@@ -2,21 +2,14 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tag, MoreHorizontal, Phone, MessageSquare, Pencil, FileText, Send, FileTextIcon } from "lucide-react";
+import { Tag, MoreHorizontal, Phone, MessageSquare, Pencil, FileText, FileTextIcon, ChevronDown, FileInvoice } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { ExpenseDialog } from "./dialogs/ExpenseDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 // Create simpler inline components instead of importing from separate files
 
@@ -115,24 +108,27 @@ const JobActions = ({
   return (
     <div className="flex gap-3 self-start">
       <div className="space-y-2">
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="flex gap-2 items-center"
-            onClick={onInvoiceClick}
-          >
-            <Send size={16} />
-            <span>Send Invoice</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex gap-2 items-center"
-            onClick={onEstimateClick}
-          >
-            <Send size={16} />
-            <span>Send Estimate</span>
-          </Button>
-        </div>
+        {/* Documents dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex gap-2 items-center">
+              <FileTextIcon size={16} />
+              <span>Documents</span>
+              <ChevronDown size={14} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onInvoiceClick}>
+              <FileInvoice size={16} className="mr-2" />
+              Create Invoice
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onEstimateClick}>
+              <FileText size={16} className="mr-2" />
+              Create Estimate
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -264,9 +260,10 @@ import * as z from "zod";
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onInvoiceCreated: (amount: number) => void;
 }
 
-const InvoiceDialog = ({ open, onOpenChange }: InvoiceDialogProps) => {
+const InvoiceDialog = ({ open, onOpenChange, onInvoiceCreated }: InvoiceDialogProps) => {
   // Simplified invoice dialog
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -281,7 +278,10 @@ const InvoiceDialog = ({ open, onOpenChange }: InvoiceDialogProps) => {
               Cancel
             </Button>
             <Button type="button" onClick={() => {
-              toast.success("Invoice created");
+              // Sample invoice amount
+              const invoiceAmount = 250;
+              toast.success(`Invoice for $${invoiceAmount.toFixed(2)} created`);
+              onInvoiceCreated(invoiceAmount);
               onOpenChange(false);
             }}>
               Create Invoice
@@ -338,6 +338,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [invoiceAmount, setInvoiceAmount] = useState(0);
   const [paymentsMade, setPaymentsMade] = useState<number[]>([]);
   
   const getJobInfo = () => {
@@ -351,7 +352,6 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       phone: "(555) 123-4567",
       email: "michael.johnson@example.com",
       total: 475.99,
-      balance: 475.99 - paymentsMade.reduce((total, payment) => total + payment, 0),
       companyName: "Fixlyfy Services",
       companyLogo: "/placeholder.svg",
       companyAddress: "456 Business Ave, Suite 789",
@@ -362,6 +362,9 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
   };
   
   const job = getJobInfo();
+
+  // Calculate balance based on invoice amount minus payments
+  const balance = invoiceAmount - paymentsMade.reduce((total, payment) => total + payment, 0);
 
   const handleStatusChange = (newStatus: string) => {
     setStatus(newStatus);
@@ -375,6 +378,10 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
   const handlePaymentAdded = (amount: number) => {
     setPaymentsMade(prev => [...prev, amount]);
     toast.success(`Payment of $${amount.toFixed(2)} added successfully`);
+  };
+
+  const handleInvoiceCreated = (amount: number) => {
+    setInvoiceAmount(amount);
   };
 
   return (
@@ -404,46 +411,17 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
               />
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7">
-                    <span className={cn(
-                      status === "open" && "text-fixlyfy-primary",
-                      status === "scheduled" && "text-fixlyfy-info",
-                      status === "in-progress" && "text-fixlyfy-warning",
-                      status === "completed" && "text-fixlyfy-success",
-                      status === "canceled" && "text-fixlyfy-error",
-                      status === "ask-review" && "text-fixlyfy-secondary"
-                    )}>
-                      {status === "open" && "Open"}
-                      {status === "scheduled" && "Scheduled"}
-                      {status === "in-progress" && "In Progress"}
-                      {status === "completed" && "Completed"}
-                      {status === "canceled" && "Cancelled"}
-                      {status === "ask-review" && "Ask Review"}
-                    </span>
-                    <MoreHorizontal size={14} className="ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Job Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleStatusChange("open")}>Open</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange("scheduled")}>Scheduled</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange("in-progress")}>In Progress</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange("completed")}>Completed</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange("canceled")}>Cancelled</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange("ask-review")}>Ask Review</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <div className="border-l h-5 border-gray-300 mx-1"></div>
               <div className="text-sm">
                 <span className="text-fixlyfy-text-secondary">Total:</span> 
                 <span className="ml-1 font-medium">${job.total.toFixed(2)}</span>
               </div>
               <div className="text-sm">
+                <span className="text-fixlyfy-text-secondary">Invoice:</span> 
+                <span className="ml-1 font-medium">${invoiceAmount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm">
                 <span className="text-fixlyfy-text-secondary">Balance:</span> 
-                <span className="ml-1 font-medium">${job.balance.toFixed(2)}</span>
+                <span className="ml-1 font-medium">${balance.toFixed(2)}</span>
               </div>
             </div>
             <p className="text-fixlyfy-text-secondary text-sm mt-2">
@@ -483,6 +461,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       <InvoiceDialog 
         open={isInvoiceDialogOpen} 
         onOpenChange={setIsInvoiceDialogOpen} 
+        onInvoiceCreated={handleInvoiceCreated}
       />
       
       <EstimateDialog 
@@ -493,7 +472,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       <PaymentDialog 
         open={isPaymentDialogOpen} 
         onOpenChange={setIsPaymentDialogOpen} 
-        balance={job.balance}
+        balance={balance}
         onPaymentProcessed={(amount) => handlePaymentAdded(amount)}
       />
       
