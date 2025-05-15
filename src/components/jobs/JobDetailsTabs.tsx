@@ -7,7 +7,7 @@ import {
   FileCheck, 
   Paperclip, 
   CheckSquare, 
-  Tool, 
+  Wrench, 
   MessageSquare 
 } from "lucide-react";
 
@@ -62,7 +62,7 @@ export const JobDetailsTabs = () => {
             value="equipment" 
             className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none"
           >
-            <Tool size={16} className="mr-2" />
+            <Wrench size={16} className="mr-2" />
             Equipment
           </TabsTrigger>
           <TabsTrigger 
