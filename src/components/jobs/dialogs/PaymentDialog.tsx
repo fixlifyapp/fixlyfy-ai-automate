@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Wallet, CreditCard, FileText } from "lucide-react";
+import { FileText, Send } from "lucide-react";
 
 const paymentFormSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -32,13 +32,19 @@ interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   balance: number;
+  onPaymentProcessed?: (amount: number) => void;
 }
 
-export const PaymentDialog = ({ open, onOpenChange, balance = 0 }: PaymentDialogProps) => {
+export const PaymentDialog = ({ 
+  open, 
+  onOpenChange, 
+  balance = 0,
+  onPaymentProcessed 
+}: PaymentDialogProps) => {
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
-      amount: 0,
+      amount: balance,
       method: "credit-card",
       reference: "",
       notes: "",
@@ -48,6 +54,11 @@ export const PaymentDialog = ({ open, onOpenChange, balance = 0 }: PaymentDialog
   const handleSubmit = (data: PaymentFormValues) => {
     console.log("Payment data:", data);
     toast.success(`Payment of $${data.amount.toFixed(2)} processed via ${data.method}`);
+    
+    if (onPaymentProcessed) {
+      onPaymentProcessed(data.amount);
+    }
+    
     onOpenChange(false);
   };
 
@@ -99,7 +110,7 @@ export const PaymentDialog = ({ open, onOpenChange, balance = 0 }: PaymentDialog
                         )}
                         onClick={() => form.setValue("method", "cash")}
                       >
-                        <Wallet size={16} />
+                        <FileText size={16} />
                         <span>Cash</span>
                       </Button>
                       
@@ -112,7 +123,7 @@ export const PaymentDialog = ({ open, onOpenChange, balance = 0 }: PaymentDialog
                         )}
                         onClick={() => form.setValue("method", "credit-card")}
                       >
-                        <CreditCard size={16} />
+                        <Send size={16} />
                         <span>Credit Card</span>
                       </Button>
                       
@@ -125,7 +136,7 @@ export const PaymentDialog = ({ open, onOpenChange, balance = 0 }: PaymentDialog
                         )}
                         onClick={() => form.setValue("method", "e-transfer")}
                       >
-                        <Wallet size={16} />
+                        <Send size={16} />
                         <span>E-Transfer</span>
                       </Button>
                       

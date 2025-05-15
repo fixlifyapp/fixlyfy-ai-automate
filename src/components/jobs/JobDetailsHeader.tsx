@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tag, MoreHorizontal, Pencil } from "lucide-react";
+import { Tag, MoreHorizontal, Phone, MessageSquare, Pencil, FileText, Send, FileTextIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -12,6 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { PaymentDialog } from "./dialogs/PaymentDialog";
+import { ExpenseDialog } from "./dialogs/ExpenseDialog";
 
 // Create simpler inline components instead of importing from separate files
 
@@ -60,9 +65,10 @@ const JobStatusBadge = ({ status, onStatusChange }: JobStatusBadgeProps) => {
 interface ClientContactButtonsProps {
   onCallClick: () => void;
   onMessageClick: () => void;
+  onEditClient: () => void;
 }
 
-const ClientContactButtons = ({ onCallClick, onMessageClick }: ClientContactButtonsProps) => {
+const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient }: ClientContactButtonsProps) => {
   return (
     <div className="flex items-center gap-1">
       <Button
@@ -71,7 +77,7 @@ const ClientContactButtons = ({ onCallClick, onMessageClick }: ClientContactButt
         className="h-7 w-7 text-fixlyfy hover:bg-fixlyfy/10"
         onClick={onCallClick}
       >
-        <Pencil size={14} />
+        <Phone size={14} />
       </Button>
       <Button
         variant="ghost"
@@ -79,9 +85,14 @@ const ClientContactButtons = ({ onCallClick, onMessageClick }: ClientContactButt
         className="h-7 w-7 text-fixlyfy hover:bg-fixlyfy/10"
         onClick={onMessageClick}
       >
-        <Pencil size={14} />
+        <MessageSquare size={14} />
       </Button>
-      <Button variant="ghost" size="icon" className="h-6 w-6">
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="h-6 w-6"
+        onClick={onEditClient}
+      >
         <Pencil size={12} />
       </Button>
     </div>
@@ -106,11 +117,11 @@ const JobActions = ({
       <div className="space-y-2">
         <div className="flex gap-2">
           <Button 
-            variant="secondary" 
+            variant="outline" 
             className="flex gap-2 items-center"
             onClick={onInvoiceClick}
           >
-            <Pencil size={16} />
+            <Send size={16} />
             <span>Send Invoice</span>
           </Button>
           <Button 
@@ -118,7 +129,7 @@ const JobActions = ({
             className="flex gap-2 items-center"
             onClick={onEstimateClick}
           >
-            <Pencil size={16} />
+            <Send size={16} />
             <span>Send Estimate</span>
           </Button>
         </div>
@@ -128,7 +139,7 @@ const JobActions = ({
             className="flex gap-2 items-center"
             onClick={onPaymentClick}
           >
-            <Pencil size={16} />
+            <FileText size={16} />
             <span>Add Payment</span>
           </Button>
           <Button 
@@ -136,7 +147,7 @@ const JobActions = ({
             className="flex gap-2 items-center"
             onClick={onExpenseClick}
           >
-            <Pencil size={16} />
+            <FileText size={16} />
             <span>Add Expense</span>
           </Button>
         </div>
@@ -157,11 +168,6 @@ const JobActions = ({
   );
 };
 
-// Re-use existing dialog imports that work
-import { PaymentDialog } from "./dialogs/PaymentDialog";
-import { ExpenseDialog } from "./dialogs/ExpenseDialog";
-
-// Simplified inline dialogs
 interface CallDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -170,9 +176,6 @@ interface CallDialogProps {
     phone: string;
   };
 }
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { toast } from "sonner";
 
 const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
   return (
@@ -327,6 +330,7 @@ interface JobDetailsHeaderProps {
 }
 
 export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<string>("scheduled");
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -334,18 +338,20 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [paymentsMade, setPaymentsMade] = useState<number[]>([]);
   
   const getJobInfo = () => {
     // In a real app, this would fetch job details from API
     return {
       id: id,
+      clientId: "client-123",
       client: "Michael Johnson",
       service: "HVAC Repair",
       address: "123 Main St, Apt 45",
       phone: "(555) 123-4567",
       email: "michael.johnson@example.com",
       total: 475.99,
-      balance: 475.99,
+      balance: 475.99 - paymentsMade.reduce((total, payment) => total + payment, 0),
       companyName: "Fixlyfy Services",
       companyLogo: "/placeholder.svg",
       companyAddress: "456 Business Ave, Suite 789",
@@ -359,8 +365,18 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
 
   const handleStatusChange = (newStatus: string) => {
     setStatus(newStatus);
+    toast.success(`Job status updated to ${newStatus}`);
+  };
+
+  const handleEditClient = () => {
+    navigate(`/clients/${job.clientId}`);
   };
   
+  const handlePaymentAdded = (amount: number) => {
+    setPaymentsMade(prev => [...prev, amount]);
+    toast.success(`Payment of $${amount.toFixed(2)} added successfully`);
+  };
+
   return (
     <div className="fixlyfy-card">
       <div className="p-6">
@@ -384,6 +400,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
               <ClientContactButtons
                 onCallClick={() => setIsCallDialogOpen(true)}
                 onMessageClick={() => setIsMessageDialogOpen(true)}
+                onEditClient={handleEditClient}
               />
             </div>
             <div className="mt-2 flex items-center gap-2">
@@ -476,7 +493,8 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       <PaymentDialog 
         open={isPaymentDialogOpen} 
         onOpenChange={setIsPaymentDialogOpen} 
-        balance={job.balance} 
+        balance={job.balance}
+        onPaymentProcessed={(amount) => handlePaymentAdded(amount)}
       />
       
       <ExpenseDialog 

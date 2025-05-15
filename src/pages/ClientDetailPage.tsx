@@ -1,12 +1,14 @@
 
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { Button } from "@/components/ui/button";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   
   const handleCreateJob = () => {
