@@ -68,6 +68,8 @@ export const ReportsTechnicians = ({ period }: ReportsTechniciansProps) => {
           {period === 'quarter' && 'Performance for this quarter'}
           {period === 'year' && 'Performance for this year'}
         </CardDescription>
+      </CardHeader>
+      <CardContent>
         <Tabs defaultValue="efficiency" className="mt-2">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="efficiency">Efficiency</TabsTrigger>
@@ -89,7 +91,7 @@ export const ReportsTechnicians = ({ period }: ReportsTechniciansProps) => {
                     </div>
                     <Progress 
                       value={tech.efficiency} 
-                      className={`h-2 ${tech.efficiency >= 90 ? 'bg-slate-100' : tech.efficiency >= 80 ? 'bg-slate-100' : 'bg-slate-100'}`}
+                      className="h-2"
                     />
                   </div>
                 </div>
