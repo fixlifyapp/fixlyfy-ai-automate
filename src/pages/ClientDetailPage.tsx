@@ -31,32 +31,6 @@ const ClientDetailPage = () => {
             View and manage client information.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="flex gap-2 items-center"
-            onClick={() => setIsPaymentDialogOpen(true)}
-          >
-            <File size={16} />
-            <span>Add Payment</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex gap-2 items-center"
-            onClick={() => setIsExpenseDialogOpen(true)}
-          >
-            <File size={16} />
-            <span>Add Expense</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex gap-2 items-center"
-            onClick={() => setIsSearchDialogOpen(true)}
-          >
-            <Search size={16} />
-            <span>Search</span>
-          </Button>
-        </div>
       </div>
       
       <ClientForm clientId={id} onCreateJob={handleCreateJob} />
@@ -70,8 +44,8 @@ const ClientDetailPage = () => {
       <PaymentDialog 
         open={isPaymentDialogOpen} 
         onOpenChange={setIsPaymentDialogOpen} 
-        balance={0} // We don't have the balance here, so passing 0
-        onPaymentProcessed={() => {}} // Empty callback
+        balance={0} 
+        onPaymentProcessed={() => {}}
       />
       
       <ExpenseDialog 
