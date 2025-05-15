@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface JobsListProps {
   isGridView: boolean;
@@ -113,12 +113,22 @@ const jobs = [
 ];
 
 export const JobsList = ({ isGridView }: JobsListProps) => {
+  const navigate = useNavigate();
+
+  const handleJobClick = (jobId: string) => {
+    navigate(`/jobs/${jobId}`);
+  };
+
   return (
     <>
       {isGridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {jobs.map((job) => (
-            <Link to={`/jobs/${job.id}`} key={job.id} className="fixlyfy-card hover:shadow-lg transition-shadow">
+            <div 
+              key={job.id} 
+              className="fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer" 
+              onClick={() => handleJobClick(job.id)}
+            >
               <div className="p-4 border-b border-fixlyfy-border">
                 <div className="flex justify-between items-start">
                   <div>
@@ -171,7 +181,7 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
@@ -196,15 +206,17 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
               {jobs.map((job, idx) => (
                 <TableRow 
                   key={job.id}
-                  className={idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50"}
+                  className={cn(
+                    idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50",
+                    "cursor-pointer hover:bg-fixlyfy-bg-interface"
+                  )}
+                  onClick={() => handleJobClick(job.id)}
                 >
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox />
                   </TableCell>
                   <TableCell>
-                    <Link to={`/jobs/${job.id}`} className="font-medium hover:text-fixlyfy transition-colors">
-                      {job.id}
-                    </Link>
+                    <span className="font-medium">{job.id}</span>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{job.client}</div>
@@ -249,7 +261,7 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
                   <TableCell className="font-medium">
                     ${job.revenue.toFixed(2)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -259,7 +271,7 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
                           <Eye size={16} className="mr-2" /> View
                         </DropdownMenuItem>
                         <DropdownMenuItem>
