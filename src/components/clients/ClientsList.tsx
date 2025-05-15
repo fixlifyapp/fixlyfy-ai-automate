@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,7 +9,9 @@ import {
   MoreVertical, 
   Eye, 
   Trash,
-  Star
+  Star,
+  Mail,
+  Phone
 } from "lucide-react";
 import {
   DropdownMenu,
