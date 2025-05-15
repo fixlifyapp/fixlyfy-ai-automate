@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Phone, 
   Mail, 
@@ -19,18 +19,40 @@ import {
   Calendar,
   CreditCard,
   Home,
-  History
+  History,
+  Check
 } from "lucide-react";
 import { clients } from "@/data/clients";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ClientFormProps {
   clientId?: string;
+  onCreateJob?: () => void;
 }
 
-export const ClientForm = ({ clientId }: ClientFormProps) => {
+interface CreateInvoiceData {
+  description: string;
+  amount: string;
+}
+
+export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details");
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<CreateInvoiceData>({
+    description: "",
+    amount: ""
+  });
   
   useEffect(() => {
     // Simulating API fetch
@@ -44,6 +66,33 @@ export const ClientForm = ({ clientId }: ClientFormProps) => {
       setIsLoading(false);
     }, 500);
   }, [clientId]);
+
+  const handleSaveChanges = () => {
+    // Simulate saving changes
+    toast({
+      title: "Changes saved",
+      description: "Client information has been updated successfully.",
+    });
+  };
+
+  const handleCreateInvoice = () => {
+    setIsInvoiceModalOpen(true);
+  };
+
+  const handleInvoiceSubmit = () => {
+    // Simulate creating an invoice
+    setIsInvoiceModalOpen(false);
+    toast({
+      title: "Invoice created",
+      description: `Invoice for $${invoiceData.amount} has been created successfully.`,
+    });
+
+    // Reset form data
+    setInvoiceData({
+      description: "",
+      amount: ""
+    });
+  };
   
   if (isLoading) {
     return (
@@ -87,9 +136,11 @@ export const ClientForm = ({ clientId }: ClientFormProps) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline">Create Job</Button>
-            <Button variant="outline">Create Invoice</Button>
-            <Button className="bg-fixlyfy hover:bg-fixlyfy/90">Save Changes</Button>
+            <Button variant="outline" onClick={onCreateJob}>Create Job</Button>
+            <Button variant="outline" onClick={handleCreateInvoice}>Create Invoice</Button>
+            <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSaveChanges}>
+              <Check size={18} className="mr-2" /> Save Changes
+            </Button>
           </div>
         </div>
         
@@ -246,7 +297,7 @@ export const ClientForm = ({ clientId }: ClientFormProps) => {
             <Card className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">Client Jobs</h3>
-                <Button className="bg-fixlyfy hover:bg-fixlyfy/90">
+                <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={onCreateJob}>
                   <Plus size={16} className="mr-2" /> New Job
                 </Button>
               </div>
@@ -307,7 +358,7 @@ export const ClientForm = ({ clientId }: ClientFormProps) => {
             <Card className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-medium">Payment History</h3>
-                <Button className="bg-fixlyfy hover:bg-fixlyfy/90">
+                <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleCreateInvoice}>
                   <Plus size={16} className="mr-2" /> Create Invoice
                 </Button>
               </div>
@@ -473,6 +524,56 @@ export const ClientForm = ({ clientId }: ClientFormProps) => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Invoice Modal */}
+      <Dialog open={isInvoiceModalOpen} onOpenChange={setIsInvoiceModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Invoice</DialogTitle>
+            <DialogDescription>
+              Create a new invoice for client {client.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description" 
+                placeholder="Enter invoice description"
+                value={invoiceData.description}
+                onChange={(e) => setInvoiceData({...invoiceData, description: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <div className="flex items-center">
+                <span className="mr-2">$</span>
+                <Input 
+                  id="amount" 
+                  placeholder="0.00" 
+                  type="number"
+                  value={invoiceData.amount}
+                  onChange={(e) => setInvoiceData({...invoiceData, amount: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInvoiceModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-fixlyfy hover:bg-fixlyfy/90" 
+              onClick={handleInvoiceSubmit}
+            >
+              Create Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
