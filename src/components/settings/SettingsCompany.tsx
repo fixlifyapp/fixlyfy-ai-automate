@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { FileUpload } from "lucide-react";
+import { Upload } from "lucide-react";
 
 export const SettingsCompany = () => {
   return (
@@ -79,7 +79,7 @@ export const SettingsCompany = () => {
                 F
               </div>
               <Button variant="outline" className="gap-2">
-                <FileUpload size={16} />
+                <Upload size={16} />
                 Upload Logo
               </Button>
               <p className="text-xs text-fixlyfy-text-secondary mt-2">
