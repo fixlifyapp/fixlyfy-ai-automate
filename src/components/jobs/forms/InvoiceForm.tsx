@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FileText, Plus, Trash } from "lucide-react";
@@ -75,7 +75,11 @@ export const InvoiceForm = ({
     },
   });
 
-  const { fields, append, remove } = form.watch("items");
+  // Add useFieldArray hook for managing dynamic form items
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
 
   const calculateTotal = () => {
     return form.watch("items").reduce(
@@ -89,7 +93,6 @@ export const InvoiceForm = ({
   };
 
   const addItem = () => {
-    const items = form.getValues("items");
     append({ description: "", quantity: 1, unitPrice: 0 });
   };
 
@@ -267,8 +270,8 @@ export const InvoiceForm = ({
 
             <div>
               <h3 className="font-medium text-lg mb-4">Items</h3>
-              {form.watch("items").map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-3 mb-3">
+              {fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-12 gap-3 mb-3">
                   <div className="col-span-6">
                     <FormField
                       control={form.control}
@@ -334,7 +337,7 @@ export const InvoiceForm = ({
                       size="icon" 
                       onClick={() => removeItem(index)}
                       className="text-fixlyfy-text-secondary"
-                      disabled={form.watch("items").length <= 1}
+                      disabled={fields.length <= 1}
                     >
                       <Trash size={18} />
                     </Button>

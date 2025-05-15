@@ -15,7 +15,7 @@ type SearchResult = {
   title: string;
   subtitle: string;
   type: "invoice" | "estimate" | "client" | "job";
-  icon: any;
+  icon: React.ElementType;
 };
 
 export const SearchDialog = ({ open, onOpenChange }: SearchDialogProps) => {
