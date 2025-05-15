@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -118,7 +119,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             <Avatar className="h-16 w-16">
               <AvatarImage src={client.avatarUrl} alt={client.name} />
               <AvatarFallback className="bg-fixlyfy/10 text-fixlyfy">
-                {client.name.split(' ').map(n => n[0]).join('')}
+                {client.name && client.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -184,14 +185,14 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
                       <Label htmlFor="firstName">First Name</Label>
                       <Input 
                         id="firstName" 
-                        defaultValue={client.name?.split(' ')[0] || ''} 
+                        defaultValue={client.name && client.name.split(' ')[0] || ''} 
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
                       <Input 
                         id="lastName" 
-                        defaultValue={client.name?.split(' ')[1] || ''} 
+                        defaultValue={client.name && client.name.split(' ')[1] || ''} 
                       />
                     </div>
                   </div>
