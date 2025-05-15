@@ -1,5 +1,5 @@
 
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, HelpCircle, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,16 +19,35 @@ export const Header = () => {
         <div className="relative flex items-center w-[300px]">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-secondary" size={18} />
           <Input 
-            placeholder="Search..." 
+            placeholder="Search jobs, clients, invoices..." 
             className="pl-10 bg-fixlyfy-bg-interface border-none" 
           />
         </div>
         
         <div className="flex items-center space-x-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative text-fixlyfy-text-secondary hover:bg-fixlyfy-bg-interface"
+            aria-label="AI Assistant"
+          >
+            <HelpCircle size={20} />
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative text-fixlyfy-text-secondary hover:bg-fixlyfy-bg-interface"
+            aria-label="Messages"
+          >
+            <MessageSquare size={20} />
+            <span className="absolute top-1 right-1 bg-fixlyfy-success w-2 h-2 rounded-full"></span>
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell size={20} className="text-fixlyfy-text-secondary" />
+              <Button variant="ghost" size="icon" className="relative text-fixlyfy-text-secondary hover:bg-fixlyfy-bg-interface">
+                <Bell size={20} />
                 <span className="absolute top-1 right-1 bg-fixlyfy-error w-2 h-2 rounded-full"></span>
               </Button>
             </DropdownMenuTrigger>

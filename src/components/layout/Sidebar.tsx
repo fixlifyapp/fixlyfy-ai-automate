@@ -11,7 +11,10 @@ import {
   Mail, 
   FileText, 
   Menu, 
-  ChevronRight
+  ChevronRight,
+  Package,
+  Zap,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -44,6 +47,24 @@ const menuItems = [
     highlight: false 
   },
   { 
+    name: 'Invoices', 
+    icon: CreditCard, 
+    path: '/invoices',
+    highlight: false 
+  },
+  { 
+    name: 'Inventory', 
+    icon: Package, 
+    path: '/inventory',
+    highlight: false 
+  },
+  {
+    name: 'Automations',
+    icon: Zap,
+    path: '/automations',
+    highlight: false
+  },
+  { 
     name: 'Reports', 
     icon: BarChart3, 
     path: '/reports',
@@ -57,9 +78,9 @@ const menuItems = [
     highlight: false 
   },
   { 
-    name: 'Invoices', 
+    name: 'Documents', 
     icon: FileText, 
-    path: '/invoices',
+    path: '/documents',
     highlight: false 
   },
 ];
@@ -115,7 +136,7 @@ export const Sidebar = () => {
               key={item.name} 
               to={item.path}
               className={cn(
-                "flex items-center py-2 px-3 rounded-lg group transition-colors",
+                "flex items-center py-2 px-3 rounded-lg group transition-colors relative",
                 location.pathname === item.path 
                   ? "bg-fixlyfy text-white" 
                   : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
