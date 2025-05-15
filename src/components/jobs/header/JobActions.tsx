@@ -12,8 +12,6 @@ import {
 interface JobActionsProps {
   onInvoiceClick: () => void;
   onEstimateClick: () => void;
-  onPaymentClick: () => void;
-  onExpenseClick: () => void;
   hasEstimate?: boolean;
   onSyncEstimateToInvoice?: () => void;
 }
@@ -21,8 +19,6 @@ interface JobActionsProps {
 export const JobActions = ({ 
   onInvoiceClick, 
   onEstimateClick, 
-  onPaymentClick, 
-  onExpenseClick,
   hasEstimate = false,
   onSyncEstimateToInvoice
 }: JobActionsProps) => {

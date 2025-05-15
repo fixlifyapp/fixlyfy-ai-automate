@@ -55,6 +55,7 @@ export const useJobDetailsHeader = (id: string) => {
   const job = getJobInfo();
 
   // Calculate balance based on invoice amount minus payments
+  // Note: Estimates don't affect the balance
   const balance = invoiceAmount - paymentsMade.reduce((total, payment) => total + payment, 0);
 
   const handleStatusChange = (newStatus: string) => {
@@ -64,11 +65,6 @@ export const useJobDetailsHeader = (id: string) => {
 
   const handleEditClient = () => {
     navigate(`/clients/${job.clientId}`);
-  };
-  
-  const handlePaymentAdded = (amount: number) => {
-    setPaymentsMade(prev => [...prev, amount]);
-    toast.success(`Payment of $${amount.toFixed(2)} added successfully`);
   };
 
   const handleInvoiceCreated = (amount: number) => {
@@ -104,7 +100,6 @@ export const useJobDetailsHeader = (id: string) => {
     setIsEstimateDialogOpen,
     handleStatusChange,
     handleEditClient,
-    handlePaymentAdded,
     handleInvoiceCreated,
     handleEstimateCreated,
     handleSyncEstimateToInvoice

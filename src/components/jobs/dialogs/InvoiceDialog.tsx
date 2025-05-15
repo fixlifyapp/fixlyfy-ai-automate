@@ -1,8 +1,10 @@
 
-import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { InvoiceForm } from "../forms/InvoiceForm";
@@ -49,6 +51,12 @@ export const InvoiceDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create Invoice</DialogTitle>
+          <DialogDescription>
+            Create an invoice to send to your client
+          </DialogDescription>
+        </DialogHeader>
         <InvoiceForm
           type="invoice"
           onSubmit={handleInvoiceSubmit}

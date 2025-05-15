@@ -29,7 +29,6 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
     setIsEstimateDialogOpen,
     handleStatusChange,
     handleEditClient,
-    handlePaymentAdded,
     handleInvoiceCreated,
     handleEstimateCreated,
     handleSyncEstimateToInvoice
@@ -69,8 +68,6 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
           <JobActions
             onInvoiceClick={() => setIsInvoiceDialogOpen(true)}
             onEstimateClick={() => setIsEstimateDialogOpen(true)}
-            onPaymentClick={() => {}}
-            onExpenseClick={() => {}}
             hasEstimate={hasEstimate}
             onSyncEstimateToInvoice={handleSyncEstimateToInvoice}
           />
