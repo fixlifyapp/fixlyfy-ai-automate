@@ -4,6 +4,9 @@ import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { AiInsights } from "@/components/dashboard/AiInsights";
 import { RecentJobs } from "@/components/dashboard/RecentJobs";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
+import { AiAssistant } from "@/components/dashboard/AiAssistant";
 
 const Index = () => {
   return (
@@ -24,9 +27,21 @@ const Index = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
           <DashboardCharts />
+        </div>
+        <div>
+          <AiAssistant />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 gap-6">
+            <UpcomingJobs />
+            <ActivityFeed />
+          </div>
         </div>
         <div>
           <RecentJobs />

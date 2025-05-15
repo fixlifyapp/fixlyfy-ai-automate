@@ -1,5 +1,5 @@
 
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Calendar, DollarSign, Users, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const metrics = [
@@ -9,31 +9,39 @@ const metrics = [
     value: '$12,450', 
     change: 12, 
     isPositive: true,
-    period: 'vs last month'
+    period: 'vs last month',
+    icon: DollarSign,
+    iconColor: "bg-fixlyfy"
   },
   {
     id: 2, 
-    name: 'Completed Jobs', 
-    value: '48', 
-    change: 8, 
+    name: 'Active Clients', 
+    value: '38', 
+    change: 5, 
     isPositive: true,
-    period: 'vs last month'
+    period: 'vs last month',
+    icon: Users,
+    iconColor: "bg-fixlyfy-success"
   },
   {
     id: 3, 
-    name: 'Customer Rating', 
-    value: '4.8/5', 
-    change: 0.2, 
-    isPositive: true,
-    period: 'vs last month'
+    name: 'Open Jobs', 
+    value: '24', 
+    change: 3, 
+    isPositive: false,
+    period: 'vs last month',
+    icon: ListTodo,
+    iconColor: "bg-fixlyfy-warning"
   },
   {
     id: 4, 
-    name: 'Pending Jobs', 
-    value: '12', 
-    change: 3, 
-    isPositive: false,
-    period: 'vs last month'
+    name: 'Scheduled Jobs', 
+    value: '15', 
+    change: 2, 
+    isPositive: true,
+    period: 'vs last month',
+    icon: Calendar,
+    iconColor: "bg-fixlyfy-info"
   },
 ];
 
@@ -46,7 +54,12 @@ export const DashboardMetrics = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
         {metrics.map((metric) => (
           <div key={metric.id} className="animate-fade-in" style={{ animationDelay: `${metric.id * 100}ms` }}>
-            <p className="text-fixlyfy-text-secondary text-sm">{metric.name}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={cn("p-2 rounded text-white", metric.iconColor)}>
+                <metric.icon size={16} />
+              </div>
+              <p className="text-fixlyfy-text-secondary text-sm">{metric.name}</p>
+            </div>
             <p className="text-2xl font-semibold my-1">{metric.value}</p>
             <div className="flex items-center">
               <div className={cn(
