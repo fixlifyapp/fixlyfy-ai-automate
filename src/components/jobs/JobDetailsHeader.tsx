@@ -7,7 +7,13 @@ import {
   MoreHorizontal, 
   Pencil, 
   Phone, 
-  MessageSquare
+  MessageSquare,
+  ReceiptText,
+  FileText,
+  Calculator,
+  Cash,
+  CreditCard,
+  Wrench
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,8 +30,25 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 interface JobDetailsHeaderProps {
   id?: string;
@@ -35,6 +58,11 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
   const [status, setStatus] = useState<string>("scheduled");
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("invoice");
   
   const getJobInfo = () => {
     // In a real app, this would fetch job details from API
@@ -46,7 +74,13 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       phone: "(555) 123-4567",
       email: "michael.johnson@example.com",
       total: 475.99,
-      balance: 475.99
+      balance: 475.99,
+      companyName: "Fixlyfy Services",
+      companyLogo: "/placeholder.svg",
+      companyAddress: "456 Business Ave, Suite 789",
+      companyPhone: "(555) 987-6543",
+      companyEmail: "info@fixlyfy.com",
+      legalText: "All services are subject to our terms and conditions. Payment due within 30 days."
     };
   };
   
@@ -55,6 +89,121 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
   const handleStatusChange = (newStatus: string) => {
     setStatus(newStatus);
     toast.success(`Job status changed to ${newStatus}`);
+  };
+
+  // Invoice form schema
+  const invoiceFormSchema = z.object({
+    items: z.array(
+      z.object({
+        description: z.string().min(2, "Description is required"),
+        quantity: z.number().min(1, "Quantity must be at least 1"),
+        price: z.number().min(0.01, "Price must be greater than 0"),
+        tax: z.boolean().default(false),
+      })
+    ).min(1, "At least one item is required"),
+    notes: z.string().optional(),
+  });
+
+  // Payment form schema
+  const paymentFormSchema = z.object({
+    amount: z.number().min(0.01, "Amount must be greater than 0"),
+    method: z.enum(["cash", "credit-card", "e-transfer", "cheque"]),
+    reference: z.string().optional(),
+    notes: z.string().optional(),
+  });
+
+  // Expense form schema
+  const expenseFormSchema = z.object({
+    description: z.string().min(2, "Description is required"),
+    amount: z.number().min(0.01, "Amount must be greater than 0"),
+    tax: z.boolean().default(false),
+    category: z.string().min(2, "Category is required"),
+    receipt: z.boolean().default(false),
+    notes: z.string().optional(),
+  });
+
+  const invoiceForm = useForm<z.infer<typeof invoiceFormSchema>>({
+    resolver: zodResolver(invoiceFormSchema),
+    defaultValues: {
+      items: [{ description: "", quantity: 1, price: 0, tax: false }],
+      notes: "",
+    },
+  });
+
+  const estimateForm = useForm<z.infer<typeof invoiceFormSchema>>({
+    resolver: zodResolver(invoiceFormSchema),
+    defaultValues: {
+      items: [{ description: "", quantity: 1, price: 0, tax: false }],
+      notes: "",
+    },
+  });
+
+  const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
+    resolver: zodResolver(paymentFormSchema),
+    defaultValues: {
+      amount: 0,
+      method: "credit-card",
+      reference: "",
+      notes: "",
+    },
+  });
+
+  const expenseForm = useForm<z.infer<typeof expenseFormSchema>>({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      description: "",
+      amount: 0,
+      tax: false,
+      category: "Materials",
+      receipt: false,
+      notes: "",
+    },
+  });
+
+  const handleAddItem = (form: any) => {
+    const currentItems = form.getValues("items") || [];
+    form.setValue("items", [
+      ...currentItems,
+      { description: "", quantity: 1, price: 0, tax: false },
+    ]);
+  };
+
+  const handleRemoveItem = (index: number, form: any) => {
+    const currentItems = form.getValues("items");
+    if (currentItems.length > 1) {
+      const updatedItems = currentItems.filter((_, i) => i !== index);
+      form.setValue("items", updatedItems);
+    }
+  };
+
+  const handleInvoiceSubmit = (data: z.infer<typeof invoiceFormSchema>) => {
+    console.log("Invoice data:", data);
+    toast.success("Invoice sent successfully");
+    setIsInvoiceDialogOpen(false);
+    window.open("about:blank", "_blank")?.focus();
+  };
+
+  const handleEstimateSubmit = (data: z.infer<typeof invoiceFormSchema>) => {
+    console.log("Estimate data:", data);
+    toast.success("Estimate sent successfully");
+    setIsEstimateDialogOpen(false);
+    window.open("about:blank", "_blank")?.focus();
+  };
+
+  const handlePaymentSubmit = (data: z.infer<typeof paymentFormSchema>) => {
+    console.log("Payment data:", data);
+    toast.success(`Payment of $${data.amount.toFixed(2)} processed via ${data.method}`);
+    setIsPaymentDialogOpen(false);
+  };
+
+  const handleExpenseSubmit = (data: z.infer<typeof expenseFormSchema>) => {
+    console.log("Expense data:", data);
+    toast.success(`Expense of $${data.amount.toFixed(2)} added`);
+    setIsExpenseDialogOpen(false);
+  };
+
+  const calculateTotal = (items: any[]) => {
+    return items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
   };
   
   return (
@@ -200,14 +349,51 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
           </div>
           
           <div className="flex gap-3 self-start">
-            <Button variant="secondary" onClick={() => toast.success("Invoice view opened")}>View Invoice</Button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  className="flex gap-2 items-center"
+                  onClick={() => setIsInvoiceDialogOpen(true)}
+                >
+                  <ReceiptText size={16} />
+                  <span>Send Invoice</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex gap-2 items-center"
+                  onClick={() => setIsEstimateDialogOpen(true)}
+                >
+                  <FileText size={16} />
+                  <span>Send Estimate</span>
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex gap-2 items-center"
+                  onClick={() => setIsPaymentDialogOpen(true)}
+                >
+                  <Cash size={16} />
+                  <span>Add Payment</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex gap-2 items-center"
+                  onClick={() => setIsExpenseDialogOpen(true)}
+                >
+                  <Wrench size={16} />
+                  <span>Add Expense</span>
+                </Button>
+              </div>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button>Actions</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Complete Job</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success("Creating new invoice...")}>Create Invoice</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsInvoiceDialogOpen(true)}>Send Invoice</DropdownMenuItem>
                 <DropdownMenuItem>Reschedule</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-fixlyfy-error">Cancel Job</DropdownMenuItem>
@@ -268,6 +454,599 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
               />
               <Button onClick={() => toast.success("Message sent to client")}>Send</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Dialog */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Create Invoice</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Form {...invoiceForm}>
+              <form onSubmit={invoiceForm.handleSubmit(handleInvoiceSubmit)} className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium">Invoice Items</h3>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleAddItem(invoiceForm)}
+                    >
+                      Add Item
+                    </Button>
+                  </div>
+                  
+                  {invoiceForm.watch("items").map((item, index) => (
+                    <div key={index} className="flex flex-wrap gap-3 items-end border p-3 rounded-md">
+                      <FormField
+                        control={invoiceForm.control}
+                        name={`items.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1 min-w-[200px]">
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Item description" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={invoiceForm.control}
+                        name={`items.${index}.quantity`}
+                        render={({ field }) => (
+                          <FormItem className="w-20">
+                            <FormLabel>Qty</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1" 
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={invoiceForm.control}
+                        name={`items.${index}.price`}
+                        render={({ field }) => (
+                          <FormItem className="w-32">
+                            <FormLabel>Price ($)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                step="0.01" 
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={invoiceForm.control}
+                        name={`items.${index}.tax`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-end space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel>Apply Tax</FormLabel>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleRemoveItem(index, invoiceForm)}
+                        disabled={invoiceForm.watch("items").length === 1}
+                        className="ml-auto"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <div className="flex justify-end">
+                    <div className="w-64 space-y-2">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>${calculateTotal(invoiceForm.watch("items")).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tax:</span>
+                        <span>$0.00</span>
+                      </div>
+                      <div className="flex justify-between font-bold">
+                        <span>Total:</span>
+                        <span>${calculateTotal(invoiceForm.watch("items")).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <FormField
+                    control={invoiceForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Additional notes for the invoice..."
+                            className="min-h-24"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsInvoiceDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => {
+                    window.open("about:blank", "_blank")?.focus();
+                    toast.success("Invoice preview opened");
+                  }}>
+                    View Invoice
+                  </Button>
+                  <Button type="submit">Send Invoice</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Estimate Dialog */}
+      <Dialog open={isEstimateDialogOpen} onOpenChange={setIsEstimateDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Create Estimate</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Form {...estimateForm}>
+              <form onSubmit={estimateForm.handleSubmit(handleEstimateSubmit)} className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium">Estimate Items</h3>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleAddItem(estimateForm)}
+                    >
+                      Add Item
+                    </Button>
+                  </div>
+                  
+                  {estimateForm.watch("items").map((item, index) => (
+                    <div key={index} className="flex flex-wrap gap-3 items-end border p-3 rounded-md">
+                      <FormField
+                        control={estimateForm.control}
+                        name={`items.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1 min-w-[200px]">
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Item description" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={estimateForm.control}
+                        name={`items.${index}.quantity`}
+                        render={({ field }) => (
+                          <FormItem className="w-20">
+                            <FormLabel>Qty</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1" 
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={estimateForm.control}
+                        name={`items.${index}.price`}
+                        render={({ field }) => (
+                          <FormItem className="w-32">
+                            <FormLabel>Price ($)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                step="0.01" 
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={estimateForm.control}
+                        name={`items.${index}.tax`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-end space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel>Apply Tax</FormLabel>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleRemoveItem(index, estimateForm)}
+                        disabled={estimateForm.watch("items").length === 1}
+                        className="ml-auto"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <div className="flex justify-end">
+                    <div className="w-64 space-y-2">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>${calculateTotal(estimateForm.watch("items")).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tax:</span>
+                        <span>$0.00</span>
+                      </div>
+                      <div className="flex justify-between font-bold">
+                        <span>Total:</span>
+                        <span>${calculateTotal(estimateForm.watch("items")).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <FormField
+                    control={estimateForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Additional notes for the estimate..."
+                            className="min-h-24"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEstimateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => {
+                    window.open("about:blank", "_blank")?.focus();
+                    toast.success("Estimate preview opened");
+                  }}>
+                    View Estimate
+                  </Button>
+                  <Button type="submit">Send Estimate</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Payment</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Form {...paymentForm}>
+              <form onSubmit={paymentForm.handleSubmit(handlePaymentSubmit)} className="space-y-4">
+                <FormField
+                  control={paymentForm.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0.01" 
+                          step="0.01" 
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Balance due: ${job.balance.toFixed(2)}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={paymentForm.control}
+                  name="method"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Method</FormLabel>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={field.value === "cash" ? "default" : "outline"}
+                          className={cn(
+                            "flex items-center gap-2 justify-start px-3",
+                            field.value === "cash" && "border-fixlyfy text-white"
+                          )}
+                          onClick={() => paymentForm.setValue("method", "cash")}
+                        >
+                          <Cash size={16} />
+                          <span>Cash</span>
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant={field.value === "credit-card" ? "default" : "outline"}
+                          className={cn(
+                            "flex items-center gap-2 justify-start px-3",
+                            field.value === "credit-card" && "border-fixlyfy text-white"
+                          )}
+                          onClick={() => paymentForm.setValue("method", "credit-card")}
+                        >
+                          <CreditCard size={16} />
+                          <span>Credit Card</span>
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant={field.value === "e-transfer" ? "default" : "outline"}
+                          className={cn(
+                            "flex items-center gap-2 justify-start px-3",
+                            field.value === "e-transfer" && "border-fixlyfy text-white"
+                          )}
+                          onClick={() => paymentForm.setValue("method", "e-transfer")}
+                        >
+                          <Cash size={16} />
+                          <span>E-Transfer</span>
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant={field.value === "cheque" ? "default" : "outline"}
+                          className={cn(
+                            "flex items-center gap-2 justify-start px-3",
+                            field.value === "cheque" && "border-fixlyfy text-white"
+                          )}
+                          onClick={() => paymentForm.setValue("method", "cheque")}
+                        >
+                          <FileText size={16} />
+                          <span>Cheque</span>
+                        </Button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={paymentForm.control}
+                  name="reference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reference # (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Transaction reference number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={paymentForm.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Any additional notes..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Process Payment</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expense Dialog */}
+      <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Tech Expense</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Form {...expenseForm}>
+              <form onSubmit={expenseForm.handleSubmit(handleExpenseSubmit)} className="space-y-4">
+                <FormField
+                  control={expenseForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Expense description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={expenseForm.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0.01" 
+                            step="0.01" 
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={expenseForm.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Materials, Parts, etc." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="flex space-x-4">
+                  <FormField
+                    control={expenseForm.control}
+                    name="tax"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div>
+                          <FormLabel>Apply Tax</FormLabel>
+                          <FormDescription>
+                            Check if tax should be applied
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={expenseForm.control}
+                    name="receipt"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div>
+                          <FormLabel>Has Receipt</FormLabel>
+                          <FormDescription>
+                            Check if a receipt is available
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={expenseForm.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Any additional notes..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsExpenseDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Add Expense</Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </div>
         </DialogContent>
       </Dialog>
