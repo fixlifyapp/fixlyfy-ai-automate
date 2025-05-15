@@ -1,15 +1,17 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, Mail, Zap, Clock, Bell, Gift, CheckCircle, AlertTriangle, User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateAutomationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTemplate?: string | null;
 }
 
 type TemplateCategory = {
@@ -110,14 +112,34 @@ const templateCategories: TemplateCategory[] = [
   }
 ];
 
-export const CreateAutomationDialog = ({ open, onOpenChange }: CreateAutomationDialogProps) => {
+export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = null }: CreateAutomationDialogProps) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("templates");
   const [prompt, setPrompt] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
+  useEffect(() => {
+    // Find the template if initialTemplate is provided
+    if (initialTemplate) {
+      for (const category of templateCategories) {
+        const template = category.templates.find(t => t.id === initialTemplate);
+        if (template) {
+          setSelectedTemplate(template);
+          setActiveTab("customize");
+          break;
+        }
+      }
+    }
+  }, [initialTemplate, open]);
+  
   const handleCreateFromPrompt = () => {
     // In a real implementation, this would send the prompt to an AI service
     console.log("Creating automation from prompt:", prompt);
+    
+    toast({
+      title: "Automation Created",
+      description: "Your automation has been created successfully.",
+    });
     
     // For demo purposes, simply close the dialog
     onOpenChange(false);
@@ -126,6 +148,14 @@ export const CreateAutomationDialog = ({ open, onOpenChange }: CreateAutomationD
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
     setActiveTab("customize");
+  };
+  
+  const handleSaveTemplate = () => {
+    toast({
+      title: "Automation Created",
+      description: `${selectedTemplate?.name} automation has been created and activated.`,
+    });
+    onOpenChange(false);
   };
   
   return (
@@ -159,7 +189,11 @@ export const CreateAutomationDialog = ({ open, onOpenChange }: CreateAutomationD
                     {category.templates.map((template) => (
                       <div 
                         key={template.id}
-                        className="border border-fixlyfy-border rounded-md p-4 hover:border-fixlyfy/60 cursor-pointer transition-colors"
+                        className={`border rounded-md p-4 cursor-pointer transition-colors ${
+                          template.id === initialTemplate 
+                            ? "border-fixlyfy bg-fixlyfy/5" 
+                            : "border-fixlyfy-border hover:border-fixlyfy/60"
+                        }`}
                         onClick={() => handleTemplateSelect(template)}
                       >
                         <div className="flex items-start">
@@ -304,7 +338,7 @@ export const CreateAutomationDialog = ({ open, onOpenChange }: CreateAutomationD
                   </Button>
                   <Button 
                     className="bg-fixlyfy hover:bg-fixlyfy/90"
-                    onClick={() => onOpenChange(false)}
+                    onClick={handleSaveTemplate}
                   >
                     Save Automation
                   </Button>

@@ -7,10 +7,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomationsList } from "@/components/automations/AutomationsList";
 import { CreateAutomationDialog } from "@/components/automations/CreateAutomationDialog";
 import { AutomationInsights } from "@/components/automations/AutomationInsights";
+import { QuickStartItemDialog } from "@/components/automations/QuickStartItemDialog";
 
 const AutomationsPage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [quickStartItemOpen, setQuickStartItemOpen] = useState(false);
+  const [selectedQuickStartItem, setSelectedQuickStartItem] = useState<typeof quickStartItems[0] | null>(null);
+  
+  const handleQuickStartItemClick = (item: typeof quickStartItems[0]) => {
+    setSelectedQuickStartItem(item);
+    setQuickStartItemOpen(true);
+  };
   
   return (
     <PageLayout>
@@ -109,8 +117,6 @@ const AutomationsPage = () => {
         </div>
 
         <div className="space-y-6">
-          <AutomationInsights />
-          
           <div className="fixlyfy-card p-6">
             <div className="flex items-center mb-4">
               <div className="w-8 h-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white mr-3">
@@ -129,6 +135,7 @@ const AutomationsPage = () => {
                   <div 
                     key={index} 
                     className="flex items-center p-3 border border-fixlyfy-border rounded-md hover:bg-fixlyfy/5 cursor-pointer transition-colors"
+                    onClick={() => handleQuickStartItemClick(item)}
                   >
                     <div className="bg-fixlyfy/10 p-2 rounded mr-3">
                       <item.icon size={16} className="text-fixlyfy" />
@@ -155,10 +162,19 @@ const AutomationsPage = () => {
               </div>
             </div>
           </div>
+          
+          <AutomationInsights />
         </div>
       </div>
       
       <CreateAutomationDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      {selectedQuickStartItem && (
+        <QuickStartItemDialog 
+          open={quickStartItemOpen}
+          onOpenChange={setQuickStartItemOpen}
+          item={selectedQuickStartItem}
+        />
+      )}
     </PageLayout>
   );
 };

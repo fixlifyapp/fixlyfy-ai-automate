@@ -1,8 +1,10 @@
 
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Brain, ArrowRight, TrendingUp } from 'lucide-react';
+import { Brain, ArrowRight, TrendingUp, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import { CreateAutomationDialog } from '@/components/automations/CreateAutomationDialog';
 
 // Mock data for automation insights
 const performanceData = [
@@ -16,6 +18,14 @@ const performanceData = [
 ];
 
 export const AutomationInsights = () => {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  
+  const handleCreateSuggested = () => {
+    setSelectedTemplate("estimate-follow");
+    setCreateDialogOpen(true);
+  };
+  
   return (
     <div className="fixlyfy-card h-full">
       <div className="p-6 border-b border-fixlyfy-border flex items-center justify-between">
@@ -28,7 +38,22 @@ export const AutomationInsights = () => {
         <Badge className="bg-fixlyfy-success">AI Powered</Badge>
       </div>
       
-      <div className="p-6">
+      <div className="p-6 space-y-4">
+        <div className="p-4 bg-fixlyfy/5 border border-fixlyfy/20 rounded-md">
+          <div className="flex items-start">
+            <Info className="text-fixlyfy mt-0.5 mr-3 shrink-0" size={18} />
+            <div>
+              <p className="font-medium mb-1">Suggested Automation</p>
+              <p className="text-sm text-fixlyfy-text-secondary">
+                Based on your patterns, adding a "3-day estimate follow-up" automation could increase conversions.
+              </p>
+              <Button variant="link" className="text-fixlyfy text-xs p-0 h-auto mt-2" onClick={handleCreateSuggested}>
+                Create this automation <ArrowRight size={12} className="ml-1" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        
         <div className="mb-6">
           <p className="text-lg font-medium mb-4">Weekly Performance</p>
           <div className="h-[140px]">
@@ -93,24 +118,14 @@ export const AutomationInsights = () => {
                 </div>
               </div>
             </div>
-            
-            <div className="p-3 bg-fixlyfy/5 border border-fixlyfy/20 rounded-md">
-              <div className="flex items-start">
-                <Brain className="text-fixlyfy mr-2 mt-0.5" size={16} />
-                <div>
-                  <p className="text-sm font-medium">Suggested Automation</p>
-                  <p className="text-xs text-fixlyfy-text-secondary mt-1">
-                    Based on your patterns, adding a "3-day estimate follow-up" automation could increase conversions.
-                  </p>
-                  <Button variant="link" className="text-fixlyfy text-xs p-0 h-auto mt-1">
-                    Create this automation <ArrowRight size={12} className="ml-1" />
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
+      <CreateAutomationDialog 
+        open={createDialogOpen} 
+        onOpenChange={setCreateDialogOpen}
+        initialTemplate={selectedTemplate} 
+      />
     </div>
   );
 };
