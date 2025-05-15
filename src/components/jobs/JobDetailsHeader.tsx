@@ -6,7 +6,6 @@ import { MessageDialog } from "./dialogs/MessageDialog";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
 import { EstimateDialog } from "./dialogs/EstimateDialog";
 import { useJobDetailsHeader } from "./header/useJobDetailsHeader";
-import { useState } from "react";
 
 interface JobDetailsHeaderProps {
   id?: string;
@@ -18,6 +17,8 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
     status,
     balance,
     invoiceAmount,
+    estimateAmount,
+    hasEstimate,
     isCallDialogOpen,
     setIsCallDialogOpen,
     isMessageDialogOpen,
@@ -29,7 +30,9 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
     handleStatusChange,
     handleEditClient,
     handlePaymentAdded,
-    handleInvoiceCreated
+    handleInvoiceCreated,
+    handleEstimateCreated,
+    handleSyncEstimateToInvoice
   } = useJobDetailsHeader(id);
 
   const clientInfo = {
@@ -68,6 +71,8 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
             onEstimateClick={() => setIsEstimateDialogOpen(true)}
             onPaymentClick={() => {}}
             onExpenseClick={() => {}}
+            hasEstimate={hasEstimate}
+            onSyncEstimateToInvoice={handleSyncEstimateToInvoice}
           />
         </div>
       </div>
@@ -99,6 +104,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       <EstimateDialog 
         open={isEstimateDialogOpen} 
         onOpenChange={setIsEstimateDialogOpen}
+        onEstimateCreated={handleEstimateCreated}
         clientInfo={clientInfo}
         companyInfo={companyInfo}
       />

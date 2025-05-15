@@ -14,13 +14,17 @@ interface JobActionsProps {
   onEstimateClick: () => void;
   onPaymentClick: () => void;
   onExpenseClick: () => void;
+  hasEstimate?: boolean;
+  onSyncEstimateToInvoice?: () => void;
 }
 
 export const JobActions = ({ 
   onInvoiceClick, 
   onEstimateClick, 
   onPaymentClick, 
-  onExpenseClick
+  onExpenseClick,
+  hasEstimate = false,
+  onSyncEstimateToInvoice
 }: JobActionsProps) => {
   return (
     <div className="flex gap-3 self-start">
@@ -31,6 +35,12 @@ export const JobActions = ({
         <DropdownMenuContent align="end">
           <DropdownMenuItem>Complete Job</DropdownMenuItem>
           <DropdownMenuItem onClick={onInvoiceClick}>Send Invoice</DropdownMenuItem>
+          <DropdownMenuItem onClick={onEstimateClick}>Send Estimate</DropdownMenuItem>
+          {hasEstimate && onSyncEstimateToInvoice && (
+            <DropdownMenuItem onClick={onSyncEstimateToInvoice}>
+              Sync Estimate to Invoice
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem>Reschedule</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-fixlyfy-error">Cancel Job</DropdownMenuItem>

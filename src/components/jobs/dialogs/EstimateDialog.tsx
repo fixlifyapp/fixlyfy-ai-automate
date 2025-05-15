@@ -9,6 +9,7 @@ import { InvoiceForm } from "../forms/InvoiceForm";
 interface EstimateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEstimateCreated?: (amount: number) => void;
   clientInfo: {
     name: string;
     address: string;
@@ -28,11 +29,21 @@ interface EstimateDialogProps {
 export const EstimateDialog = ({ 
   open, 
   onOpenChange,
+  onEstimateCreated,
   clientInfo,
   companyInfo
 }: EstimateDialogProps) => {
   const handleEstimateSubmit = (data: any) => {
+    // Calculate total amount from the estimate items
+    const amount = data.items.reduce(
+      (total: number, item: any) => total + (item.quantity * item.unitPrice), 
+      0
+    );
+    
     toast.success(`Estimate #${data.invoiceNumber} sent`);
+    if (onEstimateCreated) {
+      onEstimateCreated(amount);
+    }
     onOpenChange(false);
   };
 

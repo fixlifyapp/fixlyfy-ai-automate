@@ -27,10 +27,10 @@ export const useJobDetailsHeader = (id: string) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState(0);
+  const [estimateAmount, setEstimateAmount] = useState(0);
   const [paymentsMade, setPaymentsMade] = useState<number[]>([]);
+  const [hasEstimate, setHasEstimate] = useState(false);
   
   const getJobInfo = () => {
     // In a real app, this would fetch job details from API
@@ -73,6 +73,18 @@ export const useJobDetailsHeader = (id: string) => {
 
   const handleInvoiceCreated = (amount: number) => {
     setInvoiceAmount(amount);
+    toast.success(`Invoice created for $${amount.toFixed(2)}`);
+  };
+
+  const handleEstimateCreated = (amount: number) => {
+    setEstimateAmount(amount);
+    setHasEstimate(true);
+    toast.success(`Estimate created for $${amount.toFixed(2)}`);
+  };
+
+  const handleSyncEstimateToInvoice = () => {
+    setInvoiceAmount(estimateAmount);
+    toast.success(`Estimate of $${estimateAmount.toFixed(2)} synced to invoice successfully`);
   };
 
   return {
@@ -80,6 +92,8 @@ export const useJobDetailsHeader = (id: string) => {
     status,
     balance,
     invoiceAmount,
+    estimateAmount,
+    hasEstimate,
     isCallDialogOpen,
     setIsCallDialogOpen,
     isMessageDialogOpen,
@@ -88,13 +102,11 @@ export const useJobDetailsHeader = (id: string) => {
     setIsInvoiceDialogOpen,
     isEstimateDialogOpen,
     setIsEstimateDialogOpen,
-    isPaymentDialogOpen,
-    setIsPaymentDialogOpen,
-    isExpenseDialogOpen,
-    setIsExpenseDialogOpen,
     handleStatusChange,
     handleEditClient,
     handlePaymentAdded,
-    handleInvoiceCreated
+    handleInvoiceCreated,
+    handleEstimateCreated,
+    handleSyncEstimateToInvoice
   };
 };
