@@ -1,15 +1,15 @@
 
-import { JobStatusBadge } from "./header/JobStatusBadge";
-import { ClientContactButtons } from "./header/ClientContactButtons";
-import { JobActions } from "./header/JobActions";
 import { JobInfoSection } from "./header/JobInfoSection";
+import { JobActions } from "./header/JobActions";
 import { CallDialog } from "./dialogs/CallDialog";
 import { MessageDialog } from "./dialogs/MessageDialog";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
 import { EstimateDialog } from "./dialogs/EstimateDialog";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { ExpenseDialog } from "./dialogs/ExpenseDialog";
+import { SearchDialog } from "./dialogs/SearchDialog";
 import { useJobDetailsHeader } from "./header/useJobDetailsHeader";
+import { useState } from "react";
 
 interface JobDetailsHeaderProps {
   id?: string;
@@ -39,6 +39,24 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
     handleInvoiceCreated
   } = useJobDetailsHeader(id);
 
+  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+
+  const clientInfo = {
+    name: job.client,
+    address: job.address,
+    phone: job.phone,
+    email: job.email
+  };
+
+  const companyInfo = {
+    name: job.companyName,
+    logo: job.companyLogo,
+    address: job.companyAddress,
+    phone: job.companyPhone,
+    email: job.companyEmail,
+    legalText: job.legalText
+  };
+
   return (
     <div className="fixlyfy-card">
       <div className="p-6">
@@ -59,6 +77,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
             onEstimateClick={() => setIsEstimateDialogOpen(true)}
             onPaymentClick={() => setIsPaymentDialogOpen(true)}
             onExpenseClick={() => setIsExpenseDialogOpen(true)}
+            onSearchClick={() => setIsSearchDialogOpen(true)}
           />
         </div>
       </div>
@@ -83,11 +102,15 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
         open={isInvoiceDialogOpen} 
         onOpenChange={setIsInvoiceDialogOpen} 
         onInvoiceCreated={handleInvoiceCreated}
+        clientInfo={clientInfo}
+        companyInfo={companyInfo}
       />
       
       <EstimateDialog 
         open={isEstimateDialogOpen} 
-        onOpenChange={setIsEstimateDialogOpen} 
+        onOpenChange={setIsEstimateDialogOpen}
+        clientInfo={clientInfo}
+        companyInfo={companyInfo}
       />
       
       <PaymentDialog 
@@ -100,6 +123,11 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       <ExpenseDialog 
         open={isExpenseDialogOpen} 
         onOpenChange={setIsExpenseDialogOpen} 
+      />
+
+      <SearchDialog
+        open={isSearchDialogOpen}
+        onOpenChange={setIsSearchDialogOpen}
       />
     </div>
   );

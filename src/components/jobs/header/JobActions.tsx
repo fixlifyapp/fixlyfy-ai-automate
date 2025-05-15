@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { FileText, FileTextIcon, ChevronDown } from "lucide-react";
+import { FileText, ChevronDown, Search } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -14,13 +14,15 @@ interface JobActionsProps {
   onEstimateClick: () => void;
   onPaymentClick: () => void;
   onExpenseClick: () => void;
+  onSearchClick?: () => void;
 }
 
 export const JobActions = ({ 
   onInvoiceClick, 
   onEstimateClick, 
   onPaymentClick, 
-  onExpenseClick 
+  onExpenseClick,
+  onSearchClick
 }: JobActionsProps) => {
   return (
     <div className="flex gap-3 self-start">
@@ -29,7 +31,7 @@ export const JobActions = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex gap-2 items-center">
-              <FileTextIcon size={16} />
+              <FileText size={16} />
               <span>Documents</span>
               <ChevronDown size={14} />
             </Button>
@@ -37,11 +39,11 @@ export const JobActions = ({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onInvoiceClick}>
               <FileText size={16} className="mr-2" />
-              Create Invoice
+              Send Invoice
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onEstimateClick}>
               <FileText size={16} className="mr-2" />
-              Create Estimate
+              Send Estimate
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -63,6 +65,16 @@ export const JobActions = ({
             <FileText size={16} />
             <span>Add Expense</span>
           </Button>
+          {onSearchClick && (
+            <Button 
+              variant="outline" 
+              className="flex gap-2 items-center"
+              onClick={onSearchClick}
+            >
+              <Search size={16} />
+              <span>Search</span>
+            </Button>
+          )}
         </div>
       </div>
       <DropdownMenu>

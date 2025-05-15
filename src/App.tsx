@@ -14,6 +14,7 @@ import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import MessagesPage from "./pages/MessagesPage";
+import PreviewPage from "./pages/PreviewPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/automations" element={<AutomationsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/preview/:type/:id" element={<PreviewPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
