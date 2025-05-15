@@ -1,10 +1,48 @@
 
-// This file is now obsolete as all tab functionality has been integrated directly into JobDetailsPage.tsx
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { JobDetailsQuickActions } from "./JobDetailsQuickActions";
 
-export const JobDetailsTabs = () => {
+interface JobDetailsTabsProps {
+  activeTab?: string;
+  onTabChange?: (value: string) => void;
+  children?: React.ReactNode;
+}
+
+export const JobDetailsTabs = ({ 
+  activeTab = "details", 
+  onTabChange,
+  children 
+}: JobDetailsTabsProps) => {
   return (
-    <div>
-      <p>This component is now obsolete.</p>
+    <div className="mb-6">
+      <Tabs
+        defaultValue={activeTab}
+        onValueChange={(value) => {
+          if (onTabChange) onTabChange(value);
+        }}
+        className="w-full"
+      >
+        <div className="flex justify-between items-center border-b mb-4">
+          <TabsList className="bg-transparent p-0 h-12">
+            <TabsTrigger
+              value="details"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+            >
+              Details
+            </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+            >
+              History
+            </TabsTrigger>
+          </TabsList>
+          
+          <JobDetailsQuickActions />
+        </div>
+        
+        {children}
+      </Tabs>
     </div>
   );
 };
