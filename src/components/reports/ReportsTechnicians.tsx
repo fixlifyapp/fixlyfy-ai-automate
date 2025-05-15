@@ -74,69 +74,67 @@ export const ReportsTechnicians = ({ period }: ReportsTechniciansProps) => {
             <TabsTrigger value="rating">Rating</TabsTrigger>
             <TabsTrigger value="jobs">Jobs</TabsTrigger>
           </TabsList>
+          <TabsContent value="efficiency" className="mt-0">
+            <div className="space-y-4">
+              {technicians.map((tech) => (
+                <div key={tech.id} className="flex items-center gap-4">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={tech.avatar} alt={tech.name} />
+                    <AvatarFallback>{tech.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between">
+                      <p className="text-sm font-medium leading-none">{tech.name}</p>
+                      <p className="text-sm font-medium">{tech.efficiency}%</p>
+                    </div>
+                    <Progress 
+                      value={tech.efficiency} 
+                      className={`h-2 ${tech.efficiency >= 90 ? 'bg-slate-100' : tech.efficiency >= 80 ? 'bg-slate-100' : 'bg-slate-100'}`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+          <TabsContent value="rating" className="mt-0">
+            <div className="space-y-4">
+              {technicians.map((tech) => (
+                <div key={tech.id} className="flex items-center gap-4">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={tech.avatar} alt={tech.name} />
+                    <AvatarFallback>{tech.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between">
+                      <p className="text-sm font-medium leading-none">{tech.name}</p>
+                      <p className="text-sm font-medium">★ {tech.avgRating}</p>
+                    </div>
+                    <Progress value={tech.avgRating * 20} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+          <TabsContent value="jobs" className="mt-0">
+            <div className="space-y-4">
+              {technicians.map((tech) => (
+                <div key={tech.id} className="flex items-center gap-4">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={tech.avatar} alt={tech.name} />
+                    <AvatarFallback>{tech.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between">
+                      <p className="text-sm font-medium leading-none">{tech.name}</p>
+                      <p className="text-sm font-medium">{tech.completedJobs} jobs</p>
+                    </div>
+                    <Progress value={(tech.completedJobs / 35) * 100} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
         </Tabs>
-      </CardHeader>
-      <CardContent>
-        <TabsContent value="efficiency" className="mt-0">
-          <div className="space-y-4">
-            {technicians.map((tech) => (
-              <div key={tech.id} className="flex items-center gap-4">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={tech.avatar} alt={tech.name} />
-                  <AvatarFallback>{tech.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex justify-between">
-                    <p className="text-sm font-medium leading-none">{tech.name}</p>
-                    <p className="text-sm font-medium">{tech.efficiency}%</p>
-                  </div>
-                  <Progress 
-                    value={tech.efficiency} 
-                    className={`h-2 ${tech.efficiency >= 90 ? 'bg-slate-100' : tech.efficiency >= 80 ? 'bg-slate-100' : 'bg-slate-100'}`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="rating" className="mt-0">
-          <div className="space-y-4">
-            {technicians.map((tech) => (
-              <div key={tech.id} className="flex items-center gap-4">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={tech.avatar} alt={tech.name} />
-                  <AvatarFallback>{tech.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex justify-between">
-                    <p className="text-sm font-medium leading-none">{tech.name}</p>
-                    <p className="text-sm font-medium">★ {tech.avgRating}</p>
-                  </div>
-                  <Progress value={tech.avgRating * 20} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="jobs" className="mt-0">
-          <div className="space-y-4">
-            {technicians.map((tech) => (
-              <div key={tech.id} className="flex items-center gap-4">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={tech.avatar} alt={tech.name} />
-                  <AvatarFallback>{tech.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex justify-between">
-                    <p className="text-sm font-medium leading-none">{tech.name}</p>
-                    <p className="text-sm font-medium">{tech.completedJobs} jobs</p>
-                  </div>
-                  <Progress value={(tech.completedJobs / 35) * 100} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
       </CardContent>
     </Card>
   );
