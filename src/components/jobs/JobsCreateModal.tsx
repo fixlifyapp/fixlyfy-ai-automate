@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,17 +27,33 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clients } from "@/data/clients";
+import { useToast } from "@/hooks/use-toast";
 
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preselectedClientId?: string;
 }
 
-export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) => {
+export const JobsCreateModal = ({ 
+  open, 
+  onOpenChange, 
+  preselectedClientId 
+}: JobsCreateModalProps) => {
+  const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedClient, setSelectedClient] = useState<string>("");
   const [items, setItems] = useState<{ name: string; quantity: number; price: number }[]>([
     { name: "", quantity: 1, price: 0 }
   ]);
+
+  // Set preselected client when modal opens or preselectedClientId changes
+  useEffect(() => {
+    if (open && preselectedClientId) {
+      setSelectedClient(preselectedClientId);
+    }
+  }, [open, preselectedClientId]);
 
   const handleAddItem = () => {
     setItems([...items, { name: "", quantity: 1, price: 0 }]);
@@ -58,6 +73,18 @@ export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) =>
     setItems(newItems);
   };
 
+  const handleSubmit = () => {
+    // Simulate job creation
+    toast({
+      title: "Job created",
+      description: "The new job has been created successfully.",
+    });
+    
+    // Reset form and close modal
+    onOpenChange(false);
+    setItems([{ name: "", quantity: 1, price: 0 }]);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -72,15 +99,14 @@ export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) =>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="client">Client</Label>
-              <Select>
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="michael">Michael Johnson</SelectItem>
-                  <SelectItem value="sarah">Sarah Williams</SelectItem>
-                  <SelectItem value="david">David Brown</SelectItem>
-                  <SelectItem value="jessica">Jessica Miller</SelectItem>
+                  {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                  ))}
                   <SelectItem value="new">+ Create New Client</SelectItem>
                 </SelectContent>
               </Select>
@@ -245,7 +271,7 @@ export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) =>
           <Button 
             type="submit" 
             className="bg-fixlyfy hover:bg-fixlyfy/90" 
-            onClick={() => onOpenChange(false)}
+            onClick={handleSubmit}
           >
             Create Job
           </Button>
