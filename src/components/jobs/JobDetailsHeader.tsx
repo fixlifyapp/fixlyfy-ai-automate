@@ -5,9 +5,6 @@ import { CallDialog } from "./dialogs/CallDialog";
 import { MessageDialog } from "./dialogs/MessageDialog";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
 import { EstimateDialog } from "./dialogs/EstimateDialog";
-import { PaymentDialog } from "./dialogs/PaymentDialog";
-import { ExpenseDialog } from "./dialogs/ExpenseDialog";
-import { SearchDialog } from "./dialogs/SearchDialog";
 import { useJobDetailsHeader } from "./header/useJobDetailsHeader";
 import { useState } from "react";
 
@@ -29,17 +26,11 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
     setIsInvoiceDialogOpen,
     isEstimateDialogOpen,
     setIsEstimateDialogOpen,
-    isPaymentDialogOpen,
-    setIsPaymentDialogOpen,
-    isExpenseDialogOpen,
-    setIsExpenseDialogOpen,
     handleStatusChange,
     handleEditClient,
     handlePaymentAdded,
     handleInvoiceCreated
   } = useJobDetailsHeader(id);
-
-  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
 
   const clientInfo = {
     name: job.client,
@@ -75,9 +66,8 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
           <JobActions
             onInvoiceClick={() => setIsInvoiceDialogOpen(true)}
             onEstimateClick={() => setIsEstimateDialogOpen(true)}
-            onPaymentClick={() => setIsPaymentDialogOpen(true)}
-            onExpenseClick={() => setIsExpenseDialogOpen(true)}
-            onSearchClick={() => setIsSearchDialogOpen(true)}
+            onPaymentClick={() => {}}
+            onExpenseClick={() => {}}
           />
         </div>
       </div>
@@ -111,23 +101,6 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
         onOpenChange={setIsEstimateDialogOpen}
         clientInfo={clientInfo}
         companyInfo={companyInfo}
-      />
-      
-      <PaymentDialog 
-        open={isPaymentDialogOpen} 
-        onOpenChange={setIsPaymentDialogOpen} 
-        balance={balance}
-        onPaymentProcessed={handlePaymentAdded}
-      />
-      
-      <ExpenseDialog 
-        open={isExpenseDialogOpen} 
-        onOpenChange={setIsExpenseDialogOpen} 
-      />
-
-      <SearchDialog
-        open={isSearchDialogOpen}
-        onOpenChange={setIsSearchDialogOpen}
       />
     </div>
   );
