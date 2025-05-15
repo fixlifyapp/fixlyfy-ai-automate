@@ -23,76 +23,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { clients } from "@/data/clients";
 
 interface ClientsListProps {
   isGridView: boolean;
 }
 
-const clients = [
-  {
-    id: "CLT-1001",
-    name: "Michael Johnson",
-    email: "michael.johnson@example.com",
-    phone: "(555) 123-4567",
-    status: "active",
-    lastOrder: "2023-05-10",
-    revenue: 1250.00,
-    address: "123 Main St, Apt 45, Boston, MA",
-    rating: 5,
-    type: "Residential"
-  },
-  {
-    id: "CLT-1002",
-    name: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    phone: "(555) 987-6543",
-    status: "active",
-    lastOrder: "2023-05-15",
-    revenue: 2750.00,
-    address: "456 Oak Ave, New York, NY",
-    rating: 4,
-    type: "Residential"
-  },
-  {
-    id: "CLT-1003",
-    name: "Apex Construction Inc.",
-    email: "info@apexconstruction.com",
-    phone: "(555) 765-4321",
-    status: "active",
-    lastOrder: "2023-05-01",
-    revenue: 12500.00,
-    address: "789 Business Park, Chicago, IL",
-    rating: 5,
-    type: "Commercial"
-  },
-  {
-    id: "CLT-1004",
-    name: "Jessica Miller",
-    email: "jessica.miller@example.com",
-    phone: "(555) 234-5678",
-    status: "inactive",
-    lastOrder: "2023-03-20",
-    revenue: 350.00,
-    address: "321 Elm St, San Francisco, CA",
-    rating: 3,
-    type: "Residential"
-  },
-  {
-    id: "CLT-1005",
-    name: "Highland Property Management",
-    email: "contact@highlandpm.com",
-    phone: "(555) 876-5432",
-    status: "active",
-    lastOrder: "2023-05-17",
-    revenue: 8750.00,
-    address: "555 Highland Ave, Seattle, WA",
-    rating: 4,
-    type: "Property Manager"
-  },
-];
-
 export const ClientsList = ({ isGridView }: ClientsListProps) => {
+  const navigate = useNavigate();
+
+  const handleClientClick = (clientId: string) => {
+    navigate(`/clients/${clientId}`);
+  };
+
   const getRatingStars = (rating: number) => {
     return Array(5).fill(0).map((_, i) => (
       <Star 
@@ -108,7 +52,11 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
       {isGridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {clients.map((client) => (
-            <Link to={`/clients/${client.id}`} key={client.id} className="fixlyfy-card hover:shadow-lg transition-shadow">
+            <div
+              key={client.id}
+              onClick={() => handleClientClick(client.id)}
+              className="fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer"
+            >
               <div className="p-4 border-b border-fixlyfy-border">
                 <div className="flex justify-between items-start">
                   <div>
@@ -148,12 +96,20 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                     <span className="text-fixlyfy-text-secondary">Lifetime Value:</span>
                     <span className="ml-2 font-medium">${client.revenue.toFixed(2)}</span>
                   </div>
-                  <Button variant="outline" size="sm" className="text-fixlyfy border-fixlyfy/20">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-fixlyfy border-fixlyfy/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClientClick(client.id);
+                    }}
+                  >
                     View
                   </Button>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
@@ -178,15 +134,16 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
               {clients.map((client, idx) => (
                 <TableRow 
                   key={client.id}
-                  className={idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50"}
+                  className={idx % 2 === 0 ? "bg-white cursor-pointer" : "bg-fixlyfy-bg-interface/50 cursor-pointer"}
+                  onClick={() => handleClientClick(client.id)}
                 >
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox />
                   </TableCell>
                   <TableCell>
-                    <Link to={`/clients/${client.id}`} className="font-medium hover:text-fixlyfy transition-colors">
+                    <span className="font-medium hover:text-fixlyfy transition-colors">
                       {client.id}
-                    </Link>
+                    </span>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{client.name}</div>
@@ -217,7 +174,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       {getRatingStars(client.rating)}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -227,7 +184,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleClientClick(client.id)}>
                           <Eye size={16} className="mr-2" /> View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem>
