@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tag, MoreHorizontal, Phone, MessageSquare, Pencil, FileText, FileTextIcon, ChevronDown, FileInvoice } from "lucide-react";
+import { Tag, MoreHorizontal, Phone, MessageSquare, Pencil, FileText, FileTextIcon, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
@@ -119,7 +118,7 @@ const JobActions = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onInvoiceClick}>
-              <FileInvoice size={16} className="mr-2" />
+              <FileText size={16} className="mr-2" />
               Create Invoice
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onEstimateClick}>
