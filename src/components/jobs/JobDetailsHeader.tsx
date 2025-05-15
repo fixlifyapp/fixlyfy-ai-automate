@@ -7,13 +7,7 @@ import {
   MoreHorizontal, 
   Pencil, 
   Phone, 
-  MessageSquare,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
+  MessageSquare
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,7 +17,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog as UIDialog } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
+import {
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -218,7 +218,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
       </div>
 
       {/* Call Dialog */}
-      <UIDialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
+      <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Call Client</DialogTitle>
@@ -235,10 +235,10 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
             </div>
           </div>
         </DialogContent>
-      </UIDialog>
+      </Dialog>
 
       {/* Message Dialog */}
-      <UIDialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Message History with {job.client}</DialogTitle>
@@ -270,7 +270,7 @@ export const JobDetailsHeader = ({ id = "JOB-1001" }: JobDetailsHeaderProps) => 
             </div>
           </div>
         </DialogContent>
-      </UIDialog>
+      </Dialog>
     </div>
   );
 };
