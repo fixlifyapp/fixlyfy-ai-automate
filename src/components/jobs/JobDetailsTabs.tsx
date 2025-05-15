@@ -1,5 +1,5 @@
 
-// This file is now obsolete as the tab functionality has been integrated directly into JobDetailsPage.tsx
+// This file is now obsolete as all tab functionality has been integrated directly into JobDetailsPage.tsx
 
 export const JobDetailsTabs = () => {
   return (
