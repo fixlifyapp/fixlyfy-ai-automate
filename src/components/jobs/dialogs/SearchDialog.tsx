@@ -60,12 +60,13 @@ export const SearchDialog = ({ open, onOpenChange }: SearchDialogProps) => {
           type: "job",
           icon: Phone
         }
-      ].filter(item => 
+      ];
+      
+      setResults(mockResults.filter(item => 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
         item.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      ));
       
-      setResults(mockResults);
       setIsSearching(false);
     }, 500);
   };

@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FileText, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const invoiceFormSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
@@ -26,6 +27,8 @@ const invoiceFormSchema = z.object({
       description: z.string().min(1, "Description is required"),
       quantity: z.number().min(1, "Quantity must be at least 1"),
       unitPrice: z.number().min(0.01, "Price must be greater than 0"),
+      ourPrice: z.number().min(0, "Our price must be 0 or greater"),
+      taxable: z.boolean().default(true),
     })
   ).min(1, "At least one item is required"),
   notes: z.string().optional(),
@@ -70,7 +73,7 @@ export const InvoiceForm = ({
       invoiceNumber: defaultInvoiceNumber,
       issueDate: new Date().toISOString().slice(0, 10),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      items: [{ description: "", quantity: 1, unitPrice: 0 }],
+      items: [{ description: "", quantity: 1, unitPrice: 0, ourPrice: 0, taxable: true }],
       notes: "",
     },
   });
@@ -83,7 +86,13 @@ export const InvoiceForm = ({
 
   const calculateTotal = () => {
     return form.watch("items").reduce(
-      (total, item) => total + (item.quantity || 0) * (item.unitPrice || 0),
+      (total, item) => {
+        if (item.taxable) {
+          // Add 5% tax for taxable items - this could be configurable in a real app
+          return total + (item.quantity || 0) * (item.unitPrice || 0) * 1.05;
+        }
+        return total + (item.quantity || 0) * (item.unitPrice || 0);
+      },
       0
     );
   };
@@ -93,7 +102,7 @@ export const InvoiceForm = ({
   };
 
   const addItem = () => {
-    append({ description: "", quantity: 1, unitPrice: 0 });
+    append({ description: "", quantity: 1, unitPrice: 0, ourPrice: 0, taxable: true });
   };
 
   const removeItem = (index: number) => {
@@ -157,6 +166,9 @@ export const InvoiceForm = ({
               <th className="py-3 text-right">Qty</th>
               <th className="py-3 text-right">Unit Price</th>
               <th className="py-3 text-right">Amount</th>
+              {data.items.some(item => item.taxable) && (
+                <th className="py-3 text-center">Tax</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -166,10 +178,13 @@ export const InvoiceForm = ({
                 <td className="py-3 text-right">{item.quantity}</td>
                 <td className="py-3 text-right">${item.unitPrice.toFixed(2)}</td>
                 <td className="py-3 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                {data.items.some(item => item.taxable) && (
+                  <td className="py-3 text-center">{item.taxable ? "✓" : ""}</td>
+                )}
               </tr>
             ))}
             <tr>
-              <td colSpan={3} className="py-4 text-right font-semibold">Total:</td>
+              <td colSpan={data.items.some(item => item.taxable) ? 4 : 3} className="py-4 text-right font-semibold">Total:</td>
               <td className="py-4 text-right font-bold">${total.toFixed(2)}</td>
             </tr>
           </tbody>
@@ -271,16 +286,16 @@ export const InvoiceForm = ({
             <div>
               <h3 className="font-medium text-lg mb-4">Items</h3>
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-12 gap-3 mb-3">
-                  <div className="col-span-6">
+                <div key={field.id} className="grid grid-cols-12 gap-3 mb-4">
+                  <div className="col-span-3">
                     <FormField
                       control={form.control}
                       name={`items.${index}.description`}
                       render={({ field }) => (
                         <FormItem>
-                          {index === 0 && <FormLabel>Description</FormLabel>}
+                          {index === 0 && <FormLabel>Product Name</FormLabel>}
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} placeholder="Enter product name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -308,13 +323,13 @@ export const InvoiceForm = ({
                       )}
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <FormField
                       control={form.control}
                       name={`items.${index}.unitPrice`}
                       render={({ field }) => (
                         <FormItem>
-                          {index === 0 && <FormLabel>Unit Price ($)</FormLabel>}
+                          {index === 0 && <FormLabel>Client Price ($)</FormLabel>}
                           <FormControl>
                             <Input 
                               type="number" 
@@ -329,18 +344,61 @@ export const InvoiceForm = ({
                       )}
                     />
                   </div>
-                  <div className="col-span-1 flex items-end">
-                    {index === 0 && <div className="h-6 mb-2"></div>}
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => removeItem(index)}
-                      className="text-fixlyfy-text-secondary"
-                      disabled={fields.length <= 1}
-                    >
-                      <Trash size={18} />
-                    </Button>
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.ourPrice`}
+                      render={({ field }) => (
+                        <FormItem>
+                          {index === 0 && <FormLabel>Our Price ($)</FormLabel>}
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="0" 
+                              step="0.01" 
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              className="bg-yellow-50"
+                              title="Internal use only - not shown on invoice"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          {index === 0 && (
+                            <p className="text-xs text-muted-foreground italic">Internal only - not visible to client</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.taxable`}
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-end space-x-3 pt-6">
+                          {index === 0 && <div className="absolute -top-6 text-sm font-medium">Taxable</div>}
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="text-sm">
+                            {field.value ? 'Yes' : 'No'}
+                          </div>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => removeItem(index)}
+                            className="text-fixlyfy-text-secondary ml-3"
+                            disabled={fields.length <= 1}
+                          >
+                            <Trash size={18} />
+                          </Button>
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
               ))}
