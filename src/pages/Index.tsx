@@ -7,6 +7,8 @@ import { RecentJobs } from "@/components/dashboard/RecentJobs";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
+import { SecondaryMetrics } from "@/components/dashboard/SecondaryMetrics";
+import { ServiceCategoryChart } from "@/components/dashboard/ServiceCategoryChart";
 
 const Index = () => {
   return (
@@ -27,21 +29,31 @@ const Index = () => {
         </div>
       </div>
       
+      <div className="mb-6">
+        <SecondaryMetrics />
+      </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
           <DashboardCharts />
         </div>
         <div>
+          <ServiceCategoryChart />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div>
           <AiAssistant />
+        </div>
+        <div className="lg:col-span-2">
+          <UpcomingJobs />
         </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 gap-6">
-            <UpcomingJobs />
-            <ActivityFeed />
-          </div>
+          <ActivityFeed />
         </div>
         <div>
           <RecentJobs />

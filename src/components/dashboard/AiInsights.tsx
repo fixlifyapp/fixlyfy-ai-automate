@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Brain } from "lucide-react";
+import { Brain, AlertTriangle, TrendingUp, Clock, Star, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const insights = [
@@ -9,21 +9,36 @@ const insights = [
     title: 'Revenue Opportunity',
     description: 'HVAC revenue is down 18% compared to last month. Consider a targeted promotion.',
     type: 'warning',
-    action: 'Create Promotion'
+    action: 'Create Promotion',
+    actionUrl: '/marketing',
+    icon: AlertTriangle
   },
   {
     id: 2,
     title: 'Scheduling Optimization',
     description: '3 technicians are underutilized next week. Optimize your schedule.',
     type: 'info',
-    action: 'Optimize Schedule'
+    action: 'Optimize Schedule',
+    actionUrl: '/schedule',
+    icon: Clock
   },
   {
     id: 3,
     title: 'Customer Satisfaction',
     description: 'Customer ratings improved by 12% this month. Great job!',
     type: 'success',
-    action: null
+    action: 'View Details',
+    actionUrl: '/reports',
+    icon: Star
+  },
+  {
+    id: 4,
+    title: 'Performance Trend',
+    description: 'Your business efficiency has increased 8% over the last quarter.',
+    type: 'info',
+    action: 'View Analytics',
+    actionUrl: '/reports',
+    icon: TrendingUp
   }
 ];
 
@@ -39,7 +54,7 @@ export const AiInsights = () => {
         </div>
       </div>
       
-      <div className="px-6 py-4 space-y-4">
+      <div className="px-6 py-4 space-y-4 overflow-auto max-h-[calc(100%-200px)]">
         {insights.map((insight, idx) => (
           <div 
             key={insight.id} 
@@ -52,14 +67,22 @@ export const AiInsights = () => {
             style={{ animationDelay: `${idx * 150}ms` }}
           >
             <div className="flex items-start justify-between">
-              <h3 className={cn(
-                "text-sm font-medium mb-1",
-                insight.type === 'success' && "text-fixlyfy-success",
-                insight.type === 'warning' && "text-fixlyfy-warning",
-                insight.type === 'info' && "text-fixlyfy-info",
-              )}>
-                {insight.title}
-              </h3>
+              <div className="flex gap-2 items-center">
+                <insight.icon className={cn(
+                  "h-4 w-4",
+                  insight.type === 'success' && "text-fixlyfy-success",
+                  insight.type === 'warning' && "text-fixlyfy-warning",
+                  insight.type === 'info' && "text-fixlyfy-info",
+                )} />
+                <h3 className={cn(
+                  "text-sm font-medium",
+                  insight.type === 'success' && "text-fixlyfy-success",
+                  insight.type === 'warning' && "text-fixlyfy-warning",
+                  insight.type === 'info' && "text-fixlyfy-info",
+                )}>
+                  {insight.title}
+                </h3>
+              </div>
               <div className={cn(
                 "w-2 h-2 rounded-full",
                 insight.type === 'success' && "bg-fixlyfy-success",
@@ -67,10 +90,23 @@ export const AiInsights = () => {
                 insight.type === 'info' && "bg-fixlyfy-info",
               )} />
             </div>
-            <p className="text-sm text-fixlyfy-text-secondary mb-2">{insight.description}</p>
+            <p className="text-sm text-fixlyfy-text-secondary mb-2 mt-1">{insight.description}</p>
             {insight.action && (
-              <Button size="sm" variant="outline" className="w-full text-fixlyfy border-fixlyfy/20">
-                {insight.action}
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className={cn(
+                  "w-full text-fixlyfy border-fixlyfy/20 justify-between",
+                  insight.type === 'success' && "text-fixlyfy-success border-fixlyfy-success/20",
+                  insight.type === 'warning' && "text-fixlyfy-warning border-fixlyfy-warning/20",
+                  insight.type === 'info' && "text-fixlyfy-info border-fixlyfy-info/20",
+                )}
+                asChild
+              >
+                <a href={insight.actionUrl}>
+                  {insight.action}
+                  <ArrowUpRight size={14} />
+                </a>
               </Button>
             )}
           </div>
