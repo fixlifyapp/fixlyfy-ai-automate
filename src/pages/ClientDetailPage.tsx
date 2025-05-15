@@ -3,11 +3,9 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ClientForm } from "@/components/clients/ClientForm";
-import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
-  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   
   return (
     <PageLayout>
@@ -18,16 +16,7 @@ const ClientDetailPage = () => {
         </p>
       </div>
       
-      <ClientForm 
-        clientId={id} 
-        onCreateJob={() => setIsCreateJobModalOpen(true)}
-      />
-
-      <JobsCreateModal 
-        open={isCreateJobModalOpen} 
-        onOpenChange={setIsCreateJobModalOpen}
-        preselectedClient={id}
-      />
+      <ClientForm clientId={id} />
     </PageLayout>
   );
 };

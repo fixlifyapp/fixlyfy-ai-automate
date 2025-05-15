@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,11 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { 
   MoreVertical, 
-  Pencil,
   Eye, 
-  Mail, 
-  Phone, 
-  FileText, 
   Trash,
   Star
 } from "lucide-react";
@@ -186,15 +181,6 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleClientClick(client.id)}>
                           <Eye size={16} className="mr-2" /> View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Pencil size={16} className="mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Mail size={16} className="mr-2" /> Send Email
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <FileText size={16} className="mr-2" /> Create Job
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-fixlyfy-error">
