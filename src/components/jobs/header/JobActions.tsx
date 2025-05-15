@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { FileText, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
