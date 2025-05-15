@@ -182,23 +182,6 @@ export const Sidebar = () => {
           </Link>
         ))}
       </div>
-      
-      {!collapsed && (
-        <div className="p-4 m-3 rounded-lg fixlyfy-gradient">
-          <div className="text-white font-medium mb-1">Upgrade to Pro</div>
-          <p className="text-white/80 text-xs mb-3">Get access to AI features and more</p>
-          <Button size="sm" variant="secondary" className="w-full">
-            Upgrade
-          </Button>
-        </div>
-      )}
-      {collapsed && (
-        <div className="p-3 m-2 rounded-lg fixlyfy-gradient flex items-center justify-center">
-          <Button size="icon" variant="secondary">
-            <ChevronRight size={16} />
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
