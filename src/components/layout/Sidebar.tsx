@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -9,12 +8,9 @@ import {
   Settings, 
   BarChart3, 
   Mail, 
-  FileText, 
-  Menu, 
-  ChevronRight,
-  Package,
   Zap,
-  CreditCard
+  Menu, 
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -46,18 +42,6 @@ const menuItems = [
     path: '/schedule',
     highlight: false 
   },
-  { 
-    name: 'Invoices', 
-    icon: CreditCard, 
-    path: '/invoices',
-    highlight: false 
-  },
-  { 
-    name: 'Inventory', 
-    icon: Package, 
-    path: '/inventory',
-    highlight: false 
-  },
   {
     name: 'Automations',
     icon: Zap,
@@ -76,13 +60,7 @@ const menuItems = [
     path: '/messages', 
     badge: '3',
     highlight: false 
-  },
-  { 
-    name: 'Documents', 
-    icon: FileText, 
-    path: '/documents',
-    highlight: false 
-  },
+  }
 ];
 
 const bottomMenuItems = [
