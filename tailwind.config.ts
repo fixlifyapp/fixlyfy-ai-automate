@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -61,34 +65,66 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				fixlyfy: {
+					DEFAULT: '#8A4DD5',
+					light: '#B084F9',
+					success: '#10B981',
+					warning: '#F59E0B',
+					error: '#EF4444',
+					info: '#3B82F6',
+					text: '#111827',
+					'text-secondary': '#6B7280',
+					'text-muted': '#9CA3AF',
+					'bg-interface': '#F9FAFB',
+					'bg-sidebar': '#F4F4F8',
+					border: '#E5E7EB',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
+			boxShadow: {
+				'card': '0 4px 12px rgba(0, 0, 0, 0.04)',
+			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' },
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' },
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
 					},
-					to: {
-						height: '0'
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
 					}
-				}
+				},
+				'slide-in': {
+					'0%': {
+						transform: 'translateX(-100%)',
+					},
+					'100%': {
+						transform: 'translateX(0)',
+					}
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out forwards',
+				'slide-in': 'slide-in 0.3s ease-out forwards',
+			},
+			backgroundImage: {
+				'gradient-primary': 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 100%)',
 			}
 		}
 	},
