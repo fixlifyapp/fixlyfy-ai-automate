@@ -56,6 +56,11 @@ import {
   Search,
   Trash,
   Check,
+  FileCheck,
+  CreditCard,
+  Download,
+  Printer,
+  ChevronsUpDown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +76,8 @@ const mockProducts = [
   { id: "6", name: "Diagnostic Service", description: "Complete system diagnostic", price: 89.00 },
   { id: "7", name: "Duct Cleaning", description: "Full duct system cleaning", price: 299.00 },
   { id: "8", name: "Compressor", description: "2-ton replacement compressor", price: 485.00 },
+  { id: "9", name: "Thermostat Wire", description: "18-gauge thermostat wire (50ft)", price: 24.99 },
+  { id: "10", name: "Air Handler", description: "2-ton air handler unit", price: 899.00 },
 ];
 
 // Mock history data
@@ -85,7 +92,7 @@ const jobHistoryData = [
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   
-  // State for modals and popovers
+  // State for dialogs
   const [isDescriptionDialogOpen, setIsDescriptionDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isJobTypeDialogOpen, setIsJobTypeDialogOpen] = useState(false);
@@ -94,6 +101,10 @@ const JobDetailsPage = () => {
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isEstimateDetailsOpen, setIsEstimateDetailsOpen] = useState(false);
+  const [isInvoicePreviewOpen, setIsInvoicePreviewOpen] = useState(false);
+  const [isEstimatePreviewOpen, setIsEstimatePreviewOpen] = useState(false);
   
   // Job data state
   const [jobDescription, setJobDescription] = useState<string>(
@@ -120,6 +131,9 @@ const JobDetailsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState(mockProducts);
   const [applyTax, setApplyTax] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState("credit-card");
+  const [invoiceNumber] = useState("INV-1089");
+  const [estimateNumber] = useState("EST-2047");
   const TAX_RATE = 0.13; // 13% tax rate
   
   // Mock data
@@ -143,8 +157,24 @@ const JobDetailsPage = () => {
   const clientInfo = {
     name: "Michael Johnson",
     address: "123 Main St, Apt 45",
+    city: "Austin",
+    state: "TX",
+    zip: "78701",
     phone: "(555) 123-4567",
     email: "michael.johnson@example.com"
+  };
+
+  const companyInfo = {
+    name: "Fixlyfy Services Inc.",
+    logo: "https://placekitten.com/200/60", // Placeholder logo
+    address: "456 Business Ave, Suite 100",
+    city: "Austin",
+    state: "TX",
+    zip: "78702",
+    phone: "(555) 987-6543",
+    email: "info@fixlyfy.com",
+    website: "www.fixlyfy.com",
+    taxId: "TX-12345678"
   };
 
   const handleAddAttachment = () => {
@@ -206,14 +236,38 @@ const JobDetailsPage = () => {
     return calculateSubtotal() + calculateTax();
   };
 
-  const handleCreateInvoice = () => {
+  const handleSendInvoice = () => {
     if (invoiceItems.length === 0) {
-      toast.error("Cannot create empty invoice. Please add products first.");
+      toast.error("Cannot send empty invoice. Please add products first.");
       return;
     }
     
-    toast.success("Invoice created successfully!");
-    // In a real app, this would save the invoice to a database
+    setIsInvoicePreviewOpen(true);
+  };
+  
+  const handleSendEstimate = () => {
+    if (invoiceItems.length === 0) {
+      toast.error("Cannot send empty estimate. Please add products first.");
+      return;
+    }
+    
+    setIsEstimatePreviewOpen(true);
+  };
+  
+  const handleMakePayment = () => {
+    if (calculateTotal() <= 0) {
+      toast.error("No amount to pay. Please add products to the invoice first.");
+      return;
+    }
+    
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleProcessPayment = () => {
+    toast.success(`Payment of $${calculateTotal().toFixed(2)} processed via ${paymentMethod === "credit-card" ? "Credit Card" : 
+      paymentMethod === "e-transfer" ? "E-Transfer" : 
+      paymentMethod === "cash" ? "Cash" : "Check"}`);
+    setIsPaymentDialogOpen(false);
   };
   
   return (
@@ -436,116 +490,320 @@ const JobDetailsPage = () => {
               
               <TabsContent value="create" className="p-6">
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium">Create Invoice</h3>
-                    <Button 
-                      onClick={() => setIsAddProductDialogOpen(true)}
-                      className="bg-fixlyfy hover:bg-fixlyfy/90"
-                    >
-                      <Plus size={16} className="mr-2" />
-                      Add Product
-                    </Button>
-                  </div>
-                  
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[40%]">Product</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead className="text-center">Qty</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {invoiceItems.length > 0 ? (
-                          invoiceItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-medium">{item.name}</TableCell>
-                              <TableCell>{item.description}</TableCell>
-                              <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center justify-center">
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    className="h-7 w-7"
-                                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                  >
-                                    -
-                                  </Button>
-                                  <span className="mx-2">{item.quantity}</span>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                                    className="h-7 w-7"
-                                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                                  >
-                                    +
-                                  </Button>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-red-500"
-                                  onClick={() => handleRemoveProduct(item.id)}
-                                >
-                                  <Trash size={16} />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center py-4 text-fixlyfy-text-secondary">
-                              No products added yet. Click "Add Product" to create an invoice.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="apply-tax" 
-                        checked={applyTax} 
-                        onCheckedChange={setApplyTax}
-                      />
-                      <Label htmlFor="apply-tax">Apply Tax (13%)</Label>
+                  {/* Tabs for different creation options */}
+                  <Tabs defaultValue="invoice">
+                    <div className="mb-6">
+                      <TabsList className="grid grid-cols-3 w-full md:w-auto">
+                        <TabsTrigger value="invoice">Invoice</TabsTrigger>
+                        <TabsTrigger value="estimate">Estimate</TabsTrigger>
+                        <TabsTrigger value="payment">Payment</TabsTrigger>
+                      </TabsList>
                     </div>
                     
-                    <div className="space-y-2 text-right">
-                      <div className="text-sm text-fixlyfy-text-secondary">
-                        <span>Subtotal:</span>
-                        <span className="ml-2 font-medium text-foreground">${calculateSubtotal().toFixed(2)}</span>
+                    <TabsContent value="invoice" className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="text-lg font-medium">Create Invoice</h3>
+                          <p className="text-sm text-fixlyfy-text-secondary">Invoice #{invoiceNumber}</p>
+                        </div>
+                        <Button 
+                          onClick={() => setIsAddProductDialogOpen(true)}
+                          className="bg-fixlyfy hover:bg-fixlyfy/90"
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Add Product
+                        </Button>
                       </div>
-                      <div className="text-sm text-fixlyfy-text-secondary">
-                        <span>Tax (13%):</span>
-                        <span className="ml-2 font-medium text-foreground">${calculateTax().toFixed(2)}</span>
+                      
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[40%]">Product</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Price</TableHead>
+                              <TableHead className="text-center">Qty</TableHead>
+                              <TableHead className="text-right">Total</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {invoiceItems.length > 0 ? (
+                              invoiceItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell className="font-medium">{item.name}</TableCell>
+                                  <TableCell>{item.description}</TableCell>
+                                  <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center justify-center">
+                                      <Button 
+                                        variant="outline" 
+                                        size="icon" 
+                                        className="h-7 w-7"
+                                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="mx-2">{item.quantity}</span>
+                                      <Button 
+                                        variant="outline" 
+                                        size="icon" 
+                                        className="h-7 w-7"
+                                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                      >
+                                        +
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                                  <TableCell>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => handleRemoveProduct(item.id)}
+                                    >
+                                      <Trash size={16} />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center py-4 text-fixlyfy-text-secondary">
+                                  No products added yet. Click "Add Product" to create an invoice.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="text-lg font-medium">
-                        <span>Total:</span>
-                        <span className="ml-2">${calculateTotal().toFixed(2)}</span>
+                      
+                      <div className="flex justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Switch 
+                            id="apply-tax" 
+                            checked={applyTax} 
+                            onCheckedChange={setApplyTax}
+                          />
+                          <Label htmlFor="apply-tax">Apply Tax (13%)</Label>
+                        </div>
+                        
+                        <div className="space-y-2 text-right">
+                          <div className="text-sm text-fixlyfy-text-secondary">
+                            <span>Subtotal:</span>
+                            <span className="ml-2 font-medium text-foreground">${calculateSubtotal().toFixed(2)}</span>
+                          </div>
+                          <div className="text-sm text-fixlyfy-text-secondary">
+                            <span>Tax (13%):</span>
+                            <span className="ml-2 font-medium text-foreground">${calculateTax().toFixed(2)}</span>
+                          </div>
+                          <div className="text-lg font-medium">
+                            <span>Total:</span>
+                            <span className="ml-2">${calculateTotal().toFixed(2)}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <Button 
-                      className="bg-fixlyfy hover:bg-fixlyfy/90 w-[200px]"
-                      onClick={handleCreateInvoice}
-                      disabled={invoiceItems.length === 0}
-                    >
-                      Create Invoice
-                    </Button>
-                  </div>
+                      
+                      <div className="flex justify-end">
+                        <Button 
+                          className="bg-fixlyfy hover:bg-fixlyfy/90 w-[200px]"
+                          onClick={handleSendInvoice}
+                          disabled={invoiceItems.length === 0}
+                        >
+                          Send Invoice
+                        </Button>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="estimate" className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="text-lg font-medium">Create Estimate</h3>
+                          <p className="text-sm text-fixlyfy-text-secondary">Estimate #{estimateNumber}</p>
+                        </div>
+                        <Button 
+                          onClick={() => setIsAddProductDialogOpen(true)}
+                          className="bg-fixlyfy hover:bg-fixlyfy/90"
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Add Product
+                        </Button>
+                      </div>
+                      
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[40%]">Product</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Price</TableHead>
+                              <TableHead className="text-center">Qty</TableHead>
+                              <TableHead className="text-right">Total</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {invoiceItems.length > 0 ? (
+                              invoiceItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell className="font-medium">{item.name}</TableCell>
+                                  <TableCell>{item.description}</TableCell>
+                                  <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center justify-center">
+                                      <Button 
+                                        variant="outline" 
+                                        size="icon" 
+                                        className="h-7 w-7"
+                                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                      >
+                                        -
+                                      </Button>
+                                      <span className="mx-2">{item.quantity}</span>
+                                      <Button 
+                                        variant="outline" 
+                                        size="icon" 
+                                        className="h-7 w-7"
+                                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                      >
+                                        +
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                                  <TableCell>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8 text-red-500"
+                                      onClick={() => handleRemoveProduct(item.id)}
+                                    >
+                                      <Trash size={16} />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center py-4 text-fixlyfy-text-secondary">
+                                  No products added yet. Click "Add Product" to create an estimate.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Switch 
+                            id="apply-tax-estimate" 
+                            checked={applyTax} 
+                            onCheckedChange={setApplyTax}
+                          />
+                          <Label htmlFor="apply-tax-estimate">Apply Tax (13%)</Label>
+                        </div>
+                        
+                        <div className="space-y-2 text-right">
+                          <div className="text-sm text-fixlyfy-text-secondary">
+                            <span>Subtotal:</span>
+                            <span className="ml-2 font-medium text-foreground">${calculateSubtotal().toFixed(2)}</span>
+                          </div>
+                          <div className="text-sm text-fixlyfy-text-secondary">
+                            <span>Tax (13%):</span>
+                            <span className="ml-2 font-medium text-foreground">${calculateTax().toFixed(2)}</span>
+                          </div>
+                          <div className="text-lg font-medium">
+                            <span>Total:</span>
+                            <span className="ml-2">${calculateTotal().toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end">
+                        <Button 
+                          className="bg-fixlyfy hover:bg-fixlyfy/90 w-[200px]"
+                          onClick={handleSendEstimate}
+                          disabled={invoiceItems.length === 0}
+                        >
+                          Send Estimate
+                        </Button>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="payment" className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium">Add Payment</h3>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="payment-amount">Amount</Label>
+                            <Input 
+                              id="payment-amount" 
+                              type="text" 
+                              value={calculateTotal().toFixed(2)} 
+                              readOnly
+                              className="bg-muted"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="payment-date">Payment Date</Label>
+                            <Input 
+                              id="payment-date" 
+                              type="text" 
+                              value={format(new Date(), "MMM dd, yyyy")} 
+                              readOnly
+                              className="bg-muted"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Payment Method</Label>
+                          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div className="flex items-center space-x-2 border rounded-md p-3">
+                              <RadioGroupItem id="payment-cc" value="credit-card" />
+                              <Label htmlFor="payment-cc">Credit Card</Label>
+                            </div>
+                            <div className="flex items-center space-x-2 border rounded-md p-3">
+                              <RadioGroupItem id="payment-etransfer" value="e-transfer" />
+                              <Label htmlFor="payment-etransfer">E-Transfer</Label>
+                            </div>
+                            <div className="flex items-center space-x-2 border rounded-md p-3">
+                              <RadioGroupItem id="payment-cash" value="cash" />
+                              <Label htmlFor="payment-cash">Cash</Label>
+                            </div>
+                            <div className="flex items-center space-x-2 border rounded-md p-3">
+                              <RadioGroupItem id="payment-check" value="check" />
+                              <Label htmlFor="payment-check">Check</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="payment-notes">Notes</Label>
+                          <textarea 
+                            id="payment-notes" 
+                            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none h-20"
+                            placeholder="Add payment notes..."
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end">
+                        <Button
+                          className="bg-fixlyfy hover:bg-fixlyfy/90 w-[200px]"
+                          onClick={handleMakePayment}
+                        >
+                          <CreditCard size={16} className="mr-2" />
+                          Process Payment
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </TabsContent>
               
@@ -623,6 +881,331 @@ const JobDetailsPage = () => {
           <DialogFooter>
             <Button onClick={() => setIsAddProductDialogOpen(false)}>
               Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Preview Dialog */}
+      <Dialog open={isInvoicePreviewOpen} onOpenChange={setIsInvoicePreviewOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Invoice Preview</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="border rounded-md p-6 bg-white">
+              {/* Invoice Header */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <img src={companyInfo.logo} alt="Company Logo" className="h-12 mb-2" />
+                  <h2 className="text-xl font-bold">{companyInfo.name}</h2>
+                  <p className="text-sm">{companyInfo.address}</p>
+                  <p className="text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                  <p className="text-sm">Phone: {companyInfo.phone}</p>
+                  <p className="text-sm">Email: {companyInfo.email}</p>
+                </div>
+                <div className="text-right">
+                  <h1 className="text-2xl font-bold text-fixlyfy mb-2">INVOICE</h1>
+                  <p className="text-sm"><strong>Invoice #:</strong> {invoiceNumber}</p>
+                  <p className="text-sm"><strong>Date:</strong> {format(new Date(), "MMM dd, yyyy")}</p>
+                  <p className="text-sm"><strong>Due Date:</strong> {format(new Date(new Date().setDate(new Date().getDate() + 30)), "MMM dd, yyyy")}</p>
+                  <p className="text-sm"><strong>Job #:</strong> {id}</p>
+                </div>
+              </div>
+              
+              {/* Bill To */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-md">
+                <h3 className="font-bold mb-2">Bill To:</h3>
+                <p>{clientInfo.name}</p>
+                <p>{clientInfo.address}</p>
+                <p>{clientInfo.city}, {clientInfo.state} {clientInfo.zip}</p>
+                <p>Phone: {clientInfo.phone}</p>
+                <p>Email: {clientInfo.email}</p>
+              </div>
+              
+              {/* Invoice Items */}
+              <div className="mb-6">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-fixlyfy text-white">
+                      <th className="p-2 text-left">Item</th>
+                      <th className="p-2 text-left">Description</th>
+                      <th className="p-2 text-right">Price</th>
+                      <th className="p-2 text-center">Qty</th>
+                      <th className="p-2 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceItems.map((item, index) => (
+                      <tr key={item.id} className={index % 2 === 0 ? "bg-gray-50" : ""}>
+                        <td className="p-2 border-b">{item.name}</td>
+                        <td className="p-2 border-b">{item.description}</td>
+                        <td className="p-2 border-b text-right">${item.price.toFixed(2)}</td>
+                        <td className="p-2 border-b text-center">{item.quantity}</td>
+                        <td className="p-2 border-b text-right">${(item.price * item.quantity).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Totals */}
+              <div className="flex justify-end mb-6">
+                <div className="w-64">
+                  <div className="flex justify-between py-2">
+                    <span>Subtotal:</span>
+                    <span>${calculateSubtotal().toFixed(2)}</span>
+                  </div>
+                  {applyTax && (
+                    <div className="flex justify-between py-2">
+                      <span>Tax (13%):</span>
+                      <span>${calculateTax().toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-2 font-bold border-t">
+                    <span>Total:</span>
+                    <span>${calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Notes and Terms */}
+              <div className="mb-6 text-sm">
+                <h4 className="font-bold mb-2">Notes:</h4>
+                <p>Thank you for your business!</p>
+              </div>
+              
+              <div className="text-sm">
+                <h4 className="font-bold mb-2">Terms and Conditions:</h4>
+                <p>Payment is due within 30 days from the invoice date. Please make checks payable to {companyInfo.name} or contact us for electronic payment options.</p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <div className="w-full flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsInvoicePreviewOpen(false)}>
+                  <Check size={16} className="mr-2" />
+                  Send Later
+                </Button>
+                <Button variant="outline">
+                  <Download size={16} className="mr-2" />
+                  Download
+                </Button>
+                <Button variant="outline">
+                  <Printer size={16} className="mr-2" />
+                  Print
+                </Button>
+              </div>
+              <Button 
+                onClick={() => {
+                  setIsInvoicePreviewOpen(false);
+                  toast.success(`Invoice #${invoiceNumber} sent to client`);
+                }}
+              >
+                Send Invoice
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Estimate Preview Dialog */}
+      <Dialog open={isEstimatePreviewOpen} onOpenChange={setIsEstimatePreviewOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Estimate Preview</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="border rounded-md p-6 bg-white">
+              {/* Estimate Header */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <img src={companyInfo.logo} alt="Company Logo" className="h-12 mb-2" />
+                  <h2 className="text-xl font-bold">{companyInfo.name}</h2>
+                  <p className="text-sm">{companyInfo.address}</p>
+                  <p className="text-sm">{companyInfo.city}, {companyInfo.state} {companyInfo.zip}</p>
+                  <p className="text-sm">Phone: {companyInfo.phone}</p>
+                  <p className="text-sm">Email: {companyInfo.email}</p>
+                </div>
+                <div className="text-right">
+                  <h1 className="text-2xl font-bold text-fixlyfy mb-2">ESTIMATE</h1>
+                  <p className="text-sm"><strong>Estimate #:</strong> {estimateNumber}</p>
+                  <p className="text-sm"><strong>Date:</strong> {format(new Date(), "MMM dd, yyyy")}</p>
+                  <p className="text-sm"><strong>Valid Until:</strong> {format(new Date(new Date().setDate(new Date().getDate() + 30)), "MMM dd, yyyy")}</p>
+                  <p className="text-sm"><strong>Job #:</strong> {id}</p>
+                </div>
+              </div>
+              
+              {/* Customer Info */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-md">
+                <h3 className="font-bold mb-2">Customer:</h3>
+                <p>{clientInfo.name}</p>
+                <p>{clientInfo.address}</p>
+                <p>{clientInfo.city}, {clientInfo.state} {clientInfo.zip}</p>
+                <p>Phone: {clientInfo.phone}</p>
+                <p>Email: {clientInfo.email}</p>
+              </div>
+              
+              {/* Estimate Items */}
+              <div className="mb-6">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-fixlyfy text-white">
+                      <th className="p-2 text-left">Item</th>
+                      <th className="p-2 text-left">Description</th>
+                      <th className="p-2 text-right">Price</th>
+                      <th className="p-2 text-center">Qty</th>
+                      <th className="p-2 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceItems.map((item, index) => (
+                      <tr key={item.id} className={index % 2 === 0 ? "bg-gray-50" : ""}>
+                        <td className="p-2 border-b">{item.name}</td>
+                        <td className="p-2 border-b">{item.description}</td>
+                        <td className="p-2 border-b text-right">${item.price.toFixed(2)}</td>
+                        <td className="p-2 border-b text-center">{item.quantity}</td>
+                        <td className="p-2 border-b text-right">${(item.price * item.quantity).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Totals */}
+              <div className="flex justify-end mb-6">
+                <div className="w-64">
+                  <div className="flex justify-between py-2">
+                    <span>Subtotal:</span>
+                    <span>${calculateSubtotal().toFixed(2)}</span>
+                  </div>
+                  {applyTax && (
+                    <div className="flex justify-between py-2">
+                      <span>Tax (13%):</span>
+                      <span>${calculateTax().toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-2 font-bold border-t">
+                    <span>Estimated Total:</span>
+                    <span>${calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Notes and Terms */}
+              <div className="mb-6 text-sm">
+                <h4 className="font-bold mb-2">Notes:</h4>
+                <p>This is only an estimate. Actual costs may vary based on additional parts or labor required.</p>
+              </div>
+              
+              <div className="text-sm">
+                <h4 className="font-bold mb-2">Terms and Conditions:</h4>
+                <p>This estimate is valid for 30 days from the date issued. By accepting this estimate, you agree to the services and costs outlined above.</p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <div className="w-full flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsEstimatePreviewOpen(false)}>
+                  <Check size={16} className="mr-2" />
+                  Send Later
+                </Button>
+                <Button variant="outline">
+                  <Download size={16} className="mr-2" />
+                  Download
+                </Button>
+                <Button variant="outline">
+                  <Printer size={16} className="mr-2" />
+                  Print
+                </Button>
+              </div>
+              <Button 
+                onClick={() => {
+                  setIsEstimatePreviewOpen(false);
+                  toast.success(`Estimate #${estimateNumber} sent to client`);
+                }}
+              >
+                Send Estimate
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Process Payment</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div>
+              <Label>Selected Payment Method</Label>
+              <div className="flex items-center mt-2 p-3 border rounded-md bg-gray-50">
+                <div className="font-medium">
+                  {paymentMethod === "credit-card" ? "Credit Card" : 
+                   paymentMethod === "e-transfer" ? "E-Transfer" : 
+                   paymentMethod === "cash" ? "Cash" : "Check"}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Label>Amount</Label>
+              <div className="flex items-center mt-2 p-3 border rounded-md bg-gray-50">
+                <div className="font-medium">${calculateTotal().toFixed(2)}</div>
+              </div>
+            </div>
+            
+            {paymentMethod === "credit-card" && (
+              <div className="space-y-2">
+                <Label htmlFor="card-number">Card Details</Label>
+                <div className="space-y-2">
+                  <Input id="card-number" placeholder="Card number" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="MM/YY" />
+                    <Input placeholder="CVC" />
+                  </div>
+                  <Input placeholder="Cardholder name" />
+                </div>
+              </div>
+            )}
+            
+            {paymentMethod === "check" && (
+              <div className="space-y-2">
+                <Label htmlFor="check-number">Check Number</Label>
+                <Input id="check-number" placeholder="Enter check number" />
+              </div>
+            )}
+            
+            {paymentMethod === "e-transfer" && (
+              <div className="border rounded-md p-3 bg-muted/30">
+                <p className="text-sm">Send e-transfer to: <strong>{companyInfo.email}</strong></p>
+                <p className="text-sm mt-1">Reference: <strong>Job #{id}</strong></p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsPaymentDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleProcessPayment}
+            >
+              Process Payment
             </Button>
           </DialogFooter>
         </DialogContent>
