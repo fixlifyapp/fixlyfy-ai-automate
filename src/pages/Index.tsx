@@ -9,55 +9,21 @@ import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { SecondaryMetrics } from "@/components/dashboard/SecondaryMetrics";
 import { ServiceCategoryChart } from "@/components/dashboard/ServiceCategoryChart";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Redirect to the new dashboard
+    navigate('/dashboard');
+  }, [navigate]);
+  
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-fixlyfy-text-secondary">
-          Welcome back! Here's an overview of your business.
-        </p>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <DashboardMetrics />
-        </div>
-        <div>
-          <AiInsights />
-        </div>
-      </div>
-      
-      <div className="mb-6">
-        <SecondaryMetrics />
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <DashboardCharts />
-        </div>
-        <div>
-          <ServiceCategoryChart />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div>
-          <AiAssistant />
-        </div>
-        <div className="lg:col-span-2">
-          <UpcomingJobs />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ActivityFeed />
-        </div>
-        <div>
-          <RecentJobs />
-        </div>
+      <div className="flex items-center justify-center h-[80vh]">
+        <p className="text-fixlyfy-text-secondary">Redirecting to Dashboard...</p>
       </div>
     </PageLayout>
   );
