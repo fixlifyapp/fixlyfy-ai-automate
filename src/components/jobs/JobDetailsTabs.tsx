@@ -1,6 +1,5 @@
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { JobDetailsQuickActions } from "./JobDetailsQuickActions";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface JobDetailsTabsProps {
   activeTab?: string;
@@ -37,8 +36,6 @@ export const JobDetailsTabs = ({
               History
             </TabsTrigger>
           </TabsList>
-          
-          <JobDetailsQuickActions />
         </div>
         
         {children}
