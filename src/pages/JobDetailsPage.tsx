@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
 import { JobDetailsQuickActions } from "@/components/jobs/JobDetailsQuickActions";
 import { TabsContent } from "@/components/ui/tabs";
+import { JobEstimates } from "@/components/jobs/JobEstimates";
+import { JobInvoices } from "@/components/jobs/JobInvoices";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +30,12 @@ const JobDetailsPage = () => {
             <JobDetailsTabs activeTab={activeTab} onTabChange={setActiveTab}>
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
+              </TabsContent>
+              <TabsContent value="estimates">
+                <JobEstimates jobId={id || ""} />
+              </TabsContent>
+              <TabsContent value="invoices">
+                <JobInvoices jobId={id || ""} />
               </TabsContent>
               <TabsContent value="history">
                 <JobHistory jobId={id || ""} />
