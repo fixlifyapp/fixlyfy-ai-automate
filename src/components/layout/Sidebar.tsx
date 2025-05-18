@@ -12,7 +12,8 @@ import {
   Zap,
   Menu, 
   ChevronRight,
-  Package
+  Package,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,13 @@ const menuItems = [
     path: '/products',
     highlight: false,
     permission: 'jobs.view.own' // Basic products access
+  },
+  {
+    name: 'Team',
+    icon: UserCheck,
+    path: '/admin/team',
+    highlight: false,
+    permission: 'users.view' // Users with user view permission can see team
   },
   {
     name: 'Automations',
