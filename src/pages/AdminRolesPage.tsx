@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PERMISSIONS_LIST, UserRole, RolePermissions, DEFAULT_PERMISSIONS, DEFAULT_ROLES } from "@/components/auth/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,13 +36,36 @@ type CreateRoleFormValues = z.infer<typeof createRoleSchema>;
 
 const AdminRolesPage = () => {
   const { hasPermission, allRoles, addCustomRole } = useRBAC();
+  // Ensure we initialize with a default tab that's guaranteed to exist
   const [activeTab, setActiveTab] = useState<UserRole>("admin");
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   
-  // Create a copy of default permissions for editing
+  // Initialize the rolePermissions state with a copy of DEFAULT_PERMISSIONS
   const [rolePermissions, setRolePermissions] = useState<Record<UserRole, string[]>>({
     ...DEFAULT_PERMISSIONS
   });
+
+  // Update rolePermissions when allRoles changes
+  useEffect(() => {
+    // Make sure all roles have an entry in rolePermissions
+    const updatedPermissions = { ...rolePermissions };
+    
+    // Ensure all roles in allRoles exist in updatedPermissions
+    if (allRoles && allRoles.length > 0) {
+      allRoles.forEach(role => {
+        if (!updatedPermissions[role]) {
+          updatedPermissions[role] = DEFAULT_PERMISSIONS[role] || [];
+        }
+      });
+      
+      setRolePermissions(updatedPermissions);
+      
+      // Make sure activeTab is in allRoles
+      if (!allRoles.includes(activeTab)) {
+        setActiveTab(allRoles[0]);
+      }
+    }
+  }, [allRoles]);
   
   const createRoleForm = useForm<CreateRoleFormValues>({
     resolver: zodResolver(createRoleSchema),
@@ -67,6 +90,11 @@ const AdminRolesPage = () => {
         return prev;
       }
       
+      // Make sure the role exists in updatedPermissions
+      if (!updatedPermissions[role]) {
+        updatedPermissions[role] = [];
+      }
+      
       // If permission exists, remove it, otherwise add it
       if (updatedPermissions[role].includes(permissionId)) {
         updatedPermissions[role] = updatedPermissions[role].filter(id => id !== permissionId);
@@ -85,8 +113,11 @@ const AdminRolesPage = () => {
     
     // Save custom roles permissions to localStorage
     try {
+      // Ensure DEFAULT_ROLES is defined and is an array
+      const defaultRoles = Array.isArray(DEFAULT_ROLES) ? DEFAULT_ROLES : [];
+      
       const customRolesPermissions = Object.entries(rolePermissions)
-        .filter(([role]) => !DEFAULT_ROLES.includes(role as UserRole))
+        .filter(([role]) => !defaultRoles.includes(role as UserRole))
         .reduce((acc, [role, permissions]) => {
           acc[role] = permissions;
           return acc;
@@ -117,11 +148,30 @@ const AdminRolesPage = () => {
   
   // Generate TabsTrigger components dynamically from all available roles
   const renderRoleTabs = () => {
+    // Ensure allRoles is defined and not empty
+    if (!allRoles || allRoles.length === 0) {
+      return (
+        <TabsList className="grid grid-cols-2 mb-6">
+          <TabsTrigger value="admin">Admin</TabsTrigger>
+          <TabsTrigger 
+            value="create-role"
+            onClick={() => setIsCreateRoleOpen(true)}
+            className="bg-fixlyfy/10 hover:bg-fixlyfy/20 text-fixlyfy"
+          >
+            <Plus size={16} className="mr-1" /> Add Role
+          </TabsTrigger>
+        </TabsList>
+      );
+    }
+    
     // Filter out any undefined or empty roles
-    const safeRoles = Object.keys(rolePermissions).filter(Boolean);
+    const safeRoles = allRoles.filter(Boolean);
+    
+    // Determine number of columns based on number of roles
+    const numColumns = Math.min(safeRoles.length + 1, 5); // +1 for the "Add Role" button
     
     return (
-      <TabsList className="grid grid-cols-5 mb-6">
+      <TabsList className={`grid grid-cols-${numColumns} mb-6`}>
         {safeRoles.map((role) => (
           <TabsTrigger 
             key={role} 
