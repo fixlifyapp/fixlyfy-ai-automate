@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Accordion, 
@@ -16,9 +17,6 @@ import {
   Paperclip,
   Filter,
   Copy,
-  Star,
-  Download,
-  Undo,
   MoreHorizontal,
   Play,
   Send,
@@ -26,7 +24,10 @@ import {
   AlertCircle,
   ShieldAlert,
   Eye,
-  EyeOff
+  EyeOff,
+  Star,
+  Download,
+  Undo
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -343,7 +344,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
 
   // Function to determine if user can see an item
   const canViewItem = (item: HistoryItem) => {
-    // Admin and managers can see everything
+    // Admin, managers, and dispatchers can see everything
     if (hasPermission('*') || hasPermission('jobs.view.all')) return true;
     
     // If item is restricted, only show to admin/manager/dispatcher roles
@@ -471,8 +472,8 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
   };
 
   const handleToggleRestrictedItems = () => {
-    // Only admins and managers can see restricted items
-    if (hasPermission('admin') || hasPermission('manager')) {
+    // Only admins, managers, and dispatchers can see restricted items
+    if (hasPermission('admin') || hasPermission('manager') || hasPermission('jobs.view.all')) {
       setShowRestrictedItems(prev => !prev);
     }
   };
@@ -522,8 +523,8 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
           <h3 className="text-lg font-medium">Job History</h3>
           
           <div className="flex items-center space-x-2">
-            {/* Toggle for showing restricted items (admin/manager only) */}
-            {(hasPermission('admin') || hasPermission('manager')) && (
+            {/* Toggle for showing restricted items (admin/manager/dispatcher only) */}
+            {(hasPermission('admin') || hasPermission('manager') || hasPermission('jobs.view.all')) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -550,7 +551,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
           </div>
         </div>
 
-        {/* Role-based access warning */}
+        {/* Role-based access warning - only show to technicians */}
         {isRestrictedView && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
             <ShieldAlert size={16} className="text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
