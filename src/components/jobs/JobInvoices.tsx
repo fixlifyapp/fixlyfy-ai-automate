@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { InvoiceCreationDialog } from "./dialogs/InvoiceCreationDialog";
+import { Payment } from "@/types/payment";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -32,6 +33,7 @@ interface Invoice {
   notes?: string;
   status: "draft" | "sent" | "paid" | "overdue";
   jobId: string;
+  payments?: number[];
 }
 
 export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
@@ -39,6 +41,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isViewingInvoice, setIsViewingInvoice] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
   
   // Load existing invoices - in a real app, this would come from your database
   useEffect(() => {
@@ -70,10 +73,37 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         total: 372.9,
         status: "sent",
         jobId: "JOB-1001",
+        payments: [100, 50] // Example payments
       }
     ];
     
     setInvoices(mockInvoices);
+    
+    // Load payments for job
+    const mockPayments = [
+      {
+        id: "payment-1",
+        date: new Date().toISOString(),
+        clientId: "client-123",
+        clientName: "Michael Johnson",
+        jobId: "JOB-1001",
+        amount: 100,
+        method: "credit-card",
+        status: "paid"
+      },
+      {
+        id: "payment-2",
+        date: new Date().toISOString(),
+        clientId: "client-123",
+        clientName: "Michael Johnson",
+        jobId: "JOB-1001",
+        amount: 50,
+        method: "credit-card",
+        status: "paid"
+      }
+    ] as Payment[];
+    
+    setPayments(mockPayments);
   }, [jobId]);
 
   const handleCreateInvoice = () => {
@@ -81,7 +111,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   };
 
   const handleSaveInvoice = (invoice: Invoice) => {
-    setInvoices([...invoices, invoice]);
+    setInvoices([...invoices, {...invoice, payments: []}]);
     setIsCreateDialogOpen(false);
   };
 
@@ -105,6 +135,12 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       )
     );
     toast.success("Invoice marked as paid");
+  };
+
+  // Calculate balance for an invoice (total - sum of payments)
+  const calculateBalance = (invoice: Invoice) => {
+    const paymentsTotal = invoice.payments ? invoice.payments.reduce((sum, payment) => sum + payment, 0) : 0;
+    return invoice.total - paymentsTotal;
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -142,8 +178,8 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
               <TableRow>
                 <TableHead>Invoice #</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Due Date</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Balance</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -153,8 +189,10 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                   <TableCell>${invoice.total.toFixed(2)}</TableCell>
+                  <TableCell className={calculateBalance(invoice) > 0 ? "text-orange-500" : "text-green-500"}>
+                    ${calculateBalance(invoice).toFixed(2)}
+                  </TableCell>
                   <TableCell>
                     <Badge 
                       variant="outline" 

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
@@ -14,11 +14,13 @@ import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobPayments } from "@/components/jobs/JobPayments";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
+  const jobHeaderData = useJobDetailsHeader(id || "");
   
   return (
     <PageLayout>
@@ -31,7 +33,12 @@ const JobDetailsPage = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <JobDetailsTabs activeTab={activeTab} onTabChange={setActiveTab}>
+            <JobDetailsTabs 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab}
+              invoiceAmount={jobHeaderData.invoiceAmount}
+              balance={jobHeaderData.balance}
+            >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
               </TabsContent>

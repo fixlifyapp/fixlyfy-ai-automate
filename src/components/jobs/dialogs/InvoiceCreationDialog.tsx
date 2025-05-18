@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Product } from "../builder/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Plus, Search } from "lucide-react";
+import { Trash, Plus, Search, Sync } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
@@ -27,6 +27,10 @@ interface InvoiceCreationDialogProps {
   onOpenChange: (open: boolean) => void;
   jobId: string;
   onSave?: (invoice: any) => void;
+  hasEstimate?: boolean;
+  estimateItems?: InvoiceItem[];
+  estimateTotal?: number;
+  onSyncFromEstimate?: () => void;
 }
 
 export const InvoiceCreationDialog = ({
@@ -34,6 +38,10 @@ export const InvoiceCreationDialog = ({
   onOpenChange,
   jobId,
   onSave,
+  hasEstimate = false,
+  estimateItems = [],
+  estimateTotal = 0,
+  onSyncFromEstimate
 }: InvoiceCreationDialogProps) => {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +53,26 @@ export const InvoiceCreationDialog = ({
   const [notes, setNotes] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
   const TAX_RATE = 0.13; // 13% tax rate
+
+  // If there's an estimate, provide option to sync from estimate on dialog open
+  useEffect(() => {
+    if (open && hasEstimate && estimateItems.length > 0) {
+      // Offering the option to sync, but not auto-syncing
+      // If you want to auto-sync, you can uncomment the next line:
+      // setInvoiceItems(estimateItems);
+    }
+  }, [open, hasEstimate, estimateItems]);
+
+  // Function to sync items from estimate
+  const handleSyncFromEstimate = () => {
+    if (hasEstimate && estimateItems.length > 0) {
+      setInvoiceItems(estimateItems);
+      toast.success("Items synced from estimate");
+      if (onSyncFromEstimate) {
+        onSyncFromEstimate();
+      }
+    }
+  };
 
   // Sample products - in a real app, this would come from your database
   const availableProducts: Product[] = [
@@ -210,15 +238,28 @@ export const InvoiceCreationDialog = ({
           <>
             <div className="flex justify-between items-center my-4">
               <h3 className="font-medium">Invoice Items</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowProductSearch(true)}
-                className="flex items-center gap-1"
-              >
-                <Plus size={16} />
-                Add Item
-              </Button>
+              <div className="flex gap-2">
+                {hasEstimate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSyncFromEstimate}
+                    className="flex items-center gap-1"
+                  >
+                    <Sync size={16} />
+                    Sync from Estimate
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowProductSearch(true)}
+                  className="flex items-center gap-1"
+                >
+                  <Plus size={16} />
+                  Add Item
+                </Button>
+              </div>
             </div>
             
             {invoiceItems.length > 0 ? (
@@ -283,6 +324,17 @@ export const InvoiceCreationDialog = ({
             ) : (
               <div className="border rounded-md p-8 text-center text-muted-foreground">
                 <p>No items added yet. Click "Add Item" to add products to this invoice.</p>
+                {hasEstimate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSyncFromEstimate}
+                    className="mt-4 flex items-center gap-1 mx-auto"
+                  >
+                    <Sync size={16} />
+                    Sync from Estimate
+                  </Button>
+                )}
               </div>
             )}
             
