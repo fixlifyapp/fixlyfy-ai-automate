@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Accordion, 
@@ -13,7 +12,7 @@ import {
   MessageSquare,
   Phone,
   Receipt,
-  FileText2,
+  FileIcon,
   User,
   Paperclip,
   Filter
@@ -148,9 +147,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       case "payment":
         return <Receipt className="text-green-500" />;
       case "estimate":
-        return <FileText2 className="text-amber-500" />;
+        return <FileText className="text-amber-500" />;
       case "invoice":
-        return <FileText2 className="text-blue-500" />;
+        return <FileText className="text-blue-500" />;
       case "technician":
         return <User className="text-fixlyfy-warning" />;
       case "attachment":
