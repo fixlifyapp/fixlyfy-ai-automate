@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -331,7 +330,7 @@ export const InvoiceCreationDialog = ({
                     onClick={handleSyncFromEstimate}
                     className="mt-4 flex items-center gap-1 mx-auto"
                   >
-                    <Sync size={16} />
+                    <RefreshCw size={16} />
                     Sync from Estimate
                   </Button>
                 )}

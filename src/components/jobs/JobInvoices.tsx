@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,15 +10,14 @@ import { Payment } from "@/types/payment";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Product } from "./builder/types";
 
 interface JobInvoicesProps {
   jobId: string;
 }
 
-interface InvoiceItem {
-  name: string;
-  description: string;
-  price: number;
+// Modified InvoiceItem to extend Product and match the interface in InvoiceCreationDialog
+interface InvoiceItem extends Product {
   quantity: number;
   taxable: boolean;
 }
