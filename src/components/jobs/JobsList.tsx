@@ -13,7 +13,8 @@ import {
   UserPlus, 
   Mail, 
   Trash, 
-  File
+  File,
+  Tag
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
+import { getTagColor } from "@/data/tags";
 
 interface JobsListProps {
   isGridView: boolean;
@@ -48,6 +50,7 @@ const jobs = [
     revenue: 250.00,
     service: "HVAC Repair",
     address: "123 Main St, Apt 45",
+    tags: ["HVAC", "Residential", "Maintenance"]
   },
   {
     id: "JOB-1002",
@@ -64,6 +67,7 @@ const jobs = [
     revenue: 350.00,
     service: "Plumbing",
     address: "456 Oak Ave",
+    tags: ["Plumbing", "Emergency", "Residential"]
   },
   {
     id: "JOB-1003",
@@ -80,6 +84,7 @@ const jobs = [
     revenue: 175.00,
     service: "Electrical",
     address: "789 Pine St",
+    tags: ["Electrical", "Commercial", "Installation"]
   },
   {
     id: "JOB-1004",
@@ -96,6 +101,7 @@ const jobs = [
     revenue: 200.00,
     service: "HVAC Maintenance",
     address: "321 Elm St",
+    tags: ["HVAC", "Maintenance", "Commercial"]
   },
   {
     id: "JOB-1005",
@@ -112,6 +118,7 @@ const jobs = [
     revenue: 0.00,
     service: "Electrical",
     address: "555 Maple Rd",
+    tags: ["Electrical", "Canceled", "Residential"]
   },
 ];
 
@@ -180,6 +187,26 @@ export const JobsList = ({ isGridView, selectedJobs = [], onSelectJob, onSelectA
                 </div>
               </div>
               <div className="p-4">
+                {/* Tags section for grid view */}
+                {job.tags && job.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {job.tags.slice(0, 2).map((tag, index) => (
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className={`text-xs ${getTagColor(tag)}`}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                    {job.tags.length > 2 && (
+                      <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-600">
+                        +{job.tags.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center">
                     <Calendar size={14} className="text-fixlyfy-text-secondary mr-1" />
@@ -226,6 +253,7 @@ export const JobsList = ({ isGridView, selectedJobs = [], onSelectJob, onSelectA
                 <TableHead>Job #</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Tags</TableHead>
                 <TableHead>Scheduled</TableHead>
                 <TableHead>Technician</TableHead>
                 <TableHead>Priority</TableHead>
@@ -269,6 +297,32 @@ export const JobsList = ({ isGridView, selectedJobs = [], onSelectJob, onSelectA
                       {job.status === "completed" && "Completed"}
                       {job.status === "canceled" && "Canceled"}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {job.tags && job.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {job.tags.slice(0, 2).map((tag, index) => (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className={`text-xs ${getTagColor(tag)}`}
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                        {job.tags.length > 2 && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs bg-gray-50 border-gray-200 text-gray-600"
+                            title={job.tags.slice(2).join(", ")}
+                          >
+                            +{job.tags.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">No tags</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {new Date(job.date).toLocaleDateString()} 
@@ -317,6 +371,9 @@ export const JobsList = ({ isGridView, selectedJobs = [], onSelectJob, onSelectA
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Mail size={16} className="mr-2" /> Send Reminder
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Tag size={16} className="mr-2" /> Manage Tags
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem>
