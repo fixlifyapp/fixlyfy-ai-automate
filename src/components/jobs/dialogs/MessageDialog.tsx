@@ -14,6 +14,7 @@ interface MessageDialogProps {
   onOpenChange: (open: boolean) => void;
   client: {
     name: string;
+    phone?: string;  // Added phone as optional property
   };
 }
 
