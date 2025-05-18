@@ -6,7 +6,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -14,23 +13,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 
 interface MarkAsPaidDialogProps {
   selectedJobs: string[];
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (paymentMethod: string) => void;
 }
 
 export function MarkAsPaidDialog({ selectedJobs, onOpenChange, onSuccess }: MarkAsPaidDialogProps) {
-  const [paymentMethod, setPaymentMethod] = useState<string>("credit_card");
-  const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -41,15 +45,13 @@ export function MarkAsPaidDialog({ selectedJobs, onOpenChange, onSuccess }: Mark
       //   body: JSON.stringify({
       //     jobIds: selectedJobs,
       //     paymentMethod,
-      //     notes,
       //   }),
       // });
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      toast.success(`Marked ${selectedJobs.length} jobs as paid`);
-      onSuccess();
+      onSuccess(paymentMethod);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to mark jobs as paid:", error);
@@ -62,9 +64,9 @@ export function MarkAsPaidDialog({ selectedJobs, onOpenChange, onSuccess }: Mark
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Mark Invoices as Paid</DialogTitle>
+        <DialogTitle>Mark Jobs as Paid</DialogTitle>
         <DialogDescription>
-          Mark invoices for the {selectedJobs.length} selected jobs as paid.
+          Mark {selectedJobs.length} selected jobs as paid and record the payment method.
         </DialogDescription>
       </DialogHeader>
       
@@ -74,29 +76,18 @@ export function MarkAsPaidDialog({ selectedJobs, onOpenChange, onSuccess }: Mark
             <label htmlFor="payment-method" className="text-sm font-medium">
               Payment Method
             </label>
-            <Select defaultValue={paymentMethod} onValueChange={setPaymentMethod}>
+            <Select onValueChange={setPaymentMethod}>
               <SelectTrigger id="payment-method">
                 <SelectValue placeholder="Select payment method" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="credit_card">Credit Card</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="credit-card">Credit Card</SelectItem>
+                <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
                 <SelectItem value="check">Check</SelectItem>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="notes" className="text-sm font-medium">
-              Payment Notes (Optional)
-            </label>
-            <Input
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter any notes about this payment"
-            />
           </div>
         </div>
         
@@ -109,7 +100,7 @@ export function MarkAsPaidDialog({ selectedJobs, onOpenChange, onSuccess }: Mark
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || !paymentMethod}>
             {isSubmitting ? "Processing..." : "Mark as Paid"}
           </Button>
         </DialogFooter>

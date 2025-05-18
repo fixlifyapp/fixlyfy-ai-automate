@@ -15,9 +15,24 @@ import { MarkAsPaidDialog } from "./dialogs/MarkAsPaidDialog";
 interface BulkActionsBarProps {
   selectedJobs: string[];
   onClearSelection: () => void;
+  onUpdateStatus: (jobIds: string[], newStatus: string) => void;
+  onAssignTechnician: (jobIds: string[], technicianId: string, technicianName: string) => void;
+  onDeleteJobs: (jobIds: string[]) => void;
+  onSendReminders: (jobIds: string[], reminderType: string) => void;
+  onTagJobs: (jobIds: string[], tags: string[]) => void;
+  onMarkAsPaid: (jobIds: string[], paymentMethod: string) => void;
 }
 
-export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBarProps) {
+export function BulkActionsBar({ 
+  selectedJobs, 
+  onClearSelection,
+  onUpdateStatus,
+  onAssignTechnician,
+  onDeleteJobs,
+  onSendReminders,
+  onTagJobs,
+  onMarkAsPaid
+}: BulkActionsBarProps) {
   const [isChangeStatusOpen, setIsChangeStatusOpen] = useState(false);
   const [isAssignTechOpen, setIsAssignTechOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -72,7 +87,7 @@ export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBa
           <ChangeStatusDialog 
             selectedJobs={selectedJobs} 
             onOpenChange={setIsChangeStatusOpen}
-            onSuccess={onClearSelection}
+            onSuccess={(status) => onUpdateStatus(selectedJobs, status)}
           />
         </Dialog>
 
@@ -83,7 +98,7 @@ export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBa
           <AssignTechnicianDialog 
             selectedJobs={selectedJobs} 
             onOpenChange={setIsAssignTechOpen} 
-            onSuccess={onClearSelection}
+            onSuccess={(techId, techName) => onAssignTechnician(selectedJobs, techId, techName)}
             technicians={teamMembers.filter(member => member.role === "technician")}
           />
         </Dialog>
@@ -97,7 +112,7 @@ export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBa
           <DeleteJobsDialog 
             selectedJobs={selectedJobs} 
             onOpenChange={setIsDeleteOpen} 
-            onSuccess={onClearSelection}
+            onSuccess={() => onDeleteJobs(selectedJobs)}
           />
         </Dialog>
 
@@ -109,7 +124,7 @@ export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBa
           <TagJobsDialog 
             selectedJobs={selectedJobs} 
             onOpenChange={setIsTagJobsOpen} 
-            onSuccess={onClearSelection}
+            onSuccess={(tags) => onTagJobs(selectedJobs, tags)}
           />
         </Dialog>
 
@@ -120,7 +135,7 @@ export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBa
           <SendReminderDialog 
             selectedJobs={selectedJobs} 
             onOpenChange={setIsSendReminderOpen} 
-            onSuccess={onClearSelection}
+            onSuccess={(reminderType) => onSendReminders(selectedJobs, reminderType)}
           />
         </Dialog>
 
@@ -131,7 +146,7 @@ export function BulkActionsBar({ selectedJobs, onClearSelection }: BulkActionsBa
           <MarkAsPaidDialog 
             selectedJobs={selectedJobs} 
             onOpenChange={setIsMarkPaidOpen} 
-            onSuccess={onClearSelection}
+            onSuccess={(paymentMethod) => onMarkAsPaid(selectedJobs, paymentMethod)}
           />
         </Dialog>
       </div>

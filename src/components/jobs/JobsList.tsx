@@ -115,25 +115,29 @@ const jobs = [
   },
 ];
 
-export const JobsList = ({ isGridView, selectedJobs, onSelectJob, onSelectAllJobs }: JobsListProps) => {
+export const JobsList = ({ isGridView, selectedJobs = [], onSelectJob, onSelectAllJobs }: JobsListProps) => {
   const navigate = useNavigate();
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
   };
 
-  const areAllJobsSelected = jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
+  // Add null/undefined check to prevent the error
+  const areAllJobsSelected = jobs.length > 0 && selectedJobs && jobs.every(job => selectedJobs.includes(job.id));
 
   // Modified to handle selection without propagation
   const handleCheckboxClick = (e: React.MouseEvent, jobId: string) => {
     e.stopPropagation();
-    onSelectJob(jobId, !selectedJobs.includes(jobId));
+    onSelectJob(jobId, !(selectedJobs && selectedJobs.includes(jobId)));
   };
 
   const handleSelectAll = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectAllJobs(!areAllJobsSelected);
   };
+
+  // Add safety checks for selectedJobs
+  const isJobSelected = (jobId: string) => selectedJobs && selectedJobs.includes(jobId);
 
   return (
     <>
@@ -144,13 +148,13 @@ export const JobsList = ({ isGridView, selectedJobs, onSelectJob, onSelectAllJob
               key={job.id} 
               className={cn(
                 "fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer relative",
-                selectedJobs.includes(job.id) && "ring-2 ring-fixlyfy"
+                isJobSelected(job.id) && "ring-2 ring-fixlyfy"
               )} 
               onClick={() => handleJobClick(job.id)}
             >
               {/* Add checkbox for selection */}
               <div className="absolute top-3 left-3 z-10" onClick={(e) => handleCheckboxClick(e, job.id)}>
-                <Checkbox checked={selectedJobs.includes(job.id)} />
+                <Checkbox checked={isJobSelected(job.id)} />
               </div>
 
               <div className="p-4 border-b border-fixlyfy-border">
@@ -236,13 +240,13 @@ export const JobsList = ({ isGridView, selectedJobs, onSelectJob, onSelectAllJob
                   className={cn(
                     idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50",
                     "cursor-pointer hover:bg-fixlyfy-bg-interface",
-                    selectedJobs.includes(job.id) && "bg-fixlyfy/5"
+                    isJobSelected(job.id) && "bg-fixlyfy/5"
                   )}
                   onClick={() => handleJobClick(job.id)}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox 
-                      checked={selectedJobs.includes(job.id)} 
+                      checked={isJobSelected(job.id)} 
                       onClick={(e) => handleCheckboxClick(e, job.id)}
                     />
                   </TableCell>

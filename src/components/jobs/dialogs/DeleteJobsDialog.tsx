@@ -35,7 +35,6 @@ export function DeleteJobsDialog({ selectedJobs, onOpenChange, onSuccess }: Dele
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      toast.success(`Deleted ${selectedJobs.length} jobs`);
       onSuccess();
       onOpenChange(false);
     } catch (error) {

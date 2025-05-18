@@ -20,7 +20,7 @@ import { toast } from "sonner";
 interface ChangeStatusDialogProps {
   selectedJobs: string[];
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (status: string) => void;
 }
 
 export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: ChangeStatusDialogProps) {
@@ -51,8 +51,8 @@ export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: Ch
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      toast.success(`Updated ${selectedJobs.length} jobs to "${status}"`);
-      onSuccess();
+      // Call onSuccess with the new status
+      onSuccess(status);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to update job status:", error);

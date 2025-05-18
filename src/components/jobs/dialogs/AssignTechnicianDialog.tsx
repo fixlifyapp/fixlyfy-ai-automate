@@ -23,7 +23,7 @@ interface AssignTechnicianDialogProps {
   selectedJobs: string[];
   technicians: TeamMember[];
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (technicianId: string, technicianName: string) => void;
 }
 
 export function AssignTechnicianDialog({ 
@@ -62,8 +62,7 @@ export function AssignTechnicianDialog({
       const selectedTech = technicians.find(tech => tech.id === technicianId);
       const techName = selectedTech ? selectedTech.name : "selected technician";
       
-      toast.success(`Assigned ${selectedJobs.length} jobs to ${techName}`);
-      onSuccess();
+      onSuccess(technicianId, techName);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to assign technician:", error);

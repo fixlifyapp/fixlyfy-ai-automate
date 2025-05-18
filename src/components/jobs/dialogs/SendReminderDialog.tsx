@@ -20,7 +20,7 @@ import { toast } from "sonner";
 interface SendReminderDialogProps {
   selectedJobs: string[];
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (reminderType: string) => void;
 }
 
 export function SendReminderDialog({ selectedJobs, onOpenChange, onSuccess }: SendReminderDialogProps) {
@@ -45,8 +45,7 @@ export function SendReminderDialog({ selectedJobs, onOpenChange, onSuccess }: Se
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      toast.success(`Sent ${reminderType.toUpperCase()} reminders to ${selectedJobs.length} clients`);
-      onSuccess();
+      onSuccess(reminderType);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to send reminders:", error);
