@@ -16,18 +16,16 @@ export const JobDetailsHeader = () => {
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
-        <div className="flex items-center gap-2">
-          <JobInfoSection 
-            job={jobHeaderData.job}
-            invoiceAmount={jobHeaderData.invoiceAmount}
-            balance={jobHeaderData.balance}
-            status={jobHeaderData.status}
-            onStatusChange={jobHeaderData.handleStatusChange}
-            onCallClick={() => jobHeaderData.setIsCallDialogOpen(true)}
-            onMessageClick={() => jobHeaderData.setIsMessageDialogOpen(true)}
-            onEditClient={jobHeaderData.handleEditClient}
-          />
-        </div>
+        <JobInfoSection 
+          job={jobHeaderData.job}
+          invoiceAmount={jobHeaderData.invoiceAmount}
+          balance={jobHeaderData.balance}
+          status={jobHeaderData.status}
+          onStatusChange={jobHeaderData.handleStatusChange}
+          onCallClick={() => jobHeaderData.setIsCallDialogOpen(true)}
+          onMessageClick={() => jobHeaderData.setIsMessageDialogOpen(true)}
+          onEditClient={jobHeaderData.handleEditClient}
+        />
         
         <div>
           <JobActions 

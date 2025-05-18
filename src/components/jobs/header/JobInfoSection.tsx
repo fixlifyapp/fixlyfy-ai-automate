@@ -39,13 +39,26 @@ export const JobInfoSection = ({
     <div className="flex flex-col gap-1">
       <JobStatusBadge status={status} onStatusChange={onStatusChange} />
       
-      <div className="flex gap-2 items-center">
-        <h2 className="text-lg font-medium">{job.client}</h2>
-        <ClientContactButtons
-          onCallClick={onCallClick}
-          onMessageClick={onMessageClick}
-          onEditClient={onEditClient}
-        />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-medium">{job.client}</h2>
+          <ClientContactButtons
+            onCallClick={onCallClick}
+            onMessageClick={onMessageClick}
+            onEditClient={onEditClient}
+          />
+        </div>
+        
+        <div className="flex gap-4 text-sm mt-1 sm:mt-0 sm:ml-4">
+          <div>
+            <span className="text-muted-foreground">Total:</span>{" "}
+            <span className="font-medium">${invoiceAmount.toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Balance:</span>{" "}
+            <span className="font-medium">${balance.toFixed(2)}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
