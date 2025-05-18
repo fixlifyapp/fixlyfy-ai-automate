@@ -1,7 +1,11 @@
 
 import { Button } from "@/components/ui/button";
-import { Brain } from "lucide-react";
+import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 const aiSuggestions = [
   {
@@ -26,40 +30,54 @@ const quickActions = [
     id: 1,
     name: "Complete Job",
     variant: "default",
-    className: "bg-fixlyfy hover:bg-fixlyfy/90 w-full"
+    className: "bg-fixlyfy hover:bg-fixlyfy/90 w-full",
+    icon: CheckCircle
   },
   {
     id: 2,
     name: "Create Invoice",
     variant: "outline",
-    className: "w-full"
+    className: "w-full",
+    icon: FileText
   },
   {
     id: 3,
     name: "Send Reminder",
     variant: "outline",
-    className: "w-full"
+    className: "w-full",
+    icon: Bell
   },
   {
     id: 4,
     name: "Reassign",
     variant: "outline",
-    className: "w-full"
+    className: "w-full",
+    icon: UserPlus
   }
 ];
 
 export const JobDetailsQuickActions = () => {
+  const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2]);
+  
+  const handleFeedback = (id: number, isPositive: boolean) => {
+    console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
+    // In a real app, we would send this feedback to the server
+  };
+  
   return (
-    <div className="space-y-6">
-      <div className="fixlyfy-card">
-        <div className="p-6 border-b border-fixlyfy-border flex items-center">
-          <div className="w-8 h-8 rounded-md mr-3 fixlyfy-gradient flex items-center justify-center">
-            <Brain size={18} className="text-white" />
+    <>
+      {/* AI Suggestions Panel */}
+      <Card className="border-fixlyfy-border bg-fixlyfy/5">
+        <CardHeader className="flex flex-row items-center justify-between p-4 border-b border-fixlyfy-border">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-md fixlyfy-gradient flex items-center justify-center">
+              <Brain size={18} className="text-white" />
+            </div>
+            <h3 className="text-lg font-medium">AI Suggestions</h3>
           </div>
-          <h3 className="text-lg font-medium">AI Suggestions</h3>
-        </div>
+        </CardHeader>
         
-        <div className="p-6 space-y-4">
+        <CardContent className="p-4 space-y-3">
           {aiSuggestions.map((suggestion, idx) => (
             <div 
               key={suggestion.id} 
@@ -72,28 +90,48 @@ export const JobDetailsQuickActions = () => {
               style={{ animationDelay: `${idx * 150}ms` }}
             >
               <p className="text-sm text-fixlyfy-text-secondary">{suggestion.tip}</p>
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 w-7 p-0" 
+                  onClick={() => handleFeedback(suggestion.id, true)}
+                >
+                  <ThumbsUp size={14} />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 w-7 p-0" 
+                  onClick={() => handleFeedback(suggestion.id, false)}
+                >
+                  <ThumbsDown size={14} />
+                </Button>
+              </div>
             </div>
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       
-      <div className="fixlyfy-card">
-        <div className="p-6 border-b border-fixlyfy-border">
+      {/* Quick Actions Block */}
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardHeader className="p-4 border-b border-fixlyfy-border">
           <h3 className="text-lg font-medium">Quick Actions</h3>
-        </div>
+        </CardHeader>
         
-        <div className="p-6 space-y-3">
+        <CardContent className="p-4 space-y-3">
           {quickActions.map((action) => (
             <Button 
               key={action.id} 
               variant={action.variant as any} 
-              className={action.className}
+              className={cn(action.className, "flex items-center gap-2")}
             >
+              <action.icon size={18} />
               {action.name}
             </Button>
           ))}
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </>
   );
 };

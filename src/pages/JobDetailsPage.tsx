@@ -13,22 +13,24 @@ import { JobEstimates } from "@/components/jobs/JobEstimates";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobProducts } from "@/components/jobs/JobProducts";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("details");
-
+  const { hasPermission } = useRBAC();
+  
   return (
     <PageLayout>
-      <div className="container mx-auto">
+      <div className="container mx-auto px-4">
         <div className="mb-6">
           <Card className="border-fixlyfy-border shadow-sm">
             <JobDetailsHeader />
           </Card>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
             <JobDetailsTabs activeTab={activeTab} onTabChange={setActiveTab}>
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
@@ -50,8 +52,12 @@ const JobDetailsPage = () => {
               </TabsContent>
             </JobDetailsTabs>
           </div>
-          <div className="md:col-span-1">
-            <JobDetailsQuickActions />
+          <div className="lg:col-span-1 space-y-6">
+            {hasPermission('view_ai_suggestions') && (
+              <Card className="border-fixlyfy-border shadow-sm bg-fixlyfy/5">
+                <JobDetailsQuickActions />
+              </Card>
+            )}
           </div>
         </div>
       </div>

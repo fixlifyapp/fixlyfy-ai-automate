@@ -21,41 +21,41 @@ export const JobDetailsTabs = ({
         }}
         className="w-full"
       >
-        <div className="flex justify-between items-center border-b mb-4">
+        <div className="flex overflow-x-auto border-b mb-4">
           <TabsList className="bg-transparent p-0 h-12">
             <TabsTrigger
               value="details"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >
-              Details
+              Overview
             </TabsTrigger>
             <TabsTrigger
               value="estimates"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >
               Estimates
             </TabsTrigger>
             <TabsTrigger
               value="invoices"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >
               Invoices
             </TabsTrigger>
             <TabsTrigger
               value="messages"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >
               Messages
             </TabsTrigger>
             <TabsTrigger
               value="products"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >
               Products
             </TabsTrigger>
             <TabsTrigger
               value="history"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy-primary data-[state=active]:shadow-none px-4 h-12"
+              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >
               History
             </TabsTrigger>
