@@ -1,12 +1,21 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, X, Save } from "lucide-react";
+import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { JobDetailsEditDialog } from "./dialogs/JobDetailsEditDialog";
+import { JobTypeDialog } from "./dialogs/JobTypeDialog";
+import { TeamSelectionDialog } from "./dialogs/TeamSelectionDialog";
+import { SourceSelectionDialog } from "./dialogs/SourceSelectionDialog";
+import { PrioritySelectionDialog } from "./dialogs/PrioritySelectionDialog";
+import { ScheduleSelectionDialog } from "./dialogs/ScheduleSelectionDialog";
+import { TagsManagementDialog } from "./dialogs/TagsManagementDialog";
+import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
+import { AttachmentUploadDialog } from "./dialogs/AttachmentUploadDialog";
 
 interface JobDetailsProps {
   jobId: string;
@@ -43,24 +52,20 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     { id: 2, name: "Previous-service.pdf", size: "185 KB" }
   ]);
 
-  const [notes, setNotes] = useState("Customer mentioned they've had issues with this unit before. Previous service was done by our technician John Doe last summer. Customer prefers morning appointments.");
+  // Dialog open states
+  const [isDescriptionDialogOpen, setIsDescriptionDialogOpen] = useState(false);
+  const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
+  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+  const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
+  const [isPriorityDialogOpen, setIsPriorityDialogOpen] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isTagsDialogOpen, setIsTagsDialogOpen] = useState(false);
+  const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
+  const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
 
   // Edit states
   const [editingClientInfo, setEditingClientInfo] = useState(false);
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [editingJobDetails, setEditingJobDetails] = useState(false);
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [editingTasks, setEditingTasks] = useState(false);
-  const [newTask, setNewTask] = useState("");
-
-  // Temporary states for editing
   const [tempClientInfo, setTempClientInfo] = useState(clientInfo);
-  const [tempJobDetails, setTempJobDetails] = useState(jobDetails);
-  const [tempDescription, setTempDescription] = useState(jobDetails.description);
-  const [tempNotes, setTempNotes] = useState(notes);
-
-  // Tag management
-  const [newTag, setNewTag] = useState("");
 
   // Handle saving client info
   const handleSaveClientInfo = () => {
@@ -69,67 +74,53 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     toast.success("Client information updated");
   };
 
-  // Handle saving job description
-  const handleSaveDescription = () => {
-    setJobDetails(prev => ({ ...prev, description: tempDescription }));
-    setEditingDescription(false);
-    toast.success("Job description updated");
+  // Handle updating job description
+  const handleUpdateDescription = (description: string) => {
+    setJobDetails(prev => ({ ...prev, description }));
   };
 
-  // Handle saving job details
-  const handleSaveJobDetails = () => {
-    setJobDetails(tempJobDetails);
-    setEditingJobDetails(false);
-    toast.success("Job details updated");
+  // Handle updating job type
+  const handleUpdateType = (type: string) => {
+    setJobDetails(prev => ({ ...prev, type }));
   };
 
-  // Handle saving notes
-  const handleSaveNotes = () => {
-    setNotes(tempNotes);
-    setEditingNotes(false);
-    toast.success("Notes updated");
+  // Handle updating team
+  const handleUpdateTeam = (team: string) => {
+    setJobDetails(prev => ({ ...prev, team }));
   };
 
-  // Handle adding a tag
-  const handleAddTag = () => {
-    if (newTag.trim() !== "") {
-      setJobDetails(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
-      setNewTag("");
-      toast.success("Tag added");
-    }
+  // Handle updating source
+  const handleUpdateSource = (source: string) => {
+    setJobDetails(prev => ({ ...prev, source }));
   };
 
-  // Handle removing a tag
-  const handleRemoveTag = (tag: string) => {
-    setJobDetails(prev => ({
-      ...prev,
-      tags: prev.tags.filter(t => t !== tag)
+  // Handle updating priority
+  const handleUpdatePriority = (priority: string) => {
+    setJobDetails(prev => ({ ...prev, priority }));
+  };
+
+  // Handle updating schedule
+  const handleUpdateSchedule = (date: string, timeWindow: string) => {
+    setJobDetails(prev => ({ 
+      ...prev, 
+      scheduleDate: date,
+      scheduleTime: timeWindow
     }));
-    toast.success("Tag removed");
   };
 
-  // Handle toggling task completion
-  const handleToggleTask = (id: number) => {
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  // Handle updating tags
+  const handleUpdateTags = (tags: string[]) => {
+    setJobDetails(prev => ({ ...prev, tags }));
   };
 
-  // Handle adding a task
-  const handleAddTask = () => {
-    if (newTask.trim() !== "") {
-      setTasks(prev => [
-        ...prev, 
-        { id: Math.max(...prev.map(t => t.id)) + 1, name: newTask.trim(), completed: false }
-      ]);
-      setNewTask("");
-      toast.success("Task added");
-    }
+  // Handle updating tasks
+  const handleUpdateTasks = (updatedTasks: typeof tasks) => {
+    setTasks(updatedTasks);
+  };
+
+  // Handle updating attachments
+  const handleUpdateAttachments = (updatedAttachments: typeof attachments) => {
+    setAttachments(updatedAttachments);
   };
 
   return (
@@ -151,7 +142,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                 }
               }}
             >
-              {editingClientInfo ? <Save size={16} /> : <Edit size={16} />}
+              {editingClientInfo ? <CheckCircle size={16} /> : <Edit size={16} />}
             </Button>
           </div>
           
@@ -237,28 +228,13 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => {
-                if (editingDescription) {
-                  handleSaveDescription();
-                } else {
-                  setTempDescription(jobDetails.description);
-                  setEditingDescription(true);
-                }
-              }}
+              onClick={() => setIsDescriptionDialogOpen(true)}
             >
-              {editingDescription ? <Save size={16} /> : <Edit size={16} />}
+              <Edit size={16} />
             </Button>
           </div>
           
-          {editingDescription ? (
-            <Input 
-              value={tempDescription}
-              onChange={(e) => setTempDescription(e.target.value)}
-              className="mb-4"
-            />
-          ) : (
-            <p className="text-gray-700">{jobDetails.description}</p>
-          )}
+          <p className="text-gray-700">{jobDetails.description}</p>
           
           <div className="flex flex-wrap gap-2 mt-4">
             {jobDetails.tags.map((tag, index) => (
@@ -268,32 +244,17 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                 className="bg-purple-50 border-purple-200 text-purple-600 flex items-center gap-1"
               >
                 {tag}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-4 w-4 p-0 ml-1"
-                  onClick={() => handleRemoveTag(tag)}
-                >
-                  <X size={12} />
-                </Button>
               </Badge>
             ))}
-            <div className="flex items-center gap-1">
-              <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Add tag..."
-                className="h-6 w-24 text-xs"
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0"
-                onClick={handleAddTag}
-              >
-                <Tag size={14} />
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-purple-600 border-purple-200"
+              onClick={() => setIsTagsDialogOpen(true)}
+            >
+              <Tag size={14} className="mr-1" />
+              Manage Tags
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -303,50 +264,26 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Job Details</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                if (editingJobDetails) {
-                  handleSaveJobDetails();
-                } else {
-                  setTempJobDetails(jobDetails);
-                  setEditingJobDetails(true);
-                }
-              }}
-            >
-              {editingJobDetails ? <Save size={16} /> : <Edit size={16} />}
-            </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Job Type</p>
-              {editingJobDetails ? (
-                <Input 
-                  value={tempJobDetails.type}
-                  onChange={(e) => setTempJobDetails({ ...tempJobDetails, type: e.target.value })}
-                  className="mt-1"
-                />
-              ) : (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Job Type</p>
                 <p className="text-purple-600">{jobDetails.type}</p>
-              )}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsTypeDialogOpen(true)}
+              >
+                <Edit size={16} />
+              </Button>
             </div>
             
-            <div>
-              <p className="text-sm text-muted-foreground">Schedule Date & Time</p>
-              {editingJobDetails ? (
-                <div className="flex gap-2 mt-1">
-                  <Input 
-                    value={tempJobDetails.scheduleDate}
-                    onChange={(e) => setTempJobDetails({ ...tempJobDetails, scheduleDate: e.target.value })}
-                  />
-                  <Input 
-                    value={tempJobDetails.scheduleTime}
-                    onChange={(e) => setTempJobDetails({ ...tempJobDetails, scheduleTime: e.target.value })}
-                  />
-                </div>
-              ) : (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Schedule Date & Time</p>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
                     <Calendar size={16} className="text-purple-600" />
@@ -357,49 +294,59 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                     <p className="text-purple-600">{jobDetails.scheduleTime}</p>
                   </div>
                 </div>
-              )}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsScheduleDialogOpen(true)}
+              >
+                <Edit size={16} />
+              </Button>
             </div>
             
-            <div>
-              <p className="text-sm text-muted-foreground">Team</p>
-              {editingJobDetails ? (
-                <Input 
-                  value={tempJobDetails.team}
-                  onChange={(e) => setTempJobDetails({ ...tempJobDetails, team: e.target.value })}
-                  className="mt-1"
-                />
-              ) : (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Team</p>
                 <div className="flex items-center gap-1">
                   <User size={16} className="text-purple-600" />
                   <p className="text-purple-600">{jobDetails.team}</p>
                 </div>
-              )}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsTeamDialogOpen(true)}
+              >
+                <Edit size={16} />
+              </Button>
             </div>
             
-            <div>
-              <p className="text-sm text-muted-foreground">Priority</p>
-              {editingJobDetails ? (
-                <Input 
-                  value={tempJobDetails.priority}
-                  onChange={(e) => setTempJobDetails({ ...tempJobDetails, priority: e.target.value })}
-                  className="mt-1"
-                />
-              ) : (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Priority</p>
                 <p className="text-purple-600">{jobDetails.priority}</p>
-              )}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsPriorityDialogOpen(true)}
+              >
+                <Edit size={16} />
+              </Button>
             </div>
             
-            <div>
-              <p className="text-sm text-muted-foreground">Source</p>
-              {editingJobDetails ? (
-                <Input 
-                  value={tempJobDetails.source}
-                  onChange={(e) => setTempJobDetails({ ...tempJobDetails, source: e.target.value })}
-                  className="mt-1"
-                />
-              ) : (
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Source</p>
                 <p className="text-purple-600">{jobDetails.source}</p>
-              )}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsSourceDialogOpen(true)}
+              >
+                <Edit size={16} />
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -417,59 +364,28 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                   {tasks.filter(t => !t.completed).length} tasks remaining
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  className="text-purple-600 h-8"
-                  onClick={() => setEditingTasks(!editingTasks)}
-                >
-                  {editingTasks ? "Done" : "Edit"}
-                </Button>
-              </div>
+              <Button 
+                variant="ghost" 
+                className="text-purple-600 h-8"
+                onClick={() => setIsTasksDialogOpen(true)}
+              >
+                <Edit size={16} />
+              </Button>
             </div>
             
             <div className="space-y-3">
               {tasks.map((task) => (
                 <div key={task.id} className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0"
-                    onClick={() => handleToggleTask(task.id)}
-                  >
-                    {task.completed ? (
-                      <CheckCircle size={18} className="text-green-500" />
-                    ) : (
-                      <Circle size={18} className="text-gray-300" />
-                    )}
-                  </Button>
+                  {task.completed ? (
+                    <CheckCircle size={18} className="text-green-500" />
+                  ) : (
+                    <Circle size={18} className="text-gray-300" />
+                  )}
                   <span className={task.completed ? "line-through text-gray-500" : ""}>
                     {task.name}
                   </span>
                 </div>
               ))}
-              {editingTasks && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Input
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
-                    placeholder="Add new task..."
-                    className="flex-grow"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddTask();
-                      }
-                    }}
-                  />
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleAddTask}
-                  >
-                    Add
-                  </Button>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -483,9 +399,12 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                 <p className="text-sm text-muted-foreground">{attachments.length} files</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" className="text-purple-600 h-8">View All</Button>
-                <Button size="icon" variant="outline" className="h-8 w-8">
-                  <span className="text-lg font-medium">+</span>
+                <Button 
+                  variant="ghost" 
+                  className="text-purple-600 h-8"
+                  onClick={() => setIsAttachmentsDialogOpen(true)}
+                >
+                  <Edit size={16} />
                 </Button>
               </div>
             </div>
@@ -505,38 +424,70 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         </Card>
       </div>
       
-      {/* Notes */}
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Notes</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                if (editingNotes) {
-                  handleSaveNotes();
-                } else {
-                  setTempNotes(notes);
-                  setEditingNotes(true);
-                }
-              }}
-            >
-              {editingNotes ? <Save size={16} /> : <Edit size={16} />}
-            </Button>
-          </div>
-          
-          {editingNotes ? (
-            <Input 
-              value={tempNotes}
-              onChange={(e) => setTempNotes(e.target.value)}
-              className="mt-1"
-            />
-          ) : (
-            <p className="text-gray-700">{notes}</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Dialogs */}
+      <JobDetailsEditDialog
+        open={isDescriptionDialogOpen}
+        onOpenChange={setIsDescriptionDialogOpen}
+        initialDescription={jobDetails.description}
+        onSave={handleUpdateDescription}
+      />
+      
+      <JobTypeDialog
+        open={isTypeDialogOpen}
+        onOpenChange={setIsTypeDialogOpen}
+        initialType={jobDetails.type}
+        onSave={handleUpdateType}
+      />
+      
+      <TeamSelectionDialog
+        open={isTeamDialogOpen}
+        onOpenChange={setIsTeamDialogOpen}
+        initialTeam={jobDetails.team}
+        onSave={handleUpdateTeam}
+      />
+      
+      <SourceSelectionDialog
+        open={isSourceDialogOpen}
+        onOpenChange={setIsSourceDialogOpen}
+        initialSource={jobDetails.source}
+        onSave={handleUpdateSource}
+      />
+      
+      <PrioritySelectionDialog
+        open={isPriorityDialogOpen}
+        onOpenChange={setIsPriorityDialogOpen}
+        initialPriority={jobDetails.priority}
+        onSave={handleUpdatePriority}
+      />
+      
+      <ScheduleSelectionDialog
+        open={isScheduleDialogOpen}
+        onOpenChange={setIsScheduleDialogOpen}
+        initialDate={jobDetails.scheduleDate}
+        initialTimeWindow={jobDetails.scheduleTime}
+        onSave={handleUpdateSchedule}
+      />
+      
+      <TagsManagementDialog
+        open={isTagsDialogOpen}
+        onOpenChange={setIsTagsDialogOpen}
+        initialTags={jobDetails.tags}
+        onSave={handleUpdateTags}
+      />
+      
+      <TaskManagementDialog
+        open={isTasksDialogOpen}
+        onOpenChange={setIsTasksDialogOpen}
+        initialTasks={tasks}
+        onSave={handleUpdateTasks}
+      />
+      
+      <AttachmentUploadDialog
+        open={isAttachmentsDialogOpen}
+        onOpenChange={setIsAttachmentsDialogOpen}
+        initialAttachments={attachments}
+        onSave={handleUpdateAttachments}
+      />
     </div>
   );
 };

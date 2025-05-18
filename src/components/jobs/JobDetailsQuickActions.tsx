@@ -8,6 +8,17 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useState } from "react";
 import { JobProducts } from "./JobProducts";
 import { useParams } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const aiSuggestions = [
   {
@@ -37,13 +48,6 @@ const quickActions = [
   },
   {
     id: 2,
-    name: "Create Invoice",
-    variant: "outline",
-    className: "w-full",
-    icon: FileText
-  },
-  {
-    id: 3,
     name: "Send Reminder",
     variant: "outline",
     className: "w-full",
@@ -54,10 +58,29 @@ const quickActions = [
 export const JobDetailsQuickActions = () => {
   const { id } = useParams();
   const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2]);
+  const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
   
   const handleFeedback = (id: number, isPositive: boolean) => {
     console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
-    // In a real app, we would send this feedback to the server
+    toast.success(`Feedback recorded for suggestion #${id}`);
+  };
+
+  const handleQuickAction = (actionId: number) => {
+    switch (actionId) {
+      case 1: // Complete Job
+        setIsCompleteJobDialogOpen(true);
+        break;
+      case 2: // Send Reminder
+        toast.success("Reminder sent to client");
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleCompleteJob = () => {
+    toast.success("Job marked as completed");
+    setIsCompleteJobDialogOpen(false);
   };
   
   return (
@@ -137,6 +160,7 @@ export const JobDetailsQuickActions = () => {
               key={action.id} 
               variant={action.variant as any} 
               className={cn(action.className, "flex items-center gap-2")}
+              onClick={() => handleQuickAction(action.id)}
             >
               <action.icon size={18} />
               {action.name}
@@ -144,6 +168,25 @@ export const JobDetailsQuickActions = () => {
           ))}
         </CardContent>
       </Card>
+
+      {/* Complete Job Dialog */}
+      <AlertDialog 
+        open={isCompleteJobDialogOpen} 
+        onOpenChange={setIsCompleteJobDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will mark the job as completed and notify the client. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCompleteJob}>Yes, Complete Job</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
