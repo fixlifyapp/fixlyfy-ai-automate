@@ -8,9 +8,6 @@ import { CallDialog } from "@/components/jobs/dialogs/CallDialog";
 import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
 import { InvoiceDialog } from "@/components/jobs/dialogs/InvoiceDialog";
 import { EstimateDialog } from "@/components/jobs/dialogs/EstimateDialog";
-import { Badge } from "@/components/ui/badge";
-import { ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export const JobDetailsHeader = () => {
   const { id } = useParams();
@@ -20,9 +17,6 @@ export const JobDetailsHeader = () => {
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-sm px-3 py-1 border-fixlyfy/20">
-            {jobHeaderData.job.id}
-          </Badge>
           <JobInfoSection 
             job={jobHeaderData.job}
             invoiceAmount={jobHeaderData.invoiceAmount}
@@ -35,10 +29,7 @@ export const JobDetailsHeader = () => {
           />
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-1" onClick={() => {}}>
-            Actions <ChevronDown size={16} />
-          </Button>
+        <div>
           <JobActions 
             onInvoiceClick={() => jobHeaderData.setIsInvoiceDialogOpen(true)}
             onEstimateClick={() => jobHeaderData.setIsEstimateDialogOpen(true)}

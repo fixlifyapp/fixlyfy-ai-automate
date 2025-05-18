@@ -12,7 +12,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { JobEstimates } from "@/components/jobs/JobEstimates";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { JobMessages } from "@/components/jobs/JobMessages";
-import { JobProducts } from "@/components/jobs/JobProducts";
 import { useRBAC } from "@/components/auth/RBACProvider";
 
 const JobDetailsPage = () => {
@@ -44,20 +43,13 @@ const JobDetailsPage = () => {
               <TabsContent value="messages">
                 <JobMessages jobId={id || ""} />
               </TabsContent>
-              <TabsContent value="products">
-                <JobProducts jobId={id || ""} />
-              </TabsContent>
               <TabsContent value="history">
                 <JobHistory jobId={id || ""} />
               </TabsContent>
             </JobDetailsTabs>
           </div>
           <div className="lg:col-span-1 space-y-6">
-            {hasPermission('view_ai_suggestions') && (
-              <Card className="border-fixlyfy-border shadow-sm bg-fixlyfy/5">
-                <JobDetailsQuickActions />
-              </Card>
-            )}
+            <JobDetailsQuickActions />
           </div>
         </div>
       </div>
