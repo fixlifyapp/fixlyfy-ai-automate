@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Accordion, 
@@ -52,7 +51,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
   const { toast } = useToast();
   const { hasPermission } = useRBAC();
 
-  // In a real app, we would fetch this data from an API
+  // Enhanced fake data with more entries and variety
   const historyItems = [
     {
       id: 1,
@@ -68,7 +67,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "13:45",
       type: "note",
       title: "Note Added",
-      description: "Technician added a note: 'HVAC unit is 8 years old and showing signs of wear.'"
+      description: "Technician added a note: 'HVAC unit is 8 years old and showing signs of wear. Will need to order replacement parts for the condenser.'"
     },
     {
       id: 3,
@@ -133,6 +132,127 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       type: "attachment",
       title: "File Attached",
       description: "Technician uploaded photo-evidence.jpg"
+    },
+    // New additional items
+    {
+      id: 11,
+      date: "May 16, 2023",
+      time: "08:45",
+      type: "status-change",
+      title: "Job Status Changed",
+      description: "Job status changed from 'In Progress' to 'Completed'"
+    },
+    {
+      id: 12,
+      date: "May 16, 2023",
+      time: "08:30",
+      type: "note",
+      title: "Note Added",
+      description: "Technician added a note: 'Successfully replaced condenser fan motor and cleaned the evaporator coil. Unit is now functioning properly with appropriate cooling.'"
+    },
+    {
+      id: 13,
+      date: "May 16, 2023",
+      time: "09:15",
+      type: "payment",
+      title: "Payment Received",
+      description: "Customer paid remaining balance of $325.99"
+    },
+    {
+      id: 14,
+      date: "May 15, 2023",
+      time: "17:05",
+      type: "communication",
+      title: "Call Made",
+      description: "Technician called customer to discuss additional parts needed"
+    },
+    {
+      id: 15,
+      date: "May 15, 2023",
+      time: "16:30",
+      type: "attachment",
+      title: "File Attached",
+      description: "Customer uploaded warranty-document.pdf"
+    },
+    {
+      id: 16,
+      date: "May 15, 2023",
+      time: "15:45",
+      type: "estimate",
+      title: "Estimate Updated",
+      description: "Estimate #EST-2023-1001 was updated from $250.00 to $475.99 due to additional parts"
+    },
+    {
+      id: 17,
+      date: "May 14, 2023",
+      time: "13:15",
+      type: "note",
+      title: "Note Added",
+      description: "Customer requested service to be done before noon if possible. They need to leave for work by 1:00 PM."
+    },
+    {
+      id: 18,
+      date: "May 14, 2023",
+      time: "10:20",
+      type: "communication",
+      title: "Email Sent",
+      description: "Detailed job information email sent to customer"
+    },
+    {
+      id: 19,
+      date: "May 13, 2023",
+      time: "09:30",
+      type: "status-change",
+      title: "Job Status Changed",
+      description: "Job status changed from 'Pending' to 'Scheduled'"
+    },
+    {
+      id: 20,
+      date: "May 13, 2023",
+      time: "14:15",
+      type: "invoice",
+      title: "Invoice Updated",
+      description: "Invoice #INV-2023-1001 updated with new line items"
+    },
+    {
+      id: 21,
+      date: "May 11, 2023",
+      time: "09:45",
+      type: "communication",
+      title: "Call Received",
+      description: "Customer called about HVAC unit not cooling properly"
+    },
+    {
+      id: 22,
+      date: "May 10, 2023",
+      time: "16:20",
+      type: "technician",
+      title: "Technician Scheduled",
+      description: "John Doe initially assigned to job"
+    },
+    {
+      id: 23,
+      date: "May 17, 2023",
+      time: "10:30",
+      type: "note",
+      title: "Follow-up Note",
+      description: "Called customer to verify system is still operating correctly. Customer reported everything is working well."
+    },
+    {
+      id: 24,
+      date: "May 16, 2023",
+      time: "15:00",
+      type: "attachment",
+      title: "File Attached",
+      description: "Final inspection report.pdf uploaded to job"
+    },
+    {
+      id: 25,
+      date: "May 17, 2023",
+      time: "11:45",
+      type: "status-change",
+      title: "Job Status Changed",
+      description: "Job status changed from 'Completed' to 'Closed'"
     }
   ];
 
@@ -277,16 +397,21 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
   const getAiInsight = () => {
     const statusChanges = historyItems.filter(item => item.type === "status-change").length;
     const technicianChanges = historyItems.filter(item => item.type === "technician").length;
+    const daysElapsed = new Set(historyItems.map(item => item.date)).size;
     
-    if (statusChanges > 2) {
-      return "This job has multiple status changes - may indicate scheduling issues.";
+    if (statusChanges > 3) {
+      return "This job has multiple status changes - may indicate scheduling issues or customer indecision.";
     }
     
     if (technicianChanges > 1) {
       return "Multiple technician reassignments detected - consider reviewing routing efficiency.";
     }
+
+    if (daysElapsed > 6) {
+      return "Job has been open for over a week - may need escalation or customer follow-up.";
+    }
     
-    return "Job history appears normal with standard progression.";
+    return "Job history shows normal progression with standard completion timeframe.";
   };
 
   return (
@@ -405,7 +530,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                                   </DropdownMenuItem>
                                   
                                   {item.type === "attachment" && (
-                                    <DropdownMenuItem onClick={() => handleDownload("photo-evidence.jpg")}>
+                                    <DropdownMenuItem onClick={() => handleDownload(item.description.split(' ').pop() || "file.pdf")}>
                                       <Download size={14} className="mr-2" /> Download
                                     </DropdownMenuItem>
                                   )}
@@ -437,4 +562,3 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     </Card>
   );
 };
-
