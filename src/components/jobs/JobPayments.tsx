@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, DollarSign, Bank, FileText } from "lucide-react";
+import { CreditCard, DollarSign, Ban, FileText } from "lucide-react";
 import { Payment, PaymentMethod } from "@/types/payment";
 import { payments as samplePayments } from "@/data/payments";
 import { formatDistanceToNow } from "date-fns";
@@ -30,7 +30,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       case "cash":
         return <DollarSign size={16} className="text-green-500" />;
       case "e-transfer":
-        return <Bank size={16} className="text-purple-500" />;
+        return <Ban size={16} className="text-purple-500" />; // Changed from Bank to Ban
       case "cheque":
         return <FileText size={16} className="text-orange-500" />;
       default:
