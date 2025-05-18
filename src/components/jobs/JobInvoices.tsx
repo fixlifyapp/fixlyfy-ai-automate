@@ -2,12 +2,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Send, Check } from "lucide-react";
+import { PlusCircle, FileText, Send, Check, Plus, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { InvoiceCreationDialog } from "./dialogs/InvoiceCreationDialog";
 import { Payment } from "@/types/payment";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -33,7 +36,7 @@ interface Invoice {
   notes?: string;
   status: "draft" | "sent" | "paid" | "overdue";
   jobId: string;
-  payments?: number[];
+  payments: Payment[];
 }
 
 export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
@@ -41,9 +44,15 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isViewingInvoice, setIsViewingInvoice] = useState(false);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [isAddingPayment, setIsAddingPayment] = useState(false);
+  const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<string>("credit-card");
+  const [paymentNotes, setPaymentNotes] = useState<string>("");
+  const [estimateItems, setEstimateItems] = useState<InvoiceItem[]>([]);
+  const [hasEstimate, setHasEstimate] = useState(false);
   
-  // Load existing invoices - in a real app, this would come from your database
+  // Load existing invoices and estimates - in a real app, this would come from your database
   useEffect(() => {
     // Mock data - in a real app, you would fetch this from your backend
     const mockInvoices: Invoice[] = [
@@ -73,46 +82,78 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         total: 372.9,
         status: "sent",
         jobId: "JOB-1001",
-        payments: [100, 50] // Example payments
+        payments: [
+          {
+            id: "payment-1",
+            date: new Date().toISOString(),
+            clientId: "client-123",
+            clientName: "Michael Johnson",
+            jobId: "JOB-1001",
+            amount: 100,
+            method: "credit-card",
+            status: "paid"
+          },
+          {
+            id: "payment-2",
+            date: new Date().toISOString(),
+            clientId: "client-123",
+            clientName: "Michael Johnson",
+            jobId: "JOB-1001",
+            amount: 50,
+            method: "credit-card",
+            status: "paid"
+          }
+        ]
       }
     ];
     
     setInvoices(mockInvoices);
     
-    // Load payments for job
-    const mockPayments = [
+    // Mock estimate items
+    const mockEstimateItems: InvoiceItem[] = [
       {
-        id: "payment-1",
-        date: new Date().toISOString(),
-        clientId: "client-123",
-        clientName: "Michael Johnson",
-        jobId: "JOB-1001",
-        amount: 100,
-        method: "credit-card",
-        status: "paid"
+        name: "Diagnostic Service",
+        description: "Complete system diagnostics",
+        price: 120,
+        quantity: 1,
+        taxable: true
       },
       {
-        id: "payment-2",
-        date: new Date().toISOString(),
-        clientId: "client-123",
-        clientName: "Michael Johnson",
-        jobId: "JOB-1001",
-        amount: 50,
-        method: "credit-card",
-        status: "paid"
+        name: "HVAC Annual Maintenance",
+        description: "Yearly system tune-up and maintenance",
+        price: 250,
+        quantity: 1,
+        taxable: true
       }
-    ] as Payment[];
+    ];
     
-    setPayments(mockPayments);
+    setEstimateItems(mockEstimateItems);
+    setHasEstimate(true);
   }, [jobId]);
 
   const handleCreateInvoice = () => {
+    setSelectedInvoice(null);
+    setIsCreateDialogOpen(true);
+  };
+  
+  const handleEditInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsEditingInvoice(true);
     setIsCreateDialogOpen(true);
   };
 
   const handleSaveInvoice = (invoice: Invoice) => {
-    setInvoices([...invoices, {...invoice, payments: []}]);
+    if (selectedInvoice) {
+      // Update existing invoice
+      setInvoices(
+        invoices.map((inv) => (inv.id === selectedInvoice.id ? invoice : inv))
+      );
+    } else {
+      // Add new invoice
+      setInvoices([...invoices, {...invoice, payments: []}]);
+    }
     setIsCreateDialogOpen(false);
+    setIsEditingInvoice(false);
   };
 
   const handleSendInvoice = (invoiceId: string) => {
@@ -136,11 +177,61 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     );
     toast.success("Invoice marked as paid");
   };
+  
+  const handleSyncFromEstimate = () => {
+    toast.success("Estimate synchronized to invoice");
+  };
 
   // Calculate balance for an invoice (total - sum of payments)
   const calculateBalance = (invoice: Invoice) => {
-    const paymentsTotal = invoice.payments ? invoice.payments.reduce((sum, payment) => sum + payment, 0) : 0;
+    const paymentsTotal = invoice.payments ? invoice.payments.reduce((sum, payment) => sum + payment.amount, 0) : 0;
     return invoice.total - paymentsTotal;
+  };
+
+  const handleAddPayment = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentAmount(calculateBalance(invoice));
+    setPaymentMethod("credit-card");
+    setPaymentNotes("");
+    setIsAddingPayment(true);
+  };
+  
+  const handleSavePayment = () => {
+    if (!selectedInvoice || paymentAmount <= 0) return;
+    
+    const newPayment: Payment = {
+      id: `payment-${Date.now()}`,
+      date: new Date().toISOString(),
+      clientId: "client-123",
+      clientName: "Michael Johnson",
+      jobId,
+      amount: paymentAmount,
+      method: paymentMethod as any,
+      status: "paid",
+      notes: paymentNotes
+    };
+    
+    setInvoices(
+      invoices.map((invoice) =>
+        invoice.id === selectedInvoice.id
+          ? { ...invoice, payments: [...invoice.payments, newPayment] }
+          : invoice
+      )
+    );
+    
+    setIsAddingPayment(false);
+    toast.success(`Payment of $${paymentAmount} added successfully`);
+    
+    // If payment covers the full balance, mark invoice as paid
+    if (paymentAmount >= calculateBalance(selectedInvoice)) {
+      setInvoices(
+        invoices.map((invoice) =>
+          invoice.id === selectedInvoice.id
+            ? { ...invoice, status: "paid" as const }
+            : invoice
+        )
+      );
+    }
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -204,28 +295,40 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm"
-                        onClick={() => viewInvoice(invoice)}
+                        onClick={() => handleEditInvoice(invoice)}
+                        className="text-xs"
                       >
-                        <FileText size={16} />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleAddPayment(invoice)}
+                        className="text-xs"
+                        disabled={calculateBalance(invoice) <= 0}
+                      >
+                        Add Payment
                       </Button>
                       {invoice.status === "draft" && (
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm"
                           onClick={() => handleSendInvoice(invoice.id)}
+                          className="text-xs"
                         >
-                          <Send size={16} />
+                          Send
                         </Button>
                       )}
-                      {invoice.status === "sent" && (
+                      {invoice.status === "sent" && calculateBalance(invoice) > 0 && (
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm"
                           onClick={() => handleMarkAsPaid(invoice.id)}
+                          className="text-xs"
                         >
-                          <Check size={16} />
+                          Mark Paid
                         </Button>
                       )}
                     </div>
@@ -245,7 +348,67 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
           onOpenChange={setIsCreateDialogOpen}
           jobId={jobId}
           onSave={handleSaveInvoice}
+          hasEstimate={hasEstimate}
+          estimateItems={estimateItems}
+          onSyncFromEstimate={handleSyncFromEstimate}
         />
+        
+        {/* Add Payment Dialog */}
+        <Dialog open={isAddingPayment} onOpenChange={setIsAddingPayment}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Payment</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">
+                  Amount
+                </Label>
+                <div className="col-span-3 relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2">$</span>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                    className="pl-7"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="method" className="text-right">
+                  Method
+                </Label>
+                <select 
+                  id="method"
+                  className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="credit-card">Credit Card</option>
+                  <option value="cash">Cash</option>
+                  <option value="e-transfer">E-Transfer</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="notes" className="text-right">
+                  Notes
+                </Label>
+                <Input
+                  id="notes"
+                  className="col-span-3"
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddingPayment(false)}>Cancel</Button>
+              <Button onClick={handleSavePayment}>Save Payment</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

@@ -2,16 +2,26 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Send } from "lucide-react";
+import { PlusCircle, FileText, Send, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UpsellDialog } from "@/components/jobs/dialogs/UpsellDialog";
 import { EstimateBuilderDialog } from "@/components/jobs/dialogs/EstimateBuilderDialog";
 import { toast } from "sonner";
 import { Product } from "./builder/types";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface JobEstimatesProps {
   jobId: string;
+}
+
+interface EstimateItem {
+  name: string;
+  description: string;
+  price: number;
+  quantity: number;
+  taxable: boolean;
 }
 
 export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
@@ -20,6 +30,8 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [recommendedProduct, setRecommendedProduct] = useState<Product | null>(null);
   const [techniciansNote, setTechniciansNote] = useState("");
+  const [isConvertToInvoiceDialogOpen, setIsConvertToInvoiceDialogOpen] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
   
   // In a real app, this would be fetched from an API
   const [estimates, setEstimates] = useState([
@@ -30,6 +42,29 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
       amount: 475.99,
       status: "sent",
       viewed: true,
+      items: [
+        {
+          name: "Diagnostic Service",
+          description: "Complete system diagnostics",
+          price: 120,
+          quantity: 1,
+          taxable: true
+        },
+        {
+          name: "HVAC Annual Maintenance",
+          description: "Yearly system tune-up and maintenance",
+          price: 250,
+          quantity: 1,
+          taxable: true
+        },
+        {
+          name: "Air Filter Replacement",
+          description: "Premium air filter with installation",
+          price: 55,
+          quantity: 1,
+          taxable: true
+        }
+      ],
       recommendedProduct: {
         id: "prod-4",
         name: "1-Year Warranty",
@@ -47,6 +82,22 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
       amount: 299.50,
       status: "draft",
       viewed: false,
+      items: [
+        {
+          name: "Minor Repair",
+          description: "Quick fix and adjustment",
+          price: 150,
+          quantity: 1,
+          taxable: true
+        },
+        {
+          name: "Parts Replacement",
+          description: "Standard component replacement",
+          price: 115,
+          quantity: 1,
+          taxable: true
+        }
+      ],
       recommendedProduct: null,
       techniciansNote: ""
     }
@@ -90,6 +141,20 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
   const handleUpsellAccept = (product: Product) => {
     toast.success(`${product.name} added to the estimate`);
     // In a real app, this would update the estimate with the added product
+  };
+  
+  const handleConvertToInvoice = (estimate: any) => {
+    setSelectedEstimate(estimate);
+    setIsConvertToInvoiceDialogOpen(true);
+  };
+  
+  const confirmConvertToInvoice = () => {
+    // In a real app, this would create a new invoice from the estimate
+    toast.success(`Estimate ${selectedEstimate.number} converted to invoice`);
+    setIsConvertToInvoiceDialogOpen(false);
+    
+    // Here you might want to redirect to the invoices tab
+    // or notify a parent component to switch tabs
   };
 
   return (
@@ -135,19 +200,29 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm"
+                        className="text-xs"
                         onClick={() => handleViewEstimate(estimate)}
                       >
-                        <FileText size={16} />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => handleConvertToInvoice(estimate)}
+                      >
+                        To Invoice
                       </Button>
                       {estimate.status === "draft" && (
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm"
+                          className="text-xs"
                           onClick={() => handleSendEstimate(estimate.id)}
                         >
-                          <Send size={16} />
+                          Send
                         </Button>
                       )}
                     </div>
@@ -177,6 +252,28 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
           estimateId={selectedEstimateId}
           jobId={jobId}
         />
+        
+        {/* Convert to Invoice Dialog */}
+        <Dialog open={isConvertToInvoiceDialogOpen} onOpenChange={setIsConvertToInvoiceDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Convert to Invoice</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>Are you sure you want to convert estimate {selectedEstimate?.number} to an invoice?</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This will create a new invoice with all the items from this estimate.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsConvertToInvoiceDialogOpen(false)}>Cancel</Button>
+              <Button onClick={confirmConvertToInvoice} className="gap-2">
+                <RefreshCw size={16} />
+                Convert to Invoice
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

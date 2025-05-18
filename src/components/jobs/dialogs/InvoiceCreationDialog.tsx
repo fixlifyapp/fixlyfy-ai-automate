@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Product } from "../builder/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Plus, Search, Sync } from "lucide-react";
+import { Trash, Plus, Search, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
@@ -246,7 +246,7 @@ export const InvoiceCreationDialog = ({
                     onClick={handleSyncFromEstimate}
                     className="flex items-center gap-1"
                   >
-                    <Sync size={16} />
+                    <RefreshCw size={16} />
                     Sync from Estimate
                   </Button>
                 )}
