@@ -20,6 +20,61 @@ interface MessageDialogProps {
 
 export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps) => {
   const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      text: "Hello! Just confirming our appointment tomorrow at 1:30 PM.",
+      sender: "You",
+      timestamp: "May 14 9:30 AM",
+      isClient: false
+    },
+    {
+      text: "Yes, I'll be there. Thank you for the reminder.",
+      sender: client.name,
+      timestamp: "May 14 10:15 AM",
+      isClient: true
+    }
+  ]);
+
+  const handleSendMessage = () => {
+    if (!message.trim()) return;
+
+    // Add the new message to the list
+    const newMessage = {
+      text: message,
+      sender: "You",
+      timestamp: new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      }),
+      isClient: false
+    };
+
+    setMessages([...messages, newMessage]);
+    toast.success("Message sent to client");
+    setMessage("");
+    
+    // Simulate a reply after a delay (in a real app, this would come from the API)
+    if (Math.random() > 0.5) {
+      setTimeout(() => {
+        const clientReply = {
+          text: "Thanks for the update! I'll check with you later.",
+          sender: client.name,
+          timestamp: new Date().toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true
+          }),
+          isClient: true
+        };
+        setMessages(prevMessages => [...prevMessages, clientReply]);
+      }, 3000);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -29,19 +84,25 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
         </DialogHeader>
         <div className="py-4">
           <div className="h-64 overflow-y-auto border rounded-md p-3 mb-4 space-y-3">
-            <div className="flex flex-col max-w-[80%]">
-              <div className="bg-muted p-3 rounded-lg">
-                <p className="text-sm">Hello! Just confirming our appointment tomorrow at 1:30 PM.</p>
+            {messages.map((msg, index) => (
+              <div 
+                key={index} 
+                className={`flex flex-col max-w-[80%] ${msg.isClient ? 'self-end items-end ml-auto' : ''}`}
+              >
+                <div 
+                  className={`${
+                    msg.isClient 
+                      ? 'bg-fixlyfy text-white' 
+                      : 'bg-muted'
+                  } p-3 rounded-lg`}
+                >
+                  <p className="text-sm">{msg.text}</p>
+                </div>
+                <span className="text-xs text-fixlyfy-text-secondary mt-1">
+                  {msg.sender}, {msg.timestamp}
+                </span>
               </div>
-              <span className="text-xs text-fixlyfy-text-secondary mt-1">You, May 14 9:30 AM</span>
-            </div>
-            
-            <div className="flex flex-col max-w-[80%] self-end items-end ml-auto">
-              <div className="bg-fixlyfy text-white p-3 rounded-lg">
-                <p className="text-sm">Yes, I'll be there. Thank you for the reminder.</p>
-              </div>
-              <span className="text-xs text-fixlyfy-text-secondary mt-1">{client.name}, May 14 10:15 AM</span>
-            </div>
+            ))}
           </div>
           
           <div className="flex gap-2">
@@ -51,11 +112,14 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
               rows={2}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
             />
-            <Button onClick={() => {
-              toast.success("Message sent to client");
-              setMessage("");
-            }}>Send</Button>
+            <Button onClick={handleSendMessage}>Send</Button>
           </div>
         </div>
       </DialogContent>
