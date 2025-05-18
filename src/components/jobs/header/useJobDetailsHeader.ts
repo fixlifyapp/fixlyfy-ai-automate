@@ -83,6 +83,12 @@ export const useJobDetailsHeader = (id: string) => {
     toast.success(`Estimate of $${estimateAmount.toFixed(2)} synced to invoice successfully`);
   };
 
+  // Handle recording a payment
+  const handlePaymentRecorded = (amount: number) => {
+    setPaymentsMade([...paymentsMade, amount]);
+    toast.success(`Payment of $${amount.toFixed(2)} recorded`);
+  };
+
   return {
     job,
     status,
@@ -102,6 +108,7 @@ export const useJobDetailsHeader = (id: string) => {
     handleEditClient,
     handleInvoiceCreated,
     handleEstimateCreated,
-    handleSyncEstimateToInvoice
+    handleSyncEstimateToInvoice,
+    handlePaymentRecorded
   };
 };

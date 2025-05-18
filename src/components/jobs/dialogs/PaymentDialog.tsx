@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { FileText, Send } from "lucide-react";
+import { CreditCard, DollarSign, Bank, FileText } from "lucide-react";
 
 const paymentFormSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -110,7 +110,7 @@ export const PaymentDialog = ({
                         )}
                         onClick={() => form.setValue("method", "cash")}
                       >
-                        <FileText size={16} />
+                        <DollarSign size={16} />
                         <span>Cash</span>
                       </Button>
                       
@@ -123,7 +123,7 @@ export const PaymentDialog = ({
                         )}
                         onClick={() => form.setValue("method", "credit-card")}
                       >
-                        <Send size={16} />
+                        <CreditCard size={16} />
                         <span>Credit Card</span>
                       </Button>
                       
@@ -136,7 +136,7 @@ export const PaymentDialog = ({
                         )}
                         onClick={() => form.setValue("method", "e-transfer")}
                       >
-                        <Send size={16} />
+                        <Bank size={16} />
                         <span>E-Transfer</span>
                       </Button>
                       
