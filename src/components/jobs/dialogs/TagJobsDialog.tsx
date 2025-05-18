@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react"; // Add this import for the X icon
 import { globalTags, getTagColor } from "@/data/tags";
 
 interface TagJobsDialogProps {
