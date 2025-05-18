@@ -61,18 +61,24 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         dueDate: "2025-06-09",
         items: [
           {
+            id: "item-1", // Added required property
             name: "Labor - Standard Rate",
             description: "Standard labor rate per hour",
             price: 95,
             quantity: 3,
             taxable: true,
+            category: "Labor", // Added required property
+            tags: ["service", "labor"] // Added required property
           },
           {
+            id: "item-2", // Added required property
             name: "HVAC Filter Replacement",
             description: "High-quality air filter replacement",
             price: 45,
             quantity: 1,
             taxable: true,
+            category: "Parts", // Added required property
+            tags: ["hvac", "filter"] // Added required property
           }
         ],
         subtotal: 330,
@@ -107,21 +113,27 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     
     setInvoices(mockInvoices);
     
-    // Mock estimate items
+    // Mock estimate items - Add required properties to each item
     const mockEstimateItems: InvoiceItem[] = [
       {
+        id: "estimate-item-1",  // Added required property
         name: "Diagnostic Service",
         description: "Complete system diagnostics",
         price: 120,
         quantity: 1,
-        taxable: true
+        taxable: true,
+        category: "Services",  // Added required property
+        tags: ["diagnostic", "service"]  // Added required property
       },
       {
+        id: "estimate-item-2",  // Added required property
         name: "HVAC Annual Maintenance",
         description: "Yearly system tune-up and maintenance",
         price: 250,
         quantity: 1,
-        taxable: true
+        taxable: true,
+        category: "Maintenance",  // Added required property
+        tags: ["hvac", "maintenance", "annual"]  // Added required property
       }
     ];
     
