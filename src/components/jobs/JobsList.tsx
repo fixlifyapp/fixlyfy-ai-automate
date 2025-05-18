@@ -27,6 +27,9 @@ import { Link, useNavigate } from "react-router-dom";
 
 interface JobsListProps {
   isGridView: boolean;
+  selectedJobs: string[];
+  onSelectJob: (jobId: string, isSelected: boolean) => void;
+  onSelectAllJobs: (isSelected: boolean) => void;
 }
 
 const jobs = [
@@ -112,11 +115,24 @@ const jobs = [
   },
 ];
 
-export const JobsList = ({ isGridView }: JobsListProps) => {
+export const JobsList = ({ isGridView, selectedJobs, onSelectJob, onSelectAllJobs }: JobsListProps) => {
   const navigate = useNavigate();
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
+  };
+
+  const areAllJobsSelected = jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
+
+  // Modified to handle selection without propagation
+  const handleCheckboxClick = (e: React.MouseEvent, jobId: string) => {
+    e.stopPropagation();
+    onSelectJob(jobId, !selectedJobs.includes(jobId));
+  };
+
+  const handleSelectAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectAllJobs(!areAllJobsSelected);
   };
 
   return (
@@ -126,12 +142,20 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
           {jobs.map((job) => (
             <div 
               key={job.id} 
-              className="fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer" 
+              className={cn(
+                "fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer relative",
+                selectedJobs.includes(job.id) && "ring-2 ring-fixlyfy"
+              )} 
               onClick={() => handleJobClick(job.id)}
             >
+              {/* Add checkbox for selection */}
+              <div className="absolute top-3 left-3 z-10" onClick={(e) => handleCheckboxClick(e, job.id)}>
+                <Checkbox checked={selectedJobs.includes(job.id)} />
+              </div>
+
               <div className="p-4 border-b border-fixlyfy-border">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="pl-7"> {/* Add padding to make room for checkbox */}
                     <Badge variant="outline" className="mb-2">
                       {job.id}
                     </Badge>
@@ -190,7 +214,10 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">
-                  <Checkbox />
+                  <Checkbox 
+                    checked={areAllJobsSelected} 
+                    onClick={handleSelectAll}
+                  />
                 </TableHead>
                 <TableHead>Job #</TableHead>
                 <TableHead>Client</TableHead>
@@ -208,12 +235,16 @@ export const JobsList = ({ isGridView }: JobsListProps) => {
                   key={job.id}
                   className={cn(
                     idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50",
-                    "cursor-pointer hover:bg-fixlyfy-bg-interface"
+                    "cursor-pointer hover:bg-fixlyfy-bg-interface",
+                    selectedJobs.includes(job.id) && "bg-fixlyfy/5"
                   )}
                   onClick={() => handleJobClick(job.id)}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox />
+                    <Checkbox 
+                      checked={selectedJobs.includes(job.id)} 
+                      onClick={(e) => handleCheckboxClick(e, job.id)}
+                    />
                   </TableCell>
                   <TableCell>
                     <span className="font-medium">{job.id}</span>

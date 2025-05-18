@@ -6,10 +6,36 @@ import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { Button } from "@/components/ui/button";
 import { Plus, Grid, List } from "lucide-react";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 
 const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  
+  // Handle selecting or deselecting a job
+  const handleSelectJob = (jobId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedJobs(prev => [...prev, jobId]);
+    } else {
+      setSelectedJobs(prev => prev.filter(id => id !== jobId));
+    }
+  };
+  
+  // Handle selecting or deselecting all jobs
+  const handleSelectAllJobs = (isSelected: boolean) => {
+    if (isSelected) {
+      // In a real app, you'd fetch all job IDs from your data
+      setSelectedJobs(["JOB-1001", "JOB-1002", "JOB-1003", "JOB-1004", "JOB-1005"]);
+    } else {
+      setSelectedJobs([]);
+    }
+  };
+  
+  // Clear selection of jobs
+  const handleClearSelection = () => {
+    setSelectedJobs([]);
+  };
   
   return (
     <PageLayout>
@@ -24,6 +50,13 @@ const JobsPage = () => {
           <Plus size={18} className="mr-2" /> Create Job
         </Button>
       </div>
+      
+      {selectedJobs.length > 0 && (
+        <BulkActionsBar 
+          selectedJobs={selectedJobs} 
+          onClearSelection={handleClearSelection} 
+        />
+      )}
       
       <div className="fixlyfy-card p-4 mb-6">
         <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -49,7 +82,12 @@ const JobsPage = () => {
         </div>
       </div>
       
-      <JobsList isGridView={isGridView} />
+      <JobsList 
+        isGridView={isGridView} 
+        selectedJobs={selectedJobs}
+        onSelectJob={handleSelectJob}
+        onSelectAllJobs={handleSelectAllJobs}
+      />
       
       <JobsCreateModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
     </PageLayout>
