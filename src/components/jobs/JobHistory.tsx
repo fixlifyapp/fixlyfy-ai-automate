@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Accordion, 
@@ -12,22 +13,44 @@ import {
   MessageSquare,
   Phone,
   Receipt,
-  FileIcon,
   User,
   Paperclip,
-  Filter
+  Filter,
+  Copy,
+  Star,
+  Download,
+  Undo,
+  MoreHorizontal,
+  Play,
+  Send,
+  DollarSign,
+  AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobHistoryProps {
   jobId: string;
 }
 
 export const JobHistory = ({ jobId }: JobHistoryProps) => {
-  // Add state for the active filter
+  // Add state for the active filter and pinned items
   const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [pinnedItems, setPinnedItems] = useState<number[]>([]);
+  const { toast } = useToast();
+  const { hasPermission } = useRBAC();
 
   // In a real app, we would fetch this data from an API
   const historyItems = [
@@ -51,7 +74,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       id: 3,
       date: "May 15, 2023",
       time: "13:30",
-      type: "status-change",
+      type: "job-created",
       title: "Job Started",
       description: "Technician Robert Smith started working on the job"
     },
@@ -125,38 +148,114 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     { value: "attachment", label: "Attachments" }
   ];
 
-  // Filter the history items based on the active filter
-  const filteredItems = historyItems.filter(item => 
-    activeFilter === "all" || item.type === activeFilter
-  );
+  // Filter the history items based on the active filter and sort pinned items to the top
+  const filteredItems = historyItems
+    .filter(item => activeFilter === "all" || item.type === activeFilter)
+    .sort((a, b) => {
+      // Sort pinned items first
+      const isPinnedA = pinnedItems.includes(a.id);
+      const isPinnedB = pinnedItems.includes(b.id);
+      
+      if (isPinnedA && !isPinnedB) return -1;
+      if (!isPinnedA && isPinnedB) return 1;
+      
+      // Then by date (newest first)
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
 
   const getHistoryIcon = (type: string) => {
     switch (type) {
       case "status-change":
-        return <Clock className="text-fixlyfy-info" />;
+        return <Clock className="text-blue-500" />;
       case "note":
-        return <FileText className="text-fixlyfy-warning" />;
-      case "document":
-        return <FileText className="text-fixlyfy-primary" />;
+        return <FileText className="text-orange-500" />;
       case "job-created":
-        return <CheckCircle className="text-fixlyfy-success" />;
+        return <Play className="text-purple-500" />;
       case "communication":
-        return <MessageSquare className="text-fixlyfy" />;
+        return <MessageSquare className="text-indigo-500" />;
       case "call":
-        return <Phone className="text-fixlyfy-secondary" />;
+        return <Phone className="text-indigo-500" />;
       case "payment":
-        return <Receipt className="text-green-500" />;
+        return <DollarSign className="text-green-500" />;
       case "estimate":
-        return <FileText className="text-amber-500" />;
+        return <Send className="text-indigo-500" />;
       case "invoice":
         return <FileText className="text-blue-500" />;
       case "technician":
-        return <User className="text-fixlyfy-warning" />;
+        return <User className="text-purple-500" />;
       case "attachment":
         return <Paperclip className="text-gray-500" />;
       default:
-        return <Clock className="text-fixlyfy" />;
+        return <Clock className="text-blue-500" />;
     }
+  };
+
+  const getHistoryColor = (type: string) => {
+    switch (type) {
+      case "status-change":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "note":
+        return "bg-orange-100 text-orange-700 border-orange-200";
+      case "job-created":
+        return "bg-purple-100 text-purple-700 border-purple-200";
+      case "communication":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "call":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "payment":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "estimate":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "invoice":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "technician":
+        return "bg-purple-100 text-purple-700 border-purple-200";
+      case "attachment":
+        return "bg-gray-100 text-gray-700 border-gray-200";
+      default:
+        return "bg-blue-100 text-blue-700 border-blue-200";
+    }
+  };
+
+  const handlePinItem = (id: number) => {
+    setPinnedItems(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+    
+    toast({
+      title: pinnedItems.includes(id) ? "Item unpinned" : "Item pinned",
+      description: pinnedItems.includes(id) 
+        ? "The item has been removed from pinned items." 
+        : "The item will now appear at the top of the list.",
+    });
+  };
+
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard",
+      description: "The content has been copied to your clipboard.",
+    });
+  };
+
+  const handleRevertChange = (id: number) => {
+    // In a real app, this would call an API to revert the change
+    toast({
+      title: "Change reverted",
+      description: "The change has been successfully reverted.",
+    });
+  };
+
+  const handleDownload = (filename: string) => {
+    // In a real app, this would download the file
+    toast({
+      title: "Download started",
+      description: `Downloading ${filename}...`,
+    });
   };
 
   const groupHistoryByDate = () => {
@@ -173,6 +272,22 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
   };
 
   const groupedHistory = groupHistoryByDate();
+  
+  // Simple AI insight based on the history data
+  const getAiInsight = () => {
+    const statusChanges = historyItems.filter(item => item.type === "status-change").length;
+    const technicianChanges = historyItems.filter(item => item.type === "technician").length;
+    
+    if (statusChanges > 2) {
+      return "This job has multiple status changes - may indicate scheduling issues.";
+    }
+    
+    if (technicianChanges > 1) {
+      return "Multiple technician reassignments detected - consider reviewing routing efficiency.";
+    }
+    
+    return "Job history appears normal with standard progression.";
+  };
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
@@ -186,6 +301,12 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
               Filter
             </Badge>
           </div>
+        </div>
+
+        {/* AI Insight Bar */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-start">
+          <AlertCircle size={16} className="text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+          <p className="text-sm text-blue-700">{getAiInsight()}</p>
         </div>
 
         {/* Activity Type Filters */}
@@ -225,14 +346,78 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                 <AccordionContent>
                   <div className="pl-4 border-l-2 border-fixlyfy-border/30 space-y-6 py-2">
                     {items.map((item, itemIndex) => (
-                      <div key={item.id} className="relative">
+                      <div key={item.id} className="relative group">
+                        {/* Pin indicator */}
+                        {pinnedItems.includes(item.id) && (
+                          <div className="absolute -left-[40px] bg-amber-100 p-1 rounded-full border border-amber-200">
+                            <Star size={14} className="text-amber-500" />
+                          </div>
+                        )}
+                        
                         <div className="absolute -left-[25px] bg-white p-1 rounded-full border border-fixlyfy-border">
                           {getHistoryIcon(item.type)}
                         </div>
                         <div className="ml-2">
-                          <div className="flex items-center mb-1">
-                            <span className="text-sm font-medium">{item.title}</span>
-                            <span className="ml-2 text-xs text-muted-foreground">{item.time}</span>
+                          <div className="flex items-center mb-1 justify-between">
+                            <div className="flex items-center">
+                              <Badge className={`mr-2 ${getHistoryColor(item.type)}`}>
+                                {item.title}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{item.time}</span>
+                            </div>
+                            
+                            {/* Inline Actions */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => handlePinItem(item.id)}
+                                    >
+                                      <Star 
+                                        size={16} 
+                                        className={cn(
+                                          pinnedItems.includes(item.id) 
+                                            ? "fill-amber-400 text-amber-400" 
+                                            : "text-muted-foreground"
+                                        )} 
+                                      />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {pinnedItems.includes(item.id) ? "Unpin" : "Pin"}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal size={16} />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleCopyToClipboard(item.description)}>
+                                    <Copy size={14} className="mr-2" /> Copy
+                                  </DropdownMenuItem>
+                                  
+                                  {item.type === "attachment" && (
+                                    <DropdownMenuItem onClick={() => handleDownload("photo-evidence.jpg")}>
+                                      <Download size={14} className="mr-2" /> Download
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {hasPermission("admin") && (
+                                    <DropdownMenuItem onClick={() => handleRevertChange(item.id)}>
+                                      <Undo size={14} className="mr-2" /> Revert
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                           <p className="text-sm text-muted-foreground">{item.description}</p>
                         </div>
@@ -252,3 +437,4 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     </Card>
   );
 };
+
