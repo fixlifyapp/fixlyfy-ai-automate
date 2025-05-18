@@ -12,7 +12,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { JobEstimates } from "@/components/jobs/JobEstimates";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { JobMessages } from "@/components/jobs/JobMessages";
-import { JobProducts } from "@/components/jobs/JobProducts";
 import { useRBAC } from "@/components/auth/RBACProvider";
 
 const JobDetailsPage = () => {
@@ -51,12 +50,6 @@ const JobDetailsPage = () => {
           </div>
           <div className="lg:col-span-1 space-y-6">
             <JobDetailsQuickActions />
-            <Card className="border-fixlyfy-border shadow-sm p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-medium">Products</h3>
-              </div>
-              <JobProducts jobId={id || ""} />
-            </Card>
           </div>
         </div>
       </div>

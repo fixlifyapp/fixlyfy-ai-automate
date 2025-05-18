@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useRBAC } from '@/components/auth/RBACProvider';
+import { ProductsSidebar } from '@/components/jobs/ProductsSidebar';
 
 // Define menu items with required permissions
 const menuItems = [
@@ -86,7 +86,11 @@ const bottomMenuItems = [
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const params = useParams();
   const { hasPermission } = useRBAC();
+  
+  // Check if we're on a job details page
+  const isJobDetailsPage = location.pathname.startsWith('/jobs/') && params.id;
   
   // Filter menu items based on permissions
   const filteredMenuItems = menuItems.filter(item => 
@@ -154,6 +158,13 @@ export const Sidebar = () => {
             </Link>
           ))}
         </div>
+        
+        {/* Products section will show only on job details pages */}
+        {isJobDetailsPage && !collapsed && (
+          <div className="mt-6 px-3">
+            <ProductsSidebar />
+          </div>
+        )}
       </div>
       
       <div className="p-3 space-y-1">
