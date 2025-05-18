@@ -41,6 +41,11 @@ export const TeamFilters = ({
     onSearch("");
   };
 
+  // Helper function to handle empty values
+  const getNullableValue = (value: string | null) => {
+    return value === null ? "all" : value;
+  };
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center mb-6">
       <div className="relative flex-1">
@@ -66,14 +71,14 @@ export const TeamFilters = ({
       
       <div className="flex gap-3">
         <Select
-          value={roleFilter || ""}
-          onValueChange={(value) => onFilterRole(value || null)}
+          value={getNullableValue(roleFilter)}
+          onValueChange={(value) => onFilterRole(value === "all" ? null : value)}
         >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Roles</SelectItem>
+            <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="manager">Manager</SelectItem>
             <SelectItem value="technician">Technician</SelectItem>
@@ -82,14 +87,14 @@ export const TeamFilters = ({
         </Select>
         
         <Select
-          value={statusFilter || ""}
-          onValueChange={(value) => onFilterStatus(value || null)}
+          value={getNullableValue(statusFilter)}
+          onValueChange={(value) => onFilterStatus(value === "all" ? null : value)}
         >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="suspended">Suspended</SelectItem>
           </SelectContent>
