@@ -23,7 +23,10 @@ import {
   Play,
   Send,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  ShieldAlert,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -39,27 +42,44 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { teamMembers } from "@/data/team";
 
 interface JobHistoryProps {
   jobId: string;
+}
+
+interface HistoryItem {
+  id: number;
+  date: string;
+  time: string;
+  type: string;
+  title: string;
+  description: string;
+  userId?: string;
+  userName?: string;
+  meta?: Record<string, any>;
+  visibility?: 'all' | 'restricted';
 }
 
 export const JobHistory = ({ jobId }: JobHistoryProps) => {
   // Add state for the active filter and pinned items
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [pinnedItems, setPinnedItems] = useState<number[]>([]);
+  const [showRestrictedItems, setShowRestrictedItems] = useState(false);
   const { toast } = useToast();
-  const { hasPermission } = useRBAC();
+  const { hasPermission, currentUser } = useRBAC();
 
-  // Enhanced fake data with more entries and variety
-  const historyItems = [
+  // Enhanced fake data with user information
+  const historyItems: HistoryItem[] = [
     {
       id: 1,
       date: "May 15, 2023",
       time: "14:22",
       type: "status-change",
       title: "Job Status Changed",
-      description: "Job status changed from 'Scheduled' to 'In Progress'"
+      description: "Job status changed from 'Scheduled' to 'In Progress'",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 2,
@@ -67,7 +87,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "13:45",
       type: "note",
       title: "Note Added",
-      description: "Technician added a note: 'HVAC unit is 8 years old and showing signs of wear. Will need to order replacement parts for the condenser.'"
+      description: "Technician added a note: 'HVAC unit is 8 years old and showing signs of wear. Will need to order replacement parts for the condenser.'",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 3,
@@ -75,7 +97,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "13:30",
       type: "job-created",
       title: "Job Started",
-      description: "Technician Robert Smith started working on the job"
+      description: "Technician Robert Smith started working on the job",
+      userId: "3", // Michael Chen (technician) 
+      userName: "Michael Chen"
     },
     {
       id: 4,
@@ -83,7 +107,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "09:15",
       type: "communication",
       title: "SMS Sent",
-      description: "Appointment confirmation SMS sent to customer"
+      description: "Appointment confirmation SMS sent to customer",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 5,
@@ -91,7 +117,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "11:30",
       type: "job-created",
       title: "Job Created",
-      description: "Job was created and scheduled for May 15, 2023"
+      description: "Job was created and scheduled for May 15, 2023",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 6,
@@ -99,7 +127,11 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "10:45",
       type: "payment",
       title: "Payment Received",
-      description: "Customer paid deposit of $150.00"
+      description: "Customer paid deposit of $150.00",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson",
+      visibility: 'restricted',
+      meta: { amount: 150, paymentMethod: 'credit_card' }
     },
     {
       id: 7,
@@ -107,7 +139,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "15:20",
       type: "estimate",
       title: "Estimate Created",
-      description: "Estimate #EST-2023-1001 was created for $250.00"
+      description: "Estimate #EST-2023-1001 was created for $250.00",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 8,
@@ -115,7 +149,10 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "16:30",
       type: "invoice",
       title: "Invoice Generated",
-      description: "Invoice #INV-2023-1001 was generated for $250.00"
+      description: "Invoice #INV-2023-1001 was generated for $250.00",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson",
+      visibility: 'restricted'
     },
     {
       id: 9,
@@ -123,7 +160,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "14:00",
       type: "technician",
       title: "Technician Changed",
-      description: "Job reassigned from John Doe to Robert Smith"
+      description: "Job reassigned from John Doe to Robert Smith",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 10,
@@ -131,16 +170,19 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "11:00",
       type: "attachment",
       title: "File Attached",
-      description: "Technician uploaded photo-evidence.jpg"
+      description: "Technician uploaded photo-evidence.jpg",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
-    // New additional items
     {
       id: 11,
       date: "May 16, 2023",
       time: "08:45",
       type: "status-change",
       title: "Job Status Changed",
-      description: "Job status changed from 'In Progress' to 'Completed'"
+      description: "Job status changed from 'In Progress' to 'Completed'",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 12,
@@ -148,7 +190,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "08:30",
       type: "note",
       title: "Note Added",
-      description: "Technician added a note: 'Successfully replaced condenser fan motor and cleaned the evaporator coil. Unit is now functioning properly with appropriate cooling.'"
+      description: "Technician added a note: 'Successfully replaced condenser fan motor and cleaned the evaporator coil. Unit is now functioning properly with appropriate cooling.'",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 13,
@@ -156,7 +200,11 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "09:15",
       type: "payment",
       title: "Payment Received",
-      description: "Customer paid remaining balance of $325.99"
+      description: "Customer paid remaining balance of $325.99",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson",
+      visibility: 'restricted',
+      meta: { amount: 325.99, paymentMethod: 'check' }
     },
     {
       id: 14,
@@ -164,7 +212,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "17:05",
       type: "communication",
       title: "Call Made",
-      description: "Technician called customer to discuss additional parts needed"
+      description: "Technician called customer to discuss additional parts needed",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 15,
@@ -172,7 +222,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "16:30",
       type: "attachment",
       title: "File Attached",
-      description: "Customer uploaded warranty-document.pdf"
+      description: "Customer uploaded warranty-document.pdf",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 16,
@@ -180,7 +232,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "15:45",
       type: "estimate",
       title: "Estimate Updated",
-      description: "Estimate #EST-2023-1001 was updated from $250.00 to $475.99 due to additional parts"
+      description: "Estimate #EST-2023-1001 was updated from $250.00 to $475.99 due to additional parts",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 17,
@@ -188,7 +242,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "13:15",
       type: "note",
       title: "Note Added",
-      description: "Customer requested service to be done before noon if possible. They need to leave for work by 1:00 PM."
+      description: "Customer requested service to be done before noon if possible. They need to leave for work by 1:00 PM.",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 18,
@@ -196,7 +252,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "10:20",
       type: "communication",
       title: "Email Sent",
-      description: "Detailed job information email sent to customer"
+      description: "Detailed job information email sent to customer",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 19,
@@ -204,7 +262,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "09:30",
       type: "status-change",
       title: "Job Status Changed",
-      description: "Job status changed from 'Pending' to 'Scheduled'"
+      description: "Job status changed from 'Pending' to 'Scheduled'",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 20,
@@ -212,7 +272,10 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "14:15",
       type: "invoice",
       title: "Invoice Updated",
-      description: "Invoice #INV-2023-1001 updated with new line items"
+      description: "Invoice #INV-2023-1001 updated with new line items",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson",
+      visibility: 'restricted'
     },
     {
       id: 21,
@@ -220,7 +283,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "09:45",
       type: "communication",
       title: "Call Received",
-      description: "Customer called about HVAC unit not cooling properly"
+      description: "Customer called about HVAC unit not cooling properly",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 22,
@@ -228,7 +293,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "16:20",
       type: "technician",
       title: "Technician Scheduled",
-      description: "John Doe initially assigned to job"
+      description: "John Doe initially assigned to job",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
     },
     {
       id: 23,
@@ -236,7 +303,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "10:30",
       type: "note",
       title: "Follow-up Note",
-      description: "Called customer to verify system is still operating correctly. Customer reported everything is working well."
+      description: "Called customer to verify system is still operating correctly. Customer reported everything is working well.",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 24,
@@ -244,7 +313,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "15:00",
       type: "attachment",
       title: "File Attached",
-      description: "Final inspection report.pdf uploaded to job"
+      description: "Final inspection report.pdf uploaded to job",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     },
     {
       id: 25,
@@ -252,7 +323,9 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       time: "11:45",
       type: "status-change",
       title: "Job Status Changed",
-      description: "Job status changed from 'Completed' to 'Closed'"
+      description: "Job status changed from 'Completed' to 'Closed'",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
     }
   ];
 
@@ -268,9 +341,28 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     { value: "attachment", label: "Attachments" }
   ];
 
-  // Filter the history items based on the active filter and sort pinned items to the top
+  // Function to determine if user can see an item
+  const canViewItem = (item: HistoryItem) => {
+    // Admin and managers can see everything
+    if (hasPermission('*') || hasPermission('jobs.view.all')) return true;
+    
+    // If item is restricted, only show to admin/manager/dispatcher roles
+    if (item.visibility === 'restricted' && !showRestrictedItems) {
+      return false;
+    }
+    
+    // Technicians can only see their own items or general items
+    if (currentUser?.role === 'technician') {
+      return item.userId === currentUser?.id || !item.userId;
+    }
+    
+    return true;
+  };
+
+  // Filter the history items based on the active filter, user role, and sort pinned items to the top
   const filteredItems = historyItems
     .filter(item => activeFilter === "all" || item.type === activeFilter)
+    .filter(item => canViewItem(item))
     .sort((a, b) => {
       // Sort pinned items first
       const isPinnedA = pinnedItems.includes(a.id);
@@ -378,6 +470,13 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     });
   };
 
+  const handleToggleRestrictedItems = () => {
+    // Only admins and managers can see restricted items
+    if (hasPermission('admin') || hasPermission('manager')) {
+      setShowRestrictedItems(prev => !prev);
+    }
+  };
+
   const groupHistoryByDate = () => {
     const grouped: Record<string, typeof filteredItems> = {};
     
@@ -414,19 +513,52 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     return "Job history shows normal progression with standard completion timeframe.";
   };
 
+  const isRestrictedView = currentUser?.role === 'technician';
+
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Job History</h3>
           
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
+            {/* Toggle for showing restricted items (admin/manager only) */}
+            {(hasPermission('admin') || hasPermission('manager')) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={handleToggleRestrictedItems}
+              >
+                {showRestrictedItems ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showRestrictedItems ? "Hide Restricted" : "Show Restricted"}
+              </Button>
+            )}
+            
+            {/* Role indicator */}
+            {currentUser && (
+              <Badge variant="outline" className="mr-2">
+                <User size={14} className="mr-1" /> 
+                {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}
+              </Badge>
+            )}
+
             <Badge variant="outline" className="mr-2">
               <Filter size={14} className="mr-1" /> 
               Filter
             </Badge>
           </div>
         </div>
+
+        {/* Role-based access warning */}
+        {isRestrictedView && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
+            <ShieldAlert size={16} className="text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+            <p className="text-sm text-amber-700">
+              You have limited access to job history. Contact your manager if you need additional information.
+            </p>
+          </div>
+        )}
 
         {/* AI Insight Bar */}
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-start">
@@ -489,6 +621,14 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                                 {item.title}
                               </Badge>
                               <span className="text-xs text-muted-foreground">{item.time}</span>
+                              
+                              {/* User badge */}
+                              {item.userName && (
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  <User size={12} className="mr-1" />
+                                  {item.userName}
+                                </Badge>
+                              )}
                             </div>
                             
                             {/* Inline Actions */}
@@ -535,7 +675,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                                     </DropdownMenuItem>
                                   )}
                                   
-                                  {hasPermission("admin") && (
+                                  {hasPermission('admin') && (
                                     <DropdownMenuItem onClick={() => handleRevertChange(item.id)}>
                                       <Undo size={14} className="mr-2" /> Revert
                                     </DropdownMenuItem>
