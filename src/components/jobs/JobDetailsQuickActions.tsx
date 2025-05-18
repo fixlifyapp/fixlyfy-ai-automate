@@ -1,12 +1,11 @@
 
 import { Button } from "@/components/ui/button";
-import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown, Package } from "lucide-react";
+import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
-import { JobProducts } from "./JobProducts";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -85,22 +84,6 @@ export const JobDetailsQuickActions = () => {
   
   return (
     <>
-      {/* Products Panel */}
-      <Card className="border-fixlyfy-border shadow-sm mb-6">
-        <CardHeader className="flex flex-row items-center justify-between p-4 border-b border-fixlyfy-border">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md fixlyfy-gradient flex items-center justify-center">
-              <Package size={18} className="text-white" />
-            </div>
-            <h3 className="text-lg font-medium">Products</h3>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="p-4">
-          <JobProducts jobId={id || ""} />
-        </CardContent>
-      </Card>
-      
       {/* AI Suggestions Panel */}
       <Card className="border-fixlyfy-border bg-fixlyfy/5 mb-6">
         <CardHeader className="flex flex-row items-center justify-between p-4 border-b border-fixlyfy-border">
