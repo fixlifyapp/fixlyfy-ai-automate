@@ -11,21 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { globalTags, getTagColor } from "@/data/tags";
 
 interface TagJobsDialogProps {
   selectedJobs: string[];
   onOpenChange: (open: boolean) => void;
   onSuccess: (tags: string[]) => void;
 }
-
-// Mock available tags - in a real app, these would come from an API
-const availableTags = [
-  { id: "tag-1", name: "Urgent" },
-  { id: "tag-2", name: "Follow-up" },
-  { id: "tag-3", name: "VIP" },
-  { id: "tag-4", name: "Quote Required" },
-  { id: "tag-5", name: "Warranty" },
-];
 
 export function TagJobsDialog({ selectedJobs, onOpenChange, onSuccess }: TagJobsDialogProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -97,14 +90,17 @@ export function TagJobsDialog({ selectedJobs, onOpenChange, onSuccess }: TagJobs
               Select Tags
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {availableTags.map((tag) => (
+              {globalTags.map((tag) => (
                 <div key={tag.id} className="flex items-center space-x-2">
                   <Checkbox 
                     id={`tag-${tag.id}`} 
                     checked={selectedTags.includes(tag.name)}
                     onCheckedChange={() => handleTagToggle(tag.name)}
                   />
-                  <label htmlFor={`tag-${tag.id}`} className="text-sm">
+                  <label 
+                    htmlFor={`tag-${tag.id}`} 
+                    className={`text-sm px-2 py-0.5 rounded-md ${tag.color}`}
+                  >
                     {tag.name}
                   </label>
                 </div>
@@ -138,19 +134,21 @@ export function TagJobsDialog({ selectedJobs, onOpenChange, onSuccess }: TagJobs
               <p className="text-sm font-medium">Selected Tags:</p>
               <div className="flex flex-wrap gap-2">
                 {selectedTags.map((tag, index) => (
-                  <div 
+                  <Badge 
                     key={index} 
-                    className="bg-fixlyfy-bg-interface px-2 py-1 text-xs rounded-md flex items-center gap-1"
+                    variant="outline" 
+                    className={`flex items-center gap-1 ${getTagColor(tag)}`}
                   >
                     {tag}
-                    <button 
-                      type="button" 
-                      className="hover:text-fixlyfy-error" 
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-4 w-4 p-0 ml-1"
                       onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
                     >
-                      ✕
-                    </button>
-                  </div>
+                      <X size={12} />
+                    </Button>
+                  </Badge>
                 ))}
               </div>
             </div>

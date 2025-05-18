@@ -37,6 +37,7 @@ export function DeleteJobsDialog({ selectedJobs, onOpenChange, onSuccess }: Dele
       
       onSuccess();
       onOpenChange(false);
+      toast.success(`Deleted ${selectedJobs.length} jobs successfully`);
     } catch (error) {
       console.error("Failed to delete jobs:", error);
       toast.error("Failed to delete jobs. Please try again.");
