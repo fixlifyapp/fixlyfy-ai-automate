@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, FileText, PlusCircle, Trash, Pencil, Search, Plus, Info } from "lucide-react";
+import { Send, Save, FileText, Trash, Pencil, Search, Plus, Info } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
@@ -95,7 +94,7 @@ export const InvoiceBuilderDialog = ({
       setLineItems([]);
       setNotes("");
     }
-  }, [invoiceId, open]);
+  }, [invoiceId, open, taxRate]);
 
   const handleAddProduct = (product: Product) => {
     const newLineItem: LineItem = {
