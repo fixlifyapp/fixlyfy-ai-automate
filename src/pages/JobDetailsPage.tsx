@@ -5,7 +5,6 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
 import { JobDetails } from "@/components/jobs/JobDetails";
 import { JobHistory } from "@/components/jobs/JobHistory";
-import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
 import { JobDetailsQuickActions } from "@/components/jobs/JobDetailsQuickActions";
@@ -14,7 +13,6 @@ import { TabsContent } from "@/components/ui/tabs";
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("details");
-  const jobHeaderData = useJobDetailsHeader(id || "");
 
   return (
     <PageLayout>

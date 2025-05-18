@@ -38,28 +38,59 @@ export const JobDetailsHeader = () => {
       <CallDialog 
         open={jobHeaderData.isCallDialogOpen} 
         onOpenChange={jobHeaderData.setIsCallDialogOpen}
-        phoneNumber={jobHeaderData.job.phone}
+        client={{
+          name: jobHeaderData.job.client,
+          phone: jobHeaderData.job.phone
+        }}
       />
       
       <MessageDialog 
         open={jobHeaderData.isMessageDialogOpen} 
         onOpenChange={jobHeaderData.setIsMessageDialogOpen}
-        clientName={jobHeaderData.job.client}
-        phoneNumber={jobHeaderData.job.phone}
+        client={{
+          name: jobHeaderData.job.client,
+          phone: jobHeaderData.job.phone
+        }}
       />
       
       <InvoiceDialog 
         open={jobHeaderData.isInvoiceDialogOpen} 
         onOpenChange={jobHeaderData.setIsInvoiceDialogOpen}
-        jobId={id || ""}
         onInvoiceCreated={jobHeaderData.handleInvoiceCreated}
+        clientInfo={{
+          name: jobHeaderData.job.client,
+          address: jobHeaderData.job.address,
+          phone: jobHeaderData.job.phone,
+          email: jobHeaderData.job.email
+        }}
+        companyInfo={{
+          name: jobHeaderData.job.companyName,
+          logo: jobHeaderData.job.companyLogo,
+          address: jobHeaderData.job.companyAddress,
+          phone: jobHeaderData.job.companyPhone,
+          email: jobHeaderData.job.companyEmail,
+          legalText: jobHeaderData.job.legalText
+        }}
       />
       
       <EstimateDialog 
         open={jobHeaderData.isEstimateDialogOpen} 
         onOpenChange={jobHeaderData.setIsEstimateDialogOpen}
-        jobId={id || ""}
         onEstimateCreated={jobHeaderData.handleEstimateCreated}
+        clientInfo={{
+          name: jobHeaderData.job.client,
+          address: jobHeaderData.job.address,
+          phone: jobHeaderData.job.phone,
+          email: jobHeaderData.job.email
+        }}
+        companyInfo={{
+          name: jobHeaderData.job.companyName,
+          logo: jobHeaderData.job.companyLogo,
+          address: jobHeaderData.job.companyAddress,
+          phone: jobHeaderData.job.companyPhone,
+          email: jobHeaderData.job.companyEmail,
+          legalText: jobHeaderData.job.legalText
+        }}
       />
     </div>
   );

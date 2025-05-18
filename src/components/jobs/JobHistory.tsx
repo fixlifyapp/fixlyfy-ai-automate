@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Accordion, 
@@ -7,9 +6,8 @@ import {
   AccordionTrigger 
 } from "@/components/ui/accordion";
 import {
-  FileText2,
-  Clock,
   FileText,
+  Clock,
   CheckCircle,
   MessageSquare,
   Phone
@@ -70,7 +68,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       case "status-change":
         return <Clock className="text-fixlyfy-info" />;
       case "note":
-        return <FileText2 className="text-fixlyfy-warning" />;
+        return <FileText className="text-fixlyfy-warning" />;
       case "document":
         return <FileText className="text-fixlyfy-primary" />;
       case "job-created":
