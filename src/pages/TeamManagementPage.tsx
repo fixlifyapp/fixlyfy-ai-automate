@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { 
   Table, 
@@ -10,16 +11,60 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useState } from "react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
+import { TeamFilters } from "@/components/team/TeamFilters";
+import { TeamMember } from "@/types/team";
 
-// Sample team data for demonstration
-import { teamMembers } from "@/data/team";
+// Import team data
+import { teamMembers as initialTeamMembers } from "@/data/team";
 
 const TeamManagementPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>(initialTeamMembers);
+
+  // Apply filters whenever filters change
+  useEffect(() => {
+    let result = initialTeamMembers;
+    
+    // Apply search filter
+    if (searchTerm) {
+      const lowercaseTerm = searchTerm.toLowerCase();
+      result = result.filter(
+        member => 
+          member.name.toLowerCase().includes(lowercaseTerm) || 
+          member.email.toLowerCase().includes(lowercaseTerm)
+      );
+    }
+    
+    // Apply role filter
+    if (roleFilter) {
+      result = result.filter(member => member.role === roleFilter);
+    }
+    
+    // Apply status filter
+    if (statusFilter) {
+      result = result.filter(member => member.status === statusFilter);
+    }
+    
+    setFilteredMembers(result);
+  }, [searchTerm, roleFilter, statusFilter]);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+  
+  const handleFilterRole = (role: string | null) => {
+    setRoleFilter(role);
+  };
+  
+  const handleFilterStatus = (status: string | null) => {
+    setStatusFilter(status);
+  };
   
   return (
     <PageLayout>
@@ -32,10 +77,19 @@ const TeamManagementPage = () => {
               className="gap-2"
             >
               <Plus size={18} />
-              Add Team Member
+              Invite Team Member
             </Button>
           </PermissionRequired>
         </div>
+        
+        <TeamFilters
+          onSearch={handleSearch}
+          onFilterRole={handleFilterRole}
+          onFilterStatus={handleFilterStatus}
+          searchTerm={searchTerm}
+          roleFilter={roleFilter}
+          statusFilter={statusFilter}
+        />
         
         <Card className="border-fixlyfy-border shadow-sm">
           <div className="overflow-x-auto">
@@ -51,12 +105,22 @@ const TeamManagementPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teamMembers.map((member) => (
-                  <UserCardRow 
-                    key={member.id}
-                    user={member}
-                  />
-                ))}
+                {filteredMembers.length === 0 ? (
+                  <TableRow>
+                    <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                      {searchTerm || roleFilter || statusFilter ? 
+                        "No team members match your filters" : 
+                        "No team members found"}
+                    </td>
+                  </TableRow>
+                ) : (
+                  filteredMembers.map((member) => (
+                    <UserCardRow 
+                      key={member.id}
+                      user={member}
+                    />
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

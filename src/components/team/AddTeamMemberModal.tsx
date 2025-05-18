@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,8 @@ export const AddTeamMemberModal = ({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("technician");
+  const [serviceArea, setServiceArea] = useState("");
+  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { allRoles } = useRBAC();
@@ -45,40 +48,52 @@ export const AddTeamMemberModal = ({
     // Simulate API call
     try {
       // In a real app, this would call an API to create the team member
-      console.log("Creating team member:", { name, email, role });
+      console.log("Inviting team member:", { 
+        name, 
+        email, 
+        role, 
+        serviceArea, 
+        sendWelcomeEmail 
+      });
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      toast.success("Team member added successfully!");
+      toast.success(`Invitation sent to ${email}`);
       
       // Reset form and close modal
-      setName("");
-      setEmail("");
-      setRole("technician");
+      resetForm();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to add team member");
+      toast.error("Failed to send invitation");
       console.error(error);
     } finally {
       setIsSubmitting(false);
     }
   };
+  
+  const resetForm = () => {
+    setName("");
+    setEmail("");
+    setRole("technician");
+    setServiceArea("");
+    setSendWelcomeEmail(true);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Team Member</DialogTitle>
+            <DialogTitle>Invite Team Member</DialogTitle>
             <DialogDescription>
-              Create a new team member account. They'll receive an email with setup instructions.
+              Send an invitation to join your team. They'll receive an email with setup instructions.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-5 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
-                Name
+                Full Name
               </Label>
               <Input
                 id="name"
@@ -86,6 +101,7 @@ export const AddTeamMemberModal = ({
                 onChange={(e) => setName(e.target.value)}
                 className="col-span-3"
                 required
+                placeholder="John Smith"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -99,6 +115,7 @@ export const AddTeamMemberModal = ({
                 onChange={(e) => setEmail(e.target.value)}
                 className="col-span-3"
                 required
+                placeholder="john.smith@example.com"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -121,13 +138,44 @@ export const AddTeamMemberModal = ({
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="serviceArea" className="text-right">
+                Service Area
+              </Label>
+              <Input
+                id="serviceArea"
+                value={serviceArea}
+                onChange={(e) => setServiceArea(e.target.value)}
+                className="col-span-3"
+                placeholder="Optional: City, Region, etc."
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <div className="col-start-2 col-span-3 flex items-center space-x-2">
+                <Checkbox 
+                  id="sendEmail" 
+                  checked={sendWelcomeEmail} 
+                  onCheckedChange={(checked) => setSendWelcomeEmail(checked === true)}
+                />
+                <Label htmlFor="sendEmail" className="cursor-pointer">
+                  Send welcome email with setup instructions
+                </Label>
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                resetForm();
+                onOpenChange(false);
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Team Member"}
+              {isSubmitting ? "Sending Invitation..." : "Invite Team Member"}
             </Button>
           </DialogFooter>
         </form>
