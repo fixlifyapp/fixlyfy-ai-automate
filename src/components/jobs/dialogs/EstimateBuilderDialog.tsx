@@ -19,6 +19,7 @@ import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
 import { WarrantySelectionDialog } from "./WarrantySelectionDialog";
 import { ProductEditDialog } from "./ProductEditDialog";
+import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export const EstimateBuilderDialog = ({
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [recommendedWarranty, setRecommendedWarranty] = useState<Product | null>(null);
   const [techniciansNote, setTechniciansNote] = useState("");
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
 
   // Mock data for selected estimate
   useEffect(() => {
@@ -116,19 +118,8 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleAddEmptyLineItem = () => {
-    const newLineItem: LineItem = {
-      id: `line-${Date.now()}`,
-      description: "",
-      quantity: 1,
-      unitPrice: 0,
-      discount: 0,
-      tax: 10,
-      total: 0,
-      ourPrice: 0,
-      taxable: true
-    };
-    
-    setLineItems([...lineItems, newLineItem]);
+    // Instead of adding an empty line item, open the product search dialog
+    setIsProductSearchOpen(true);
   };
 
   const calculateLineTotal = (item: LineItem): number => {
@@ -244,6 +235,10 @@ export const EstimateBuilderDialog = ({
     setIsProductEditDialogOpen(false);
     setSelectedProduct(null);
     setSelectedLineItemId(null);
+  };
+
+  const handleProductSelected = (product: Product) => {
+    handleAddProduct(product);
   };
 
   return (
@@ -369,7 +364,7 @@ export const EstimateBuilderDialog = ({
                       {lineItems.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                            No items added yet. Add items from the catalog or manually.
+                            No items added yet. Add items from the catalog or search for products.
                           </TableCell>
                         </TableRow>
                       )}
@@ -384,8 +379,8 @@ export const EstimateBuilderDialog = ({
                     className="gap-2"
                     onClick={handleAddEmptyLineItem}
                   >
-                    <PlusCircle size={16} />
-                    Add Line Item
+                    <Search size={16} />
+                    Search & Add Products
                   </Button>
                 </div>
                 
@@ -558,6 +553,12 @@ export const EstimateBuilderDialog = ({
         product={selectedProduct}
         onSave={handleProductSaved}
         categories={["Custom"]}
+      />
+
+      <ProductSearch
+        open={isProductSearchOpen}
+        onOpenChange={setIsProductSearchOpen}
+        onProductSelect={handleProductSelected}
       />
     </Dialog>
   );

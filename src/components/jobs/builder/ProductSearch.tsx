@@ -1,0 +1,210 @@
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Search, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Product } from "./types";
+
+interface ProductSearchProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onProductSelect: (product: Product) => void;
+}
+
+export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSearchProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Mock product catalog
+  // In a real app, this would be fetched from an API
+  const productCatalog: Product[] = [
+    {
+      id: "prod-1",
+      name: "Repair Service",
+      description: "Standard HVAC repair service",
+      category: "Services",
+      price: 220,
+      ourPrice: 150,
+      taxable: true,
+      tags: ["repair", "service"]
+    },
+    {
+      id: "prod-2",
+      name: "Defrost System",
+      description: "Defrost System Replacement",
+      category: "Parts",
+      price: 149,
+      ourPrice: 85,
+      taxable: true,
+      tags: ["part", "defrost"]
+    },
+    {
+      id: "prod-3",
+      name: "6-Month Warranty",
+      description: "Extended warranty covering parts and labor",
+      category: "Warranties",
+      price: 49,
+      ourPrice: 10,
+      taxable: false,
+      tags: ["warranty", "protection"]
+    },
+    {
+      id: "prod-4",
+      name: "Filter Replacement",
+      description: "HVAC filter replacement",
+      category: "Parts",
+      price: 35,
+      ourPrice: 20,
+      taxable: true,
+      tags: ["filter", "part"]
+    },
+    {
+      id: "prod-5",
+      name: "Diagnostic Service",
+      description: "Complete system diagnostic",
+      category: "Services",
+      price: 89,
+      ourPrice: 45,
+      taxable: true,
+      tags: ["diagnostic", "service"]
+    }
+  ];
+  
+  const categories = Array.from(new Set(productCatalog.map(product => product.category)));
+  
+  const filteredProducts = productCatalog.filter(product => {
+    const matchesSearch = searchQuery === "" || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === null || product.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product);
+  };
+
+  const handleAddProduct = () => {
+    if (selectedProduct) {
+      onProductSelect(selectedProduct);
+      onOpenChange(false);
+      setSelectedProduct(null);
+      setSearchQuery("");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Search Products</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Label htmlFor="product-search" className="sr-only">Search Products</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="product-search"
+                  placeholder="Search products..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant={selectedCategory === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+              >
+                All
+              </Button>
+              {categories.map(category => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40%]">Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
+                  <TableRow 
+                    key={product.id} 
+                    className={selectedProduct?.id === product.id ? "bg-muted/50" : ""}
+                    onClick={() => handleSelectProduct(product)}
+                  >
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">{product.description}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{product.category}</Badge>
+                    </TableCell>
+                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleSelectProduct(product)}
+                      >
+                        <Plus size={16} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                    No products found matching your search.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAddProduct}
+            disabled={!selectedProduct}
+          >
+            Add Selected Product
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
