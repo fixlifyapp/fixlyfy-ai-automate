@@ -16,6 +16,7 @@ import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import MessagesPage from "./pages/MessagesPage";
+import ProductsPage from "./pages/ProductsPage";
 import PreviewPage from "./pages/PreviewPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import NotFound from "./pages/NotFound";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/automations" element={<AutomationsPage />} />
             <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/products" element={<ProductsPage />} />
             <Route path="/preview/:type/:id" element={<PreviewPage />} />
             <Route path="/admin/roles" element={<AdminRolesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

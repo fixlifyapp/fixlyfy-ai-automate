@@ -11,13 +11,13 @@ import {
   Mail, 
   Zap,
   Menu, 
-  ChevronRight
+  ChevronRight,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useRBAC } from '@/components/auth/RBACProvider';
-import { ProductsSidebar } from '@/components/jobs/ProductsSidebar';
 
 // Define menu items with required permissions
 const menuItems = [
@@ -49,6 +49,13 @@ const menuItems = [
     path: '/schedule',
     highlight: false,
     permission: 'jobs.view.own' // Basic scheduling access
+  },
+  {
+    name: 'Products',
+    icon: Package,
+    path: '/products',
+    highlight: false,
+    permission: 'jobs.view.own' // Basic products access
   },
   {
     name: 'Automations',
@@ -87,11 +94,7 @@ const bottomMenuItems = [
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const params = useParams();
   const { hasPermission } = useRBAC();
-  
-  // Check if we're on a job details page
-  const isJobDetailsPage = location.pathname.startsWith('/jobs/') && params.id;
   
   // Filter menu items based on permissions
   const filteredMenuItems = menuItems.filter(item => 
@@ -159,13 +162,6 @@ export const Sidebar = () => {
             </Link>
           ))}
         </div>
-        
-        {/* Products section will show only on job details pages */}
-        {isJobDetailsPage && !collapsed && (
-          <div className="mt-6 px-3">
-            <ProductsSidebar />
-          </div>
-        )}
       </div>
       
       <div className="p-3 space-y-1">
