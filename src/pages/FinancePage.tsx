@@ -57,11 +57,17 @@ export default function FinancePage() {
     let filtered = [...payments];
 
     if (startDate) {
-      filtered = filtered.filter(payment => new Date(payment.date) >= startDate);
+      // Fix: Use setHours to set the time to the start of the day
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(payment => new Date(payment.date) >= start);
     }
 
     if (endDate) {
-      filtered = filtered.filter(payment => new Date(payment.date) <= endDate);
+      // Fix: Use setHours to set the time to the end of the day
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(payment => new Date(payment.date) <= end);
     }
 
     if (method !== "all") {
