@@ -1,102 +1,44 @@
 
-import { Bell, Search, HelpCircle, MessageSquare } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { Menu, Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { SearchDialog } from '@/components/jobs/dialogs/SearchDialog';
+import { UserRoleSwitcher } from '@/components/auth/UserRoleSwitcher';
 
 export const Header = () => {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
   return (
-    <header className="bg-white border-b border-fixlyfy-border p-4">
+    <header className="border-b border-fixlyfy-border bg-fixlyfy-bg-interface py-3 px-4">
       <div className="flex items-center justify-between">
-        <div className="relative flex items-center w-[300px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-secondary" size={18} />
-          <Input 
-            placeholder="Search jobs, clients, invoices..." 
-            className="pl-10 bg-fixlyfy-bg-interface border-none" 
-          />
+        <div className="flex items-center max-w-md w-full">
+          <div className="relative w-full mr-2">
+            <Search 
+              size={18} 
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-secondary"
+            />
+            <Input 
+              placeholder="Search..." 
+              className="pl-10 border-fixlyfy-border" 
+              onClick={() => setIsSearchOpen(true)}
+              readOnly
+            />
+          </div>
         </div>
         
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative text-fixlyfy-text-secondary hover:bg-fixlyfy-bg-interface"
-            aria-label="AI Assistant"
-          >
-            <HelpCircle size={20} />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell size={20} className="text-fixlyfy-text-secondary" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-fixlyfy animate-pulse"></span>
           </Button>
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative text-fixlyfy-text-secondary hover:bg-fixlyfy-bg-interface"
-            aria-label="Messages"
-          >
-            <MessageSquare size={20} />
-            <span className="absolute top-1 right-1 bg-fixlyfy-success w-2 h-2 rounded-full"></span>
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative text-fixlyfy-text-secondary hover:bg-fixlyfy-bg-interface">
-                <Bell size={20} />
-                <span className="absolute top-1 right-1 bg-fixlyfy-error w-2 h-2 rounded-full"></span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[350px]">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="max-h-[400px] overflow-y-auto">
-                {[1, 2, 3].map((i) => (
-                  <DropdownMenuItem key={i} className="p-4 cursor-pointer">
-                    <div>
-                      <p className="font-medium">New job assigned #{i+1000}</p>
-                      <p className="text-sm text-fixlyfy-text-secondary">HVAC repair at 123 Main St, scheduled for today</p>
-                      <p className="text-xs text-fixlyfy-text-muted mt-1">Just now</p>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex justify-center text-fixlyfy">
-                View all notifications
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="flex items-center space-x-3 cursor-pointer">
-                <Avatar>
-                  <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback>TC</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block text-right">
-                  <p className="text-sm font-medium">Tom Cook</p>
-                  <p className="text-xs text-fixlyfy-text-secondary">Admin</p>
-                </div>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Business Settings</DropdownMenuItem>
-              <DropdownMenuItem>Help & Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserRoleSwitcher />
         </div>
       </div>
+      
+      <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </header>
   );
 };

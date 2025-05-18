@@ -5,8 +5,27 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRBAC, PermissionRequired } from "@/components/auth/RBACProvider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useState } from "react";
+import { UserRole } from "@/components/auth/types";
 
 export const SettingsUser = () => {
+  const { currentUser, setCurrentUser } = useRBAC();
+  const [selectedRole, setSelectedRole] = useState<UserRole>(currentUser?.role || 'technician');
+  
+  const handleRoleChange = (value: UserRole) => {
+    setSelectedRole(value);
+    
+    // In a real app, this would make an API call to update the user's role
+    if (currentUser) {
+      setCurrentUser({
+        ...currentUser,
+        role: value
+      });
+    }
+  };
+  
   return (
     <div className="space-y-8">
       <div>
@@ -39,15 +58,20 @@ export const SettingsUser = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select defaultValue="admin">
+              <Select 
+                defaultValue={currentUser?.role || "technician"}
+                onValueChange={(value) => handleRoleChange(value as UserRole)}
+              >
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrator</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
+                  <PermissionRequired permission="users.roles.assign">
+                    <SelectItem value="admin">Administrator</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="dispatcher">Dispatcher</SelectItem>
+                  </PermissionRequired>
                   <SelectItem value="technician">Technician</SelectItem>
-                  <SelectItem value="support">Support</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -83,28 +107,62 @@ export const SettingsUser = () => {
       
       <Separator />
       
-      <div>
-        <h3 className="text-lg font-medium mb-4">Personal Preferences</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="notification-email">Notification Email</Label>
-            <Input id="notification-email" type="email" defaultValue="tom.cook@example.com" />
+      <PermissionRequired permission="settings.view">
+        <div>
+          <h3 className="text-lg font-medium mb-4">Personal Preferences</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="notification-email">Notification Email</Label>
+              <Input id="notification-email" type="email" defaultValue="tom.cook@example.com" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="calendar-sync">Calendar Integration</Label>
+              <Select defaultValue="google">
+                <SelectTrigger id="calendar-sync">
+                  <SelectValue placeholder="Select calendar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="google">Google Calendar</SelectItem>
+                  <SelectItem value="outlook">Outlook Calendar</SelectItem>
+                  <SelectItem value="apple">Apple Calendar</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="calendar-sync">Calendar Integration</Label>
-            <Select defaultValue="google">
-              <SelectTrigger id="calendar-sync">
-                <SelectValue placeholder="Select calendar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="google">Google Calendar</SelectItem>
-                <SelectItem value="outlook">Outlook Calendar</SelectItem>
-                <SelectItem value="apple">Apple Calendar</SelectItem>
-                <SelectItem value="none">None</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        </div>
+      </PermissionRequired>
+      
+      <div className="md:col-span-2 space-y-4">
+        <h3 className="text-lg font-medium">Role Preview</h3>
+        <p className="text-muted-foreground text-sm">
+          Test how the application looks with different roles. This only affects your current session.
+        </p>
+        
+        <div className="bg-fixlyfy/5 p-4 rounded-lg">
+          <RadioGroup 
+            defaultValue={currentUser?.role}
+            onValueChange={(value) => handleRoleChange(value as UserRole)}
+            className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-6"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="admin" id="r-admin" />
+              <Label htmlFor="r-admin">Administrator</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="manager" id="r-manager" />
+              <Label htmlFor="r-manager">Manager</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="dispatcher" id="r-dispatcher" />
+              <Label htmlFor="r-dispatcher">Dispatcher</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="technician" id="r-technician" />
+              <Label htmlFor="r-technician">Technician</Label>
+            </div>
+          </RadioGroup>
         </div>
       </div>
       

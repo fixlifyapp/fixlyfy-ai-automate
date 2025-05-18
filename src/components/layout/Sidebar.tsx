@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -15,51 +16,60 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useRBAC } from '@/components/auth/RBACProvider';
 
+// Define menu items with required permissions
 const menuItems = [
   { 
     name: 'Dashboard', 
     icon: LayoutDashboard, 
     path: '/', 
-    highlight: false 
+    highlight: false,
+    permission: null // Accessible to all
   },
   { 
     name: 'Jobs', 
     icon: ListTodo, 
     path: '/jobs', 
     badge: '12', 
-    highlight: true 
+    highlight: true,
+    permission: 'jobs.view.own' // At minimum, users can view their own jobs
   },
   { 
     name: 'Clients', 
     icon: Users, 
     path: '/clients',
-    highlight: false 
+    highlight: false,
+    permission: 'jobs.view.own' // If you can view jobs, you can see clients
   },
   { 
     name: 'Schedule', 
     icon: Calendar, 
     path: '/schedule',
-    highlight: false 
+    highlight: false,
+    permission: 'jobs.view.own' // Basic scheduling access
   },
   {
     name: 'Automations',
     icon: Zap,
     path: '/automations',
-    highlight: false
+    highlight: false,
+    permission: 'settings.view' // Only those with settings access can see automations
   },
   { 
     name: 'Reports', 
     icon: BarChart3, 
     path: '/reports',
-    highlight: false 
+    highlight: false,
+    permission: 'reports.view' // Specific permission for reports
   },
   { 
     name: 'Messages', 
     icon: Mail, 
     path: '/messages', 
     badge: '3',
-    highlight: false 
+    highlight: false,
+    permission: null // Accessible to all
   }
 ];
 
@@ -68,13 +78,20 @@ const bottomMenuItems = [
     name: 'Settings', 
     icon: Settings, 
     path: '/settings',
-    highlight: false 
+    highlight: false,
+    permission: null // Settings page is accessible but content is controlled
   }
 ];
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { hasPermission } = useRBAC();
+  
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.permission || hasPermission(item.permission)
+  );
   
   return (
     <div 
@@ -109,7 +126,7 @@ export const Sidebar = () => {
       
       <div className="flex-1 overflow-y-auto hide-scrollbar pt-4">
         <div className="space-y-1 px-3">
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <Link 
               key={item.name} 
               to={item.path}
