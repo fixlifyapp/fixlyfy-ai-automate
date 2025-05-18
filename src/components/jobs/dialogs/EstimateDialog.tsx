@@ -43,7 +43,7 @@ export const EstimateDialog = ({
       0
     );
     
-    toast.success(`Estimate #${data.invoiceNumber} sent`);
+    toast.success(`Estimate #${data.invoiceNumber} created`);
     if (onEstimateCreated) {
       onEstimateCreated(amount);
     }

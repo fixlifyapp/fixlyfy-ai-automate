@@ -73,6 +73,36 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
       ourPrice: 45,
       taxable: true,
       tags: ["diagnostic", "service"]
+    },
+    {
+      id: "prod-6",
+      name: "1-Year Extended Warranty",
+      description: "Full coverage for parts and labor",
+      category: "Warranties",
+      price: 129,
+      ourPrice: 35,
+      taxable: false,
+      tags: ["warranty", "premium"]
+    },
+    {
+      id: "prod-7",
+      name: "Emergency Service Fee",
+      description: "After-hours emergency service",
+      category: "Services",
+      price: 75,
+      ourPrice: 75,
+      taxable: true,
+      tags: ["emergency", "fee"]
+    },
+    {
+      id: "prod-8",
+      name: "Thermostat Installation",
+      description: "Smart thermostat installation",
+      category: "Services",
+      price: 110,
+      ourPrice: 60,
+      taxable: true,
+      tags: ["installation", "smart"]
     }
   ];
   
@@ -81,7 +111,8 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
   const filteredProducts = productCatalog.filter(product => {
     const matchesSearch = searchQuery === "" || 
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCategory = selectedCategory === null || product.category === selectedCategory;
     
@@ -101,14 +132,16 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
     }
   };
 
+  const frequentlyUsed = productCatalog.filter(p => ["prod-1", "prod-4", "prod-5"].includes(p.id));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto p-0">
+        <DialogHeader className="p-6 border-b">
           <DialogTitle className="text-xl font-semibold">Select a Product</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1">
               <Label htmlFor="product-search" className="sr-only">Search Products</Label>
@@ -116,7 +149,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="product-search"
-                  placeholder="Search products..."
+                  placeholder="Search by name, description or tag..."
                   className="pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -124,28 +157,36 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                 />
               </div>
             </div>
-            
-            <div className="flex flex-wrap gap-2">
+          </div>
+          
+          <div className="flex flex-wrap gap-2 pb-4 border-b">
+            <Button
+              variant={selectedCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(null)}
+              className="rounded-full"
+            >
+              All
+            </Button>
+            <Button
+              variant={selectedCategory === "frequently-used" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory("frequently-used")}
+              className="rounded-full"
+            >
+              Frequently Used
+            </Button>
+            {categories.map(category => (
               <Button
-                variant={selectedCategory === null ? "default" : "outline"}
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => setSelectedCategory(category)}
                 className="rounded-full"
               >
-                All
+                {category}
               </Button>
-              {categories.map(category => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className="rounded-full"
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
+            ))}
           </div>
           
           <div className="border rounded-md overflow-hidden bg-white">
@@ -159,7 +200,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
               </TableHeader>
               <TableBody>
                 {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
+                  (selectedCategory === "frequently-used" ? frequentlyUsed : filteredProducts).map((product) => (
                     <TableRow 
                       key={product.id} 
                       className={cn(
@@ -175,7 +216,14 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                           )}
                           <div>
                             <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">{product.description}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{product.description}</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {product.tags.map(tag => (
+                                <Badge key={tag} variant="outline" className="text-xs py-0 px-1">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -197,7 +245,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
           </div>
         </div>
         
-        <DialogFooter className="gap-2 mt-4">
+        <DialogFooter className="border-t p-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
