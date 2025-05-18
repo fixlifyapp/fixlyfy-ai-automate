@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PlusCircle, FileText, Send } from "lucide-react";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UpsellDialog } from "@/components/jobs/dialogs/UpsellDialog";
 import { EstimateBuilderDialog } from "@/components/jobs/dialogs/EstimateBuilderDialog";
+import { toast } from "sonner";
+import { Product } from "./builder/types";
 
 interface JobEstimatesProps {
   jobId: string;
@@ -16,34 +18,78 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
+  const [recommendedProduct, setRecommendedProduct] = useState<Product | null>(null);
+  const [techniciansNote, setTechniciansNote] = useState("");
   
   // In a real app, this would be fetched from an API
-  const estimates = [
+  const [estimates, setEstimates] = useState([
     {
       id: "est-001",
       number: "EST-12345",
       date: "2023-05-15",
       amount: 475.99,
-      status: "sent"
+      status: "sent",
+      viewed: true,
+      recommendedProduct: {
+        id: "prod-4",
+        name: "1-Year Warranty",
+        description: "1-year extended warranty and priority service",
+        price: 89,
+        category: "Warranties",
+        tags: ["warranty"],
+      },
+      techniciansNote: "Based on the age of your unit, this warranty would provide great value."
     },
     {
       id: "est-002",
       number: "EST-12346",
       date: "2023-05-10",
       amount: 299.50,
-      status: "draft"
+      status: "draft",
+      viewed: false,
+      recommendedProduct: null,
+      techniciansNote: ""
     }
-  ];
+  ]);
 
   const handleCreateEstimate = () => {
+    setSelectedEstimateId(null);
     setIsEstimateBuilderOpen(true);
-    // Show upsell dialog when creating a new estimate
-    setIsUpsellDialogOpen(true);
   };
 
   const handleEditEstimate = (estimateId: string) => {
     setSelectedEstimateId(estimateId);
     setIsEstimateBuilderOpen(true);
+  };
+
+  const handleViewEstimate = (estimate: any) => {
+    if (!estimate.viewed && estimate.recommendedProduct) {
+      // Show upsell dialog when estimate is viewed the first time
+      setRecommendedProduct(estimate.recommendedProduct);
+      setTechniciansNote(estimate.techniciansNote);
+      setIsUpsellDialogOpen(true);
+      
+      // Mark as viewed
+      setEstimates(estimates.map(e => 
+        e.id === estimate.id ? {...e, viewed: true} : e
+      ));
+    } else {
+      // Just view the estimate
+      handleEditEstimate(estimate.id);
+    }
+  };
+
+  const handleSendEstimate = (estimateId: string) => {
+    // In a real app, this would send the estimate via email or other notification
+    setEstimates(estimates.map(e => 
+      e.id === estimateId ? {...e, status: "sent"} : e
+    ));
+    toast.success("Estimate sent to customer");
+  };
+
+  const handleUpsellAccept = (product: Product) => {
+    toast.success(`${product.name} added to the estimate`);
+    // In a real app, this would update the estimate with the added product
   };
 
   return (
@@ -91,7 +137,7 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => handleEditEstimate(estimate.id)}
+                        onClick={() => handleViewEstimate(estimate)}
                       >
                         <FileText size={16} />
                       </Button>
@@ -99,6 +145,7 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleSendEstimate(estimate.id)}
                         >
                           <Send size={16} />
                         </Button>
@@ -119,6 +166,9 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
           open={isUpsellDialogOpen} 
           onOpenChange={setIsUpsellDialogOpen}
           jobId={jobId}
+          recommendedProduct={recommendedProduct}
+          techniciansNote={techniciansNote}
+          onAccept={handleUpsellAccept}
         />
 
         <EstimateBuilderDialog

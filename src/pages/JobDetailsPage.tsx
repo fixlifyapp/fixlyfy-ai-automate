@@ -12,6 +12,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { JobEstimates } from "@/components/jobs/JobEstimates";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { JobMessages } from "@/components/jobs/JobMessages";
+import { JobProducts } from "@/components/jobs/JobProducts";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +41,9 @@ const JobDetailsPage = () => {
               </TabsContent>
               <TabsContent value="messages">
                 <JobMessages jobId={id || ""} />
+              </TabsContent>
+              <TabsContent value="products">
+                <JobProducts jobId={id || ""} />
               </TabsContent>
               <TabsContent value="history">
                 <JobHistory jobId={id || ""} />

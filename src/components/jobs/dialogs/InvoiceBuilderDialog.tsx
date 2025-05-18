@@ -13,9 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, FileText, PlusCircle, Trash } from "lucide-react";
+import { Send, Save, FileText, PlusCircle, Trash, Pencil } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
+import { toast } from "sonner";
+import { WarrantySelectionDialog } from "./WarrantySelectionDialog";
+import { ProductEditDialog } from "./ProductEditDialog";
 
 interface InvoiceBuilderDialogProps {
   open: boolean;
@@ -34,6 +37,12 @@ export const InvoiceBuilderDialog = ({
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [notes, setNotes] = useState("");
+  const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
+  const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
+  const [recommendedWarranty, setRecommendedWarranty] = useState<Product | null>(null);
+  const [techniciansNote, setTechniciansNote] = useState("");
 
   // Mock data for selected invoice
   useEffect(() => {
@@ -48,7 +57,9 @@ export const InvoiceBuilderDialog = ({
           unitPrice: 220,
           discount: 0,
           tax: 10,
-          total: 220
+          total: 220,
+          ourPrice: 150,
+          taxable: true
         },
         {
           id: "line-2",
@@ -57,7 +68,9 @@ export const InvoiceBuilderDialog = ({
           unitPrice: 149,
           discount: 0,
           tax: 10,
-          total: 149
+          total: 149,
+          ourPrice: 85,
+          taxable: true
         },
         {
           id: "line-3",
@@ -65,8 +78,10 @@ export const InvoiceBuilderDialog = ({
           quantity: 1,
           unitPrice: 49,
           discount: 0,
-          tax: 10,
-          total: 49
+          tax: 0,
+          total: 49,
+          ourPrice: 10,
+          taxable: false
         }
       ]);
       setNotes("Service completed on weekend as requested. All parts and labor covered under 30-day warranty.");
@@ -85,11 +100,14 @@ export const InvoiceBuilderDialog = ({
       quantity: 1,
       unitPrice: product.price,
       discount: 0,
-      tax: 10, // Default tax rate
-      total: product.price
+      tax: product.taxable ? 10 : 0, // Default tax rate or 0 if not taxable
+      total: product.price,
+      ourPrice: product.ourPrice,
+      taxable: product.taxable
     };
     
     setLineItems([...lineItems, newLineItem]);
+    toast.success(`${product.name} added to invoice`);
   };
 
   const handleRemoveLineItem = (lineItemId: string) => {
@@ -108,11 +126,27 @@ export const InvoiceBuilderDialog = ({
     }));
   };
 
+  const handleAddEmptyLineItem = () => {
+    const newLineItem: LineItem = {
+      id: `line-${Date.now()}`,
+      description: "",
+      quantity: 1,
+      unitPrice: 0,
+      discount: 0,
+      tax: 10,
+      total: 0,
+      ourPrice: 0,
+      taxable: true
+    };
+    
+    setLineItems([...lineItems, newLineItem]);
+  };
+
   const calculateLineTotal = (item: LineItem): number => {
     const subtotal = item.quantity * item.unitPrice;
     const discountAmount = subtotal * (item.discount / 100);
     const afterDiscount = subtotal - discountAmount;
-    const taxAmount = afterDiscount * (item.tax / 100);
+    const taxAmount = item.taxable ? afterDiscount * (item.tax / 100) : 0;
     return afterDiscount + taxAmount;
   };
 
@@ -126,6 +160,8 @@ export const InvoiceBuilderDialog = ({
 
   const calculateTotalTax = (): number => {
     return lineItems.reduce((total, item) => {
+      if (!item.taxable) return total;
+      
       const subtotal = item.quantity * item.unitPrice;
       const discountAmount = subtotal * (item.discount / 100);
       const afterDiscount = subtotal - discountAmount;
@@ -138,14 +174,87 @@ export const InvoiceBuilderDialog = ({
     return calculateSubtotal() + calculateTotalTax();
   };
 
+  const calculateTotalMargin = (): number => {
+    return lineItems.reduce((margin, item) => {
+      const revenue = item.quantity * item.unitPrice * (1 - item.discount / 100);
+      const cost = item.quantity * (item.ourPrice || 0);
+      return margin + (revenue - cost);
+    }, 0);
+  };
+
+  const calculateMarginPercentage = (): number => {
+    const totalRevenue = calculateSubtotal();
+    const margin = calculateTotalMargin();
+    return totalRevenue > 0 ? (margin / totalRevenue) * 100 : 0;
+  };
+
   const handleSaveDraft = () => {
     // In a real app, this would save the invoice to an API
+    toast.success(`Invoice ${invoiceNumber} saved as draft`);
     onOpenChange(false);
   };
 
   const handleSendInvoice = () => {
-    // In a real app, this would send the invoice to the customer
+    setIsWarrantyDialogOpen(true);
+  };
+
+  const handleWarrantyConfirmed = (selectedWarranty: Product | null, note: string) => {
+    setIsWarrantyDialogOpen(false);
+    
+    // If a warranty was selected, store it for the customer upsell
+    if (selectedWarranty) {
+      setRecommendedWarranty(selectedWarranty);
+      setTechniciansNote(note);
+    }
+    
+    // In a real app, this would send the invoice to the API with warranty settings
+    toast.success(`Invoice ${invoiceNumber} sent to customer${selectedWarranty ? ' with warranty recommendation' : ''}`);
     onOpenChange(false);
+  };
+
+  const handleEditLineItem = (lineItemId: string) => {
+    const lineItem = lineItems.find(item => item.id === lineItemId);
+    if (lineItem) {
+      // Create a temporary product from the line item for editing
+      setSelectedProduct({
+        id: lineItem.id,
+        name: lineItem.description,
+        description: lineItem.description,
+        category: "Custom",
+        price: lineItem.unitPrice,
+        ourPrice: lineItem.ourPrice || 0,
+        taxable: lineItem.taxable !== undefined ? lineItem.taxable : true,
+        tags: []
+      });
+      setSelectedLineItemId(lineItemId);
+      setIsProductEditDialogOpen(true);
+    }
+  };
+
+  const handleProductSaved = (product: Product) => {
+    if (selectedLineItemId) {
+      // Update the line item with the edited product details
+      setLineItems(lineItems.map(item => {
+        if (item.id === selectedLineItemId) {
+          return {
+            ...item,
+            description: product.name,
+            unitPrice: product.price,
+            ourPrice: product.ourPrice,
+            taxable: product.taxable,
+            total: calculateLineTotal({
+              ...item,
+              unitPrice: product.price,
+              taxable: product.taxable,
+            })
+          };
+        }
+        return item;
+      }));
+    }
+    setIsProductEditDialogOpen(false);
+    setSelectedProduct(null);
+    setSelectedLineItemId(null);
   };
 
   return (
@@ -192,7 +301,7 @@ export const InvoiceBuilderDialog = ({
                         <TableHead className="w-[100px]">Discount %</TableHead>
                         <TableHead className="w-[80px]">Tax %</TableHead>
                         <TableHead className="w-[120px] text-right">Total</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -240,19 +349,31 @@ export const InvoiceBuilderDialog = ({
                               max={100}
                               onChange={(e) => handleUpdateLineItem(item.id, "tax", parseFloat(e.target.value) || 0)}
                               className="text-right"
+                              disabled={!item.taxable}
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             ${item.total.toFixed(2)}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveLineItem(item.id)}
-                            >
-                              <Trash size={16} className="text-destructive" />
-                            </Button>
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditLineItem(item.id)}
+                                title="Edit product details"
+                              >
+                                <Pencil size={16} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveLineItem(item.id)}
+                                title="Remove item"
+                              >
+                                <Trash size={16} className="text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -268,7 +389,12 @@ export const InvoiceBuilderDialog = ({
                 </div>
                 
                 <div className="mt-4">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={handleAddEmptyLineItem}
+                  >
                     <PlusCircle size={16} />
                     Add Line Item
                   </Button>
@@ -302,6 +428,19 @@ export const InvoiceBuilderDialog = ({
                       <div className="border-t pt-2 mt-2 flex justify-between font-medium">
                         <span>Grand Total:</span>
                         <span>${calculateGrandTotal().toFixed(2)}</span>
+                      </div>
+                      
+                      {/* Profit margin - visible only to staff */}
+                      <div className="border-t border-dashed mt-4 pt-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-600">Margin:</span>
+                          <span className="text-green-600">
+                            ${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage().toFixed(0)}%)
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This information is for internal use only and will not be visible to customers.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -417,6 +556,20 @@ export const InvoiceBuilderDialog = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      <WarrantySelectionDialog
+        open={isWarrantyDialogOpen}
+        onOpenChange={setIsWarrantyDialogOpen}
+        onConfirm={handleWarrantyConfirmed}
+      />
+
+      <ProductEditDialog
+        open={isProductEditDialogOpen}
+        onOpenChange={setIsProductEditDialogOpen}
+        product={selectedProduct}
+        onSave={handleProductSaved}
+        categories={["Custom"]}
+      />
     </Dialog>
   );
 };

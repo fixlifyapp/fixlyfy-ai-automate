@@ -5,6 +5,8 @@ export interface Product {
   description: string;
   category: string;
   price: number;
+  ourPrice?: number;
+  taxable?: boolean;
   tags: string[];
 }
 
@@ -16,4 +18,6 @@ export interface LineItem {
   discount: number;
   tax: number;
   total: number;
+  ourPrice?: number;
+  taxable?: boolean;
 }
