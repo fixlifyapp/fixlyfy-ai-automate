@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { 
@@ -14,9 +13,7 @@ import {
   ChevronRight,
   Package,
   UserCheck,
-  Receipt,
-  Bot,
-  ClipboardList
+  Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -96,20 +93,6 @@ const menuItems = [
     badge: '3',
     highlight: false,
     permission: null // Accessible to all
-  },
-  {
-    name: 'Assistant',
-    icon: Bot,
-    path: '/assistant',
-    highlight: false,
-    permission: null // Accessible to all
-  },
-  {
-    name: 'Audit Log',
-    icon: ClipboardList,
-    path: '/admin/audit-log',
-    highlight: false,
-    permission: 'admin.view' // Only admins can see audit logs
   }
 ];
 

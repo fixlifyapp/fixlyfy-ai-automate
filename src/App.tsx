@@ -21,8 +21,6 @@ import PreviewPage from "./pages/PreviewPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
 import FinancePage from "./pages/FinancePage";
-import AiAssistantPage from "./pages/AiAssistantPage";
-import AuditLogPage from "./pages/AuditLogPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,8 +49,6 @@ const App = () => (
             <Route path="/admin/roles" element={<AdminRolesPage />} />
             <Route path="/admin/team" element={<TeamManagementPage />} />
             <Route path="/finance" element={<FinancePage />} />
-            <Route path="/assistant" element={<AiAssistantPage />} />
-            <Route path="/admin/audit-log" element={<AuditLogPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
