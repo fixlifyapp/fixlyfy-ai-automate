@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Send, RefreshCw } from "lucide-react";
+import { PlusCircle, FileText, Send, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UpsellDialog } from "@/components/jobs/dialogs/UpsellDialog";
@@ -11,6 +10,7 @@ import { toast } from "sonner";
 import { Product } from "./builder/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 
 interface JobEstimatesProps {
   jobId: string;
@@ -22,6 +22,9 @@ interface EstimateItem {
   price: number;
   quantity: number;
   taxable: boolean;
+  id: string; // Added required property
+  category: string; // Added required property
+  tags: string[]; // Added required property
 }
 
 export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
@@ -32,6 +35,8 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
   const [techniciansNote, setTechniciansNote] = useState("");
   const [isConvertToInvoiceDialogOpen, setIsConvertToInvoiceDialogOpen] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // In a real app, this would be fetched from an API
   const [estimates, setEstimates] = useState([
@@ -44,25 +49,34 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
       viewed: true,
       items: [
         {
+          id: "item-1",
           name: "Diagnostic Service",
           description: "Complete system diagnostics",
           price: 120,
           quantity: 1,
-          taxable: true
+          taxable: true,
+          category: "Services",
+          tags: ["diagnostic", "service"]
         },
         {
+          id: "item-2",
           name: "HVAC Annual Maintenance",
           description: "Yearly system tune-up and maintenance",
           price: 250,
           quantity: 1,
-          taxable: true
+          taxable: true,
+          category: "Maintenance",
+          tags: ["hvac", "maintenance"]
         },
         {
+          id: "item-3",
           name: "Air Filter Replacement",
           description: "Premium air filter with installation",
           price: 55,
           quantity: 1,
-          taxable: true
+          taxable: true,
+          category: "Products",
+          tags: ["filter", "replacement"]
         }
       ],
       recommendedProduct: {
@@ -84,18 +98,24 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
       viewed: false,
       items: [
         {
+          id: "item-4",
           name: "Minor Repair",
           description: "Quick fix and adjustment",
           price: 150,
           quantity: 1,
-          taxable: true
+          taxable: true,
+          category: "Services",
+          tags: ["repair", "quick"]
         },
         {
+          id: "item-5",
           name: "Parts Replacement",
           description: "Standard component replacement",
           price: 115,
           quantity: 1,
-          taxable: true
+          taxable: true,
+          category: "Products",
+          tags: ["parts", "replacement"]
         }
       ],
       recommendedProduct: null,
@@ -155,6 +175,40 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
     
     // Here you might want to redirect to the invoices tab
     // or notify a parent component to switch tabs
+  };
+
+  const handleDeleteEstimate = (estimateId: string) => {
+    const estimate = estimates.find(e => e.id === estimateId);
+    if (estimate) {
+      setSelectedEstimate(estimate);
+      setIsDeleteConfirmOpen(true);
+    }
+  };
+  
+  const confirmDeleteEstimate = async () => {
+    if (!selectedEstimate) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // In a real app, this would be an actual API call
+      // await fetch(`/api/estimates/${selectedEstimate.id}`, {
+      //   method: 'DELETE',
+      // });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Remove estimate from local state
+      setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
+      toast.success(`Estimate ${selectedEstimate.number} deleted successfully`);
+    } catch (error) {
+      console.error("Failed to delete estimate:", error);
+      toast.error("Failed to delete estimate");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
+    }
   };
 
   return (
@@ -225,6 +279,14 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
                           Send
                         </Button>
                       )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs text-fixlyfy-error"
+                        onClick={() => handleDeleteEstimate(estimate.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -273,6 +335,17 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
               </Button>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DeleteConfirmDialog 
+            title="Delete Estimate"
+            description={`Are you sure you want to delete estimate ${selectedEstimate?.number}? This action cannot be undone.`}
+            onOpenChange={setIsDeleteConfirmOpen}
+            onConfirm={confirmDeleteEstimate}
+            isDeleting={isDeleting}
+          />
         </Dialog>
       </CardContent>
     </Card>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Send, Check, Plus, RefreshCw } from "lucide-react";
+import { PlusCircle, FileText, Send, Check, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Product } from "./builder/types";
+import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -44,11 +45,14 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [isViewingInvoice, setIsViewingInvoice] = useState(false);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+  const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>("credit-card");
   const [paymentNotes, setPaymentNotes] = useState<string>("");
   const [estimateItems, setEstimateItems] = useState<InvoiceItem[]>([]);
   const [hasEstimate, setHasEstimate] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Load existing invoices and estimates - in a real app, this would come from your database
   useEffect(() => {
@@ -262,6 +266,38 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     setIsViewingInvoice(true);
   };
 
+  // New function to handle invoice deletion
+  const handleDeleteInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteInvoice = async () => {
+    if (!selectedInvoice) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // In a real app, this would be an actual API call
+      // await fetch(`/api/invoices/${selectedInvoice.id}`, {
+      //   method: 'DELETE',
+      // });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Remove invoice from local state
+      setInvoices(invoices.filter(invoice => invoice.id !== selectedInvoice.id));
+      toast.success("Invoice deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete invoice:", error);
+      toast.error("Failed to delete invoice");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
+    }
+  };
+
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
@@ -341,6 +377,14 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
                           Mark Paid
                         </Button>
                       )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteInvoice(invoice)}
+                        className="text-xs text-fixlyfy-error"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -418,6 +462,17 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
               <Button onClick={handleSavePayment}>Save Payment</Button>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
+        
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DeleteConfirmDialog 
+            title="Delete Invoice"
+            description={`Are you sure you want to delete invoice ${selectedInvoice?.invoiceNumber}? This action cannot be undone.`}
+            onOpenChange={setIsDeleteConfirmOpen}
+            onConfirm={confirmDeleteInvoice}
+            isDeleting={isDeleting}
+          />
         </Dialog>
       </CardContent>
     </Card>
