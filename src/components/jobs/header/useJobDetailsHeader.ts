@@ -1,7 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { payments } from "@/data/payments";
+import { Payment } from "@/types/payment";
 
 export interface JobInfo {
   id: string;
@@ -31,6 +33,23 @@ export const useJobDetailsHeader = (id: string) => {
   const [estimateAmount, setEstimateAmount] = useState(0);
   const [paymentsMade, setPaymentsMade] = useState<number[]>([]);
   const [hasEstimate, setHasEstimate] = useState(false);
+  const [jobPayments, setJobPayments] = useState<Payment[]>([]);
+  
+  // Load job info and initial payment data
+  useEffect(() => {
+    const job = getJobInfo();
+    
+    // Initialize invoice amount from job total
+    setInvoiceAmount(job.total);
+    
+    // Load existing payments for this job
+    const existingPayments = payments.filter(payment => payment.jobId === id);
+    setJobPayments(existingPayments);
+    
+    // Extract payment amounts
+    const existingPaymentAmounts = existingPayments.map(payment => payment.amount);
+    setPaymentsMade(existingPaymentAmounts);
+  }, [id]);
   
   const getJobInfo = () => {
     // In a real app, this would fetch job details from API
@@ -85,7 +104,24 @@ export const useJobDetailsHeader = (id: string) => {
 
   // Handle recording a payment
   const handlePaymentRecorded = (amount: number) => {
-    setPaymentsMade([...paymentsMade, amount]);
+    // Update the payments list
+    setPaymentsMade(prevPayments => [...prevPayments, amount]);
+    
+    // Create a new payment record (in a real app, this would be saved to the database)
+    const newPayment: Payment = {
+      id: `payment-${Date.now()}`,
+      date: new Date().toISOString(),
+      clientId: job.clientId,
+      clientName: job.client,
+      jobId: job.id,
+      amount: amount,
+      method: "credit-card", // Default method
+      status: "paid"
+    };
+    
+    // Update the payments list
+    setJobPayments(prevPayments => [...prevPayments, newPayment]);
+    
     toast.success(`Payment of $${amount.toFixed(2)} recorded`);
   };
 
@@ -109,6 +145,7 @@ export const useJobDetailsHeader = (id: string) => {
     handleInvoiceCreated,
     handleEstimateCreated,
     handleSyncEstimateToInvoice,
-    handlePaymentRecorded
+    handlePaymentRecorded,
+    jobPayments
   };
 };
