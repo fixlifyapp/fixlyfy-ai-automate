@@ -28,9 +28,9 @@ export function PrioritySelectionDialog({
   const [selectedPriority, setSelectedPriority] = useState(initialPriority);
   
   const priorities = [
-    { value: "High", color: "text-red-500" },
-    { value: "Medium", color: "text-orange-500" },
-    { value: "Low", color: "text-green-500" },
+    { value: "High", color: "text-red-500", bgColor: "bg-red-50 border-red-200" },
+    { value: "Medium", color: "text-orange-500", bgColor: "bg-orange-50 border-orange-200" },
+    { value: "Low", color: "text-green-500", bgColor: "bg-green-50 border-green-200" },
   ];
 
   const handleSave = () => {
@@ -54,7 +54,10 @@ export function PrioritySelectionDialog({
             {priorities.map((priority) => (
               <div key={priority.value} className="flex items-center space-x-2">
                 <RadioGroupItem value={priority.value} id={`priority-${priority.value}`} />
-                <Label htmlFor={`priority-${priority.value}`} className={priority.color}>
+                <Label 
+                  htmlFor={`priority-${priority.value}`} 
+                  className={`px-3 py-1 rounded-full ${priority.color} ${priority.bgColor}`}
+                >
                   {priority.value}
                 </Label>
               </div>

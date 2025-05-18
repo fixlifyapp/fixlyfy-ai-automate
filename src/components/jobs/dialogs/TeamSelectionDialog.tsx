@@ -28,13 +28,13 @@ export function TeamSelectionDialog({
 }: TeamSelectionDialogProps) {
   const [selectedTeam, setSelectedTeam] = useState(initialTeam);
   
-  // Mock team data
+  // Mock team data with colors
   const teams = [
-    { id: "1", name: "Robert Smith" },
-    { id: "2", name: "Jane Cooper" },
-    { id: "3", name: "Michael Johnson" },
-    { id: "4", name: "Sarah Williams" },
-    { id: "5", name: "David Martinez" }
+    { id: "1", name: "Robert Smith", color: "bg-purple-100 text-purple-600" },
+    { id: "2", name: "Jane Cooper", color: "bg-blue-100 text-blue-600" },
+    { id: "3", name: "Michael Johnson", color: "bg-green-100 text-green-600" },
+    { id: "4", name: "Sarah Williams", color: "bg-pink-100 text-pink-600" },
+    { id: "5", name: "David Martinez", color: "bg-amber-100 text-amber-600" }
   ];
 
   const handleSave = () => {
@@ -59,10 +59,10 @@ export function TeamSelectionDialog({
               <div key={team.id} className="flex items-center space-x-2">
                 <RadioGroupItem value={team.name} id={`team-${team.id}`} />
                 <Label htmlFor={`team-${team.id}`} className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                    <User size={16} className="text-purple-600" />
+                  <div className={`w-8 h-8 rounded-full ${team.color.split(" ")[0]} flex items-center justify-center`}>
+                    <User size={16} className={team.color.split(" ")[1]} />
                   </div>
-                  {team.name}
+                  <span className={team.color.split(" ")[1]}>{team.name}</span>
                 </Label>
               </div>
             ))}

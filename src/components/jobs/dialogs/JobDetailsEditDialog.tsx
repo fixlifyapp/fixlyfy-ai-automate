@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 interface JobDetailsEditDialogProps {
   open: boolean;
@@ -34,15 +35,16 @@ export function JobDetailsEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Edit Job Description</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <Input
+          <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full"
+            className="w-full min-h-[150px]"
+            placeholder="Enter detailed job description..."
           />
         </div>
         <DialogFooter>

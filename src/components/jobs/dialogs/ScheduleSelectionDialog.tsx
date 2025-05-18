@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,19 +36,33 @@ export function ScheduleSelectionDialog({
   initialTimeWindow,
   onSave,
 }: ScheduleSelectionDialogProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    initialDate ? new Date(initialDate) : undefined
-  );
+  // Parse initial dates or set defaults
+  const parseInitialDate = () => {
+    try {
+      return initialDate ? new Date(initialDate) : new Date();
+    } catch (e) {
+      return new Date();
+    }
+  };
+  
+  const [startDate, setStartDate] = useState<Date | undefined>(parseInitialDate());
+  const [endDate, setEndDate] = useState<Date | undefined>(parseInitialDate());
   const [startTime, setStartTime] = useState(initialTimeWindow.split(" - ")[0] || "09:00");
   const [endTime, setEndTime] = useState(initialTimeWindow.split(" - ")[1] || "11:00");
   
   const handleSave = () => {
-    const formattedDate = selectedDate 
-      ? format(selectedDate, "MMM dd, yyyy") 
-      : "Not scheduled";
+    const formattedStartDate = startDate ? format(startDate, "MMM dd, yyyy") : "Not scheduled";
+    const formattedEndDate = endDate ? format(endDate, "MMM dd, yyyy") : formattedStartDate;
+    
+    // If it's a multi-day job, show date range
+    let dateDisplay = formattedStartDate;
+    if (startDate && endDate && differenceInDays(endDate, startDate) > 0) {
+      dateDisplay = `${formattedStartDate} - ${formattedEndDate}`;
+    }
+    
     const timeWindow = `${startTime} - ${endTime}`;
     
-    onSave(formattedDate, timeWindow);
+    onSave(dateDisplay, timeWindow);
     onOpenChange(false);
     toast.success("Job schedule updated");
   };
@@ -60,34 +74,72 @@ export function ScheduleSelectionDialog({
           <DialogTitle>Schedule Job</DialogTitle>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          <div>
-            <Label>Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal mt-2",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Start Date */}
+            <div>
+              <Label>Start Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-2",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "MMM dd, yyyy") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      // If end date is before start date or not set, update it
+                      if (date && (!endDate || endDate < date)) {
+                        setEndDate(date);
+                      }
+                    }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            {/* End Date */}
+            <div>
+              <Label>End Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-2",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "MMM dd, yyyy") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    disabled={(date) => startDate ? date < startDate : false}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startTime">Start Time</Label>
               <div className="flex items-center mt-2">

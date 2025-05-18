@@ -28,10 +28,10 @@ export function JobTypeDialog({
   const [selectedType, setSelectedType] = useState(initialType);
   
   const jobTypes = [
-    "Diagnostic", 
-    "Repair service", 
-    "Maintenance", 
-    "Installation"
+    { value: "Diagnostic", color: "bg-blue-50 border-blue-200 text-blue-600" },
+    { value: "Repair service", color: "bg-orange-50 border-orange-200 text-orange-600" }, 
+    { value: "Maintenance", color: "bg-green-50 border-green-200 text-green-600" }, 
+    { value: "Installation", color: "bg-purple-50 border-purple-200 text-purple-600" }
   ];
 
   const handleSave = () => {
@@ -53,9 +53,14 @@ export function JobTypeDialog({
             className="space-y-3"
           >
             {jobTypes.map((type) => (
-              <div key={type} className="flex items-center space-x-2">
-                <RadioGroupItem value={type} id={`type-${type}`} />
-                <Label htmlFor={`type-${type}`}>{type}</Label>
+              <div key={type.value} className="flex items-center space-x-2">
+                <RadioGroupItem value={type.value} id={`type-${type.value}`} />
+                <Label 
+                  htmlFor={`type-${type.value}`}
+                  className={`px-3 py-1 rounded-full ${type.color}`}
+                >
+                  {type.value}
+                </Label>
               </div>
             ))}
           </RadioGroup>

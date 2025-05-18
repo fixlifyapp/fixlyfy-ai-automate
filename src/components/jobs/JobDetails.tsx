@@ -67,6 +67,32 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   const [editingClientInfo, setEditingClientInfo] = useState(false);
   const [tempClientInfo, setTempClientInfo] = useState(clientInfo);
 
+  // Tag colors based on tag name
+  const getTagColor = (tag: string) => {
+    const tagColors: Record<string, string> = {
+      "HVAC": "bg-purple-50 border-purple-200 text-purple-600",
+      "Residential": "bg-blue-50 border-blue-200 text-blue-600",
+      "Commercial": "bg-indigo-50 border-indigo-200 text-indigo-600",
+      "Emergency": "bg-red-50 border-red-200 text-red-600",
+      "Maintenance": "bg-green-50 border-green-200 text-green-600",
+      "Installation": "bg-amber-50 border-amber-200 text-amber-600",
+      "Repair": "bg-orange-50 border-orange-200 text-orange-600"
+    };
+    
+    return tagColors[tag] || "bg-purple-50 border-purple-200 text-purple-600";
+  };
+  
+  // Priority colors based on priority level
+  const getPriorityColor = (priority: string) => {
+    const priorityColors: Record<string, string> = {
+      "High": "text-red-600",
+      "Medium": "text-orange-600",
+      "Low": "text-green-600"
+    };
+    
+    return priorityColors[priority] || "text-purple-600";
+  };
+
   // Handle saving client info
   const handleSaveClientInfo = () => {
     setClientInfo(tempClientInfo);
@@ -121,6 +147,19 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   // Handle updating attachments
   const handleUpdateAttachments = (updatedAttachments: typeof attachments) => {
     setAttachments(updatedAttachments);
+  };
+
+  // Get team color
+  const getTeamColor = (team: string) => {
+    const teamColors: Record<string, string> = {
+      "Robert Smith": "text-purple-600",
+      "Jane Cooper": "text-blue-600",
+      "Michael Johnson": "text-green-600",
+      "Sarah Williams": "text-pink-600",
+      "David Martinez": "text-amber-600"
+    };
+    
+    return teamColors[team] || "text-purple-600";
   };
 
   return (
@@ -234,14 +273,17 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             </Button>
           </div>
           
-          <p className="text-gray-700">{jobDetails.description}</p>
+          <div className="cursor-pointer" onClick={() => setIsDescriptionDialogOpen(true)}>
+            <p className="text-gray-700">{jobDetails.description}</p>
+          </div>
           
           <div className="flex flex-wrap gap-2 mt-4">
             {jobDetails.tags.map((tag, index) => (
               <Badge 
                 key={index} 
                 variant="outline" 
-                className="bg-purple-50 border-purple-200 text-purple-600 flex items-center gap-1"
+                className={`flex items-center gap-1 ${getTagColor(tag)}`}
+                onClick={() => setIsTagsDialogOpen(true)}
               >
                 {tag}
               </Badge>
@@ -268,7 +310,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex justify-between items-center">
-              <div>
+              <div onClick={() => setIsTypeDialogOpen(true)} className="cursor-pointer">
                 <p className="text-sm text-muted-foreground">Job Type</p>
                 <p className="text-purple-600">{jobDetails.type}</p>
               </div>
@@ -282,7 +324,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             </div>
             
             <div className="flex justify-between items-center">
-              <div>
+              <div onClick={() => setIsScheduleDialogOpen(true)} className="cursor-pointer">
                 <p className="text-sm text-muted-foreground">Schedule Date & Time</p>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
@@ -305,11 +347,11 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             </div>
             
             <div className="flex justify-between items-center">
-              <div>
+              <div onClick={() => setIsTeamDialogOpen(true)} className="cursor-pointer">
                 <p className="text-sm text-muted-foreground">Team</p>
                 <div className="flex items-center gap-1">
-                  <User size={16} className="text-purple-600" />
-                  <p className="text-purple-600">{jobDetails.team}</p>
+                  <User size={16} className={getTeamColor(jobDetails.team)} />
+                  <p className={getTeamColor(jobDetails.team)}>{jobDetails.team}</p>
                 </div>
               </div>
               <Button 
@@ -322,9 +364,9 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             </div>
             
             <div className="flex justify-between items-center">
-              <div>
+              <div onClick={() => setIsPriorityDialogOpen(true)} className="cursor-pointer">
                 <p className="text-sm text-muted-foreground">Priority</p>
-                <p className="text-purple-600">{jobDetails.priority}</p>
+                <p className={getPriorityColor(jobDetails.priority)}>{jobDetails.priority}</p>
               </div>
               <Button 
                 variant="ghost" 
@@ -336,7 +378,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             </div>
             
             <div className="flex justify-between items-center">
-              <div>
+              <div onClick={() => setIsSourceDialogOpen(true)} className="cursor-pointer">
                 <p className="text-sm text-muted-foreground">Source</p>
                 <p className="text-purple-600">{jobDetails.source}</p>
               </div>
@@ -373,7 +415,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
               </Button>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 cursor-pointer" onClick={() => setIsTasksDialogOpen(true)}>
               {tasks.map((task) => (
                 <div key={task.id} className="flex items-center gap-2">
                   {task.completed ? (
@@ -409,7 +451,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
               </div>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 cursor-pointer" onClick={() => setIsAttachmentsDialogOpen(true)}>
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
