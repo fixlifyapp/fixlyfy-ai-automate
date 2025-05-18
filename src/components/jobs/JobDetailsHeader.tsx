@@ -39,18 +39,20 @@ export const JobDetailsHeader = () => {
         open={jobHeaderData.isCallDialogOpen} 
         onOpenChange={jobHeaderData.setIsCallDialogOpen}
         client={{
-          name: jobHeaderData.job.client,
-          phone: jobHeaderData.job.phone
+          name: jobHeaderData.job.client
+          // Removed phone property since it's not part of the expected type
         }}
+        phoneNumber={jobHeaderData.job.phone} // Added separate phoneNumber prop
       />
       
       <MessageDialog 
         open={jobHeaderData.isMessageDialogOpen} 
         onOpenChange={jobHeaderData.setIsMessageDialogOpen}
         client={{
-          name: jobHeaderData.job.client,
-          phone: jobHeaderData.job.phone
+          name: jobHeaderData.job.client
+          // Removed phone property since it's not part of the expected type
         }}
+        phoneNumber={jobHeaderData.job.phone} // Added separate phoneNumber prop
       />
       
       <InvoiceDialog 
