@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { 
@@ -13,7 +12,8 @@ import {
   Menu, 
   ChevronRight,
   Package,
-  UserCheck
+  UserCheck,
+  Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,13 @@ const menuItems = [
     path: '/products',
     highlight: false,
     permission: 'jobs.view.own' // Basic products access
+  },
+  {
+    name: 'Finance',
+    icon: Receipt,
+    path: '/finance',
+    highlight: false,
+    permission: 'payments.view' // Only users with payment view permission can see Finance
   },
   {
     name: 'Team',
