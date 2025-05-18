@@ -10,7 +10,6 @@ interface RBACContextType {
   userRole: UserRole | null;
   setCurrentUser: (user: User | null) => void;
   allRoles: UserRole[];
-  addCustomRole: (roleName: string) => void;
 }
 
 const defaultUser: User = {
@@ -26,83 +25,12 @@ const RBACContext = createContext<RBACContextType | undefined>(undefined);
 export const RBACProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(defaultUser);
   const [loading, setLoading] = useState(true);
-  const [customRoles, setCustomRoles] = useState<UserRole[]>([]);
   
-  // Load saved custom roles from localStorage
   useEffect(() => {
     // Normally would fetch the current user from an API or local storage
     // For demo purposes, we use the default admin user
-    // In a real app, replace with actual authentication logic
     setLoading(false);
-
-    // Load any saved custom roles from localStorage
-    try {
-      const savedCustomRoles = localStorage.getItem('fixlyfy_custom_roles');
-      if (savedCustomRoles) {
-        const parsedRoles = JSON.parse(savedCustomRoles) as string[];
-        setCustomRoles(parsedRoles);
-      }
-    } catch (error) {
-      console.error('Error loading custom roles:', error);
-    }
   }, []);
-  
-  // Initialize permissions for custom roles if they don't exist
-  useEffect(() => {
-    const updatedPermissions = { ...DEFAULT_PERMISSIONS };
-    
-    customRoles.forEach(role => {
-      if (!updatedPermissions[role]) {
-        updatedPermissions[role] = [];
-      }
-    });
-    
-    // Try to load any saved custom role permissions
-    try {
-      const savedPermissions = localStorage.getItem('fixlyfy_custom_roles_permissions');
-      if (savedPermissions) {
-        const parsedPermissions = JSON.parse(savedPermissions) as Record<string, string[]>;
-        
-        // Merge saved permissions with default permissions
-        Object.entries(parsedPermissions).forEach(([role, permissions]) => {
-          updatedPermissions[role] = permissions;
-        });
-      }
-    } catch (error) {
-      console.error('Error loading custom role permissions:', error);
-    }
-  }, [customRoles]);
-
-  const addCustomRole = (roleName: string) => {
-    if (!roleName.trim()) {
-      toast.error('Role name cannot be empty');
-      return;
-    }
-
-    // Clean up the role name for use as an ID
-    const cleanRoleName = roleName.trim().toLowerCase();
-    
-    // Make sure we have the default roles always available for the check
-    const defaultRoleKeys = Object.keys(DEFAULT_PERMISSIONS);
-    
-    // Check if role already exists in both default and custom roles
-    if ([...defaultRoleKeys, ...customRoles].includes(cleanRoleName)) {
-      toast.error(`Role "${roleName}" already exists`);
-      return;
-    }
-
-    // Add the new role
-    const newRoles = [...customRoles, cleanRoleName];
-    setCustomRoles(newRoles);
-    
-    // Initialize empty permissions for the new role
-    DEFAULT_PERMISSIONS[cleanRoleName] = [];
-    
-    // Save to localStorage
-    localStorage.setItem('fixlyfy_custom_roles', JSON.stringify(newRoles));
-    
-    toast.success(`Role "${roleName}" created successfully`);
-  };
 
   const hasPermission = (permission: string): boolean => {
     if (!currentUser) return false;
@@ -117,9 +45,9 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     return rolePermissions.includes(permission);
   };
 
-  // Combine default roles with custom roles - ensure we always have an array
+  // Use the default roles from DEFAULT_PERMISSIONS
   const defaultRoleKeys = Object.keys(DEFAULT_PERMISSIONS) || [];
-  const allRoles: UserRole[] = [...defaultRoleKeys, ...customRoles];
+  const allRoles: UserRole[] = defaultRoleKeys;
 
   const value = {
     currentUser,
@@ -128,7 +56,6 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     userRole: currentUser?.role || null,
     setCurrentUser,
     allRoles,
-    addCustomRole,
   };
 
   return (
