@@ -1,28 +1,62 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { PERMISSIONS_LIST, UserRole, RolePermissions, DEFAULT_PERMISSIONS } from "@/components/auth/types";
+import { PERMISSIONS_LIST, UserRole, RolePermissions, DEFAULT_PERMISSIONS, DEFAULT_ROLES } from "@/components/auth/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useRBAC, PermissionRequired } from "@/components/auth/RBACProvider";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Plus, UserPlus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const createRoleSchema = z.object({
+  roleName: z.string()
+    .min(3, "Role name must be at least 3 characters")
+    .max(30, "Role name must be less than 30 characters")
+    .regex(/^[a-zA-Z0-9 ]+$/, "Only letters, numbers, and spaces are allowed")
+    .refine(name => !name.startsWith(' ') && !name.endsWith(' '), {
+      message: "Role name cannot start or end with a space"
+    }),
+  roleDescription: z.string().max(100, "Description must be less than 100 characters").optional(),
+});
+
+type CreateRoleFormValues = z.infer<typeof createRoleSchema>;
 
 const AdminRolesPage = () => {
-  const { hasPermission } = useRBAC();
+  const { hasPermission, allRoles, addCustomRole } = useRBAC();
   const [activeTab, setActiveTab] = useState<UserRole>("admin");
+  const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   
   // Create a copy of default permissions for editing
   const [rolePermissions, setRolePermissions] = useState<Record<UserRole, string[]>>({
     ...DEFAULT_PERMISSIONS
   });
+  
+  const createRoleForm = useForm<CreateRoleFormValues>({
+    resolver: zodResolver(createRoleSchema),
+    defaultValues: {
+      roleName: "",
+      roleDescription: "",
+    },
+  });
+
+  const handleCreateRole = (data: CreateRoleFormValues) => {
+    addCustomRole(data.roleName);
+    setIsCreateRoleOpen(false);
+    createRoleForm.reset();
+  };
   
   const handlePermissionToggle = (role: UserRole, permissionId: string) => {
     setRolePermissions(prev => {
@@ -48,6 +82,20 @@ const AdminRolesPage = () => {
     // In a real app, this would make an API call to save the permissions
     toast.success("Role permissions updated successfully");
     console.log("Updated permissions:", rolePermissions);
+    
+    // Save custom roles permissions to localStorage
+    try {
+      const customRolesPermissions = Object.entries(rolePermissions)
+        .filter(([role]) => !DEFAULT_ROLES.includes(role as UserRole))
+        .reduce((acc, [role, permissions]) => {
+          acc[role] = permissions;
+          return acc;
+        }, {} as Record<string, string[]>);
+        
+      localStorage.setItem('fixlyfy_custom_roles_permissions', JSON.stringify(customRolesPermissions));
+    } catch (error) {
+      console.error('Error saving custom roles permissions:', error);
+    }
   };
   
   const handleReset = () => {
@@ -66,6 +114,33 @@ const AdminRolesPage = () => {
     },
     {}
   );
+  
+  // Generate TabsTrigger components dynamically from all available roles
+  const renderRoleTabs = () => {
+    // Filter out any undefined or empty roles
+    const safeRoles = Object.keys(rolePermissions).filter(Boolean);
+    
+    return (
+      <TabsList className="grid grid-cols-5 mb-6">
+        {safeRoles.map((role) => (
+          <TabsTrigger 
+            key={role} 
+            value={role}
+            className="capitalize"
+          >
+            {role}
+          </TabsTrigger>
+        ))}
+        <TabsTrigger 
+          value="create-role"
+          onClick={() => setIsCreateRoleOpen(true)}
+          className="bg-fixlyfy/10 hover:bg-fixlyfy/20 text-fixlyfy"
+        >
+          <Plus size={16} className="mr-1" /> Add Role
+        </TabsTrigger>
+      </TabsList>
+    );
+  };
   
   // UI to render for users without access
   const unauthorizedContent = (
@@ -88,6 +163,64 @@ const AdminRolesPage = () => {
           </p>
         </div>
         
+        {/* Create Role Dialog */}
+        <Dialog open={isCreateRoleOpen} onOpenChange={setIsCreateRoleOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus size={18} /> Create New Role
+              </DialogTitle>
+              <DialogDescription>
+                Create a custom role with specific permissions for your organization.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...createRoleForm}>
+              <form onSubmit={createRoleForm.handleSubmit(handleCreateRole)} className="space-y-4">
+                <FormField
+                  control={createRoleForm.control}
+                  name="roleName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter role name" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        This name will be used to identify the role in the system.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={createRoleForm.control}
+                  name="roleDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Brief description of this role" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateRoleOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-fixlyfy hover:bg-fixlyfy/90">
+                    Create Role
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+        
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Roles & Permissions</CardTitle>
@@ -97,17 +230,12 @@ const AdminRolesPage = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)}>
-              <TabsList className="grid grid-cols-4 mb-6">
-                <TabsTrigger value="admin">Admin</TabsTrigger>
-                <TabsTrigger value="manager">Manager</TabsTrigger>
-                <TabsTrigger value="dispatcher">Dispatcher</TabsTrigger>
-                <TabsTrigger value="technician">Technician</TabsTrigger>
-              </TabsList>
+              {renderRoleTabs()}
               
               <TabsContent value={activeTab} className="space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-medium">
+                    <h3 className="text-lg font-medium capitalize">
                       {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Role
                     </h3>
                     <p className="text-sm text-muted-foreground">
@@ -115,6 +243,7 @@ const AdminRolesPage = () => {
                       {activeTab === 'manager' && "Can view team performance and approve estimates and invoices."}
                       {activeTab === 'dispatcher' && "Can assign and schedule jobs for technicians."}
                       {activeTab === 'technician' && "Can manage their own jobs and create related documents."}
+                      {!DEFAULT_ROLES.includes(activeTab) && "Custom role with configurable permissions."}
                     </p>
                   </div>
                   
@@ -153,8 +282,8 @@ const AdminRolesPage = () => {
                                   <Checkbox 
                                     checked={
                                       // Special case for admin role with wildcard
-                                      (activeTab === 'admin' && rolePermissions[activeTab].includes('*')) ||
-                                      rolePermissions[activeTab].includes(permission.id)
+                                      (activeTab === 'admin' && rolePermissions[activeTab]?.includes('*')) ||
+                                      rolePermissions[activeTab]?.includes(permission.id)
                                     }
                                     disabled={activeTab === 'admin' && permission.id === '*'}
                                     onCheckedChange={() => handlePermissionToggle(activeTab, permission.id)}

@@ -1,4 +1,5 @@
-export type UserRole = 'admin' | 'technician' | 'dispatcher' | 'manager';
+
+export type UserRole = 'admin' | 'technician' | 'dispatcher' | 'manager' | string;
 
 export interface Permission {
   id: string;
@@ -109,4 +110,8 @@ export const PERMISSIONS_LIST: Permission[] = [
   { id: 'discounts.approve', name: 'Approve Discounts', description: 'Can approve discounts', category: 'invoices' },
   { id: 'insights.view', name: 'View Insights', description: 'Can view AI insights', category: 'reports' },
   { id: 'technicians.locate', name: 'Locate Technicians', description: 'Can locate technicians', category: 'jobs' },
+  { id: '*', name: 'All Permissions', description: 'Grants all available permissions', category: 'settings' },
 ];
+
+// Define default roles for references
+export const DEFAULT_ROLES: UserRole[] = ['admin', 'manager', 'dispatcher', 'technician'];

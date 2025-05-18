@@ -9,7 +9,7 @@ import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
-import { Settings, Users } from "lucide-react";
+import { Settings, UserPlus, Users, UsersRound } from "lucide-react";
 
 const SettingsPage = () => {
   return (
@@ -21,13 +21,13 @@ const SettingsPage = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <PermissionRequired permission="users.roles.assign">
           <Link to="/admin/roles">
             <Card className="h-full hover:shadow-md transition-shadow">
               <CardContent className="flex items-center p-6 space-x-4">
                 <div className="bg-fixlyfy/10 p-3 rounded-full">
-                  <Users className="h-6 w-6 text-fixlyfy" />
+                  <UsersRound className="h-6 w-6 text-fixlyfy" />
                 </div>
                 <div>
                   <h3 className="font-medium">Role Management</h3>
