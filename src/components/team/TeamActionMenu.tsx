@@ -24,30 +24,55 @@ import { useRBAC } from "@/components/auth/RBACProvider";
 interface TeamActionMenuProps {
   userId: string;
   status: "active" | "suspended";
+  testMode?: boolean;
 }
 
-export const TeamActionMenu = ({ userId, status }: TeamActionMenuProps) => {
+export const TeamActionMenu = ({ userId, status, testMode = false }: TeamActionMenuProps) => {
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isSuspendOpen, setIsSuspendOpen] = useState(false);
   const { hasPermission } = useRBAC();
   
   const canEditUsers = hasPermission("users.edit");
-
+  const canEditPassword = hasPermission("users.edit");
+  const canManageUserStatus = hasPermission("users.edit");
+  
   const handleResetPassword = () => {
+    if (!canEditPassword) {
+      toast.error("You don't have permission to reset passwords");
+      return;
+    }
+    
     // In a real app, this would call an API to reset the password
     console.log(`Resetting password for user ${userId}`);
     toast.success("Password reset link sent to user");
+    
+    if (testMode) {
+      toast.info("Test Mode: Password reset simulated locally. Will integrate with Supabase Auth later.");
+    }
+    
     setIsResetPasswordOpen(false);
   };
 
   const handleToggleStatus = () => {
+    if (!canManageUserStatus) {
+      toast.error("You don't have permission to manage user status");
+      return;
+    }
+    
     const newStatus = status === "active" ? "suspended" : "active";
+    
     // In a real app, this would call an API to update the user's status
     console.log(`Updating status for user ${userId} to ${newStatus}`);
     toast.success(`User ${newStatus}`);
+    
+    if (testMode) {
+      toast.info("Test Mode: Status changed locally only. Will be saved to Supabase after integration.");
+    }
+    
     setIsSuspendOpen(false);
   };
 
+  // If user doesn't have permission to edit users, don't render the menu
   if (!canEditUsers) {
     return null;
   }
@@ -62,23 +87,28 @@ export const TeamActionMenu = ({ userId, status }: TeamActionMenuProps) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setIsResetPasswordOpen(true)}>
-            <Lock className="mr-2 h-4 w-4" />
-            Reset Password
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setIsSuspendOpen(true)}>
-            {status === "active" ? (
-              <>
-                <UserMinus className="mr-2 h-4 w-4" />
-                Suspend User
-              </>
-            ) : (
-              <>
-                <UserCheck className="mr-2 h-4 w-4" />
-                Activate User
-              </>
-            )}
-          </DropdownMenuItem>
+          {canEditPassword && (
+            <DropdownMenuItem onClick={() => setIsResetPasswordOpen(true)}>
+              <Lock className="mr-2 h-4 w-4" />
+              Reset Password
+            </DropdownMenuItem>
+          )}
+          
+          {canManageUserStatus && (
+            <DropdownMenuItem onClick={() => setIsSuspendOpen(true)}>
+              {status === "active" ? (
+                <>
+                  <UserMinus className="mr-2 h-4 w-4" />
+                  Suspend User
+                </>
+              ) : (
+                <>
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Activate User
+                </>
+              )}
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       
@@ -89,6 +119,11 @@ export const TeamActionMenu = ({ userId, status }: TeamActionMenuProps) => {
             <AlertDialogTitle>Reset Password?</AlertDialogTitle>
             <AlertDialogDescription>
               This will send a password reset link to the user's email address. Are you sure you want to continue?
+              {testMode && (
+                <div className="mt-2 text-amber-500 text-sm font-medium">
+                  Test Mode: This is a simulation and no email will be sent.
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -109,6 +144,12 @@ export const TeamActionMenu = ({ userId, status }: TeamActionMenuProps) => {
               {status === "active" 
                 ? "This will prevent the user from logging in. Are you sure you want to continue?"
                 : "This will allow the user to log in again. Are you sure you want to continue?"}
+              
+              {testMode && (
+                <div className="mt-2 text-amber-500 text-sm font-medium">
+                  Test Mode: Changes will only be reflected locally until Supabase integration.
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

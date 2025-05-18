@@ -7,6 +7,7 @@ interface RBACContextType {
   currentUser: User | null;
   loading: boolean;
   hasPermission: (permission: string) => boolean;
+  hasRole: (role: UserRole | UserRole[]) => boolean;
   userRole: UserRole | null;
   setCurrentUser: (user: User | null) => void;
   allRoles: UserRole[];
@@ -32,6 +33,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
+  // Enhanced permission check that properly handles wildcards
   const hasPermission = (permission: string): boolean => {
     if (!currentUser) return false;
     
@@ -45,14 +47,26 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     return rolePermissions.includes(permission);
   };
 
+  // New function to check if user has a specific role or one of multiple roles
+  const hasRole = (role: UserRole | UserRole[]): boolean => {
+    if (!currentUser) return false;
+    
+    if (Array.isArray(role)) {
+      return role.includes(currentUser.role);
+    }
+    
+    return currentUser.role === role;
+  };
+
   // Use the default roles from DEFAULT_PERMISSIONS
-  const defaultRoleKeys = Object.keys(DEFAULT_PERMISSIONS) || [];
+  const defaultRoleKeys = Object.keys(DEFAULT_PERMISSIONS) as UserRole[] || [];
   const allRoles: UserRole[] = defaultRoleKeys;
 
   const value = {
     currentUser,
     loading,
     hasPermission,
+    hasRole,
     userRole: currentUser?.role || null,
     setCurrentUser,
     allRoles,
@@ -97,12 +111,18 @@ export const RoleRequired = ({
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }) => {
-  const { currentUser } = useRBAC();
+  const { hasRole } = useRBAC();
   
-  if (!currentUser) return <>{fallback}</>;
+  const hasAccess = hasRole(role);
   
-  const roles = Array.isArray(role) ? role : [role];
-  const hasRole = roles.includes(currentUser.role);
-  
-  return hasRole ? <>{children}</> : <>{fallback}</>;
+  return hasAccess ? <>{children}</> : <>{fallback}</>;
+};
+
+// New component for testing pre-Supabase functionality
+export const TestModeIndicator = () => {
+  return process.env.NODE_ENV === 'development' ? (
+    <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
+      Test Mode (No Supabase)
+    </div>
+  ) : null;
 };
