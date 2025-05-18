@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,12 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, FileText, PlusCircle, Trash, Pencil } from "lucide-react";
+import { Send, Save, FileText, PlusCircle, Trash, Pencil, Search } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
 import { WarrantySelectionDialog } from "./WarrantySelectionDialog";
 import { ProductEditDialog } from "./ProductEditDialog";
+import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 
 interface InvoiceBuilderDialogProps {
   open: boolean;
@@ -43,6 +43,7 @@ export const InvoiceBuilderDialog = ({
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [recommendedWarranty, setRecommendedWarranty] = useState<Product | null>(null);
   const [techniciansNote, setTechniciansNote] = useState("");
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
 
   // Mock data for selected invoice
   useEffect(() => {
@@ -127,19 +128,7 @@ export const InvoiceBuilderDialog = ({
   };
 
   const handleAddEmptyLineItem = () => {
-    const newLineItem: LineItem = {
-      id: `line-${Date.now()}`,
-      description: "",
-      quantity: 1,
-      unitPrice: 0,
-      discount: 0,
-      tax: 10,
-      total: 0,
-      ourPrice: 0,
-      taxable: true
-    };
-    
-    setLineItems([...lineItems, newLineItem]);
+    setIsProductSearchOpen(true);
   };
 
   const calculateLineTotal = (item: LineItem): number => {
@@ -257,11 +246,15 @@ export const InvoiceBuilderDialog = ({
     setSelectedLineItemId(null);
   };
 
+  const handleProductSelected = (product: Product) => {
+    handleAddProduct(product);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{invoiceId ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{invoiceId ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
         </DialogHeader>
           
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
@@ -295,18 +288,17 @@ export const InvoiceBuilderDialog = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="w-[100px]">Qty</TableHead>
+                        <TableHead className="w-[50%]">Description</TableHead>
+                        <TableHead className="w-[80px]">Qty</TableHead>
                         <TableHead className="w-[120px]">Unit Price</TableHead>
-                        <TableHead className="w-[100px]">Discount %</TableHead>
-                        <TableHead className="w-[80px]">Tax %</TableHead>
+                        <TableHead className="w-[80px]">Discount %</TableHead>
                         <TableHead className="w-[120px] text-right">Total</TableHead>
                         <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className="hover:bg-muted/20">
                           <TableCell>
                             <Input
                               value={item.description}
@@ -341,17 +333,6 @@ export const InvoiceBuilderDialog = ({
                               className="text-right"
                             />
                           </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.tax}
-                              min={0}
-                              max={100}
-                              onChange={(e) => handleUpdateLineItem(item.id, "tax", parseFloat(e.target.value) || 0)}
-                              className="text-right"
-                              disabled={!item.taxable}
-                            />
-                          </TableCell>
                           <TableCell className="text-right font-medium">
                             ${item.total.toFixed(2)}
                           </TableCell>
@@ -379,8 +360,8 @@ export const InvoiceBuilderDialog = ({
                       ))}
                       {lineItems.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                            No items added yet. Add items from the catalog or manually.
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No items added yet. Add items from the catalog or search for products.
                           </TableCell>
                         </TableRow>
                       )}
@@ -395,8 +376,8 @@ export const InvoiceBuilderDialog = ({
                     className="gap-2"
                     onClick={handleAddEmptyLineItem}
                   >
-                    <PlusCircle size={16} />
-                    Add Line Item
+                    <Search size={16} />
+                    Search & Add Products
                   </Button>
                 </div>
                 
@@ -569,6 +550,12 @@ export const InvoiceBuilderDialog = ({
         product={selectedProduct}
         onSave={handleProductSaved}
         categories={["Custom"]}
+      />
+      
+      <ProductSearch
+        open={isProductSearchOpen}
+        onOpenChange={setIsProductSearchOpen}
+        onProductSelect={handleProductSelected}
       />
     </Dialog>
   );

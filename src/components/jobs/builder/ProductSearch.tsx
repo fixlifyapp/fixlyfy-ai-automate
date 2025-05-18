@@ -1,13 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "./types";
+import { cn } from "@/lib/utils";
 
 interface ProductSearchProps {
   open: boolean;
@@ -104,11 +105,11 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Search Products</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Select a Product</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1">
               <Label htmlFor="product-search" className="sr-only">Search Products</Label>
               <div className="relative">
@@ -119,15 +120,17 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                   className="pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
                 />
               </div>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={selectedCategory === null ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(null)}
+                className="rounded-full"
               >
                 All
               </Button>
@@ -137,6 +140,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                   variant={selectedCategory === category ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(category)}
+                  className="rounded-full"
                 >
                   {category}
                 </Button>
@@ -144,63 +148,65 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
             </div>
           </div>
           
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40%]">Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
-                  <TableRow 
-                    key={product.id} 
-                    className={selectedProduct?.id === product.id ? "bg-muted/50" : ""}
-                    onClick={() => handleSelectProduct(product)}
-                  >
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.description}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleSelectProduct(product)}
-                      >
-                        <Plus size={16} />
-                      </Button>
+          <div className="border rounded-md overflow-hidden bg-white">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[60%]">Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => (
+                    <TableRow 
+                      key={product.id} 
+                      className={cn(
+                        "cursor-pointer hover:bg-muted/50 transition-colors",
+                        selectedProduct?.id === product.id ? "bg-muted/80" : ""
+                      )}
+                      onClick={() => handleSelectProduct(product)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {selectedProduct?.id === product.id && (
+                            <Check size={16} className="text-primary" />
+                          )}
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-sm text-muted-foreground">{product.description}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{product.category}</Badge>
+                      </TableCell>
+                      <TableCell>${product.price.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      No products found matching your search.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
-                    No products found matching your search.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
         
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button 
             onClick={handleAddProduct}
             disabled={!selectedProduct}
+            className="gap-2"
           >
+            <Plus size={16} />
             Add Selected Product
           </Button>
         </DialogFooter>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, FileText, PlusCircle, Trash, Search, Pencil } from "lucide-react";
+import { Send, Save, PlusCircle, Trash, Search, Pencil } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
@@ -118,7 +117,7 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleAddEmptyLineItem = () => {
-    // Instead of adding an empty line item, open the product search dialog
+    // Open the product search dialog
     setIsProductSearchOpen(true);
   };
 
@@ -245,7 +244,7 @@ export const EstimateBuilderDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{estimateId ? "Edit Estimate" : "Create Estimate"}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{estimateId ? "Edit Estimate" : "Create Estimate"}</DialogTitle>
         </DialogHeader>
           
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
@@ -279,18 +278,17 @@ export const EstimateBuilderDialog = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="w-[100px]">Qty</TableHead>
+                        <TableHead className="w-[50%]">Description</TableHead>
+                        <TableHead className="w-[80px]">Qty</TableHead>
                         <TableHead className="w-[120px]">Unit Price</TableHead>
-                        <TableHead className="w-[100px]">Discount %</TableHead>
-                        <TableHead className="w-[80px]">Tax %</TableHead>
+                        <TableHead className="w-[80px]">Discount %</TableHead>
                         <TableHead className="w-[120px] text-right">Total</TableHead>
                         <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {lineItems.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className="hover:bg-muted/20">
                           <TableCell>
                             <Input
                               value={item.description}
@@ -325,17 +323,6 @@ export const EstimateBuilderDialog = ({
                               className="text-right"
                             />
                           </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.tax}
-                              min={0}
-                              max={100}
-                              onChange={(e) => handleUpdateLineItem(item.id, "tax", parseFloat(e.target.value) || 0)}
-                              className="text-right"
-                              disabled={!item.taxable}
-                            />
-                          </TableCell>
                           <TableCell className="text-right font-medium">
                             ${item.total.toFixed(2)}
                           </TableCell>
@@ -363,8 +350,8 @@ export const EstimateBuilderDialog = ({
                       ))}
                       {lineItems.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                            No items added yet. Add items from the catalog or search for products.
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No items added yet. Add items using the search button below.
                           </TableCell>
                         </TableRow>
                       )}
