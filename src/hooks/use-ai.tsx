@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface UseAIOptions {
   systemContext?: string;
@@ -18,25 +19,37 @@ export function useAI(options: UseAIOptions = {}) {
     setError(null);
     
     try {
+      console.log("Sending AI request with prompt:", prompt);
+      
       const { data, error } = await supabase.functions.invoke("generate-with-ai", {
         body: {
           prompt,
           context: customOptions?.systemContext || options.systemContext,
           mode: customOptions?.mode || options.mode || "text",
-          temperature: customOptions?.temperature || options.temperature,
-          maxTokens: customOptions?.maxTokens || options.maxTokens
+          temperature: customOptions?.temperature || options.temperature || 0.7,
+          maxTokens: customOptions?.maxTokens || options.maxTokens || 800
         }
       });
       
       if (error) {
+        console.error("Supabase function error:", error);
         throw new Error(error.message);
       }
       
+      if (!data || !data.generatedText) {
+        console.error("Missing generatedText in response:", data);
+        throw new Error("Invalid response format from AI service");
+      }
+      
+      console.log("AI response data:", data);
       return data.generatedText;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate AI response';
       setError(errorMessage);
       console.error("AI generation error:", err);
+      toast.error("AI Error", {
+        description: errorMessage
+      });
       return null;
     } finally {
       setIsLoading(false);

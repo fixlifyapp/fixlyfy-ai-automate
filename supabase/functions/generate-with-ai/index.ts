@@ -58,8 +58,8 @@ serve(async (req) => {
           { role: 'system', content: systemMessage },
           { role: 'user', content: userPrompt }
         ],
-        temperature: parseFloat(temperature as string),
-        max_tokens: parseInt(maxTokens as string),
+        temperature: parseFloat(temperature.toString()),
+        max_tokens: parseInt(maxTokens.toString()),
       }),
     });
 
@@ -69,8 +69,8 @@ serve(async (req) => {
       throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
-    const generatedText = data.choices[0].message.content;
+    const responseData = await response.json();
+    const generatedText = responseData.choices[0].message.content;
 
     return new Response(JSON.stringify({ generatedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

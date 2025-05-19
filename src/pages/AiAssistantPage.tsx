@@ -49,6 +49,9 @@ const AiAssistantPage = () => {
       const aiResponse = await generateText(input.trim());
       
       if (aiResponse) {
+        // Debug log to check response
+        console.log("AI response received:", aiResponse);
+        
         const aiMessage: Message = {
           id: messages.length + 2,
           content: aiResponse,
