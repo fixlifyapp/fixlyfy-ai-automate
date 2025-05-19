@@ -11,7 +11,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,7 +23,7 @@ const paymentFormSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   method: z.enum(["cash", "credit-card", "e-transfer", "cheque"]),
   reference: z.string().optional(),
-  notes: z.string().optional(),
+  // Removed notes field
   // New fields for credit card
   cardNumber: z.string().optional(),
   cardholderName: z.string().optional(),
@@ -53,7 +52,7 @@ export const PaymentDialog = ({
       amount: balance,
       method: "credit-card",
       reference: "",
-      notes: "",
+      // Removed notes field from defaultValues
       cardNumber: "",
       cardholderName: "",
       expiryDate: "",
@@ -276,22 +275,7 @@ export const PaymentDialog = ({
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Any additional notes..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Removed the Notes FormField */}
               
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
