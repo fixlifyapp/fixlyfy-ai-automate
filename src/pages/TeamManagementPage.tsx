@@ -17,9 +17,27 @@ import { UserCardRow } from "@/components/team/UserCardRow";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { TeamFilters } from "@/components/team/TeamFilters";
 import { TeamMember } from "@/types/team";
+import { TeamMemberProfile } from "@/types/team-member";
 
 // Import team data
 import { teamMembers as initialTeamMembers } from "@/data/team";
+
+// Helper function to convert TeamMember to TeamMemberProfile
+const convertToTeamMemberProfile = (member: TeamMember): TeamMemberProfile => {
+  return {
+    ...member,
+    isPublic: true,
+    availableForJobs: true,
+    twoFactorEnabled: false,
+    callMaskingEnabled: false,
+    laborCostPerHour: 50,
+    skills: [],
+    serviceAreas: [],
+    scheduleColor: "#6366f1",
+    internalNotes: "",
+    usesTwoFactor: false
+  };
+};
 
 const TeamManagementPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -127,7 +145,7 @@ const TeamManagementPage = () => {
                   filteredMembers.map((member) => (
                     <UserCardRow 
                       key={member.id}
-                      user={member}
+                      user={convertToTeamMemberProfile(member)}
                     />
                   ))
                 )}

@@ -94,7 +94,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
         ...p,
         enabled: (
           (p.type === "view") || 
-          (p.module === "jobs" && p.type === "edit") ||
+          (p.module === "jobs" && (p.type === "edit" || p.type === "create")) ||
           (p.module === "schedule" && p.type === "view")
         )
       }));
@@ -223,7 +223,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
           </div>
         ))}
         
-        <Alert variant="warning" className="mt-4">
+        <Alert className="mt-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Changing permissions may impact what this team member can see and do in the system.
