@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { 
   Table, 
@@ -26,6 +27,7 @@ const TeamManagementPage = () => {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const navigate = useNavigate();
 
   // Apply filters whenever filters change
   useEffect(() => {
@@ -66,6 +68,14 @@ const TeamManagementPage = () => {
     setStatusFilter(status);
   };
   
+  const handleAddNewMember = () => {
+    setIsModalOpen(true);
+  };
+  
+  const handleViewTeamMember = (id: string) => {
+    navigate(`/admin/team/${id}`);
+  };
+  
   return (
     <PageLayout>
       <div className="container mx-auto px-4 py-6">
@@ -73,7 +83,7 @@ const TeamManagementPage = () => {
           <h1 className="text-2xl font-bold">Team Management</h1>
           <PermissionRequired permission="users.create" fallback={null}>
             <Button 
-              onClick={() => setIsModalOpen(true)} 
+              onClick={handleAddNewMember} 
               className="gap-2"
             >
               <Plus size={18} />
