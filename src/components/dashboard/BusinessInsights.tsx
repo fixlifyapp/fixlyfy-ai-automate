@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,27 +104,32 @@ export const BusinessInsights = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Highlight the Test Data Button */}
+        <div className="p-4 border border-dashed border-fixlyfy/20 rounded-lg mb-4 bg-fixlyfy/5">
+          <h3 className="text-base font-medium mb-2">Generate Test Data</h3>
+          <p className="text-sm text-fixlyfy-text-secondary mb-3">
+            Create 20 sample clients and 40 jobs in Toronto & GTA area for testing
+          </p>
+          
+          <Button
+            onClick={handleGenerateTestData}
+            variant="default"
+            className="bg-fixlyfy hover:bg-fixlyfy/90 w-full"
+            disabled={isGeneratingData}
+          >
+            <Database size={16} className="mr-2" />
+            {isGeneratingData ? "Generating Test Data..." : "Generate Test Data"}
+          </Button>
+        </div>
+      
         <div className="flex justify-between items-center mb-4">
-          <div className="flex gap-2">
-            <Button 
-              onClick={testOpenAI}
-              variant="outline" 
-              size="sm"
-            >
-              Test OpenAI Connection
-            </Button>
-            
-            <Button
-              onClick={handleGenerateTestData}
-              variant="outline"
-              size="sm"
-              disabled={isGeneratingData}
-              className="flex items-center gap-1"
-            >
-              <Database size={14} className="mr-1" />
-              {isGeneratingData ? "Generating..." : "Generate Test Data"}
-            </Button>
-          </div>
+          <Button 
+            onClick={testOpenAI}
+            variant="outline" 
+            size="sm"
+          >
+            Test OpenAI Connection
+          </Button>
           
           {insights && (
             <Button
