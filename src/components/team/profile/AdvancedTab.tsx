@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -98,7 +97,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
         enabled: (
           p.type === "view" || 
           (p.module === "jobs" && (p.type === "edit" || p.type === "create")) ||
-          (p.module === "schedule" && p.type === "view")
+          (p.module === "schedule" && p.type === "edit")
         )
       }));
     } else if (preset === "dispatcher") {
