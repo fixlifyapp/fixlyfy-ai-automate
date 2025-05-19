@@ -22,6 +22,11 @@ const JobDetailsPage = () => {
   const { hasPermission } = useRBAC();
   const jobHeaderData = useJobDetailsHeader(id || "");
   
+  // Add function to handle switching to invoices tab when an estimate is converted
+  const handleSwitchToInvoicesTab = () => {
+    setActiveTab("invoices");
+  };
+  
   return (
     <PageLayout>
       <div className="container mx-auto px-4">
@@ -43,7 +48,10 @@ const JobDetailsPage = () => {
                 <JobDetails jobId={id || ""} />
               </TabsContent>
               <TabsContent value="estimates">
-                <JobEstimates jobId={id || ""} />
+                <JobEstimates 
+                  jobId={id || ""} 
+                  onEstimateConverted={handleSwitchToInvoicesTab}
+                />
               </TabsContent>
               <TabsContent value="invoices">
                 <JobInvoices jobId={id || ""} />

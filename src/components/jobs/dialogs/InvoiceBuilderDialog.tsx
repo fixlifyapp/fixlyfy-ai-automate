@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, FileText, Trash, Pencil, Search, Plus, Info } from "lucide-react";
+import { Send, Save, FileText, Trash, Pencil, Search, Plus, Info, RefreshCw } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
@@ -26,13 +27,17 @@ interface InvoiceBuilderDialogProps {
   onOpenChange: (open: boolean) => void;
   invoiceId: string | null;
   jobId: string;
+  estimateItems?: LineItem[];
+  onSyncFromEstimate?: () => void;
 }
 
 export const InvoiceBuilderDialog = ({
   open,
   onOpenChange,
   invoiceId,
-  jobId
+  jobId,
+  estimateItems,
+  onSyncFromEstimate
 }: InvoiceBuilderDialogProps) => {
   const [activeTab, setActiveTab] = useState("editor");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -210,6 +215,18 @@ export const InvoiceBuilderDialog = ({
     setIsWarrantyDialogOpen(true);
   };
 
+  const handleSyncFromEstimate = () => {
+    if (estimateItems && estimateItems.length > 0) {
+      setLineItems([...estimateItems]);
+      toast.success("Items from estimate synced to invoice");
+      if (onSyncFromEstimate) {
+        onSyncFromEstimate();
+      }
+    } else {
+      toast.error("No estimate items available to sync");
+    }
+  };
+
   const handleWarrantyConfirmed = (selectedWarranty: Product | null, note: string) => {
     setIsWarrantyDialogOpen(false);
     
@@ -316,8 +333,8 @@ export const InvoiceBuilderDialog = ({
                     <Input
                       id="invoice-number"
                       value={invoiceNumber}
-                      onChange={(e) => setInvoiceNumber(e.target.value)}
-                      className="w-40"
+                      readOnly
+                      className="w-40 bg-muted/50"
                     />
                   </div>
                   
@@ -330,6 +347,19 @@ export const InvoiceBuilderDialog = ({
                       className="bg-muted/50"
                     />
                   </div>
+                  
+                  {estimateItems && estimateItems.length > 0 && (
+                    <div className="ml-auto">
+                      <Button 
+                        onClick={handleSyncFromEstimate} 
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <RefreshCw size={16} />
+                        Sync from Estimate
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Line Items Section */}

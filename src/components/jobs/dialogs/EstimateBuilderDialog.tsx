@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,26 +13,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, PlusCircle, Trash, Search, Pencil } from "lucide-react";
+import { Send, Save, Trash, Search, Pencil, Plus, Info, RefreshCw } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
 import { WarrantySelectionDialog } from "./WarrantySelectionDialog";
 import { ProductEditDialog } from "./ProductEditDialog";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
+import { cn } from "@/lib/utils";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   estimateId: string | null;
   jobId: string;
+  onSyncToInvoice?: (estimate: any) => void;
 }
 
 export const EstimateBuilderDialog = ({
   open,
   onOpenChange,
   estimateId,
-  jobId
+  jobId,
+  onSyncToInvoice
 }: EstimateBuilderDialogProps) => {
   const [activeTab, setActiveTab] = useState("editor");
   const [estimateNumber, setEstimateNumber] = useState("");
@@ -44,6 +48,7 @@ export const EstimateBuilderDialog = ({
   const [recommendedWarranty, setRecommendedWarranty] = useState<Product | null>(null);
   const [techniciansNote, setTechniciansNote] = useState("");
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+  const [taxRate, setTaxRate] = useState(10); // Default tax rate of 10%
 
   // Mock data for selected estimate
   useEffect(() => {
@@ -57,7 +62,7 @@ export const EstimateBuilderDialog = ({
           quantity: 1,
           unitPrice: 220,
           discount: 0,
-          tax: 10,
+          tax: taxRate,
           total: 220,
           ourPrice: 150,
           taxable: true
@@ -68,7 +73,7 @@ export const EstimateBuilderDialog = ({
           quantity: 1,
           unitPrice: 149,
           discount: 0,
-          tax: 10,
+          tax: taxRate,
           total: 149,
           ourPrice: 85,
           taxable: true
@@ -81,7 +86,7 @@ export const EstimateBuilderDialog = ({
       setLineItems([]);
       setNotes("");
     }
-  }, [estimateId, open]);
+  }, [estimateId, open, taxRate]);
 
   const handleAddProduct = (product: Product) => {
     const newLineItem: LineItem = {
@@ -90,7 +95,7 @@ export const EstimateBuilderDialog = ({
       quantity: 1,
       unitPrice: product.price,
       discount: 0,
-      tax: product.taxable ? 10 : 0, // Default tax rate or 0 if not taxable
+      tax: product.taxable ? taxRate : 0, // Default tax rate or 0 if not taxable
       total: product.price,
       ourPrice: product.ourPrice,
       taxable: product.taxable
@@ -117,16 +122,30 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleAddEmptyLineItem = () => {
-    // Open the product search dialog
     setIsProductSearchOpen(true);
+  };
+
+  const handleAddCustomLine = () => {
+    const newLineItem: LineItem = {
+      id: `line-${Date.now()}`,
+      description: "",
+      quantity: 1,
+      unitPrice: 0,
+      discount: 0,
+      tax: taxRate,
+      total: 0,
+      ourPrice: 0,
+      taxable: true
+    };
+    
+    setLineItems([...lineItems, newLineItem]);
   };
 
   const calculateLineTotal = (item: LineItem): number => {
     const subtotal = item.quantity * item.unitPrice;
     const discountAmount = subtotal * (item.discount / 100);
     const afterDiscount = subtotal - discountAmount;
-    const taxAmount = item.taxable ? afterDiscount * (item.tax / 100) : 0;
-    return afterDiscount + taxAmount;
+    return afterDiscount;
   };
 
   const calculateSubtotal = (): number => {
@@ -144,7 +163,7 @@ export const EstimateBuilderDialog = ({
       const subtotal = item.quantity * item.unitPrice;
       const discountAmount = subtotal * (item.discount / 100);
       const afterDiscount = subtotal - discountAmount;
-      const taxAmount = afterDiscount * (item.tax / 100);
+      const taxAmount = afterDiscount * (taxRate / 100);
       return total + taxAmount;
     }, 0);
   };
@@ -174,7 +193,30 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleSendEstimate = () => {
+    // Validate estimate before sending
+    if (lineItems.length === 0) {
+      toast.error("Please add at least one item to the estimate");
+      return;
+    }
+    
     setIsWarrantyDialogOpen(true);
+  };
+
+  const handleSyncToInvoice = () => {
+    if (onSyncToInvoice) {
+      const estimate = {
+        id: estimateId || `est-${Date.now()}`,
+        number: estimateNumber,
+        items: lineItems,
+        total: calculateGrandTotal(),
+        subtotal: calculateSubtotal(),
+        tax: calculateTotalTax(),
+        notes,
+        date: new Date().toISOString()
+      };
+      
+      onSyncToInvoice(estimate);
+    }
   };
 
   const handleWarrantyConfirmed = (selectedWarranty: Product | null, note: string) => {
@@ -239,183 +281,283 @@ export const EstimateBuilderDialog = ({
   const handleProductSelected = (product: Product) => {
     handleAddProduct(product);
   };
+  
+  const handleTaxRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newRate = parseFloat(e.target.value) || 0;
+    setTaxRate(newRate);
+  };
+
+  // Check if estimate can be sent
+  const canSendEstimate = lineItems.length > 0 && calculateGrandTotal() > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">{estimateId ? "Edit Estimate" : "Create Estimate"}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+        {/* Sticky Header */}
+        <div className="bg-background sticky top-0 z-10 border-b p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <DialogHeader className="mb-0">
+              <DialogTitle className="text-xl font-semibold">{estimateId ? "Edit Estimate" : "Create Estimate"}</DialogTitle>
+            </DialogHeader>
+            
+            <Badge variant="outline" className="bg-fixlyfy-warning/10 text-fixlyfy-warning border-fixlyfy-warning/20">
+              Draft
+            </Badge>
+          </div>
           
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="editor">Editor</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="editor">Editor</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
           
-          <TabsContent value="editor" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <div className="flex items-center mb-4 space-x-4">
+        <div className="px-6 pt-2 pb-6">
+          <TabsContent value="editor" className="mt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Section - Estimate Builder */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Estimate Header Section */}
+                <div className="flex flex-wrap gap-4 items-center">
                   <div className="space-y-2">
                     <Label htmlFor="estimate-number">Estimate #</Label>
                     <Input
                       id="estimate-number"
                       value={estimateNumber}
-                      onChange={(e) => setEstimateNumber(e.target.value)}
-                      className="w-40"
+                      readOnly
+                      className="w-40 bg-muted/50"
                     />
                   </div>
                   
-                  <div className="ml-auto">
-                    <Badge variant="outline" className="bg-fixlyfy-warning/10 text-fixlyfy-warning border-fixlyfy-warning/20">
-                      Draft
-                    </Badge>
+                  <div className="space-y-2 flex-1">
+                    <Label htmlFor="client-name">Client</Label>
+                    <Input
+                      id="client-name"
+                      value="Michael Johnson"
+                      readOnly
+                      className="bg-muted/50"
+                    />
+                  </div>
+
+                  {onSyncToInvoice && (
+                    <div className="ml-auto">
+                      <Button 
+                        onClick={handleSyncToInvoice} 
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <RefreshCw size={16} />
+                        Sync to Invoice
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Line Items Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Line Items</h3>
+                  </div>
+                  
+                  <div className="border rounded-md overflow-hidden bg-white">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50%]">Description</TableHead>
+                          <TableHead className="w-[80px]">Qty</TableHead>
+                          <TableHead className="w-[120px]">Unit Price</TableHead>
+                          <TableHead className="w-[80px]">Discount %</TableHead>
+                          <TableHead className="w-[120px] text-right">Total</TableHead>
+                          <TableHead className="w-[80px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lineItems.map((item) => (
+                          <TableRow key={item.id} className="hover:bg-muted/20 group">
+                            <TableCell>
+                              <Input
+                                value={item.description}
+                                onChange={(e) => handleUpdateLineItem(item.id, "description", e.target.value)}
+                                className="border-transparent focus:border-input bg-transparent"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                min={1}
+                                onChange={(e) => handleUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                                className="border-transparent focus:border-input bg-transparent w-16"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                                <Input
+                                  type="number"
+                                  value={item.unitPrice}
+                                  min={0}
+                                  step={0.01}
+                                  onChange={(e) => handleUpdateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
+                                  className="border-transparent focus:border-input bg-transparent pl-6"
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  value={item.discount}
+                                  min={0}
+                                  max={100}
+                                  onChange={(e) => handleUpdateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)}
+                                  className="border-transparent focus:border-input bg-transparent pr-6 w-16"
+                                />
+                                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              ${calculateLineTotal(item).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditLineItem(item.id)}
+                                  title="Edit product details"
+                                  className="h-8 w-8"
+                                >
+                                  <Pencil size={16} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveLineItem(item.id)}
+                                  title="Remove item"
+                                  className="h-8 w-8 text-destructive"
+                                >
+                                  <Trash size={16} />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {lineItems.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              No items added yet. Add items from the catalog or create a custom line item.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={handleAddEmptyLineItem}
+                    >
+                      <Search size={16} />
+                      Add from Catalog
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={handleAddCustomLine}
+                    >
+                      <Plus size={16} />
+                      Add Custom Line
+                    </Button>
                   </div>
                 </div>
                 
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[50%]">Description</TableHead>
-                        <TableHead className="w-[80px]">Qty</TableHead>
-                        <TableHead className="w-[120px]">Unit Price</TableHead>
-                        <TableHead className="w-[80px]">Discount %</TableHead>
-                        <TableHead className="w-[120px] text-right">Total</TableHead>
-                        <TableHead className="w-[80px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lineItems.map((item) => (
-                        <TableRow key={item.id} className="hover:bg-muted/20">
-                          <TableCell>
-                            <Input
-                              value={item.description}
-                              onChange={(e) => handleUpdateLineItem(item.id, "description", e.target.value)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              min={1}
-                              onChange={(e) => handleUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.unitPrice}
-                              min={0}
-                              step={0.01}
-                              onChange={(e) => handleUpdateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
-                              className="text-right"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.discount}
-                              min={0}
-                              max={100}
-                              onChange={(e) => handleUpdateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)}
-                              className="text-right"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ${item.total.toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditLineItem(item.id)}
-                                title="Edit product details"
-                              >
-                                <Pencil size={16} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveLineItem(item.id)}
-                                title="Remove item"
-                              >
-                                <Trash size={16} className="text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {lineItems.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No items added yet. Add items using the search button below.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                <div className="mt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={handleAddEmptyLineItem}
-                  >
-                    <Search size={16} />
-                    Search & Add Products
-                  </Button>
-                </div>
-                
-                <div className="mt-6 space-y-2">
+                {/* Notes Section */}
+                <div className="space-y-2">
                   <Label htmlFor="notes">Notes & Terms</Label>
                   <textarea
                     id="notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full min-h-[100px] p-2 border rounded-md"
+                    className="w-full min-h-[100px] p-2 border rounded-md resize-y"
                     placeholder="Add notes or terms and conditions..."
                   />
                 </div>
               </div>
               
-              <div className="md:col-span-1">
-                <div className="sticky top-0">
-                  <div className="border rounded-md p-4 mb-4 bg-muted/30">
-                    <h4 className="font-medium mb-4">Summary</h4>
-                    <div className="space-y-2">
+              {/* Right Section - Catalog & Summary */}
+              <div className="lg:col-span-1">
+                {/* Fixed position on desktop, scrollable on mobile */}
+                <div className="space-y-6">
+                  {/* Summary Card */}
+                  <div className="border rounded-md p-6 bg-card">
+                    <h3 className="font-semibold text-lg mb-4">Summary</h3>
+                    <div className="space-y-3">
                       <div className="flex justify-between">
                         <span>Subtotal:</span>
                         <span>${calculateSubtotal().toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Tax:</span>
+                      
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span>Tax:</span>
+                          <div className="relative w-16">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={taxRate}
+                              onChange={handleTaxRateChange}
+                              className="h-7 px-2 py-1 text-right pr-5"
+                            />
+                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground text-xs">%</span>
+                          </div>
+                        </div>
                         <span>${calculateTotalTax().toFixed(2)}</span>
                       </div>
-                      <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                        <span>Grand Total:</span>
-                        <span>${calculateGrandTotal().toFixed(2)}</span>
+                      
+                      <div className="pt-3 border-t">
+                        <div className="flex justify-between font-semibold text-lg">
+                          <span>Total:</span>
+                          <span>${calculateGrandTotal().toFixed(2)}</span>
+                        </div>
                       </div>
                       
                       {/* Profit margin - visible only to staff */}
-                      <div className="border-t border-dashed mt-4 pt-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-600">Margin:</span>
-                          <span className="text-green-600">
-                            ${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage().toFixed(0)}%)
+                      <div className="mt-4 pt-4 border-t border-dashed">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1 text-green-600">
+                            <span className="font-medium">Profit Margin</span>
+                            <span className="tooltip-container">
+                              <Info size={14} className="text-muted-foreground" />
+                              <span className="tooltip-text text-xs bg-background border p-2 rounded shadow-md absolute -top-10 left-0 hidden group-hover:block w-48">
+                                This information is for internal use only
+                              </span>
+                            </span>
+                          </div>
+                          <span className="text-green-600 font-medium">
+                            ${calculateTotalMargin().toFixed(2)}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          This information is for internal use only and will not be visible to customers.
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-sm text-muted-foreground">Percentage:</span>
+                          <span className="text-sm text-green-600">
+                            {calculateMarginPercentage().toFixed(0)}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          This information is for internal use only
                         </p>
                       </div>
                     </div>
                   </div>
                   
+                  {/* Product Catalog */}
                   <ProductCatalog onAddProduct={handleAddProduct} />
                 </div>
               </div>
@@ -476,7 +618,7 @@ export const EstimateBuilderDialog = ({
                       <td className="text-right py-2">{item.quantity}</td>
                       <td className="text-right py-2">${item.unitPrice.toFixed(2)}</td>
                       <td className="text-right py-2">{item.discount > 0 ? `${item.discount}%` : '-'}</td>
-                      <td className="text-right py-2">${item.total.toFixed(2)}</td>
+                      <td className="text-right py-2">${calculateLineTotal(item).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -488,7 +630,7 @@ export const EstimateBuilderDialog = ({
                   </tr>
                   <tr>
                     <td colSpan={3}></td>
-                    <td className="text-right py-2 font-medium">Tax:</td>
+                    <td className="text-right py-2 font-medium">Tax ({taxRate}%):</td>
                     <td className="text-right py-2">${calculateTotalTax().toFixed(2)}</td>
                   </tr>
                   <tr>
@@ -511,23 +653,32 @@ export const EstimateBuilderDialog = ({
               </div>
             </div>
           </TabsContent>
-        </Tabs>
+        </div>
         
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
-            <Save size={16} />
-            Save Draft
-          </Button>
-          <Button onClick={handleSendEstimate} className="gap-2">
-            <Send size={16} />
-            Send to Customer
-          </Button>
+        {/* Sticky Footer */}
+        <DialogFooter className="sticky bottom-0 border-t bg-background px-6 py-4 mt-0">
+          <div className="w-full flex flex-col sm:flex-row justify-between gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
+                <Save size={16} />
+                Save Draft
+              </Button>
+              <Button 
+                onClick={handleSendEstimate} 
+                className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                disabled={!canSendEstimate}
+              >
+                <Send size={16} />
+                Send to Customer
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
-
+      
       <WarrantySelectionDialog
         open={isWarrantyDialogOpen}
         onOpenChange={setIsWarrantyDialogOpen}
@@ -541,7 +692,7 @@ export const EstimateBuilderDialog = ({
         onSave={handleProductSaved}
         categories={["Custom"]}
       />
-
+      
       <ProductSearch
         open={isProductSearchOpen}
         onOpenChange={setIsProductSearchOpen}

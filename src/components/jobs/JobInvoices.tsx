@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { InvoiceCreationDialog } from "./dialogs/InvoiceCreationDialog";
+import { InvoiceBuilderDialog } from "./dialogs/InvoiceBuilderDialog";
 import { Payment } from "@/types/payment";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Product } from "./builder/types";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
+import { LineItem } from "./builder/types";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -49,8 +52,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>("credit-card");
-  const [paymentNotes, setPaymentNotes] = useState<string>("");
-  const [estimateItems, setEstimateItems] = useState<InvoiceItem[]>([]);
+  const [estimateItems, setEstimateItems] = useState<LineItem[]>([]);
   const [hasEstimate, setHasEstimate] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -118,26 +120,28 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     setInvoices(mockInvoices);
     
     // Mock estimate items - Add required properties to each item
-    const mockEstimateItems: InvoiceItem[] = [
+    const mockEstimateItems: LineItem[] = [
       {
-        id: "estimate-item-1",  // Added required property
-        name: "Diagnostic Service",
-        description: "Complete system diagnostics",
-        price: 120,
+        id: "estimate-item-1",
+        description: "Diagnostic Service",
         quantity: 1,
-        taxable: true,
-        category: "Services",  // Added required property
-        tags: ["diagnostic", "service"]  // Added required property
+        unitPrice: 120,
+        discount: 0,
+        tax: 10,
+        total: 120,
+        ourPrice: 75,
+        taxable: true
       },
       {
-        id: "estimate-item-2",  // Added required property
-        name: "HVAC Annual Maintenance",
-        description: "Yearly system tune-up and maintenance",
-        price: 250,
+        id: "estimate-item-2",
+        description: "HVAC Annual Maintenance",
         quantity: 1,
-        taxable: true,
-        category: "Maintenance",  // Added required property
-        tags: ["hvac", "maintenance", "annual"]  // Added required property
+        unitPrice: 250,
+        discount: 0,
+        tax: 10,
+        total: 250,
+        ourPrice: 140,
+        taxable: true
       }
     ];
     
@@ -206,7 +210,6 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     setSelectedInvoice(invoice);
     setPaymentAmount(calculateBalance(invoice));
     setPaymentMethod("credit-card");
-    setPaymentNotes("");
     setIsAddingPayment(true);
   };
   
@@ -222,7 +225,6 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       amount: paymentAmount,
       method: paymentMethod as any,
       status: "paid",
-      notes: paymentNotes
     };
     
     setInvoices(
@@ -397,12 +399,11 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
           </div>
         )}
         
-        <InvoiceCreationDialog
+        <InvoiceBuilderDialog 
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
+          invoiceId={selectedInvoice?.id || null}
           jobId={jobId}
-          onSave={handleSaveInvoice}
-          hasEstimate={hasEstimate}
           estimateItems={estimateItems}
           onSyncFromEstimate={handleSyncFromEstimate}
         />
@@ -444,17 +445,6 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
                   <option value="e-transfer">E-Transfer</option>
                   <option value="cheque">Cheque</option>
                 </select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="notes" className="text-right">
-                  Notes
-                </Label>
-                <Input
-                  id="notes"
-                  className="col-span-3"
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
-                />
               </div>
             </div>
             <DialogFooter>

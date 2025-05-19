@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,11 +10,11 @@ import { EstimateBuilderDialog } from "@/components/jobs/dialogs/EstimateBuilder
 import { toast } from "sonner";
 import { Product } from "./builder/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 
 interface JobEstimatesProps {
   jobId: string;
+  onEstimateConverted?: () => void;
 }
 
 interface EstimateItem {
@@ -22,12 +23,12 @@ interface EstimateItem {
   price: number;
   quantity: number;
   taxable: boolean;
-  id: string; // Added required property
-  category: string; // Added required property
-  tags: string[]; // Added required property
+  id: string;
+  category: string;
+  tags: string[];
 }
 
-export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
+export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) => {
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
@@ -173,8 +174,10 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
     toast.success(`Estimate ${selectedEstimate.number} converted to invoice`);
     setIsConvertToInvoiceDialogOpen(false);
     
-    // Here you might want to redirect to the invoices tab
-    // or notify a parent component to switch tabs
+    // Switch to the invoices tab if the callback is provided
+    if (onEstimateConverted) {
+      onEstimateConverted();
+    }
   };
 
   const handleDeleteEstimate = (estimateId: string) => {
@@ -208,6 +211,15 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
     } finally {
       setIsDeleting(false);
       setIsDeleteConfirmOpen(false);
+    }
+  };
+
+  const handleSyncToInvoice = (estimate: any) => {
+    toast.success(`Estimate ${estimate.number} synced to invoice`);
+    
+    // Switch to the invoices tab if the callback is provided
+    if (onEstimateConverted) {
+      onEstimateConverted();
     }
   };
 
@@ -313,6 +325,7 @@ export const JobEstimates = ({ jobId }: JobEstimatesProps) => {
           onOpenChange={setIsEstimateBuilderOpen}
           estimateId={selectedEstimateId}
           jobId={jobId}
+          onSyncToInvoice={handleSyncToInvoice}
         />
         
         {/* Convert to Invoice Dialog */}
