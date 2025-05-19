@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, FileText, Trash, Pencil, Search, Plus, Info, RefreshCw } from "lucide-react";
+import { Send, Save, FileText, Trash, Pencil, Search, Plus, Info, RefreshCw, FileCheck, Receipt, BarChart3 } from "lucide-react";
 import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { LineItem, Product } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
@@ -298,6 +297,125 @@ export const InvoiceBuilderDialog = ({
   // Check if invoice can be sent
   const canSendInvoice = lineItems.length > 0 && calculateGrandTotal() > 0;
 
+  // Modified empty state component
+  const EmptyInvoiceState = () => (
+    <div className="text-center py-12 px-6 flex flex-col items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300">
+      <div className="bg-fixlyfy/10 rounded-full p-4 mb-4">
+        <Receipt size={40} className="text-fixlyfy" />
+      </div>
+      <h3 className="text-lg font-medium mb-2">Create Your First Invoice</h3>
+      <p className="text-fixlyfy-text-secondary max-w-md mb-6">
+        Add services, parts, and labor items to create a professional invoice for your customer.
+      </p>
+      <div className="flex flex-wrap gap-3 justify-center">
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={handleAddEmptyLineItem}
+        >
+          <Search size={16} />
+          Add from Catalog
+        </Button>
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={handleAddCustomLine}
+        >
+          <Plus size={16} />
+          Add Custom Line
+        </Button>
+        {estimateItems && estimateItems.length > 0 && (
+          <Button 
+            onClick={handleSyncFromEstimate} 
+            className="gap-2 bg-fixlyfy hover:bg-fixlyfy/90"
+          >
+            <RefreshCw size={16} />
+            Sync from Estimate
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Quick Template feature
+  const invoiceTemplates = [
+    {
+      id: "diagnostic",
+      name: "Diagnostic Visit",
+      icon: <FileCheck size={18} />,
+      description: "Standard diagnostic visit template with basic service fee",
+      items: [
+        {
+          id: `line-${Date.now()}-1`,
+          description: "Diagnostic Service Fee",
+          quantity: 1,
+          unitPrice: 95,
+          discount: 0,
+          tax: taxRate,
+          total: 95,
+          ourPrice: 45,
+          taxable: true
+        }
+      ]
+    },
+    {
+      id: "maintenance",
+      name: "Maintenance Package",
+      icon: <BarChart3 size={18} />,
+      description: "Standard maintenance package with parts and labor",
+      items: [
+        {
+          id: `line-${Date.now()}-2`,
+          description: "Maintenance Service - Standard",
+          quantity: 1,
+          unitPrice: 189,
+          discount: 0,
+          tax: taxRate,
+          total: 189,
+          ourPrice: 85,
+          taxable: true
+        },
+        {
+          id: `line-${Date.now()}-3`,
+          description: "Replacement Filters (Set of 3)",
+          quantity: 1,
+          unitPrice: 45,
+          discount: 0,
+          tax: taxRate,
+          total: 45,
+          ourPrice: 22,
+          taxable: true
+        }
+      ]
+    }
+  ];
+
+  const applyTemplate = (template: typeof invoiceTemplates[0]) => {
+    setLineItems([...lineItems, ...template.items]);
+    toast.success(`Applied ${template.name} template`);
+  };
+
+  const TemplatesSection = () => (
+    <div className="border rounded-md p-4 bg-card mb-6">
+      <h3 className="font-medium mb-3">Quick Templates</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {invoiceTemplates.map(template => (
+          <div 
+            key={template.id}
+            className="border rounded-md p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+            onClick={() => applyTemplate(template)}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              {template.icon}
+              <span className="font-medium">{template.name}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">{template.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
@@ -361,6 +479,9 @@ export const InvoiceBuilderDialog = ({
                     </div>
                   )}
                 </div>
+                
+                {/* Templates Section - Only show when empty */}
+                {lineItems.length === 0 && <TemplatesSection />}
                 
                 {/* Line Items Section */}
                 <div className="space-y-4">
@@ -454,8 +575,8 @@ export const InvoiceBuilderDialog = ({
                         ))}
                         {lineItems.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                              No items added yet. Add items from the catalog or create a custom line item.
+                            <TableCell colSpan={6} className="p-0 border-b-0">
+                              <EmptyInvoiceState />
                             </TableCell>
                           </TableRow>
                         )}
@@ -463,26 +584,28 @@ export const InvoiceBuilderDialog = ({
                     </Table>
                   </div>
                   
-                  <div className="flex flex-wrap gap-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2"
-                      onClick={handleAddEmptyLineItem}
-                    >
-                      <Search size={16} />
-                      Add from Catalog
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2"
-                      onClick={handleAddCustomLine}
-                    >
-                      <Plus size={16} />
-                      Add Custom Line
-                    </Button>
-                  </div>
+                  {lineItems.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2"
+                        onClick={handleAddEmptyLineItem}
+                      >
+                        <Search size={16} />
+                        Add from Catalog
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2"
+                        onClick={handleAddCustomLine}
+                      >
+                        <Plus size={16} />
+                        Add Custom Line
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Notes Section */}
@@ -573,93 +696,105 @@ export const InvoiceBuilderDialog = ({
           </TabsContent>
           
           <TabsContent value="preview">
-            <div className="border rounded-md p-6 bg-white">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1">INVOICE</h2>
-                  <p className="text-lg font-medium">{invoiceNumber}</p>
-                </div>
-                <div className="text-right">
-                  <img src="/placeholder.svg" alt="Company Logo" className="h-12 mb-2" />
-                  <p className="font-medium">Fixlyfy Services</p>
-                  <p className="text-sm text-muted-foreground">456 Business Ave, Suite 789</p>
-                  <p className="text-sm text-muted-foreground">(555) 987-6543</p>
-                </div>
+            {lineItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 border rounded-md bg-gray-50">
+                <FileText size={48} className="text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Invoice Preview</h3>
+                <p className="text-muted-foreground mb-6">Add line items to see your invoice preview</p>
+                <Button onClick={() => setActiveTab("editor")} className="gap-2">
+                  <Plus size={16} />
+                  Add Items Now
+                </Button>
               </div>
-              
-              <div className="grid grid-cols-2 gap-8 mb-8">
-                <div>
-                  <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Bill To:</h3>
-                  <p className="font-medium">Michael Johnson</p>
-                  <p className="text-sm text-muted-foreground">123 Main St, Apt 45</p>
-                  <p className="text-sm text-muted-foreground">(555) 123-4567</p>
-                  <p className="text-sm text-muted-foreground">michael.johnson@example.com</p>
+            ) : (
+              <div className="border rounded-md p-6 bg-white">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-1">INVOICE</h2>
+                    <p className="text-lg font-medium">{invoiceNumber}</p>
+                  </div>
+                  <div className="text-right">
+                    <img src="/placeholder.svg" alt="Company Logo" className="h-12 mb-2" />
+                    <p className="font-medium">Fixlyfy Services</p>
+                    <p className="text-sm text-muted-foreground">456 Business Ave, Suite 789</p>
+                    <p className="text-sm text-muted-foreground">(555) 987-6543</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Invoice Date:</h3>
-                      <p>{new Date().toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Due Date:</h3>
-                      <p>{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                
+                <div className="grid grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Bill To:</h3>
+                    <p className="font-medium">Michael Johnson</p>
+                    <p className="text-sm text-muted-foreground">123 Main St, Apt 45</p>
+                    <p className="text-sm text-muted-foreground">(555) 123-4567</p>
+                    <p className="text-sm text-muted-foreground">michael.johnson@example.com</p>
+                  </div>
+                  <div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Invoice Date:</h3>
+                        <p>{new Date().toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Due Date:</h3>
+                        <p>{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <table className="w-full mb-8">
-                <thead className="border-b">
-                  <tr>
-                    <th className="text-left py-2">Description</th>
-                    <th className="text-right py-2">Qty</th>
-                    <th className="text-right py-2">Unit Price</th>
-                    <th className="text-right py-2">Discount</th>
-                    <th className="text-right py-2">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item) => (
-                    <tr key={item.id} className="border-b">
-                      <td className="py-2">{item.description}</td>
-                      <td className="text-right py-2">{item.quantity}</td>
-                      <td className="text-right py-2">${item.unitPrice.toFixed(2)}</td>
-                      <td className="text-right py-2">{item.discount > 0 ? `${item.discount}%` : '-'}</td>
-                      <td className="text-right py-2">${calculateLineTotal(item).toFixed(2)}</td>
+                
+                <table className="w-full mb-8">
+                  <thead className="border-b">
+                    <tr>
+                      <th className="text-left py-2">Description</th>
+                      <th className="text-right py-2">Qty</th>
+                      <th className="text-right py-2">Unit Price</th>
+                      <th className="text-right py-2">Discount</th>
+                      <th className="text-right py-2">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={3}></td>
-                    <td className="text-right py-2 font-medium">Subtotal:</td>
-                    <td className="text-right py-2">${calculateSubtotal().toFixed(2)}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3}></td>
-                    <td className="text-right py-2 font-medium">Tax ({taxRate}%):</td>
-                    <td className="text-right py-2">${calculateTotalTax().toFixed(2)}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3}></td>
-                    <td className="text-right py-2 font-medium">Total Due:</td>
-                    <td className="text-right py-2 font-bold">${calculateGrandTotal().toFixed(2)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-              
-              {notes && (
-                <div className="mb-8">
-                  <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Notes:</h3>
-                  <p className="text-sm whitespace-pre-line">{notes}</p>
+                  </thead>
+                  <tbody>
+                    {lineItems.map((item) => (
+                      <tr key={item.id} className="border-b">
+                        <td className="py-2">{item.description}</td>
+                        <td className="text-right py-2">{item.quantity}</td>
+                        <td className="text-right py-2">${item.unitPrice.toFixed(2)}</td>
+                        <td className="text-right py-2">{item.discount > 0 ? `${item.discount}%` : '-'}</td>
+                        <td className="text-right py-2">${calculateLineTotal(item).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3}></td>
+                      <td className="text-right py-2 font-medium">Subtotal:</td>
+                      <td className="text-right py-2">${calculateSubtotal().toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={3}></td>
+                      <td className="text-right py-2 font-medium">Tax ({taxRate}%):</td>
+                      <td className="text-right py-2">${calculateTotalTax().toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={3}></td>
+                      <td className="text-right py-2 font-medium">Total Due:</td>
+                      <td className="text-right py-2 font-bold">${calculateGrandTotal().toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                
+                {notes && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Notes:</h3>
+                    <p className="text-sm whitespace-pre-line">{notes}</p>
+                  </div>
+                )}
+                
+                <div className="text-sm text-muted-foreground border-t pt-4">
+                  <p>All services are subject to our terms and conditions. Payment due within 30 days.</p>
                 </div>
-              )}
-              
-              <div className="text-sm text-muted-foreground border-t pt-4">
-                <p>All services are subject to our terms and conditions. Payment due within 30 days.</p>
               </div>
-            </div>
+            )}
           </TabsContent>
         </div>
         
