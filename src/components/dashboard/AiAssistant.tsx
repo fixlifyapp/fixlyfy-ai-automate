@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ArrowUpIcon, Bot, Send } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { createClient } from "@/integrations/supabase/client";
 
 type Message = {
   id: number;
@@ -24,9 +26,11 @@ export const AiAssistant = () => {
     }
   ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
   
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
     
     // Add user message
     const userMessage: Message = {
@@ -36,28 +40,46 @@ export const AiAssistant = () => {
       timestamp: new Date()
     };
     
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInput("");
+    setIsLoading(true);
     
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "I can help you schedule that job. What time works best for the client?",
-        "Based on your schedule, tomorrow morning would be the best time to fit in this new job.",
-        "Let me analyze that for you. Your top performing service this month is HVAC with a 24% increase in revenue.",
-        "I've found 3 technicians available for this job. David has the highest rating for this type of work.",
-        "I can help you create an estimate for this job. What services will be included?"
-      ];
+    try {
+      // Get AI response from our Edge Function
+      const { data, error } = await supabase.functions.invoke("generate-with-ai", {
+        body: {
+          prompt: input,
+          context: "You are an AI assistant for a field service management application called Fixlyfy. Help users with scheduling, service recommendations, business analytics, and technician management. Provide concise, helpful responses focused on service business needs. Reference current data if available."
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
       
       const aiMessage: Message = {
         id: messages.length + 2,
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: data.generatedText,
         role: "assistant",
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, aiMessage]);
-    }, 1000);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: "I'm sorry, I encountered an error processing your request. Please try again later.",
+        role: "assistant",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -106,6 +128,20 @@ export const AiAssistant = () => {
               )}
             </div>
           ))}
+          {isLoading && (
+            <div className="flex gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-fixlyfy text-white">AI</AvatarFallback>
+              </Avatar>
+              <div className="px-3 py-2 rounded-lg bg-fixlyfy-bg-interface text-fixlyfy-text max-w-[80%]">
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 rounded-full bg-fixlyfy animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-fixlyfy animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-fixlyfy animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="flex gap-2">
@@ -115,8 +151,13 @@ export const AiAssistant = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
             className="flex-1"
+            disabled={isLoading}
           />
-          <Button onClick={handleSendMessage} className="bg-fixlyfy">
+          <Button 
+            onClick={handleSendMessage} 
+            className="bg-fixlyfy"
+            disabled={isLoading}
+          >
             <Send size={18} />
           </Button>
         </div>

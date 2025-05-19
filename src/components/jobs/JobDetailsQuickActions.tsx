@@ -1,13 +1,13 @@
-
 import { Button } from "@/components/ui/button";
 import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useAI } from "@/hooks/use-ai";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const aiSuggestions = [
+// We'll keep our initial suggestions but dynamically generate more with AI
+const initialAiSuggestions = [
   {
     id: 1,
     tip: "This is a returning customer with 5+ jobs. Consider offering a loyalty discount.",
@@ -58,10 +59,23 @@ export const JobDetailsQuickActions = () => {
   const { id } = useParams();
   const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2]);
   const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState(initialAiSuggestions);
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  
+  const { generateText } = useAI({
+    systemContext: "You are an AI assistant for a field service business. Generate concise, practical insights for technicians and managers about service jobs."
+  });
   
   const handleFeedback = (id: number, isPositive: boolean) => {
     console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
-    toast.success(`Feedback recorded for suggestion #${id}`);
+    
+    // Remove the suggestion if feedback is negative
+    if (!isPositive) {
+      setAiSuggestions(aiSuggestions.filter(suggestion => suggestion.id !== id));
+      toast.success("Thanks for your feedback! We'll improve our suggestions.");
+    } else {
+      toast.success("Thanks for your feedback! Glad this was helpful.");
+    }
   };
 
   const handleQuickAction = (actionId: number) => {
@@ -82,6 +96,37 @@ export const JobDetailsQuickActions = () => {
     setIsCompleteJobDialogOpen(false);
   };
   
+  const generateNewSuggestion = async () => {
+    if (isGeneratingSuggestion) return;
+    
+    setIsGeneratingSuggestion(true);
+    
+    try {
+      const suggestionsPrompt = 
+        `Based on job ID ${id}, generate a new business insight or recommendation for a field service technician. 
+         Make it practical, specific, and under 100 characters. Return just the text of the suggestion.`;
+      
+      const newSuggestionText = await generateText(suggestionsPrompt);
+      
+      if (newSuggestionText) {
+        const suggestionTypes = ["info", "recommendation", "insight"];
+        const randomType = suggestionTypes[Math.floor(Math.random() * suggestionTypes.length)];
+        
+        const newSuggestion = {
+          id: Date.now(),
+          tip: newSuggestionText,
+          type: randomType
+        };
+        
+        setAiSuggestions([...aiSuggestions, newSuggestion]);
+      }
+    } catch (error) {
+      console.error("Error generating suggestion:", error);
+    } finally {
+      setIsGeneratingSuggestion(false);
+    }
+  };
+  
   return (
     <>
       {/* AI Suggestions Panel */}
@@ -93,6 +138,14 @@ export const JobDetailsQuickActions = () => {
             </div>
             <h3 className="text-lg font-medium">AI Suggestions</h3>
           </div>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={generateNewSuggestion}
+            disabled={isGeneratingSuggestion}
+          >
+            {isGeneratingSuggestion ? "Thinking..." : "Generate New Insight"}
+          </Button>
         </CardHeader>
         
         <CardContent className="p-4 space-y-3">

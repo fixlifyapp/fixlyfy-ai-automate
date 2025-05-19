@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, PlusCircle } from "lucide-react";
+import { MessageSquare, PlusCircle, Bot } from "lucide-react";
 import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
+import { useAI } from "@/hooks/use-ai";
+import { toast } from "sonner";
 
 interface JobMessagesProps {
   jobId: string;
@@ -11,9 +13,12 @@ interface JobMessagesProps {
 
 export const JobMessages = ({ jobId }: JobMessagesProps) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const { generateText, isLoading } = useAI({
+    systemContext: "You are an assistant helping with job messaging for a field service company. Keep responses professional, friendly, and concise."
+  });
   
   // In a real app, these would be fetched from an API based on jobId
-  const messages = [
+  const [messages, setMessages] = useState([
     {
       id: "msg-001",
       date: "2023-05-15",
@@ -28,20 +33,67 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
       sender: "client",
       recipient: "technician"
     }
-  ];
+  ]);
+
+  const handleSuggestResponse = async () => {
+    if (isLoading) return;
+    
+    try {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.sender === "technician") {
+        toast.info("Waiting for client response before suggesting a reply.");
+        return;
+      }
+      
+      const prompt = `Generate a professional response to this customer message: "${lastMessage.content}"`;
+      const suggestedResponse = await generateText(prompt);
+      
+      if (suggestedResponse) {
+        toast.success("AI suggestion ready", {
+          description: suggestedResponse,
+          action: {
+            label: "Use",
+            onClick: () => {
+              const newMessage = {
+                id: `msg-${Date.now()}`,
+                date: new Date().toISOString(),
+                content: suggestedResponse,
+                sender: "technician",
+                recipient: "client"
+              };
+              setMessages([...messages, newMessage]);
+            }
+          }
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to generate response suggestion");
+    }
+  };
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-medium">Messages</h3>
-          <Button 
-            onClick={() => setIsMessageDialogOpen(true)} 
-            className="gap-2"
-          >
-            <PlusCircle size={16} />
-            New Message
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleSuggestResponse}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <Bot size={16} />
+              {isLoading ? "Thinking..." : "Suggest Response"}
+            </Button>
+            <Button 
+              onClick={() => setIsMessageDialogOpen(true)} 
+              className="gap-2"
+            >
+              <PlusCircle size={16} />
+              New Message
+            </Button>
+          </div>
         </div>
 
         {messages.length > 0 ? (

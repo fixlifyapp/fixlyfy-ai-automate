@@ -2,6 +2,9 @@
 import { cn } from "@/lib/utils";
 import { Brain, AlertTriangle, TrendingUp, Clock, Star, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { createClient } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const insights = [
   {
@@ -43,6 +46,42 @@ const insights = [
 ];
 
 export const AiInsights = () => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const supabase = createClient();
+  
+  const generateReport = async () => {
+    setIsGenerating(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-with-ai", {
+        body: {
+          prompt: "Generate a summary report of the business performance for this week",
+          context: "You are a business analytics AI for a field service company called Fixlyfy. Create a concise summary report of the business performance focusing on revenue, technician utilization, job completion rate, and customer satisfaction.",
+          format: "report"
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      toast.success("Report generated successfully!", {
+        description: "Your AI summary report is ready to view",
+        action: {
+          label: "View",
+          onClick: () => console.log("View report clicked")
+        }
+      });
+    } catch (error) {
+      toast.error("Failed to generate report", {
+        description: "Please try again later"
+      });
+      console.error("Error generating report:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
   return (
     <div className="fixlyfy-card h-full">
       <div className="p-6 border-b border-fixlyfy-border flex items-center justify-between">
@@ -121,8 +160,14 @@ export const AiInsights = () => {
         <p className="text-xs text-white/80 mb-3">
           Get an AI-generated report summarizing your business performance for the week.
         </p>
-        <Button variant="secondary" size="sm" className="w-full">
-          Generate Report
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          className="w-full"
+          onClick={generateReport}
+          disabled={isGenerating}
+        >
+          {isGenerating ? "Generating..." : "Generate Report"}
         </Button>
       </div>
     </div>
