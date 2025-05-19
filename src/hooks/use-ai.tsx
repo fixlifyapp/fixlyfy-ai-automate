@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { createClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseAIOptions {
   systemContext?: string;
@@ -9,7 +9,6 @@ interface UseAIOptions {
 export function useAI(options: UseAIOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
   
   const generateText = async (prompt: string) => {
     setIsLoading(true);

@@ -1,9 +1,8 @@
-
 import { cn } from "@/lib/utils";
 import { Brain, AlertTriangle, TrendingUp, Clock, Star, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { createClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const insights = [
@@ -47,7 +46,6 @@ const insights = [
 
 export const AiInsights = () => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const supabase = createClient();
   
   const generateReport = async () => {
     setIsGenerating(true);
