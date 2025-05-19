@@ -5,10 +5,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { Button } from "@/components/ui/button";
-import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
-import { ExpenseDialog } from "@/components/jobs/dialogs/ExpenseDialog";
-import { SearchDialog } from "@/components/jobs/dialogs/SearchDialog";
-import { File, Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientJobs } from "@/components/clients/ClientJobs";
 
@@ -16,9 +13,6 @@ const ClientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
-  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   
   const handleCreateJob = () => {
@@ -58,23 +52,6 @@ const ClientDetailPage = () => {
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         preselectedClientId={id}
-      />
-
-      <PaymentDialog 
-        open={isPaymentDialogOpen} 
-        onOpenChange={setIsPaymentDialogOpen} 
-        balance={0} 
-        onPaymentProcessed={() => {}}
-      />
-      
-      <ExpenseDialog 
-        open={isExpenseDialogOpen} 
-        onOpenChange={setIsExpenseDialogOpen} 
-      />
-
-      <SearchDialog
-        open={isSearchDialogOpen}
-        onOpenChange={setIsSearchDialogOpen}
       />
     </PageLayout>
   );
