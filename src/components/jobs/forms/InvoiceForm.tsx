@@ -17,6 +17,8 @@ import * as z from "zod";
 import { FileText, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { WarrantySelectionDialog } from "../dialogs/WarrantySelectionDialog";
+import { Product } from "../builder/types";
 
 const invoiceFormSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
@@ -55,6 +57,8 @@ interface InvoiceFormProps {
     phone: string;
     email: string;
   };
+  showWarrantyUpsell?: boolean;
+  previousItems?: any[];
 }
 
 export const InvoiceForm = ({
@@ -63,9 +67,12 @@ export const InvoiceForm = ({
   onCancel,
   defaultInvoiceNumber,
   companyInfo,
-  clientInfo
+  clientInfo,
+  showWarrantyUpsell = false,
+  previousItems = []
 }: InvoiceFormProps) => {
   const [previewMode, setPreviewMode] = useState(false);
+  const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
   
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
@@ -73,7 +80,9 @@ export const InvoiceForm = ({
       invoiceNumber: defaultInvoiceNumber,
       issueDate: new Date().toISOString().slice(0, 10),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      items: [{ description: "", quantity: 1, unitPrice: 0, ourPrice: 0, taxable: true }],
+      items: previousItems.length > 0 
+        ? previousItems 
+        : [{ description: "", quantity: 1, unitPrice: 0, ourPrice: 0, taxable: true }],
       notes: "",
     },
   });
@@ -107,6 +116,24 @@ export const InvoiceForm = ({
 
   const removeItem = (index: number) => {
     remove(index);
+  };
+  
+  const handleAddWarranty = () => {
+    setIsWarrantyDialogOpen(true);
+  };
+  
+  const handleWarrantySelection = (selectedWarranty: Product | null, customNote: string) => {
+    if (selectedWarranty) {
+      // Add warranty to the items
+      append({
+        description: `${selectedWarranty.name}: ${selectedWarranty.description}`,
+        quantity: 1,
+        unitPrice: selectedWarranty.price,
+        ourPrice: selectedWarranty.ourPrice || 0,
+        taxable: false
+      });
+    }
+    setIsWarrantyDialogOpen(false);
   };
 
   const renderPreview = () => {
@@ -208,7 +235,17 @@ export const InvoiceForm = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">{type === "invoice" ? "Create Invoice" : "Create Estimate"}</h2>
-        <div>
+        <div className="flex gap-2">
+          {showWarrantyUpsell && (
+            <Button 
+              variant="outline" 
+              onClick={handleAddWarranty}
+              className="gap-2"
+            >
+              <Plus size={16} />
+              Add Warranty
+            </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={() => setPreviewMode(!previewMode)}
@@ -284,7 +321,14 @@ export const InvoiceForm = ({
             </div>
 
             <div>
-              <h3 className="font-medium text-lg mb-4">Items</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-medium text-lg">Items</h3>
+                {previousItems.length > 0 && (
+                  <span className="text-sm text-muted-foreground italic">
+                    Items loaded from previous {type}
+                  </span>
+                )}
+              </div>
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-3 mb-4">
                   <div className="col-span-3">
@@ -448,6 +492,13 @@ export const InvoiceForm = ({
           </form>
         </Form>
       )}
+      
+      {/* Warranty Selection Dialog */}
+      <WarrantySelectionDialog
+        open={isWarrantyDialogOpen}
+        onOpenChange={setIsWarrantyDialogOpen}
+        onConfirm={handleWarrantySelection}
+      />
     </div>
   );
 };

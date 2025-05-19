@@ -33,6 +33,10 @@ export const JobDetailsHeader = () => {
             onEstimateClick={() => jobHeaderData.setIsEstimateDialogOpen(true)}
             hasEstimate={jobHeaderData.hasEstimate}
             onSyncEstimateToInvoice={jobHeaderData.handleSyncEstimateToInvoice}
+            previousEstimates={jobHeaderData.previousEstimates}
+            previousInvoices={jobHeaderData.previousInvoices}
+            onLoadPreviousEstimate={() => jobHeaderData.setIsLoadPreviousEstimateDialogOpen(true)}
+            onLoadPreviousInvoice={() => jobHeaderData.setIsLoadPreviousInvoiceDialogOpen(true)}
           />
         </div>
       </div>
@@ -73,6 +77,7 @@ export const JobDetailsHeader = () => {
           email: jobHeaderData.job.companyEmail,
           legalText: jobHeaderData.job.legalText
         }}
+        showWarrantyUpsell={true}
       />
       
       <EstimateDialog 
@@ -93,6 +98,7 @@ export const JobDetailsHeader = () => {
           email: jobHeaderData.job.companyEmail,
           legalText: jobHeaderData.job.legalText
         }}
+        showWarrantyUpsell={true}
       />
     </div>
   );

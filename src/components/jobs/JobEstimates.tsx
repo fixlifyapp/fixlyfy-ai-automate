@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Product } from "./builder/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
+import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
 
 interface JobEstimatesProps {
   jobId: string;
@@ -38,6 +39,7 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
   
   // In a real app, this would be fetched from an API
   const [estimates, setEstimates] = useState([
@@ -222,6 +224,19 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
       onEstimateConverted();
     }
   };
+  
+  const handleAddWarranty = (estimate: any) => {
+    setSelectedEstimate(estimate);
+    setIsWarrantyDialogOpen(true);
+  };
+  
+  const handleWarrantySelection = (selectedWarranty: Product | null, customNote: string) => {
+    if (selectedWarranty) {
+      toast.success(`${selectedWarranty.name} added to estimate ${selectedEstimate.number}`);
+      // In a real app, this would update the estimate with the warranty
+    }
+    setIsWarrantyDialogOpen(false);
+  };
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
@@ -280,6 +295,14 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
                         onClick={() => handleConvertToInvoice(estimate)}
                       >
                         To Invoice
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => handleAddWarranty(estimate)}
+                      >
+                        Add Warranty
                       </Button>
                       {estimate.status === "draft" && (
                         <Button 
@@ -360,6 +383,13 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
             isDeleting={isDeleting}
           />
         </Dialog>
+        
+        {/* Warranty Selection Dialog */}
+        <WarrantySelectionDialog
+          open={isWarrantyDialogOpen}
+          onOpenChange={setIsWarrantyDialogOpen}
+          onConfirm={handleWarrantySelection}
+        />
       </CardContent>
     </Card>
   );

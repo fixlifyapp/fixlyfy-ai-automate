@@ -6,7 +6,10 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
 interface JobActionsProps {
@@ -17,6 +20,10 @@ interface JobActionsProps {
   onCompleteJob?: () => void;
   onCancelJob?: () => void;
   onReschedule?: () => void;
+  onLoadPreviousEstimate?: () => void;
+  onLoadPreviousInvoice?: () => void;
+  previousEstimates?: { id: string; number: string }[];
+  previousInvoices?: { id: string; number: string }[];
 }
 
 export const JobActions = ({ 
@@ -26,7 +33,11 @@ export const JobActions = ({
   onSyncEstimateToInvoice,
   onCompleteJob,
   onCancelJob,
-  onReschedule
+  onReschedule,
+  onLoadPreviousEstimate,
+  onLoadPreviousInvoice,
+  previousEstimates = [],
+  previousInvoices = []
 }: JobActionsProps) => {
   return (
     <DropdownMenu>
@@ -37,8 +48,49 @@ export const JobActions = ({
         {onCompleteJob && (
           <DropdownMenuItem onClick={onCompleteJob}>Complete Job</DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={onInvoiceClick}>Send Invoice</DropdownMenuItem>
-        <DropdownMenuItem onClick={onEstimateClick}>Send Estimate</DropdownMenuItem>
+        
+        {/* Invoice options */}
+        {previousInvoices.length > 0 ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Send Invoice</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={onInvoiceClick}>Create New Invoice</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {previousInvoices.map(invoice => (
+                <DropdownMenuItem
+                  key={invoice.id}
+                  onClick={() => onLoadPreviousInvoice && onLoadPreviousInvoice()}
+                >
+                  Load from {invoice.number}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : (
+          <DropdownMenuItem onClick={onInvoiceClick}>Send Invoice</DropdownMenuItem>
+        )}
+        
+        {/* Estimate options */}
+        {previousEstimates.length > 0 ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Send Estimate</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={onEstimateClick}>Create New Estimate</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {previousEstimates.map(estimate => (
+                <DropdownMenuItem
+                  key={estimate.id}
+                  onClick={() => onLoadPreviousEstimate && onLoadPreviousEstimate()}
+                >
+                  Load from {estimate.number}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : (
+          <DropdownMenuItem onClick={onEstimateClick}>Send Estimate</DropdownMenuItem>
+        )}
+        
         {hasEstimate && onSyncEstimateToInvoice && (
           <DropdownMenuItem onClick={onSyncEstimateToInvoice}>
             Convert Estimate to Invoice
