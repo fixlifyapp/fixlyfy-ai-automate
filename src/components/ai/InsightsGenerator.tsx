@@ -3,8 +3,9 @@ import { useState } from "react";
 import { useAI } from "@/hooks/use-ai";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Loader2, RefreshCw } from "lucide-react";
+import { Brain, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface InsightsGeneratorProps {
   data: any;
@@ -33,6 +34,8 @@ export const InsightsGenerator = ({
   
   const generateContent = async () => {
     setIsGenerating(true);
+    toast.loading("Generating AI insights...");
+    
     try {
       let result;
       
@@ -47,9 +50,15 @@ export const InsightsGenerator = ({
         if (onInsightsGenerated) {
           onInsightsGenerated(result);
         }
+        toast.dismiss();
+        toast.success("AI insights generated");
       }
     } catch (err) {
       console.error("Failed to generate insights:", err);
+      toast.dismiss();
+      toast.error("Failed to generate insights", {
+        description: "Please check your OpenAI API key and try again"
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -69,7 +78,10 @@ export const InsightsGenerator = ({
       
       {error && (
         <div className="p-4 border border-fixlyfy-error/20 bg-fixlyfy-error/5 rounded-md">
-          <p className="text-fixlyfy-error text-sm">{error}</p>
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-fixlyfy-error mr-2" />
+            <p className="text-fixlyfy-error text-sm">{error}</p>
+          </div>
         </div>
       )}
       

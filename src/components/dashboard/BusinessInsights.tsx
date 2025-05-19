@@ -3,6 +3,7 @@ import { useState } from "react";
 import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Example data - in a real implementation, this would come from your API or state
 const businessMetrics = {
@@ -30,6 +31,35 @@ const businessMetrics = {
 
 export const BusinessInsights = () => {
   const [insights, setInsights] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
+  
+  const testOpenAI = async () => {
+    try {
+      setTestStatus("idle");
+      const result = await fetch("/api/test-openai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: "Test connection" }),
+      });
+      
+      if (!result.ok) {
+        throw new Error("Failed to connect to OpenAI");
+      }
+      
+      setTestStatus("success");
+      toast.success("OpenAI connection successful!", {
+        description: "Your AI insights feature is ready to use"
+      });
+    } catch (error) {
+      setTestStatus("error");
+      toast.error("OpenAI connection failed", {
+        description: "Please check your API key and try again"
+      });
+      console.error("OpenAI test error:", error);
+    }
+  };
   
   return (
     <Card className="h-full">
@@ -37,6 +67,17 @@ export const BusinessInsights = () => {
         <CardTitle>Business Insights</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="mb-4">
+          <Button 
+            onClick={testOpenAI}
+            variant="outline" 
+            size="sm"
+            className="mb-4"
+          >
+            Test OpenAI Connection
+          </Button>
+        </div>
+        
         <InsightsGenerator 
           data={businessMetrics} 
           topic="monthly business performance"
