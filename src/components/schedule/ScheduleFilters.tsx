@@ -12,7 +12,12 @@ import {
 import { format } from "date-fns";
 import { useState } from "react";
 
-export const ScheduleFilters = () => {
+interface ScheduleFiltersProps {
+  view: 'day' | 'week' | 'month';
+  onViewChange: (view: 'day' | 'week' | 'month') => void;
+}
+
+export const ScheduleFilters = ({ view, onViewChange }: ScheduleFiltersProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   
   const handlePrevious = () => {
@@ -49,6 +54,17 @@ export const ScheduleFilters = () => {
       </div>
       
       <div className="ml-auto flex flex-wrap gap-3 items-center">
+        <Select value={view} onValueChange={(v) => onViewChange(v as 'day' | 'week' | 'month')}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="Select View" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="day">Day View</SelectItem>
+            <SelectItem value="week">Week View</SelectItem>
+            <SelectItem value="month">Month View</SelectItem>
+          </SelectContent>
+        </Select>
+        
         <Select defaultValue="all">
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="All Technicians" />

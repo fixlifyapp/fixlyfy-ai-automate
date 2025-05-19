@@ -1,8 +1,10 @@
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, addWeeks, subWeeks } from "date-fns";
 import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ScheduleCalendarProps {
   view: 'day' | 'week' | 'month';
@@ -68,11 +70,35 @@ const timeSlots = Array.from({ length: 12 }, (_, index) => {
 });
 
 export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
-  const [currentDate] = useState(new Date(2025, 4, 15)); // Fixed to May 15, 2025
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 4, 15)); // Fixed to May 15, 2025
   
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  
+  const handlePrevious = () => {
+    if (view === 'day') {
+      setCurrentDate(prev => addDays(prev, -1));
+    } else if (view === 'week') {
+      setCurrentDate(prev => subWeeks(prev, 1));
+    } else {
+      setCurrentDate(prev => subMonths(prev, 1));
+    }
+  };
+  
+  const handleNext = () => {
+    if (view === 'day') {
+      setCurrentDate(prev => addDays(prev, 1));
+    } else if (view === 'week') {
+      setCurrentDate(prev => addWeeks(prev, 1));
+    } else {
+      setCurrentDate(prev => addMonths(prev, 1));
+    }
+  };
+  
+  const handleToday = () => {
+    setCurrentDate(new Date(2025, 4, 15)); // Reset to fixed date
+  };
   
   const getJobsForTimeSlot = (time: string, day: Date) => {
     const [hourStr, minuteStr] = time.split(':');
@@ -93,11 +119,49 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
     });
   };
   
+  // Calendar header with navigation controls
+  const CalendarHeader = () => (
+    <div className="flex items-center justify-between mb-4 border-b border-fixlyfy-border pb-4">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="icon" onClick={handlePrevious}>
+          <ChevronLeft size={16} />
+        </Button>
+        <Button variant="outline" onClick={handleToday}>
+          Today
+        </Button>
+        <Button variant="outline" size="icon" onClick={handleNext}>
+          <ChevronRight size={16} />
+        </Button>
+      </div>
+      
+      <h2 className="text-lg font-medium">
+        {view === 'day' && format(currentDate, 'EEEE, MMMM d, yyyy')}
+        {view === 'week' && `Week of ${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`}
+        {view === 'month' && format(currentDate, 'MMMM yyyy')}
+      </h2>
+      
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full bg-fixlyfy"></span>
+          <span className="text-xs">Scheduled</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full bg-fixlyfy-warning"></span>
+          <span className="text-xs">In Progress</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full bg-fixlyfy-success"></span>
+          <span className="text-xs">Completed</span>
+        </div>
+      </div>
+    </div>
+  );
+  
   if (view === 'day') {
     return (
       <div className="fixlyfy-card overflow-hidden">
         <div className="p-4 border-b border-fixlyfy-border">
-          <h2 className="text-lg font-medium">{format(currentDate, 'EEEE, MMMM d, yyyy')}</h2>
+          <CalendarHeader />
         </div>
         <div className="overflow-auto">
           {timeSlots.map((time, index) => {
@@ -156,6 +220,10 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
   if (view === 'week') {
     return (
       <div className="fixlyfy-card overflow-hidden">
+        <div className="p-4 border-b border-fixlyfy-border">
+          <CalendarHeader />
+        </div>
+        
         <div className="grid grid-cols-7 border-b border-fixlyfy-border sticky top-0 bg-white z-10">
           {weekDays.map(day => (
             <div 
@@ -224,17 +292,42 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
     );
   }
   
-  // Month view placeholder - would typically be more complex
+  // Month view with basic calendar grid
   return (
-    <div className="fixlyfy-card p-6">
-      <div className="text-center p-10">
-        <h3 className="text-xl font-medium mb-4">Month View</h3>
-        <p className="text-fixlyfy-text-secondary">
-          Month view would display a traditional calendar with job indicators.
-        </p>
-        <p className="text-fixlyfy-text-secondary mt-2">
-          Each day would show a count of scheduled jobs and color indicators for job types.
-        </p>
+    <div className="fixlyfy-card overflow-hidden">
+      <div className="p-4 border-b border-fixlyfy-border">
+        <CalendarHeader />
+      </div>
+      
+      <div className="grid grid-cols-7 gap-0">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+          <div key={day} className="p-2 text-center border-b border-r border-fixlyfy-border text-xs font-medium">
+            {day}
+          </div>
+        ))}
+        
+        {Array.from({ length: 35 }, (_, i) => {
+          // This is a simplified month view - in a real app you would calculate the actual days
+          const dayNum = (i % 30) + 1;
+          const hasJob = scheduledJobs.some(job => job.date.getDate() === dayNum && job.date.getMonth() === 4);
+          
+          return (
+            <div 
+              key={i} 
+              className={cn(
+                "h-24 p-1 border-r border-b border-fixlyfy-border",
+                hasJob ? "bg-fixlyfy-bg-interface/30" : ""
+              )}
+            >
+              <div className="text-xs font-medium mb-1">{dayNum}</div>
+              {hasJob && (
+                <div className="text-xs p-1 rounded bg-fixlyfy text-white mb-1">
+                  Job scheduled
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
