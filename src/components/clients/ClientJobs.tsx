@@ -60,6 +60,8 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
   const navigate = useNavigate();
 
   const handleJobClick = (jobId: string) => {
+    // Fix: Ensuring the navigation is working correctly
+    console.log("Navigating to job:", jobId);
     navigate(`/jobs/${jobId}`);
   };
 
