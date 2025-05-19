@@ -6,9 +6,37 @@ import { ReportsFilters } from "@/components/reports/ReportsFilters";
 import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { ReportsTechnicians } from "@/components/reports/ReportsTechnicians";
 import { ReportsJobs } from "@/components/reports/ReportsJobs";
+import { Button } from "@/components/ui/button";
+import { Database } from "lucide-react";
+import { toast } from "sonner";
+import { useTestData } from "@/utils/test-data-generator";
 
 const ReportsPage = () => {
   const [period, setPeriod] = useState('month');
+  const [isGeneratingData, setIsGeneratingData] = useState(false);
+  const { generateAllTestData } = useTestData();
+  
+  const handleGenerateTestData = async () => {
+    setIsGeneratingData(true);
+    toast.loading("Generating test data for Toronto & GTA...");
+    
+    try {
+      await generateAllTestData();
+      
+      toast.dismiss();
+      toast.success("Test data created successfully", {
+        description: "20 clients and 40 jobs across Toronto & GTA created"
+      });
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to generate test data", {
+        description: "An error occurred while creating test data"
+      });
+      console.error("Test data generation error:", error);
+    } finally {
+      setIsGeneratingData(false);
+    }
+  };
   
   return (
     <PageLayout>
@@ -19,6 +47,16 @@ const ReportsPage = () => {
             Analyze your business performance with detailed reports and insights.
           </p>
         </div>
+        <Button
+          onClick={handleGenerateTestData}
+          variant="default"
+          size="lg"
+          className="bg-violet-600 hover:bg-violet-700"
+          disabled={isGeneratingData}
+        >
+          <Database size={20} className="mr-2" />
+          {isGeneratingData ? "Generating..." : "Generate Test Data"}
+        </Button>
       </div>
       
       <div className="fixlyfy-card p-4 mb-6">
