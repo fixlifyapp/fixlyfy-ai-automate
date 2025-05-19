@@ -12,7 +12,7 @@ import {
   Star,
   Mail,
   Phone,
-  FileExport,
+  FileDown,
   Edit
 } from "lucide-react";
 import {
@@ -115,7 +115,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
               className="flex gap-2 border-fixlyfy/20 text-fixlyfy"
               onClick={handleExportClients}
             >
-              <FileExport size={16} /> Export Selected
+              <FileDown size={16} /> Export Selected
             </Button>
           </div>
           <Button 
@@ -210,7 +210,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
               className="flex gap-2 border-fixlyfy/20 text-fixlyfy"
               onClick={handleExportClients}
             >
-              <FileExport size={16} /> Export All
+              <FileDown size={16} /> Export All
             </Button>
           </div>
           <Table>
