@@ -36,11 +36,6 @@ const ClientDetailPage = () => {
           <h2 className="text-xl font-semibold mb-4">Client Information</h2>
           <ClientForm clientId={id} onCreateJob={handleCreateJob} />
         </div>
-        
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Client Jobs</h2>
-          <ClientJobs clientId={id} onCreateJob={handleCreateJob} />
-        </div>
       </div>
       
       <JobsCreateModal 
