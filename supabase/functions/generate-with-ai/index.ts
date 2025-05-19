@@ -46,6 +46,8 @@ serve(async (req) => {
         break;
     }
 
+    console.log('Making OpenAI request with model: gpt-4o');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -53,7 +55,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o',  // Explicitly using gpt-4o model
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userPrompt }
@@ -66,10 +68,12 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorData}`);
     }
 
     const responseData = await response.json();
+    console.log('OpenAI response received:', responseData);
+    
     const generatedText = responseData.choices[0].message.content;
 
     return new Response(JSON.stringify({ generatedText }), {

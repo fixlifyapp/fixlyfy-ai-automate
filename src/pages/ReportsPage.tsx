@@ -14,18 +14,24 @@ import { useTestData } from "@/utils/test-data-generator";
 const ReportsPage = () => {
   const [period, setPeriod] = useState('month');
   const [isGeneratingData, setIsGeneratingData] = useState(false);
-  const { generateAllTestData } = useTestData();
+  const { generateTestClients, generateTestJobs } = useTestData();
   
   const handleGenerateTestData = async () => {
     setIsGeneratingData(true);
-    toast.loading("Generating test data for Toronto & GTA...");
+    toast.loading("Generating minimal test data...");
     
     try {
-      await generateAllTestData();
+      // Generate only 5 clients
+      const clientIds = await generateTestClients(5);
+      
+      // Generate only 5 jobs
+      if (clientIds.length > 0) {
+        await generateTestJobs(clientIds, 5);
+      }
       
       toast.dismiss();
       toast.success("Test data created successfully", {
-        description: "20 clients and 40 jobs across Toronto & GTA created"
+        description: "5 clients and 5 jobs created for testing"
       });
     } catch (error) {
       toast.dismiss();
@@ -55,7 +61,7 @@ const ReportsPage = () => {
           disabled={isGeneratingData}
         >
           <Database size={20} className="mr-2" />
-          {isGeneratingData ? "Generating..." : "Generate Test Data"}
+          {isGeneratingData ? "Generating..." : "Generate Test Data (5)"}
         </Button>
       </div>
       
