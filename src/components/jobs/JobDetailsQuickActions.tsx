@@ -24,7 +24,7 @@ interface AiSuggestion {
   id: number;
   tip: string;
   type: "info" | "recommendation" | "insight" | "warning" | "upsell";
-  category?: "revenue" | "efficiency" | "customer" | "sales";
+  category?: "revenue" | "efficiency" | "customer" | "sales" | "upsell";
   action?: {
     label: string;
     onClick: () => void;
