@@ -20,14 +20,25 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not set in environment variables');
     }
 
-    const { prompt, context, format } = await req.json();
+    const { prompt, context, mode, data, format } = await req.json();
 
     if (!prompt) {
       throw new Error('No prompt provided');
     }
 
-    // Default system message if none provided
-    const systemMessage = context || 'You are a helpful assistant for a field service management application. Provide concise, helpful responses.';
+    // Build the system message based on mode and context
+    let systemMessage = context || 'You are a helpful assistant for a field service management application. Provide concise, helpful responses.';
+    let userPrompt = prompt;
+    
+    // Enhanced prompts based on mode
+    if (mode === "insights") {
+      systemMessage = context || 'You are an AI business analyst for a field service company. Analyze the provided data and generate actionable insights. Focus on practical recommendations that can improve business performance.';
+      userPrompt = `${prompt}\n\nData for analysis: ${JSON.stringify(data, null, 2)}`;
+    } 
+    else if (mode === "analytics") {
+      systemMessage = context || 'You are an AI data analyst for a field service company. Interpret the provided metrics and explain their significance. Focus on trends, anomalies, and actionable takeaways.';
+      userPrompt = `${prompt}\n\nMetrics for analysis: ${JSON.stringify(data, null, 2)}`;
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -39,10 +50,10 @@ serve(async (req) => {
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemMessage },
-          { role: 'user', content: prompt }
+          { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
-        max_tokens: 500,
+        temperature: mode === "analytics" ? 0.3 : 0.7, // Lower temperature for analytics for more factual responses
+        max_tokens: mode === "insights" ? 800 : 500, // More tokens for insights
       }),
     });
 
