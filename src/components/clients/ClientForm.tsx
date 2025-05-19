@@ -21,7 +21,26 @@ import {
   CreditCard,
   Home,
   History,
-  Check
+  Check,
+  Brain,
+  MessageSquare,
+  Clock,
+  AlertCircle,
+  TrendingUp,
+  Star,
+  Copy,
+  MoreHorizontal,
+  Play,
+  Send,
+  DollarSign,
+  ShieldAlert,
+  Eye,
+  EyeOff,
+  Paperclip,
+  Filter,
+  Undo,
+  Download,
+  ArrowUpRight
 } from "lucide-react";
 import { clients } from "@/data/clients";
 import {
@@ -33,6 +52,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { useAI } from "@/hooks/use-ai";
 
 interface ClientFormProps {
   clientId?: string;
@@ -55,6 +90,16 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
     description: "",
     amount: ""
   });
+
+  // States for history tab
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [pinnedItems, setPinnedItems] = useState<number[]>([]);
+  const [showRestrictedItems, setShowRestrictedItems] = useState(false);
+  const { generateText, isLoading: isAiLoading } = useAI({
+    systemContext: "You are an AI assistant for a service business management app called Fixlyfy."
+  });
+  const [aiInsight, setAiInsight] = useState("Analyzing client history and data...");
+  const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
   
   useEffect(() => {
     // Simulating API fetch
@@ -66,8 +111,35 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
     setTimeout(() => {
       setClient(foundClient || {});
       setIsLoading(false);
+      generateClientInsight(foundClient);
     }, 500);
   }, [clientId]);
+
+  const generateClientInsight = async (client: any) => {
+    if (!client) return;
+    
+    setIsGeneratingInsight(true);
+    
+    try {
+      // Simulate generating an insight with the useAI hook
+      setTimeout(() => {
+        const insight = getSimulatedAiInsight(client);
+        setAiInsight(insight);
+        setIsGeneratingInsight(false);
+      }, 1000);
+    } catch (error) {
+      setAiInsight("Unable to generate client insight at this time.");
+      setIsGeneratingInsight(false);
+    }
+  };
+
+  const getSimulatedAiInsight = (client: any) => {
+    if (client.type === "Commercial") {
+      return "This commercial client has a consistent payment history but their service frequency has decreased by 15% over the last quarter. Consider reaching out with a maintenance package offer.";
+    } else {
+      return "This residential client has requested services across multiple categories, showing opportunity for comprehensive home maintenance packages. Their jobs are typically scheduled within 2 days of request.";
+    }
+  };
 
   const handleSaveChanges = () => {
     // Simulate saving changes
@@ -101,6 +173,224 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
     console.log("Navigating to job:", jobId);
     navigate(`/jobs/${jobId}`);
   };
+
+  // Handle pinning history items
+  const handlePinItem = (id: number) => {
+    setPinnedItems(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+    
+    toast({
+      title: pinnedItems.includes(id) ? "Item unpinned" : "Item pinned",
+      description: pinnedItems.includes(id) 
+        ? "The item has been removed from pinned items." 
+        : "The item will now appear at the top of the list.",
+    });
+  };
+
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard",
+      description: "The content has been copied to your clipboard.",
+    });
+  };
+
+  // Client history data
+  const historyItems = [
+    {
+      id: 1,
+      date: "May 25, 2023",
+      time: "14:30",
+      type: "note",
+      title: "Note Added",
+      description: "Client requested to be contacted only during business hours.",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
+    },
+    {
+      id: 2,
+      date: "May 23, 2023",
+      time: "10:15",
+      type: "job-created",
+      title: "Job Created",
+      description: "New job created for HVAC service at client's main location.",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
+    },
+    {
+      id: 3,
+      date: "May 20, 2023",
+      time: "16:45",
+      type: "payment",
+      title: "Payment Received",
+      description: "Client paid invoice #INV-2023-112 for $325.00",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson",
+      visibility: 'restricted',
+      meta: { amount: 325, paymentMethod: 'credit_card' }
+    },
+    {
+      id: 4,
+      date: "May 18, 2023",
+      time: "09:30",
+      type: "communication",
+      title: "Call Made",
+      description: "Follow-up call about recent plumbing service satisfaction.",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
+    },
+    {
+      id: 5,
+      date: "May 15, 2023",
+      time: "11:00",
+      type: "job-created",
+      title: "Job Completed",
+      description: "Plumbing service completed successfully.",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
+    },
+    {
+      id: 6,
+      date: "April 28, 2023",
+      time: "14:20",
+      type: "invoice",
+      title: "Invoice Created",
+      description: "Invoice #INV-2023-098 created for $250.00",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson",
+      visibility: 'restricted'
+    },
+    {
+      id: 7,
+      date: "April 25, 2023",
+      time: "09:15",
+      type: "estimate",
+      title: "Estimate Approved",
+      description: "Client approved estimate for kitchen faucet replacement",
+      userId: "3", // Michael Chen (technician)
+      userName: "Michael Chen"
+    },
+    {
+      id: 8,
+      date: "April 24, 2023",
+      time: "16:10",
+      type: "attachment",
+      title: "File Attached",
+      description: "Added signed contract documentation.pdf to client record",
+      userId: "2", // Sarah Johnson (manager)
+      userName: "Sarah Johnson"
+    },
+    {
+      id: 9,
+      date: "April 20, 2023",
+      time: "10:30",
+      type: "communication",
+      title: "Email Sent",
+      description: "Sent welcome email with company information and service details",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
+    },
+    {
+      id: 10,
+      date: "April 20, 2023",
+      time: "09:45",
+      type: "note",
+      title: "Client Created",
+      description: "New client account created in the system",
+      userId: "4", // Emily Rodriguez (dispatcher)
+      userName: "Emily Rodriguez"
+    }
+  ];
+
+  // Define the history filters
+  const filters = [
+    { value: "all", label: "All" },
+    { value: "note", label: "Notes" },
+    { value: "payment", label: "Payments" },
+    { value: "job-created", label: "Jobs" },
+    { value: "communication", label: "Communication" },
+    { value: "invoice", label: "Invoices" },
+    { value: "estimate", label: "Estimates" },
+    { value: "attachment", label: "Attachments" }
+  ];
+
+  // Filter the history items based on the active filter and sort pinned items to the top
+  const filteredHistoryItems = historyItems
+    .filter(item => activeFilter === "all" || item.type === activeFilter)
+    .filter(item => !item.visibility || item.visibility !== 'restricted' || showRestrictedItems)
+    .sort((a, b) => {
+      // Sort pinned items first
+      const isPinnedA = pinnedItems.includes(a.id);
+      const isPinnedB = pinnedItems.includes(b.id);
+      
+      if (isPinnedA && !isPinnedB) return -1;
+      if (!isPinnedA && isPinnedB) return 1;
+      
+      // Then by date (newest first)
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+
+  const getHistoryIcon = (type: string) => {
+    switch (type) {
+      case "note":
+        return <FileText className="text-orange-500" />;
+      case "job-created":
+        return <Play className="text-purple-500" />;
+      case "communication":
+        return <MessageSquare className="text-indigo-500" />;
+      case "payment":
+        return <DollarSign className="text-green-500" />;
+      case "estimate":
+        return <Send className="text-indigo-500" />;
+      case "invoice":
+        return <FileText className="text-blue-500" />;
+      case "attachment":
+        return <Paperclip className="text-gray-500" />;
+      default:
+        return <Clock className="text-blue-500" />;
+    }
+  };
+
+  const getHistoryColor = (type: string) => {
+    switch (type) {
+      case "note":
+        return "bg-orange-100 text-orange-700 border-orange-200";
+      case "job-created":
+        return "bg-purple-100 text-purple-700 border-purple-200";
+      case "communication":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "payment":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "estimate":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "invoice":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "attachment":
+        return "bg-gray-100 text-gray-700 border-gray-200";
+      default:
+        return "bg-blue-100 text-blue-700 border-blue-200";
+    }
+  };
+
+  const groupHistoryByDate = () => {
+    const grouped: Record<string, typeof filteredHistoryItems> = {};
+    
+    filteredHistoryItems.forEach(item => {
+      if (!grouped[item.date]) {
+        grouped[item.date] = [];
+      }
+      grouped[item.date].push(item);
+    });
+    
+    return grouped;
+  };
+
+  const groupedHistory = groupHistoryByDate();
   
   if (isLoading) {
     return (
@@ -149,6 +439,42 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSaveChanges}>
               <Check size={18} className="mr-2" /> Save Changes
             </Button>
+          </div>
+        </div>
+        
+        {/* AI Insights Card */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-fixlyfy/10 to-fixlyfy/5 border border-fixlyfy/20 rounded-lg">
+          <div className="flex items-center mb-2">
+            <div className="w-8 h-8 rounded-md bg-fixlyfy/10 flex items-center justify-center mr-3">
+              <Brain size={18} className="text-fixlyfy" />
+            </div>
+            <h3 className="text-lg font-medium">AI Client Insights</h3>
+          </div>
+          <p className="text-fixlyfy-text-secondary mb-2">
+            {isGeneratingInsight ? "Analyzing client data..." : aiInsight}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div className="p-3 rounded-md bg-white border border-fixlyfy/10 shadow-sm">
+              <div className="flex items-center mb-1">
+                <Calendar size={16} className="text-fixlyfy mr-2" />
+                <span className="font-medium">Engagement</span>
+              </div>
+              <p className="text-sm text-fixlyfy-text-secondary">Last service was 7 days ago</p>
+            </div>
+            <div className="p-3 rounded-md bg-white border border-fixlyfy/10 shadow-sm">
+              <div className="flex items-center mb-1">
+                <TrendingUp size={16} className="text-green-500 mr-2" />
+                <span className="font-medium">Revenue</span>
+              </div>
+              <p className="text-sm text-fixlyfy-text-secondary">$1,250 spent in last 90 days</p>
+            </div>
+            <div className="p-3 rounded-md bg-white border border-fixlyfy/10 shadow-sm">
+              <div className="flex items-center mb-1">
+                <Star size={16} className="text-amber-500 mr-2" />
+                <span className="font-medium">Satisfaction</span>
+              </div>
+              <p className="text-sm text-fixlyfy-text-secondary">4.8/5 average job rating</p>
+            </div>
           </div>
         </div>
         
@@ -466,71 +792,171 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             </Card>
           </TabsContent>
           
-          {/* History Tab */}
+          {/* History Tab - Updated to match JobHistory style */}
           <TabsContent value="history" className="space-y-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-medium mb-6">Activity History</h3>
-              
-              <div className="relative ml-4 border-l-2 border-fixlyfy-border pl-6 space-y-6">
-                {[
-                  {
-                    type: "job",
-                    date: "May 17, 2023",
-                    time: "2:30 PM",
-                    title: "Job Completed",
-                    description: "HVAC Repair service was completed successfully",
-                    id: "JOB-101"
-                  },
-                  {
-                    type: "payment",
-                    date: "May 17, 2023",
-                    time: "3:15 PM",
-                    title: "Payment Received",
-                    description: "Payment of $150.00 received via Credit Card",
-                    id: "INV-201"
-                  },
-                  {
-                    type: "job",
-                    date: "April 12, 2023",
-                    time: "10:00 AM",
-                    title: "Job Scheduled",
-                    description: "Plumbing service scheduled",
-                    id: "JOB-102"
-                  },
-                  {
-                    type: "note",
-                    date: "April 5, 2023",
-                    time: "11:45 AM",
-                    title: "Note Added",
-                    description: "Client requested quote for kitchen renovation"
-                  },
-                  {
-                    type: "job",
-                    date: "March 23, 2023",
-                    time: "9:15 AM",
-                    title: "Job Created",
-                    description: "Electrical service requested",
-                    id: "JOB-103"
-                  }
-                ].map((item, idx) => (
-                  <div key={idx} className="relative">
-                    <div className="absolute -left-10 h-4 w-4 rounded-full bg-fixlyfy"></div>
-                    <div className="mb-1 text-sm text-fixlyfy-text-secondary">
-                      {item.date} at {item.time}
-                    </div>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{item.title}</h4>
-                        <p className="text-fixlyfy-text-secondary">{item.description}</p>
-                      </div>
-                      {item.id && (
-                        <a href="#" className="text-fixlyfy font-medium hover:underline">
-                          {item.id}
-                        </a>
-                      )}
-                    </div>
+            <Card className="border-fixlyfy-border shadow-sm">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium">Client History</h3>
+                  
+                  <div className="flex items-center space-x-2">
+                    {/* Toggle for showing restricted items */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                      onClick={() => setShowRestrictedItems(!showRestrictedItems)}
+                    >
+                      {showRestrictedItems ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {showRestrictedItems ? "Hide Restricted" : "Show Restricted"}
+                    </Button>
+                    
+                    <Badge variant="outline" className="mr-2">
+                      <Filter size={14} className="mr-1" /> 
+                      Filter
+                    </Badge>
                   </div>
-                ))}
+                </div>
+
+                {/* AI Insight Bar */}
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-start">
+                  <AlertCircle size={16} className="text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-sm text-blue-700">
+                    This client has been active for 3 months and has completed 5 jobs with a total value of $1,750.
+                  </p>
+                </div>
+
+                {/* Activity Type Filters */}
+                <div className="mb-6 overflow-x-auto pb-2">
+                  <ToggleGroup 
+                    type="single" 
+                    value={activeFilter} 
+                    onValueChange={(value) => value && setActiveFilter(value)}
+                    className="justify-start"
+                  >
+                    {filters.map(filter => (
+                      <ToggleGroupItem 
+                        key={filter.value} 
+                        value={filter.value}
+                        variant="outline"
+                        size="sm"
+                        className={`text-xs ${activeFilter === filter.value ? 'bg-fixlyfy text-white hover:bg-fixlyfy/90' : ''}`}
+                      >
+                        {filter.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+                
+                {Object.keys(groupedHistory).length > 0 ? (
+                  <Accordion type="multiple" className="w-full">
+                    {Object.entries(groupedHistory).map(([date, items], dateIndex) => (
+                      <AccordionItem key={date} value={date} className="border-b">
+                        <AccordionTrigger className="py-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-fixlyfy-bg border-fixlyfy-border text-fixlyfy">
+                              {date}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">{items.length} activities</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pl-4 border-l-2 border-fixlyfy-border/30 space-y-6 py-2">
+                            {items.map((item, itemIndex) => (
+                              <div key={item.id} className="relative group">
+                                {/* Pin indicator */}
+                                {pinnedItems.includes(item.id) && (
+                                  <div className="absolute -left-[40px] bg-amber-100 p-1 rounded-full border border-amber-200">
+                                    <Star size={14} className="text-amber-500" />
+                                  </div>
+                                )}
+                                
+                                <div className="absolute -left-[25px] bg-white p-1 rounded-full border border-fixlyfy-border">
+                                  {getHistoryIcon(item.type)}
+                                </div>
+                                <div className="ml-2">
+                                  <div className="flex items-center mb-1 justify-between">
+                                    <div className="flex items-center">
+                                      <Badge className={`mr-2 ${getHistoryColor(item.type)}`}>
+                                        {item.title}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">{item.time}</span>
+                                      
+                                      {/* User badge */}
+                                      {item.userName && (
+                                        <Badge variant="outline" className="ml-2 text-xs">
+                                          <User size={12} className="mr-1" />
+                                          {item.userName}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Inline Actions */}
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                              onClick={() => handlePinItem(item.id)}
+                                            >
+                                              <Star 
+                                                size={16} 
+                                                className={cn(
+                                                  pinnedItems.includes(item.id) 
+                                                    ? "fill-amber-400 text-amber-400" 
+                                                    : "text-muted-foreground"
+                                                )} 
+                                              />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            {pinnedItems.includes(item.id) ? "Unpin" : "Pin"}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreHorizontal size={16} />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => handleCopyToClipboard(item.description)}>
+                                            <Copy size={14} className="mr-2" /> Copy
+                                          </DropdownMenuItem>
+                                          
+                                          {item.type === "attachment" && (
+                                            <DropdownMenuItem onClick={() => {
+                                              toast({
+                                                title: "Download started",
+                                                description: `Downloading ${item.description.split(' ').pop() || "file.pdf"}...`,
+                                              });
+                                            }}>
+                                              <Download size={14} className="mr-2" /> Download
+                                            </DropdownMenuItem>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No history entries found for this filter.</p>
+                  </div>
+                )}
               </div>
             </Card>
           </TabsContent>
