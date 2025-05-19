@@ -49,6 +49,8 @@ export const EstimateBuilderDialog = ({
   const [techniciansNote, setTechniciansNote] = useState("");
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [taxRate, setTaxRate] = useState(10); // Default tax rate of 10%
+  const [showUpsellOptions, setShowUpsellOptions] = useState(false);
+  const [showSyncOptions, setShowSyncOptions] = useState(false);
 
   // Mock data for selected estimate
   useEffect(() => {
@@ -216,6 +218,7 @@ export const EstimateBuilderDialog = ({
       };
       
       onSyncToInvoice(estimate);
+      toast.success("Estimate synced to invoice");
     }
   };
 
@@ -280,11 +283,53 @@ export const EstimateBuilderDialog = ({
 
   const handleProductSelected = (product: Product) => {
     handleAddProduct(product);
+    setIsProductSearchOpen(false);
   };
   
   const handleTaxRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newRate = parseFloat(e.target.value) || 0;
     setTaxRate(newRate);
+  };
+
+  const handleAddUpsell = () => {
+    setShowUpsellOptions(!showUpsellOptions);
+  };
+
+  const handleAddWarranty = () => {
+    setIsWarrantyDialogOpen(true);
+  };
+
+  const handleAddMaintenancePlan = () => {
+    // Sample maintenance plan product
+    const maintenancePlan: Product = {
+      id: `prod-maint-${Date.now()}`,
+      name: "Annual Maintenance Plan",
+      description: "One year of scheduled maintenance including filters, inspections and priority service",
+      price: 249,
+      ourPrice: 149,
+      category: "Services",
+      tags: ["maintenance", "service"],
+      taxable: true
+    };
+    
+    handleAddProduct(maintenancePlan);
+    setShowUpsellOptions(false);
+  };
+
+  const handleDisplaySyncOptions = () => {
+    setShowSyncOptions(!showSyncOptions);
+  };
+
+  const handleSyncFromInvoice = () => {
+    toast.success("Line items imported from invoice");
+    // In a real app, this would fetch line items from an existing invoice
+    setShowSyncOptions(false);
+  };
+
+  const handleSyncFromPrevious = () => {
+    toast.success("Line items imported from previous estimate");
+    // In a real app, this would fetch line items from a previous estimate
+    setShowSyncOptions(false);
   };
 
   // Check if estimate can be sent
@@ -340,18 +385,80 @@ export const EstimateBuilderDialog = ({
                     />
                   </div>
 
-                  {onSyncToInvoice && (
-                    <div className="ml-auto">
+                  <div className="ml-auto space-x-2">
+                    {/* Sync Options Button */}
+                    <div className="relative inline-block">
                       <Button 
-                        onClick={handleSyncToInvoice} 
+                        onClick={handleDisplaySyncOptions} 
                         variant="outline"
                         className="gap-2"
                       >
                         <RefreshCw size={16} />
-                        Sync to Invoice
+                        Sync Options
                       </Button>
+                      
+                      {showSyncOptions && (
+                        <div className="absolute right-0 mt-2 w-56 bg-background border rounded-md shadow-lg z-10">
+                          <div className="py-1">
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-4 py-2 text-sm" 
+                              onClick={handleSyncToInvoice}
+                            >
+                              Sync to Invoice
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-4 py-2 text-sm" 
+                              onClick={handleSyncFromInvoice}
+                            >
+                              Import from Invoice
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-4 py-2 text-sm" 
+                              onClick={handleSyncFromPrevious}
+                            >
+                              Import from Prior Estimate
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    
+                    {/* Upsell Options Button */}
+                    <div className="relative inline-block">
+                      <Button 
+                        onClick={handleAddUpsell} 
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Plus size={16} />
+                        Add Upsell
+                      </Button>
+                      
+                      {showUpsellOptions && (
+                        <div className="absolute right-0 mt-2 w-56 bg-background border rounded-md shadow-lg z-10">
+                          <div className="py-1">
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-4 py-2 text-sm" 
+                              onClick={handleAddWarranty}
+                            >
+                              Add Warranty
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-4 py-2 text-sm" 
+                              onClick={handleAddMaintenancePlan}
+                            >
+                              Add Maintenance Plan
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Line Items Section */}
