@@ -12,7 +12,14 @@ export interface ServiceArea {
   zipCode?: string;
 }
 
-export interface TeamMemberProfile extends TeamMember {
+export interface TeamMemberProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: "active" | "suspended";
+  avatar?: string;
+  lastLogin?: string;
   isPublic: boolean;
   availableForJobs: boolean;
   phone?: string[];
@@ -58,4 +65,20 @@ export interface Permission {
 
 export interface TeamMemberPermissions {
   permissions: Permission[];
+}
+
+export interface AIInsight {
+  id: string;
+  type: 'performance' | 'upsell' | 'satisfaction' | 'skill';
+  message: string;
+  details: string;
+  icon: string;
+  priority: 'low' | 'medium' | 'high';
+  action?: {
+    label: string;
+    url?: string;
+    handler?: string;
+  };
+  createdAt: string;
+  acknowledged: boolean;
 }

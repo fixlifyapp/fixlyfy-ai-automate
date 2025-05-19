@@ -4,11 +4,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, UserCog } from "lucide-react";
+import { ArrowLeft, Save, UserCog, Brain } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProfileTab } from "@/components/team/profile/ProfileTab";
 import { AdvancedTab } from "@/components/team/profile/AdvancedTab";
 import { CommissionsTab } from "@/components/team/profile/CommissionsTab";
+import { AIInsightsTab } from "@/components/team/profile/AIInsightsTab";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { toast } from "sonner";
 import { teamMembers as initialTeamMembers } from "@/data/team";
@@ -198,6 +199,10 @@ const TeamMemberProfilePage = () => {
                   <TabsTrigger value="profile" className="flex-1 sm:flex-initial">Profile</TabsTrigger>
                   <TabsTrigger value="advanced" className="flex-1 sm:flex-initial">Advanced</TabsTrigger>
                   <TabsTrigger value="commissions" className="flex-1 sm:flex-initial">Commissions</TabsTrigger>
+                  <TabsTrigger value="ai-insights" className="flex-1 sm:flex-initial flex items-center gap-1">
+                    <Brain className="h-4 w-4" />
+                    AI Insights
+                  </TabsTrigger>
                 </TabsList>
               </div>
               
@@ -212,6 +217,10 @@ const TeamMemberProfilePage = () => {
                 
                 <TabsContent value="commissions" className="mt-4 space-y-4">
                   <CommissionsTab member={member} isEditing={isEditing} />
+                </TabsContent>
+                
+                <TabsContent value="ai-insights" className="mt-4 space-y-4">
+                  <AIInsightsTab member={member} isEditing={isEditing} />
                 </TabsContent>
               </div>
             </Card>

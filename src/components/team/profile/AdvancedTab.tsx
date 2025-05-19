@@ -1,228 +1,235 @@
 
 import { useState } from "react";
-import { TeamMemberProfile } from "@/types/team-member";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Copy, Save, Plus } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Copy, ShieldCheck } from "lucide-react";
+import { TeamMemberProfile, Permission } from "@/types/team-member";
+import { toast } from "sonner";
+
+// Mock permissions data
+const mockPermissions: Permission[] = [
+  // Jobs module
+  { id: "1", name: "View Jobs", module: "jobs", type: "view", enabled: true },
+  { id: "2", name: "Edit Jobs", module: "jobs", type: "edit", enabled: true },
+  { id: "3", name: "Create Jobs", module: "jobs", type: "create", enabled: true },
+  { id: "4", name: "Delete Jobs", module: "jobs", type: "delete", enabled: false },
+  
+  // Clients module
+  { id: "5", name: "View Clients", module: "clients", type: "view", enabled: true },
+  { id: "6", name: "Edit Clients", module: "clients", type: "edit", enabled: true },
+  { id: "7", name: "Create Clients", module: "clients", type: "create", enabled: true },
+  { id: "8", name: "Delete Clients", module: "clients", type: "delete", enabled: false },
+  
+  // Estimates/Invoices
+  { id: "9", name: "View Estimates", module: "estimates", type: "view", enabled: true },
+  { id: "10", name: "Edit Estimates", module: "estimates", type: "edit", enabled: true },
+  { id: "11", name: "Create Estimates", module: "estimates", type: "create", enabled: true },
+  { id: "12", name: "Delete Estimates", module: "estimates", type: "delete", enabled: false },
+  
+  // Reports
+  { id: "13", name: "View Reports", module: "reports", type: "view", enabled: true },
+  { id: "14", name: "Create Reports", module: "reports", type: "create", enabled: false },
+  
+  // Finance
+  { id: "15", name: "View Finance", module: "finance", type: "view", enabled: true },
+  { id: "16", name: "Edit Finance", module: "finance", type: "edit", enabled: false },
+  
+  // Schedule
+  { id: "17", name: "View Schedule", module: "schedule", type: "view", enabled: true },
+  { id: "18", name: "Edit Schedule", module: "schedule", type: "edit", enabled: true },
+  
+  // Automation
+  { id: "19", name: "View Automation", module: "automation", type: "view", enabled: true },
+  { id: "20", name: "Edit Automation", module: "automation", type: "edit", enabled: false },
+];
 
 interface AdvancedTabProps {
   member: TeamMemberProfile;
   isEditing: boolean;
 }
 
-// Mock permissions data
-const mockPermissions = [
-  // Jobs Module
-  { id: "jobs-view", name: "View Jobs", module: "jobs", type: "view", enabled: true },
-  { id: "jobs-edit", name: "Edit Jobs", module: "jobs", type: "edit", enabled: true },
-  { id: "jobs-create", name: "Create Jobs", module: "jobs", type: "create", enabled: true },
-  { id: "jobs-delete", name: "Delete Jobs", module: "jobs", type: "delete", enabled: false },
-  
-  // Clients Module
-  { id: "clients-view", name: "View Clients", module: "clients", type: "view", enabled: true },
-  { id: "clients-edit", name: "Edit Clients", module: "clients", type: "edit", enabled: true },
-  { id: "clients-create", name: "Create Clients", module: "clients", type: "create", enabled: true },
-  { id: "clients-delete", name: "Delete Clients", module: "clients", type: "delete", enabled: false },
-  
-  // Estimates/Invoices Module
-  { id: "estimates-view", name: "View Estimates", module: "estimates", type: "view", enabled: true },
-  { id: "estimates-edit", name: "Edit Estimates", module: "estimates", type: "edit", enabled: true },
-  { id: "estimates-create", name: "Create Estimates", module: "estimates", type: "create", enabled: true },
-  { id: "estimates-delete", name: "Delete Estimates", module: "estimates", type: "delete", enabled: false },
-  { id: "invoices-view", name: "View Invoices", module: "invoices", type: "view", enabled: true },
-  { id: "invoices-edit", name: "Edit Invoices", module: "invoices", type: "edit", enabled: true },
-  { id: "invoices-create", name: "Create Invoices", module: "invoices", type: "create", enabled: true },
-  { id: "invoices-delete", name: "Delete Invoices", module: "invoices", type: "delete", enabled: false },
-  
-  // Reports Module
-  { id: "reports-view", name: "View Reports", module: "reports", type: "view", enabled: true },
-  { id: "reports-create", name: "Create Reports", module: "reports", type: "create", enabled: false },
-  
-  // Finance Module
-  { id: "finance-view", name: "View Finance", module: "finance", type: "view", enabled: false },
-  { id: "finance-edit", name: "Edit Finance", module: "finance", type: "edit", enabled: false },
-  
-  // Schedule Module
-  { id: "schedule-view", name: "View Schedule", module: "schedule", type: "view", enabled: true },
-  { id: "schedule-edit", name: "Edit Schedule", module: "schedule", type: "edit", enabled: true },
-  
-  // Automation Module
-  { id: "automation-view", name: "View Automations", module: "automation", type: "view", enabled: false },
-  { id: "automation-edit", name: "Edit Automations", module: "automation", type: "edit", enabled: false },
-  { id: "automation-create", name: "Create Automations", module: "automation", type: "create", enabled: false },
-];
-
 export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
-  const [permissions, setPermissions] = useState(mockPermissions);
-  const [roleName, setRoleName] = useState(member.role);
+  const [permissions, setPermissions] = useState<Permission[]>(mockPermissions);
+  const [selectedPreset, setSelectedPreset] = useState<string>(member.role);
   
-  const handlePermissionChange = (id: string, checked: boolean) => {
+  const modules = Array.from(new Set(permissions.map(p => p.module)));
+  
+  const handleTogglePermission = (id: string) => {
     if (!isEditing) return;
     
     setPermissions(permissions.map(permission => 
-      permission.id === id ? { ...permission, enabled: checked } : permission
+      permission.id === id 
+        ? { ...permission, enabled: !permission.enabled } 
+        : permission
     ));
+    
+    // Clear the preset when custom permissions are set
+    setSelectedPreset("custom");
+    
+    toast.success("Permission updated");
   };
   
-  const modules = [...new Set(permissions.map(p => p.module))];
+  const applyPreset = (preset: string) => {
+    if (!isEditing) return;
+    
+    // In a real app, this would be replaced with actual preset logic
+    // Here we're just simulating it
+    let newPermissions = [...permissions];
+    
+    if (preset === "admin") {
+      // Admin gets all permissions
+      newPermissions = newPermissions.map(p => ({ ...p, enabled: true }));
+    } else if (preset === "manager") {
+      // Managers get most permissions except delete and some finance
+      newPermissions = newPermissions.map(p => ({
+        ...p,
+        enabled: !(p.type === "delete" || (p.module === "finance" && p.type === "edit"))
+      }));
+    } else if (preset === "technician") {
+      // Technicians get limited permissions
+      newPermissions = newPermissions.map(p => ({
+        ...p,
+        enabled: (
+          (p.type === "view") || 
+          (p.module === "jobs" && p.type === "edit") ||
+          (p.module === "schedule" && p.type === "view")
+        )
+      }));
+    } else if (preset === "dispatcher") {
+      // Dispatchers focus on scheduling and client management
+      newPermissions = newPermissions.map(p => ({
+        ...p,
+        enabled: (
+          (p.type === "view") || 
+          (p.module === "schedule" && (p.type === "edit" || p.type === "create")) ||
+          (p.module === "clients" && p.type !== "delete")
+        )
+      }));
+    }
+    
+    setPermissions(newPermissions);
+    setSelectedPreset(preset);
+    
+    toast.success(`Applied ${preset.charAt(0).toUpperCase() + preset.slice(1)} permission preset`);
+  };
   
   const handleDuplicateRole = () => {
-    // This would create a duplicate role in a real application
-    console.log("Duplicating role:", member.role);
+    if (!isEditing) return;
+    
+    toast.success("Role duplicated. You can now customize it.");
+    setSelectedPreset("custom");
   };
   
   return (
     <div className="space-y-6">
       <Card className="p-6 border-fixlyfy-border shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-          <div>
-            <h3 className="text-lg font-medium">Role Configuration</h3>
-            <p className="text-sm text-muted-foreground">
-              Configure role permissions and access levels
-            </p>
+        <div className="flex items-center mb-6">
+          <ShieldCheck className="h-5 w-5 mr-2 text-indigo-500" />
+          <h3 className="text-lg font-medium">Permissions & Access Control</h3>
+        </div>
+        
+        <div className="mb-6">
+          <Label className="mb-2 block">Role Preset</Label>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={selectedPreset === "admin" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyPreset("admin")}
+              disabled={!isEditing}
+            >
+              Admin
+            </Button>
+            <Button 
+              variant={selectedPreset === "manager" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyPreset("manager")}
+              disabled={!isEditing}
+            >
+              Manager
+            </Button>
+            <Button 
+              variant={selectedPreset === "technician" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyPreset("technician")}
+              disabled={!isEditing}
+            >
+              Technician
+            </Button>
+            <Button 
+              variant={selectedPreset === "dispatcher" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyPreset("dispatcher")}
+              disabled={!isEditing}
+            >
+              Dispatcher
+            </Button>
+            {selectedPreset === "custom" && (
+              <Button 
+                variant="default" 
+                size="sm"
+                disabled
+              >
+                Custom
+              </Button>
+            )}
           </div>
           
           {isEditing && (
-            <div className="flex items-center gap-2">
+            <div className="mt-2 flex gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={handleDuplicateRole}
-                className="gap-1"
+                className="text-xs flex items-center"
               >
-                <Copy className="h-4 w-4" />
-                Duplicate Role
-              </Button>
-              
-              <Button size="sm" className="gap-1">
-                <Plus className="h-4 w-4" />
-                New Role
+                <Copy className="h-3 w-3 mr-1" />
+                Duplicate & Customize
               </Button>
             </div>
           )}
         </div>
         
-        {/* Custom Role Name */}
-        {isEditing && (
-          <div className="mb-6">
-            <Label htmlFor="roleName">Role Name</Label>
-            <div className="flex items-center gap-2 mt-1">
-              <Input
-                id="roleName"
-                value={roleName}
-                onChange={(e) => setRoleName(e.target.value)}
-                className="max-w-xs"
-              />
-              <Button size="sm" className="gap-1">
-                <Save className="h-4 w-4" />
-                Save Role
-              </Button>
+        {modules.map(module => (
+          <div key={module} className="mb-6">
+            <h4 className="font-medium mb-3 text-sm uppercase tracking-wide text-fixlyfy">
+              {module.charAt(0).toUpperCase() + module.slice(1)}
+            </h4>
+            
+            <div className="space-y-3 bg-gray-50 p-3 rounded-md">
+              {permissions
+                .filter(p => p.module === module)
+                .map(permission => (
+                  <div 
+                    key={permission.id} 
+                    className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                  >
+                    <div>
+                      <Label htmlFor={`permission-${permission.id}`} className="font-normal">
+                        {permission.name}
+                      </Label>
+                    </div>
+                    <Switch
+                      id={`permission-${permission.id}`}
+                      checked={permission.enabled}
+                      onCheckedChange={() => handleTogglePermission(permission.id)}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                ))}
             </div>
           </div>
-        )}
+        ))}
         
-        {/* Permissions */}
-        <div className="space-y-6">
-          <h4 className="text-base font-medium">Permissions by Module</h4>
-          
-          {modules.map(module => (
-            <div key={module} className="space-y-3">
-              <div>
-                <Badge className="capitalize">
-                  {module}
-                </Badge>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                {permissions
-                  .filter(p => p.module === module)
-                  .map(permission => (
-                    <div key={permission.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{permission.name}</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs text-xs">
-                                {getPermissionDescription(permission.module, permission.type)}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        id={permission.id}
-                        checked={permission.enabled}
-                        onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  ))}
-              </div>
-              
-              <Separator className="my-4" />
-            </div>
-          ))}
-        </div>
+        <Alert variant="warning" className="mt-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Changing permissions may impact what this team member can see and do in the system.
+          </AlertDescription>
+        </Alert>
       </Card>
     </div>
   );
 };
-
-// Helper function to generate descriptions for permissions
-function getPermissionDescription(module: string, type: string): string {
-  const descriptions: Record<string, Record<string, string>> = {
-    jobs: {
-      view: "Allows viewing job details, history, and status.",
-      edit: "Allows modifying job information, status, and assignments.",
-      create: "Allows creating new jobs in the system.",
-      delete: "Allows removing jobs from the system."
-    },
-    clients: {
-      view: "Allows viewing client information and history.",
-      edit: "Allows updating client contact details and preferences.",
-      create: "Allows adding new clients to the system.",
-      delete: "Allows removing clients from the system."
-    },
-    estimates: {
-      view: "Allows viewing estimates and their status.",
-      edit: "Allows modifying estimates before client approval.",
-      create: "Allows creating new estimates for jobs.",
-      delete: "Allows removing estimates from the system."
-    },
-    invoices: {
-      view: "Allows viewing invoices and payment status.",
-      edit: "Allows modifying invoices before finalization.",
-      create: "Allows creating new invoices from estimates or directly.",
-      delete: "Allows voiding or removing invoices."
-    },
-    reports: {
-      view: "Allows access to standard reports.",
-      create: "Allows creating custom reports."
-    },
-    finance: {
-      view: "Allows viewing financial information and reports.",
-      edit: "Allows modifying payment records and financial settings."
-    },
-    schedule: {
-      view: "Allows viewing team schedules and availability.",
-      edit: "Allows modifying scheduling and dispatching."
-    },
-    automation: {
-      view: "Allows viewing automation rules and history.",
-      edit: "Allows modifying existing automation rules.",
-      create: "Allows creating new automation workflows."
-    }
-  };
-  
-  return descriptions[module]?.[type] || "Controls access to this functionality.";
-}

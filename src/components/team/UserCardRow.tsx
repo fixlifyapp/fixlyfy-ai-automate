@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { RoleDropdown } from "@/components/team/RoleDropdown";
 import { TeamActionMenu } from "@/components/team/TeamActionMenu";
-import { TeamMember } from "@/types/team";
+import { TeamMemberProfile } from "@/types/team-member";
 import { useNavigate } from "react-router-dom";
 
 interface UserCardRowProps {
-  user: TeamMember;
+  user: TeamMemberProfile;
 }
 
 export const UserCardRow = ({ user }: UserCardRowProps) => {
