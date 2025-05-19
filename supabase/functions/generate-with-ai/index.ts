@@ -20,7 +20,7 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not set in environment variables');
     }
 
-    const { prompt, context, mode, data, format } = await req.json();
+    const { prompt, context, mode, data, format, temperature = 0.7, maxTokens = 800 } = await req.json();
 
     if (!prompt) {
       throw new Error('No prompt provided');
@@ -31,13 +31,19 @@ serve(async (req) => {
     let userPrompt = prompt;
     
     // Enhanced prompts based on mode
-    if (mode === "insights") {
-      systemMessage = context || 'You are an AI business analyst for a field service company. Analyze the provided data and generate actionable insights. Focus on practical recommendations that can improve business performance.';
-      userPrompt = `${prompt}\n\nData for analysis: ${JSON.stringify(data, null, 2)}`;
-    } 
-    else if (mode === "analytics") {
-      systemMessage = context || 'You are an AI data analyst for a field service company. Interpret the provided metrics and explain their significance. Focus on trends, anomalies, and actionable takeaways.';
-      userPrompt = `${prompt}\n\nMetrics for analysis: ${JSON.stringify(data, null, 2)}`;
+    switch(mode) {
+      case "insights":
+        systemMessage = context || 'You are an AI business analyst for a field service company. Analyze the provided data and generate actionable insights. Focus on practical recommendations that can improve business performance. Format your response with bullet points using the "•" symbol.';
+        userPrompt = `${prompt}\n\nData for analysis: ${JSON.stringify(data, null, 2)}`;
+        break;
+      case "analytics":
+        systemMessage = context || 'You are an AI data analyst for a field service company. Interpret the provided metrics and explain their significance. Focus on trends, anomalies, and actionable takeaways. Format your response with bullet points using the "•" symbol.';
+        userPrompt = `${prompt}\n\nMetrics for analysis: ${JSON.stringify(data, null, 2)}`;
+        break;
+      case "recommendations":
+        systemMessage = context || 'You are an AI recommendation engine for a field service company. Based on the provided data, suggest personalized recommendations. Focus on actionable, specific suggestions. Format your response with bullet points using the "•" symbol.';
+        userPrompt = `${prompt}\n\nData for recommendations: ${JSON.stringify(data, null, 2)}`;
+        break;
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -52,8 +58,8 @@ serve(async (req) => {
           { role: 'system', content: systemMessage },
           { role: 'user', content: userPrompt }
         ],
-        temperature: mode === "analytics" ? 0.3 : 0.7, // Lower temperature for analytics for more factual responses
-        max_tokens: mode === "insights" ? 800 : 500, // More tokens for insights
+        temperature: parseFloat(temperature as string),
+        max_tokens: parseInt(maxTokens as string),
       }),
     });
 

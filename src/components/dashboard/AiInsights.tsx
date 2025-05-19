@@ -1,9 +1,11 @@
+
 import { cn } from "@/lib/utils";
-import { Brain, AlertTriangle, TrendingUp, Clock, Star, ArrowUpRight } from "lucide-react";
+import { Brain, AlertTriangle, TrendingUp, Clock, Star, ArrowUpRight, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
 
 const insights = [
   {
@@ -44,8 +46,28 @@ const insights = [
   }
 ];
 
+// Sample data for AI recommendations
+const businessData = {
+  revenue: {
+    current: 24680,
+    previous: 21340,
+    trend: 15.7
+  },
+  services: {
+    hvac: { completed: 45, revenue: 12800 },
+    plumbing: { completed: 32, revenue: 8600 },
+    electrical: { completed: 24, revenue: 6200 }
+  },
+  technicians: {
+    total: 8,
+    utilization: 78,
+    topPerforming: ["Robert Smith", "Emily Johnson"]
+  }
+};
+
 export const AiInsights = () => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [recommendation, setRecommendation] = useState<string | null>(null);
   
   const generateReport = async () => {
     setIsGenerating(true);
@@ -148,6 +170,21 @@ export const AiInsights = () => {
             )}
           </div>
         ))}
+        
+        <div className="mt-6 p-4 border border-fixlyfy-border rounded-lg">
+          <div className="flex items-center mb-3">
+            <Lightbulb className="w-5 h-5 text-fixlyfy mr-2" />
+            <h3 className="text-sm font-medium">AI Recommendation</h3>
+          </div>
+          <InsightsGenerator
+            data={businessData}
+            topic="business growth opportunities"
+            onInsightsGenerated={setRecommendation}
+            mode="recommendations"
+            variant="compact"
+            systemContext="You are an expert business consultant for a field service company. Provide ONE specific, actionable recommendation to improve business performance based on the data. Keep it under 100 words and very specific."
+          />
+        </div>
       </div>
       
       <div className="p-4 mx-6 mb-6 rounded-lg bg-gradient-primary">

@@ -13,8 +13,10 @@ import {
   Clock,
   Map,
   UserCheck,
-  CheckCircle
+  CheckCircle,
+  Brain
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Sample AI insights data
 const initialInsights = [
@@ -56,46 +58,79 @@ const initialInsights = [
   }
 ];
 
+// Sample schedule data for AI analysis
+const scheduleData = {
+  technicians: [
+    { id: 1, name: "Robert Smith", jobs: 5, utilization: 90, skills: ["hvac", "plumbing"] },
+    { id: 2, name: "Mia Johnson", jobs: 2, utilization: 45, skills: ["electrical", "security"] },
+    { id: 3, name: "James Davis", jobs: 4, utilization: 75, skills: ["hvac", "electrical"] }
+  ],
+  jobs: [
+    { id: "1223", client: "Thompson", location: "Downtown", time: "2:00 PM", duration: 90, tech: 1 },
+    { id: "1244", client: "Garcia", location: "North End", time: "9:00 AM", duration: 60, tech: 3 },
+    { id: "1251", client: "Miller", location: "West Side", time: "11:30 AM", duration: 120, tech: 2 },
+    { id: "1255", client: "Wilson", location: "West Side", time: "3:00 PM", duration: 90, tech: 1 },
+    { id: "1262", client: "Johnson", location: "East End", time: "1:00 PM", duration: 120, unassigned: true }
+  ],
+  metrics: {
+    utilization: 70,
+    travelEfficiency: 65
+  }
+};
+
 export const AIInsightsPanel = () => {
   const [insights, setInsights] = useState(initialInsights);
   const [isGenerating, setIsGenerating] = useState(false);
-  const { generateText, isLoading } = useAI({
-    systemContext: "You are an AI assistant that provides insights for field service scheduling optimization."
+  const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
+  
+  const { generateText, generateRecommendations, isLoading } = useAI({
+    systemContext: "You are an AI assistant that provides insights for field service scheduling optimization. Focus on practical, specific suggestions that can improve the schedule."
   });
   
   const handleAction = (id: number) => {
     // In a real app, this would apply the suggested change
     setInsights(prev => prev.filter(insight => insight.id !== id));
+    toast.success("Schedule change applied");
   };
   
   const handleFeedback = (id: number, isPositive: boolean) => {
     // In a real app, this would send feedback to improve the AI
     setInsights(prev => prev.filter(insight => insight.id !== id));
+    toast.success(`Thank you for your ${isPositive ? "positive" : "negative"} feedback`);
   };
   
   const generateMoreInsights = async () => {
     setIsGenerating(true);
+    toast.loading("Analyzing schedule data...");
+    
     try {
-      const suggestionText = await generateText(
-        "Generate a scheduling optimization insight for a field service company with technicians."
+      const suggestionText = await generateRecommendations(
+        scheduleData,
+        "schedule optimization"
       );
       
       if (suggestionText) {
+        setAiRecommendation(suggestionText);
+        
         // Create a new insight based on AI generation
         const newInsight = {
           id: Date.now(),
           type: ["conflict", "route", "utilization", "travel"][Math.floor(Math.random() * 4)],
-          title: "New AI Suggestion",
-          description: suggestionText,
-          icon: Lightbulb,
+          title: "AI Schedule Recommendation",
+          description: suggestionText.split('\n')[0].replace('• ', ''),
+          icon: Brain,
           iconColor: "text-fixlyfy",
-          action: "Consider"
+          action: "Optimize"
         };
         
         setInsights(prev => [newInsight, ...prev]);
+        toast.dismiss();
+        toast.success("New schedule insight generated");
       }
     } catch (error) {
       console.error("Failed to generate insights:", error);
+      toast.dismiss();
+      toast.error("Failed to generate schedule insights");
     } finally {
       setIsGenerating(false);
     }
@@ -104,15 +139,13 @@ export const AIInsightsPanel = () => {
   return (
     <div className="fixlyfy-card flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-fixlyfy-border flex justify-between items-center">
-        <h2 className="text-lg font-semibold">AI Insights</h2>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={generateMoreInsights}
-          disabled={isGenerating || isLoading}
-        >
-          {(isGenerating || isLoading) ? "Thinking..." : "Refresh Insights"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-md fixlyfy-gradient flex items-center justify-center">
+            <Brain size={16} className="text-white" />
+          </div>
+          <h2 className="text-lg font-semibold">AI Schedule Insights</h2>
+        </div>
+        <Badge className="bg-fixlyfy/20 text-fixlyfy hover:bg-fixlyfy/30">GPT-4o</Badge>
       </div>
       
       <div className="flex-1 overflow-y-auto">
@@ -182,22 +215,44 @@ export const AIInsightsPanel = () => {
         )}
       </div>
       
-      <div className="p-4 border-t border-fixlyfy-border bg-fixlyfy-bg-interface/30">
-        <h3 className="text-sm font-medium mb-2">Schedule Metrics</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-fixlyfy-text-secondary mb-1">Technician Utilization</p>
-            <div className="w-full bg-fixlyfy-border rounded-full h-2">
-              <div className="bg-fixlyfy h-2 rounded-full" style={{ width: "78%" }}></div>
+      <div className="p-4 border-t border-fixlyfy-border">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="w-full mb-4" 
+          onClick={generateMoreInsights}
+          disabled={isGenerating || isLoading}
+        >
+          {(isGenerating || isLoading) ? (
+            <>
+              <Clock className="mr-2 h-4 w-4 animate-spin" />
+              Analyzing Schedule...
+            </>
+          ) : (
+            <>
+              <Lightbulb className="mr-2 h-4 w-4" />
+              Generate New Insights
+            </>
+          )}
+        </Button>
+      
+        <div className="bg-fixlyfy-bg-interface/30 p-4 rounded-lg">
+          <h3 className="text-sm font-medium mb-2">Schedule Metrics</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-fixlyfy-text-secondary mb-1">Technician Utilization</p>
+              <div className="w-full bg-fixlyfy-border rounded-full h-2">
+                <div className="bg-fixlyfy h-2 rounded-full" style={{ width: "78%" }}></div>
+              </div>
+              <p className="text-xs mt-1 text-right">78%</p>
             </div>
-            <p className="text-xs mt-1 text-right">78%</p>
-          </div>
-          <div>
-            <p className="text-xs text-fixlyfy-text-secondary mb-1">Travel Efficiency</p>
-            <div className="w-full bg-fixlyfy-border rounded-full h-2">
-              <div className="bg-fixlyfy-success h-2 rounded-full" style={{ width: "65%" }}></div>
+            <div>
+              <p className="text-xs text-fixlyfy-text-secondary mb-1">Travel Efficiency</p>
+              <div className="w-full bg-fixlyfy-border rounded-full h-2">
+                <div className="bg-fixlyfy-success h-2 rounded-full" style={{ width: "65%" }}></div>
+              </div>
+              <p className="text-xs mt-1 text-right">65%</p>
             </div>
-            <p className="text-xs mt-1 text-right">65%</p>
           </div>
         </div>
       </div>

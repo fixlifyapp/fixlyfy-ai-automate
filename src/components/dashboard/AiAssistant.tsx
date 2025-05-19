@@ -1,12 +1,13 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpIcon, Bot, Send } from "lucide-react";
+import { ArrowUpIcon, Bot, Send, Brain, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 type Message = {
   id: number;
@@ -14,6 +15,14 @@ type Message = {
   role: "user" | "assistant";
   timestamp: Date;
 };
+
+// Recent topics the AI can suggest
+const suggestedTopics = [
+  "How can I improve technician utilization?",
+  "What's the best way to handle emergency service calls?",
+  "Tips for reducing job cancellations",
+  "How to increase customer retention?",
+];
 
 export const AiAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -26,14 +35,17 @@ export const AiAssistant = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSendMessage = async (messageText = input) => {
+    if ((!messageText.trim() && !input.trim()) || isLoading) return;
+    
+    const finalMessage = messageText.trim() || input.trim();
     
     // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
-      content: input,
+      content: finalMessage,
       role: "user",
       timestamp: new Date()
     };
@@ -41,12 +53,13 @@ export const AiAssistant = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setShowSuggestions(false);
     
     try {
       // Get AI response from our Edge Function
       const { data, error } = await supabase.functions.invoke("generate-with-ai", {
         body: {
-          prompt: input,
+          prompt: finalMessage,
           context: "You are an AI assistant for a field service management application called Fixlyfy. Help users with scheduling, service recommendations, business analytics, and technician management. Provide concise, helpful responses focused on service business needs. Reference current data if available."
         }
       });
@@ -91,6 +104,7 @@ export const AiAssistant = () => {
             <CardTitle>AI Assistant</CardTitle>
             <CardDescription>Get real-time help with your business</CardDescription>
           </div>
+          <Badge className="ml-auto bg-fixlyfy/20 text-fixlyfy hover:bg-fixlyfy/30">GPT-4o</Badge>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
@@ -142,6 +156,25 @@ export const AiAssistant = () => {
           )}
         </div>
         
+        {showSuggestions && messages.length <= 1 && (
+          <div className="mb-4">
+            <p className="text-xs text-fixlyfy-text-secondary mb-2">Suggested topics:</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedTopics.map((topic, index) => (
+                <Button 
+                  key={index} 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs"
+                  onClick={() => handleSendMessage(topic)}
+                >
+                  {topic}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Input
             placeholder="Ask anything..."
@@ -152,7 +185,7 @@ export const AiAssistant = () => {
             disabled={isLoading}
           />
           <Button 
-            onClick={handleSendMessage} 
+            onClick={() => handleSendMessage()} 
             className="bg-fixlyfy"
             disabled={isLoading}
           >

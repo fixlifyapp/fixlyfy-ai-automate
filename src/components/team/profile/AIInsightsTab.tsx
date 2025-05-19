@@ -7,6 +7,8 @@ import { Brain, ThumbsUp, ThumbsDown, ArrowRight, Check, X, Lock, ShieldCheck } 
 import { AIInsight, TeamMemberProfile } from "@/types/team-member";
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { useAI } from "@/hooks/use-ai";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Mock data for AI insights
 const mockInsights: AIInsight[] = [
@@ -124,6 +126,18 @@ const mockInsights: AIInsight[] = [
   }
 ];
 
+// Sample technician data for AI analysis
+const sampleTechPerformanceData = {
+  completedJobs: 38,
+  averageTime: 105, // minutes
+  customerRating: 4.2,
+  callbacks: 3,
+  firstTimeFixRate: 92,
+  topSkills: ["HVAC", "Refrigeration"],
+  revenueGenerated: 15420,
+  upsellRate: 28
+};
+
 interface AIInsightsTabProps {
   member: TeamMemberProfile;
   isEditing: boolean;
@@ -133,7 +147,13 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
   const [insights, setInsights] = useState<AIInsight[]>(mockInsights);
   const [filter, setFilter] = useState<'all' | 'performance' | 'upsell' | 'satisfaction' | 'skill'>('all');
   const [showAcknowledged, setShowAcknowledged] = useState(false);
+  const [personalized, setPersonalized] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
   const { hasRole } = useRBAC();
+  const { generateRecommendations, error } = useAI({
+    systemContext: `You are an AI coach for field service technicians. Provide personalized advice for ${member.firstName} ${member.lastName} based on their performance data. Be specific, actionable, and encouraging.`
+  });
   
   const isAdmin = hasRole('admin');
 
@@ -168,6 +188,30 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
   const handleFeedback = (id: string, isPositive: boolean) => {
     toast.success(`Thank you for your ${isPositive ? 'positive' : 'negative'} feedback`);
     // In a real app, you would send this feedback to your AI system
+  };
+
+  const generatePersonalizedAdvice = async () => {
+    setIsGenerating(true);
+    toast.loading("Generating personalized coaching...");
+    
+    try {
+      const advice = await generateRecommendations(
+        sampleTechPerformanceData,
+        `coaching advice for ${member.firstName} ${member.lastName}`
+      );
+      
+      if (advice) {
+        setPersonalized(advice);
+        toast.dismiss();
+        toast.success("Personalized coaching generated");
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to generate coaching insights");
+      console.error("Error generating advice:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -257,7 +301,64 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
           </div>
         </div>
         
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="space-y-4">
+          {/* Personalized AI coaching section */}
+          <div className="mb-6 border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50">
+            <div className="flex items-center mb-3">
+              <Brain className="h-5 w-5 text-indigo-600 mr-2" />
+              <h3 className="text-base font-medium">AI Coaching for {member.firstName}</h3>
+            </div>
+            
+            {personalized ? (
+              <div className="mb-4">
+                <div className="prose prose-sm max-w-none">
+                  {personalized.split('\n').map((line, i) => (
+                    <p key={i} className={line.startsWith('•') ? "flex items-start" : ""}>
+                      {line.startsWith('•') ? (
+                        <>
+                          <span className="mr-2 flex-shrink-0">•</span>
+                          <span>{line.substring(1)}</span>
+                        </>
+                      ) : (
+                        line
+                      )}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generatePersonalizedAdvice}
+                    disabled={isGenerating}
+                    className="mt-2"
+                  >
+                    {isGenerating ? "Generating..." : "Refresh Coaching"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-600 mb-3">
+                  Generate personalized coaching advice for {member.firstName} based on their performance data
+                </p>
+                <Button
+                  onClick={generatePersonalizedAdvice}
+                  disabled={isGenerating}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {isGenerating ? "Generating..." : "Generate Coaching Insights"}
+                </Button>
+              </div>
+            )}
+          </div>
+          
           {filteredInsights.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No insights to display</p>

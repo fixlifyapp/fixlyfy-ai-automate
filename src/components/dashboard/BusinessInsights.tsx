@@ -4,6 +4,8 @@ import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Brain, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // Example data - in a real implementation, this would come from your API or state
 const businessMetrics = {
@@ -32,6 +34,7 @@ const businessMetrics = {
 export const BusinessInsights = () => {
   const [insights, setInsights] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const testOpenAI = async () => {
     try {
@@ -63,19 +66,38 @@ export const BusinessInsights = () => {
   
   return (
     <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Business Insights</CardTitle>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-md fixlyfy-gradient flex items-center justify-center">
+              <Brain size={18} className="text-white" />
+            </div>
+            Business Insights
+          </CardTitle>
+          <Badge className="bg-fixlyfy-success">AI Powered</Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="mb-4">
+        <div className="flex justify-between items-center mb-4">
           <Button 
             onClick={testOpenAI}
             variant="outline" 
             size="sm"
-            className="mb-4"
           >
             Test OpenAI Connection
           </Button>
+          
+          {insights && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInsights(null)}
+              className="text-fixlyfy-text-secondary"
+            >
+              <RefreshCw size={14} className="mr-1" />
+              Reset Insights
+            </Button>
+          )}
         </div>
         
         <InsightsGenerator 
