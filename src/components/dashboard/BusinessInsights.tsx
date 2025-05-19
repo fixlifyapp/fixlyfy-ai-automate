@@ -105,26 +105,17 @@ export const BusinessInsights = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Generate Test Data Section - Prominent Styling */}
-        <div className="bg-violet-50 border-2 border-violet-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-2 text-violet-900">Generate Test Data</h3>
-          <p className="text-sm text-fixlyfy-text-secondary mb-4">
-            Create 20 sample clients and 40 jobs in Toronto & GTA area for testing your dashboard
-          </p>
-          
-          <Button
-            onClick={handleGenerateTestData}
-            variant="default"
-            className="bg-violet-600 hover:bg-violet-700 w-full"
-            disabled={isGeneratingData}
-          >
-            <Database size={16} className="mr-2" />
-            {isGeneratingData ? "Generating Test Data..." : "Generate Test Data"}
-          </Button>
-          <p className="text-xs text-fixlyfy-text-secondary mt-2">
-            Note: This data is generated in memory and not stored in the database
-          </p>
-        </div>
+        {/* Test Data Generation Button - Standalone prominently displayed */}
+        <Button
+          onClick={handleGenerateTestData}
+          variant="default"
+          size="lg"
+          className="bg-violet-600 hover:bg-violet-700 w-full py-6 text-lg"
+          disabled={isGeneratingData}
+        >
+          <Database size={20} className="mr-3" />
+          {isGeneratingData ? "Generating Test Data..." : "Generate Test Data (20 Clients & 40 Jobs)"}
+        </Button>
       
         <div className="flex justify-between items-center mb-4">
           <Button 
