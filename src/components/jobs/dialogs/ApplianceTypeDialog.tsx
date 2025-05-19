@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash, Dryer, Dishwasher, Fridge, Washer } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
+import { DryerIcon, DishwasherIcon, FridgeIcon, WasherIcon } from "@/components/icons/ApplianceIcons";
 
 type ApplianceType = {
   id: number;
@@ -76,11 +76,11 @@ export function ApplianceTypeDialog({
   // Get icon for appliance type
   const getApplianceIcon = (type: ApplianceType['type']) => {
     switch (type) {
-      case "dryer": return <Dryer size={18} />;
-      case "dishwasher": return <Dishwasher size={18} />;
-      case "fridge": return <Fridge size={18} />;
-      case "washer": return <Washer size={18} />;
-      default: return <Dryer size={18} />;
+      case "dryer": return <DryerIcon size={18} />;
+      case "dishwasher": return <DishwasherIcon size={18} />;
+      case "fridge": return <FridgeIcon size={18} />;
+      case "washer": return <WasherIcon size={18} />;
+      default: return <DryerIcon size={18} />;
     }
   };
 
@@ -110,25 +110,25 @@ export function ApplianceTypeDialog({
                   <SelectContent>
                     <SelectItem value="dryer">
                       <div className="flex items-center gap-2">
-                        <Dryer size={16} />
+                        <DryerIcon size={16} />
                         <span>Dryer</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="dishwasher">
                       <div className="flex items-center gap-2">
-                        <Dishwasher size={16} />
+                        <DishwasherIcon size={16} />
                         <span>Dishwasher</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="fridge">
                       <div className="flex items-center gap-2">
-                        <Fridge size={16} />
+                        <FridgeIcon size={16} />
                         <span>Refrigerator</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="washer">
                       <div className="flex items-center gap-2">
-                        <Washer size={16} />
+                        <WasherIcon size={16} />
                         <span>Washer</span>
                       </div>
                     </SelectItem>

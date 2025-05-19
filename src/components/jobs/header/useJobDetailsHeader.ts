@@ -29,11 +29,20 @@ export const useJobDetailsHeader = (id: string) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
+  const [isLoadPreviousEstimateDialogOpen, setIsLoadPreviousEstimateDialogOpen] = useState(false);
+  const [isLoadPreviousInvoiceDialogOpen, setIsLoadPreviousInvoiceDialogOpen] = useState(false);
   const [invoiceAmount, setInvoiceAmount] = useState(0);
   const [estimateAmount, setEstimateAmount] = useState(0);
   const [paymentsMade, setPaymentsMade] = useState<number[]>([]);
   const [hasEstimate, setHasEstimate] = useState(false);
   const [jobPayments, setJobPayments] = useState<Payment[]>([]);
+  const [previousEstimates, setPreviousEstimates] = useState<{ id: string; number: string }[]>([
+    { id: "est-001", number: "EST-1001" },
+    { id: "est-002", number: "EST-1002" }
+  ]);
+  const [previousInvoices, setPreviousInvoices] = useState<{ id: string; number: string }[]>([
+    { id: "inv-001", number: "INV-1001" }
+  ]);
   
   // Load job info and initial payment data
   useEffect(() => {
@@ -140,6 +149,12 @@ export const useJobDetailsHeader = (id: string) => {
     setIsInvoiceDialogOpen,
     isEstimateDialogOpen,
     setIsEstimateDialogOpen,
+    isLoadPreviousEstimateDialogOpen,
+    setIsLoadPreviousEstimateDialogOpen,
+    isLoadPreviousInvoiceDialogOpen,
+    setIsLoadPreviousInvoiceDialogOpen,
+    previousEstimates,
+    previousInvoices,
     handleStatusChange,
     handleEditClient,
     handleInvoiceCreated,

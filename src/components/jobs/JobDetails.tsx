@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X, Dryer, Dishwasher, Fridge, Washer } from "lucide-react";
+import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -16,6 +16,7 @@ import { TagsManagementDialog } from "./dialogs/TagsManagementDialog";
 import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
 import { AttachmentUploadDialog } from "./dialogs/AttachmentUploadDialog";
 import { ApplianceTypeDialog } from "./dialogs/ApplianceTypeDialog";
+import { DryerIcon, DishwasherIcon, FridgeIcon, WasherIcon } from "@/components/icons/ApplianceIcons";
 
 interface JobDetailsProps {
   jobId: string;
@@ -31,11 +32,11 @@ type ApplianceType = {
 // Get appliance icon based on type
 const getApplianceIcon = (type: ApplianceType['type']) => {
   switch (type) {
-    case "dryer": return <Dryer size={18} />;
-    case "dishwasher": return <Dishwasher size={18} />;
-    case "fridge": return <Fridge size={18} />;
-    case "washer": return <Washer size={18} />;
-    default: return <Dryer size={18} />;
+    case "dryer": return <DryerIcon size={18} />;
+    case "dishwasher": return <DishwasherIcon size={18} />;
+    case "fridge": return <FridgeIcon size={18} />;
+    case "washer": return <WasherIcon size={18} />;
+    default: return <DryerIcon size={18} />;
   }
 };
 
