@@ -95,9 +95,11 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
       // Technicians get limited permissions
       newPermissions = newPermissions.map(p => ({
         ...p,
+        // Fix: This comparison was causing the type error
+        // We need to use proper type checking that doesn't compare non-overlapping types
         enabled: (
-          (p.type === "view") || 
-          (p.module === "jobs" && (p.type === "edit" || p.type === "create")) ||
+          p.type === "view" || 
+          (p.module === "jobs" && ["edit", "create"].includes(p.type)) ||
           (p.module === "schedule" && p.type === "view")
         )
       }));
@@ -106,8 +108,8 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
       newPermissions = newPermissions.map(p => ({
         ...p,
         enabled: (
-          (p.type === "view") || 
-          (p.module === "schedule" && (p.type === "edit" || p.type === "create")) ||
+          p.type === "view" || 
+          (p.module === "schedule" && ["edit", "create"].includes(p.type)) ||
           (p.module === "clients" && p.type !== "delete")
         )
       }));
@@ -245,7 +247,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
           </div>
         ))}
         
-        <Alert className="mt-4">
+        <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Changing permissions may impact what this team member can see and do in the system.
