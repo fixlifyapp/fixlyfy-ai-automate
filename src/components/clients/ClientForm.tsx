@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { 
   Phone, 
   Mail, 
@@ -46,6 +46,7 @@ interface CreateInvoiceData {
 
 export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("details");
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,6 +94,12 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
       description: "",
       amount: ""
     });
+  };
+  
+  // Add function to navigate to job page
+  const handleJobClick = (jobId: string) => {
+    console.log("Navigating to job:", jobId);
+    navigate(`/jobs/${jobId}`);
   };
   
   if (isLoading) {
@@ -317,9 +324,13 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
                   </thead>
                   <tbody>
                     {[1, 2, 3, 4].map((_, idx) => (
-                      <tr key={idx} className="border-b border-fixlyfy-border hover:bg-fixlyfy-bg-interface/50">
+                      <tr 
+                        key={idx} 
+                        className="border-b border-fixlyfy-border hover:bg-fixlyfy-bg-interface/50 cursor-pointer"
+                        onClick={() => handleJobClick(`JOB-10${idx + 1}`)}
+                      >
                         <td className="px-4 py-3">
-                          <a href="#" className="text-fixlyfy font-medium">JOB-10{idx + 1}</a>
+                          <span className="text-fixlyfy font-medium">JOB-10{idx + 1}</span>
                         </td>
                         <td className="px-4 py-3 text-fixlyfy-text-secondary">
                           <div className="flex items-center">
