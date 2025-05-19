@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -95,8 +94,6 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
       // Technicians get limited permissions
       newPermissions = newPermissions.map(p => ({
         ...p,
-        // Fix: This comparison was causing the type error
-        // We need to use proper type checking that doesn't compare non-overlapping types
         enabled: (
           p.type === "view" || 
           (p.module === "jobs" && ["edit", "create"].includes(p.type)) ||
