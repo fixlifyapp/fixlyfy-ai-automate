@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { 
@@ -13,7 +14,8 @@ import {
   ChevronRight,
   Package,
   UserCheck,
-  Receipt
+  Receipt,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -71,6 +73,13 @@ const menuItems = [
     path: '/admin/team',
     highlight: false,
     permission: 'users.view' // Users with user view permission can see team
+  },
+  {
+    name: 'AI Assistant',
+    icon: Brain,
+    path: '/ai-assistant',
+    highlight: false,
+    permission: null // Accessible to all
   },
   {
     name: 'Automations',

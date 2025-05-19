@@ -22,6 +22,7 @@ import AdminRolesPage from "./pages/AdminRolesPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
 import TeamMemberProfilePage from "./pages/TeamMemberProfilePage";
 import FinancePage from "./pages/FinancePage";
+import AiAssistantPage from "./pages/AiAssistantPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/admin/team" element={<TeamManagementPage />} />
             <Route path="/admin/team/:id" element={<TeamMemberProfilePage />} />
             <Route path="/finance" element={<FinancePage />} />
+            <Route path="/ai-assistant" element={<AiAssistantPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
