@@ -12,7 +12,7 @@ import {
 import { format } from "date-fns";
 import { useState } from "react";
 
-interface ScheduleFiltersProps {
+export interface ScheduleFiltersProps {
   view: 'day' | 'week' | 'month';
   onViewChange: (view: 'day' | 'week' | 'month') => void;
 }
