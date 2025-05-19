@@ -9,6 +9,8 @@ import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { ExpenseDialog } from "@/components/jobs/dialogs/ExpenseDialog";
 import { SearchDialog } from "@/components/jobs/dialogs/SearchDialog";
 import { File, Plus, Search } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClientJobs } from "@/components/clients/ClientJobs";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
@@ -17,6 +19,7 @@ const ClientDetailPage = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   
   const handleCreateJob = () => {
     setIsCreateJobModalOpen(true);
@@ -31,9 +34,25 @@ const ClientDetailPage = () => {
             View and manage client information.
           </p>
         </div>
+        <Button onClick={() => setIsCreateJobModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
+          <Plus size={18} className="mr-2" /> Create Job
+        </Button>
       </div>
       
-      <ClientForm clientId={id} onCreateJob={handleCreateJob} />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="jobs">Jobs</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details">
+          <ClientForm clientId={id} onCreateJob={handleCreateJob} />
+        </TabsContent>
+        
+        <TabsContent value="jobs">
+          <ClientJobs clientId={id} onCreateJob={handleCreateJob} />
+        </TabsContent>
+      </Tabs>
       
       <JobsCreateModal 
         open={isCreateJobModalOpen} 
