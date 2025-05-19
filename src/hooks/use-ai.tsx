@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "./use-auth";
 
 interface UseAIOptions {
   systemContext?: string;
@@ -14,6 +15,7 @@ export function useAI(options: UseAIOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [businessData, setBusinessData] = useState<any>(null);
+  const { user } = useAuth();
   
   const generateText = async (prompt: string, customOptions?: Partial<UseAIOptions>) => {
     setIsLoading(true);
@@ -30,7 +32,8 @@ export function useAI(options: UseAIOptions = {}) {
           temperature: customOptions?.temperature || options.temperature || 0.7,
           maxTokens: customOptions?.maxTokens || options.maxTokens || 800,
           fetchBusinessData: customOptions?.fetchBusinessData !== undefined ? 
-            customOptions.fetchBusinessData : options.fetchBusinessData
+            customOptions.fetchBusinessData : options.fetchBusinessData,
+          userId: user?.id
         }
       });
       
@@ -79,7 +82,8 @@ export function useAI(options: UseAIOptions = {}) {
           temperature: customOptions?.temperature || options.temperature || 0.7,
           maxTokens: customOptions?.maxTokens || options.maxTokens || 800,
           fetchBusinessData: customOptions?.fetchBusinessData !== undefined ? 
-            customOptions.fetchBusinessData : options.fetchBusinessData
+            customOptions.fetchBusinessData : options.fetchBusinessData,
+          userId: user?.id
         }
       });
       
@@ -96,7 +100,7 @@ export function useAI(options: UseAIOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, user]);
   
   const generateAnalytics = useCallback(async (metrics: any, timeframe: string = "last month", customOptions?: Partial<UseAIOptions>) => {
     setIsLoading(true);
@@ -110,7 +114,8 @@ export function useAI(options: UseAIOptions = {}) {
           mode: "analytics",
           data: metrics,
           temperature: customOptions?.temperature || options.temperature || 0.3,
-          maxTokens: customOptions?.maxTokens || options.maxTokens || 600
+          maxTokens: customOptions?.maxTokens || options.maxTokens || 600,
+          userId: user?.id
         }
       });
       
@@ -127,7 +132,7 @@ export function useAI(options: UseAIOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, user]);
   
   const generateRecommendations = useCallback(async (data: any, subject: string, customOptions?: Partial<UseAIOptions>) => {
     setIsLoading(true);
@@ -141,7 +146,8 @@ export function useAI(options: UseAIOptions = {}) {
           mode: "recommendations",
           data: data,
           temperature: customOptions?.temperature || options.temperature || 0.6,
-          maxTokens: customOptions?.maxTokens || options.maxTokens || 700
+          maxTokens: customOptions?.maxTokens || options.maxTokens || 700,
+          userId: user?.id
         }
       });
       
@@ -158,7 +164,7 @@ export function useAI(options: UseAIOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, user]);
   
   const generateBusinessInsights = useCallback(async (prompt: string, customOptions?: Partial<UseAIOptions>) => {
     setIsLoading(true);
@@ -172,7 +178,8 @@ export function useAI(options: UseAIOptions = {}) {
           mode: "business",
           temperature: customOptions?.temperature || options.temperature || 0.4,
           maxTokens: customOptions?.maxTokens || options.maxTokens || 1000,
-          fetchBusinessData: true
+          fetchBusinessData: true,
+          userId: user?.id
         }
       });
       
@@ -193,7 +200,7 @@ export function useAI(options: UseAIOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, user]);
   
   return {
     generateText,

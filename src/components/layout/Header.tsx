@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Menu, Bell, Search, AlertTriangle, Lightbulb, MessageSquareWarning, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { SearchDialog } from '@/components/jobs/dialogs/SearchDialog';
 import { UserRoleSwitcher } from '@/components/auth/UserRoleSwitcher';
+import { UserMenu } from '@/components/auth/UserMenu';
 import {
   Popover,
   PopoverContent,
@@ -208,7 +208,8 @@ export const Header = () => {
             </PopoverContent>
           </Popover>
           
-          <UserRoleSwitcher />
+          {/* Replace UserRoleSwitcher with UserMenu */}
+          <UserMenu />
         </div>
       </div>
       

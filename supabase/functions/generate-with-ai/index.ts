@@ -27,11 +27,32 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not set in environment variables');
     }
 
-    const { prompt, context, mode, data, format, temperature = 0.7, maxTokens = 800, fetchBusinessData = false } = await req.json();
+    const { prompt, context, mode, data, format, temperature = 0.7, maxTokens = 800, fetchBusinessData = false, userId } = await req.json();
 
     if (!prompt) {
       throw new Error('No prompt provided');
     }
+    
+    // Extract authorization header to get the user's JWT token
+    const authHeader = req.headers.get('Authorization');
+    let userIdFromToken = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        // Verify the token and get the user ID
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (user && !authError) {
+          userIdFromToken = user.id;
+          console.log('User authenticated:', userIdFromToken);
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error);
+      }
+    }
+    
+    // Use the user ID from the token or fallback to the one provided in the request
+    const currentUserId = userIdFromToken || userId;
     
     // Build the system message based on mode and context
     let systemMessage = context || 'You are a helpful assistant for a field service management application. Provide concise, helpful responses.';
@@ -41,27 +62,55 @@ serve(async (req) => {
     // Fetch business data if requested and not already provided
     if (fetchBusinessData && !data) {
       console.log('Fetching business data from database...');
+      console.log('Current user ID:', currentUserId);
       
       try {
         // Fetch metrics data - add more queries as needed
+        let clientsQuery = supabase.from('clients').select('*');
+        let jobsQuery = supabase.from('jobs').select('*');
+        
+        // If we have a user ID, filter data by user
+        if (currentUserId) {
+          clientsQuery = clientsQuery.eq('created_by', currentUserId);
+          jobsQuery = jobsQuery.eq('created_by', currentUserId);
+          console.log('Filtering data for user:', currentUserId);
+        }
+        
         const [clientsResult, jobsResult] = await Promise.all([
-          supabase.from('clients').select('*'),
-          supabase.from('jobs').select('*')
+          clientsQuery,
+          jobsQuery
         ]);
         
         // Calculate basic metrics
         const clients = clientsResult.data || [];
         const jobs = jobsResult.data || [];
         
+        // Calculate revenue from jobs
+        let totalRevenue = 0;
+        const completedJobs = jobs.filter(job => job.status === 'completed');
+        
+        // Count jobs by status
+        const jobsByStatus = jobs.reduce((acc: Record<string, number>, job: any) => {
+          acc[job.status] = (acc[job.status] || 0) + 1;
+          return acc;
+        }, {});
+        
         businessData = {
           clientCount: clients.length,
           jobCount: jobs.length,
-          // Add more calculated metrics here
+          completedJobCount: completedJobs.length,
+          revenue: totalRevenue,
+          jobsByStatus,
           clients: clients.slice(0, 10), // Limit to first 10 clients
           recentJobs: jobs.slice(0, 5)  // Limit to 5 most recent jobs
         };
         
         console.log('Business data fetched successfully');
+        console.log('Business metrics:', { 
+          clientCount: businessData.clientCount,
+          jobCount: businessData.jobCount,
+          completedJobCount: businessData.completedJobCount
+        });
       } catch (error) {
         console.error('Error fetching business data:', error);
         businessData = { error: 'Failed to fetch business data' };
