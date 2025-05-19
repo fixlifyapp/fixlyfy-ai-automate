@@ -12,6 +12,8 @@ interface InsightsGeneratorProps {
   onInsightsGenerated?: (insights: string) => void;
   systemContext?: string;
   autoGenerate?: boolean;
+  mode?: "text" | "insights" | "analytics" | "recommendations";
+  variant?: "default" | "compact";
 }
 
 export const InsightsGenerator = ({
@@ -19,13 +21,16 @@ export const InsightsGenerator = ({
   topic,
   onInsightsGenerated,
   systemContext,
-  autoGenerate = false
+  autoGenerate = false,
+  mode = "insights",
+  variant = "default"
 }: InsightsGeneratorProps) => {
   const [insights, setInsights] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   
   const { generateInsights, isLoading, error: aiError } = useAI({
-    systemContext
+    systemContext,
+    mode
   });
   
   const handleGenerateInsights = async () => {
@@ -52,10 +57,10 @@ export const InsightsGenerator = ({
   return (
     <div className="space-y-4">
       {insights ? (
-        <div className="p-4 bg-fixlyfy/5 border border-fixlyfy/20 rounded-lg">
+        <div className={`p-${variant === "compact" ? "3" : "4"} bg-fixlyfy/5 border border-fixlyfy/20 rounded-lg`}>
           <h3 className="text-base font-medium mb-3 flex items-center gap-2">
             <BrainCircuit size={16} className="text-fixlyfy" /> 
-            AI-Generated Insights
+            AI-Generated {mode === "recommendations" ? "Recommendation" : "Insights"}
           </h3>
           <div className="prose prose-sm max-w-none">
             {insights.split('\n').map((line, i) => (
@@ -73,7 +78,7 @@ export const InsightsGenerator = ({
           </div>
         </div>
       ) : (
-        <div className="p-6 border border-dashed border-fixlyfy/20 rounded-lg">
+        <div className={`p-${variant === "compact" ? "3" : "6"} border border-dashed border-fixlyfy/20 rounded-lg`}>
           {(aiError || generationError) && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -84,9 +89,11 @@ export const InsightsGenerator = ({
           
           <div className="text-center">
             <BrainCircuit size={24} className="mx-auto mb-2 text-fixlyfy/70" />
-            <h3 className="text-lg font-medium mb-1">AI Business Insights</h3>
+            <h3 className="text-lg font-medium mb-1">
+              AI {mode === "recommendations" ? "Recommendation" : "Business Insights"}
+            </h3>
             <p className="text-sm text-fixlyfy-text-secondary mb-4">
-              Generate actionable insights from your business data
+              Generate {mode === "recommendations" ? "actionable recommendations" : "insights"} from your business data
             </p>
             
             <Button 
@@ -95,7 +102,7 @@ export const InsightsGenerator = ({
               className="bg-fixlyfy hover:bg-fixlyfy/90"
             >
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit size={16} className="mr-2" />}
-              Generate Business Insights
+              Generate {mode === "recommendations" ? "Recommendation" : "Business Insights"}
             </Button>
           </div>
         </div>
