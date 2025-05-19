@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, Plus } from "lucide-react";
@@ -16,43 +15,52 @@ interface ClientJobsProps {
 // Mock client jobs data - in a real app, this would be filtered based on clientId
 const mockClientJobs = [
   {
-    id: "JOB-1001",
-    status: "scheduled",
-    date: "2023-05-15",
-    time: "13:30",
+    id: "JOB-101",
+    status: "completed",
+    date: "2023-05-10",
     service: "HVAC Repair",
     technician: {
-      name: "Robert Smith",
+      name: "John Smith",
       avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "RS",
+      initials: "JS",
     },
-    revenue: 250.00,
+    revenue: 150.00,
   },
   {
-    id: "JOB-1004",
-    status: "scheduled",
-    date: "2023-05-16",
-    time: "09:00",
-    service: "HVAC Maintenance",
+    id: "JOB-102",
+    status: "in-progress",
+    date: "2023-06-11",
+    service: "Plumbing",
     technician: {
-      name: "Robert Smith",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "RS",
+      name: "Maria Garcia",
+      avatar: "https://i.pravatar.cc/150?img=2",
+      initials: "MG",
     },
-    revenue: 200.00,
+    revenue: 300.00,
   },
   {
-    id: "JOB-1005",
-    status: "canceled",
-    date: "2023-05-14",
-    time: "15:30",
+    id: "JOB-103",
+    status: "scheduled",
+    date: "2023-07-12",
     service: "Electrical",
     technician: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      initials: "JD",
+      name: "David Lee",
+      avatar: "https://i.pravatar.cc/150?img=3",
+      initials: "DL",
     },
-    revenue: 0.00,
+    revenue: 450.00,
+  },
+  {
+    id: "JOB-104",
+    status: "canceled",
+    date: "2023-08-13",
+    service: "Maintenance",
+    technician: {
+      name: "Sarah Johnson",
+      avatar: "https://i.pravatar.cc/150?img=4",
+      initials: "SJ",
+    },
+    revenue: 600.00,
   },
 ];
 
@@ -60,88 +68,84 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
   const navigate = useNavigate();
 
   const handleJobClick = (jobId: string) => {
-    // Fix: Ensuring the navigation is working correctly
+    // Ensuring the navigation is working correctly
     console.log("Navigating to job:", jobId);
     navigate(`/jobs/${jobId}`);
   };
 
   return (
     <div className="space-y-6">
-      <div className="fixlyfy-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Job #</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Technician</TableHead>
-              <TableHead>Revenue</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockClientJobs.map((job, idx) => (
-              <TableRow 
-                key={job.id}
-                className={cn(
-                  idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50",
-                  "cursor-pointer hover:bg-fixlyfy-bg-interface"
-                )}
-                onClick={() => handleJobClick(job.id)}
-              >
-                <TableCell>
-                  <span className="font-medium">{job.id}</span>
-                </TableCell>
-                <TableCell>
-                  {job.service}
-                </TableCell>
-                <TableCell>
-                  <Badge className={cn(
-                    job.status === "scheduled" && "bg-fixlyfy-info/10 text-fixlyfy-info",
-                    job.status === "in-progress" && "bg-fixlyfy-warning/10 text-fixlyfy-warning",
-                    job.status === "completed" && "bg-fixlyfy-success/10 text-fixlyfy-success",
-                    job.status === "canceled" && "bg-fixlyfy-error/10 text-fixlyfy-error"
-                  )}>
-                    {job.status === "scheduled" && "Scheduled"}
-                    {job.status === "in-progress" && "In Progress"}
-                    {job.status === "completed" && "Completed"}
-                    {job.status === "canceled" && "Canceled"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center">
-                    <Calendar size={14} className="text-fixlyfy-text-secondary mr-1" />
-                    <span>
-                      {new Date(job.date).toLocaleDateString()} 
-                      <span className="text-xs text-fixlyfy-text-secondary ml-1">{job.time}</span>
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center">
-                    <Avatar className="h-7 w-7 mr-2">
-                      <AvatarImage src={job.technician.avatar} />
-                      <AvatarFallback>{job.technician.initials}</AvatarFallback>
-                    </Avatar>
-                    <span>{job.technician.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium">
-                  ${job.revenue.toFixed(2)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-xl font-semibold">Client Jobs</h2>
+          <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">
+            <Plus size={16} className="mr-2" /> New Job
+          </Button>
+        </div>
         
-        {mockClientJobs.length === 0 && (
-          <div className="p-6 text-center">
-            <p className="text-fixlyfy-text-secondary mb-4">This client has no jobs yet.</p>
-            <Button onClick={onCreateJob} className="bg-fixlyfy hover:bg-fixlyfy/90">
-              <Plus size={18} className="mr-2" /> Create First Job
-            </Button>
-          </div>
-        )}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="text-left p-4 font-medium text-gray-600">Job #</th>
+                <th className="text-left p-4 font-medium text-gray-600">Date</th>
+                <th className="text-left p-4 font-medium text-gray-600">Service</th>
+                <th className="text-left p-4 font-medium text-gray-600">Status</th>
+                <th className="text-left p-4 font-medium text-gray-600">Technician</th>
+                <th className="text-right p-4 font-medium text-gray-600">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockClientJobs.map((job) => (
+                <tr 
+                  key={job.id} 
+                  className="border-b hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleJobClick(job.id)}
+                >
+                  <td className="p-4">
+                    <span className="text-purple-500 font-medium">{job.id}</span>
+                  </td>
+                  <td className="p-4 text-gray-600">
+                    <div className="flex items-center">
+                      <Calendar size={14} className="mr-2" />
+                      {new Date(job.date).toLocaleDateString()}
+                    </div>
+                  </td>
+                  <td className="p-4">{job.service}</td>
+                  <td className="p-4">
+                    <Badge className={cn(
+                      "text-xs font-medium py-1 px-2",
+                      job.status === "completed" && "bg-green-100 text-green-600",
+                      job.status === "in-progress" && "bg-purple-100 text-purple-600",
+                      job.status === "scheduled" && "bg-yellow-100 text-yellow-600",
+                      job.status === "canceled" && "bg-gray-100 text-gray-600"
+                    )}>
+                      {job.status === "completed" && "Completed"}
+                      {job.status === "in-progress" && "In Progress"}
+                      {job.status === "scheduled" && "Scheduled"}
+                      {job.status === "canceled" && "Cancelled"}
+                    </Badge>
+                  </td>
+                  <td className="p-4">
+                    {job.technician.name}
+                  </td>
+                  <td className="p-4 text-right font-medium">
+                    ${job.revenue.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {mockClientJobs.length === 0 && (
+            <div className="p-6 text-center">
+              <p className="text-gray-500 mb-4">This client has no jobs yet.</p>
+              <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">
+                <Plus size={18} className="mr-2" /> Create First Job
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
