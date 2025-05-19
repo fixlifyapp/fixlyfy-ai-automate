@@ -5,16 +5,12 @@ interface JobDetailsTabsProps {
   activeTab?: string;
   onTabChange?: (value: string) => void;
   children?: React.ReactNode;
-  invoiceAmount?: number;
-  balance?: number;
 }
 
 export const JobDetailsTabs = ({ 
   activeTab = "details", 
   onTabChange,
-  children,
-  invoiceAmount = 0,
-  balance = 0
+  children
 }: JobDetailsTabsProps) => {
   return (
     <div className="mb-6">

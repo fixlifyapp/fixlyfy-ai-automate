@@ -1,6 +1,5 @@
-
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit } from "lucide-react";
+import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X, Dryer, Dishwasher, Fridge, Washer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -16,10 +15,29 @@ import { ScheduleSelectionDialog } from "./dialogs/ScheduleSelectionDialog";
 import { TagsManagementDialog } from "./dialogs/TagsManagementDialog";
 import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
 import { AttachmentUploadDialog } from "./dialogs/AttachmentUploadDialog";
+import { ApplianceTypeDialog } from "./dialogs/ApplianceTypeDialog";
 
 interface JobDetailsProps {
   jobId: string;
 }
+
+// Appliance type definition
+type ApplianceType = {
+  id: number;
+  type: "dryer" | "dishwasher" | "fridge" | "washer";
+  model?: string;
+};
+
+// Get appliance icon based on type
+const getApplianceIcon = (type: ApplianceType['type']) => {
+  switch (type) {
+    case "dryer": return <Dryer size={18} />;
+    case "dishwasher": return <Dishwasher size={18} />;
+    case "fridge": return <Fridge size={18} />;
+    case "washer": return <Washer size={18} />;
+    default: return <Dryer size={18} />;
+  }
+};
 
 export const JobDetails = ({ jobId }: JobDetailsProps) => {
   // In a real app, we would fetch this data from an API
@@ -40,6 +58,18 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     priority: "Medium",
     source: "Phone Call"
   });
+
+  // Appliances state
+  const [appliances, setAppliances] = useState<ApplianceType[]>([
+    { id: 1, type: "fridge", model: "Samsung RF28R7551SR" },
+    { id: 2, type: "washer", model: "LG WM3900HWA" }
+  ]);
+
+  // Additional job types state
+  const [additionalJobTypes, setAdditionalJobTypes] = useState<string[]>([]);
+  
+  // Additional sources state
+  const [additionalSources, setAdditionalSources] = useState<string[]>([]);
 
   const [tasks, setTasks] = useState([
     { id: 1, name: "Initial diagnosis of HVAC unit", completed: true },
@@ -62,6 +92,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   const [isTagsDialogOpen, setIsTagsDialogOpen] = useState(false);
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
+  const [isApplianceDialogOpen, setIsApplianceDialogOpen] = useState(false);
 
   // Edit states
   const [editingClientInfo, setEditingClientInfo] = useState(false);
@@ -160,6 +191,39 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     };
     
     return teamColors[team] || "text-purple-600";
+  };
+
+  // Handle appliances update
+  const handleUpdateAppliances = (updatedAppliances: ApplianceType[]) => {
+    setAppliances(updatedAppliances);
+  };
+
+  // Handle adding new job type
+  const handleAddJobType = (type: string) => {
+    if (type && !additionalJobTypes.includes(type)) {
+      setAdditionalJobTypes([...additionalJobTypes, type]);
+    }
+  };
+
+  // Handle removing job type
+  const handleRemoveJobType = (index: number) => {
+    const newTypes = [...additionalJobTypes];
+    newTypes.splice(index, 1);
+    setAdditionalJobTypes(newTypes);
+  };
+
+  // Handle adding new source
+  const handleAddSource = (source: string) => {
+    if (source && !additionalSources.includes(source)) {
+      setAdditionalSources([...additionalSources, source]);
+    }
+  };
+
+  // Handle removing source
+  const handleRemoveSource = (index: number) => {
+    const newSources = [...additionalSources];
+    newSources.splice(index, 1);
+    setAdditionalSources(newSources);
   };
 
   return (
@@ -301,6 +365,49 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         </CardContent>
       </Card>
       
+      {/* Appliances Section */}
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Appliances</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsApplianceDialogOpen(true)}
+            >
+              <Edit size={16} />
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {appliances.map((appliance) => (
+              <div key={appliance.id} className="flex items-center gap-3 border rounded-lg p-3">
+                <div className="p-2 bg-gray-100 rounded-full">
+                  {getApplianceIcon(appliance.type)}
+                </div>
+                <div>
+                  <div className="font-medium capitalize">{appliance.type}</div>
+                  {appliance.model && <div className="text-sm text-gray-500">{appliance.model}</div>}
+                </div>
+              </div>
+            ))}
+            
+            {appliances.length === 0 && (
+              <div className="text-gray-500 italic">No appliances added</div>
+            )}
+
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 h-auto py-3" 
+              onClick={() => setIsApplianceDialogOpen(true)}
+            >
+              <Plus size={16} />
+              <span>Add Appliance</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
       {/* Job Metadata */}
       <Card className="border-fixlyfy-border shadow-sm">
         <CardContent className="p-6">
@@ -309,86 +416,134 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex justify-between items-center">
-              <div onClick={() => setIsTypeDialogOpen(true)} className="cursor-pointer">
-                <p className="text-sm text-muted-foreground">Job Type</p>
-                <p className="text-purple-600">{jobDetails.type}</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsTypeDialogOpen(true)}
-              >
-                <Edit size={16} />
-              </Button>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div onClick={() => setIsScheduleDialogOpen(true)} className="cursor-pointer">
-                <p className="text-sm text-muted-foreground">Schedule Date & Time</p>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Calendar size={16} className="text-purple-600" />
-                    <p className="text-purple-600">{jobDetails.scheduleDate}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock size={16} className="text-purple-600" />
-                    <p className="text-purple-600">{jobDetails.scheduleTime}</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <div onClick={() => setIsTypeDialogOpen(true)} className="cursor-pointer">
+                  <p className="text-sm text-muted-foreground">Job Type</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="text-purple-600 bg-purple-50">{jobDetails.type}</Badge>
+                    {additionalJobTypes.map((type, index) => (
+                      <Badge 
+                        key={index} 
+                        className="flex items-center gap-1 bg-purple-50 text-purple-600"
+                      >
+                        {type}
+                        <X 
+                          size={14} 
+                          className="ml-1 cursor-pointer" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveJobType(index);
+                          }} 
+                        />
+                      </Badge>
+                    ))}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsTypeDialogOpen(true);
+                      }}
+                    >
+                      <Plus size={14} />
+                    </Button>
                   </div>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsScheduleDialogOpen(true)}
-              >
-                <Edit size={16} />
-              </Button>
+              
+              <div className="flex justify-between items-center">
+                <div onClick={() => setIsScheduleDialogOpen(true)} className="cursor-pointer">
+                  <p className="text-sm text-muted-foreground">Schedule Date & Time</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={16} className="text-purple-600" />
+                      <p className="text-purple-600">{jobDetails.scheduleDate}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock size={16} className="text-purple-600" />
+                      <p className="text-purple-600">{jobDetails.scheduleTime}</p>
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsScheduleDialogOpen(true)}
+                >
+                  <Edit size={16} />
+                </Button>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div onClick={() => setIsTeamDialogOpen(true)} className="cursor-pointer">
+                  <p className="text-sm text-muted-foreground">Team</p>
+                  <div className="flex items-center gap-1">
+                    <User size={16} className={getTeamColor(jobDetails.team)} />
+                    <p className={getTeamColor(jobDetails.team)}>{jobDetails.team}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsTeamDialogOpen(true)}
+                >
+                  <Edit size={16} />
+                </Button>
+              </div>
             </div>
             
-            <div className="flex justify-between items-center">
-              <div onClick={() => setIsTeamDialogOpen(true)} className="cursor-pointer">
-                <p className="text-sm text-muted-foreground">Team</p>
-                <div className="flex items-center gap-1">
-                  <User size={16} className={getTeamColor(jobDetails.team)} />
-                  <p className={getTeamColor(jobDetails.team)}>{jobDetails.team}</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <div onClick={() => setIsPriorityDialogOpen(true)} className="cursor-pointer">
+                  <p className="text-sm text-muted-foreground">Priority</p>
+                  <p className={getPriorityColor(jobDetails.priority)}>{jobDetails.priority}</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsPriorityDialogOpen(true)}
+                >
+                  <Edit size={16} />
+                </Button>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div onClick={() => setIsSourceDialogOpen(true)} className="cursor-pointer">
+                  <p className="text-sm text-muted-foreground">Source</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="text-purple-600 bg-purple-50">{jobDetails.source}</Badge>
+                    {additionalSources.map((source, index) => (
+                      <Badge 
+                        key={index} 
+                        className="flex items-center gap-1 bg-purple-50 text-purple-600"
+                      >
+                        {source}
+                        <X 
+                          size={14} 
+                          className="ml-1 cursor-pointer" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveSource(index);
+                          }} 
+                        />
+                      </Badge>
+                    ))}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsSourceDialogOpen(true);
+                      }}
+                    >
+                      <Plus size={14} />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsTeamDialogOpen(true)}
-              >
-                <Edit size={16} />
-              </Button>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div onClick={() => setIsPriorityDialogOpen(true)} className="cursor-pointer">
-                <p className="text-sm text-muted-foreground">Priority</p>
-                <p className={getPriorityColor(jobDetails.priority)}>{jobDetails.priority}</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsPriorityDialogOpen(true)}
-              >
-                <Edit size={16} />
-              </Button>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div onClick={() => setIsSourceDialogOpen(true)} className="cursor-pointer">
-                <p className="text-sm text-muted-foreground">Source</p>
-                <p className="text-purple-600">{jobDetails.source}</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsSourceDialogOpen(true)}
-              >
-                <Edit size={16} />
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -529,6 +684,13 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         onOpenChange={setIsAttachmentsDialogOpen}
         initialAttachments={attachments}
         onSave={handleUpdateAttachments}
+      />
+      
+      <ApplianceTypeDialog
+        open={isApplianceDialogOpen}
+        onOpenChange={setIsApplianceDialogOpen}
+        initialAppliances={appliances}
+        onSave={handleUpdateAppliances}
       />
     </div>
   );

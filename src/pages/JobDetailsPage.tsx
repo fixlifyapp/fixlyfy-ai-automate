@@ -41,8 +41,6 @@ const JobDetailsPage = () => {
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}
-              invoiceAmount={jobHeaderData.invoiceAmount}
-              balance={jobHeaderData.balance}
             >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />

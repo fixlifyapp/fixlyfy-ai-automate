@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,14 +10,16 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
 
 interface SourceSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSource: string;
   onSave: (source: string) => void;
+  onAddSource?: (source: string) => void;
 }
 
 export function SourceSelectionDialog({
@@ -24,8 +27,10 @@ export function SourceSelectionDialog({
   onOpenChange,
   initialSource,
   onSave,
+  onAddSource
 }: SourceSelectionDialogProps) {
   const [selectedSource, setSelectedSource] = useState(initialSource);
+  const [newSource, setNewSource] = useState("");
   
   const sources = [
     "Google", 
@@ -43,6 +48,14 @@ export function SourceSelectionDialog({
     onSave(selectedSource);
     onOpenChange(false);
     toast.success("Lead source updated");
+  };
+
+  const handleAddSource = () => {
+    if (newSource.trim() && onAddSource) {
+      onAddSource(newSource.trim());
+      setNewSource("");
+      toast.success("Custom source added");
+    }
   };
 
   return (
@@ -64,6 +77,27 @@ export function SourceSelectionDialog({
               </div>
             ))}
           </RadioGroup>
+          
+          {onAddSource && (
+            <div className="mt-6 border-t pt-4">
+              <Label className="mb-2 block">Add Custom Source</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newSource}
+                  onChange={(e) => setNewSource(e.target.value)}
+                  placeholder="Enter custom source"
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleAddSource}
+                  disabled={!newSource.trim()}
+                  type="button"
+                >
+                  <Plus size={16} /> Add
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
