@@ -108,7 +108,6 @@ export const JobDetailsQuickActions = () => {
   const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState(initialAiSuggestions);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
   const { generateText } = useAI({
     systemContext: "You are an AI assistant for a field service business. Generate concise, practical insights for technicians and managers about service jobs."
@@ -150,11 +149,11 @@ export const JobDetailsQuickActions = () => {
     setIsGeneratingSuggestion(true);
     
     try {
-      const categories = ["revenue", "efficiency", "customer", "sales"];
+      const categories = ["revenue", "efficiency", "customer", "sales", "upsell"];
       const suggestionTypes = ["info", "recommendation", "insight", "warning", "upsell"];
       
       const categoryIndex = Math.floor(Math.random() * categories.length);
-      const selectedCategory = categories[categoryIndex] as "revenue" | "efficiency" | "customer" | "sales";
+      const selectedCategory = categories[categoryIndex] as "revenue" | "efficiency" | "customer" | "sales" | "upsell";
       
       const typeIndex = Math.floor(Math.random() * suggestionTypes.length);
       const selectedType = suggestionTypes[typeIndex] as "info" | "recommendation" | "insight" | "warning" | "upsell";
@@ -174,6 +173,9 @@ export const JobDetailsQuickActions = () => {
           break;
         case "sales":
           promptTemplate += " Focus on sales techniques, estimate conversion, or add-on services.";
+          break;
+        case "upsell":
+          promptTemplate += " Focus on product or service upselling opportunities.";
           break;
       }
       
@@ -207,24 +209,6 @@ export const JobDetailsQuickActions = () => {
       setIsGeneratingSuggestion(false);
     }
   };
-
-  const filterByCategory = (category: string | null) => {
-    setActiveCategory(category);
-  };
-  
-  const filteredSuggestions = activeCategory 
-    ? aiSuggestions.filter(s => s.category === activeCategory) 
-    : aiSuggestions;
-  
-  const getCategoryIcon = (category: string | undefined) => {
-    switch (category) {
-      case "revenue": return <DollarSign size={14} />;
-      case "efficiency": return <Clock size={14} />;
-      case "customer": return <UserPlus size={14} />;
-      case "sales": return <Zap size={14} />;
-      default: return <Brain size={14} />;
-    }
-  };
   
   return (
     <>
@@ -237,24 +221,7 @@ export const JobDetailsQuickActions = () => {
             </div>
             <h3 className="text-lg font-medium">AI Insights</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex overflow-x-auto pb-1 -mr-1 space-x-1 scrollbar-hide">
-              {["revenue", "efficiency", "customer", "sales"].map((category) => (
-                <Button 
-                  key={category} 
-                  size="sm" 
-                  variant={activeCategory === category ? "default" : "outline"}
-                  className={cn(
-                    "text-xs px-2 py-1 h-7",
-                    activeCategory === category && "bg-fixlyfy text-white"
-                  )}
-                  onClick={() => filterByCategory(activeCategory === category ? null : category)}
-                >
-                  {getCategoryIcon(category)}
-                  <span className="ml-1 capitalize">{category}</span>
-                </Button>
-              ))}
-            </div>
+          <div>
             <Button 
               size="sm" 
               variant="outline" 
@@ -267,8 +234,8 @@ export const JobDetailsQuickActions = () => {
         </CardHeader>
         
         <CardContent className="p-4 space-y-3">
-          {filteredSuggestions.length > 0 ? (
-            filteredSuggestions.map((suggestion, idx) => (
+          {aiSuggestions.length > 0 ? (
+            aiSuggestions.map((suggestion, idx) => (
               <div 
                 key={suggestion.id} 
                 className={cn(
@@ -290,8 +257,14 @@ export const JobDetailsQuickActions = () => {
                     suggestion.type === 'warning' && "bg-red-400/20",
                     suggestion.type === 'upsell' && "bg-green-400/20",
                   )}>
-                    {suggestion.category ? (
-                      getCategoryIcon(suggestion.category)
+                    {suggestion.category === "revenue" ? (
+                      <DollarSign size={14} />
+                    ) : suggestion.category === "efficiency" ? (
+                      <Clock size={14} />
+                    ) : suggestion.category === "customer" ? (
+                      <UserPlus size={14} />
+                    ) : suggestion.category === "sales" ? (
+                      <Zap size={14} />
                     ) : (
                       <Brain size={14} />
                     )}
@@ -335,14 +308,14 @@ export const JobDetailsQuickActions = () => {
           ) : (
             <div className="p-8 text-center text-fixlyfy-text-secondary">
               <AlertTriangle className="mx-auto mb-2 h-10 w-10 text-fixlyfy-warning/50" />
-              <p>No insights match the selected filter.</p>
+              <p>No insights available.</p>
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="mt-2"
-                onClick={() => setActiveCategory(null)}
+                onClick={generateNewSuggestion}
               >
-                Clear Filter
+                Generate New Insight
               </Button>
             </div>
           )}
