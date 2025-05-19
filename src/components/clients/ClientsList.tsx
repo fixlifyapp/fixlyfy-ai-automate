@@ -1,4 +1,4 @@
-
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,9 @@ import {
   Trash,
   Star,
   Mail,
-  Phone
+  Phone,
+  FileExport,
+  Edit
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,9 +32,56 @@ interface ClientsListProps {
 
 export const ClientsList = ({ isGridView }: ClientsListProps) => {
   const navigate = useNavigate();
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   const handleClientClick = (clientId: string) => {
     navigate(`/clients/${clientId}`);
+  };
+  
+  const handleCheckboxChange = (clientId: string) => {
+    setSelectedClients(prev => {
+      if (prev.includes(clientId)) {
+        return prev.filter(id => id !== clientId);
+      } else {
+        return [...prev, clientId];
+      }
+    });
+  };
+
+  const handleSelectAllChange = () => {
+    if (selectAll) {
+      setSelectedClients([]);
+    } else {
+      setSelectedClients(clients.map(client => client.id));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleBulkEdit = () => {
+    // This would open a bulk edit modal in a real implementation
+    alert(`Editing ${selectedClients.length} clients`);
+  };
+
+  const handleExportClients = () => {
+    // In a real implementation, we would generate CSV/Excel with client data
+    const exportData = selectedClients.length > 0 
+      ? clients.filter(client => selectedClients.includes(client.id))
+      : clients;
+      
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "Client ID,Name,Email,Phone,Status,Type,Revenue,Rating\n"
+      + exportData.map(client => 
+          `${client.id},${client.name},${client.email},${client.phone},${client.status},${client.type},${client.revenue},${client.rating}`
+        ).join("\n");
+        
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "clients_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getRatingStars = (rating: number) => {
@@ -47,15 +96,56 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
 
   return (
     <>
+      {/* Bulk Actions Bar */}
+      {selectedClients.length > 0 && (
+        <div className="fixlyfy-card p-2 mb-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{selectedClients.length} clients selected</span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex gap-2 ml-2 border-fixlyfy/20 text-fixlyfy"
+              onClick={handleBulkEdit}
+            >
+              <Edit size={16} /> Bulk Edit
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex gap-2 border-fixlyfy/20 text-fixlyfy"
+              onClick={handleExportClients}
+            >
+              <FileExport size={16} /> Export Selected
+            </Button>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-fixlyfy-text-secondary"
+            onClick={() => setSelectedClients([])}
+          >
+            Clear Selection
+          </Button>
+        </div>
+      )}
+      
       {isGridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {clients.map((client) => (
             <div
               key={client.id}
-              onClick={() => handleClientClick(client.id)}
-              className="fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer"
+              className="fixlyfy-card hover:shadow-lg transition-shadow relative"
             >
-              <div className="p-4 border-b border-fixlyfy-border">
+              <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+                <Checkbox 
+                  checked={selectedClients.includes(client.id)} 
+                  onCheckedChange={() => handleCheckboxChange(client.id)}
+                />
+              </div>
+              <div
+                className="p-4 border-b border-fixlyfy-border cursor-pointer"
+                onClick={() => handleClientClick(client.id)}
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <Badge variant="outline" className="mb-2">
@@ -112,11 +202,25 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
         </div>
       ) : (
         <div className="fixlyfy-card overflow-hidden">
+          <div className="flex justify-between items-center p-4 border-b border-fixlyfy-border">
+            <div className="text-sm font-medium">All Clients ({clients.length})</div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex gap-2 border-fixlyfy/20 text-fixlyfy"
+              onClick={handleExportClients}
+            >
+              <FileExport size={16} /> Export All
+            </Button>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">
-                  <Checkbox />
+                  <Checkbox 
+                    checked={selectAll} 
+                    onCheckedChange={handleSelectAllChange}
+                  />
                 </TableHead>
                 <TableHead>Client ID</TableHead>
                 <TableHead>Name</TableHead>
@@ -132,20 +236,32 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
               {clients.map((client, idx) => (
                 <TableRow 
                   key={client.id}
-                  className={idx % 2 === 0 ? "bg-white cursor-pointer" : "bg-fixlyfy-bg-interface/50 cursor-pointer"}
-                  onClick={() => handleClientClick(client.id)}
+                  className={idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50"}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox />
+                    <Checkbox 
+                      checked={selectedClients.includes(client.id)} 
+                      onCheckedChange={() => handleCheckboxChange(client.id)}
+                    />
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium hover:text-fixlyfy transition-colors">
+                    <span 
+                      className="font-medium hover:text-fixlyfy transition-colors cursor-pointer"
+                      onClick={() => handleClientClick(client.id)}
+                    >
                       {client.id}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{client.name}</div>
-                    <div className="text-xs text-fixlyfy-text-secondary truncate max-w-[200px]">{client.address}</div>
+                    <div 
+                      className="font-medium cursor-pointer"
+                      onClick={() => handleClientClick(client.id)}
+                    >
+                      {client.name}
+                    </div>
+                    <div className="text-xs text-fixlyfy-text-secondary truncate max-w-[200px]">
+                      {client.address}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{client.email}</div>
@@ -184,6 +300,9 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleClientClick(client.id)}>
                           <Eye size={16} className="mr-2" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleBulkEdit()}>
+                          <Edit size={16} className="mr-2" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-fixlyfy-error">
