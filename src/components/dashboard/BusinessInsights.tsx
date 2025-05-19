@@ -4,9 +4,8 @@ import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Brain, RefreshCw, Database, ArrowRight } from "lucide-react";
+import { Brain, RefreshCw, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useTestData } from "@/utils/test-data-generator";
 
 // Example data - in a real implementation, this would come from your API or state
 const businessMetrics = {
@@ -36,9 +35,6 @@ export const BusinessInsights = () => {
   const [insights, setInsights] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingData, setIsGeneratingData] = useState(false);
-  
-  const { generateAllTestData } = useTestData();
   
   const testOpenAI = async () => {
     try {
@@ -67,29 +63,6 @@ export const BusinessInsights = () => {
       console.error("OpenAI test error:", error);
     }
   };
-
-  const handleGenerateTestData = async () => {
-    setIsGeneratingData(true);
-    toast.loading("Generating test data for Toronto & GTA...");
-    
-    try {
-      // In a real implementation, this would call your API to store data
-      await generateAllTestData();
-      
-      toast.dismiss();
-      toast.success("Test data created successfully", {
-        description: "20 clients and 40 jobs across Toronto & GTA created"
-      });
-    } catch (error) {
-      toast.dismiss();
-      toast.error("Failed to generate test data", {
-        description: "An error occurred while creating test data"
-      });
-      console.error("Test data generation error:", error);
-    } finally {
-      setIsGeneratingData(false);
-    }
-  };
   
   return (
     <Card className="h-full">
@@ -105,18 +78,6 @@ export const BusinessInsights = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Test Data Generation Button - Standalone prominently displayed */}
-        <Button
-          onClick={handleGenerateTestData}
-          variant="default"
-          size="lg"
-          className="bg-violet-600 hover:bg-violet-700 w-full py-6 text-lg"
-          disabled={isGeneratingData}
-        >
-          <Database size={20} className="mr-3" />
-          {isGeneratingData ? "Generating Test Data..." : "Generate Test Data (20 Clients & 40 Jobs)"}
-        </Button>
-      
         <div className="flex justify-between items-center mb-4">
           <Button 
             onClick={testOpenAI}
