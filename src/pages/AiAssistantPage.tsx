@@ -1,10 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Send, Loader2 } from "lucide-react";
+import { Brain, Send, Loader2, BarChart3, Users, Briefcase, DollarSign } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAI } from "@/hooks/use-ai";
@@ -21,14 +21,16 @@ const AiAssistantPage = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: "Hello! I'm your AI business assistant. Ask me anything about your service business, and I'll provide insights and recommendations.",
+      content: "Hello! I'm your AI business assistant. I'm connected to your business data. Ask me about your metrics, revenue, clients, or any other business insights.",
       role: "assistant",
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState("");
-  const { generateText, isLoading } = useAI({
-    systemContext: "You are an AI business analyst for a field service company called Fixlyfy. Provide detailed business insights and recommendations based on user questions. Be specific, actionable, and focus on service business metrics and improvements."
+  const { generateBusinessInsights, businessData, isLoading } = useAI({
+    systemContext: "You are an AI business analyst with access to the company's data. Provide specific, data-backed insights and recommendations based on user questions.",
+    fetchBusinessData: true,
+    mode: "business"
   });
 
   const handleSendMessage = async () => {
@@ -46,7 +48,7 @@ const AiAssistantPage = () => {
     setInput("");
     
     try {
-      const aiResponse = await generateText(input.trim());
+      const aiResponse = await generateBusinessInsights(input.trim());
       
       if (aiResponse) {
         // Debug log to check response
@@ -81,12 +83,47 @@ const AiAssistantPage = () => {
     }
   };
 
+  const renderBusinessMetrics = () => {
+    if (!businessData) return null;
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Current Business Metrics
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4">
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+              <Users size={16} className="text-fixlyfy" />
+            </div>
+            <div>
+              <p className="text-sm text-fixlyfy-text-secondary">Total Clients</p>
+              <p className="font-medium">{businessData?.clientCount || "0"}</p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+              <Briefcase size={16} className="text-fixlyfy" />
+            </div>
+            <div>
+              <p className="text-sm text-fixlyfy-text-secondary">Total Jobs</p>
+              <p className="font-medium">{businessData?.jobCount || "0"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <PageLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">AI Business Assistant</h1>
         <p className="text-fixlyfy-text-secondary">
-          Ask questions about your business and get AI-powered insights and recommendations.
+          Ask questions about your business and get AI-powered insights based on your actual business data.
         </p>
       </div>
       
@@ -152,7 +189,7 @@ const AiAssistantPage = () => {
               
               <div className="p-4 border-t flex gap-2 mt-auto">
                 <Input
-                  placeholder="Ask for business insights or recommendations..."
+                  placeholder="Ask about your business metrics, revenue, clients..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
@@ -172,6 +209,8 @@ const AiAssistantPage = () => {
         </div>
         
         <div>
+          {renderBusinessMetrics()}
+          
           <Card className="mb-6">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Sample Questions</CardTitle>
@@ -181,55 +220,55 @@ const AiAssistantPage = () => {
                 variant="outline" 
                 className="w-full justify-start text-sm"
                 onClick={() => {
-                  setInput("How can I improve my technician utilization rate?");
+                  setInput("What is my total revenue?");
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                How can I improve my technician utilization rate?
+                What is my total revenue?
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full justify-start text-sm"
                 onClick={() => {
-                  setInput("What are the key metrics I should track for my HVAC business?");
+                  setInput("How many clients do I have?");
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                What are the key metrics I should track for my HVAC business?
+                How many clients do I have?
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full justify-start text-sm"
                 onClick={() => {
-                  setInput("How can I reduce the number of canceled appointments?");
+                  setInput("What are my most profitable services?");
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                How can I reduce the number of canceled appointments?
+                What are my most profitable services?
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full justify-start text-sm"
                 onClick={() => {
-                  setInput("What strategies work best for increasing customer retention?");
+                  setInput("Show me the performance of my technicians");
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                What strategies work best for increasing customer retention?
+                Show me the performance of my technicians
               </Button>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Tips for Better Results</CardTitle>
+              <CardTitle className="text-base">Business Metrics Help</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <p>• Be specific in your questions</p>
-              <p>• Include relevant context and metrics</p>
-              <p>• Ask for actionable recommendations</p>
-              <p>• Try comparing different scenarios</p>
-              <p>• Follow up with clarifying questions</p>
+              <p>• Ask about specific metrics</p>
+              <p>• Inquire about revenue trends</p>
+              <p>• Get insights on client acquisition</p>
+              <p>• Learn about service efficiency</p>
+              <p>• Understand technician performance</p>
             </CardContent>
           </Card>
         </div>

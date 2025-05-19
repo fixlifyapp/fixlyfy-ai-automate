@@ -1,18 +1,19 @@
-
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface UseAIOptions {
   systemContext?: string;
-  mode?: "text" | "insights" | "analytics" | "recommendations";
+  mode?: "text" | "insights" | "analytics" | "recommendations" | "business";
   temperature?: number;
   maxTokens?: number;
+  fetchBusinessData?: boolean;
 }
 
 export function useAI(options: UseAIOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [businessData, setBusinessData] = useState<any>(null);
   
   const generateText = async (prompt: string, customOptions?: Partial<UseAIOptions>) => {
     setIsLoading(true);
@@ -27,7 +28,9 @@ export function useAI(options: UseAIOptions = {}) {
           context: customOptions?.systemContext || options.systemContext,
           mode: customOptions?.mode || options.mode || "text",
           temperature: customOptions?.temperature || options.temperature || 0.7,
-          maxTokens: customOptions?.maxTokens || options.maxTokens || 800
+          maxTokens: customOptions?.maxTokens || options.maxTokens || 800,
+          fetchBusinessData: customOptions?.fetchBusinessData !== undefined ? 
+            customOptions.fetchBusinessData : options.fetchBusinessData
         }
       });
       
@@ -42,6 +45,12 @@ export function useAI(options: UseAIOptions = {}) {
       }
       
       console.log("AI response data:", data);
+      
+      // Store business data if returned
+      if (data.businessData) {
+        setBusinessData(data.businessData);
+      }
+      
       return data.generatedText;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate AI response';
@@ -68,7 +77,9 @@ export function useAI(options: UseAIOptions = {}) {
           mode: "insights",
           data: data,
           temperature: customOptions?.temperature || options.temperature || 0.7,
-          maxTokens: customOptions?.maxTokens || options.maxTokens || 800
+          maxTokens: customOptions?.maxTokens || options.maxTokens || 800,
+          fetchBusinessData: customOptions?.fetchBusinessData !== undefined ? 
+            customOptions.fetchBusinessData : options.fetchBusinessData
         }
       });
       
@@ -149,11 +160,48 @@ export function useAI(options: UseAIOptions = {}) {
     }
   }, [options]);
   
+  const generateBusinessInsights = useCallback(async (prompt: string, customOptions?: Partial<UseAIOptions>) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
+        body: {
+          prompt: prompt,
+          context: customOptions?.systemContext || "You are an AI business assistant with access to the company's business metrics and data. Provide specific, data-backed insights.",
+          mode: "business",
+          temperature: customOptions?.temperature || options.temperature || 0.4,
+          maxTokens: customOptions?.maxTokens || options.maxTokens || 1000,
+          fetchBusinessData: true
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (response.businessData) {
+        setBusinessData(response.businessData);
+      }
+      
+      return response.generatedText;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate business insights';
+      setError(errorMessage);
+      console.error("AI business insights error:", err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [options]);
+  
   return {
     generateText,
     generateInsights,
     generateAnalytics,
     generateRecommendations,
+    generateBusinessInsights,
+    businessData,
     isLoading,
     error
   };
