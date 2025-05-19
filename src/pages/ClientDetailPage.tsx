@@ -6,14 +6,12 @@ import { ClientForm } from "@/components/clients/ClientForm";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientJobs } from "@/components/clients/ClientJobs";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
   
   const handleCreateJob = () => {
     setIsCreateJobModalOpen(true);
@@ -33,20 +31,17 @@ const ClientDetailPage = () => {
         </Button>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="details">
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Client Information</h2>
           <ClientForm clientId={id} onCreateJob={handleCreateJob} />
-        </TabsContent>
+        </div>
         
-        <TabsContent value="jobs">
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Client Jobs</h2>
           <ClientJobs clientId={id} onCreateJob={handleCreateJob} />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
       
       <JobsCreateModal 
         open={isCreateJobModalOpen} 
