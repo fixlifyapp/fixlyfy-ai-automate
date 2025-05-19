@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Copy, ShieldCheck } from "lucide-react";
 import { TeamMemberProfile, Permission } from "@/types/team-member";
 import { toast } from "sonner";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 // Mock permissions data
 const mockPermissions: Permission[] = [
@@ -54,11 +55,13 @@ interface AdvancedTabProps {
 export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
   const [permissions, setPermissions] = useState<Permission[]>(mockPermissions);
   const [selectedPreset, setSelectedPreset] = useState<string>(member.role);
+  const { hasRole } = useRBAC();
   
+  const isAdmin = hasRole('admin');
   const modules = Array.from(new Set(permissions.map(p => p.module)));
   
   const handleTogglePermission = (id: string) => {
-    if (!isEditing) return;
+    if (!isEditing || !isAdmin) return;
     
     setPermissions(permissions.map(permission => 
       permission.id === id 
@@ -73,7 +76,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
   };
   
   const applyPreset = (preset: string) => {
-    if (!isEditing) return;
+    if (!isEditing || !isAdmin) return;
     
     // In a real app, this would be replaced with actual preset logic
     // Here we're just simulating it
@@ -117,11 +120,30 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
   };
   
   const handleDuplicateRole = () => {
-    if (!isEditing) return;
+    if (!isEditing || !isAdmin) return;
     
     toast.success("Role duplicated. You can now customize it.");
     setSelectedPreset("custom");
   };
+  
+  // If user is not admin, show message
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 border-fixlyfy-border shadow-sm">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <ShieldCheck className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+              <h3 className="text-lg font-medium mb-2">Admin Access Required</h3>
+              <p className="text-muted-foreground">
+                Only administrators can view and modify permission settings.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">

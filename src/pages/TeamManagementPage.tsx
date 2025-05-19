@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Shield } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
-import { PermissionRequired } from "@/components/auth/RBACProvider";
+import { PermissionRequired, useRBAC } from "@/components/auth/RBACProvider";
 import { TeamFilters } from "@/components/team/TeamFilters";
 import { TeamMember } from "@/types/team";
 import { TeamMemberProfile } from "@/types/team-member";
@@ -46,6 +46,9 @@ const TeamManagementPage = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>(initialTeamMembers);
   const navigate = useNavigate();
+  const { hasRole } = useRBAC();
+  
+  const isAdmin = hasRole('admin');
 
   // Apply filters whenever filters change
   useEffect(() => {
@@ -87,7 +90,9 @@ const TeamManagementPage = () => {
   };
   
   const handleAddNewMember = () => {
-    setIsModalOpen(true);
+    if (isAdmin) {
+      setIsModalOpen(true);
+    }
   };
   
   const handleViewTeamMember = (id: string) => {
@@ -99,7 +104,7 @@ const TeamManagementPage = () => {
       <div className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Team Management</h1>
-          <PermissionRequired permission="users.create" fallback={null}>
+          {isAdmin ? (
             <Button 
               onClick={handleAddNewMember} 
               className="gap-2"
@@ -107,7 +112,12 @@ const TeamManagementPage = () => {
               <Plus size={18} />
               Invite Team Member
             </Button>
-          </PermissionRequired>
+          ) : (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Shield size={16} />
+              <span>Admin access required for team management</span>
+            </div>
+          )}
         </div>
         
         <TeamFilters

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RoleDropdown } from "@/components/team/RoleDropdown";
 import { Plus, X, Upload, Phone, MapPin } from "lucide-react";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface ProfileTabProps {
   member: TeamMemberProfile;
@@ -24,28 +25,38 @@ export const ProfileTab = ({ member, isEditing }: ProfileTabProps) => {
   const [skills, setSkills] = useState<TeamMemberSkill[]>(member.skills || []);
   const [newSkill, setNewSkill] = useState("");
   const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>(member.serviceAreas || []);
+  const { hasRole } = useRBAC();
+  
+  const isAdmin = hasRole('admin');
 
   const handleAddPhone = () => {
-    if (newPhone && !phoneNumbers.includes(newPhone)) {
+    if (newPhone && !phoneNumbers.includes(newPhone) && isAdmin) {
       setPhoneNumbers([...phoneNumbers, newPhone]);
       setNewPhone("");
     }
   };
 
   const handleRemovePhone = (phone: string) => {
-    setPhoneNumbers(phoneNumbers.filter(p => p !== phone));
+    if (isAdmin) {
+      setPhoneNumbers(phoneNumbers.filter(p => p !== phone));
+    }
   };
 
   const handleAddSkill = () => {
-    if (newSkill && !skills.some(s => s.name.toLowerCase() === newSkill.toLowerCase())) {
+    if (newSkill && !skills.some(s => s.name.toLowerCase() === newSkill.toLowerCase()) && isAdmin) {
       setSkills([...skills, { id: Date.now().toString(), name: newSkill }]);
       setNewSkill("");
     }
   };
 
   const handleRemoveSkill = (skillId: string) => {
-    setSkills(skills.filter(s => s.id !== skillId));
+    if (isAdmin) {
+      setSkills(skills.filter(s => s.id !== skillId));
+    }
   };
+
+  // Only allow editing if user is admin and editing mode is active
+  const canEdit = isAdmin && isEditing;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

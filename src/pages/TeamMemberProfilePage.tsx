@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, UserCog, Brain } from "lucide-react";
+import { ArrowLeft, Save, UserCog, Brain, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProfileTab } from "@/components/team/profile/ProfileTab";
 import { AdvancedTab } from "@/components/team/profile/AdvancedTab";
@@ -76,11 +76,13 @@ const expandedTeamMembers: Record<string, TeamMemberProfile> = {
 const TeamMemberProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useRBAC();
+  const { hasRole } = useRBAC();
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [member, setMember] = useState<TeamMemberProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const isAdmin = hasRole('admin');
   
   // Fetch team member data
   useEffect(() => {
@@ -121,7 +123,8 @@ const TeamMemberProfilePage = () => {
     setIsEditing(true);
   };
   
-  const canEditTeamMembers = hasPermission("users.edit");
+  // Only admins can edit team members
+  const canEditTeamMembers = isAdmin;
   
   if (isLoading) {
     return (
@@ -199,10 +202,12 @@ const TeamMemberProfilePage = () => {
                   <TabsTrigger value="profile" className="flex-1 sm:flex-initial">Profile</TabsTrigger>
                   <TabsTrigger value="advanced" className="flex-1 sm:flex-initial">Advanced</TabsTrigger>
                   <TabsTrigger value="commissions" className="flex-1 sm:flex-initial">Commissions</TabsTrigger>
-                  <TabsTrigger value="ai-insights" className="flex-1 sm:flex-initial flex items-center gap-1">
-                    <Brain className="h-4 w-4" />
-                    AI Insights
-                  </TabsTrigger>
+                  {isAdmin && (
+                    <TabsTrigger value="ai-insights" className="flex-1 sm:flex-initial flex items-center gap-1">
+                      <Brain className="h-4 w-4" />
+                      AI Insights
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </div>
               

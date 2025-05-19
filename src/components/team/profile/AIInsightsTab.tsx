@@ -3,9 +3,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Brain, ThumbsUp, ThumbsDown, ArrowRight, Check, X } from "lucide-react";
+import { Brain, ThumbsUp, ThumbsDown, ArrowRight, Check, X, Lock, ShieldCheck } from "lucide-react";
 import { AIInsight, TeamMemberProfile } from "@/types/team-member";
 import { toast } from "sonner";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 // Mock data for AI insights
 const mockInsights: AIInsight[] = [
@@ -132,6 +133,9 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
   const [insights, setInsights] = useState<AIInsight[]>(mockInsights);
   const [filter, setFilter] = useState<'all' | 'performance' | 'upsell' | 'satisfaction' | 'skill'>('all');
   const [showAcknowledged, setShowAcknowledged] = useState(false);
+  const { hasRole } = useRBAC();
+  
+  const isAdmin = hasRole('admin');
 
   const filteredInsights = insights.filter(insight => {
     if (!showAcknowledged && insight.acknowledged) return false;
@@ -195,6 +199,25 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
       return `bg-${baseColor}-50/50 text-${baseColor}-600 border-${baseColor}-100`;
     }
   };
+
+  // If user is not admin, show access restricted message
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 border-fixlyfy-border shadow-sm">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <ShieldCheck className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+              <h3 className="text-lg font-medium mb-2">Admin Access Required</h3>
+              <p className="text-muted-foreground">
+                Only administrators can view AI insights and performance data.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
