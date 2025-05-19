@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Payment } from "@/types/payment";
 import { Button } from "@/components/ui/button";
-import { PanelRightOpen, Receipt } from "lucide-react";
+import { PanelRightOpen, Receipt, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Pagination,
@@ -25,10 +25,18 @@ import {
 interface PaymentsTableProps {
   payments: Payment[];
   onRefund: (payment: Payment) => void;
+  onDelete?: (payment: Payment) => void;
   canRefund: boolean;
+  canDelete?: boolean;
 }
 
-export function PaymentsTable({ payments, onRefund, canRefund }: PaymentsTableProps) {
+export function PaymentsTable({ 
+  payments, 
+  onRefund, 
+  onDelete, 
+  canRefund, 
+  canDelete = false 
+}: PaymentsTableProps) {
   // In a real application, we would implement pagination here
   // For now, we'll just show all payments
 
@@ -104,6 +112,16 @@ export function PaymentsTable({ payments, onRefund, canRefund }: PaymentsTablePr
                       onClick={() => onRefund(payment)}
                     >
                       Refund
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => onDelete && onDelete(payment)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                 </TableCell>

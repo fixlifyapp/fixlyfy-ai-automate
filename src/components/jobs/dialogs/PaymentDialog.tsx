@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +18,18 @@ import * as z from "zod";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CreditCard, DollarSign, Ban, FileText } from "lucide-react";
+import { useState } from "react";
 
 const paymentFormSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   method: z.enum(["cash", "credit-card", "e-transfer", "cheque"]),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  // New fields for credit card
+  cardNumber: z.string().optional(),
+  cardholderName: z.string().optional(),
+  expiryDate: z.string().optional(),
+  paymentDate: z.string().optional()
 });
 
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
@@ -47,8 +54,21 @@ export const PaymentDialog = ({
       method: "credit-card",
       reference: "",
       notes: "",
+      cardNumber: "",
+      cardholderName: "",
+      expiryDate: "",
+      paymentDate: new Date().toISOString().split('T')[0]
     },
   });
+  
+  // Show credit card fields conditional state
+  const [showCardFields, setShowCardFields] = useState(form.getValues("method") === "credit-card");
+
+  // Update card fields visibility when method changes
+  const handleMethodChange = (method: string) => {
+    form.setValue("method", method as "cash" | "credit-card" | "e-transfer" | "cheque");
+    setShowCardFields(method === "credit-card");
+  };
 
   const handleSubmit = (data: PaymentFormValues) => {
     console.log("Payment data:", data);
@@ -95,6 +115,23 @@ export const PaymentDialog = ({
               
               <FormField
                 control={form.control}
+                name="paymentDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Date</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
                 name="method"
                 render={({ field }) => (
                   <FormItem>
@@ -107,7 +144,7 @@ export const PaymentDialog = ({
                           "flex items-center gap-2 justify-start px-3",
                           field.value === "cash" && "border-fixlyfy text-white"
                         )}
-                        onClick={() => form.setValue("method", "cash")}
+                        onClick={() => handleMethodChange("cash")}
                       >
                         <DollarSign size={16} />
                         <span>Cash</span>
@@ -120,7 +157,7 @@ export const PaymentDialog = ({
                           "flex items-center gap-2 justify-start px-3",
                           field.value === "credit-card" && "border-fixlyfy text-white"
                         )}
-                        onClick={() => form.setValue("method", "credit-card")}
+                        onClick={() => handleMethodChange("credit-card")}
                       >
                         <CreditCard size={16} />
                         <span>Credit Card</span>
@@ -133,7 +170,7 @@ export const PaymentDialog = ({
                           "flex items-center gap-2 justify-start px-3",
                           field.value === "e-transfer" && "border-fixlyfy text-white"
                         )}
-                        onClick={() => form.setValue("method", "e-transfer")}
+                        onClick={() => handleMethodChange("e-transfer")}
                       >
                         <Ban size={16} />
                         <span>E-Transfer</span>
@@ -146,7 +183,7 @@ export const PaymentDialog = ({
                           "flex items-center gap-2 justify-start px-3",
                           field.value === "cheque" && "border-fixlyfy text-white"
                         )}
-                        onClick={() => form.setValue("method", "cheque")}
+                        onClick={() => handleMethodChange("cheque")}
                       >
                         <FileText size={16} />
                         <span>Cheque</span>
@@ -156,6 +193,74 @@ export const PaymentDialog = ({
                   </FormItem>
                 )}
               />
+              
+              {/* Credit Card Details (conditional) */}
+              {showCardFields && (
+                <div className="space-y-4 border rounded-md p-3 bg-gray-50">
+                  <FormField
+                    control={form.control}
+                    name="cardNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Card Number</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="**** **** **** ****" 
+                            {...field}
+                            maxLength={19}
+                            onChange={(e) => {
+                              // Format with spaces every 4 digits
+                              const value = e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="cardholderName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cardholder Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Name on card" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="expiryDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expiry Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="MM/YY" 
+                            maxLength={5}
+                            {...field} 
+                            onChange={(e) => {
+                              // Format as MM/YY
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length > 2) {
+                                value = `${value.slice(0, 2)}/${value.slice(2, 4)}`;
+                              }
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
               
               <FormField
                 control={form.control}

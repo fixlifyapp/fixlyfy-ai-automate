@@ -5,22 +5,31 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { PaymentsTable } from "@/components/finance/PaymentsTable";
 import { PaymentsFilters } from "@/components/finance/PaymentsFilters";
 import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
+import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { payments as initialPayments } from "@/data/payments";
 import { Payment, PaymentMethod } from "@/types/payment";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export default function FinancePage() {
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>(initialPayments);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { hasPermission } = useRBAC();
 
   const handleRefund = (payment: Payment) => {
     setSelectedPayment(payment);
     setIsRefundDialogOpen(true);
+  };
+
+  const handleDelete = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsDeleteDialogOpen(true);
   };
 
   const processRefund = (paymentId: string, notes?: string) => {
@@ -39,6 +48,35 @@ export default function FinancePage() {
       )
     );
     toast.success("Payment successfully refunded");
+  };
+
+  const processDelete = async () => {
+    if (!selectedPayment) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // In a real app, this would be an API call
+      // await fetch(`/api/payments/${selectedPayment.id}`, {
+      //   method: 'DELETE',
+      // });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Remove payment from both arrays
+      const newPayments = payments.filter(p => p.id !== selectedPayment.id);
+      setPayments(newPayments);
+      setFilteredPayments(filteredPayments.filter(p => p.id !== selectedPayment.id));
+      
+      toast.success("Payment successfully deleted");
+    } catch (error) {
+      console.error("Failed to delete payment:", error);
+      toast.error("Failed to delete payment");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -86,6 +124,7 @@ export default function FinancePage() {
   };
 
   const canRefund = hasPermission("payments.refund");
+  const canDelete = hasPermission("payments.delete");
 
   return (
     <PageLayout>
@@ -108,7 +147,9 @@ export default function FinancePage() {
         <PaymentsTable 
           payments={filteredPayments} 
           onRefund={handleRefund}
+          onDelete={handleDelete}
           canRefund={canRefund}
+          canDelete={canDelete}
         />
       </div>
 
@@ -120,6 +161,16 @@ export default function FinancePage() {
           onRefund={processRefund}
         />
       )}
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DeleteConfirmDialog
+          title="Delete Payment"
+          description={`Are you sure you want to delete this payment of ${selectedPayment ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedPayment.amount) : '$0.00'} for ${selectedPayment?.clientName || 'customer'}? This action cannot be undone.`}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={processDelete}
+          isDeleting={isDeleting}
+        />
+      </Dialog>
     </PageLayout>
   );
 }

@@ -5,10 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, DollarSign, Ban, FileText } from "lucide-react";
+import { CreditCard, DollarSign, Ban, FileText, Trash2 } from "lucide-react";
 import { Payment, PaymentMethod } from "@/types/payment";
 import { payments as samplePayments } from "@/data/payments";
 import { formatDistanceToNow } from "date-fns";
+import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
+import { Dialog } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -22,6 +25,9 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     // Filter sample payments to only show those for this job
     samplePayments.filter(payment => payment.jobId === jobId)
   );
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
@@ -76,6 +82,42 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     setBalance(prevBalance => prevBalance - amount);
   };
 
+  const handleDeletePayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeletePayment = async () => {
+    if (!selectedPayment) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // In a real app, this would be an actual API call
+      // await fetch(`/api/payments/${selectedPayment.id}`, {
+      //   method: 'DELETE',
+      // });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Recalculate balance if the deleted payment was a 'paid' payment
+      if (selectedPayment.status === "paid") {
+        setBalance(prevBalance => prevBalance + selectedPayment.amount);
+      }
+      
+      // Remove payment from local state
+      setPayments(payments.filter(p => p.id !== selectedPayment.id));
+      toast.success("Payment deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete payment:", error);
+      toast.error("Failed to delete payment");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
+    }
+  };
+
   // Calculate remaining balance
   const totalPaid = payments.reduce((total, payment) => {
     if (payment.status === "paid") {
@@ -116,6 +158,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
                 <TableHead>Reference</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,6 +187,17 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
                   <TableCell>
                     {getStatusBadge(payment.status)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      onClick={() => handleDeletePayment(payment)}
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                      <span className="sr-only">Delete payment</span>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -161,6 +215,17 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         balance={remainingBalance} 
         onPaymentProcessed={handlePaymentProcessed}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DeleteConfirmDialog 
+          title="Delete Payment"
+          description={`Are you sure you want to delete this payment of $${selectedPayment?.amount.toFixed(2)}? This action cannot be undone.`}
+          onOpenChange={setIsDeleteConfirmOpen}
+          onConfirm={confirmDeletePayment}
+          isDeleting={isDeleting}
+        />
+      </Dialog>
     </Card>
   );
 };
