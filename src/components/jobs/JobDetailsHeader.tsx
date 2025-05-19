@@ -77,7 +77,6 @@ export const JobDetailsHeader = () => {
           email: jobHeaderData.job.companyEmail,
           legalText: jobHeaderData.job.legalText
         }}
-        showWarrantyUpsell={true}
       />
       
       <EstimateDialog 
@@ -98,7 +97,6 @@ export const JobDetailsHeader = () => {
           email: jobHeaderData.job.companyEmail,
           legalText: jobHeaderData.job.legalText
         }}
-        showWarrantyUpsell={true}
       />
     </div>
   );

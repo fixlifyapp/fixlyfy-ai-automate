@@ -1,7 +1,13 @@
 
 import React from "react";
 
-export const DryerIcon = ({ size = 24, className = "", ...props }) => {
+interface ApplianceIconProps {
+  size?: number;
+  className?: string;
+  [key: string]: any;
+}
+
+export const DryerIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -25,7 +31,7 @@ export const DryerIcon = ({ size = 24, className = "", ...props }) => {
   );
 };
 
-export const DishwasherIcon = ({ size = 24, className = "", ...props }) => {
+export const DishwasherIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -49,7 +55,7 @@ export const DishwasherIcon = ({ size = 24, className = "", ...props }) => {
   );
 };
 
-export const FridgeIcon = ({ size = 24, className = "", ...props }) => {
+export const FridgeIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -72,7 +78,7 @@ export const FridgeIcon = ({ size = 24, className = "", ...props }) => {
   );
 };
 
-export const WasherIcon = ({ size = 24, className = "", ...props }) => {
+export const WasherIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
