@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Brain, RefreshCw, Database } from "lucide-react";
+import { Brain, RefreshCw, Database, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTestData } from "@/utils/test-data-generator";
 
@@ -104,22 +105,25 @@ export const BusinessInsights = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Highlight the Test Data Button */}
-        <div className="p-4 border border-dashed border-fixlyfy/20 rounded-lg mb-4 bg-fixlyfy/5">
-          <h3 className="text-base font-medium mb-2">Generate Test Data</h3>
-          <p className="text-sm text-fixlyfy-text-secondary mb-3">
-            Create 20 sample clients and 40 jobs in Toronto & GTA area for testing
+        {/* Generate Test Data Section - Prominent Styling */}
+        <div className="bg-violet-50 border-2 border-violet-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-2 text-violet-900">Generate Test Data</h3>
+          <p className="text-sm text-fixlyfy-text-secondary mb-4">
+            Create 20 sample clients and 40 jobs in Toronto & GTA area for testing your dashboard
           </p>
           
           <Button
             onClick={handleGenerateTestData}
             variant="default"
-            className="bg-fixlyfy hover:bg-fixlyfy/90 w-full"
+            className="bg-violet-600 hover:bg-violet-700 w-full"
             disabled={isGeneratingData}
           >
             <Database size={16} className="mr-2" />
             {isGeneratingData ? "Generating Test Data..." : "Generate Test Data"}
           </Button>
+          <p className="text-xs text-fixlyfy-text-secondary mt-2">
+            Note: This data is generated in memory and not stored in the database
+          </p>
         </div>
       
         <div className="flex justify-between items-center mb-4">
