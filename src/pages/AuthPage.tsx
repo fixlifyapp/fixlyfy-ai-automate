@@ -1,28 +1,42 @@
 
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 export default function AuthPage() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState(() => supabase.auth.getSession());
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if user is already authenticated
-  if (session) {
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="fixlyfy-gradient rounded-full p-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (user) {
     return <Navigate to="/dashboard" replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -33,18 +47,19 @@ export default function AuthPage() {
       if (error) throw error;
       
       toast.success("Logged in successfully");
+      navigate('/dashboard');
     } catch (error: any) {
       toast.error("Error logging in", {
         description: error.message
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     
     try {
       const { error } = await supabase.auth.signUp({
@@ -65,8 +80,12 @@ export default function AuthPage() {
         description: error.message
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -93,14 +112,18 @@ export default function AuthPage() {
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -109,22 +132,37 @@ export default function AuthPage() {
                       Forgot your password?
                     </a>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button 
                   type="submit" 
                   className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={loading}
+                  disabled={isSubmitting}
                 >
-                  {loading ? "Logging in..." : "Login"}
+                  {isSubmitting ? "Logging in..." : "Login"}
                 </Button>
               </CardFooter>
             </form>
@@ -134,33 +172,52 @@ export default function AuthPage() {
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-email">Email</Label>
-                  <Input
-                    id="new-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      id="new-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="new-password">Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      id="new-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button 
                   type="submit" 
                   className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={loading}
+                  disabled={isSubmitting}
                 >
-                  {loading ? "Creating account..." : "Create Account"}
+                  {isSubmitting ? "Creating account..." : "Create Account"}
                 </Button>
               </CardFooter>
             </form>

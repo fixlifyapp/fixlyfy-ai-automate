@@ -1,7 +1,9 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
+
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -15,6 +17,11 @@ const Index = () => {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
+
+  const handleGetStarted = () => {
+    navigate('/auth');
+  };
+  
   if (loading) {
     return <div className="flex h-screen items-center justify-center">
         <div className="fixlyfy-gradient rounded-full p-3">
@@ -22,6 +29,7 @@ const Index = () => {
         </div>
       </div>;
   }
+  
   return <div className="flex flex-col items-center justify-center min-h-screen bg-fixlyfy-bg p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
         <div className="flex justify-center mb-6">
@@ -36,7 +44,7 @@ const Index = () => {
         </p>
         
         <div className="space-y-4">
-          <Button onClick={() => navigate('/auth')} className="w-full bg-fixlyfy hover:bg-fixlyfy/90 py-6 text-lg">
+          <Button onClick={handleGetStarted} className="w-full bg-fixlyfy hover:bg-fixlyfy/90 py-6 text-lg">
             Get Started
           </Button>
           
@@ -51,4 +59,5 @@ const Index = () => {
       </div>
     </div>;
 };
+
 export default Index;
