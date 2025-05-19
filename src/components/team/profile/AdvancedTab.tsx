@@ -96,7 +96,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
         ...p,
         enabled: (
           p.type === "view" || 
-          (p.module === "jobs" && ["edit", "create"].includes(p.type)) ||
+          (p.module === "jobs" && (p.type === "edit" || p.type === "create")) ||
           (p.module === "schedule" && p.type === "view")
         )
       }));
@@ -106,7 +106,7 @@ export const AdvancedTab = ({ member, isEditing }: AdvancedTabProps) => {
         ...p,
         enabled: (
           p.type === "view" || 
-          (p.module === "schedule" && ["edit", "create"].includes(p.type)) ||
+          (p.module === "schedule" && (p.type === "edit" || p.type === "create")) ||
           (p.module === "clients" && p.type !== "delete")
         )
       }));
