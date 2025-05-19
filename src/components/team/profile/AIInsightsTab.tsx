@@ -152,7 +152,7 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
   
   const { hasRole } = useRBAC();
   const { generateRecommendations, error } = useAI({
-    systemContext: `You are an AI coach for field service technicians. Provide personalized advice for ${member.firstName} ${member.lastName} based on their performance data. Be specific, actionable, and encouraging.`
+    systemContext: `You are an AI coach for field service technicians. Provide personalized advice for ${member.name} based on their performance data. Be specific, actionable, and encouraging.`
   });
   
   const isAdmin = hasRole('admin');
@@ -197,7 +197,7 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
     try {
       const advice = await generateRecommendations(
         sampleTechPerformanceData,
-        `coaching advice for ${member.firstName} ${member.lastName}`
+        `coaching advice for ${member.name}`
       );
       
       if (advice) {
@@ -312,7 +312,7 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
           <div className="mb-6 border rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50">
             <div className="flex items-center mb-3">
               <Brain className="h-5 w-5 text-indigo-600 mr-2" />
-              <h3 className="text-base font-medium">AI Coaching for {member.firstName}</h3>
+              <h3 className="text-base font-medium">AI Coaching for {member.name}</h3>
             </div>
             
             {personalized ? (
@@ -346,7 +346,7 @@ export const AIInsightsTab = ({ member, isEditing }: AIInsightsTabProps) => {
             ) : (
               <div className="text-center py-4">
                 <p className="text-sm text-gray-600 mb-3">
-                  Generate personalized coaching advice for {member.firstName} based on their performance data
+                  Generate personalized coaching advice for {member.name} based on their performance data
                 </p>
                 <Button
                   onClick={generatePersonalizedAdvice}
