@@ -15,27 +15,13 @@ export const JobDetailsTabs = ({
   children,
   onEstimateTabClick
 }: JobDetailsTabsProps) => {
-  const [shouldTriggerEstimateAction, setShouldTriggerEstimateAction] = useState(false);
-
+  // Remove the auto-trigger functionality
   const handleTabChange = (value: string) => {
-    if (value === "estimates" && onEstimateTabClick) {
-      setShouldTriggerEstimateAction(true);
-    }
-    
+    // Simply call the onTabChange callback without the special estimate handling
     if (onTabChange) {
       onTabChange(value);
     }
   };
-
-  // Run the estimate action only after the tab has been switched
-  useEffect(() => {
-    if (shouldTriggerEstimateAction && activeTab === "estimates") {
-      if (onEstimateTabClick) {
-        onEstimateTabClick();
-      }
-      setShouldTriggerEstimateAction(false);
-    }
-  }, [activeTab, onEstimateTabClick, shouldTriggerEstimateAction]);
 
   return (
     <div className="mb-6">

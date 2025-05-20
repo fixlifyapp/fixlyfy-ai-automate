@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -29,10 +28,6 @@ const JobDetailsPage = () => {
     setActiveTab("invoices");
   };
   
-  const handleEstimateTabClick = () => {
-    setIsEstimateDialogOpen(true);
-  };
-
   const handleEstimateCreated = (amount: number) => {
     if (jobHeaderData.handleEstimateCreated) {
       jobHeaderData.handleEstimateCreated(amount);
@@ -53,7 +48,6 @@ const JobDetailsPage = () => {
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}
-              onEstimateTabClick={handleEstimateTabClick}
             >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
