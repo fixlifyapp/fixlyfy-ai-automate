@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
@@ -22,12 +21,13 @@ interface KpiData {
 interface KpiSummaryCardsProps {
   timePeriod: TimePeriod;
   dateRange: { from: Date | undefined; to: Date | undefined };
+  isRefreshing?: boolean;
 }
 
 // Dynamic import of icons
 import { DollarSign, CheckCircle, CalendarClock, Clock, LineChart, UserCheck } from "lucide-react";
 
-export const KpiSummaryCards = ({ timePeriod, dateRange }: KpiSummaryCardsProps) => {
+export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }: KpiSummaryCardsProps) => {
   const [kpis, setKpis] = useState<KpiData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -217,11 +217,11 @@ export const KpiSummaryCards = ({ timePeriod, dateRange }: KpiSummaryCardsProps)
     };
 
     fetchKpiData();
-  }, [user, timePeriod, dateRange]);
+  }, [user, timePeriod, dateRange, isRefreshing]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      {isLoading
+      {isLoading || isRefreshing
         ? Array.from({ length: 6 }).map((_, index) => (
             <Card key={index} className="animate-pulse">
               <CardContent className="p-4">

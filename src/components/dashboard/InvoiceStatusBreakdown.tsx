@@ -14,6 +14,10 @@ interface InvoiceStatusData {
   color: string;
 }
 
+interface InvoiceStatusBreakdownProps {
+  isRefreshing?: boolean;
+}
+
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -25,7 +29,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export const InvoiceStatusBreakdown = () => {
+export const InvoiceStatusBreakdown = ({ isRefreshing = false }: InvoiceStatusBreakdownProps) => {
   const [invoiceData, setInvoiceData] = useState<InvoiceStatusData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -90,7 +94,7 @@ export const InvoiceStatusBreakdown = () => {
     };
     
     fetchInvoiceData();
-  }, [user]);
+  }, [user, isRefreshing]);
 
   return (
     <Card className="h-full">
@@ -101,7 +105,7 @@ export const InvoiceStatusBreakdown = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoading || isRefreshing ? (
           <div className="h-[250px] flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-fixlyfy" />
           </div>

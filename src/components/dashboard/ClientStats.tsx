@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,9 +9,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface ClientStatsProps {
   timePeriod: TimePeriod;
   dateRange: { from: Date | undefined; to: Date | undefined };
+  isRefreshing?: boolean;
 }
 
-export const ClientStats = ({ timePeriod, dateRange }: ClientStatsProps) => {
+export const ClientStats = ({ timePeriod, dateRange, isRefreshing = false }: ClientStatsProps) => {
   const [newClients, setNewClients] = useState(0);
   const [topClients, setTopClients] = useState<any[]>([]);
   const [repeatJobsRatio, setRepeatJobsRatio] = useState(0);
@@ -116,7 +116,7 @@ export const ClientStats = ({ timePeriod, dateRange }: ClientStatsProps) => {
     };
 
     fetchClientStats();
-  }, [user, timePeriod, dateRange]);
+  }, [user, timePeriod, dateRange, isRefreshing]);
 
   const clientChartData = topClients.map(client => ({
     name: client.name.length > 15 ? client.name.substring(0, 15) + '...' : client.name,
@@ -131,7 +131,7 @@ export const ClientStats = ({ timePeriod, dateRange }: ClientStatsProps) => {
           <CardTitle className="text-lg">Client Metrics</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoading || isRefreshing ? (
             <div className="space-y-4">
               <div className="animate-pulse">
                 <div className="h-4 w-24 bg-gray-200 rounded mb-1"></div>
@@ -165,7 +165,7 @@ export const ClientStats = ({ timePeriod, dateRange }: ClientStatsProps) => {
           <CardTitle className="text-lg">Top Clients by Revenue</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoading || isRefreshing ? (
             <div className="h-[250px] flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-fixlyfy" />
             </div>

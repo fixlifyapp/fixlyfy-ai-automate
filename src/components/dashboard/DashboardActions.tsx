@@ -9,7 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export const DashboardActions = ({ onRefresh }: { onRefresh?: () => void }) => {
+interface DashboardActionsProps {
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}
+
+export const DashboardActions = ({ onRefresh, isRefreshing }: DashboardActionsProps) => {
   const navigate = useNavigate();
   
   return (
@@ -18,8 +23,9 @@ export const DashboardActions = ({ onRefresh }: { onRefresh?: () => void }) => {
         variant="outline" 
         size="sm"
         onClick={onRefresh}
+        disabled={isRefreshing}
       >
-        <RefreshCw size={16} className="mr-2" />
+        <RefreshCw size={16} className={`mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
         Refresh
       </Button>
       

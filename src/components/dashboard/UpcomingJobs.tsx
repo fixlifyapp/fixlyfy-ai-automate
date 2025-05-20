@@ -1,199 +1,205 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-interface UpcomingJob {
+interface Job {
   id: string;
+  job_number: string;
   title: string;
-  client: string;
-  avatar: string;
-  address: string;
-  date: string;
-  time: string;
+  scheduled_date: string;
   status: string;
-  priority: "low" | "medium" | "high";
+  client: {
+    name: string;
+    phone: string;
+  };
+  technician?: {
+    name: string;
+  };
 }
 
-export const UpcomingJobs = () => {
-  const [upcomingJobs, setUpcomingJobs] = useState<UpcomingJob[]>([]);
+interface UpcomingJobsProps {
+  isRefreshing?: boolean;
+}
+
+export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
+  const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
+  const [overdueJobs, setOverdueJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUpcomingJobs = async () => {
+    const fetchJobs = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
       try {
-        setIsLoading(true);
+        // Fetch upcoming jobs
+        const today = new Date();
+        const nextWeek = new Date();
+        nextWeek.setDate(today.getDate() + 7);
         
-        // Get upcoming jobs (scheduled jobs)
-        const { data: jobs, error: jobsError } = await supabase
+        const { data: upcoming, error: upcomingError } = await supabase
           .from('jobs')
-          .select('id, title, client_id, service, status, date, schedule_start, schedule_end')
-          .in('status', ['scheduled', 'in-progress'])
-          .order('schedule_start', { ascending: true })
-          .limit(4);
-        
-        if (jobsError) {
-          console.error('Jobs query error:', jobsError);
-          throw jobsError;
-        }
-        
-        // If no jobs found
-        if (!jobs || jobs.length === 0) {
-          setUpcomingJobs([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Get client data for all jobs
-        const clientIds = jobs
-          .map(job => job.client_id)
-          .filter(id => id !== null) as string[];
-        
-        const { data: clients, error: clientsError } = await supabase
-          .from('clients')
-          .select('id, name, address')
-          .in('id', clientIds.length > 0 ? clientIds : ['no-clients']);
-        
-        if (clientsError) {
-          console.error('Clients query error:', clientsError);
-        }
-        
-        // Create map of client ids to names
-        const clientMap = new Map();
-        if (clients) {
-          clients.forEach(client => {
-            clientMap.set(client.id, {
-              name: client.name,
-              address: client.address
-            });
-          });
-        }
-        
-        // Format the jobs data
-        const formattedJobs = jobs.map(job => {
-          const clientInfo = job.client_id ? clientMap.get(job.client_id) : null;
-          const clientName = clientInfo ? clientInfo.name : 'Unknown Client';
-          const address = clientInfo ? clientInfo.address || 'No address' : 'No address';
+          .select('id, job_number, title, scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
+          .gte('scheduled_date', today.toISOString())
+          .lte('scheduled_date', nextWeek.toISOString())
+          .in('status', ['scheduled', 'pending'])
+          .order('scheduled_date', { ascending: true })
+          .limit(5);
           
-          // Format date and time
-          const scheduleDate = job.schedule_start ? new Date(job.schedule_start) : new Date();
-          const today = new Date();
-          const tomorrow = new Date(today);
-          tomorrow.setDate(today.getDate() + 1);
-          
-          let dateDisplay;
-          if (scheduleDate.toDateString() === today.toDateString()) {
-            dateDisplay = 'Today';
-          } else if (scheduleDate.toDateString() === tomorrow.toDateString()) {
-            dateDisplay = 'Tomorrow';
-          } else {
-            dateDisplay = scheduleDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-          }
-          
-          const timeDisplay = scheduleDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          
-          // Create avatar placeholder from client name
-          const avatarPlaceholder = clientName.charAt(0).toUpperCase();
-          
-          return {
-            id: job.id,
-            title: job.service || job.title || 'Service Call',
-            client: clientName,
-            avatar: '', // No real avatars in the database, will use fallback
-            address: address || 'No address provided',
-            date: dateDisplay,
-            time: timeDisplay,
-            status: job.status || 'scheduled',
-            priority: 'medium' as 'low' | 'medium' | 'high' // Default priority since it's not in the DB
-          };
-        });
+        if (upcomingError) throw upcomingError;
         
-        setUpcomingJobs(formattedJobs);
+        setUpcomingJobs(upcoming || []);
+        
+        // Fetch overdue jobs
+        const { data: overdue, error: overdueError } = await supabase
+          .from('jobs')
+          .select('id, job_number, title, scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
+          .lt('scheduled_date', today.toISOString())
+          .in('status', ['scheduled', 'pending'])
+          .order('scheduled_date', { ascending: false })
+          .limit(5);
+          
+        if (overdueError) throw overdueError;
+        
+        setOverdueJobs(overdue || []);
       } catch (error) {
-        console.error('Error fetching upcoming jobs:', error);
-        setUpcomingJobs([]);
+        console.error('Error fetching job data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    
-    fetchUpcomingJobs();
-  }, []);
+
+    fetchJobs();
+  }, [user, isRefreshing]);
+
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return <Badge className="bg-fixlyfy">Scheduled</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-fixlyfy-warning border-fixlyfy-warning">Pending</Badge>;
+      case 'overdue':
+        return <Badge className="bg-fixlyfy-error">Overdue</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Not scheduled';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div>
-          <CardTitle>Upcoming Jobs</CardTitle>
-          <CardDescription>Jobs scheduled for today and tomorrow</CardDescription>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          asChild
-        >
-          <Link to="/schedule">View Schedule</Link>
+        <CardTitle className="text-lg">Job Schedule</CardTitle>
+        <Button variant="outline" size="sm" onClick={() => navigate('/schedule')}>
+          View Schedule
         </Button>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 size={24} className="animate-spin text-fixlyfy" />
-            <span className="ml-2">Loading jobs...</span>
-          </div>
-        ) : upcomingJobs.length === 0 ? (
-          <div className="text-center py-8 text-fixlyfy-text-secondary">
-            <p>No upcoming jobs found.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {upcomingJobs.map((job) => (
-              <div key={job.id} className="flex items-start gap-4 p-3 rounded-lg border border-fixlyfy-border hover:bg-fixlyfy-bg-interface/50 transition-colors">
-                <Avatar className="h-10 w-10 mt-1">
-                  <AvatarImage src={job.avatar} alt={job.client} />
-                  <AvatarFallback>{job.client.charAt(0)}</AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 space-y-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-sm font-medium leading-none">{job.title}</h4>
-                      <p className="text-sm text-fixlyfy-text-secondary">{job.client}</p>
-                    </div>
-                    <Badge className={cn(
-                      job.priority === "high" && "bg-fixlyfy-error/10 text-fixlyfy-error",
-                      job.priority === "medium" && "bg-fixlyfy-warning/10 text-fixlyfy-warning",
-                      job.priority === "low" && "bg-fixlyfy-success/10 text-fixlyfy-success"
-                    )}>
-                      {job.priority} priority
-                    </Badge>
+        <Tabs defaultValue="upcoming">
+          <TabsList className="mb-4">
+            <TabsTrigger value="upcoming">Upcoming ({upcomingJobs.length})</TabsTrigger>
+            <TabsTrigger value="overdue">Overdue ({overdueJobs.length})</TabsTrigger>
+          </TabsList>
+          
+          {isLoading || isRefreshing ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex justify-between items-center p-3 border border-gray-100 rounded-md animate-pulse">
+                  <div>
+                    <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 w-24 bg-gray-200 rounded"></div>
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                    <div className="flex items-center text-fixlyfy-text-secondary text-xs">
-                      <Calendar size={14} className="mr-1" />
-                      {job.date}
-                    </div>
-                    <div className="flex items-center text-fixlyfy-text-secondary text-xs">
-                      <Clock size={14} className="mr-1" />
-                      {job.time}
-                    </div>
-                    <div className="flex items-center text-fixlyfy-text-secondary text-xs">
-                      <MapPin size={14} className="mr-1" />
-                      {job.address}
-                    </div>
+                  <div className="flex items-center">
+                    <div className="h-5 w-20 bg-gray-200 rounded mr-3"></div>
+                    <div className="h-8 w-16 bg-gray-200 rounded"></div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <>
+              <TabsContent value="upcoming">
+                {upcomingJobs.length > 0 ? (
+                  <div className="space-y-3">
+                    {upcomingJobs.map((job) => (
+                      <div key={job.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-md hover:bg-gray-50">
+                        <div>
+                          <p className="font-medium text-sm">
+                            {job.job_number} - {job.title || job.client?.name}
+                          </p>
+                          <p className="text-sm text-fixlyfy-text-secondary">
+                            {formatDate(job.scheduled_date)} • {job.technician?.name || 'Unassigned'}
+                          </p>
+                        </div>
+                        <div className="flex items-center">
+                          {getStatusBadge(job.status)}
+                          <Button variant="ghost" size="sm" className="ml-2" onClick={() => navigate(`/jobs/${job.id}`)}>
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-fixlyfy-text-secondary">
+                    <p>No upcoming jobs scheduled for the next week</p>
+                    <Button className="mt-4" onClick={() => navigate('/jobs/new')}>
+                      Create Job
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="overdue">
+                {overdueJobs.length > 0 ? (
+                  <div className="space-y-3">
+                    {overdueJobs.map((job) => (
+                      <div key={job.id} className="flex justify-between items-center p-3 border border-fixlyfy-error/10 rounded-md bg-fixlyfy-error/5">
+                        <div>
+                          <p className="font-medium text-sm">
+                            {job.job_number} - {job.title || job.client?.name}
+                          </p>
+                          <p className="text-sm text-fixlyfy-error">
+                            {formatDate(job.scheduled_date)} • {job.technician?.name || 'Unassigned'}
+                          </p>
+                        </div>
+                        <div className="flex items-center">
+                          <Badge className="bg-fixlyfy-error">Overdue</Badge>
+                          <Button variant="ghost" size="sm" className="ml-2" onClick={() => navigate(`/jobs/${job.id}`)}>
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-fixlyfy-text-secondary">
+                    <p>No overdue jobs</p>
+                  </div>
+                )}
+              </TabsContent>
+            </>
+          )}
+        </Tabs>
       </CardContent>
     </Card>
   );

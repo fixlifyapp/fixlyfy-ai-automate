@@ -9,6 +9,7 @@ import { InvoiceStatusBreakdown } from "@/components/dashboard/InvoiceStatusBrea
 import { ClientStats } from "@/components/dashboard/ClientStats";
 import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterControls";
+import { DashboardActions } from "@/components/dashboard/DashboardActions";
 
 // Define time period types for filters
 export type TimePeriod = "week" | "month" | "quarter" | "custom";
@@ -19,12 +20,22 @@ const Dashboard = () => {
     from: undefined,
     to: undefined,
   });
+  
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleFilterChange = (period: TimePeriod, range?: { from: Date | undefined; to: Date | undefined }) => {
     setTimePeriod(period);
     if (range) {
       setDateRange(range);
     }
+  };
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // In a real application, this would refresh data from your API
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
   };
 
   return (
@@ -34,7 +45,7 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-fixlyfy-text-secondary">Welcome to your business overview</p>
         </div>
-        <QuickActionsPanel />
+        <DashboardActions onRefresh={handleRefresh} />
       </div>
 
       {/* Filter Controls */}
@@ -48,12 +59,20 @@ const Dashboard = () => {
       
       {/* KPI Summary Cards */}
       <div className="mb-6">
-        <KpiSummaryCards timePeriod={timePeriod} dateRange={dateRange} />
+        <KpiSummaryCards 
+          timePeriod={timePeriod} 
+          dateRange={dateRange} 
+          isRefreshing={isRefreshing}
+        />
       </div>
       
       {/* Trend Charts Section */}
       <div className="mb-6">
-        <TrendCharts timePeriod={timePeriod} dateRange={dateRange} />
+        <TrendCharts 
+          timePeriod={timePeriod} 
+          dateRange={dateRange}
+          isRefreshing={isRefreshing}
+        />
       </div>
       
       {/* AI Insights Panel */}
@@ -65,18 +84,22 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Upcoming/Overdue Jobs */}
         <div>
-          <UpcomingJobs />
+          <UpcomingJobs isRefreshing={isRefreshing} />
         </div>
         
         {/* Invoice Status Breakdown */}
         <div>
-          <InvoiceStatusBreakdown />
+          <InvoiceStatusBreakdown isRefreshing={isRefreshing} />
         </div>
       </div>
       
       {/* Client Stats */}
       <div className="mb-6">
-        <ClientStats timePeriod={timePeriod} dateRange={dateRange} />
+        <ClientStats 
+          timePeriod={timePeriod} 
+          dateRange={dateRange}
+          isRefreshing={isRefreshing} 
+        />
       </div>
     </PageLayout>
   );

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +26,7 @@ import { Loader2 } from "lucide-react";
 interface TrendChartsProps {
   timePeriod: TimePeriod;
   dateRange: { from: Date | undefined; to: Date | undefined };
+  isRefreshing?: boolean;
 }
 
 // Mock data for the charts - in a real application, this would come from your database
@@ -62,7 +62,7 @@ const technicianData = [
 
 const COLORS = ['#8A4DD5', '#B084F9', '#3B82F6', '#10B981', '#F59E0B'];
 
-export const TrendCharts = ({ timePeriod, dateRange }: TrendChartsProps) => {
+export const TrendCharts = ({ timePeriod, dateRange, isRefreshing = false }: TrendChartsProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [technicianFilter, setTechnicianFilter] = useState('jobs');
   const [serviceFilter, setServiceFilter] = useState('all');
@@ -76,7 +76,7 @@ export const TrendCharts = ({ timePeriod, dateRange }: TrendChartsProps) => {
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
-  }, [timePeriod, dateRange, user]);
+  }, [timePeriod, dateRange, user, isRefreshing]);
 
   const formatTooltipValue = (value: any, name: string, props: any) => {
     if (name === 'target') return [`Target: $${value}`, name];
@@ -89,7 +89,7 @@ export const TrendCharts = ({ timePeriod, dateRange }: TrendChartsProps) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg">Trend Analytics</CardTitle>
           <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-            {isLoading ? (
+            {isLoading || isRefreshing ? (
               <Skeleton className="h-9 w-[120px]" />
             ) : (
               <Select value={serviceFilter} onValueChange={setServiceFilter}>
@@ -116,7 +116,7 @@ export const TrendCharts = ({ timePeriod, dateRange }: TrendChartsProps) => {
             <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
           </TabsList>
           
-          {isLoading ? (
+          {isLoading || isRefreshing ? (
             <div className="h-[350px] w-full flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-fixlyfy" />
             </div>
