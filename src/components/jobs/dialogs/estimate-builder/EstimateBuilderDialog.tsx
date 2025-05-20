@@ -200,7 +200,7 @@ export const EstimateBuilderDialog = ({
                   calculateGrandTotal={estimateBuilder.calculateGrandTotal}
                   calculateTotalMargin={estimateBuilder.calculateTotalMargin}
                   calculateMarginPercentage={estimateBuilder.calculateMarginPercentage}
-                  showMargin={true}
+                  showMargin={false}
                 />
               )}
               
