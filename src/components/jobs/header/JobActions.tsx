@@ -16,28 +16,16 @@ interface JobActionsProps {
   onCompleteJob?: () => void;
   onCancelJob?: () => void;
   onReschedule?: () => void;
-  onInvoiceClick?: () => void;
-  onEstimateClick?: () => void;
-  hasEstimate?: boolean;
-  onSyncEstimateToInvoice?: () => void;
-  previousEstimates?: { id: string; number: string; }[];
-  previousInvoices?: { id: string; number: string; }[];
-  onLoadPreviousEstimate?: () => void;
-  onLoadPreviousInvoice?: () => void;
+  onCreateEstimate?: () => void;
+  onCreateInvoice?: () => void;
 }
 
 export const JobActions = ({ 
   onCompleteJob,
   onCancelJob,
   onReschedule,
-  onInvoiceClick,
-  onEstimateClick,
-  hasEstimate,
-  onSyncEstimateToInvoice,
-  previousEstimates,
-  previousInvoices,
-  onLoadPreviousEstimate,
-  onLoadPreviousInvoice
+  onCreateEstimate,
+  onCreateInvoice
 }: JobActionsProps) => {
   return (
     <DropdownMenu>
@@ -52,6 +40,15 @@ export const JobActions = ({
         {onReschedule && (
           <DropdownMenuItem onClick={onReschedule}>Reschedule</DropdownMenuItem>
         )}
+        
+        {onCreateEstimate && (
+          <DropdownMenuItem onClick={onCreateEstimate}>Create Estimate</DropdownMenuItem>
+        )}
+        
+        {onCreateInvoice && (
+          <DropdownMenuItem onClick={onCreateInvoice}>Create Invoice</DropdownMenuItem>
+        )}
+        
         <DropdownMenuSeparator />
         {onCancelJob && (
           <DropdownMenuItem onClick={onCancelJob} className="text-fixlyfy-error">

@@ -1,0 +1,120 @@
+
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { EstimatesList } from "./estimates/EstimatesList";
+import { useEstimates } from "./estimates/useEstimates";
+import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
+import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
+import { Dialog } from "@/components/ui/dialog";
+import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
+import { UpsellDialog } from "@/components/jobs/dialogs/UpsellDialog";
+import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
+import { EstimateDialog } from "./dialogs/EstimateDialog";
+import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+
+interface JobEstimatesTabProps {
+  jobId: string;
+  onEstimateConverted?: () => void;
+}
+
+export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
+  const {
+    estimates,
+    isLoading,
+    dialogs,
+    state,
+    handlers,
+    info,
+    error
+  } = useEstimates(jobId, onEstimateConverted);
+
+  return (
+    <Card className="border-fixlyfy-border shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-medium">Estimates</h3>
+          <Button onClick={handlers.handleCreateEstimate} className="gap-2">
+            <PlusCircle size={16} />
+            New Estimate
+          </Button>
+        </div>
+
+        {/* Show error message if any */}
+        {error && (
+          <div className="p-4 mb-4 border rounded-md bg-red-50 border-red-200">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle size={16} />
+              <span>There was a problem loading job information. You can still create estimates.</span>
+            </div>
+          </div>
+        )}
+
+        <EstimatesList 
+          estimates={estimates}
+          isLoading={isLoading}
+          onEdit={handlers.handleEditEstimate}
+          onConvert={handlers.handleConvertToInvoice}
+          onAddWarranty={handlers.handleAddWarranty}
+          onSend={handlers.handleSendEstimate}
+          onDelete={handlers.handleDeleteEstimate}
+        />
+        
+        <UpsellDialog 
+          open={dialogs.isUpsellDialogOpen} 
+          onOpenChange={dialogs.setIsUpsellDialogOpen}
+          jobId={jobId}
+          recommendedProduct={state.recommendedProduct}
+          techniciansNote={state.techniciansNote}
+          onAccept={handlers.handleUpsellAccept}
+        />
+
+        <EstimateBuilderDialog
+          open={dialogs.isEstimateBuilderOpen}
+          onOpenChange={dialogs.setIsEstimateBuilderOpen}
+          estimateId={state.selectedEstimateId}
+          jobId={jobId}
+          onSyncToInvoice={handlers.handleSyncToInvoice}
+          key={state.selectedEstimateId} // Add key to force re-render on ID change
+        />
+        
+        {/* Convert to Invoice Dialog */}
+        <ConvertToInvoiceDialog
+          open={dialogs.isConvertToInvoiceDialogOpen}
+          onOpenChange={dialogs.setIsConvertToInvoiceDialogOpen}
+          onConfirm={handlers.confirmConvertToInvoice}
+          estimateNumber={state.selectedEstimate?.number}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={dialogs.isDeleteConfirmOpen} onOpenChange={dialogs.setIsDeleteConfirmOpen}>
+          <DeleteConfirmDialog 
+            title="Delete Estimate"
+            description={`Are you sure you want to delete estimate ${state.selectedEstimate?.number}? This action cannot be undone.`}
+            onOpenChange={dialogs.setIsDeleteConfirmOpen}
+            onConfirm={handlers.confirmDeleteEstimate}
+            isDeleting={state.isDeleting}
+          />
+        </Dialog>
+        
+        {/* Warranty Selection Dialog */}
+        <WarrantySelectionDialog
+          open={dialogs.isWarrantyDialogOpen}
+          onOpenChange={dialogs.setIsWarrantyDialogOpen}
+          onConfirm={handlers.handleWarrantySelection}
+        />
+        
+        {/* Estimate Creation Dialog */}
+        <EstimateDialog
+          open={dialogs.isEstimateDialogOpen}
+          onOpenChange={dialogs.setIsEstimateDialogOpen}
+          onEstimateCreated={handlers.handleEstimateCreated}
+          clientInfo={info.clientInfo}
+          companyInfo={info.companyInfo}
+        />
+      </CardContent>
+    </Card>
+  );
+};

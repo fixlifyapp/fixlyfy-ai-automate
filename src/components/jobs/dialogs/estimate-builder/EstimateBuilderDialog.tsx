@@ -75,7 +75,7 @@ export const EstimateBuilderDialog = ({
     jobId
   });
   
-  // Wrap the original handleEditLineItem to adapt the return type
+  // Wrap the original handleEditLineItem to return a boolean
   const handleEditLineItem = (id: string): boolean => {
     originalHandleEditLineItem(id);
     return true; // Return boolean as required by the interface

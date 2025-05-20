@@ -30,8 +30,6 @@ interface EstimateData {
   technicians_note: string;
   created_at: string;
   updated_at: string;
-  items?: LineItem[];
-  tax_rate?: number;
 }
 
 interface UseEstimateBuilderProps {
@@ -118,8 +116,7 @@ export const useEstimateBuilder = ({
         setEstimateNumber(estimateData.number);
         setNotes(estimateData.technicians_note || '');
         
-        // Since 'items' is not directly in the estimate table, we need to fetch them separately
-        // Let's fetch the line items from estimate_items table
+        // Fetch the line items from estimate_items table
         const { data: itemsData, error: itemsError } = await supabase
           .from('estimate_items')
           .select('*')
@@ -146,8 +143,8 @@ export const useEstimateBuilder = ({
           setLineItems(transformedItems);
         }
         
-        // Set tax rate - since it might not be in the database, default to 0
-        setTaxRate(0); // Use a default value or fetch from elsewhere if needed
+        // Default tax rate to 0 if not found
+        setTaxRate(0);
       }
     } catch (error) {
       console.error("Error fetching estimate:", error);
@@ -180,13 +177,8 @@ export const useEstimateBuilder = ({
         return false;
       }
       
-      // Now handle the line items - this is more complex
-      // We need to:
-      // 1. Update existing items
-      // 2. Delete items not in our current list
-      // 3. Insert new items
-      
-      // First, get existing items for this estimate
+      // Handle the line items using upsert and delete operations
+      // Get existing items for this estimate
       const { data: existingItems, error: fetchError } = await supabase
         .from('estimate_items')
         .select('id')
@@ -218,22 +210,26 @@ export const useEstimateBuilder = ({
         }
       }
       
-      // Now handle updates and inserts
+      // Now handle updates and inserts for each item
       for (const item of lineItems) {
-        // Check if this is an existing item or new item
         const isExisting = existingItemIds.includes(item.id);
+        
+        // Prepare item data for upsert
+        const itemData = {
+          id: item.id,
+          estimate_id: estimateId,
+          name: item.description,
+          description: item.description,
+          price: item.unitPrice,
+          quantity: item.quantity,
+          taxable: item.taxable
+        };
         
         if (isExisting) {
           // Update existing item
           const { error: updateError } = await supabase
             .from('estimate_items')
-            .update({
-              name: item.description,
-              description: item.description,
-              price: item.unitPrice,
-              quantity: item.quantity,
-              taxable: item.taxable
-            })
+            .update(itemData)
             .eq('id', item.id)
             .eq('estimate_id', estimateId);
             
@@ -246,15 +242,7 @@ export const useEstimateBuilder = ({
           // Insert new item
           const { error: insertError } = await supabase
             .from('estimate_items')
-            .insert({
-              id: item.id,
-              estimate_id: estimateId,
-              name: item.description,
-              description: item.description,
-              price: item.unitPrice,
-              quantity: item.quantity,
-              taxable: item.taxable
-            });
+            .insert(itemData);
             
           if (insertError) {
             console.error("Error inserting new item:", insertError, item);
@@ -336,12 +324,14 @@ export const useEstimateBuilder = ({
   // Handle editing a line item
   const handleEditLineItem = (id: string) => {
     setSelectedLineItemId(id);
-    // Logic to open a modal or form to edit the line item
+    // Open edit modal or perform other actions
+    console.log(`Editing line item with ID: ${id}`);
   };
 
   // Handle adding an empty line item
   const handleAddEmptyLineItem = () => {
-    // Logic to open product search
+    // Open product search
+    console.log("Opening product search");
   };
 
   // Handle adding a custom line
@@ -363,13 +353,14 @@ export const useEstimateBuilder = ({
   // Handle product saved
   const handleProductSaved = (product: Product) => {
     setSelectedProduct(product);
-    // Logic to save the product
+    // Add the edited product to line items
+    handleAddProduct(product);
   };
 
   // Handle product selected
   const handleProductSelected = (product: Product) => {
     setSelectedProduct(product);
-    // Logic to handle product selection
+    handleAddProduct(product);
   };
 
   // Handle sync to invoice

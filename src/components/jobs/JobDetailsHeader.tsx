@@ -29,14 +29,11 @@ export const JobDetailsHeader = () => {
         
         <div>
           <JobActions 
-            onInvoiceClick={() => jobHeaderData.setIsInvoiceDialogOpen(true)}
-            onEstimateClick={() => jobHeaderData.setIsEstimateDialogOpen(true)}
-            hasEstimate={jobHeaderData.hasEstimate}
-            onSyncEstimateToInvoice={jobHeaderData.handleSyncEstimateToInvoice}
-            previousEstimates={jobHeaderData.previousEstimates}
-            previousInvoices={jobHeaderData.previousInvoices}
-            onLoadPreviousEstimate={() => jobHeaderData.setIsLoadPreviousEstimateDialogOpen(true)}
-            onLoadPreviousInvoice={() => jobHeaderData.setIsLoadPreviousInvoiceDialogOpen(true)}
+            onCompleteJob={jobHeaderData.handleCompleteJob}
+            onCancelJob={jobHeaderData.handleCancelJob}
+            onReschedule={jobHeaderData.handleReschedule}
+            onCreateEstimate={() => jobHeaderData.setIsEstimateDialogOpen(true)}
+            onCreateInvoice={() => jobHeaderData.setIsInvoiceDialogOpen(true)}
           />
         </div>
       </div>
