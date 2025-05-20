@@ -1,7 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Product } from "../builder/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EstimateItem {
   id: string;
@@ -43,90 +44,8 @@ interface CompanyInfo {
 }
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
-  // In a real app, this would be fetched from an API
-  const [estimates, setEstimates] = useState<Estimate[]>([
-    {
-      id: "est-001",
-      number: "EST-12345",
-      date: "2023-05-15",
-      amount: 475.99,
-      status: "sent",
-      viewed: true,
-      items: [
-        {
-          id: "item-1",
-          name: "Diagnostic Service",
-          description: "Complete system diagnostics",
-          price: 120,
-          quantity: 1,
-          taxable: true,
-          category: "Services",
-          tags: ["diagnostic", "service"]
-        },
-        {
-          id: "item-2",
-          name: "HVAC Annual Maintenance",
-          description: "Yearly system tune-up and maintenance",
-          price: 250,
-          quantity: 1,
-          taxable: true,
-          category: "Maintenance",
-          tags: ["hvac", "maintenance"]
-        },
-        {
-          id: "item-3",
-          name: "Air Filter Replacement",
-          description: "Premium air filter with installation",
-          price: 55,
-          quantity: 1,
-          taxable: true,
-          category: "Products",
-          tags: ["filter", "replacement"]
-        }
-      ],
-      recommendedProduct: {
-        id: "prod-4",
-        name: "1-Year Warranty",
-        description: "1-year extended warranty and priority service",
-        price: 89,
-        category: "Warranties",
-        tags: ["warranty"],
-      },
-      techniciansNote: "Based on the age of your unit, this warranty would provide great value."
-    },
-    {
-      id: "est-002",
-      number: "EST-12346",
-      date: "2023-05-10",
-      amount: 299.50,
-      status: "draft",
-      viewed: false,
-      items: [
-        {
-          id: "item-4",
-          name: "Minor Repair",
-          description: "Quick fix and adjustment",
-          price: 150,
-          quantity: 1,
-          taxable: true,
-          category: "Services",
-          tags: ["repair", "quick"]
-        },
-        {
-          id: "item-5",
-          name: "Parts Replacement",
-          description: "Standard component replacement",
-          price: 115,
-          quantity: 1,
-          taxable: true,
-          category: "Products",
-          tags: ["parts", "replacement"]
-        }
-      ],
-      recommendedProduct: null,
-      techniciansNote: ""
-    }
-  ]);
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
@@ -140,13 +59,79 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const [isDeleting, setIsDeleting] = useState(false);
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
 
+  // Fetch estimates from Supabase
+  useEffect(() => {
+    const fetchEstimates = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('estimates')
+          .select('*, estimate_items(*), recommended_products(*)')
+          .eq('job_id', jobId)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+
+        // Transform the data to match our Estimate interface
+        const transformedEstimates = data.map((est) => {
+          // Extract estimate items
+          const items = est.estimate_items || [];
+          
+          // Extract recommended product (if any)
+          const recProduct = est.recommended_products && est.recommended_products.length > 0 
+            ? {
+                id: est.recommended_products[0].id,
+                name: est.recommended_products[0].name,
+                description: est.recommended_products[0].description || '',
+                price: est.recommended_products[0].price,
+                category: est.recommended_products[0].category || '',
+                tags: est.recommended_products[0].tags || [],
+              }
+            : null;
+            
+          return {
+            id: est.id,
+            number: est.number,
+            date: est.date,
+            amount: est.amount,
+            status: est.status,
+            viewed: est.viewed,
+            items: items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              description: item.description || '',
+              price: item.price,
+              quantity: item.quantity,
+              taxable: item.taxable,
+              category: item.category || '',
+              tags: item.tags || [],
+            })),
+            recommendedProduct: recProduct,
+            techniciansNote: est.technicians_note || '',
+          };
+        });
+        
+        setEstimates(transformedEstimates);
+      } catch (error) {
+        console.error('Error fetching estimates:', error);
+        toast.error('Failed to load estimates');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (jobId) {
+      fetchEstimates();
+    }
+  }, [jobId]);
+
   const handleCreateEstimate = () => {
-    // Open the EstimateDialog
     setIsEstimateDialogOpen(true);
   };
 
   const handleEditEstimate = (estimateId: string) => {
-    // Find the estimate to edit
     const estimate = estimates.find(est => est.id === estimateId);
     if (estimate) {
       setSelectedEstimateId(estimateId);
@@ -162,22 +147,55 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
       setTechniciansNote(estimate.techniciansNote);
       setIsUpsellDialogOpen(true);
       
-      // Mark as viewed
-      setEstimates(estimates.map(e => 
-        e.id === estimate.id ? {...e, viewed: true} : e
-      ));
+      // Mark as viewed in the database
+      updateEstimateViewed(estimate.id);
     } else {
       // Just view the estimate
       handleEditEstimate(estimate.id);
     }
   };
 
-  const handleSendEstimate = (estimateId: string) => {
-    // In a real app, this would send the estimate via email or other notification
-    setEstimates(estimates.map(e => 
-      e.id === estimateId ? {...e, status: "sent"} : e
-    ));
-    toast.success("Estimate sent to customer");
+  const updateEstimateViewed = async (estimateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('estimates')
+        .update({ viewed: true })
+        .eq('id', estimateId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setEstimates(estimates.map(e => 
+        e.id === estimateId ? {...e, viewed: true} : e
+      ));
+    } catch (error) {
+      console.error('Error updating estimate viewed status:', error);
+    }
+  };
+
+  const handleSendEstimate = async (estimateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('estimates')
+        .update({ status: 'sent' })
+        .eq('id', estimateId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setEstimates(estimates.map(e => 
+        e.id === estimateId ? {...e, status: 'sent'} : e
+      ));
+      
+      toast.success("Estimate sent to customer");
+    } catch (error) {
+      console.error('Error sending estimate:', error);
+      toast.error('Failed to send estimate');
+    }
   };
 
   const handleUpsellAccept = (product: Product) => {
@@ -190,19 +208,35 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     setIsConvertToInvoiceDialogOpen(true);
   };
   
-  const confirmConvertToInvoice = () => {
-    // In a real app, this would create a new invoice from the estimate
+  const confirmConvertToInvoice = async () => {
     if (!selectedEstimate) return;
     
-    toast.success(`Estimate ${selectedEstimate.number} converted to invoice`);
-    setIsConvertToInvoiceDialogOpen(false);
-    
-    // Remove the estimate from the list since it's now an invoice
-    setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
-    
-    // Switch to the invoices tab if the callback is provided
-    if (onEstimateConverted) {
-      onEstimateConverted();
+    try {
+      // In a real app, this would create a new invoice from the estimate
+      // For now, we'll just mark the estimate as converted by updating its status
+      const { error } = await supabase
+        .from('estimates')
+        .update({ status: 'converted' })
+        .eq('id', selectedEstimate.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast.success(`Estimate ${selectedEstimate.number} converted to invoice`);
+      
+      // Remove the estimate from the list since it's now an invoice
+      setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
+      
+      // Switch to the invoices tab if the callback is provided
+      if (onEstimateConverted) {
+        onEstimateConverted();
+      }
+    } catch (error) {
+      console.error('Error converting estimate to invoice:', error);
+      toast.error('Failed to convert estimate to invoice');
+    } finally {
+      setIsConvertToInvoiceDialogOpen(false);
     }
   };
 
@@ -220,13 +254,14 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     setIsDeleting(true);
     
     try {
-      // In a real app, this would be an actual API call
-      // await fetch(`/api/estimates/${selectedEstimate.id}`, {
-      //   method: 'DELETE',
-      // });
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const { error } = await supabase
+        .from('estimates')
+        .delete()
+        .eq('id', selectedEstimate.id);
+        
+      if (error) {
+        throw error;
+      }
       
       // Remove estimate from local state
       setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
@@ -254,59 +289,113 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     setIsWarrantyDialogOpen(true);
   };
   
-  const handleWarrantySelection = (selectedWarranty: Product | null, customNote: string) => {
+  const handleWarrantySelection = async (selectedWarranty: Product | null, customNote: string) => {
     if (selectedWarranty && selectedEstimate) {
-      // Add the warranty to the estimate
-      const updatedEstimates = estimates.map(est => 
-        est.id === selectedEstimate.id 
-          ? {
-              ...est,
-              items: [
-                ...est.items,
-                {
-                  id: `item-w-${Date.now()}`,
-                  name: selectedWarranty.name,
-                  description: selectedWarranty.description,
-                  price: selectedWarranty.price,
-                  quantity: 1,
-                  taxable: true,
-                  category: selectedWarranty.category,
-                  tags: selectedWarranty.tags || [],
-                }
-              ],
-              amount: est.amount + selectedWarranty.price
-            } 
-          : est
-      );
-      
-      setEstimates(updatedEstimates);
-      toast.success(`${selectedWarranty.name} added to estimate ${selectedEstimate.number}`);
+      try {
+        // Add the warranty to the estimate in Supabase
+        const { error: itemError } = await supabase
+          .from('estimate_items')
+          .insert({
+            estimate_id: selectedEstimate.id,
+            name: selectedWarranty.name,
+            description: selectedWarranty.description,
+            price: selectedWarranty.price,
+            quantity: 1,
+            taxable: true,
+            category: selectedWarranty.category,
+            tags: selectedWarranty.tags || [],
+          });
+          
+        if (itemError) {
+          throw itemError;
+        }
+        
+        // Update the estimate amount
+        const newAmount = selectedEstimate.amount + selectedWarranty.price;
+        const { error: updateError } = await supabase
+          .from('estimates')
+          .update({ amount: newAmount })
+          .eq('id', selectedEstimate.id);
+          
+        if (updateError) {
+          throw updateError;
+        }
+        
+        // Update local state
+        const updatedEstimates = estimates.map(est => 
+          est.id === selectedEstimate.id 
+            ? {
+                ...est,
+                items: [
+                  ...est.items,
+                  {
+                    id: `item-w-${Date.now()}`, // Temporary ID until we refresh
+                    name: selectedWarranty.name,
+                    description: selectedWarranty.description,
+                    price: selectedWarranty.price,
+                    quantity: 1,
+                    taxable: true,
+                    category: selectedWarranty.category,
+                    tags: selectedWarranty.tags || [],
+                  }
+                ],
+                amount: est.amount + selectedWarranty.price
+              } 
+            : est
+        );
+        
+        setEstimates(updatedEstimates);
+        toast.success(`${selectedWarranty.name} added to estimate ${selectedEstimate.number}`);
+      } catch (error) {
+        console.error('Error adding warranty:', error);
+        toast.error('Failed to add warranty to estimate');
+      }
     }
     setIsWarrantyDialogOpen(false);
   };
 
-  const handleEstimateCreated = (amount: number) => {
-    // Generate a new estimate ID and number
-    const newEstimateId = `est-${Math.floor(Math.random() * 10000)}`;
-    const newEstimateNumber = `EST-${Math.floor(10000 + Math.random() * 90000)}`;
-    
-    // Create a new estimate
-    const newEstimate = {
-      id: newEstimateId,
-      number: newEstimateNumber,
-      date: new Date().toISOString().split('T')[0],
-      amount: amount,
-      status: "draft",
-      viewed: false,
-      items: [] as EstimateItem[],
-      recommendedProduct: null,
-      techniciansNote: ""
-    };
-    
-    // Add the new estimate to the list
-    setEstimates([newEstimate, ...estimates]);
-    
-    toast.success(`Estimate ${newEstimateNumber} created`);
+  const handleEstimateCreated = async (amount: number) => {
+    try {
+      // Generate a new estimate number
+      const newEstimateNumber = `EST-${Math.floor(10000 + Math.random() * 90000)}`;
+      
+      // Create a new estimate in Supabase
+      const { data, error } = await supabase
+        .from('estimates')
+        .insert({
+          job_id: jobId,
+          number: newEstimateNumber,
+          amount: amount,
+          status: 'draft'
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Create a new estimate object
+      const newEstimate = {
+        id: data.id,
+        number: data.number,
+        date: data.date,
+        amount: data.amount,
+        status: data.status,
+        viewed: false,
+        items: [] as EstimateItem[],
+        recommendedProduct: null,
+        techniciansNote: ""
+      };
+      
+      // Add the new estimate to the list
+      setEstimates([newEstimate, ...estimates]);
+      
+      toast.success(`Estimate ${newEstimateNumber} created`);
+    } catch (error) {
+      console.error('Error creating estimate:', error);
+      toast.error('Failed to create estimate');
+    }
   };
   
   const getClientInfo = (): ClientInfo => {
@@ -333,6 +422,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
 
   return {
     estimates,
+    isLoading,
     dialogs: {
       isUpsellDialogOpen,
       setIsUpsellDialogOpen,

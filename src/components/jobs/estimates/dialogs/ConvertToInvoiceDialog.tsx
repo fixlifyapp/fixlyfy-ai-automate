@@ -7,7 +7,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface ConvertToInvoiceDialogProps {
   open: boolean;
@@ -22,6 +23,17 @@ export const ConvertToInvoiceDialog = ({
   onConfirm,
   estimateNumber,
 }: ConvertToInvoiceDialogProps) => {
+  const [isConverting, setIsConverting] = useState(false);
+  
+  const handleConfirm = async () => {
+    setIsConverting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsConverting(false);
+    }
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -37,10 +49,21 @@ export const ConvertToInvoiceDialog = ({
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={onConfirm} className="gap-2">
-            <RefreshCw size={16} />
-            Convert to Invoice
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isConverting}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirm} className="gap-2" disabled={isConverting}>
+            {isConverting ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Converting...
+              </>
+            ) : (
+              <>
+                <RefreshCw size={16} />
+                Convert to Invoice
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

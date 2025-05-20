@@ -72,6 +72,95 @@ export type Database = {
         }
         Relationships: []
       }
+      estimate_items: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          estimate_id: string
+          id: string
+          name: string
+          price: number
+          quantity: number
+          tags: string[] | null
+          taxable: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          estimate_id: string
+          id?: string
+          name: string
+          price?: number
+          quantity?: number
+          tags?: string[] | null
+          taxable?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          estimate_id?: string
+          id?: string
+          name?: string
+          price?: number
+          quantity?: number
+          tags?: string[] | null
+          taxable?: boolean
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_items_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimates: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          id: string
+          job_id: string
+          number: string
+          status: string
+          technicians_note: string | null
+          updated_at: string | null
+          viewed: boolean
+        }
+        Insert: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          id?: string
+          job_id: string
+          number: string
+          status?: string
+          technicians_note?: string | null
+          updated_at?: string | null
+          viewed?: boolean
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          id?: string
+          job_id?: string
+          number?: string
+          status?: string
+          technicians_note?: string | null
+          updated_at?: string | null
+          viewed?: boolean
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           client_id: string | null
@@ -163,6 +252,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      recommended_products: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          estimate_id: string
+          id: string
+          name: string
+          price: number
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          estimate_id: string
+          id?: string
+          name: string
+          price?: number
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          estimate_id?: string
+          id?: string
+          name?: string
+          price?: number
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommended_products_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {

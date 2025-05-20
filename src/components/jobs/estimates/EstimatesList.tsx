@@ -2,6 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EstimateActions } from "./EstimateActions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface EstimateItem {
   id: string;
@@ -28,6 +29,7 @@ interface Estimate {
 
 interface EstimatesListProps {
   estimates: Estimate[];
+  isLoading?: boolean;
   onEdit: (estimateId: string) => void;
   onConvert: (estimate: any) => void;
   onAddWarranty: (estimate: any) => void;
@@ -37,12 +39,23 @@ interface EstimatesListProps {
 
 export const EstimatesList = ({
   estimates,
+  isLoading = false,
   onEdit,
   onConvert,
   onAddWarranty,
   onSend,
   onDelete,
 }: EstimatesListProps) => {
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
+  }
+
   if (estimates.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -74,7 +87,9 @@ export const EstimatesList = ({
                 className={
                   estimate.status === "sent" 
                     ? "bg-fixlyfy-success/10 text-fixlyfy-success border-fixlyfy-success/20" 
-                    : "bg-fixlyfy-warning/10 text-fixlyfy-warning border-fixlyfy-warning/20"
+                    : estimate.status === "converted"
+                      ? "bg-fixlyfy-primary/10 text-fixlyfy-primary border-fixlyfy-primary/20"
+                      : "bg-fixlyfy-warning/10 text-fixlyfy-warning border-fixlyfy-warning/20"
                 }
               >
                 {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}

@@ -20,6 +20,7 @@ interface JobEstimatesProps {
 export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) => {
   const {
     estimates,
+    isLoading,
     dialogs,
     state,
     handlers,
@@ -39,6 +40,7 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
 
         <EstimatesList 
           estimates={estimates}
+          isLoading={isLoading}
           onEdit={handlers.handleEditEstimate}
           onConvert={handlers.handleConvertToInvoice}
           onAddWarranty={handlers.handleAddWarranty}

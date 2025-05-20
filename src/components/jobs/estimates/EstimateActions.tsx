@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 
 interface EstimateActionsProps {
   estimate: any;
@@ -9,6 +9,7 @@ interface EstimateActionsProps {
   onAddWarranty: (estimate: any) => void;
   onSend: (estimateId: string) => void;
   onDelete: (estimateId: string) => void;
+  isProcessing?: boolean;
 }
 
 export const EstimateActions = ({
@@ -18,6 +19,7 @@ export const EstimateActions = ({
   onAddWarranty,
   onSend,
   onDelete,
+  isProcessing = false,
 }: EstimateActionsProps) => {
   return (
     <div className="flex justify-end gap-2">
@@ -26,6 +28,7 @@ export const EstimateActions = ({
         size="sm"
         className="text-xs"
         onClick={() => onEdit(estimate.id)}
+        disabled={isProcessing}
       >
         Edit
       </Button>
@@ -34,6 +37,7 @@ export const EstimateActions = ({
         size="sm"
         className="text-xs"
         onClick={() => onConvert(estimate)}
+        disabled={isProcessing}
       >
         To Invoice
       </Button>
@@ -42,6 +46,7 @@ export const EstimateActions = ({
         size="sm"
         className="text-xs"
         onClick={() => onAddWarranty(estimate)}
+        disabled={isProcessing}
       >
         Add Warranty
       </Button>
@@ -51,6 +56,7 @@ export const EstimateActions = ({
           size="sm"
           className="text-xs"
           onClick={() => onSend(estimate.id)}
+          disabled={isProcessing}
         >
           Send
         </Button>
@@ -60,8 +66,9 @@ export const EstimateActions = ({
         size="sm"
         className="text-xs text-fixlyfy-error"
         onClick={() => onDelete(estimate.id)}
+        disabled={isProcessing}
       >
-        <Trash2 size={14} />
+        {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
       </Button>
     </div>
   );
