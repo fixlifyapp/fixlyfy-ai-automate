@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Product } from "../builder/types";
 import { X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface ProductEditDialogProps {
   open: boolean;
@@ -44,7 +45,7 @@ export const ProductEditDialog = ({
   useEffect(() => {
     if (product) {
       setName(product.name);
-      setDescription(product.description);
+      setDescription(product.description || "");
       setCategory(product.category);
       setPrice(product.price);
       setOurPrice(product.ourPrice || 0);
@@ -77,7 +78,17 @@ export const ProductEditDialog = ({
   };
 
   const handleSubmit = () => {
-    const finalCategory = showCustomCategory ? customCategory : category;
+    if (!name.trim()) {
+      toast.error("Product name is required");
+      return;
+    }
+    
+    const finalCategory = showCustomCategory ? customCategory.trim() : category;
+    
+    if (!finalCategory) {
+      toast.error("Category is required");
+      return;
+    }
     
     const updatedProduct: Product = {
       id: product?.id || "",
@@ -85,6 +96,7 @@ export const ProductEditDialog = ({
       description,
       category: finalCategory,
       price,
+      cost: product?.cost || 0, // Preserve existing cost
       ourPrice,
       taxable,
       tags
@@ -107,6 +119,16 @@ export const ProductEditDialog = ({
       amount: margin.toFixed(2),
       percentage: percentage.toFixed(0)
     };
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "custom") {
+      setShowCustomCategory(true);
+      setCustomCategory("");
+    } else {
+      setCategory(value);
+    }
   };
 
   const margin = getMargin();
@@ -146,7 +168,7 @@ export const ProductEditDialog = ({
                 <select
                   id="product-category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={handleCategoryChange}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {categories.map((cat) => (

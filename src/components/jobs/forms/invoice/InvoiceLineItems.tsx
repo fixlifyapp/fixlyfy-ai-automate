@@ -43,7 +43,9 @@ export const InvoiceLineItems = ({ form, previousItems }: InvoiceLineItemsProps)
                   {...form.register(`items.${index}.description`)}
                 />
               </FormControl>
-              <FormMessage>{form.formState.errors.items?.[index]?.description?.message}</FormMessage>
+              {form.formState.errors.items?.[index]?.description && (
+                <FormMessage>{form.formState.errors.items?.[index]?.description?.message}</FormMessage>
+              )}
             </FormItem>
           </div>
           <div className="col-span-2">
@@ -57,7 +59,9 @@ export const InvoiceLineItems = ({ form, previousItems }: InvoiceLineItemsProps)
                   {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
                 />
               </FormControl>
-              <FormMessage>{form.formState.errors.items?.[index]?.quantity?.message}</FormMessage>
+              {form.formState.errors.items?.[index]?.quantity && (
+                <FormMessage>{form.formState.errors.items?.[index]?.quantity?.message}</FormMessage>
+              )}
             </FormItem>
           </div>
           <div className="col-span-2">
@@ -71,7 +75,9 @@ export const InvoiceLineItems = ({ form, previousItems }: InvoiceLineItemsProps)
                   {...form.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
                 />
               </FormControl>
-              <FormMessage>{form.formState.errors.items?.[index]?.unitPrice?.message}</FormMessage>
+              {form.formState.errors.items?.[index]?.unitPrice && (
+                <FormMessage>{form.formState.errors.items?.[index]?.unitPrice?.message}</FormMessage>
+              )}
             </FormItem>
           </div>
           <div className="col-span-2">
@@ -87,7 +93,9 @@ export const InvoiceLineItems = ({ form, previousItems }: InvoiceLineItemsProps)
                   title="Internal use only - not shown on invoice"
                 />
               </FormControl>
-              <FormMessage>{form.formState.errors.items?.[index]?.ourPrice?.message}</FormMessage>
+              {form.formState.errors.items?.[index]?.ourPrice && (
+                <FormMessage>{form.formState.errors.items?.[index]?.ourPrice?.message}</FormMessage>
+              )}
               {index === 0 && (
                 <p className="text-xs text-muted-foreground italic">Internal only - not visible to client</p>
               )}

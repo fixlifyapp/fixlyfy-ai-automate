@@ -29,9 +29,15 @@ export const InvoiceFormDetails = ({
   previousItems,
   calculateTotal,
 }: InvoiceFormDetailsProps) => {
+  // Handle form submission correctly
+  const onSubmit = form.handleSubmit((data) => {
+    console.log("Form submitted:", data);
+    // The actual submission logic is handled by the parent component
+  });
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(form.handleSubmit)} className="space-y-6">
+      <form onSubmit={onSubmit} className="space-y-6">
         <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control}

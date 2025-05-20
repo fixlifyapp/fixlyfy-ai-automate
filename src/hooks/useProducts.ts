@@ -69,14 +69,16 @@ export const useProducts = (category?: string) => {
 
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log("Adding product:", product);
+      
       // Transform ourPrice to ourprice for the database
-      const dbProduct = {
+      const dbProduct: any = {
         ...product,
         ourprice: product.ourPrice,
       };
       
       // Remove ourPrice as it's not a column in the database
-      delete (dbProduct as any).ourPrice;
+      delete dbProduct.ourPrice;
       
       const { data, error } = await supabase
         .from('products')
@@ -84,7 +86,10 @@ export const useProducts = (category?: string) => {
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
       // Transform the returned data to include ourPrice
       const formattedProduct = {
@@ -95,9 +100,9 @@ export const useProducts = (category?: string) => {
       setProducts(prev => [formattedProduct, ...prev]);
       toast.success('Product added successfully');
       return formattedProduct;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error(`Failed to add product: ${error.message || 'Unknown error'}`);
       return null;
     }
   };
@@ -133,9 +138,9 @@ export const useProducts = (category?: string) => {
       
       toast.success('Product updated successfully');
       return formattedProduct;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating product:', error);
-      toast.error('Failed to update product');
+      toast.error(`Failed to update product: ${error.message || 'Unknown error'}`);
       return null;
     }
   };
@@ -152,9 +157,9 @@ export const useProducts = (category?: string) => {
       setProducts(prev => prev.filter(product => product.id !== id));
       toast.success('Product deleted successfully');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting product:', error);
-      toast.error('Failed to delete product');
+      toast.error(`Failed to delete product: ${error.message || 'Unknown error'}`);
       return false;
     }
   };
