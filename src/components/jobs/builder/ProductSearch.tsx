@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,15 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
       setSelectedProduct(null);
       setSearchQuery("");
     }
+  };
+  
+  // New function to handle quick add product and close dialog
+  const handleQuickAddProduct = (product: Product, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click from selecting the product
+    onProductSelect(product);
+    onOpenChange(false);
+    setSelectedProduct(null);
+    setSearchQuery("");
   };
 
   // Get frequently used products - in a real app this would come from analytics
@@ -121,6 +131,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                     <TableHead className="w-[60%]">Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Price</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -156,11 +167,22 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                           <Badge variant="outline">{product.category}</Badge>
                         </TableCell>
                         <TableCell>${product.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => handleQuickAddProduct(product, e)}
+                            title="Quick add"
+                          >
+                            <Plus size={16} />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         No products found matching your search.
                       </TableCell>
                     </TableRow>
