@@ -1,6 +1,7 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
 import { EstimateForm } from "./EstimateForm";
 import { EstimatePreview } from "./EstimatePreview";
@@ -38,9 +39,20 @@ export const EstimateBuilderDialog = ({
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const isMobile = useIsMobile();
   
-  // Fetch client info from the job
-  const { job } = useJobs(jobId);
-  const clientInfo = job?.client;
+  // Fetch job data
+  const { jobs, isLoading } = useJobs(jobId);
+  // Find the specific job we're interested in
+  const [jobData, setJobData] = useState<any>(null);
+  
+  // Get the job data when jobs are loaded
+  useEffect(() => {
+    if (!isLoading && jobs.length > 0) {
+      const foundJob = jobs.find(job => job.id === jobId);
+      if (foundJob) {
+        setJobData(foundJob);
+      }
+    }
+  }, [jobs, isLoading, jobId]);
   
   const estimateBuilder = useEstimateBuilder({
     estimateId: estimateId || null,
@@ -279,7 +291,7 @@ export const EstimateBuilderDialog = ({
         onOpenChange={setIsSendDialogOpen}
         onSave={estimateBuilder.saveEstimateChanges}
         onAddWarranty={handleAddWarranty}
-        clientInfo={clientInfo}
+        clientInfo={jobData?.client}
         estimateNumber={estimateBuilder.estimateNumber}
       />
     </Dialog>
