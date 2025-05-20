@@ -87,7 +87,10 @@ export const EstimateDialog = ({
   const handleWarrantySelection = (selectedWarranty: any, customNote: string) => {
     if (selectedWarranty) {
       // Add the warranty to the estimate
-      estimateCreation.actions.addProductToEstimate(selectedWarranty);
+      estimateCreation.actions.addProductToEstimate({
+        ...selectedWarranty,
+        ourPrice: 0, // Ensure ourPrice is 0 for warranties
+      });
       toast.success(`${selectedWarranty.name} added to estimate`);
     }
     
@@ -103,10 +106,13 @@ export const EstimateDialog = ({
     // Find and update the product
     const productIndex = currentProducts.findIndex(p => p.id === productId);
     if (productIndex !== -1) {
-      currentProducts[productIndex] = updatedProduct;
+      // Ensure ourPrice is set to 0
+      currentProducts[productIndex] = {
+        ...updatedProduct,
+        ourPrice: 0
+      };
       
       // Update the state with the modified products array
-      // Note: This is a new array with the updated product, not modifying the original product
       estimateCreation.actions.setEstimateItems(currentProducts);
     }
   };
@@ -132,7 +138,10 @@ export const EstimateDialog = ({
           {/* Product selection section */}
           <EstimateProductSelector
             selectedProducts={estimateCreation.state.estimateItems}
-            onAddProduct={estimateCreation.actions.addProductToEstimate}
+            onAddProduct={(product) => {
+              // Ensure ourPrice is 0 for any product added to estimates
+              estimateCreation.actions.addProductToEstimate({...product, ourPrice: 0});
+            }}
             onRemoveProduct={estimateCreation.actions.removeProductFromEstimate}
             onUpdateProduct={handleUpdateProduct}
           />

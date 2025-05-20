@@ -84,12 +84,21 @@ export const ProductEditInEstimateDialog = ({
       return;
     }
     
+    // Enhance description for warranty products
+    let enhancedDescription = description;
+    if (category.toLowerCase() === "warranty") {
+      if (!description.includes("peace of mind") && !description.includes("protection")) {
+        enhancedDescription = `${description} Provides peace of mind and protects your investment.`;
+      }
+    }
+    
     const updatedProduct: Product = {
       ...product,
       name,
-      description,
+      description: enhancedDescription,
       category,
       price,
+      ourPrice: 0, // Always set ourPrice to 0 in estimates
       taxable,
       tags
     };
@@ -104,6 +113,9 @@ export const ProductEditInEstimateDialog = ({
       handleAddTag();
     }
   };
+
+  // Add a special note for warranty products
+  const isWarranty = category.toLowerCase() === "warranty";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,8 +141,13 @@ export const ProductEditInEstimateDialog = ({
               id="product-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter product description"
+              placeholder={isWarranty ? "Describe how this warranty solves customer problems" : "Enter product description"}
             />
+            {isWarranty && (
+              <p className="text-xs text-green-600 italic mt-1">
+                Tip: Describe how this warranty provides peace of mind and protects the customer's investment
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

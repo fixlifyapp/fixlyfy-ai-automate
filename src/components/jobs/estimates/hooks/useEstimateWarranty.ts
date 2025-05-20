@@ -22,7 +22,7 @@ export const useEstimateWarranty = (
             description: selectedWarranty.description,
             price: selectedWarranty.price,
             quantity: 1,
-            taxable: true,
+            taxable: false, // Warranties are typically not taxed
             category: selectedWarranty.category,
             tags: selectedWarranty.tags || [],
           });
@@ -42,6 +42,18 @@ export const useEstimateWarranty = (
           throw updateError;
         }
         
+        // Save technician's note if provided
+        if (customNote.trim()) {
+          const { error: noteError } = await supabase
+            .from('estimates')
+            .update({ technicians_note: customNote })
+            .eq('id', selectedEstimate.id);
+            
+          if (noteError) {
+            console.error('Error saving technician note:', noteError);
+          }
+        }
+        
         // Update local state
         const updatedEstimates = estimates.map(est => 
           est.id === selectedEstimate.id 
@@ -55,12 +67,13 @@ export const useEstimateWarranty = (
                     description: selectedWarranty.description,
                     price: selectedWarranty.price,
                     quantity: 1,
-                    taxable: true,
+                    taxable: false,
                     category: selectedWarranty.category,
                     tags: selectedWarranty.tags || [],
                   }
                 ],
-                amount: est.amount + selectedWarranty.price
+                amount: est.amount + selectedWarranty.price,
+                techniciansNote: customNote || est.techniciansNote
               } 
             : est
         );

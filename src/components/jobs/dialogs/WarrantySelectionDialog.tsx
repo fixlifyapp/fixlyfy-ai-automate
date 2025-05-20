@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Check } from "lucide-react";
+import { Check, Shield } from "lucide-react";
 import { Product } from "../builder/types";
 
 interface WarrantySelectionDialogProps {
@@ -29,15 +29,16 @@ export const WarrantySelectionDialog = ({
   const [selectedWarrantyId, setSelectedWarrantyId] = useState<string | null>(null);
   const [customNote, setCustomNote] = useState("");
   
-  // In a real app, these would be fetched from an API, filtering for warranty products
+  // Warranty options with customer pain points addressed
   const warranties = [
     {
       id: "prod-3",
       name: "6-Month Warranty",
-      description: "Extended warranty covering parts and labor",
-      category: "Warranties",
+      description: "Extended warranty covering parts and labor. Eliminates worry about sudden repair costs after service.",
+      category: "Warranty",
       price: 49,
-      ourPrice: 10,
+      ourPrice: 0,
+      cost: 0,
       taxable: false,
       tags: ["warranty", "protection"],
       benefit: "Basic coverage for common issues"
@@ -45,10 +46,11 @@ export const WarrantySelectionDialog = ({
     {
       id: "prod-4",
       name: "1-Year Warranty",
-      description: "1-year extended warranty and priority service",
-      category: "Warranties",
+      description: "1-year extended warranty with priority service. Peace of mind knowing your appliance is fully protected for a full year.",
+      category: "Warranty",
       price: 89,
-      ourPrice: 20,
+      ourPrice: 0,
+      cost: 0,
       taxable: false,
       tags: ["warranty", "protection"],
       benefit: "Full year of coverage with priority service"
@@ -56,10 +58,11 @@ export const WarrantySelectionDialog = ({
     {
       id: "prod-5",
       name: "2-Year Warranty",
-      description: "2-year comprehensive warranty package",
-      category: "Warranties",
+      description: "2-year comprehensive warranty package. Save money on future repairs and maintenance with complete coverage.",
+      category: "Warranty",
       price: 149,
-      ourPrice: 30,
+      ourPrice: 0,
+      cost: 0,
       taxable: false,
       tags: ["warranty", "protection"],
       benefit: "Extended coverage with annual maintenance"
@@ -67,10 +70,11 @@ export const WarrantySelectionDialog = ({
     {
       id: "prod-6",
       name: "5-Year Warranty",
-      description: "Premium 5-year warranty with full coverage",
-      category: "Warranties",
+      description: "Premium 5-year warranty with full coverage. Ultimate protection and priority emergency service for your valuable appliance.",
+      category: "Warranty",
       price: 299,
-      ourPrice: 70,
+      ourPrice: 0,
+      cost: 0,
       taxable: false,
       tags: ["warranty", "protection", "premium"],
       benefit: "Maximum protection and priority emergency service"
@@ -98,9 +102,12 @@ export const WarrantySelectionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Recommend a Warranty</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Shield className="text-green-600" size={20} />
+            Recommend a Warranty
+          </DialogTitle>
           <DialogDescription>
-            Select a warranty to recommend to your customer. This will be presented as an upsell opportunity.
+            Select a warranty to recommend to your customer. Warranties address customer concerns and provide peace of mind.
           </DialogDescription>
         </DialogHeader>
 
@@ -137,7 +144,7 @@ export const WarrantySelectionDialog = ({
             </Label>
             <Input
               id="custom-note"
-              placeholder="E.g., Based on the age of your unit, I'd recommend this warranty..."
+              placeholder="E.g., Based on the age of your unit, I'd recommend this warranty to prevent future repair costs..."
               value={customNote}
               onChange={(e) => setCustomNote(e.target.value)}
             />

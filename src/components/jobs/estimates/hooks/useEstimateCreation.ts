@@ -52,8 +52,8 @@ export const useEstimateCreation = (
           quantity: item.quantity,
           taxable: item.taxable,
           tags: item.tags || [],
-          cost: 0, // Add required field
-          ourPrice: 0, // Add required field
+          cost: 0, // Default cost
+          ourPrice: 0, // Default ourPrice to 0
           sku: ""
         }));
         setEstimateItems(mappedItems);
@@ -68,7 +68,12 @@ export const useEstimateCreation = (
 
   // Add a product to the estimate
   const addProductToEstimate = (product: Product) => {
-    setEstimateItems(prev => [...prev, product]);
+    // Ensure ourPrice is set to 0 for any product added to estimates
+    const productWithZeroOurPrice = {
+      ...product,
+      ourPrice: 0
+    };
+    setEstimateItems(prev => [...prev, productWithZeroOurPrice]);
   };
 
   // Remove a product from the estimate
