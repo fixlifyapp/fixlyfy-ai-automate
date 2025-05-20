@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { TeamMember } from "@/types/team";
 
@@ -88,7 +89,7 @@ const getRandomBusinessName = (): string => {
 
 // Team roles and statuses
 const teamRoles = ["technician", "technician", "technician", "technician", "dispatcher", "dispatcher", "admin", "manager"];
-const teamStatuses = ["active", "active", "active", "active", "suspended"] as const;
+const teamStatuses = ["active", "active", "active", "active", "suspended"];
 
 // Generate test team members data
 export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMember[]> => {
@@ -106,7 +107,30 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
   
   if (existingTeamMembers && existingTeamMembers.length > 0) {
     console.log("Team members already exist - skipping team generation");
-    return []; // Return empty array instead of void
+    
+    // Fetch existing team members instead of returning empty array
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('*');
+      
+    if (error) {
+      console.error("Error fetching existing team members:", error);
+      throw error;
+    }
+    
+    // Convert Supabase profiles to TeamMember format
+    const teamMembers: TeamMember[] = profiles?.map(profile => ({
+      id: profile.id,
+      name: profile.name || 'Unknown',
+      email: profile.email || `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
+      role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
+      status: "active",
+      avatar: profile.avatar_url || "https://github.com/shadcn.png",
+      lastLogin: profile.updated_at,
+    })) || [];
+    
+    console.log(`Fetched ${teamMembers.length} existing team members`);
+    return teamMembers;
   }
   
   console.log(`Generating ${count} test team members...`);
@@ -133,13 +157,16 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
     
     const lastLoginDate = new Date();
     lastLoginDate.setDate(lastLoginDate.getDate() - getRandomInt(0, 14));
+
+    const statusOptions = ["active", "suspended"] as const;
+    const status = getRandomElement(statusOptions);
     
     teamMembers.push({
       id: `team-${i + 1}`,
       name: name,
       email: email,
       role: role as "admin" | "manager" | "dispatcher" | "technician",
-      status: getRandomElement(teamStatuses),
+      status: status,
       avatar: "https://github.com/shadcn.png",
       lastLogin: lastLoginDate.toISOString(),
     });
@@ -149,12 +176,29 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
     console.log("Inserting test team members into database...");
     console.log("Sample team member data:", teamMembers[0]);
     
-    // In a real app, this would insert data into the profiles table
-    // For now, we're using the teamMembers array in memory
+    // Actually insert the team members into the profiles table
+    const profilesData = teamMembers.map(member => ({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      role: member.role,
+      avatar_url: member.avatar,
+      updated_at: member.lastLogin
+    }));
     
-    console.log(`Successfully created ${teamMembers.length} team members`);
+    // Insert into Supabase
+    const { error } = await supabase
+      .from('profiles')
+      .insert(profilesData);
     
-    // Return the generated team members to be stored in the team.ts data file
+    if (error) {
+      console.error("Error inserting team members:", error);
+      throw error;
+    }
+    
+    console.log(`Successfully created ${teamMembers.length} team members in Supabase`);
+    
+    // Return the generated team members
     return teamMembers;
   } catch (error) {
     console.error("Error generating test team members:", error);

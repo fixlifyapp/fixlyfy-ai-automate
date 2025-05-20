@@ -22,6 +22,8 @@ import {
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { UserRole } from "@/components/auth/types";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 interface AddTeamMemberModalProps {
   open: boolean;
@@ -45,28 +47,43 @@ export const AddTeamMemberModal = ({
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
     try {
-      // In a real app, this would call an API to create the team member
-      console.log("Inviting team member:", { 
-        name, 
-        email, 
-        role, 
-        serviceArea, 
-        sendWelcomeEmail 
-      });
+      // Generate a unique ID for the new team member
+      const id = uuidv4();
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Insert the new team member into the profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          id,
+          name,
+          email,
+          role,
+          avatar_url: "https://github.com/shadcn.png",
+        });
+      
+      if (error) throw error;
+      
+      // In a real app, this would also send an invitation email
+      if (sendWelcomeEmail) {
+        console.log(`[Simulation] Sending welcome email to ${email}`);
+        // This would integrate with an email service in a real app
+      }
       
       toast.success(`Invitation sent to ${email}`);
       
       // Reset form and close modal
       resetForm();
       onOpenChange(false);
+      
+      // Refresh the page after a short delay to show the new team member
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
     } catch (error) {
-      toast.error("Failed to send invitation");
-      console.error(error);
+      console.error("Error creating team member:", error);
+      toast.error("Failed to create team member");
     } finally {
       setIsSubmitting(false);
     }

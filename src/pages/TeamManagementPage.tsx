@@ -20,9 +20,7 @@ import { TeamMember } from "@/types/team";
 import { TeamMemberProfile } from "@/types/team-member";
 import { toast } from "sonner";
 import { generateTestTeamMembers } from "@/utils/test-data-generator";
-
-// Import team data
-import { teamMembers as initialTeamMembers } from "@/data/team";
+import { supabase } from "@/integrations/supabase/client";
 
 // Helper function to convert TeamMember to TeamMemberProfile
 const convertToTeamMemberProfile = (member: TeamMember): TeamMemberProfile => {
@@ -46,17 +44,58 @@ const TeamManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importCompleted, setImportCompleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { hasRole } = useRBAC();
   
   const isAdmin = hasRole('admin');
-
-  // Apply filters whenever filters change
+  
+  // Fetch team members from Supabase on component mount
   useEffect(() => {
-    let result = initialTeamMembers;
+    const fetchTeamMembers = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          // Convert profiles to TeamMember format
+          const members: TeamMember[] = data.map(profile => ({
+            id: profile.id,
+            name: profile.name || 'Unknown',
+            email: profile.email || `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
+            role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
+            status: "active",
+            avatar: profile.avatar_url || "https://github.com/shadcn.png",
+            lastLogin: profile.updated_at,
+          }));
+          
+          setTeamMembers(members);
+          setFilteredMembers(members);
+        }
+      } catch (error) {
+        console.error("Error fetching team members:", error);
+        toast.error("Failed to load team members");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchTeamMembers();
+  }, []);
+
+  // Apply filters whenever filters or team members change
+  useEffect(() => {
+    let result = teamMembers;
     
     // Apply search filter
     if (searchTerm) {
@@ -79,7 +118,7 @@ const TeamManagementPage = () => {
     }
     
     setFilteredMembers(result);
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [searchTerm, roleFilter, statusFilter, teamMembers]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -110,9 +149,9 @@ const TeamManagementPage = () => {
       toast.info("Importing test team data...");
       const newMembers = await generateTestTeamMembers(6);
       if (newMembers.length > 0) {
-        // Add the new members to the display
-        setFilteredMembers(prevMembers => [...prevMembers, ...newMembers]);
-        toast.success("Successfully imported 6 test team members!");
+        // Update the local state with the new members
+        setTeamMembers(prevMembers => [...prevMembers, ...newMembers]);
+        toast.success(`Successfully imported ${newMembers.length} team members!`);
       } else {
         toast.info("Team members already exist - no new data imported");
       }
@@ -190,7 +229,16 @@ const TeamManagementPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMembers.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <td colSpan={6} className="py-10 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <Loader2 size={24} className="animate-spin text-primary" />
+                        <span>Loading team members...</span>
+                      </div>
+                    </td>
+                  </TableRow>
+                ) : filteredMembers.length === 0 ? (
                   <TableRow>
                     <td colSpan={6} className="py-10 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
