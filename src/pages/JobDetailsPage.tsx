@@ -14,6 +14,7 @@ import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobEstimates } from "@/components/jobs/JobEstimates";
+import { JobInvoices } from "@/components/jobs/JobInvoices";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,8 +24,8 @@ const JobDetailsPage = () => {
   
   // Handle estimate conversion
   const handleEstimateConverted = () => {
-    // Switch to payments tab
-    setActiveTab("payments");
+    // Switch to invoices tab
+    setActiveTab("invoices");
   };
   
   return (
@@ -49,6 +50,9 @@ const JobDetailsPage = () => {
               </TabsContent>
               <TabsContent value="estimates">
                 <JobEstimates jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+              </TabsContent>
+              <TabsContent value="invoices">
+                <JobInvoices jobId={id || ""} />
               </TabsContent>
               <TabsContent value="payments">
                 <JobPayments jobId={id || ""} />

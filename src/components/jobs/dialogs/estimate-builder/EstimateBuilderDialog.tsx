@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -132,7 +133,85 @@ export const EstimateBuilderDialog = ({
   // Get the action text based on whether we're creating or editing
   const actionText = estimateId ? "Save Changes" : "Save Draft";
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {estimateId ? `Edit Estimate ${estimateNumber}` : "Create New Estimate"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="editor">Editor</TabsTrigger>
+            <TabsTrigger value="preview">
+              Preview
+              {lineItems.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  ${calculateGrandTotal().toFixed(2)}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="editor" className="pt-4">
+            <EstimateEditor
+              lineItems={lineItems}
+              onAddEmptyLine={openProductSearch}
+              onAddCustomLine={handleAddCustomLine}
+              onEditLine={handleEditLineItem}
+              onRemoveLine={handleRemoveLineItem}
+              onUpdateLine={handleUpdateLineItem}
+              calculateSubtotal={calculateSubtotal}
+              calculateTotalTax={calculateTotalTax}
+              calculateGrandTotal={calculateGrandTotal}
+              calculateMarginPercentage={calculateMarginPercentage}
+              calculateTotalMargin={calculateTotalMargin}
+              isLoading={isLoading}
+              taxRate={taxRate}
+            />
+          </TabsContent>
+          <TabsContent value="preview" className="pt-4">
+            <EstimatePreview
+              estimateNumber={estimateNumber}
+              lineItems={lineItems}
+              calculateSubtotal={calculateSubtotal}
+              calculateTotalTax={calculateTotalTax}
+              calculateGrandTotal={calculateGrandTotal}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between sm:gap-0">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              className="flex gap-1"
+              disabled={isLoading || lineItems.length === 0}
+            >
+              <Save size={16} />
+              {actionText}
+            </Button>
+            <Button
+              onClick={handleSendEstimate}
+              className="flex gap-1"
+              disabled={isLoading || !canSendEstimate}
+            >
+              <Send size={16} />
+              Send to Customer
+            </Button>
+          </div>
+          {estimateId && onSyncToInvoice && (
+            <Button 
+              variant="outline" 
+              onClick={() => handleSyncToInvoice()}
+              className="w-full sm:w-auto"
+              disabled={isLoading || lineItems.length === 0}
+            >
+              Sync to Invoice
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
       
       <WarrantySelectionDialog open={isWarrantyDialogOpen} onOpenChange={setIsWarrantyDialogOpen} onConfirm={handleWarrantyConfirmed} />
 
