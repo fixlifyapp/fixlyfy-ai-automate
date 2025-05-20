@@ -24,7 +24,11 @@ export const EstimateActions = ({
   // Add a console log to debug the estimate object
   console.log("Estimate in EstimateActions:", estimate);
   
-  const handleEditClick = () => {
+  const handleEditClick = (e: React.MouseEvent) => {
+    // Prevent any default popup behavior
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log("Edit button clicked for estimate ID:", estimate.id);
     if (estimate && estimate.id) {
       onEdit(estimate.id);
