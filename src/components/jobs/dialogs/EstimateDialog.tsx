@@ -95,6 +95,22 @@ export const EstimateDialog = ({
     setIsWarrantyDialogOpen(false);
   };
   
+  // Handle updating a product in the estimate
+  const handleUpdateProduct = (productId: string, updatedProduct: any) => {
+    // Get current products
+    const currentProducts = [...estimateCreation.state.estimateItems];
+    
+    // Find and update the product
+    const productIndex = currentProducts.findIndex(p => p.id === productId);
+    if (productIndex !== -1) {
+      currentProducts[productIndex] = updatedProduct;
+      
+      // Update the state with the modified products array
+      // Note: This is a new array with the updated product, not modifying the original product
+      estimateCreation.actions.setEstimateItems(currentProducts);
+    }
+  };
+  
   // When ready to create after warranty dialog is closed
   useEffect(() => {
     if (readyToCreate && !isWarrantyDialogOpen) {
@@ -118,6 +134,7 @@ export const EstimateDialog = ({
             selectedProducts={estimateCreation.state.estimateItems}
             onAddProduct={estimateCreation.actions.addProductToEstimate}
             onRemoveProduct={estimateCreation.actions.removeProductFromEstimate}
+            onUpdateProduct={handleUpdateProduct}
           />
           
           <div className="flex items-end gap-4">

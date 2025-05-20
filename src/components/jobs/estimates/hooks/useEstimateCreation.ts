@@ -174,7 +174,8 @@ export const useEstimateCreation = (
       setSelectedEstimateId,
       addProductToEstimate,
       removeProductFromEstimate,
-      calculateEstimateTotal
+      calculateEstimateTotal,
+      setEstimateItems
     }
   };
 };

@@ -6,21 +6,26 @@ import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Plus, Package } from "lucide-react";
+import { Trash, Plus, Package, Pencil } from "lucide-react";
+import { ProductEditInEstimateDialog } from "../dialogs/ProductEditInEstimateDialog";
 
 interface EstimateProductSelectorProps {
   selectedProducts: any[];
   onAddProduct: (product: any) => void;
   onRemoveProduct: (productId: string) => void;
+  onUpdateProduct?: (productId: string, updatedProduct: any) => void;
 }
 
 export function EstimateProductSelector({
   selectedProducts,
   onAddProduct,
-  onRemoveProduct
+  onRemoveProduct,
+  onUpdateProduct
 }: EstimateProductSelectorProps) {
   const { products, isLoading } = useProducts();
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<any>(null);
 
   // Calculate total estimate amount
   const estimateTotal = selectedProducts.reduce((sum, product) => 
@@ -33,6 +38,18 @@ export function EstimateProductSelector({
 
   const handleProductSelect = (product: any) => {
     onAddProduct(product);
+  };
+  
+  const handleEditProduct = (product: any) => {
+    setProductToEdit(product);
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleUpdateProduct = (updatedProduct: any) => {
+    if (onUpdateProduct && updatedProduct.id) {
+      onUpdateProduct(updatedProduct.id, updatedProduct);
+    }
+    setIsEditDialogOpen(false);
   };
   
   return (
@@ -61,7 +78,7 @@ export function EstimateProductSelector({
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -89,14 +106,26 @@ export function EstimateProductSelector({
                       <TableCell>{product.category}</TableCell>
                       <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => onRemoveProduct(product.id)}
-                          className="h-8 w-8"
-                        >
-                          <Trash size={16} />
-                        </Button>
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleEditProduct(product)}
+                            className="h-8 w-8"
+                            title="Edit product"
+                          >
+                            <Pencil size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => onRemoveProduct(product.id)}
+                            className="h-8 w-8"
+                            title="Remove product"
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -124,6 +153,14 @@ export function EstimateProductSelector({
         open={isProductSearchOpen}
         onOpenChange={setIsProductSearchOpen}
         onProductSelect={handleProductSelect}
+      />
+      
+      {/* Product edit dialog for estimate-specific edits */}
+      <ProductEditInEstimateDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        product={productToEdit}
+        onSave={handleUpdateProduct}
       />
     </div>
   );
