@@ -14,7 +14,7 @@ export const useEstimateWarranty = (
     if (selectedWarranty && selectedEstimate) {
       try {
         // Add the warranty to the estimate in Supabase
-        const { error: itemError } = await supabase
+        const { data: newItem, error: itemError } = await supabase
           .from('estimate_items')
           .insert({
             estimate_id: selectedEstimate.id,
@@ -25,7 +25,9 @@ export const useEstimateWarranty = (
             taxable: false, // Warranties are typically not taxed
             category: selectedWarranty.category,
             tags: selectedWarranty.tags || [],
-          });
+          })
+          .select()
+          .single();
           
         if (itemError) {
           throw itemError;
@@ -54,7 +56,7 @@ export const useEstimateWarranty = (
           }
         }
         
-        // Update local state
+        // Update local state with the newly created item
         const updatedEstimates = estimates.map(est => 
           est.id === selectedEstimate.id 
             ? {
@@ -62,7 +64,7 @@ export const useEstimateWarranty = (
                 items: [
                   ...est.items,
                   {
-                    id: `item-w-${Date.now()}`, // Temporary ID until we refresh
+                    id: newItem.id, // Use the actual DB id
                     name: selectedWarranty.name,
                     description: selectedWarranty.description,
                     price: selectedWarranty.price,
@@ -87,7 +89,59 @@ export const useEstimateWarranty = (
     }
   };
 
+  // Handle removing a warranty from an estimate
+  const removeWarrantyFromEstimate = async (itemId: string) => {
+    if (!selectedEstimate) return;
+    
+    try {
+      // Find the item to get its price
+      const itemToRemove = selectedEstimate.items.find((item: any) => item.id === itemId);
+      
+      if (!itemToRemove) {
+        toast.error('Item not found');
+        return;
+      }
+      
+      // Delete the item from the database
+      const { error: deleteError } = await supabase
+        .from('estimate_items')
+        .delete()
+        .eq('id', itemId)
+        .eq('estimate_id', selectedEstimate.id);
+        
+      if (deleteError) throw deleteError;
+      
+      // Update the estimate amount
+      const newAmount = Math.max(0, selectedEstimate.amount - itemToRemove.price);
+      
+      const { error: updateError } = await supabase
+        .from('estimates')
+        .update({ amount: newAmount })
+        .eq('id', selectedEstimate.id);
+        
+      if (updateError) throw updateError;
+      
+      // Update the local state
+      const updatedEstimates = estimates.map(est => 
+        est.id === selectedEstimate.id
+          ? {
+              ...est,
+              items: est.items.filter((item: any) => item.id !== itemId),
+              amount: newAmount
+            }
+          : est
+      );
+      
+      setEstimates(updatedEstimates);
+      toast.success('Item removed from estimate');
+    } catch (error) {
+      console.error('Error removing warranty:', error);
+      toast.error('Failed to remove item from estimate');
+    }
+  };
+
   return {
-    handleWarrantySelection
+    handleWarrantySelection,
+    removeWarrantyFromEstimate
   };
 };

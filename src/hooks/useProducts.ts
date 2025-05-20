@@ -22,6 +22,7 @@ export const useProducts = (category?: string) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -147,6 +148,24 @@ export const useProducts = (category?: string) => {
 
   const deleteProduct = async (id: string) => {
     try {
+      setIsDeleting(true);
+      
+      // Check for dependencies in estimate_items
+      const { data: estimateItems, error: checkError } = await supabase
+        .from('estimate_items')
+        .select('id')
+        .eq('id', id)
+        .limit(1);
+        
+      if (checkError) throw checkError;
+      
+      // If product is used in any estimate, warn the user
+      if (estimateItems && estimateItems.length > 0) {
+        toast.error('Cannot delete product as it is being used in estimates');
+        return false;
+      }
+      
+      // If no dependencies, proceed with deletion
       const { error } = await supabase
         .from('products')
         .delete()
@@ -161,6 +180,8 @@ export const useProducts = (category?: string) => {
       console.error('Error deleting product:', error);
       toast.error(`Failed to delete product: ${error.message || 'Unknown error'}`);
       return false;
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -170,6 +191,7 @@ export const useProducts = (category?: string) => {
   return {
     products,
     isLoading,
+    isDeleting,
     categories,
     addProduct,
     createProduct,

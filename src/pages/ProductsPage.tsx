@@ -8,10 +8,14 @@ import { Plus, Download } from "lucide-react";
 import { applianceRepairProducts } from "@/data/appliance-repair-products";
 import { useProducts } from "@/hooks/useProducts";
 import { toast } from "sonner";
+import { Dialog } from "@/components/ui/dialog";
+import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
 
 const ProductsPage = () => {
   const [isImporting, setIsImporting] = useState(false);
-  const { createProduct, refreshProducts } = useProducts();
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const { createProduct, refreshProducts, deleteProduct, isDeleting } = useProducts();
 
   const handleImportApplianceProducts = async () => {
     if (isImporting) return;
@@ -48,6 +52,21 @@ const ProductsPage = () => {
     }
   };
 
+  const handleDeleteProduct = (productId: string) => {
+    setProductToDelete(productId);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (productToDelete) {
+      const success = await deleteProduct(productToDelete);
+      if (success) {
+        setIsDeleteConfirmOpen(false);
+        setProductToDelete(null);
+      }
+    }
+  };
+
   return (
     <PageLayout>
       <div className="container mx-auto px-4 py-6">
@@ -70,9 +89,23 @@ const ProductsPage = () => {
           </div>
         </div>
         <Card className="border-fixlyfy-border shadow-sm">
-          <JobProducts jobId="" />
+          <JobProducts 
+            jobId="" 
+            onDeleteProduct={handleDeleteProduct}
+          />
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DeleteConfirmDialog 
+          title="Delete Product"
+          description="Are you sure you want to delete this product? This action cannot be undone."
+          onOpenChange={setIsDeleteConfirmOpen}
+          onConfirm={confirmDeleteProduct}
+          isDeleting={isDeleting}
+        />
+      </Dialog>
     </PageLayout>
   );
 };

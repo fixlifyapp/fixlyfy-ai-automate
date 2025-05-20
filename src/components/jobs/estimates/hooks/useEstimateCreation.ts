@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,7 +76,57 @@ export const useEstimateCreation = (
   };
 
   // Remove a product from the estimate
-  const removeProductFromEstimate = (productId: string) => {
+  const removeProductFromEstimate = async (productId: string) => {
+    // First, check if we are in edit mode (have a selectedEstimateId)
+    if (selectedEstimateId) {
+      try {
+        // Get the item we're about to remove to keep track of its price
+        const itemToRemove = estimateItems.find(item => item.id === productId);
+        
+        // Remove from database if it's an existing estimate
+        const { error } = await supabase
+          .from('estimate_items')
+          .delete()
+          .eq('id', productId)
+          .eq('estimate_id', selectedEstimateId);
+          
+        if (error) {
+          console.error('Error removing product from estimate:', error);
+          toast.error('Failed to remove product from estimate');
+          return;
+        }
+        
+        // If this was a successful database removal and we have the item's price
+        if (itemToRemove) {
+          // Update the estimate's total amount
+          const estimate = estimates.find(est => est.id === selectedEstimateId);
+          if (estimate) {
+            const newAmount = Math.max(0, estimate.amount - itemToRemove.price);
+            
+            const { error: updateError } = await supabase
+              .from('estimates')
+              .update({ amount: newAmount })
+              .eq('id', selectedEstimateId);
+              
+            if (updateError) {
+              console.error('Error updating estimate amount:', updateError);
+            } else {
+              // Update the local estimates array
+              setEstimates(estimates.map(est => 
+                est.id === selectedEstimateId ? { ...est, amount: newAmount } : est
+              ));
+            }
+          }
+        }
+        
+        toast.success('Product removed from estimate');
+      } catch (error) {
+        console.error('Error in removeProductFromEstimate:', error);
+        toast.error('Failed to remove product');
+      }
+    }
+    
+    // Always update the local state regardless of DB operation
     setEstimateItems(prev => prev.filter(item => item.id !== productId));
   };
 

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash, Plus, Package, Pencil } from "lucide-react";
 import { ProductEditInEstimateDialog } from "../dialogs/ProductEditInEstimateDialog";
+import { Dialog } from "@/components/ui/dialog";
+import { DeleteConfirmDialog } from "../dialogs/DeleteConfirmDialog";
 
 interface EstimateProductSelectorProps {
   selectedProducts: any[];
@@ -26,6 +28,8 @@ export function EstimateProductSelector({
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<any>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   // Calculate total estimate amount
   const estimateTotal = selectedProducts.reduce((sum, product) => 
@@ -50,6 +54,19 @@ export function EstimateProductSelector({
       onUpdateProduct(updatedProduct.id, updatedProduct);
     }
     setIsEditDialogOpen(false);
+  };
+  
+  const handleDeleteClick = (productId: string) => {
+    setProductToDelete(productId);
+    setIsDeleteConfirmOpen(true);
+  };
+  
+  const confirmDeleteProduct = () => {
+    if (productToDelete) {
+      onRemoveProduct(productToDelete);
+      setIsDeleteConfirmOpen(false);
+      setProductToDelete(null);
+    }
   };
   
   return (
@@ -119,7 +136,7 @@ export function EstimateProductSelector({
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => onRemoveProduct(product.id)}
+                            onClick={() => handleDeleteClick(product.id)}
                             className="h-8 w-8"
                             title="Remove product"
                           >
@@ -162,6 +179,18 @@ export function EstimateProductSelector({
         product={productToEdit}
         onSave={handleUpdateProduct}
       />
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DeleteConfirmDialog 
+          title="Remove Product"
+          description="Are you sure you want to remove this product from the estimate?"
+          onOpenChange={setIsDeleteConfirmOpen}
+          onConfirm={confirmDeleteProduct}
+          isDeleting={false}
+          confirmText="Remove"
+        />
+      </Dialog>
     </div>
   );
-}
+};

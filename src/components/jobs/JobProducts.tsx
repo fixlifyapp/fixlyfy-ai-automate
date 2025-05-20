@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, Pencil, Search, X } from "lucide-react";
+import { PlusCircle, Pencil, Search, X, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobProductsProps {
   jobId: string;
+  onDeleteProduct?: (productId: string) => void;
 }
 
-export const JobProducts = ({ jobId }: JobProductsProps) => {
+export const JobProducts = ({ jobId, onDeleteProduct }: JobProductsProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -67,6 +68,14 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
     }
     setIsEditDialogOpen(false);
     setIsCreateDialogOpen(false);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    if (onDeleteProduct) {
+      onDeleteProduct(productId);
+    } else {
+      deleteProduct(productId);
+    }
   };
 
   const getMarginPercentage = (product: Product) => {
@@ -180,13 +189,22 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
                     {product.taxable ? "Yes" : "No"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleEditProduct(product)}
-                    >
-                      <Pencil size={16} />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteProduct(product.id)}
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
