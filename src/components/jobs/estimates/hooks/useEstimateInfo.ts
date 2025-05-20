@@ -137,18 +137,14 @@ export const useEstimateInfo = (jobId?: string, clientId?: string) => {
   }, [jobId, clientId]);
 
   return {
-    state: {
-      clientInfo,
-      companyInfo,
-      jobInfo,
-      isLoading
-    },
-    actions: {
-      fetchClientInfo,
-      fetchJobInfo,
-      getCompanyInfo,
-      getClientInfo,
-      generateUniqueNumber
-    }
+    clientInfo,
+    companyInfo,
+    jobInfo,
+    isLoading,
+    getClientInfo,
+    getCompanyInfo,
+    fetchClientInfo,
+    fetchJobInfo,
+    generateUniqueNumber
   };
 };

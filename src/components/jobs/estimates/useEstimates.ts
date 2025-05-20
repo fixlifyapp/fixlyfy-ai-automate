@@ -23,7 +23,9 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const estimateActions = useEstimateActions(jobId, estimates, setEstimates, onEstimateConverted);
   const estimateCreation = useEstimateCreation(jobId, estimates, setEstimates);
   const estimateUpsell = useEstimateUpsell(estimates, setEstimates);
-  const estimateInfo = useEstimateInfo();
+  
+  // Get client and company info
+  const estimateInfo = useEstimateInfo(jobId);
   
   // Get warranty functionality (depends on selectedEstimate from actions)
   const estimateWarranty = useEstimateWarranty(

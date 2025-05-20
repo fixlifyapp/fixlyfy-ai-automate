@@ -96,8 +96,8 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
           open={dialogs.isEstimateDialogOpen}
           onOpenChange={dialogs.setIsEstimateDialogOpen}
           onEstimateCreated={handlers.handleEstimateCreated}
-          clientInfo={info.getClientInfo()}
-          companyInfo={info.getCompanyInfo()}
+          clientInfo={info.clientInfo}
+          companyInfo={info.companyInfo}
         />
       </CardContent>
     </Card>
