@@ -2,8 +2,19 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LineItem } from "@/components/jobs/builder/types";
 import { Pencil, Trash } from "lucide-react";
+
+interface LineItem {
+  id: string;
+  description?: string;
+  name: string;
+  quantity: number;
+  price: number;
+  discount?: number;
+  tax?: number;
+  taxable: boolean;
+  unitPrice?: number;
+}
 
 interface LineItemsTableProps {
   lineItems: LineItem[];
@@ -21,8 +32,9 @@ export const LineItemsTable = ({
   
   // Helper function to calculate the total for a line item
   const calculateLineTotal = (item: LineItem): number => {
-    const subtotal = item.quantity * item.unitPrice;
-    const discountAmount = subtotal * (item.discount / 100);
+    const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
+    const subtotal = item.quantity * price;
+    const discountAmount = item.discount ? subtotal * (item.discount / 100) : 0;
     const afterDiscount = subtotal - discountAmount;
     return afterDiscount;
   };
@@ -45,7 +57,7 @@ export const LineItemsTable = ({
             <TableRow key={item.id} className="hover:bg-muted/20 group">
               <TableCell>
                 <Input
-                  value={item.description}
+                  value={item.description || item.name}
                   onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
                   className="border-transparent focus:border-input bg-transparent"
                 />
@@ -64,10 +76,17 @@ export const LineItemsTable = ({
                   <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
                     type="number"
-                    value={item.unitPrice}
+                    value={item.unitPrice !== undefined ? item.unitPrice : item.price}
                     min={0}
                     step={0.01}
-                    onChange={(e) => onUpdateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      if (item.unitPrice !== undefined) {
+                        onUpdateLineItem(item.id, "unitPrice", value);
+                      } else {
+                        onUpdateLineItem(item.id, "price", value);
+                      }
+                    }}
                     className="border-transparent focus:border-input bg-transparent pl-6"
                   />
                 </div>
@@ -76,7 +95,7 @@ export const LineItemsTable = ({
                 <div className="relative">
                   <Input
                     type="number"
-                    value={item.discount}
+                    value={item.discount || 0}
                     min={0}
                     max={100}
                     onChange={(e) => onUpdateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)}

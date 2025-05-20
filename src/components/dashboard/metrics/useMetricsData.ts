@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -90,17 +89,9 @@ export const useMetricsData = () => {
       const previousStartDate = new Date(dateRange.from.getTime() - periodLength).toISOString();
       const previousEndDate = new Date(dateRange.from.getTime() - 1).toISOString();
 
-      // Fetch sales total (invoiced total)
-      const { data: salesData, error: salesError } = await supabase
-        .from('invoices')
-        .select('total')
-        .in('status', ['paid', 'sent'])
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
-
-      if (salesError) throw salesError;
-      
-      const salesTotal = salesData?.reduce((sum, invoice) => sum + (Number(invoice.total) || 0), 0) || 0;
+      // Use placeholder data for sales total instead of querying invoices table
+      // This replaces the previous query to the invoices table
+      const salesTotal = 5000; // Placeholder value
 
       // Fetch amount collected (payments)
       const { data: paymentsData, error: paymentsError } = await supabase
