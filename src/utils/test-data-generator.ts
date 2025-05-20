@@ -122,7 +122,8 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
     const teamMembers: TeamMember[] = profiles?.map(profile => ({
       id: profile.id,
       name: profile.name || 'Unknown',
-      email: profile.email || `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
+      // Generate email since it's not in the profiles table
+      email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
       role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
       status: "active",
       avatar: profile.avatar_url || "https://github.com/shadcn.png",
@@ -158,8 +159,10 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
     const lastLoginDate = new Date();
     lastLoginDate.setDate(lastLoginDate.getDate() - getRandomInt(0, 14));
 
+    // Define status options with explicit type
     const statusOptions = ["active", "suspended"] as const;
-    const status = getRandomElement(statusOptions);
+    // Use type assertion when accessing random element
+    const status = getRandomElement([...statusOptions]) as "active" | "suspended";
     
     teamMembers.push({
       id: `team-${i + 1}`,
@@ -180,7 +183,8 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
     const profilesData = teamMembers.map(member => ({
       id: member.id,
       name: member.name,
-      email: member.email,
+      // We need to include email in the TeamMember interface for UI display,
+      // but don't include it in the profiles table data since that table doesn't have an email field
       role: member.role,
       avatar_url: member.avatar,
       updated_at: member.lastLogin

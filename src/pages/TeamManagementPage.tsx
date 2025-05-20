@@ -72,7 +72,8 @@ const TeamManagementPage = () => {
           const members: TeamMember[] = data.map(profile => ({
             id: profile.id,
             name: profile.name || 'Unknown',
-            email: profile.email || `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
+            // Since email is not in profiles table, generate one based on name or id
+            email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
             role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
             status: "active",
             avatar: profile.avatar_url || "https://github.com/shadcn.png",

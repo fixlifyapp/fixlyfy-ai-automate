@@ -57,9 +57,10 @@ export const AddTeamMemberModal = ({
         .insert({
           id,
           name,
-          email,
           role,
           avatar_url: "https://github.com/shadcn.png",
+          // Note: We don't include email in the Supabase profiles table
+          // since that table doesn't have an email field
         });
       
       if (error) throw error;
