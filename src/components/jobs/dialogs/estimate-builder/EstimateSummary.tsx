@@ -26,6 +26,7 @@ export const EstimateSummary = ({
   const totalTax = typeof calculateTotalTax === 'function' ? calculateTotalTax() : 0;
   const grandTotal = typeof calculateGrandTotal === 'function' ? calculateGrandTotal() : 0;
   
+  // We'll only calculate the margin if showMargin is true and the functions are provided
   const displayMargin = showMargin && !!calculateTotalMargin && !!calculateMarginPercentage;
   const totalMargin = displayMargin && typeof calculateTotalMargin === 'function' ? calculateTotalMargin() : 0;
   const marginPercentage = displayMargin && typeof calculateMarginPercentage === 'function' ? calculateMarginPercentage() : 0;

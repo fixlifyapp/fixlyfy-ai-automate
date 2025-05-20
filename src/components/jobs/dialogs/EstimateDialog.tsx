@@ -79,26 +79,6 @@ export const EstimateDialog = ({
     return subtotal + calculateTax();
   };
 
-  // Calculate profit margin for display
-  const calculateProfitMargin = () => {
-    if (estimateCreation.state.estimateItems.length === 0) return 0;
-    
-    const revenue = estimateCreation.actions.calculateEstimateTotal();
-    const cost = estimateCreation.state.estimateItems.reduce((total, item) => {
-      return total + (item.ourPrice || 0);
-    }, 0);
-    
-    return revenue - cost;
-  };
-
-  const calculateMarginPercentage = () => {
-    const revenue = estimateCreation.actions.calculateEstimateTotal();
-    const margin = calculateProfitMargin();
-    
-    if (revenue === 0) return 0;
-    return Math.round((margin / revenue) * 100);
-  };
-
   // Function to handle the form submission  
   const handleCreateEstimate = () => {
     // Check if we have any warranty products to offer
@@ -244,21 +224,7 @@ export const EstimateDialog = ({
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="estimate-cost" className="flex items-center gap-2 text-sm font-medium">
-                    Our Price ($)
-                    <span className="text-xs text-muted-foreground">(Internal)</span>
-                  </Label>
-                  <Input
-                    id="estimate-cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="mt-1"
-                    disabled={estimateCreation.state.estimateItems.length > 0}
-                  />
-                </div>
+                {/* Removed Our Price input field */}
                 
                 <div className="bg-muted/30 border rounded-md p-4 space-y-3">
                   <div className="flex justify-between text-sm">
@@ -282,19 +248,7 @@ export const EstimateDialog = ({
                     <span>${calculateTotal().toFixed(2)}</span>
                   </div>
                   
-                  {estimateCreation.state.estimateItems.length > 0 && (
-                    <div className="pt-2 border-t border-dashed border-border">
-                      <div className="flex justify-between text-sm">
-                        <span className="flex items-center gap-1 text-green-600">
-                          Profit Margin:
-                          <Info size={14} className="text-muted-foreground" />
-                        </span>
-                        <span className="text-green-600">
-                          ${calculateProfitMargin().toFixed(2)} ({calculateMarginPercentage()}%)
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  {/* Removed margin calculation display */}
                 </div>
               </div>
             </div>
