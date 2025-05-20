@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DeleteJobsDialogProps {
   selectedJobs: string[];
@@ -23,17 +24,15 @@ export function DeleteJobsDialog({ selectedJobs, onOpenChange, onSuccess }: Dele
     setIsSubmitting(true);
     
     try {
-      // In a real app, this would be an actual API call
-      // await fetch('/api/jobs/bulk-delete', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     jobIds: selectedJobs,
-      //   }),
-      // });
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Delete all selected jobs from Supabase
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .in('id', selectedJobs);
+        
+      if (error) {
+        throw error;
+      }
       
       onSuccess();
       onOpenChange(false);

@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChangeStatusDialogProps {
   selectedJobs: string[];
@@ -38,22 +39,20 @@ export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: Ch
     setIsSubmitting(true);
     
     try {
-      // In a real app, this would be an actual API call
-      // await fetch('/api/jobs/bulk-update-status', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     jobIds: selectedJobs,
-      //     status,
-      //   }),
-      // });
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Update status for all selected jobs in Supabase
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status })
+        .in('id', selectedJobs);
+        
+      if (error) {
+        throw error;
+      }
       
       // Call onSuccess with the new status
       onSuccess(status);
       onOpenChange(false);
+      toast.success(`Updated ${selectedJobs.length} jobs to "${status}"`);
     } catch (error) {
       console.error("Failed to update job status:", error);
       toast.error("Failed to update job status. Please try again.");

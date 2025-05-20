@@ -4,145 +4,62 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { Button } from "@/components/ui/button";
-import { Plus, Grid, List } from "lucide-react";
+import { Plus, Grid, List, Loader2 } from "lucide-react";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { toast } from "sonner";
-
-// Mock job data - in a real app, this would come from an API
-const initialJobs = [
-  {
-    id: "JOB-1001",
-    client: "Michael Johnson",
-    status: "scheduled",
-    date: "2023-05-15",
-    time: "13:30",
-    technician: {
-      name: "Robert Smith",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "RS",
-      id: "tech-1"
-    },
-    priority: "medium",
-    revenue: 250.00,
-    service: "HVAC Repair",
-    address: "123 Main St, Apt 45",
-  },
-  {
-    id: "JOB-1002",
-    client: "Sarah Williams",
-    status: "in-progress",
-    date: "2023-05-15",
-    time: "14:45",
-    technician: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      initials: "JD",
-      id: "tech-2"
-    },
-    priority: "high",
-    revenue: 350.00,
-    service: "Plumbing",
-    address: "456 Oak Ave",
-  },
-  {
-    id: "JOB-1003",
-    client: "David Brown",
-    status: "completed",
-    date: "2023-05-15",
-    time: "11:15",
-    technician: {
-      name: "Emily Clark",
-      avatar: "https://i.pravatar.cc/150?img=5",
-      initials: "EC",
-      id: "tech-3"
-    },
-    priority: "low",
-    revenue: 175.00,
-    service: "Electrical",
-    address: "789 Pine St",
-  },
-  {
-    id: "JOB-1004",
-    client: "Jessica Miller",
-    status: "scheduled",
-    date: "2023-05-16",
-    time: "09:00",
-    technician: {
-      name: "Robert Smith",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "RS",
-      id: "tech-1"
-    },
-    priority: "medium",
-    revenue: 200.00,
-    service: "HVAC Maintenance",
-    address: "321 Elm St",
-  },
-  {
-    id: "JOB-1005",
-    client: "Thomas Anderson",
-    status: "canceled",
-    date: "2023-05-14",
-    time: "15:30",
-    technician: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      initials: "JD",
-      id: "tech-2"
-    },
-    priority: "low",
-    revenue: 0.00,
-    service: "Electrical",
-    address: "555 Maple Rd",
-  },
-];
+import { useJobs } from "@/hooks/useJobs";
 
 const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
-  const [jobs, setJobs] = useState([...initialJobs]);
+  
+  // Use the useJobs hook to fetch job data from Supabase
+  const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
   
   // Handler for bulk status updates
   const handleUpdateJobsStatus = (jobIds: string[], newStatus: string) => {
-    // Update job data
-    setJobs(prevJobs => 
-      prevJobs.map(job => 
-        jobIds.includes(job.id) ? { ...job, status: newStatus } : job
-      )
-    );
-    
-    toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
-    setSelectedJobs([]);
+    // Update job data in Supabase for each selected job
+    Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })))
+      .then(() => {
+        toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
+        setSelectedJobs([]);
+        refreshJobs(); // Refresh the job list
+      })
+      .catch(error => {
+        console.error("Failed to update jobs status:", error);
+        toast.error("Failed to update job status");
+      });
   };
   
   // Handler for bulk technician assignment
   const handleAssignTechnician = (jobIds: string[], technicianId: string, technicianName: string) => {
-    setJobs(prevJobs => 
-      prevJobs.map(job => {
-        if (jobIds.includes(job.id)) {
-          // Find the technician data by id - in a real app, you'd get this from your API
-          const techData = initialJobs.find(j => j.technician.id === technicianId)?.technician;
-          
-          return { 
-            ...job, 
-            technician: techData || job.technician
-          };
-        }
-        return job;
+    // Update job data in Supabase for each selected job
+    Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })))
+      .then(() => {
+        toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
+        setSelectedJobs([]);
+        refreshJobs(); // Refresh the job list
       })
-    );
-    
-    toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
-    setSelectedJobs([]);
+      .catch(error => {
+        console.error("Failed to assign technician:", error);
+        toast.error("Failed to assign technician");
+      });
   };
   
   // Handler for bulk deletion
   const handleDeleteJobs = (jobIds: string[]) => {
-    setJobs(prevJobs => prevJobs.filter(job => !jobIds.includes(job.id)));
-    toast.success(`Deleted ${jobIds.length} jobs`);
-    setSelectedJobs([]);
+    // Delete jobs from Supabase
+    Promise.all(jobIds.map(id => deleteJob(id)))
+      .then(() => {
+        toast.success(`Deleted ${jobIds.length} jobs`);
+        setSelectedJobs([]);
+      })
+      .catch(error => {
+        console.error("Failed to delete jobs:", error);
+        toast.error("Failed to delete jobs");
+      });
   };
   
   // Handler for sending reminders
@@ -154,13 +71,31 @@ const JobsPage = () => {
   
   // Handler for tagging jobs
   const handleTagJobs = (jobIds: string[], tags: string[]) => {
-    // In a real app, this would update job tags via an API
-    toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
-    setSelectedJobs([]);
+    // Update job tags in Supabase
+    Promise.all(jobIds.map(id => {
+      const job = jobs.find(j => j.id === id);
+      if (!job) return Promise.resolve(null);
+      
+      // Merge existing tags with new tags
+      const existingTags = job.tags || [];
+      const updatedTags = [...new Set([...existingTags, ...tags])];
+      
+      return updateJob(id, { tags: updatedTags });
+    }))
+      .then(() => {
+        toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
+        setSelectedJobs([]);
+        refreshJobs(); // Refresh the job list
+      })
+      .catch(error => {
+        console.error("Failed to tag jobs:", error);
+        toast.error("Failed to tag jobs");
+      });
   };
   
   // Handler for marking jobs as paid
   const handleMarkAsPaid = (jobIds: string[], paymentMethod: string) => {
+    // In a real app, this would update payment status in the database
     toast.success(`Marked ${jobIds.length} jobs as paid via ${paymentMethod}`);
     setSelectedJobs([]);
   };
@@ -239,14 +174,29 @@ const JobsPage = () => {
         </div>
       </div>
       
-      <JobsList 
-        isGridView={isGridView} 
-        selectedJobs={selectedJobs}
-        onSelectJob={handleSelectJob}
-        onSelectAllJobs={handleSelectAllJobs}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 size={32} className="animate-spin text-fixlyfy mr-2" />
+          <span>Loading jobs...</span>
+        </div>
+      ) : (
+        <JobsList 
+          jobs={jobs}
+          isGridView={isGridView} 
+          selectedJobs={selectedJobs}
+          onSelectJob={handleSelectJob}
+          onSelectAllJobs={handleSelectAllJobs}
+        />
+      )}
       
-      <JobsCreateModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <JobsCreateModal 
+        open={isCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={(job) => {
+          refreshJobs();
+          toast.success(`Job ${job.id} created successfully`);
+        }}
+      />
     </PageLayout>
   );
 };
