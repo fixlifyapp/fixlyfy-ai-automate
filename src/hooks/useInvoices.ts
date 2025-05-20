@@ -38,7 +38,7 @@ export const useInvoices = (jobId?: string) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { actions: { generateUniqueNumber } } = useEstimateInfo();
+  const { generateUniqueNumber } = useEstimateInfo();
 
   const fetchInvoices = async () => {
     if (!jobId) return;

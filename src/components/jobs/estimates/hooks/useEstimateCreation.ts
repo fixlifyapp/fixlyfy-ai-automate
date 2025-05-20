@@ -31,6 +31,8 @@ export const useEstimateCreation = (
       // Generate a new estimate number
       const newEstimateNumber = `EST-${Math.floor(10000 + Math.random() * 90000)}`;
       
+      console.log('Creating estimate for job:', jobId, 'with amount:', amount);
+      
       // Create a new estimate in Supabase
       const { data, error } = await supabase
         .from('estimates')
@@ -44,6 +46,7 @@ export const useEstimateCreation = (
         .single();
         
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
       
@@ -60,13 +63,17 @@ export const useEstimateCreation = (
         techniciansNote: ""
       };
       
+      console.log('Created estimate:', newEstimate);
+      
       // Add the new estimate to the list
       setEstimates([newEstimate, ...estimates]);
       
       toast.success(`Estimate ${newEstimateNumber} created`);
+      return newEstimate;
     } catch (error) {
       console.error('Error creating estimate:', error);
       toast.error('Failed to create estimate');
+      return null;
     }
   };
 
