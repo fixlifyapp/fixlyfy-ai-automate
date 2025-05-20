@@ -20,6 +20,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useClients, type Client } from "@/hooks/useClients";
+import { toast } from "sonner";
 
 interface ClientsCreateModalProps {
   open: boolean;
@@ -28,22 +30,45 @@ interface ClientsCreateModalProps {
 
 export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addClient } = useClients();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // In a real implementation, this would save the client to the database
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      
+      const clientData: Partial<Client> = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        phone: formData.get('phone') as string,
+        address: formData.get('address') as string,
+        city: formData.get('city') as string,
+        state: formData.get('state') as string,
+        zip: formData.get('zip') as string,
+        country: formData.get('country') as string,
+        type: formData.get('clientType') as string,
+        status: formData.get('status') as string,
+        notes: formData.get('notes') as string,
+      };
+      
+      await addClient(clientData);
       onOpenChange(false);
-    }, 1000);
+      toast.success("Client added successfully");
+      
+    } catch (error) {
+      console.error("Error adding client:", error);
+      toast.error("Failed to add client");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-        <DialogHeader className="px-2">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>Add New Client</DialogTitle>
           <DialogDescription>
             Fill in the details below to add a new client to your database.
@@ -51,11 +76,11 @@ export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalPro
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
-          <ScrollArea className="flex-grow pr-4">
+          <ScrollArea className="flex-grow px-6" style={{ maxHeight: "calc(80vh - 170px)" }}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="clientType">Client Type</Label>
-                <Select defaultValue="residential">
+                <Select name="clientType" defaultValue="residential">
                   <SelectTrigger id="clientType">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -68,7 +93,7 @@ export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select defaultValue="active">
+                <Select name="status" defaultValue="active">
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -81,44 +106,45 @@ export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" placeholder="Full name or business name" />
+                <Input id="name" name="name" placeholder="Full name or business name" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="Email address" />
+                <Input id="email" name="email" type="email" placeholder="Email address" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="Phone number" />
+                <Input id="phone" name="phone" placeholder="Phone number" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="altPhone">Alternative Phone</Label>
-                <Input id="altPhone" placeholder="Alternative phone (optional)" />
+                <Input id="altPhone" name="altPhone" placeholder="Alternative phone (optional)" />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" placeholder="Street address" />
+                <Input id="address" name="address" placeholder="Street address" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
-                <Input id="city" placeholder="City" />
+                <Input id="city" name="city" placeholder="City" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="state">State</Label>
-                <Input id="state" placeholder="State/Province" />
+                <Input id="state" name="state" placeholder="State/Province" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="zip">ZIP / Postal Code</Label>
-                <Input id="zip" placeholder="ZIP / Postal code" />
+                <Input id="zip" name="zip" placeholder="ZIP / Postal code" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
-                <Input id="country" placeholder="Country" defaultValue="United States" />
+                <Input id="country" name="country" placeholder="Country" defaultValue="United States" />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea 
                   id="notes" 
+                  name="notes"
                   placeholder="Add any additional notes about this client"
                   className="resize-none"
                   rows={3}
@@ -127,7 +153,7 @@ export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalPro
             </div>
           </ScrollArea>
           
-          <DialogFooter className="mt-6 px-2">
+          <DialogFooter className="px-6 py-4 border-t">
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button 
               type="submit" 
