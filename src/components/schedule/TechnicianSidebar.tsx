@@ -1,125 +1,160 @@
 
 import { useState } from "react";
-import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter } from "lucide-react";
-import { teamMembers } from "@/data/team";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { jobs } from "@/data/real-jobs";
 
-// Sample technicians with enhanced data
-const technicians = teamMembers.map(member => ({
-  ...member,
-  skills: ['HVAC', 'Plumbing', 'Electrical'].filter(() => Math.random() > 0.5),
-  status: Math.random() > 0.7 ? 'busy' : Math.random() > 0.3 ? 'available' : 'on-leave',
-  jobCount: Math.floor(Math.random() * 8),
-  serviceArea: ['Downtown', 'East Side', 'West End', 'North District'][Math.floor(Math.random() * 4)]
-}));
-
-export const TechnicianSidebar = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+// Derive technicians from the real jobs data
+const deriveTechnicians = () => {
+  const techMap = new Map();
   
-  const filteredTechnicians = technicians.filter(tech => {
-    const matchesSearch = tech.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAvailability = showAvailableOnly ? tech.status === 'available' : true;
-    const matchesSkills = selectedSkills.length > 0 
-      ? tech.skills.some(skill => selectedSkills.includes(skill))
-      : true;
+  jobs.forEach(job => {
+    if (!techMap.has(job.technician.name)) {
+      techMap.set(job.technician.name, {
+        id: job.technician.name.toLowerCase().replace(/\s+/g, '-'),
+        name: job.technician.name,
+        avatar: job.technician.avatar,
+        initials: job.technician.initials,
+        jobCount: 1,
+        specialties: new Set()
+      });
+    } else {
+      const tech = techMap.get(job.technician.name);
+      tech.jobCount++;
+    }
     
-    return matchesSearch && matchesAvailability && matchesSkills;
+    // Add job tags as specialties
+    if (job.tags) {
+      job.tags.forEach(tag => {
+        const tech = techMap.get(job.technician.name);
+        if (tech && tech.specialties) {
+          tech.specialties.add(tag);
+        }
+      });
+    }
   });
   
-  const allSkills = Array.from(new Set(technicians.flatMap(tech => tech.skills)));
-  
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev => 
-      prev.includes(skill) 
-        ? prev.filter(s => s !== skill) 
-        : [...prev, skill]
-    );
+  // Convert to array and process specialties
+  return Array.from(techMap.values()).map(tech => ({
+    ...tech,
+    specialties: Array.from(tech.specialties).slice(0, 2) // Take first two specialties
+  }));
+};
+
+const technicians = deriveTechnicians();
+
+export const TechnicianSidebar = () => {
+  const [selectedTechs, setSelectedTechs] = useState<string[]>(technicians.map(t => t.id));
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTechs = technicians.filter(tech => 
+    tech.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleTechSelect = (techId: string) => {
+    setSelectedTechs(prev => {
+      if (prev.includes(techId)) {
+        return prev.filter(id => id !== techId);
+      } else {
+        return [...prev, techId];
+      }
+    });
   };
-  
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedTechs(filteredTechs.map(t => t.id));
+    } else {
+      setSelectedTechs([]);
+    }
+  };
+
   return (
-    <div className="fixlyfy-card flex flex-col h-full overflow-hidden">
+    <div className="fixlyfy-card h-fit">
       <div className="p-4 border-b border-fixlyfy-border">
-        <h2 className="text-lg font-semibold mb-4">Technicians</h2>
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-secondary" size={16} />
-          <Input 
-            placeholder="Search technicians..." 
-            className="pl-10"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+        <h3 className="font-medium">Technicians</h3>
+      </div>
+      
+      <div className="p-4 border-b border-fixlyfy-border">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted" size={16} />
+          <Input
+            className="pl-8"
+            placeholder="Search technicians..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-        
-        <div className="flex items-center space-x-2 mb-4">
-          <Checkbox 
-            id="available" 
-            checked={showAvailableOnly}
-            onCheckedChange={(checked) => setShowAvailableOnly(!!checked)}
-          />
-          <label 
-            htmlFor="available" 
-            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Available Only
-          </label>
-        </div>
-        
-        <div className="mb-4">
-          <p className="text-sm font-medium mb-2">Filter by Skills</p>
-          <div className="flex flex-wrap gap-2">
-            {allSkills.map(skill => (
-              <Badge 
-                key={skill}
-                variant={selectedSkills.includes(skill) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => toggleSkill(skill)}
-              >
-                {skill}
-              </Badge>
-            ))}
-          </div>
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
-        {filteredTechnicians.map(tech => (
-          <div key={tech.id} className="p-4 border-b border-fixlyfy-border hover:bg-fixlyfy-bg-interface/30 cursor-pointer">
-            <div className="flex items-center mb-2">
-              <Avatar className="h-10 w-10 mr-3">
-                <img src={tech.avatar} alt={tech.name} />
+      <div className="p-4 border-b border-fixlyfy-border">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="all-techs"
+            checked={filteredTechs.length > 0 && selectedTechs.length === filteredTechs.length}
+            onCheckedChange={handleSelectAll}
+          />
+          <label
+            htmlFor="all-techs"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Select All Technicians
+          </label>
+        </div>
+      </div>
+      
+      <div className="max-h-[500px] overflow-y-auto">
+        {filteredTechs.map((tech) => (
+          <div
+            key={tech.id}
+            className="p-4 border-b border-fixlyfy-border last:border-b-0 hover:bg-fixlyfy-bg-hover"
+          >
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id={`tech-${tech.id}`}
+                checked={selectedTechs.includes(tech.id)}
+                onCheckedChange={() => handleTechSelect(tech.id)}
+              />
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={tech.avatar} />
+                <AvatarFallback>{tech.initials}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="text-sm font-medium">{tech.name}</h3>
-                <div className="flex items-center mt-1">
-                  <span 
-                    className={`inline-block w-2 h-2 rounded-full mr-1.5 ${
-                      tech.status === 'available' ? 'bg-fixlyfy-success' : 
-                      tech.status === 'busy' ? 'bg-fixlyfy-warning' : 
-                      'bg-fixlyfy-danger'
-                    }`}
-                  />
-                  <span className="text-xs text-fixlyfy-text-secondary capitalize">{tech.status}</span>
-                </div>
-              </div>
-              <div className="ml-auto text-right">
-                <Badge variant="outline" className="mb-1">{tech.jobCount} jobs</Badge>
-                <p className="text-xs text-fixlyfy-text-secondary">{tech.serviceArea}</p>
+                <label
+                  htmlFor={`tech-${tech.id}`}
+                  className="font-medium text-sm cursor-pointer"
+                >
+                  {tech.name}
+                </label>
+                <p className="text-xs text-fixlyfy-text-secondary">
+                  {tech.jobCount} job{tech.jobCount !== 1 ? "s" : ""}
+                </p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {tech.skills.map(skill => (
-                <Badge key={skill} variant="secondary" className="text-xs">{skill}</Badge>
-              ))}
-            </div>
+            {tech.specialties && tech.specialties.length > 0 && (
+              <div className="ml-8 mt-2 flex flex-wrap gap-1">
+                {tech.specialties.map((specialty, i) => (
+                  <span key={i} className="text-xs bg-fixlyfy-bg-interface px-2 py-0.5 rounded-full text-fixlyfy-text-secondary">
+                    {specialty}
+                  </span>
+                ))}
+                {tech.specialties.length > 2 && (
+                  <span className="text-xs bg-fixlyfy-bg-interface px-2 py-0.5 rounded-full text-fixlyfy-text-secondary">
+                    +{(tech.specialties as any).size - 2} more
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         ))}
+        
+        {filteredTechs.length === 0 && (
+          <div className="p-4 text-center text-fixlyfy-text-secondary">
+            No technicians found
+          </div>
+        )}
       </div>
     </div>
   );

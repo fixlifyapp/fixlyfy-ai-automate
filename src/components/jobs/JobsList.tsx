@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,8 +23,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getTagColor } from "@/data/tags";
+import { jobs } from "@/data/real-jobs";
 
 interface JobsListProps {
   isGridView: boolean;
@@ -33,94 +33,6 @@ interface JobsListProps {
   onSelectJob: (jobId: string, isSelected: boolean) => void;
   onSelectAllJobs: (isSelected: boolean) => void;
 }
-
-const jobs = [
-  {
-    id: "JOB-1001",
-    client: "Michael Johnson",
-    status: "scheduled",
-    date: "2023-05-15",
-    time: "13:30",
-    technician: {
-      name: "Robert Smith",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "RS",
-    },
-    priority: "medium",
-    revenue: 250.00,
-    service: "HVAC Repair",
-    address: "123 Main St, Apt 45",
-    tags: ["HVAC", "Residential", "Maintenance"]
-  },
-  {
-    id: "JOB-1002",
-    client: "Sarah Williams",
-    status: "in-progress",
-    date: "2023-05-15",
-    time: "14:45",
-    technician: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      initials: "JD",
-    },
-    priority: "high",
-    revenue: 350.00,
-    service: "Plumbing",
-    address: "456 Oak Ave",
-    tags: ["Plumbing", "Emergency", "Residential"]
-  },
-  {
-    id: "JOB-1003",
-    client: "David Brown",
-    status: "completed",
-    date: "2023-05-15",
-    time: "11:15",
-    technician: {
-      name: "Emily Clark",
-      avatar: "https://i.pravatar.cc/150?img=5",
-      initials: "EC",
-    },
-    priority: "low",
-    revenue: 175.00,
-    service: "Electrical",
-    address: "789 Pine St",
-    tags: ["Electrical", "Commercial", "Installation"]
-  },
-  {
-    id: "JOB-1004",
-    client: "Jessica Miller",
-    status: "scheduled",
-    date: "2023-05-16",
-    time: "09:00",
-    technician: {
-      name: "Robert Smith",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "RS",
-    },
-    priority: "medium",
-    revenue: 200.00,
-    service: "HVAC Maintenance",
-    address: "321 Elm St",
-    tags: ["HVAC", "Maintenance", "Commercial"]
-  },
-  {
-    id: "JOB-1005",
-    client: "Thomas Anderson",
-    status: "canceled",
-    date: "2023-05-14",
-    time: "15:30",
-    technician: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      initials: "JD",
-    },
-    priority: "low",
-    revenue: 0.00,
-    service: "Electrical",
-    address: "555 Maple Rd",
-    tags: ["Electrical", "Canceled", "Residential"]
-  },
-];
 
 export const JobsList = ({ isGridView, selectedJobs = [], onSelectJob, onSelectAllJobs }: JobsListProps) => {
   const navigate = useNavigate();

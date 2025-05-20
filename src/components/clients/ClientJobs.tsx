@@ -6,66 +6,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { jobs } from "@/data/real-jobs";
 
 interface ClientJobsProps {
   clientId: string | undefined;
   onCreateJob: () => void;
 }
 
-// Mock client jobs data - in a real app, this would be filtered based on clientId
-const mockClientJobs = [
-  {
-    id: "JOB-101",
-    status: "completed",
-    date: "2023-05-10",
-    service: "HVAC Repair",
-    technician: {
-      name: "John Smith",
-      avatar: "https://i.pravatar.cc/150?img=1",
-      initials: "JS",
-    },
-    revenue: 150.00,
-  },
-  {
-    id: "JOB-102",
-    status: "in-progress",
-    date: "2023-06-11",
-    service: "Plumbing",
-    technician: {
-      name: "Maria Garcia",
-      avatar: "https://i.pravatar.cc/150?img=2",
-      initials: "MG",
-    },
-    revenue: 300.00,
-  },
-  {
-    id: "JOB-103",
-    status: "scheduled",
-    date: "2023-07-12",
-    service: "Electrical",
-    technician: {
-      name: "David Lee",
-      avatar: "https://i.pravatar.cc/150?img=3",
-      initials: "DL",
-    },
-    revenue: 450.00,
-  },
-  {
-    id: "JOB-104",
-    status: "canceled",
-    date: "2023-08-13",
-    service: "Maintenance",
-    technician: {
-      name: "Sarah Johnson",
-      avatar: "https://i.pravatar.cc/150?img=4",
-      initials: "SJ",
-    },
-    revenue: 600.00,
-  },
-];
-
 export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
   const navigate = useNavigate();
+  
+  // Filter jobs based on the clientId
+  const clientJobs = jobs.filter(job => job.clientId === clientId);
 
   const handleJobClick = (jobId: string) => {
     // Ensuring the navigation is working correctly
@@ -96,7 +48,7 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
               </tr>
             </thead>
             <tbody>
-              {mockClientJobs.map((job) => (
+              {clientJobs.map((job) => (
                 <tr 
                   key={job.id} 
                   className="border-b hover:bg-gray-50 cursor-pointer"
@@ -137,7 +89,7 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
             </tbody>
           </table>
           
-          {mockClientJobs.length === 0 && (
+          {clientJobs.length === 0 && (
             <div className="p-6 text-center">
               <p className="text-gray-500 mb-4">This client has no jobs yet.</p>
               <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">

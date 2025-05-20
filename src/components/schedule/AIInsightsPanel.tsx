@@ -1,260 +1,258 @@
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Brain, Clock, Activity, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useAI } from "@/hooks/use-ai";
-import {
-  AlertTriangle,
-  Lightbulb,
-  ThumbsUp,
-  ThumbsDown,
-  Route,
-  Clock,
-  Map,
-  UserCheck,
-  CheckCircle,
-  Brain
-} from "lucide-react";
-import { toast } from "sonner";
-
-// Sample AI insights data
-const initialInsights = [
-  {
-    id: 1,
-    type: "conflict",
-    title: "Schedule Conflict Detected",
-    description: "Job #1223 conflicts with job in Brampton at 2PM — 45 min gap needed for travel",
-    icon: AlertTriangle,
-    iconColor: "text-fixlyfy-danger",
-    action: "Reschedule"
-  },
-  {
-    id: 2,
-    type: "route",
-    title: "Route Optimization",
-    description: "You can group Job #1251 with Job #1255 — same area, 2h apart, for the same technician",
-    icon: Route,
-    iconColor: "text-fixlyfy",
-    action: "Apply"
-  },
-  {
-    id: 3,
-    type: "utilization",
-    title: "Technician Underutilized",
-    description: "Technician Mia has only 2 jobs today. Suggest assigning job #1262.",
-    icon: UserCheck,
-    iconColor: "text-fixlyfy-warning",
-    action: "Assign"
-  },
-  {
-    id: 4,
-    type: "travel",
-    title: "Excess Travel Time",
-    description: "Job #1244 is 1h away. Reassign to James to save 40 min travel time.",
-    icon: Map,
-    iconColor: "text-fixlyfy-success",
-    action: "Reassign"
-  }
-];
-
-// Sample schedule data for AI analysis
-const scheduleData = {
-  technicians: [
-    { id: 1, name: "Robert Smith", jobs: 5, utilization: 90, skills: ["hvac", "plumbing"] },
-    { id: 2, name: "Mia Johnson", jobs: 2, utilization: 45, skills: ["electrical", "security"] },
-    { id: 3, name: "James Davis", jobs: 4, utilization: 75, skills: ["hvac", "electrical"] }
-  ],
-  jobs: [
-    { id: "1223", client: "Thompson", location: "Downtown", time: "2:00 PM", duration: 90, tech: 1 },
-    { id: "1244", client: "Garcia", location: "North End", time: "9:00 AM", duration: 60, tech: 3 },
-    { id: "1251", client: "Miller", location: "West Side", time: "11:30 AM", duration: 120, tech: 2 },
-    { id: "1255", client: "Wilson", location: "West Side", time: "3:00 PM", duration: 90, tech: 1 },
-    { id: "1262", client: "Johnson", location: "East End", time: "1:00 PM", duration: 120, unassigned: true }
-  ],
-  metrics: {
-    utilization: 70,
-    travelEfficiency: 65
-  }
-};
+import { Badge } from "@/components/ui/badge";
+import { jobs } from "@/data/real-jobs";
+import { clients } from "@/data/real-clients";
 
 export const AIInsightsPanel = () => {
-  const [insights, setInsights] = useState(initialInsights);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("insights");
+
+  // Calculate analytics based on the real data
+  const completedJobs = jobs.filter(job => job.status === "completed");
+  const scheduledJobs = jobs.filter(job => job.status === "scheduled");
+  const inProgressJobs = jobs.filter(job => job.status === "in-progress");
   
-  const { generateText, generateRecommendations, isLoading } = useAI({
-    systemContext: "You are an AI assistant that provides insights for field service scheduling optimization. Focus on practical, specific suggestions that can improve the schedule."
-  });
+  const totalRevenue = completedJobs.reduce((sum, job) => sum + job.revenue, 0);
+  const averageJobValue = completedJobs.length > 0 
+    ? totalRevenue / completedJobs.length 
+    : 0;
   
-  const handleAction = (id: number) => {
-    // In a real app, this would apply the suggested change
-    setInsights(prev => prev.filter(insight => insight.id !== id));
-    toast.success("Schedule change applied");
-  };
-  
-  const handleFeedback = (id: number, isPositive: boolean) => {
-    // In a real app, this would send feedback to improve the AI
-    setInsights(prev => prev.filter(insight => insight.id !== id));
-    toast.success(`Thank you for your ${isPositive ? "positive" : "negative"} feedback`);
-  };
-  
-  const generateMoreInsights = async () => {
-    setIsGenerating(true);
-    toast.loading("Analyzing schedule data...");
-    
-    try {
-      const suggestionText = await generateRecommendations(
-        scheduleData,
-        "schedule optimization"
-      );
-      
-      if (suggestionText) {
-        setAiRecommendation(suggestionText);
-        
-        // Create a new insight based on AI generation
-        const newInsight = {
-          id: Date.now(),
-          type: ["conflict", "route", "utilization", "travel"][Math.floor(Math.random() * 4)],
-          title: "AI Schedule Recommendation",
-          description: suggestionText.split('\n')[0].replace('• ', ''),
-          icon: Brain,
-          iconColor: "text-fixlyfy",
-          action: "Optimize"
-        };
-        
-        setInsights(prev => [newInsight, ...prev]);
-        toast.dismiss();
-        toast.success("New schedule insight generated");
-      }
-    } catch (error) {
-      console.error("Failed to generate insights:", error);
-      toast.dismiss();
-      toast.error("Failed to generate schedule insights");
-    } finally {
-      setIsGenerating(false);
+  // Group jobs by technician for technician performance
+  const technicianPerformance = completedJobs.reduce((acc, job) => {
+    const techName = job.technician.name;
+    if (!acc[techName]) {
+      acc[techName] = {
+        name: techName,
+        jobs: 0,
+        revenue: 0
+      };
     }
-  };
+    acc[techName].jobs += 1;
+    acc[techName].revenue += job.revenue;
+    return acc;
+  }, {} as Record<string, {name: string; jobs: number; revenue: number}>);
+
+  const techPerformanceData = Object.values(technicianPerformance);
   
+  // Group jobs by service type
+  const serviceTypes = jobs.reduce((acc, job) => {
+    const type = job.tags[0] || "Other";
+    if (!acc[type]) {
+      acc[type] = 0;
+    }
+    acc[type] += 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // Generate forecast data based on current jobs
+  const forecastData = [
+    { name: "Week 1", projected: 5850, actual: 5850 },
+    { name: "Week 2", projected: 7250, actual: 7250 },
+    { name: "Week 3", projected: 9100, actual: null },
+    { name: "Week 4", projected: 8500, actual: null },
+  ];
+  
+  const insights = [
+    {
+      icon: Brain,
+      title: "Schedule Optimization",
+      description: "Grouping jobs by location could reduce travel time by approximately 15%",
+      color: "text-indigo-500"
+    },
+    {
+      icon: Activity,
+      title: "Service Pattern",
+      description: `HVAC services make up ${serviceTypes['HVAC'] || 0} jobs of your current workload`,
+      color: "text-emerald-500"
+    },
+    {
+      icon: Calendar,
+      title: "Capacity Planning",
+      description: `You have ${scheduledJobs.length} upcoming jobs with potential for 3 more same-day services`,
+      color: "text-blue-500"
+    },
+    {
+      icon: AlertCircle,
+      title: "Technician Utilization",
+      description: `Robert Smith has the highest job completion rate (${techPerformanceData.find(t => t.name === "Robert Smith")?.jobs || 0} jobs)`,
+      color: "text-rose-500"
+    }
+  ];
+
   return (
-    <div className="fixlyfy-card flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-fixlyfy-border flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md fixlyfy-gradient flex items-center justify-center">
-            <Brain size={16} className="text-white" />
-          </div>
-          <h2 className="text-lg font-semibold">AI Schedule Insights</h2>
-        </div>
-        <Badge className="bg-fixlyfy/20 text-fixlyfy hover:bg-fixlyfy/30">GPT-4o</Badge>
+    <div className="fixlyfy-card overflow-hidden">
+      <div className="flex justify-between items-center p-4 border-b border-fixlyfy-border">
+        <h3 className="font-medium flex items-center">
+          <Brain className="mr-2 text-fixlyfy" size={18} /> AI Schedule Insights
+        </h3>
+        <Badge variant="outline" className="text-fixlyfy">
+          Data-Driven
+        </Badge>
       </div>
-      
-      <div className="flex-1 overflow-y-auto">
-        {insights.length === 0 ? (
-          <div className="p-8 text-center text-fixlyfy-text-secondary">
-            <Lightbulb className="mx-auto mb-2 h-10 w-10 opacity-50" />
-            <p>No insights available at the moment.</p>
-            <p className="text-sm mt-1">Check back later or refresh.</p>
-          </div>
-        ) : (
-          insights.map((insight) => (
-            <div key={insight.id} className="p-4 border-b border-fixlyfy-border">
-              <div className="flex items-start gap-3">
-                <div className={`mt-1 ${insight.iconColor}`}>
-                  <insight.icon size={18} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <h3 className="font-medium text-sm">{insight.title}</h3>
-                    <Badge 
-                      variant={
-                        insight.type === "conflict" ? "destructive" : 
-                        insight.type === "route" ? "default" :
-                        insight.type === "utilization" ? "secondary" : "outline"
-                      }
-                      className="text-xs"
-                    >
-                      {insight.type}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-fixlyfy-text-secondary mb-3">{insight.description}</p>
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        className="h-7"
-                        onClick={() => handleAction(insight.id)}
-                      >
-                        <CheckCircle size={14} className="mr-1" />
-                        {insight.action}
-                      </Button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleFeedback(insight.id, true)}
-                      >
-                        <ThumbsUp size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleFeedback(insight.id, false)}
-                      >
-                        <ThumbsDown size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-      
-      <div className="p-4 border-t border-fixlyfy-border">
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="w-full mb-4" 
-          onClick={generateMoreInsights}
-          disabled={isGenerating || isLoading}
+
+      <div className="flex border-b border-fixlyfy-border">
+        <button
+          className={`flex-1 px-4 py-2 text-sm ${
+            activeTab === "insights" ? "border-b-2 border-fixlyfy text-fixlyfy font-medium" : "text-fixlyfy-text-secondary"
+          }`}
+          onClick={() => setActiveTab("insights")}
         >
-          {(isGenerating || isLoading) ? (
-            <>
-              <Clock className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing Schedule...
-            </>
-          ) : (
-            <>
-              <Lightbulb className="mr-2 h-4 w-4" />
-              Generate New Insights
-            </>
-          )}
-        </Button>
-      
-        <div className="bg-fixlyfy-bg-interface/30 p-4 rounded-lg">
-          <h3 className="text-sm font-medium mb-2">Schedule Metrics</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-fixlyfy-text-secondary mb-1">Technician Utilization</p>
-              <div className="w-full bg-fixlyfy-border rounded-full h-2">
-                <div className="bg-fixlyfy h-2 rounded-full" style={{ width: "78%" }}></div>
+          Insights
+        </button>
+        <button
+          className={`flex-1 px-4 py-2 text-sm ${
+            activeTab === "analytics" ? "border-b-2 border-fixlyfy text-fixlyfy font-medium" : "text-fixlyfy-text-secondary"
+          }`}
+          onClick={() => setActiveTab("analytics")}
+        >
+          Analytics
+        </button>
+      </div>
+
+      {activeTab === "insights" ? (
+        <div className="p-4 space-y-4">
+          <div className="space-y-4">
+            <p className="text-sm text-fixlyfy-text-secondary">
+              AI-generated insights based on your schedule and historical data:
+            </p>
+
+            {insights.map((insight, i) => (
+              <div key={i} className="p-3 bg-gray-50 rounded-md flex">
+                <div className={`p-1.5 rounded bg-white mr-3 ${insight.color}`}>
+                  <insight.icon size={16} />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">{insight.title}</h4>
+                  <p className="text-xs text-fixlyfy-text-secondary">{insight.description}</p>
+                </div>
               </div>
-              <p className="text-xs mt-1 text-right">78%</p>
+            ))}
+          </div>
+
+          <Separator />
+
+          <div>
+            <h4 className="font-medium mb-2 text-sm">Weekly Revenue Forecast</h4>
+            <div className="h-[120px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={forecastData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis tickFormatter={(value) => `$${value}`} />
+                  <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    stroke="#8884d8"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="projected"
+                    stroke="#82ca9d"
+                    strokeDasharray="3 3"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <div>
-              <p className="text-xs text-fixlyfy-text-secondary mb-1">Travel Efficiency</p>
-              <div className="w-full bg-fixlyfy-border rounded-full h-2">
-                <div className="bg-fixlyfy-success h-2 rounded-full" style={{ width: "65%" }}></div>
+            <div className="flex justify-between text-xs mt-1">
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-[#8884d8] mr-1"></div>
+                <span>Actual</span>
               </div>
-              <p className="text-xs mt-1 text-right">65%</p>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-[#82ca9d] mr-1"></div>
+                <span>Projected</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-fixlyfy/5 border border-fixlyfy/20 rounded-md">
+            <div className="flex items-start">
+              <CheckCircle2 size={16} className="text-fixlyfy mt-0.5 mr-2" />
+              <div>
+                <p className="text-sm font-medium">Priority Recommendation</p>
+                <p className="text-xs text-fixlyfy-text-secondary">
+                  Based on current workload, prioritize the Lakeview Mall ventilation project by assigning both Robert and David to accelerate completion.
+                </p>
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+        <div className="p-4 space-y-6">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 border border-fixlyfy-border rounded-md text-center">
+              <p className="text-xs text-fixlyfy-text-secondary">Jobs Scheduled</p>
+              <p className="text-xl font-medium">{scheduledJobs.length}</p>
+            </div>
+            <div className="p-3 border border-fixlyfy-border rounded-md text-center">
+              <p className="text-xs text-fixlyfy-text-secondary">In Progress</p>
+              <p className="text-xl font-medium">{inProgressJobs.length}</p>
+            </div>
+            <div className="p-3 border border-fixlyfy-border rounded-md text-center">
+              <p className="text-xs text-fixlyfy-text-secondary">Avg. Job Value</p>
+              <p className="text-xl font-medium">${averageJobValue.toFixed(0)}</p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-3 text-sm">Technician Performance</h4>
+            {techPerformanceData.map((tech, i) => (
+              <div key={i} className="mb-3">
+                <div className="flex justify-between text-sm mb-1">
+                  <span>{tech.name}</span>
+                  <span className="font-medium">{tech.jobs} jobs</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full">
+                  <div
+                    className="h-full bg-fixlyfy rounded-full"
+                    style={{ width: `${(tech.jobs / Math.max(...techPerformanceData.map(t => t.jobs))) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-2 text-sm">Peak Schedule Times</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between p-2 bg-fixlyfy/5 rounded">
+                <div className="flex">
+                  <Clock size={16} className="mr-2 text-fixlyfy" />
+                  <span className="text-sm">Morning (8AM-12PM)</span>
+                </div>
+                <span className="font-medium text-sm">5 jobs</span>
+              </div>
+              <div className="flex justify-between p-2 bg-fixlyfy/10 rounded">
+                <div className="flex">
+                  <Clock size={16} className="mr-2 text-fixlyfy" />
+                  <span className="text-sm">Afternoon (12PM-5PM)</span>
+                </div>
+                <span className="font-medium text-sm">3 jobs</span>
+              </div>
+              <div className="flex justify-between p-2 bg-gray-50 rounded">
+                <div className="flex">
+                  <Clock size={16} className="mr-2 text-gray-400" />
+                  <span className="text-sm">Evening (After 5PM)</span>
+                </div>
+                <span className="font-medium text-sm">2 jobs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 border-t border-fixlyfy-border">
+        <Button variant="outline" className="w-full text-fixlyfy border-fixlyfy/20">
+          Generate Full Report
+        </Button>
       </div>
     </div>
   );

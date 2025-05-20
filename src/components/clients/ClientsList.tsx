@@ -23,8 +23,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, useNavigate } from "react-router-dom";
-import { clients } from "@/data/clients";
+import { useNavigate } from "react-router-dom";
+import { clients } from "@/data/real-clients";
 
 interface ClientsListProps {
   isGridView: boolean;
