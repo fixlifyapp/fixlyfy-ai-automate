@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Pencil, Trash2, Send, Check, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog } from "@/components/ui/dialog";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
@@ -192,14 +193,15 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         )}
 
         {/* Delete Confirmation Dialog */}
-        <DeleteConfirmDialog 
-          open={isDeleteConfirmOpen}
-          onOpenChange={setIsDeleteConfirmOpen}
-          title="Delete Invoice"
-          description="Are you sure you want to delete this invoice? This action cannot be undone."
-          onConfirm={confirmDeleteInvoice}
-          isDeleting={isDeleting}
-        />
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DeleteConfirmDialog 
+            title="Delete Invoice"
+            description="Are you sure you want to delete this invoice? This action cannot be undone."
+            onOpenChange={setIsDeleteConfirmOpen}
+            onConfirm={confirmDeleteInvoice}
+            isDeleting={isDeleting}
+          />
+        </Dialog>
 
         {/* Invoice Creation Dialog */}
         <InvoiceDialog

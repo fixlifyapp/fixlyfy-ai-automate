@@ -13,6 +13,7 @@ import { Product } from "@/components/jobs/builder/types";
 import { EstimateEditor } from "./EstimateEditor";
 import { EstimatePreview } from "./EstimatePreview";
 import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
+
 interface EstimateBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,6 +21,7 @@ interface EstimateBuilderDialogProps {
   jobId: string;
   onSyncToInvoice?: (estimate: any) => void;
 }
+
 export const EstimateBuilderDialog = ({
   open,
   onOpenChange,
@@ -132,7 +134,9 @@ export const EstimateBuilderDialog = ({
 
   // Get the action text based on whether we're creating or editing
   const actionText = estimateId ? "Save Changes" : "Save Draft";
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -155,7 +159,7 @@ export const EstimateBuilderDialog = ({
           <TabsContent value="editor" className="pt-4">
             <EstimateEditor
               lineItems={lineItems}
-              onAddEmptyLine={openProductSearch}
+              onAddEmptyLineItem={openProductSearch}
               onAddCustomLine={handleAddCustomLine}
               onEditLine={handleEditLineItem}
               onRemoveLine={handleRemoveLineItem}
@@ -176,6 +180,8 @@ export const EstimateBuilderDialog = ({
               calculateSubtotal={calculateSubtotal}
               calculateTotalTax={calculateTotalTax}
               calculateGrandTotal={calculateGrandTotal}
+              notes={notes || ""}
+              taxRate={taxRate}
             />
           </TabsContent>
         </Tabs>
@@ -213,10 +219,25 @@ export const EstimateBuilderDialog = ({
         </DialogFooter>
       </DialogContent>
       
-      <WarrantySelectionDialog open={isWarrantyDialogOpen} onOpenChange={setIsWarrantyDialogOpen} onConfirm={handleWarrantyConfirmed} />
+      <WarrantySelectionDialog 
+        open={isWarrantyDialogOpen} 
+        onOpenChange={setIsWarrantyDialogOpen} 
+        onConfirm={handleWarrantyConfirmed} 
+      />
 
-      <ProductEditDialog open={isProductEditDialogOpen} onOpenChange={setIsProductEditDialogOpen} product={selectedProduct} onSave={handleProductSaved} categories={["Custom"]} />
+      <ProductEditDialog 
+        open={isProductEditDialogOpen} 
+        onOpenChange={setIsProductEditDialogOpen} 
+        product={selectedProduct} 
+        onSave={handleProductSaved} 
+        categories={["Custom"]} 
+      />
       
-      <ProductSearch open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen} onProductSelect={handleProductSelected} />
-    </Dialog>;
+      <ProductSearch 
+        open={isProductSearchOpen} 
+        onOpenChange={setIsProductSearchOpen} 
+        onProductSelect={handleProductSelected} 
+      />
+    </Dialog>
+  );
 };
