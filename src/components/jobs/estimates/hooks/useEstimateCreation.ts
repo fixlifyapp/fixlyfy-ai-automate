@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstimateInfo } from "./useEstimateInfo";
+import { Product } from "@/hooks/useProducts";
 
 export const useEstimateCreation = (
   jobId: string,
@@ -10,12 +11,14 @@ export const useEstimateCreation = (
   setEstimates: (estimates: any[]) => void
 ) => {
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
+  const [estimateItems, setEstimateItems] = useState<Product[]>([]);
   const { generateUniqueNumber } = useEstimateInfo();
 
   // Handle creating a new estimate
   const handleCreateEstimate = () => {
     // This function just signals the dialog should open
     // The actual creation happens in handleEstimateCreated
+    setEstimateItems([]);
   };
 
   // Handle editing an existing estimate
@@ -23,8 +26,41 @@ export const useEstimateCreation = (
     const estimate = estimates.find(est => est.id === estimateId);
     if (estimate) {
       setSelectedEstimateId(estimateId);
+      loadEstimateItems(estimateId);
       toast.info(`Editing estimate ${estimate.number}`);
     }
+  };
+
+  // Load existing items for an estimate
+  const loadEstimateItems = async (estimateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('estimate_items')
+        .select('*')
+        .eq('estimate_id', estimateId);
+      
+      if (error) throw error;
+
+      setEstimateItems(data || []);
+    } catch (error) {
+      console.error('Error loading estimate items:', error);
+      toast.error('Failed to load estimate items');
+    }
+  };
+
+  // Add a product to the estimate
+  const addProductToEstimate = (product: Product) => {
+    setEstimateItems(prev => [...prev, product]);
+  };
+
+  // Remove a product from the estimate
+  const removeProductFromEstimate = (productId: string) => {
+    setEstimateItems(prev => prev.filter(item => item.id !== productId));
+  };
+
+  // Calculate total amount based on products
+  const calculateEstimateTotal = () => {
+    return estimateItems.reduce((total, item) => total + item.price, 0);
   };
 
   // Handle estimate creation from the dialog
@@ -39,7 +75,7 @@ export const useEstimateCreation = (
       const { data, error } = await supabase
         .from('estimates')
         .insert({
-          job_id: jobId, // Now this accepts text format
+          job_id: jobId, 
           number: newEstimateNumber,
           amount: amount,
           status: 'draft'
@@ -52,6 +88,29 @@ export const useEstimateCreation = (
         throw error;
       }
       
+      // Save estimate items if there are any
+      if (estimateItems.length > 0) {
+        const itemsToInsert = estimateItems.map(product => ({
+          estimate_id: data.id,
+          name: product.name,
+          description: product.description || '',
+          category: product.category,
+          price: product.price,
+          quantity: 1,
+          taxable: product.taxable || true,
+          tags: product.tags || []
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('estimate_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) {
+          console.error('Error saving estimate items:', itemsError);
+          toast.error('Warning: Some items may not have been saved');
+        }
+      }
+      
       // Create a new estimate object
       const newEstimate = {
         id: data.id,
@@ -60,7 +119,13 @@ export const useEstimateCreation = (
         amount: data.amount,
         status: data.status,
         viewed: false,
-        items: [],
+        items: estimateItems.map(product => ({
+          name: product.name,
+          description: product.description || '',
+          price: product.price,
+          quantity: 1,
+          category: product.category
+        })),
         recommendedProduct: null,
         techniciansNote: ""
       };
@@ -82,12 +147,16 @@ export const useEstimateCreation = (
   return {
     state: {
       selectedEstimateId,
+      estimateItems
     },
     actions: {
       handleCreateEstimate,
       handleEditEstimate,
       handleEstimateCreated,
       setSelectedEstimateId,
+      addProductToEstimate,
+      removeProductFromEstimate,
+      calculateEstimateTotal
     }
   };
 };

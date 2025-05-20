@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ProductEditDialog } from "./dialogs/ProductEditDialog";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, Product } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobProductsProps {
@@ -19,7 +19,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<useProducts.Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   const { 
@@ -42,7 +42,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleEditProduct = (product: useProducts.Product) => {
+  const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };
@@ -69,7 +69,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
     setIsCreateDialogOpen(false);
   };
 
-  const getMarginPercentage = (product: useProducts.Product) => {
+  const getMarginPercentage = (product: Product) => {
     const margin = product.price - (product.ourPrice || 0);
     return margin > 0 ? ((margin / product.price) * 100).toFixed(0) : "0";
   };
