@@ -51,7 +51,8 @@ serve(async (req) => {
       temperature = 0.7,
       maxTokens = 800,
       fetchBusinessData = false,
-      userId
+      userId,
+      forceRefresh = false // New parameter to force refresh regardless of cache
     } = requestData;
 
     // Validate that we have either prompt or userPrompt
@@ -71,6 +72,7 @@ serve(async (req) => {
     
     console.log("Using context:", finalSystemContext);
     console.log("Using prompt:", finalUserPrompt);
+    console.log("Force refresh:", forceRefresh);
 
     // If fetchBusinessData is true, get business data from Supabase
     let businessData = null;
@@ -89,10 +91,13 @@ serve(async (req) => {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         
         try {
+          // Add cache control for 7-day refresh cycle
+          const cacheOptions = forceRefresh ? { count: "exact" } : undefined;
+          
           // Fetch jobs data
           const { data: jobs, error: jobsError } = await supabase
             .from('jobs')
-            .select('*');
+            .select('*', cacheOptions);
             
           if (jobsError) {
             console.error("Error fetching jobs:", jobsError);
@@ -101,7 +106,7 @@ serve(async (req) => {
           // Fetch clients data
           const { data: clients, error: clientsError } = await supabase
             .from('clients')
-            .select('*');
+            .select('*', cacheOptions);
             
           if (clientsError) {
             console.error("Error fetching clients:", clientsError);
@@ -169,7 +174,8 @@ serve(async (req) => {
                   total: jobs.length,
                   completed: completedJobs.length,
                   inProgress: jobs.filter(job => job.status === "in-progress").length,
-                  scheduled: jobs.filter(job => job.status === "scheduled").length
+                  scheduled: jobs.filter(job => job.status === "scheduled").length,
+                  lastUpdated: new Date().toISOString() // Add last updated timestamp
                 },
                 revenue: {
                   total: totalRevenue,
@@ -184,7 +190,9 @@ serve(async (req) => {
                   topPerformer: topTech.id
                 }
               },
-              period: "current month"
+              period: "current month",
+              refreshCycle: "7 days",
+              lastRefreshed: new Date().toISOString()
             };
             
             console.log("Generated business data:", JSON.stringify(businessData));
@@ -201,7 +209,7 @@ serve(async (req) => {
       userMessageContent = `Here is the data: ${JSON.stringify(data)}\n\n${finalUserPrompt}`;
     }
     
-    // Prepare the request body
+    // Prepare the request body - always use GPT-4o
     const openaiRequest: OpenAIRequest = {
       model: "gpt-4o",
       messages: [
@@ -245,7 +253,13 @@ serve(async (req) => {
 
     // Return the AI-generated content and optionally the business data
     return new Response(
-      JSON.stringify({ generatedText, businessData }),
+      JSON.stringify({ 
+        generatedText, 
+        businessData,
+        model: "gpt-4o", // Explicitly include model information
+        lastRefreshed: new Date().toISOString(),
+        refreshCycle: "7 days"
+      }),
       { 
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }

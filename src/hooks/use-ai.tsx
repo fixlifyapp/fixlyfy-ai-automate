@@ -1,7 +1,9 @@
+
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "./use-auth";
+import { shouldRefreshAIInsights, updateLastRefreshTimestamp } from "@/utils/ai-refresh";
 
 interface UseAIOptions {
   systemContext?: string;
@@ -9,6 +11,7 @@ interface UseAIOptions {
   temperature?: number;
   maxTokens?: number;
   fetchBusinessData?: boolean;
+  forceRefresh?: boolean;
 }
 
 export function useAI(options: UseAIOptions = {}) {
@@ -24,6 +27,9 @@ export function useAI(options: UseAIOptions = {}) {
     try {
       console.log("Sending AI request with prompt:", prompt);
       
+      // Check if we need to refresh insights based on time
+      const shouldRefresh = customOptions?.forceRefresh || options.forceRefresh || await shouldRefreshAIInsights();
+      
       const { data, error } = await supabase.functions.invoke("generate-with-ai", {
         body: {
           prompt,
@@ -33,7 +39,8 @@ export function useAI(options: UseAIOptions = {}) {
           maxTokens: customOptions?.maxTokens || options.maxTokens || 800,
           fetchBusinessData: customOptions?.fetchBusinessData !== undefined ? 
             customOptions.fetchBusinessData : options.fetchBusinessData,
-          userId: user?.id
+          userId: user?.id,
+          forceRefresh: shouldRefresh
         }
       });
       
@@ -52,6 +59,11 @@ export function useAI(options: UseAIOptions = {}) {
       // Store business data if returned
       if (data.businessData) {
         setBusinessData(data.businessData);
+      }
+      
+      // Update the refresh timestamp if successful
+      if (shouldRefresh) {
+        updateLastRefreshTimestamp();
       }
       
       return data.generatedText;
@@ -166,6 +178,9 @@ export function useAI(options: UseAIOptions = {}) {
     setError(null);
     
     try {
+      // Check if we need to refresh insights
+      const shouldRefresh = customOptions?.forceRefresh || options.forceRefresh || await shouldRefreshAIInsights();
+      
       const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
         body: {
           prompt: prompt,
@@ -174,6 +189,7 @@ export function useAI(options: UseAIOptions = {}) {
           temperature: customOptions?.temperature || options.temperature || 0.4,
           maxTokens: customOptions?.maxTokens || options.maxTokens || 1000,
           fetchBusinessData: true,
+          forceRefresh: shouldRefresh
         }
       });
       
@@ -183,6 +199,11 @@ export function useAI(options: UseAIOptions = {}) {
       
       if (response.businessData) {
         setBusinessData(response.businessData);
+      }
+      
+      // Update the refresh timestamp if successful
+      if (shouldRefresh) {
+        updateLastRefreshTimestamp();
       }
       
       return response.generatedText;
