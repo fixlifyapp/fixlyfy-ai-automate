@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
         
         const { data: upcoming, error: upcomingError } = await supabase
           .from('jobs')
-          .select('id, title, schedule_start as scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
+          .select('id, title, schedule_start, status, client_id, technician_id')
           .gte('schedule_start', today.toISOString())
           .lte('schedule_start', nextWeek.toISOString())
           .in('status', ['scheduled', 'pending'])
@@ -55,12 +56,14 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
           
         if (upcomingError) throw upcomingError;
         
-        setUpcomingJobs(upcoming as Job[] || []);
+        // Fetch clients and technicians data separately
+        const transformedUpcoming = await getJobsWithDetails(upcoming || []);
+        setUpcomingJobs(transformedUpcoming);
         
         // Fetch overdue jobs
         const { data: overdue, error: overdueError } = await supabase
           .from('jobs')
-          .select('id, title, schedule_start as scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
+          .select('id, title, schedule_start, status, client_id, technician_id')
           .lt('schedule_start', today.toISOString())
           .in('status', ['scheduled', 'pending'])
           .order('schedule_start', { ascending: false })
@@ -68,7 +71,8 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
           
         if (overdueError) throw overdueError;
         
-        setOverdueJobs(overdue as Job[] || []);
+        const transformedOverdue = await getJobsWithDetails(overdue || []);
+        setOverdueJobs(transformedOverdue);
       } catch (error) {
         console.error('Error fetching job data:', error);
       } finally {
@@ -78,6 +82,50 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
 
     fetchJobs();
   }, [user, isRefreshing]);
+
+  // Helper function to get client and technician details for jobs
+  const getJobsWithDetails = async (jobs: any[]) => {
+    const transformedJobs = await Promise.all(jobs.map(async (job) => {
+      // Get client info
+      let clientData = { name: 'Unknown Client', phone: '' };
+      if (job.client_id) {
+        const { data: client } = await supabase
+          .from('clients')
+          .select('name, phone')
+          .eq('id', job.client_id)
+          .single();
+          
+        if (client) {
+          clientData = client;
+        }
+      }
+      
+      // Get technician info
+      let technicianData = undefined;
+      if (job.technician_id) {
+        const { data: technician } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', job.technician_id)
+          .single();
+          
+        if (technician) {
+          technicianData = technician;
+        }
+      }
+      
+      return {
+        id: job.id,
+        title: job.title,
+        scheduled_date: job.schedule_start,
+        status: job.status,
+        client: clientData,
+        technician: technicianData
+      };
+    }));
+    
+    return transformedJobs;
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {

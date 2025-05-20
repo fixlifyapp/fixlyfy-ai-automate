@@ -57,15 +57,14 @@ export const TechScoreboard = ({ isRefreshing = false }: TechScoreboardProps) =>
         startDate.setFullYear(startDate.getFullYear() - 1);
       }
       
-      // Fetch jobs with technician information
+      // Fetch jobs with technician ids
       const { data: jobs, error } = await supabase
         .from('jobs')
         .select(`
           id, 
           revenue, 
           status,
-          technician_id, 
-          profiles:technician_id(name)
+          technician_id
         `)
         .gte('date', startDate.toISOString())
         .lte('date', endDate.toISOString())
@@ -74,15 +73,46 @@ export const TechScoreboard = ({ isRefreshing = false }: TechScoreboardProps) =>
         
       if (error) throw error;
       
+      if (!jobs || jobs.length === 0) {
+        setTechnicians([]);
+        setIsLoading(false);
+        return;
+      }
+      
       // Process data to calculate stats per technician
       const techStats: Record<string, TechnicianStats> = {};
       
+      // Get unique technician IDs
+      const techIds = Array.from(new Set(jobs.map(job => job.technician_id)));
+      
+      // Fetch technician names
+      const { data: techProfiles, error: techError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', techIds as string[]);
+        
+      if (techError) throw techError;
+      
+      if (!techProfiles || techProfiles.length === 0) {
+        setTechnicians([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Create a map of technician ID to name
+      const techNameMap: Record<string, string> = {};
+      techProfiles.forEach(tech => {
+        if (tech.id && tech.name) {
+          techNameMap[tech.id] = tech.name;
+        }
+      });
+      
       jobs?.forEach(job => {
-        if (job.technician_id && job.profiles?.name) {
+        if (job.technician_id && techNameMap[job.technician_id]) {
           const techId = job.technician_id;
+          const name = techNameMap[techId];
           
           if (!techStats[techId]) {
-            const name = job.profiles.name;
             const initials = name
               .split(' ')
               .map(part => part[0])
