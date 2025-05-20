@@ -41,7 +41,25 @@ export const useEstimateCreation = (
       
       if (error) throw error;
 
-      setEstimateItems(data || []);
+      // Fix: Map the database items to Product type with required fields
+      if (data) {
+        const mappedItems: Product[] = data.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description || "",
+          category: item.category || "",
+          price: Number(item.price),
+          quantity: item.quantity,
+          taxable: item.taxable,
+          tags: item.tags || [],
+          cost: 0, // Add required field
+          ourPrice: 0, // Add required field
+          sku: ""
+        }));
+        setEstimateItems(mappedItems);
+      } else {
+        setEstimateItems([]);
+      }
     } catch (error) {
       console.error('Error loading estimate items:', error);
       toast.error('Failed to load estimate items');

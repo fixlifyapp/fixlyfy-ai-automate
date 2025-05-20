@@ -38,7 +38,8 @@ export const EstimateDialog = ({
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
   const [readyToCreate, setReadyToCreate] = useState(false);
   
-  const estimateCreation = useEstimateCreation("", [], []);
+  // Fix: Pass proper parameters to useEstimateCreation
+  const estimateCreation = useEstimateCreation("", [], (estimates) => {});
   const { products } = useProducts("Warranty");
   const warrantyProducts = products.filter(p => p.category === "Warranty");
 
