@@ -39,7 +39,13 @@ export const useJobHistory = (jobId: string) => {
         
         if (error) throw error;
         
-        setHistoryItems(data || []);
+        // Convert Json to Record<string, any>
+        const typedData: HistoryItem[] = data?.map(item => ({
+          ...item,
+          meta: item.meta as unknown as Record<string, any>,
+        })) || [];
+        
+        setHistoryItems(typedData);
         
         // Fetch pinned items from local storage
         const storedPinnedItems = localStorage.getItem(`pinned_history_${jobId}`);
@@ -74,9 +80,15 @@ export const useJobHistory = (jobId: string) => {
         
       if (error) throw error;
       
+      // Convert Json to Record<string, any>
+      const typedData: HistoryItem = {
+        ...data,
+        meta: data.meta as unknown as Record<string, any>,
+      };
+      
       // Update local state
-      setHistoryItems(prev => [data, ...prev]);
-      return data;
+      setHistoryItems(prev => [typedData, ...prev]);
+      return typedData;
     } catch (error) {
       console.error('Error adding history item:', error);
       toast.error('Failed to record history');
@@ -95,12 +107,18 @@ export const useJobHistory = (jobId: string) => {
         
       if (error) throw error;
       
+      // Convert Json to Record<string, any>
+      const typedData: HistoryItem = {
+        ...data,
+        meta: data.meta as unknown as Record<string, any>,
+      };
+      
       // Update local state
       setHistoryItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...data } : item
+        item.id === id ? typedData : item
       ));
       
-      return data;
+      return typedData;
     } catch (error) {
       console.error('Error updating history item:', error);
       toast.error('Failed to update history');

@@ -5,6 +5,7 @@ import { EstimateEditor } from "./EstimateEditor";
 import { LineItemsTable } from "./LineItemsTable";
 import { Estimate } from "@/hooks/useEstimates";
 import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
+import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,7 +20,13 @@ interface EstimateBuilderDialogProps {
 export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, onSyncToInvoice }: EstimateBuilderDialogProps) {
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
-  const { fetchEstimate, addEmptyLineItem, addCustomLine, removeLine, updateLine } = useEstimateInfo();
+  const estimateInfo = useEstimateInfo();
+  const estimateBuilder = useEstimateBuilder({
+    estimateId: estimateId || null,
+    open,
+    onSyncToInvoice,
+    jobId
+  });
 
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
@@ -32,13 +39,54 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
   const loadEstimate = useCallback(async () => {
     if (estimateId) {
       try {
-        const fetchedEstimate = await fetchEstimate(estimateId);
-        if (fetchedEstimate) {
-          setEstimate(fetchedEstimate);
-          setLineItems(fetchedEstimate.estimate_items || []);
-        } else {
+        setEstimate({
+          id: estimateId,
+          job_id: jobId,
+          number: '',
+          date: new Date().toISOString(),
+          amount: 0,
+          status: 'draft',
+          viewed: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        
+        // Fetch estimate details from Supabase
+        const { data, error } = await supabase
+          .from('estimates')
+          .select('*')
+          .eq('id', estimateId)
+          .single();
+          
+        if (error) {
           toast.error("Failed to load estimate");
+          return;
         }
+        
+        if (data) {
+          setEstimate({
+            ...data,
+            discount: data.discount || 0,
+            tax_rate: data.tax_rate || 0,
+            technicians_note: data.technicians_note || ""
+          } as Estimate);
+        }
+        
+        // Fetch estimate items
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('estimate_items')
+          .select('*')
+          .eq('estimate_id', estimateId);
+          
+        if (itemsError) {
+          toast.error("Failed to load estimate items");
+          return;
+        }
+        
+        if (itemsData) {
+          setLineItems(itemsData || []);
+        }
+        
       } catch (error) {
         console.error("Error loading estimate:", error);
         toast.error("Failed to load estimate");
@@ -48,11 +96,18 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
         job_id: jobId,
         discount: 0,
         tax_rate: 0,
-        technicians_note: ""
+        technicians_note: "",
+        number: estimateInfo.generateUniqueNumber('EST'),
+        date: new Date().toISOString(),
+        amount: 0,
+        status: 'draft',
+        viewed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       } as Estimate);
       setLineItems([]);
     }
-  }, [estimateId, fetchEstimate, jobId]);
+  }, [estimateId, jobId, estimateInfo]);
 
   useEffect(() => {
     if (open) {
@@ -60,70 +115,132 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
     }
   }, [open, loadEstimate]);
 
-  const handleAddEmptyLineItem = async () => {
-    if (estimate) {
-      const newLineItem = await addEmptyLineItem(estimate.id);
-      if (newLineItem) {
-        setLineItems(prev => [...prev, newLineItem]);
-      }
-    } else {
+  // Implement the missing methods
+  const addEmptyLineItem = async () => {
+    if (!estimate?.id) {
       toast.error("Estimate not loaded");
+      return null;
+    }
+    
+    const newItem = {
+      estimate_id: estimate.id,
+      name: "New Item",
+      description: "",
+      price: 0,
+      quantity: 1,
+      taxable: true
+    };
+    
+    try {
+      const { data, error } = await supabase
+        .from('estimate_items')
+        .insert(newItem)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setLineItems(prev => [...prev, data]);
+        return data;
+      }
+    } catch (error) {
+      console.error("Error adding empty line item:", error);
+      toast.error("Failed to add item");
+    }
+    
+    return null;
+  };
+
+  const addCustomLine = async (name: string, price: number, quantity: number, taxable: boolean) => {
+    if (!estimate?.id) {
+      toast.error("Estimate not loaded");
+      return;
+    }
+    
+    const newItem = {
+      estimate_id: estimate.id,
+      name,
+      description: name,
+      price,
+      quantity,
+      taxable
+    };
+    
+    try {
+      const { data, error } = await supabase
+        .from('estimate_items')
+        .insert(newItem)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setLineItems(prev => [...prev, data]);
+      }
+    } catch (error) {
+      console.error("Error adding custom line:", error);
+      toast.error("Failed to add custom line");
     }
   };
 
-  const handleAddCustomLine = async (name: string, price: number, quantity: number, taxable: boolean) => {
-    if (estimate) {
-      try {
-        const newLineItem = await addCustomLine(estimate.id, name, price, quantity, taxable);
-        if (newLineItem) {
-          setLineItems(prev => [...prev, newLineItem]);
-        }
-      } catch (error) {
-        console.error("Error adding custom line:", error);
-        toast.error("Failed to add custom line");
-      }
-    } else {
+  const removeLine = async (lineId: string) => {
+    if (!estimate?.id) {
       toast.error("Estimate not loaded");
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('estimate_items')
+        .delete()
+        .eq('id', lineId);
+        
+      if (error) throw error;
+      
+      setLineItems(prev => prev.filter(item => item.id !== lineId));
+    } catch (error) {
+      console.error("Error removing line:", error);
+      toast.error("Failed to remove line");
     }
   };
 
-  const handleRemoveLine = async (lineId: string) => {
-    if (estimate) {
-      try {
-        await removeLine(lineId);
-        setLineItems(prev => prev.filter(item => item.id !== lineId));
-      } catch (error) {
-        console.error("Error removing line:", error);
-        toast.error("Failed to remove line");
-      }
-    } else {
+  const updateLine = async (lineId: string, updates: any) => {
+    if (!estimate?.id) {
       toast.error("Estimate not loaded");
+      return null;
     }
-  };
-
-  const handleUpdateLine = async (lineId: string, updates: any) => {
-    if (estimate) {
-      try {
-        const updatedLine = await updateLine(lineId, updates);
-        if (updatedLine) {
-          setLineItems(prev =>
-            prev.map(item => (item.id === lineId ? { ...item, ...updatedLine } : item))
-          );
-        }
-      } catch (error) {
-        console.error("Error updating line:", error);
-        toast.error("Failed to update line");
+    
+    try {
+      const { data, error } = await supabase
+        .from('estimate_items')
+        .update(updates)
+        .eq('id', lineId)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setLineItems(prev =>
+          prev.map(item => (item.id === lineId ? { ...item, ...data } : item))
+        );
+        return data;
       }
-    } else {
-      toast.error("Estimate not loaded");
+    } catch (error) {
+      console.error("Error updating line:", error);
+      toast.error("Failed to update line");
     }
+    
+    return null;
   };
 
   const handleUpdateDiscount = async (discount: number) => {
     if (estimate) {
       try {
         // Optimistically update the local state
-        setEstimate(prev => ({ ...prev, discount }));
+        setEstimate(prev => prev ? { ...prev, discount } : null);
         
         // Update the discount in the database
         await supabase
@@ -145,7 +262,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
     if (estimate) {
       try {
         // Optimistically update the local state
-        setEstimate(prev => ({ ...prev, tax_rate }));
+        setEstimate(prev => prev ? { ...prev, tax_rate } : null);
         
         // Update the tax in the database
         await supabase
@@ -167,7 +284,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
     if (estimate) {
       try {
         // Optimistically update the local state
-        setEstimate(prev => ({ ...prev, technicians_note }));
+        setEstimate(prev => prev ? { ...prev, technicians_note } : null);
         
         // Update the note in the database
         await supabase
@@ -195,10 +312,10 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
           <div>
             <EstimateEditor
               lineItems={lineItems}
-              onAddEmptyLineItem={handleAddEmptyLineItem}
-              onAddCustomLine={handleAddCustomLine}
-              onRemoveLine={handleRemoveLine}
-              onUpdateLine={handleUpdateLine}
+              onAddEmptyLineItem={addEmptyLineItem}
+              onAddCustomLine={addCustomLine}
+              onRemoveLine={removeLine}
+              onUpdateLine={updateLine}
               onUpdateDiscount={handleUpdateDiscount}
               onUpdateTax={handleUpdateTax}
               onUpdateNote={handleUpdateNote}
@@ -210,8 +327,8 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
           <div>
             <LineItemsTable
               lineItems={lineItems}
-              onRemoveLineItem={handleRemoveLine}
-              onUpdateLineItem={handleUpdateLine}
+              onRemoveLineItem={removeLine}
+              onUpdateLineItem={updateLine}
               onEditLineItem={() => false}
             />
             {onSyncToInvoice && (

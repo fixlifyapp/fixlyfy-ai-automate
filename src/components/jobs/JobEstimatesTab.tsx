@@ -57,7 +57,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onEdit={handlers.handleEditEstimate}
           onConvert={handlers.handleConvertToInvoice}
           onAddWarranty={handlers.handleAddWarranty}
-          onSend={handlers.handleSendEstimate}
+          onSend={(estimate) => handlers.handleSendEstimate && handlers.handleSendEstimate(estimate)}
           onDelete={handlers.handleDeleteEstimate}
         />
         

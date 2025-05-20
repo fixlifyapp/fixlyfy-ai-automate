@@ -1,57 +1,100 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { DeleteJobsDialog } from "./dialogs/DeleteJobsDialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal } from "lucide-react";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { X, CheckCircle, UserPlus, Trash, SendHorizonal, Tag } from 'lucide-react';
 
-interface BulkActionsBarProps {
+export interface BulkActionsBarProps {
   selectedJobs: string[];
-  onDeselectAll: () => void;
-  onSelectionComplete: () => void;
+  onClearSelection: () => void;
+  onUpdateStatus: (jobIds: string[], newStatus: string) => void;
+  onAssignTechnician: (jobIds: string[], technicianId: string, technicianName: string) => void;
+  onDeleteJobs: (jobIds: string[]) => void;
+  onSendReminders: (jobIds: string[], reminderType: string) => void;
+  onTagJobs: (jobIds: string[], tags: string[]) => void;
 }
 
-export function BulkActionsBar({ selectedJobs, onDeselectAll, onSelectionComplete }: BulkActionsBarProps) {
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const handleDeleteJobs = () => {
-    setIsDeleteDialogOpen(true);
-  };
+export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
+  selectedJobs,
+  onClearSelection,
+  onUpdateStatus,
+  onAssignTechnician,
+  onDeleteJobs,
+  onSendReminders,
+  onTagJobs
+}) => {
+  if (selectedJobs.length === 0) return null;
 
   return (
-    <div className="flex items-center justify-end space-x-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open dropdown menu</span>
-            <MoreHorizontal className="h-4 w-4" />
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50 py-3 px-4 flex items-center">
+      <div className="container mx-auto flex flex-wrap items-center gap-3">
+        <div className="bg-fixlyfy text-white px-3 py-1 rounded-full text-sm font-medium">
+          {selectedJobs.length} jobs selected
+        </div>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+          onClick={onClearSelection}
+        >
+          <X size={14} />
+          Clear
+        </Button>
+        
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1"
+            onClick={() => onUpdateStatus(selectedJobs, 'completed')}
+          >
+            <CheckCircle size={14} />
+            Mark Complete
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={handleDeleteJobs}>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1"
+            onClick={() => onAssignTechnician(selectedJobs, '', '')}
+          >
+            <UserPlus size={14} />
+            Assign
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1"
+            onClick={() => onSendReminders(selectedJobs, 'sms')}
+          >
+            <SendHorizonal size={14} />
+            Send Reminder
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1"
+            onClick={() => onTagJobs(selectedJobs, [])}
+          >
+            <Tag size={14} />
+            Tag
+          </Button>
+          
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            className="gap-1"
+            onClick={() => onDeleteJobs(selectedJobs)}
+          >
+            <Trash size={14} />
             Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {isDeleteDialogOpen && (
-        <DeleteJobsDialog
-          selectedJobs={selectedJobs}
-          onOpenChange={setIsDeleteDialogOpen}
-          onSuccess={() => {
-            onSelectionComplete();
-            onDeselectAll();
-          }}
-          open={isDeleteDialogOpen}
-        />
-      )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default BulkActionsBar;

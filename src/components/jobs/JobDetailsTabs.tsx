@@ -2,14 +2,15 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReactNode } from "react";
 
 interface JobDetailsTabsProps {
   activeTab?: string;
   onTabChange?: (value: string) => void;
   children?: React.ReactNode;
   onEstimateTabClick?: () => void;
-  onCreateEstimate?: React.ReactNode;
-  onCreateInvoice?: React.ReactNode;
+  onCreateEstimate?: ReactNode;
+  onCreateInvoice?: ReactNode;
 }
 
 export const JobDetailsTabs = ({
