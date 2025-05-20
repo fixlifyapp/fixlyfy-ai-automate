@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Product } from "./builder/types";
 import { ProductEditDialog } from "./dialogs/ProductEditDialog";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +19,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<useProducts.Product | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   const { 
@@ -35,7 +34,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = !searchQuery || 
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
       (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
     
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
@@ -43,7 +42,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleEditProduct = (product: Product) => {
+  const handleEditProduct = (product: useProducts.Product) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };
@@ -53,19 +52,24 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
     setIsCreateDialogOpen(true);
   };
 
-  const handleSaveProduct = async (product: Product) => {
+  const handleSaveProduct = async (product: any) => {
     if (selectedProduct) {
       // Editing existing product
       await updateProduct(product.id, product);
     } else {
       // Creating new product
-      await createProduct(product);
+      // Make sure cost has a default value for new products
+      const newProduct = {
+        ...product,
+        cost: product.cost ?? 0
+      };
+      await createProduct(newProduct);
     }
     setIsEditDialogOpen(false);
     setIsCreateDialogOpen(false);
   };
 
-  const getMarginPercentage = (product: Product) => {
+  const getMarginPercentage = (product: useProducts.Product) => {
     const margin = product.price - (product.ourPrice || 0);
     return margin > 0 ? ((margin / product.price) * 100).toFixed(0) : "0";
   };

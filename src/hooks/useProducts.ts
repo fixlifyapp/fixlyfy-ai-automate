@@ -105,11 +105,11 @@ export const useProducts = (category?: string) => {
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     try {
       // Transform ourPrice to ourprice for the database
-      const dbUpdates = { ...updates };
+      const dbUpdates: any = { ...updates };
       
       if ('ourPrice' in updates) {
         dbUpdates.ourprice = updates.ourPrice;
-        delete (dbUpdates as any).ourPrice;
+        delete dbUpdates.ourPrice;
       }
       
       const { data, error } = await supabase
