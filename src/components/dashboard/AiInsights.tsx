@@ -6,123 +6,175 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
-import { clients } from "@/data/real-clients";
-import { jobs } from "@/data/real-jobs";
 
 export const AiInsights = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [insights, setInsights] = useState<any[]>([]);
   const [businessData, setBusinessData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Generate real insights based on client and job data
-    const activeClients = clients.filter(client => client.status === "active");
-    const completedJobs = jobs.filter(job => job.status === "completed");
-    
-    // Calculate HVAC revenue
-    const hvacJobs = jobs.filter(job => 
-      job.tags.includes("HVAC") && job.status === "completed"
-    );
-    const hvacRevenue = hvacJobs.reduce((sum, job) => sum + job.revenue, 0);
-    const totalRevenue = completedJobs.reduce((sum, job) => sum + job.revenue, 0);
-    
-    // Calculate technician utilization
-    const technicians = [...new Set(jobs.map(job => job.technician.name))];
-    const technicianData = technicians.reduce((acc: Record<string, any>, name) => {
-      const techJobs = jobs.filter(job => job.technician.name === name);
-      acc[name] = techJobs.length;
-      return acc;
-    }, {});
-    
-    // Find underutilized technicians
-    const avgJobsPerTech = jobs.length / technicians.length;
-    const underutilizedTechs = Object.entries(technicianData)
-      .filter(([_, count]) => (count as number) < avgJobsPerTech * 0.7)
-      .map(([name]) => name);
-    
-    // Generate insights based on real data
-    const generatedInsights = [
-      {
-        id: 1,
-        title: 'Revenue Opportunity',
-        description: `HVAC revenue is ${(hvacRevenue / totalRevenue * 100).toFixed(0)}% of total revenue. Consider expanding this service line.`,
-        type: 'warning',
-        action: 'Create Promotion',
-        actionUrl: '/marketing',
-        icon: AlertTriangle
-      },
-      {
-        id: 2,
-        title: 'Scheduling Optimization',
-        description: `${underutilizedTechs.length} technicians are underutilized. Optimize your schedule to balance workloads.`,
-        type: 'info',
-        action: 'Optimize Schedule',
-        actionUrl: '/schedule',
-        icon: Clock
-      },
-      {
-        id: 3,
-        title: 'Customer Satisfaction',
-        description: `Average client satisfaction is 4.2/5 based on recent surveys. Great job!`,
-        type: 'success',
-        action: 'View Details',
-        actionUrl: '/reports',
-        icon: Star
-      },
-      {
-        id: 4,
-        title: 'Performance Trend',
-        description: `Your business has ${completedJobs.length} completed jobs this period with average value of $${(totalRevenue / completedJobs.length).toFixed(0)}.`,
-        type: 'info',
-        action: 'View Analytics',
-        actionUrl: '/reports',
-        icon: TrendingUp
-      }
-    ];
-    
-    setInsights(generatedInsights);
-    
-    // Set business data for AI recommendations
-    const data = {
-      revenue: {
-        current: totalRevenue,
-        previous: totalRevenue * 0.85, // Simulated previous revenue
-        trend: 15.7
-      },
-      services: {
-        hvac: { 
-          completed: hvacJobs.length, 
-          revenue: hvacRevenue 
-        },
-        plumbing: { 
-          completed: jobs.filter(j => j.tags.includes("Plumbing") && j.status === "completed").length, 
-          revenue: jobs.filter(j => j.tags.includes("Plumbing") && j.status === "completed")
-            .reduce((sum, j) => sum + j.revenue, 0) 
-        },
-        electrical: { 
-          completed: jobs.filter(j => j.tags.includes("Electrical") && j.status === "completed").length, 
-          revenue: jobs.filter(j => j.tags.includes("Electrical") && j.status === "completed")
-            .reduce((sum, j) => sum + j.revenue, 0)
-        }
-      },
-      technicians: {
-        total: technicians.length,
-        utilization: 78,
-        topPerforming: Object.entries(technicianData)
-          .sort((a, b) => (b[1] as number) - (a[1] as number))
-          .slice(0, 2)
-          .map(([name]) => name)
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch clients
+        const { data: clients, error: clientsError } = await supabase
+          .from('clients')
+          .select('*');
+          
+        if (clientsError) throw clientsError;
+        
+        // Fetch jobs
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
+          .select('*');
+          
+        if (jobsError) throw jobsError;
+        
+        // Fetch products
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select('*');
+          
+        if (productsError) throw productsError;
+        
+        // Calculate insights from real data
+        const activeClients = (clients || []).filter(client => client.status === "active");
+        const completedJobs = (jobs || []).filter(job => job.status === "completed");
+        
+        // Calculate HVAC revenue
+        const hvacJobs = (jobs || []).filter(job => 
+          job.tags && job.tags.includes("HVAC") && job.status === "completed"
+        );
+        const hvacRevenue = hvacJobs.reduce((sum, job) => sum + (job.revenue || 0), 0);
+        const totalRevenue = completedJobs.reduce((sum, job) => sum + (job.revenue || 0), 0);
+        
+        // Calculate technician utilization
+        const technicianIds = [...new Set((jobs || []).map(job => job.technician_id))].filter(id => id);
+        const technicianData: Record<string, any> = {};
+        
+        (jobs || []).forEach(job => {
+          if (job.technician_id) {
+            if (!technicianData[job.technician_id]) {
+              technicianData[job.technician_id] = 0;
+            }
+            technicianData[job.technician_id]++;
+          }
+        });
+        
+        // Find underutilized technicians
+        const avgJobsPerTech = technicianIds.length > 0 ? jobs.length / technicianIds.length : 0;
+        const underutilizedTechs = Object.entries(technicianData)
+          .filter(([_, count]) => (count as number) < avgJobsPerTech * 0.7)
+          .map(([id]) => id);
+        
+        // Generate insights based on real data
+        const generatedInsights = [
+          {
+            id: 1,
+            title: 'Revenue Opportunity',
+            description: totalRevenue > 0 
+              ? `HVAC revenue is ${(hvacRevenue / totalRevenue * 100).toFixed(0)}% of total revenue. Consider expanding this service line.`
+              : 'No completed jobs yet. Start building revenue by closing your first jobs.',
+            type: 'warning',
+            action: 'Create Promotion',
+            actionUrl: '/marketing',
+            icon: AlertTriangle
+          },
+          {
+            id: 2,
+            title: 'Scheduling Optimization',
+            description: `${underutilizedTechs.length} technicians are underutilized. Optimize your schedule to balance workloads.`,
+            type: 'info',
+            action: 'Optimize Schedule',
+            actionUrl: '/schedule',
+            icon: Clock
+          },
+          {
+            id: 3,
+            title: 'Customer Satisfaction',
+            description: `Average client satisfaction is 4.2/5 based on recent surveys. Great job!`,
+            type: 'success',
+            action: 'View Details',
+            actionUrl: '/reports',
+            icon: Star
+          },
+          {
+            id: 4,
+            title: 'Performance Trend',
+            description: completedJobs.length > 0 
+              ? `Your business has ${completedJobs.length} completed jobs this period with average value of $${(totalRevenue / completedJobs.length).toFixed(0)}.`
+              : 'No completed jobs yet. Focus on moving jobs to completion to start tracking performance.',
+            type: 'info',
+            action: 'View Analytics',
+            actionUrl: '/reports',
+            icon: TrendingUp
+          }
+        ];
+        
+        setInsights(generatedInsights);
+        
+        // Set business data for AI recommendations
+        const data = {
+          revenue: {
+            current: totalRevenue,
+            previous: totalRevenue * 0.85, // Simulated previous revenue
+            trend: 15.7
+          },
+          services: {
+            hvac: { 
+              completed: hvacJobs.length, 
+              revenue: hvacRevenue 
+            },
+            plumbing: { 
+              completed: (jobs || []).filter(j => j.tags && j.tags.includes("Plumbing") && j.status === "completed").length, 
+              revenue: (jobs || []).filter(j => j.tags && j.tags.includes("Plumbing") && j.status === "completed")
+                .reduce((sum, j) => sum + (j.revenue || 0), 0) 
+            },
+            electrical: { 
+              completed: (jobs || []).filter(j => j.tags && j.tags.includes("Electrical") && j.status === "completed").length, 
+              revenue: (jobs || []).filter(j => j.tags && j.tags.includes("Electrical") && j.status === "completed")
+                .reduce((sum, j) => sum + (j.revenue || 0), 0)
+            }
+          },
+          technicians: {
+            total: technicianIds.length,
+            utilization: 78,
+            topPerforming: Object.entries(technicianData)
+              .sort((a, b) => (b[1] as number) - (a[1] as number))
+              .slice(0, 2)
+              .map(([id]) => id)
+          }
+        };
+        
+        setBusinessData(data);
+      } catch (error) {
+        console.error("Error fetching data for insights:", error);
+        toast.error("Failed to load business insights");
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    setBusinessData(data);
+    fetchData();
   }, []);
   
   const generateReport = async () => {
     setIsGenerating(true);
     
     try {
+      // Get auth session to use with edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("Authentication required", {
+          description: "Please sign in to generate reports"
+        });
+        setIsGenerating(false);
+        return;
+      }
+      
       // Simulate API call for demonstration
       setTimeout(() => {
         toast.success("Report generated successfully!", {
@@ -143,8 +195,17 @@ export const AiInsights = () => {
     }
   };
   
+  if (isLoading) {
+    return (
+      <div className="fixlyfy-card h-full p-6 flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-current border-t-transparent text-fixlyfy rounded-full mr-2" />
+        <span>Loading insights...</span>
+      </div>
+    );
+  }
+  
   if (!businessData || insights.length === 0) {
-    return <div className="fixlyfy-card h-full p-6">Loading insights...</div>;
+    return <div className="fixlyfy-card h-full p-6">No insights available. Please check your data.</div>;
   }
   
   return (
