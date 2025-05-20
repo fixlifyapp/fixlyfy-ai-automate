@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
@@ -16,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
 import { Payment as RefundDialogPayment } from "@/types/payment";
+import { recordPayment } from "@/services/jobHistoryService";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -27,6 +28,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { currentUser } = useRBAC();
   
   const { 
     payments, 
@@ -36,9 +38,17 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     netAmount,
     addPayment,
     refundPayment,
-    deletePayment
+    deletePayment,
+    fetchPayments
   } = usePayments(jobId);
   
+  // Fetch payments when component mounts or jobId changes
+  useEffect(() => {
+    if (jobId) {
+      fetchPayments();
+    }
+  }, [jobId, fetchPayments]);
+
   const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
       case "credit-card":
@@ -136,13 +146,20 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         throw updateError;
       }
       
+      // Record in job history
+      await recordPayment(
+        jobId,
+        amount,
+        method,
+        currentUser?.name,
+        currentUser?.id,
+        reference
+      );
+      
       toast.success('Payment recorded successfully');
       
-      // Refresh payments list by adding the new payment
-      addPayment(
-        { amount, method, reference, notes },
-        "" // We don't need client ID since we're using invoice ID
-      );
+      // Refresh payments list by fetching the latest data
+      fetchPayments();
     } catch (error) {
       console.error("Error processing payment:", error);
       toast.error("Failed to process payment");

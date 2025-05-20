@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { HistoryItem } from '@/hooks/useJobHistory';
+import { PaymentMethod } from '@/types/payment';
 
 export const recordStatusChange = async (
   jobId: string, 
@@ -71,9 +72,10 @@ export const recordNoteAdded = async (
 export const recordPayment = async (
   jobId: string,
   amount: number,
-  method: string,
+  method: PaymentMethod,
   userName?: string,
-  userId?: string
+  userId?: string,
+  reference?: string
 ) => {
   try {
     const historyItem = {
@@ -85,7 +87,8 @@ export const recordPayment = async (
       user_name: userName,
       meta: {
         amount,
-        method
+        method,
+        reference
       },
       visibility: 'restricted'
     };

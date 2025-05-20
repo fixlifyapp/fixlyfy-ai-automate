@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { payments as mockPayments } from "@/data/payments";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +10,7 @@ export interface Payment {
   id: string;
   amount: number;
   date: string;
-  method: PaymentMethod; // Change from string to PaymentMethod
+  method: PaymentMethod;
   created_at: string;
   notes: string;
   reference: string;
@@ -32,7 +32,6 @@ type PaymentInput = {
 
 // Enhanced version of usePayments
 export const usePayments = (jobId?: string) => {
-  // Fix the initial state by ensuring mockPayments are cast to the proper type
   const [payments, setPayments] = useState<Payment[]>(() => {
     const filteredPayments = jobId 
       ? mockPayments.filter(p => p.jobId === jobId) 
@@ -56,7 +55,7 @@ export const usePayments = (jobId?: string) => {
     }));
   });
   
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Calculate payment totals
   const totalPaid = useMemo(() => {
@@ -74,6 +73,57 @@ export const usePayments = (jobId?: string) => {
   const netAmount = useMemo(() => {
     return totalPaid - totalRefunded;
   }, [totalPaid, totalRefunded]);
+
+  // Function to fetch payments for a specific job
+  const fetchPayments = useCallback(async () => {
+    if (!jobId) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // First get the invoice for this job
+      const { data: invoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('job_id', jobId);
+        
+      if (invoiceError) {
+        throw invoiceError;
+      }
+      
+      if (!invoices || invoices.length === 0) {
+        // No invoices found for this job, use mock data
+        setPayments([]);
+        return;
+      }
+      
+      const invoiceIds = invoices.map(inv => inv.id);
+      
+      // Fetch payments for these invoices
+      const { data: paymentData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .in('invoice_id', invoiceIds);
+        
+      if (paymentsError) {
+        throw paymentsError;
+      }
+      
+      if (paymentData) {
+        const formattedPayments = paymentData.map(p => ({
+          ...p,
+          status: 'paid', // Default status for new payments
+          job_id: jobId,
+        })) as Payment[];
+        
+        setPayments(formattedPayments);
+      }
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [jobId]);
 
   // Add a new payment
   const addPayment = async (paymentData: PaymentInput, clientId: string) => {
@@ -145,6 +195,7 @@ export const usePayments = (jobId?: string) => {
     netAmount,
     addPayment,
     refundPayment,
-    deletePayment
+    deletePayment,
+    fetchPayments
   };
 };
