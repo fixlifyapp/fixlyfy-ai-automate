@@ -1,63 +1,40 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Product } from "@/components/jobs/builder/types";
 
-interface EstimateUpsellOptionsProps {
-  onAddCustomLine: () => void;
+export interface EstimateUpsellOptionsProps {
+  warranty?: Product | null;
+  techniciansNote?: string;
+  onWarrantyChange: (warranty: Product | null) => void;
+  onNotesChange: (note: string) => void;
 }
 
 export const EstimateUpsellOptions = ({
-  onAddCustomLine,
+  warranty,
+  techniciansNote = "",
+  onWarrantyChange,
+  onNotesChange
 }: EstimateUpsellOptionsProps) => {
-  const [showUpsellOptions, setShowUpsellOptions] = useState(false);
-
-  const handleAddUpsell = () => {
-    setShowUpsellOptions(!showUpsellOptions);
-  };
-
-  const handleAddWarranty = () => {
-    // This would open the warranty dialog in the parent component
-    setShowUpsellOptions(false);
-  };
-
-  const handleAddMaintenancePlan = () => {
-    // Add maintenance plan and close menu
-    onAddCustomLine();
-    setShowUpsellOptions(false);
-  };
-
   return (
-    <div className="relative inline-block">
-      <Button 
-        onClick={handleAddUpsell} 
-        variant="outline"
-        className="gap-2"
-      >
-        <Plus size={16} />
-        Add Upsell
-      </Button>
-      
-      {showUpsellOptions && (
-        <div className="absolute right-0 mt-2 w-56 bg-background border rounded-md shadow-lg z-10">
-          <div className="py-1">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start px-4 py-2 text-sm" 
-              onClick={handleAddWarranty}
-            >
-              Add Warranty
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start px-4 py-2 text-sm" 
-              onClick={handleAddMaintenancePlan}
-            >
-              Add Maintenance Plan
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Technician's Notes</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Add any notes or recommendations from the technician.
+        </p>
+        
+        <div className="space-y-2">
+          <Label htmlFor="technicians-note">Notes</Label>
+          <Textarea
+            id="technicians-note"
+            value={techniciansNote}
+            onChange={(e) => onNotesChange(e.target.value)}
+            placeholder="Enter any additional notes or recommendations..."
+            className="min-h-[150px]"
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 };

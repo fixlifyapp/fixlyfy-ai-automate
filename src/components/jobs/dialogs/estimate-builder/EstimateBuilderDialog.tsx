@@ -8,6 +8,9 @@ import { EstimatePreview } from "./EstimatePreview";
 import { EstimateSyncOptions } from "./EstimateSyncOptions";
 import { EstimateUpsellOptions } from "./EstimateUpsellOptions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
+import { CustomLineItemDialog } from "./CustomLineItemDialog";
+import { Product, LineItem } from "@/components/jobs/builder/types";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -25,6 +28,8 @@ export const EstimateBuilderDialog = ({
   onSyncToInvoice
 }: EstimateBuilderDialogProps) => {
   const [activeTab, setActiveTab] = useState("form");
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(estimateId ? false : true);
+  const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
   
   const estimateBuilder = useEstimateBuilder({
     estimateId: estimateId || null,
@@ -32,6 +37,31 @@ export const EstimateBuilderDialog = ({
     onSyncToInvoice,
     jobId
   });
+  
+  const handleProductSelect = (product: Product) => {
+    estimateBuilder.handleAddProduct(product);
+    if (!estimateId) {
+      // If it's a new estimate, select first product and proceed to editing
+      setIsProductSearchOpen(false);
+    }
+  };
+  
+  const handleCustomLineItemSave = (item: Partial<LineItem>) => {
+    const newLineItem: LineItem = {
+      id: `item-${Date.now()}`,
+      description: item.description || item.name || "Custom Item",
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || 0,
+      taxable: item.taxable !== undefined ? item.taxable : true,
+      discount: item.discount || 0,
+      ourPrice: item.ourPrice || 0,
+      name: item.name || "Custom Item",
+      price: item.unitPrice || 0,
+      total: (item.quantity || 1) * (item.unitPrice || 0)
+    };
+    
+    estimateBuilder.setLineItems([...estimateBuilder.lineItems, newLineItem]);
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -54,8 +84,8 @@ export const EstimateBuilderDialog = ({
               onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
               onUpdateLineItem={estimateBuilder.handleUpdateLineItem}
               onEditLineItem={estimateBuilder.handleEditLineItem}
-              onAddEmptyLineItem={estimateBuilder.handleAddEmptyLineItem}
-              onAddCustomLine={estimateBuilder.handleAddCustomLine}
+              onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
+              onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
               taxRate={estimateBuilder.taxRate}
               setTaxRate={estimateBuilder.setTaxRate}
               calculateSubtotal={estimateBuilder.calculateSubtotal}
@@ -63,6 +93,7 @@ export const EstimateBuilderDialog = ({
               calculateGrandTotal={estimateBuilder.calculateGrandTotal}
               calculateTotalMargin={estimateBuilder.calculateTotalMargin}
               calculateMarginPercentage={estimateBuilder.calculateMarginPercentage}
+              showMargin={true}
             />
           </TabsContent>
           
@@ -74,16 +105,18 @@ export const EstimateBuilderDialog = ({
               calculateSubtotal={estimateBuilder.calculateSubtotal}
               calculateTotalTax={estimateBuilder.calculateTotalTax}
               calculateGrandTotal={estimateBuilder.calculateGrandTotal}
+              notes={estimateBuilder.notes || ""}
             />
           </TabsContent>
           
           <TabsContent value="options" className="py-4">
             <div className="space-y-8">
+              {/* Pass the correct props to EstimateUpsellOptions */}
               <EstimateUpsellOptions
-                recommendedWarranty={estimateBuilder.recommendedWarranty}
+                warranty={estimateBuilder.recommendedWarranty}
                 techniciansNote={estimateBuilder.techniciansNote}
-                setRecommendedWarranty={estimateBuilder.setRecommendedWarranty}
-                setTechniciansNote={estimateBuilder.setTechniciansNote}
+                onWarrantyChange={estimateBuilder.setRecommendedWarranty}
+                onNotesChange={estimateBuilder.setTechniciansNote}
               />
               
               <EstimateSyncOptions
@@ -102,6 +135,20 @@ export const EstimateBuilderDialog = ({
           </Button>
         </div>
       </DialogContent>
+      
+      {/* Product Search Dialog */}
+      <ProductSearch
+        open={isProductSearchOpen}
+        onOpenChange={setIsProductSearchOpen}
+        onProductSelect={handleProductSelect}
+      />
+      
+      {/* Custom Line Item Dialog */}
+      <CustomLineItemDialog
+        open={isCustomLineItemDialogOpen}
+        onOpenChange={setIsCustomLineItemDialogOpen}
+        onSave={handleCustomLineItemSave}
+      />
     </Dialog>
   );
 };
