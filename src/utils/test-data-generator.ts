@@ -88,7 +88,7 @@ const getRandomBusinessName = (): string => {
 
 // Team roles and statuses
 const teamRoles = ["technician", "technician", "technician", "technician", "dispatcher", "dispatcher", "admin", "manager"];
-const teamStatuses = ["active", "active", "active", "active", "suspended"];
+const teamStatuses = ["active", "active", "active", "active", "suspended"] as const;
 
 // Generate test team members data
 export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMember[]> => {
@@ -138,7 +138,7 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
       id: `team-${i + 1}`,
       name: name,
       email: email,
-      role: role,
+      role: role as "admin" | "manager" | "dispatcher" | "technician",
       status: getRandomElement(teamStatuses),
       avatar: "https://github.com/shadcn.png",
       lastLogin: lastLoginDate.toISOString(),

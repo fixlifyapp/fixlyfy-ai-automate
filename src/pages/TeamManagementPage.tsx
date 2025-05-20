@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Shield, Upload, Loader2 } from "lucide-react";
+import { Plus, Shield, Upload, Loader2, UserPlus } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
 import { PermissionRequired, useRBAC } from "@/components/auth/RBACProvider";
@@ -155,7 +155,7 @@ const TeamManagementPage = () => {
                 onClick={handleAddNewMember} 
                 className="gap-2"
               >
-                <Plus size={18} />
+                <UserPlus size={18} />
                 Invite Team Member
               </Button>
             ) : (
@@ -193,9 +193,12 @@ const TeamManagementPage = () => {
                 {filteredMembers.length === 0 ? (
                   <TableRow>
                     <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                      {searchTerm || roleFilter || statusFilter ? 
-                        "No team members match your filters" : 
-                        "No team members found"}
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <UserPlus size={24} className="text-muted-foreground/50" />
+                        {searchTerm || roleFilter || statusFilter ? 
+                          "No team members match your filters" : 
+                          "No team members yet. Click 'Import Test Data' to add some sample data."}
+                      </div>
                     </td>
                   </TableRow>
                 ) : (
