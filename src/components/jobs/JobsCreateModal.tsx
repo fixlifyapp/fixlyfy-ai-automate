@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -29,17 +30,20 @@ import { CalendarIcon, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clients } from "@/data/clients";
 import { useToast } from "@/hooks/use-toast";
+import { Job } from "@/hooks/useJobs";
 
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preselectedClientId?: string;
+  onSuccess?: (job: Job) => void;
 }
 
 export const JobsCreateModal = ({ 
   open, 
   onOpenChange, 
-  preselectedClientId 
+  preselectedClientId,
+  onSuccess 
 }: JobsCreateModalProps) => {
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -74,7 +78,20 @@ export const JobsCreateModal = ({
   };
 
   const handleSubmit = () => {
-    // Simulate job creation
+    // Simulate job creation (in real app you'd make an API call)
+    const mockJob: Job = {
+      id: `JOB-${Math.floor(10000 + Math.random() * 90000)}`,
+      title: "New Service Job",
+      client_id: selectedClient,
+      status: "scheduled",
+      date: new Date().toISOString()
+    };
+    
+    // Call onSuccess callback if provided
+    if (onSuccess) {
+      onSuccess(mockJob);
+    }
+    
     toast({
       title: "Job created",
       description: "The new job has been created successfully.",
