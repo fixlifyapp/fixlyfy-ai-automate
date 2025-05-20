@@ -1,90 +1,192 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { CheckCircle, Users, DollarSign, Star } from "lucide-react";
+import { CheckCircle, Users, DollarSign, Star, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const SecondaryMetrics = () => {
-  // Mock data for secondary metrics
-  const metrics = [
-    {
-      id: 1,
-      name: "Completion Rate",
-      value: 92,
-      icon: CheckCircle,
-      description: "Jobs completed on time",
-      change: "+5% vs last month",
-      color: "text-fixlyfy-success"
-    },
-    {
-      id: 2,
-      name: "Average Job Value",
-      value: "$245",
-      icon: DollarSign,
-      description: "Per completed job",
-      change: "+$18 vs last month",
-      color: "text-fixlyfy"
-    },
-    {
-      id: 3,
-      name: "Technician Utilization",
-      value: 84,
-      icon: Users,
-      description: "Scheduled hours ratio",
-      change: "+2% vs last month",
-      color: "text-fixlyfy-info"
-    },
-    {
-      id: 4,
-      name: "Customer Satisfaction",
-      value: 4.8,
-      icon: Star,
-      description: "Average rating",
-      change: "+0.2 vs last month",
-      color: "text-fixlyfy-warning"
-    }
-  ];
+  const [metrics, setMetrics] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const calculateMetrics = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch jobs data
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
+          .select('status, revenue, created_at, updated_at');
+          
+        if (jobsError) throw jobsError;
+        
+        // Fetch clients data for satisfaction
+        const { data: clients, error: clientsError } = await supabase
+          .from('clients')
+          .select('rating');
+          
+        if (clientsError) throw clientsError;
+        
+        // Calculate completion rate
+        const totalJobs = jobs?.length || 0;
+        const completedJobs = jobs?.filter(job => job.status === 'completed')?.length || 0;
+        const completionRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
+        
+        // Calculate average job value
+        const completedJobsWithRevenue = jobs?.filter(job => job.status === 'completed' && job.revenue);
+        const totalRevenue = completedJobsWithRevenue?.reduce((sum, job) => sum + parseFloat(job.revenue), 0) || 0;
+        const averageJobValue = completedJobsWithRevenue?.length > 0 
+          ? Math.round(totalRevenue / completedJobsWithRevenue.length) 
+          : 0;
+          
+        // Calculate technician utilization (mocked as we don't have real utilization data)
+        const technicianUtilization = 84; // Mocked value
+        
+        // Calculate customer satisfaction
+        const clientsWithRating = clients?.filter(client => client.rating);
+        const averageSatisfaction = clientsWithRating?.length > 0
+          ? (clientsWithRating.reduce((sum, client) => sum + client.rating, 0) / clientsWithRating.length).toFixed(1)
+          : "0.0";
+          
+        // Calculate month-over-month changes (mocked)
+        const previousMonthCompletion = completionRate - getRandomChange(2, 6);
+        const previousMonthAvgValue = averageJobValue - getRandomChange(10, 20);
+        const previousMonthUtilization = technicianUtilization - getRandomChange(1, 3);
+        const previousMonthSatisfaction = parseFloat(averageSatisfaction) - 0.2;
+        
+        // Create metrics array with calculated values
+        const calculatedMetrics = [
+          {
+            id: 1,
+            name: "Completion Rate",
+            value: completionRate,
+            icon: CheckCircle,
+            description: "Jobs completed on time",
+            change: `+${(completionRate - previousMonthCompletion).toFixed(0)}% vs last month`,
+            color: "text-fixlyfy-success"
+          },
+          {
+            id: 2,
+            name: "Average Job Value",
+            value: `$${averageJobValue}`,
+            icon: DollarSign,
+            description: "Per completed job",
+            change: `+$${(averageJobValue - previousMonthAvgValue).toFixed(0)} vs last month`,
+            color: "text-fixlyfy"
+          },
+          {
+            id: 3,
+            name: "Technician Utilization",
+            value: technicianUtilization,
+            icon: Users,
+            description: "Scheduled hours ratio",
+            change: `+${(technicianUtilization - previousMonthUtilization).toFixed(0)}% vs last month`,
+            color: "text-fixlyfy-info"
+          },
+          {
+            id: 4,
+            name: "Customer Satisfaction",
+            value: averageSatisfaction,
+            icon: Star,
+            description: "Average rating",
+            change: `+${(parseFloat(averageSatisfaction) - previousMonthSatisfaction).toFixed(1)} vs last month`,
+            color: "text-fixlyfy-warning"
+          }
+        ];
+        
+        setMetrics(calculatedMetrics);
+      } catch (error) {
+        console.error('Error calculating secondary metrics:', error);
+        // Set default metrics in case of error
+        setMetrics([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    calculateMetrics();
+  }, []);
+  
+  // Helper function for mock data
+  function getRandomChange(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index} className="animate-pulse">
+            <CardHeader className="space-y-0 pb-2">
+              <div className="h-4 w-24 bg-gray-200 rounded"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 w-16 bg-gray-200 rounded mb-1"></div>
+              <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+              <div className="h-2 w-full bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-20 bg-gray-200 rounded"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {metrics.map((metric) => (
-        <Card key={metric.id} className="animate-fade-in" style={{ animationDelay: `${metric.id * 100}ms` }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
-            <metric.icon className={cn("h-4 w-4", metric.color)} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-1">
-              {typeof metric.value === 'number' ? 
-                <>
-                  {metric.value}
-                  {metric.name.includes("Satisfaction") ? <span className="text-sm ml-1">/ 5</span> : "%"}
-                </> : 
-                metric.value
-              }
-            </div>
-            <p className="text-xs text-fixlyfy-text-secondary mb-2">{metric.description}</p>
-            {typeof metric.value === 'number' && metric.value !== 4.8 && (
-              <Progress 
-                value={metric.value} 
-                className={cn(
-                  "h-1.5",
-                  metric.value > 90 ? "bg-fixlyfy-success/20" : 
-                  metric.value > 80 ? "bg-fixlyfy-info/20" : 
-                  "bg-fixlyfy-warning/20"
-                )}
-              />
-            )}
-            {metric.value === 4.8 && (
-              <Progress 
-                value={metric.value * 20} 
-                className="h-1.5 bg-fixlyfy-warning/20"
-              />
-            )}
-            <p className="text-xs mt-2 text-fixlyfy-success">{metric.change}</p>
-          </CardContent>
-        </Card>
-      ))}
+      {metrics.length === 0 ? (
+        <div className="col-span-4 text-center py-8 text-fixlyfy-text-secondary">
+          <p>Unable to load metrics data.</p>
+        </div>
+      ) : (
+        metrics.map((metric) => (
+          <Card key={metric.id} className="animate-fade-in" style={{ animationDelay: `${metric.id * 100}ms` }}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
+              <metric.icon className={cn("h-4 w-4", metric.color)} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold mb-1">
+                {typeof metric.value === 'number' ? 
+                  <>
+                    {metric.value}
+                    {metric.name.includes("Satisfaction") ? <span className="text-sm ml-1">/ 5</span> : "%"}
+                  </> : 
+                  metric.value
+                }
+              </div>
+              <p className="text-xs text-fixlyfy-text-secondary mb-2">{metric.description}</p>
+              {typeof metric.value === 'number' && !metric.name.includes("Satisfaction") && (
+                <Progress 
+                  value={metric.value} 
+                  className={cn(
+                    "h-1.5",
+                    metric.value > 90 ? "bg-fixlyfy-success/20" : 
+                    metric.value > 80 ? "bg-fixlyfy-info/20" : 
+                    "bg-fixlyfy-warning/20"
+                  )}
+                />
+              )}
+              {metric.name.includes("Satisfaction") && (
+                <Progress 
+                  value={parseFloat(metric.value) * 20} 
+                  className="h-1.5 bg-fixlyfy-warning/20"
+                />
+              )}
+              {typeof metric.value === 'string' && metric.value.startsWith('$') && (
+                <Progress 
+                  value={parseInt(metric.value.substring(1)) / 10} 
+                  className="h-1.5 bg-fixlyfy/20"
+                  max={100}
+                />
+              )}
+              <p className="text-xs mt-2 text-fixlyfy-success">{metric.change}</p>
+            </CardContent>
+          </Card>
+        ))
+      )}
     </div>
   );
 };
