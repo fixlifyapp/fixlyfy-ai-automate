@@ -1,12 +1,12 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EstimateEditor } from "./EstimateEditor";
 import { LineItemsTable } from "./LineItemsTable";
 import { Estimate } from "@/hooks/useEstimates";
-import { useEstimatesInfo } from "@/components/jobs/estimates/hooks/useEstimatesInfo";
+import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -19,8 +19,7 @@ interface EstimateBuilderDialogProps {
 export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, onSyncToInvoice }: EstimateBuilderDialogProps) {
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
-  const { fetchEstimate, addEmptyLineItem, addCustomLine, removeLine, updateLine, updateDiscount, updateTax, updateNote } = useEstimatesInfo();
-  const router = useRouter();
+  const { fetchEstimate, addEmptyLineItem, addCustomLine, removeLine, updateLine } = useEstimateInfo();
 
   const handleOpenChange = (open: boolean) => {
     onOpenChange(open);
@@ -211,8 +210,9 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
           <div>
             <LineItemsTable
               lineItems={lineItems}
-              onRemoveLine={handleRemoveLine}
-              onUpdateLine={handleUpdateLine}
+              onRemoveLineItem={handleRemoveLine}
+              onUpdateLineItem={handleUpdateLine}
+              onEditLineItem={() => false}
             />
             {onSyncToInvoice && (
               <button onClick={onSyncToInvoice} className="mt-4 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">

@@ -76,7 +76,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onOpenChange={dialogs.setIsEstimateBuilderOpen}
           estimateId={state.selectedEstimateId}
           jobId={jobId}
-          onSyncToInvoice={handlers.handleSyncToInvoice}
+          onSyncToInvoice={handlers.handleSyncToInvoice ? () => handlers.handleSyncToInvoice() : undefined}
           key={state.selectedEstimateId} // Add key to force re-render on ID change
         />
         
