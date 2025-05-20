@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Pencil } from "lucide-react";
 
 interface EstimateActionsProps {
   estimate: any;
@@ -24,18 +24,25 @@ export const EstimateActions = ({
   // Add a console log to debug the estimate object
   console.log("Estimate in EstimateActions:", estimate);
   
+  const handleEditClick = () => {
+    console.log("Edit button clicked for estimate ID:", estimate.id);
+    if (estimate && estimate.id) {
+      onEdit(estimate.id);
+    } else {
+      console.error("Cannot edit: Invalid estimate object or missing ID");
+    }
+  };
+  
   return (
     <div className="flex justify-end gap-2">
       <Button 
         variant="outline" 
         size="sm"
-        className="text-xs"
-        onClick={() => {
-          console.log("Edit button clicked for estimate ID:", estimate.id);
-          onEdit(estimate.id);
-        }}
+        className="text-xs flex items-center gap-1"
+        onClick={handleEditClick}
         disabled={isProcessing}
       >
+        <Pencil size={14} />
         Edit
       </Button>
       <Button 
