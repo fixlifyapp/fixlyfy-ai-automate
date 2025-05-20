@@ -37,7 +37,7 @@ export const useEstimateCreation = (
       const { data, error } = await supabase
         .from('estimates')
         .insert({
-          job_id: jobId,
+          job_id: jobId, // Now this accepts text format
           number: newEstimateNumber,
           amount: amount,
           status: 'draft'

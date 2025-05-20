@@ -128,7 +128,7 @@ export const useInvoices = (jobId?: string) => {
         .from('invoices')
         .insert({
           number: invoiceNumber,
-          job_id: estimate.job_id,
+          job_id: estimate.job_id, // This now accepts text format
           client_id: job.client_id,
           estimate_id: estimate.id,
           date: new Date().toISOString(),
