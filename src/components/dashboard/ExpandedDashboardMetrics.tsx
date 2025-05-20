@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { Loader2, ArrowUpIcon, ArrowDownIcon, DollarSign, CalendarClock } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -51,6 +51,10 @@ export const ExpandedDashboardMetrics = () => {
     jobsCompleted: 0,
     jobsCancelled: 0,
     jobsCreated: 0,
+    openJobs: 0,
+    totalRevenue: 0,
+    previousTotalRevenue: 0,
+    previousOpenJobs: 0,
     topTechnicians: [] as { name: string; job_count: number; total_revenue: number }[]
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +105,11 @@ export const ExpandedDashboardMetrics = () => {
       const dateRange = getDateRange();
       const startDate = dateRange.from.toISOString();
       const endDate = dateRange.to.toISOString();
+
+      // Calculate previous period date range for comparisons
+      const periodLength = dateRange.to.getTime() - dateRange.from.getTime();
+      const previousStartDate = new Date(dateRange.from.getTime() - periodLength).toISOString();
+      const previousEndDate = new Date(dateRange.from.getTime() - 1).toISOString();
 
       // Fetch sales total (invoiced total)
       const { data: salesData, error: salesError } = await supabase
@@ -153,6 +162,46 @@ export const ExpandedDashboardMetrics = () => {
         .lte('created_at', endDate);
 
       if (createdError) throw createdError;
+
+      // Fetch open jobs (scheduled or in_progress)
+      const { count: openJobs, error: openJobsError } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['scheduled', 'in_progress', 'in-progress'])
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (openJobsError) throw openJobsError;
+
+      // Fetch previous period open jobs for comparison
+      const { count: previousOpenJobs } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['scheduled', 'in_progress', 'in-progress'])
+        .gte('created_at', previousStartDate)
+        .lte('created_at', previousEndDate);
+
+      // Fetch total revenue
+      const { data: revenueData, error: revenueError } = await supabase
+        .from('jobs')
+        .select('revenue')
+        .eq('status', 'completed')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (revenueError) throw revenueError;
+      
+      const totalRevenue = revenueData?.reduce((sum, job) => sum + (Number(job.revenue) || 0), 0) || 0;
+
+      // Fetch previous period revenue for comparison
+      const { data: previousRevenueData } = await supabase
+        .from('jobs')
+        .select('revenue')
+        .eq('status', 'completed')
+        .gte('created_at', previousStartDate)
+        .lte('created_at', previousEndDate);
+        
+      const previousTotalRevenue = previousRevenueData?.reduce((sum, job) => sum + (Number(job.revenue) || 0), 0) || 0;
 
       // Fetch top technicians by completed jobs
       const { data: technicianData, error: techError } = await supabase
@@ -232,6 +281,10 @@ export const ExpandedDashboardMetrics = () => {
         jobsCompleted: jobsCompleted || 0,
         jobsCancelled: jobsCancelled || 0,
         jobsCreated: jobsCreated || 0,
+        openJobs: openJobs || 0,
+        totalRevenue,
+        previousTotalRevenue,
+        previousOpenJobs: previousOpenJobs || 1, // Avoid division by zero
       }));
     } catch (error) {
       console.error('Error fetching dashboard metrics:', error);
@@ -341,6 +394,16 @@ export const ExpandedDashboardMetrics = () => {
     </Card>
   );
 
+  const calculateRevenueChange = () => {
+    if (metrics.previousTotalRevenue === 0) return 0;
+    return Math.round(((metrics.totalRevenue - metrics.previousTotalRevenue) / metrics.previousTotalRevenue) * 100);
+  };
+
+  const calculateOpenJobsChange = () => {
+    if (metrics.previousOpenJobs === 0) return 0;
+    return Math.round(((metrics.openJobs - metrics.previousOpenJobs) / metrics.previousOpenJobs) * 100);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-4">
@@ -395,6 +458,26 @@ export const ExpandedDashboardMetrics = () => {
       </div>
       
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <MetricCard
+          title="Total Revenue"
+          value={formatValue(metrics.totalRevenue)}
+          icon={<DollarSign className="h-4 w-4 text-white" />}
+          iconColor="bg-blue-500"
+          change={calculateRevenueChange()}
+          isPositive={calculateRevenueChange() >= 0}
+          isLoading={isLoading}
+          changeLabel="vs previous period"
+        />
+        <MetricCard
+          title="Open Jobs"
+          value={metrics.openJobs.toString()}
+          icon={<CalendarClock className="h-4 w-4 text-white" />}
+          iconColor="bg-amber-500"
+          change={calculateOpenJobsChange()}
+          isPositive={calculateOpenJobsChange() < 0} // For open jobs, negative change may be good
+          isLoading={isLoading}
+          changeLabel="vs previous period"
+        />
         <MetricCard
           title="Sales (Invoiced Total)"
           value={formatValue(metrics.salesTotal)}
