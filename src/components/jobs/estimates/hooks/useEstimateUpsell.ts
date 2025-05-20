@@ -26,7 +26,7 @@ export const useEstimateUpsell = (
           name: "Recommended Service",
           description: estimate.notes || "",
           price: 99.99,
-          category: "Services",
+          category: "Warranties",
           taxable: true,
           cost: 50,
           ourPrice: 75,

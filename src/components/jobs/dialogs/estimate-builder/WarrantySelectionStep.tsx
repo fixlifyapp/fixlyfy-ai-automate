@@ -20,7 +20,7 @@ export const WarrantySelectionStep = ({
 }: WarrantySelectionStepProps) => {
   const [selectedWarrantyId, setSelectedWarrantyId] = useState<string | null>(null);
   const [customNote, setCustomNote] = useState("");
-  const { products, isLoading } = useProducts("Warranty");
+  const { products, isLoading } = useProducts("Warranties");
   
   // Check if we have warranty products
   const hasWarranties = products.length > 0;

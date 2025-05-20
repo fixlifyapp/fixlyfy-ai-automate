@@ -22,7 +22,7 @@ export const EstimateUpsellOptions = ({
   onNotesChange
 }: EstimateUpsellOptionsProps) => {
   const [showWarrantyOptions, setShowWarrantyOptions] = useState(false);
-  const { products, isLoading } = useProducts("Warranty");
+  const { products, isLoading } = useProducts("Warranties");
 
   const handleWarrantySelect = (product: Product) => {
     onWarrantyChange(product);
