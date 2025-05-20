@@ -72,7 +72,7 @@ export const useInvoices = (jobId?: string) => {
           return {
             ...invoice,
             items: itemsData || []
-          };
+          } as Invoice;
         })
       );
 

@@ -1,292 +1,143 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { CreditCard, DollarSign, Ban, FileText } from "lucide-react";
 import { useState } from "react";
-
-const paymentFormSchema = z.object({
-  amount: z.number().min(0.01, "Amount must be greater than 0"),
-  method: z.enum(["cash", "credit-card", "e-transfer", "cheque"]),
-  reference: z.string().optional(),
-  // Removed notes field
-  // New fields for credit card
-  cardNumber: z.string().optional(),
-  cardholderName: z.string().optional(),
-  expiryDate: z.string().optional(),
-  paymentDate: z.string().optional()
-});
-
-type PaymentFormValues = z.infer<typeof paymentFormSchema>;
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { PaymentMethod } from "@/types/payment";
 
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   balance: number;
-  onPaymentProcessed?: (amount: number) => void;
+  onPaymentProcessed: (amount: number, method: PaymentMethod, reference?: string, notes?: string) => Promise<void>;
 }
 
-export const PaymentDialog = ({ 
-  open, 
-  onOpenChange, 
-  balance = 0,
-  onPaymentProcessed 
-}: PaymentDialogProps) => {
-  const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentFormSchema),
-    defaultValues: {
-      amount: balance,
-      method: "credit-card",
-      reference: "",
-      // Removed notes field from defaultValues
-      cardNumber: "",
-      cardholderName: "",
-      expiryDate: "",
-      paymentDate: new Date().toISOString().split('T')[0]
-    },
-  });
-  
-  // Show credit card fields conditional state
-  const [showCardFields, setShowCardFields] = useState(form.getValues("method") === "credit-card");
+export function PaymentDialog({
+  open,
+  onOpenChange,
+  balance,
+  onPaymentProcessed
+}: PaymentDialogProps) {
+  const [amount, setAmount] = useState<number>(balance);
+  const [method, setMethod] = useState<PaymentMethod>("credit-card");
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update card fields visibility when method changes
-  const handleMethodChange = (method: string) => {
-    form.setValue("method", method as "cash" | "credit-card" | "e-transfer" | "cheque");
-    setShowCardFields(method === "credit-card");
-  };
-
-  const handleSubmit = (data: PaymentFormValues) => {
-    console.log("Payment data:", data);
-    toast.success(`Payment of $${data.amount.toFixed(2)} processed via ${data.method}`);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (onPaymentProcessed) {
-      onPaymentProcessed(data.amount);
+    if (amount <= 0) {
+      toast.error("Payment amount must be greater than zero");
+      return;
     }
     
-    onOpenChange(false);
+    setIsSubmitting(true);
+    
+    try {
+      await onPaymentProcessed(amount, method, reference, notes);
+      onOpenChange(false);
+      
+      // Reset form
+      setAmount(balance);
+      setMethod("credit-card");
+      setReference("");
+      setNotes("");
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      toast.error("Failed to process payment");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Payment</DialogTitle>
         </DialogHeader>
-        <div className="py-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount ($)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0.01" 
-                        step="0.01" 
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Balance due: ${balance.toFixed(2)}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="amount" className="text-right">Amount</Label>
+              <div className="col-span-3 relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2">$</span>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(parseFloat(e.target.value))}
+                  className="pl-7"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="method" className="text-right">Method</Label>
+              <Select value={method} onValueChange={(value) => setMethod(value as PaymentMethod)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="credit-card">Credit Card</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="e-transfer">E-Transfer</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="reference" className="text-right">Reference</Label>
+              <Input
+                id="reference"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className="col-span-3"
+                placeholder="Transaction ID, Check #, etc."
               />
-              
-              <FormField
-                control={form.control}
-                name="paymentDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Date</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date" 
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="notes" className="text-right align-top mt-3">Notes</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="col-span-3"
+                rows={3}
               />
-              
-              <FormField
-                control={form.control}
-                name="method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Method</FormLabel>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant={field.value === "cash" ? "default" : "outline"}
-                        className={cn(
-                          "flex items-center gap-2 justify-start px-3",
-                          field.value === "cash" && "border-fixlyfy text-white"
-                        )}
-                        onClick={() => handleMethodChange("cash")}
-                      >
-                        <DollarSign size={16} />
-                        <span>Cash</span>
-                      </Button>
-                      
-                      <Button
-                        type="button"
-                        variant={field.value === "credit-card" ? "default" : "outline"}
-                        className={cn(
-                          "flex items-center gap-2 justify-start px-3",
-                          field.value === "credit-card" && "border-fixlyfy text-white"
-                        )}
-                        onClick={() => handleMethodChange("credit-card")}
-                      >
-                        <CreditCard size={16} />
-                        <span>Credit Card</span>
-                      </Button>
-                      
-                      <Button
-                        type="button"
-                        variant={field.value === "e-transfer" ? "default" : "outline"}
-                        className={cn(
-                          "flex items-center gap-2 justify-start px-3",
-                          field.value === "e-transfer" && "border-fixlyfy text-white"
-                        )}
-                        onClick={() => handleMethodChange("e-transfer")}
-                      >
-                        <Ban size={16} />
-                        <span>E-Transfer</span>
-                      </Button>
-                      
-                      <Button
-                        type="button"
-                        variant={field.value === "cheque" ? "default" : "outline"}
-                        className={cn(
-                          "flex items-center gap-2 justify-start px-3",
-                          field.value === "cheque" && "border-fixlyfy text-white"
-                        )}
-                        onClick={() => handleMethodChange("cheque")}
-                      >
-                        <FileText size={16} />
-                        <span>Cheque</span>
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Credit Card Details (conditional) */}
-              {showCardFields && (
-                <div className="space-y-4 border rounded-md p-3 bg-gray-50">
-                  <FormField
-                    control={form.control}
-                    name="cardNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Card Number</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="**** **** **** ****" 
-                            {...field}
-                            maxLength={19}
-                            onChange={(e) => {
-                              // Format with spaces every 4 digits
-                              const value = e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
-                              field.onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="cardholderName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cardholder Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Name on card" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="expiryDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Expiry Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="MM/YY" 
-                            maxLength={5}
-                            {...field} 
-                            onChange={(e) => {
-                              // Format as MM/YY
-                              let value = e.target.value.replace(/\D/g, '');
-                              if (value.length > 2) {
-                                value = `${value.slice(0, 2)}/${value.slice(2, 4)}`;
-                              }
-                              field.onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-              
-              <FormField
-                control={form.control}
-                name="reference"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference # (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Transaction reference number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Removed the Notes FormField */}
-              
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Process Payment</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Processing..." : "Add Payment"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
-  );
-};
+  }

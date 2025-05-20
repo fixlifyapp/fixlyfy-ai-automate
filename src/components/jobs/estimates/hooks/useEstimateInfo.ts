@@ -114,6 +114,11 @@ export const useEstimateInfo = (jobId?: string, clientId?: string) => {
     return companyInfo;
   };
   
+  // Get client information (missing method)
+  const getClientInfo = (): ClientInfo => {
+    return clientInfo;
+  };
+  
   // Generate a unique estimate/invoice number
   const generateUniqueNumber = (prefix: string) => {
     const randomPart = Math.floor(10000 + Math.random() * 90000);
@@ -142,6 +147,7 @@ export const useEstimateInfo = (jobId?: string, clientId?: string) => {
       fetchClientInfo,
       fetchJobInfo,
       getCompanyInfo,
+      getClientInfo,
       generateUniqueNumber
     }
   };
