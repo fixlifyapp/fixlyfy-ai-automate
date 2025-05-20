@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -170,7 +169,7 @@ export function useAI(options: UseAIOptions = {}) {
       const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
         body: {
           prompt: prompt,
-          context: customOptions?.systemContext || context || "You are an AI business assistant with access to the company's business metrics and data. Provide specific, data-backed insights.",
+          context: customOptions?.systemContext || options.systemContext || "You are an AI business assistant with access to the company's business metrics and data. Provide specific, data-backed insights.",
           mode: "business",
           temperature: customOptions?.temperature || options.temperature || 0.4,
           maxTokens: customOptions?.maxTokens || options.maxTokens || 1000,
