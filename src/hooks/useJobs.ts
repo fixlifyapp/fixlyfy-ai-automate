@@ -35,7 +35,23 @@ export const useJobs = (clientId?: string) => {
         // Prepare query
         let query = supabase
           .from('jobs')
-          .select('*, clients(name)');
+          .select(`
+            id,
+            title,
+            description,
+            service,
+            status,
+            client_id,
+            technician_id,
+            schedule_start,
+            schedule_end,
+            date,
+            revenue,
+            tags,
+            created_at,
+            updated_at,
+            clients(name)
+          `);
           
         // Filter by client if provided
         if (clientId) {
@@ -104,7 +120,6 @@ export const useJobs = (clientId?: string) => {
       };
       
       setJobs(prev => [jobWithClient, ...prev]);
-      toast.success('Job added successfully');
       return jobWithClient;
     } catch (error) {
       console.error('Error adding job:', error);
@@ -129,7 +144,6 @@ export const useJobs = (clientId?: string) => {
         job.id === id ? { ...job, ...data, client: job.client } : job
       ));
       
-      toast.success('Job updated successfully');
       return data;
     } catch (error) {
       console.error('Error updating job:', error);
@@ -148,7 +162,6 @@ export const useJobs = (clientId?: string) => {
       if (error) throw error;
       
       setJobs(prev => prev.filter(job => job.id !== id));
-      toast.success('Job deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting job:', error);

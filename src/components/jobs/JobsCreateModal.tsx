@@ -26,11 +26,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X } from "lucide-react";
+import { CalendarIcon, Plus, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clients } from "@/data/clients";
-import { useToast } from "@/hooks/use-toast";
-import { Job } from "@/hooks/useJobs";
+import { toast } from "sonner";
+import { Job, useJobs } from "@/hooks/useJobs";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -45,9 +46,16 @@ export const JobsCreateModal = ({
   preselectedClientId,
   onSuccess 
 }: JobsCreateModalProps) => {
-  const { toast } = useToast();
+  const { addJob } = useJobs();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedClient, setSelectedClient] = useState<string>("");
+  const [jobType, setJobType] = useState<string>("");
+  const [serviceArea, setServiceArea] = useState<string>("");
+  const [priority, setPriority] = useState<string>("medium");
+  const [technician, setTechnician] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [timeValue, setTimeValue] = useState<string>("09:00");
   const [items, setItems] = useState<{ name: string; quantity: number; price: number }[]>([
     { name: "", quantity: 1, price: 0 }
   ]);
@@ -77,33 +85,81 @@ export const JobsCreateModal = ({
     setItems(newItems);
   };
 
-  const handleSubmit = () => {
-    // Simulate job creation (in real app you'd make an API call)
-    const mockJob: Job = {
-      id: `JOB-${Math.floor(10000 + Math.random() * 90000)}`,
-      title: "New Service Job",
-      client_id: selectedClient,
-      status: "scheduled",
-      date: new Date().toISOString()
-    };
-    
-    // Call onSuccess callback if provided
-    if (onSuccess) {
-      onSuccess(mockJob);
-    }
-    
-    toast({
-      title: "Job created",
-      description: "The new job has been created successfully.",
-    });
-    
-    // Reset form and close modal
-    onOpenChange(false);
+  const resetForm = () => {
+    setDate(new Date());
+    setSelectedClient("");
+    setJobType("");
+    setServiceArea("");
+    setPriority("medium");
+    setTechnician("");
+    setDescription("");
+    setTimeValue("09:00");
     setItems([{ name: "", quantity: 1, price: 0 }]);
   };
 
+  const handleSubmit = async () => {
+    if (!selectedClient) {
+      toast.error("Please select a client");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Calculate total revenue from items
+      const revenue = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      // Format the scheduled date by combining the date and time
+      const scheduledDate = date ? new Date(date) : new Date();
+      const [hours, minutes] = timeValue.split(':').map(Number);
+      scheduledDate.setHours(hours);
+      scheduledDate.setMinutes(minutes);
+      
+      // Create the job object
+      const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
+        title: jobType ? `${jobType} Service` : "New Service Job",
+        description: description,
+        status: "scheduled",
+        client_id: selectedClient,
+        service: jobType,
+        technician_id: technician || undefined,
+        schedule_start: scheduledDate.toISOString(),
+        schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours duration by default
+        date: scheduledDate.toISOString(),
+        revenue: revenue,
+        tags: serviceArea ? [serviceArea, priority] : [priority]
+      };
+
+      // Add the job using the useJobs hook
+      const newJob = await addJob(jobData);
+      
+      if (newJob) {
+        toast.success(`Job created successfully: ${newJob.id}`);
+        
+        // Call onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess(newJob);
+        }
+        
+        // Reset form and close modal
+        resetForm();
+        onOpenChange(false);
+      } else {
+        toast.error("Failed to create job");
+      }
+    } catch (error) {
+      console.error("Error creating job:", error);
+      toast.error("Error creating job");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) resetForm();
+      onOpenChange(newOpen);
+    }}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
@@ -130,7 +186,7 @@ export const JobsCreateModal = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="area">Service Area</Label>
-              <Select>
+              <Select value={serviceArea} onValueChange={setServiceArea}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select area" />
                 </SelectTrigger>
@@ -147,21 +203,21 @@ export const JobsCreateModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="jobType">Job Type</Label>
-              <Select>
+              <Select value={jobType} onValueChange={setJobType}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select job type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hvac">HVAC Repair</SelectItem>
-                  <SelectItem value="plumbing">Plumbing</SelectItem>
-                  <SelectItem value="electrical">Electrical</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="HVAC">HVAC Repair</SelectItem>
+                  <SelectItem value="Plumbing">Plumbing</SelectItem>
+                  <SelectItem value="Electrical">Electrical</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Select>
+              <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
@@ -201,12 +257,16 @@ export const JobsCreateModal = ({
                     />
                   </PopoverContent>
                 </Popover>
-                <Input type="time" defaultValue="09:00" />
+                <Input 
+                  type="time" 
+                  value={timeValue}
+                  onChange={(e) => setTimeValue(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="technician">Technician</Label>
-              <Select>
+              <Select value={technician} onValueChange={setTechnician}>
                 <SelectTrigger>
                   <SelectValue placeholder="Assign technician" />
                 </SelectTrigger>
@@ -224,7 +284,9 @@ export const JobsCreateModal = ({
             <Label htmlFor="description">Description</Label>
             <Textarea 
               id="description" 
-              placeholder="Describe the job details, customer requirements, etc." 
+              placeholder="Describe the job details, customer requirements, etc."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
           
@@ -256,7 +318,7 @@ export const JobsCreateModal = ({
                   className="w-20" 
                   min="1"
                   value={item.quantity}
-                  onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value))}
+                  onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
                 />
                 <Input 
                   type="number" 
@@ -265,7 +327,7 @@ export const JobsCreateModal = ({
                   min="0"
                   step="0.01"
                   value={item.price}
-                  onChange={(e) => handleItemChange(index, "price", parseFloat(e.target.value))}
+                  onChange={(e) => handleItemChange(index, "price", parseFloat(e.target.value) || 0)}
                 />
                 <Button 
                   type="button" 
@@ -289,8 +351,16 @@ export const JobsCreateModal = ({
             type="submit" 
             className="bg-fixlyfy hover:bg-fixlyfy/90" 
             onClick={handleSubmit}
+            disabled={isSubmitting}
           >
-            Create Job
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Job'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

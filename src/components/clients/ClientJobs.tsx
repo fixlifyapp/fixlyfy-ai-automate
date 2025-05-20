@@ -1,210 +1,103 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus } from "lucide-react";
+import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { getTagColor } from "@/data/tags";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Loader2, Plus } from "lucide-react";
+import { JobsCreateModal } from "../jobs/JobsCreateModal";
+import { useNavigate } from "react-router-dom";
 
 interface ClientJobsProps {
-  clientId: string | undefined;
-  onCreateJob: () => void;
+  clientId?: string;
 }
 
-export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
+export const ClientJobs = ({ clientId }: ClientJobsProps) => {
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const { jobs, isLoading, refreshJobs } = useJobs(clientId);
   const navigate = useNavigate();
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    async function fetchClientJobs() {
-      if (!clientId) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        console.log("Fetching jobs for client:", clientId);
-        
-        // Fetch jobs for the client
-        const { data: jobsData, error: jobsError } = await supabase
-          .from('jobs')
-          .select('*')
-          .eq('client_id', clientId);
-        
-        if (jobsError) {
-          console.error('Error fetching client jobs:', jobsError);
-          setError(`Failed to load jobs: ${jobsError.message}`);
-          setLoading(false);
-          return;
-        }
-        
-        console.log("Client jobs data received:", jobsData);
-        
-        if (!jobsData || jobsData.length === 0) {
-          console.log("No jobs found for this client");
-          setJobs([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Fetch technicians separately
-        const { data: profiles, error: techError } = await supabase
-          .from('profiles')
-          .select('id, name');
 
-        if (techError) {
-          console.error('Error fetching profiles:', techError);
-        }
-
-        // Create a map of technician IDs to names for easy lookup
-        const technicianMap = new Map();
-        if (profiles) {
-          profiles.forEach((profile: any) => {
-            technicianMap.set(profile.id, profile.name || 'Unnamed Technician');
-          });
-        }
-        
-        // Transform data to match component expectations
-        const formattedJobs = jobsData.map(job => {
-          const technicianName = job.technician_id ? 
-            technicianMap.get(job.technician_id) || 'Unassigned' : 
-            'Unassigned';
-          
-          // Handle revenue parsing safely
-          const revenue = job.revenue !== null && job.revenue !== undefined
-            ? typeof job.revenue === 'number'
-              ? job.revenue
-              : typeof job.revenue === 'string'
-                ? parseFloat(job.revenue)
-                : 0
-            : 0;
-          
-          return {
-            id: job.id,
-            client: job.title, // Using title as client name since we're in client context
-            address: job.description || 'No address provided',
-            service: job.service || 'General service',
-            status: job.status,
-            date: job.date,
-            time: job.date ? new Date(job.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:00',
-            technician: {
-              name: technicianName,
-              initials: technicianName ? technicianName.substring(0, 2).toUpperCase() : 'UA'
-            },
-            revenue: revenue,
-            tags: job.tags || []
-          };
-        });
-        
-        console.log("Formatted client jobs:", formattedJobs);
-        setJobs(formattedJobs);
-      } catch (error: any) {
-        console.error('Error fetching client jobs:', error);
-        setError(`Failed to load client jobs: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchClientJobs();
-  }, [clientId]);
-
-  const handleJobClick = (jobId: string) => {
-    // Ensuring the navigation is working correctly
-    console.log("Navigating to job:", jobId);
-    navigate(`/jobs/${jobId}`);
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 size={32} className="animate-spin text-fixlyfy mr-2" />
+        <span>Loading jobs...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg border shadow-sm">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-xl font-semibold">Client Jobs</h2>
-          <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">
-            <Plus size={16} className="mr-2" /> New Job
+    <div className="mt-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Client Jobs</h2>
+        <Button onClick={() => setIsCreateJobModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
+          <Plus size={18} className="mr-2" /> Create Job
+        </Button>
+      </div>
+
+      {jobs.length === 0 ? (
+        <div className="text-center py-8 border rounded-md">
+          <p className="text-muted-foreground">No jobs found for this client.</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => setIsCreateJobModalOpen(true)}
+          >
+            Create First Job
           </Button>
         </div>
-        
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-purple-500 rounded-full" role="status">
-                <span className="sr-only">Loading...</span>
-              </div>
-              <p className="mt-2 text-sm text-gray-500">Loading jobs...</p>
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center">
-              <p className="text-red-500">{error}</p>
-              <p className="mt-2 text-sm text-gray-500">Please try again later</p>
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-gray-500 mb-4">This client has no jobs yet.</p>
-              <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">
-                <Plus size={18} className="mr-2" /> Create First Job
-              </Button>
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-left p-4 font-medium text-gray-600">Job #</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Date</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Service</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Technician</th>
-                  <th className="text-right p-4 font-medium text-gray-600">Amount</th>
+      ) : (
+        <div className="overflow-hidden border rounded-md">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/50">
+                <th className="text-left p-3 font-medium">Job ID</th>
+                <th className="text-left p-3 font-medium">Title</th>
+                <th className="text-left p-3 font-medium">Status</th>
+                <th className="text-left p-3 font-medium">Date</th>
+                <th className="text-left p-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {jobs.map((job) => (
+                <tr key={job.id} className="hover:bg-muted/30">
+                  <td className="p-3">{job.id}</td>
+                  <td className="p-3">{job.title}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      job.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                      job.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {job.status}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    {new Date(job.date).toLocaleDateString()}
+                  </td>
+                  <td className="p-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
+                      View
+                    </Button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {jobs.map((job) => (
-                  <tr 
-                    key={job.id} 
-                    className="border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleJobClick(job.id)}
-                  >
-                    <td className="p-4">
-                      <span className="text-purple-500 font-medium">{job.id}</span>
-                    </td>
-                    <td className="p-4 text-gray-600">
-                      <div className="flex items-center">
-                        <Calendar size={14} className="mr-2" />
-                        {new Date(job.date).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="p-4">{job.service}</td>
-                    <td className="p-4">
-                      <Badge className={cn(
-                        "text-xs font-medium py-1 px-2",
-                        job.status === "completed" && "bg-green-100 text-green-600",
-                        job.status === "in-progress" && "bg-purple-100 text-purple-600",
-                        job.status === "scheduled" && "bg-yellow-100 text-yellow-600",
-                        job.status === "canceled" && "bg-gray-100 text-gray-600"
-                      )}>
-                        {job.status === "completed" && "Completed"}
-                        {job.status === "in-progress" && "In Progress"}
-                        {job.status === "scheduled" && "Scheduled"}
-                        {job.status === "canceled" && "Cancelled"}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      {job.technician.name}
-                    </td>
-                    <td className="p-4 text-right font-medium">
-                      ${job.revenue.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+      )}
+
+      <JobsCreateModal 
+        open={isCreateJobModalOpen} 
+        onOpenChange={setIsCreateJobModalOpen}
+        preselectedClientId={clientId}
+        onSuccess={() => {
+          refreshJobs();
+        }}
+      />
     </div>
   );
 };
