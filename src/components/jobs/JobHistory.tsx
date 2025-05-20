@@ -30,7 +30,7 @@ import {
   Undo
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,292 +43,28 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { teamMembers } from "@/data/team";
+import { HistoryItem, useJobHistory } from "@/hooks/useJobHistory";
 
 interface JobHistoryProps {
   jobId: string;
 }
 
-interface HistoryItem {
-  id: number;
-  date: string;
-  time: string;
-  type: string;
-  title: string;
-  description: string;
-  userId?: string;
-  userName?: string;
-  meta?: Record<string, any>;
-  visibility?: 'all' | 'restricted';
-}
-
 export const JobHistory = ({ jobId }: JobHistoryProps) => {
-  // Add state for the active filter and pinned items
+  // Add state for the active filter
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [pinnedItems, setPinnedItems] = useState<number[]>([]);
-  const [showRestrictedItems, setShowRestrictedItems] = useState(false);
   const { toast } = useToast();
   const { hasPermission, currentUser } = useRBAC();
-
-  // Enhanced fake data with user information
-  const historyItems: HistoryItem[] = [
-    {
-      id: 1,
-      date: "May 15, 2023",
-      time: "14:22",
-      type: "status-change",
-      title: "Job Status Changed",
-      description: "Job status changed from 'Scheduled' to 'In Progress'",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 2,
-      date: "May 15, 2023",
-      time: "13:45",
-      type: "note",
-      title: "Note Added",
-      description: "Technician added a note: 'HVAC unit is 8 years old and showing signs of wear. Will need to order replacement parts for the condenser.'",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 3,
-      date: "May 15, 2023",
-      time: "13:30",
-      type: "job-created",
-      title: "Job Started",
-      description: "Technician Robert Smith started working on the job",
-      userId: "3", // Michael Chen (technician) 
-      userName: "Michael Chen"
-    },
-    {
-      id: 4,
-      date: "May 14, 2023",
-      time: "09:15",
-      type: "communication",
-      title: "SMS Sent",
-      description: "Appointment confirmation SMS sent to customer",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 5,
-      date: "May 12, 2023",
-      time: "11:30",
-      type: "job-created",
-      title: "Job Created",
-      description: "Job was created and scheduled for May 15, 2023",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 6,
-      date: "May 13, 2023",
-      time: "10:45",
-      type: "payment",
-      title: "Payment Received",
-      description: "Customer paid deposit of $150.00",
-      userId: "2", // Sarah Johnson (manager)
-      userName: "Sarah Johnson",
-      visibility: 'restricted',
-      meta: { amount: 150, paymentMethod: 'credit_card' }
-    },
-    {
-      id: 7,
-      date: "May 12, 2023",
-      time: "15:20",
-      type: "estimate",
-      title: "Estimate Created",
-      description: "Estimate #EST-2023-1001 was created for $250.00",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 8,
-      date: "May 14, 2023",
-      time: "16:30",
-      type: "invoice",
-      title: "Invoice Generated",
-      description: "Invoice #INV-2023-1001 was generated for $250.00",
-      userId: "2", // Sarah Johnson (manager)
-      userName: "Sarah Johnson",
-      visibility: 'restricted'
-    },
-    {
-      id: 9,
-      date: "May 14, 2023",
-      time: "14:00",
-      type: "technician",
-      title: "Technician Changed",
-      description: "Job reassigned from John Doe to Robert Smith",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 10,
-      date: "May 13, 2023",
-      time: "11:00",
-      type: "attachment",
-      title: "File Attached",
-      description: "Technician uploaded photo-evidence.jpg",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 11,
-      date: "May 16, 2023",
-      time: "08:45",
-      type: "status-change",
-      title: "Job Status Changed",
-      description: "Job status changed from 'In Progress' to 'Completed'",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 12,
-      date: "May 16, 2023",
-      time: "08:30",
-      type: "note",
-      title: "Note Added",
-      description: "Technician added a note: 'Successfully replaced condenser fan motor and cleaned the evaporator coil. Unit is now functioning properly with appropriate cooling.'",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 13,
-      date: "May 16, 2023",
-      time: "09:15",
-      type: "payment",
-      title: "Payment Received",
-      description: "Customer paid remaining balance of $325.99",
-      userId: "2", // Sarah Johnson (manager)
-      userName: "Sarah Johnson",
-      visibility: 'restricted',
-      meta: { amount: 325.99, paymentMethod: 'check' }
-    },
-    {
-      id: 14,
-      date: "May 15, 2023",
-      time: "17:05",
-      type: "communication",
-      title: "Call Made",
-      description: "Technician called customer to discuss additional parts needed",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 15,
-      date: "May 15, 2023",
-      time: "16:30",
-      type: "attachment",
-      title: "File Attached",
-      description: "Customer uploaded warranty-document.pdf",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 16,
-      date: "May 15, 2023",
-      time: "15:45",
-      type: "estimate",
-      title: "Estimate Updated",
-      description: "Estimate #EST-2023-1001 was updated from $250.00 to $475.99 due to additional parts",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 17,
-      date: "May 14, 2023",
-      time: "13:15",
-      type: "note",
-      title: "Note Added",
-      description: "Customer requested service to be done before noon if possible. They need to leave for work by 1:00 PM.",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 18,
-      date: "May 14, 2023",
-      time: "10:20",
-      type: "communication",
-      title: "Email Sent",
-      description: "Detailed job information email sent to customer",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 19,
-      date: "May 13, 2023",
-      time: "09:30",
-      type: "status-change",
-      title: "Job Status Changed",
-      description: "Job status changed from 'Pending' to 'Scheduled'",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 20,
-      date: "May 13, 2023",
-      time: "14:15",
-      type: "invoice",
-      title: "Invoice Updated",
-      description: "Invoice #INV-2023-1001 updated with new line items",
-      userId: "2", // Sarah Johnson (manager)
-      userName: "Sarah Johnson",
-      visibility: 'restricted'
-    },
-    {
-      id: 21,
-      date: "May 11, 2023",
-      time: "09:45",
-      type: "communication",
-      title: "Call Received",
-      description: "Customer called about HVAC unit not cooling properly",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 22,
-      date: "May 10, 2023",
-      time: "16:20",
-      type: "technician",
-      title: "Technician Scheduled",
-      description: "John Doe initially assigned to job",
-      userId: "4", // Emily Rodriguez (dispatcher)
-      userName: "Emily Rodriguez"
-    },
-    {
-      id: 23,
-      date: "May 17, 2023",
-      time: "10:30",
-      type: "note",
-      title: "Follow-up Note",
-      description: "Called customer to verify system is still operating correctly. Customer reported everything is working well.",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 24,
-      date: "May 16, 2023",
-      time: "15:00",
-      type: "attachment",
-      title: "File Attached",
-      description: "Final inspection report.pdf uploaded to job",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    },
-    {
-      id: 25,
-      date: "May 17, 2023",
-      time: "11:45",
-      type: "status-change",
-      title: "Job Status Changed",
-      description: "Job status changed from 'Completed' to 'Closed'",
-      userId: "3", // Michael Chen (technician)
-      userName: "Michael Chen"
-    }
-  ];
+  
+  const {
+    historyItems,
+    isLoading,
+    pinnedItems,
+    showRestrictedItems,
+    setShowRestrictedItems,
+    togglePinnedItem,
+    canViewItem,
+    deleteHistoryItem
+  } = useJobHistory(jobId);
 
   // Define the filters
   const filters = [
@@ -341,24 +77,6 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     { value: "technician", label: "Technician" },
     { value: "attachment", label: "Attachments" }
   ];
-
-  // Function to determine if user can see an item
-  const canViewItem = (item: HistoryItem) => {
-    // Admin, managers, and dispatchers can see everything
-    if (hasPermission('*') || hasPermission('jobs.view.all')) return true;
-    
-    // If item is restricted, only show to admin/manager/dispatcher roles
-    if (item.visibility === 'restricted' && !showRestrictedItems) {
-      return false;
-    }
-    
-    // Technicians can only see their own items or general items
-    if (currentUser?.role === 'technician') {
-      return item.userId === currentUser?.id || !item.userId;
-    }
-    
-    return true;
-  };
 
   // Filter the history items based on the active filter, user role, and sort pinned items to the top
   const filteredItems = historyItems
@@ -373,7 +91,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
       if (!isPinnedA && isPinnedB) return 1;
       
       // Then by date (newest first)
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
   const getHistoryIcon = (type: string) => {
@@ -430,14 +148,8 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     }
   };
 
-  const handlePinItem = (id: number) => {
-    setPinnedItems(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(item => item !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
+  const handlePinItem = (id: string) => {
+    togglePinnedItem(id);
     
     toast({
       title: pinnedItems.includes(id) ? "Item unpinned" : "Item pinned",
@@ -455,8 +167,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     });
   };
 
-  const handleRevertChange = (id: number) => {
-    // In a real app, this would call an API to revert the change
+  const handleRevertChange = (id: string) => {
     toast({
       title: "Change reverted",
       description: "The change has been successfully reverted.",
@@ -464,7 +175,6 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
   };
 
   const handleDownload = (filename: string) => {
-    // In a real app, this would download the file
     toast({
       title: "Download started",
       description: `Downloading ${filename}...`,
@@ -478,14 +188,33 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }).format(date);
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
   const groupHistoryByDate = () => {
     const grouped: Record<string, typeof filteredItems> = {};
     
     filteredItems.forEach(item => {
-      if (!grouped[item.date]) {
-        grouped[item.date] = [];
+      const dateKey = formatDate(item.created_at);
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
       }
-      grouped[item.date].push(item);
+      grouped[dateKey].push(item);
     });
     
     return grouped;
@@ -497,7 +226,7 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
   const getAiInsight = () => {
     const statusChanges = historyItems.filter(item => item.type === "status-change").length;
     const technicianChanges = historyItems.filter(item => item.type === "technician").length;
-    const daysElapsed = new Set(historyItems.map(item => item.date)).size;
+    const daysElapsed = new Set(historyItems.map(item => formatDate(item.created_at))).size;
     
     if (statusChanges > 3) {
       return "This job has multiple status changes - may indicate scheduling issues or customer indecision.";
@@ -589,7 +318,11 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
           </ToggleGroup>
         </div>
         
-        {Object.keys(groupedHistory).length > 0 ? (
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Loading history data...</p>
+          </div>
+        ) : Object.keys(groupedHistory).length > 0 ? (
           <Accordion type="multiple" className="w-full">
             {Object.entries(groupedHistory).map(([date, items], dateIndex) => (
               <AccordionItem key={date} value={date} className="border-b">
@@ -621,13 +354,13 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                               <Badge className={`mr-2 ${getHistoryColor(item.type)}`}>
                                 {item.title}
                               </Badge>
-                              <span className="text-xs text-muted-foreground">{item.time}</span>
+                              <span className="text-xs text-muted-foreground">{formatTime(item.created_at)}</span>
                               
                               {/* User badge */}
-                              {item.userName && (
+                              {item.user_name && (
                                 <Badge variant="outline" className="ml-2 text-xs">
                                   <User size={12} className="mr-1" />
-                                  {item.userName}
+                                  {item.user_name}
                                 </Badge>
                               )}
                             </div>
@@ -670,8 +403,8 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
                                     <Copy size={14} className="mr-2" /> Copy
                                   </DropdownMenuItem>
                                   
-                                  {item.type === "attachment" && (
-                                    <DropdownMenuItem onClick={() => handleDownload(item.description.split(' ').pop() || "file.pdf")}>
+                                  {item.type === "attachment" && item.meta?.filename && (
+                                    <DropdownMenuItem onClick={() => handleDownload(item.meta.filename)}>
                                       <Download size={14} className="mr-2" /> Download
                                     </DropdownMenuItem>
                                   )}

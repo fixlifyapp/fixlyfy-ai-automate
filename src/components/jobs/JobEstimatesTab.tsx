@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, AlertCircle } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { useEstimates } from "./estimates/useEstimates";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
@@ -12,7 +12,6 @@ import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { UpsellDialog } from "@/components/jobs/dialogs/UpsellDialog";
 import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
 import { EstimateDialog } from "./dialogs/EstimateDialog";
-import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface JobEstimatesTabProps {
@@ -36,7 +35,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-medium">Estimates</h3>
-          <Button onClick={handlers.handleCreateEstimate} className="gap-2">
+          <Button onClick={() => handlers.handleCreateEstimate && handlers.handleCreateEstimate()} className="gap-2">
             <PlusCircle size={16} />
             New Estimate
           </Button>
@@ -76,7 +75,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onOpenChange={dialogs.setIsEstimateBuilderOpen}
           estimateId={state.selectedEstimateId}
           jobId={jobId}
-          onSyncToInvoice={handlers.handleSyncToInvoice ? () => handlers.handleSyncToInvoice() : undefined}
+          onSyncToInvoice={handlers.handleSyncToInvoice}
           key={state.selectedEstimateId} // Add key to force re-render on ID change
         />
         

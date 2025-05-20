@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { recordStatusChange } from "@/services/jobHistoryService";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 export interface Job {
   id: string;
@@ -27,6 +29,7 @@ export const useJobs = (clientId?: string) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { currentUser } = useRBAC();
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -119,6 +122,15 @@ export const useJobs = (clientId?: string) => {
         }
       };
       
+      // Record job creation in history
+      await recordStatusChange(
+        jobId,
+        'new',
+        'scheduled',
+        currentUser?.name,
+        currentUser?.id
+      );
+      
       setJobs(prev => [jobWithClient, ...prev]);
       return jobWithClient;
     } catch (error) {
@@ -130,6 +142,20 @@ export const useJobs = (clientId?: string) => {
 
   const updateJob = async (id: string, updates: Partial<Job>) => {
     try {
+      // If status is being updated, record it in history
+      if (updates.status) {
+        const job = jobs.find(j => j.id === id);
+        if (job && job.status !== updates.status) {
+          await recordStatusChange(
+            id,
+            job.status,
+            updates.status,
+            currentUser?.name,
+            currentUser?.id
+          );
+        }
+      }
+      
       const { data, error } = await supabase
         .from('jobs')
         .update(updates)

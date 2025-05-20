@@ -1,15 +1,17 @@
+
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 interface JobDetailsTabsProps {
   activeTab?: string;
   onTabChange?: (value: string) => void;
   children?: React.ReactNode;
   onEstimateTabClick?: () => void;
-  onCreateEstimate?: () => void;
-  onCreateInvoice?: () => void;
+  onCreateEstimate?: React.ReactNode;
+  onCreateInvoice?: React.ReactNode;
 }
+
 export const JobDetailsTabs = ({
   activeTab = "details",
   onTabChange,
@@ -25,6 +27,7 @@ export const JobDetailsTabs = ({
       onTabChange(value);
     }
   };
+  
   return <div className="mb-6">
       <Tabs defaultValue={activeTab} value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex justify-between items-center border-b mb-4">

@@ -26,7 +26,9 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     isLoading: false,
     dialogs: {},
     state: {},
-    handlers: {},
+    handlers: {
+      handleSyncToInvoice: () => {}
+    },
     info: {},
     error: null
   };

@@ -275,6 +275,60 @@ export type Database = {
           },
         ]
       }
+      job_history: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          job_id: string
+          meta: Json | null
+          title: string
+          type: string
+          user_id: string | null
+          user_name: string | null
+          visibility: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          job_id: string
+          meta?: Json | null
+          title: string
+          type: string
+          user_id?: string | null
+          user_name?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          job_id?: string
+          meta?: Json | null
+          title?: string
+          type?: string
+          user_id?: string | null
+          user_name?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_idx"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           client_id: string | null
