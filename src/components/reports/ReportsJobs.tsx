@@ -25,23 +25,36 @@ interface Job {
 export const ReportsJobs = ({ period }: ReportsJobsProps) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
     async function fetchJobs() {
       setLoading(true);
+      setError(null);
+      
       try {
+        console.log("Fetching completed jobs data...");
+        
         // Fetch completed jobs from Supabase
-        const { data: jobsData, error } = await supabase
+        const { data: jobsData, error: jobsError } = await supabase
           .from('jobs')
           .select('id, title, service, date, schedule_start, schedule_end, revenue, client_id, technician_id, status')
           .eq('status', 'completed')
           .order('date', { ascending: false })
-          .limit(5);
+          .limit(10);
 
-        if (error) throw error;
+        if (jobsError) {
+          console.error("Error fetching jobs:", jobsError);
+          setError(`Failed to fetch jobs: ${jobsError.message}`);
+          setLoading(false);
+          return;
+        }
 
+        console.log("Jobs data received:", jobsData);
+        
         if (!jobsData || jobsData.length === 0) {
+          console.log("No completed jobs found in database");
           setJobs([]);
           setLoading(false);
           return;
@@ -49,30 +62,58 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
 
         // Get all client IDs to fetch client data
         const clientIds = jobsData.map(job => job.client_id).filter(Boolean);
-        const { data: clientsData } = await supabase
+        
+        // Handle case where no client IDs exist
+        if (clientIds.length === 0) {
+          console.log("No client IDs found in jobs");
+          setJobs([]);
+          setLoading(false);
+          return;
+        }
+        
+        const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
           .select('id, name')
           .in('id', clientIds);
 
-        // Get all technician IDs to fetch technician data
-        const technicianIds = jobsData.map(job => job.technician_id).filter(Boolean);
-        const { data: techniciansData } = await supabase
-          .from('profiles')
-          .select('id, name')
-          .in('id', technicianIds);
+        if (clientsError) {
+          console.error("Error fetching clients:", clientsError);
+        }
 
-        // Create maps for quick lookups
+        console.log("Clients data received:", clientsData);
+
+        // Get all technician IDs to fetch technician data
+        const technicianIds = jobsData
+          .map(job => job.technician_id)
+          .filter(id => id !== null && id !== undefined) as string[];
+        
+        let technicianMap = new Map();
+        
+        if (technicianIds.length > 0) {
+          const { data: techniciansData, error: techniciansError } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .in('id', technicianIds);
+
+          if (techniciansError) {
+            console.error("Error fetching technicians:", techniciansError);
+          } else {
+            console.log("Technicians data received:", techniciansData);
+            
+            // Create maps for quick lookups
+            if (techniciansData) {
+              techniciansData.forEach(tech => {
+                technicianMap.set(tech.id, tech.name || 'Unnamed Technician');
+              });
+            }
+          }
+        }
+
+        // Create map for client lookups
         const clientMap = new Map();
         if (clientsData) {
           clientsData.forEach(client => {
             clientMap.set(client.id, client.name);
-          });
-        }
-
-        const technicianMap = new Map();
-        if (techniciansData) {
-          techniciansData.forEach(tech => {
-            technicianMap.set(tech.id, tech.name);
           });
         }
 
@@ -84,18 +125,20 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
           
           return {
             id: job.id,
-            client: job.client_id ? clientMap.get(job.client_id) || 'Unknown Client' : 'Unknown Client',
+            client: job.client_id ? (clientMap.get(job.client_id) || 'Unknown Client') : 'Unknown Client',
             service: job.service || 'General Service',
-            technician: job.technician_id ? technicianMap.get(job.technician_id) || 'Unassigned' : 'Unassigned',
+            technician: job.technician_id ? (technicianMap.get(job.technician_id) || 'Unassigned') : 'Unassigned',
             date: new Date(job.date),
             duration: durationMinutes,
-            revenue: parseFloat(job.revenue?.toString() || '0'),
+            revenue: typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue?.toString() || '0'),
           };
         });
-
+        
+        console.log("Formatted jobs:", formattedJobs);
         setJobs(formattedJobs);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching jobs data:', error);
+        setError(`Failed to load jobs: ${error.message}`);
       } finally {
         setLoading(false);
       }
@@ -152,9 +195,18 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
             <Loader2 size={24} className="animate-spin text-fixlyfy" />
             <span className="ml-2">Loading jobs...</span>
           </div>
+        ) : error ? (
+          <div className="p-8 text-center">
+            <p className="text-red-500">{error}</p>
+            <p className="text-fixlyfy-text-secondary mt-2">
+              Use the "Generate Test Data" button at the top of the page to create sample jobs.
+            </p>
+          </div>
         ) : jobs.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-fixlyfy-text-secondary">No completed jobs found. Use the "Generate Test Data" button to create sample jobs.</p>
+            <p className="text-fixlyfy-text-secondary">
+              No completed jobs found. Use the "Generate Test Data" button to create sample jobs.
+            </p>
           </div>
         ) : isMobile ? (
           <div className="p-4">

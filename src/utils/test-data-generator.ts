@@ -8,8 +8,8 @@ interface Client {
   phone: string;
   address: string;
   city: string;
-  postalCode: string;
-  province: string;
+  zip: string;
+  state: string;
   type: string;
   rating: number;
   status: string;
@@ -29,6 +29,7 @@ interface Job {
   technician_id?: string;
   service: string;
   revenue?: number;
+  tags?: string[];
   notes?: string;
 }
 
@@ -90,6 +91,36 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
   const clients: any[] = [];
   const clientIds: string[] = [];
   
+  // Check for existing clients first to avoid duplicating test data
+  const { data: existingClients, error: checkError } = await supabase
+    .from('clients')
+    .select('id')
+    .limit(1);
+  
+  if (checkError) {
+    console.error("Error checking existing clients:", checkError);
+    throw checkError;
+  }
+  
+  if (existingClients && existingClients.length > 0) {
+    console.log("Clients already exist - fetching existing IDs");
+    const { data: allClientIds, error } = await supabase
+      .from('clients')
+      .select('id')
+      .limit(count);
+      
+    if (error) {
+      console.error("Error fetching existing client IDs:", error);
+      throw error;
+    }
+    
+    if (allClientIds && allClientIds.length > 0) {
+      return allClientIds.map(client => client.id);
+    }
+  }
+  
+  console.log(`Generating ${count} test clients...`);
+  
   // Generate individual clients (70%)
   const individualCount = Math.floor(count * 0.7);
   for (let i = 0; i < individualCount; i++) {
@@ -137,29 +168,48 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
   }
   
   try {
-    console.log("Generating test clients data...");
+    console.log("Inserting test clients into database...");
     // Insert into Supabase
     const { data, error } = await supabase.from('clients').insert(clients).select('id');
     
     if (error) {
       console.error("Error generating test clients:", error);
-      return [];
+      throw error;
     }
     
     if (data) {
       clientIds.push(...data.map(client => client.id));
+      console.log(`Successfully created ${data.length} clients with IDs:`, clientIds);
+    } else {
+      console.log("No clients were created. Data is null.");
     }
     
     return clientIds;
   } catch (error) {
     console.error("Error generating test clients:", error);
-    return [];
+    throw error;
   }
 };
 
 export const generateTestJobs = async (clientIds: string[], count: number = 40): Promise<void> => {
   if (clientIds.length === 0) {
     console.error("No client IDs provided for job generation");
+    throw new Error("No client IDs available to create jobs");
+  }
+  
+  // Check for existing jobs first to avoid duplicating test data
+  const { data: existingJobs, error: checkError } = await supabase
+    .from('jobs')
+    .select('id')
+    .limit(1);
+  
+  if (checkError) {
+    console.error("Error checking existing jobs:", checkError);
+    throw checkError;
+  }
+  
+  if (existingJobs && existingJobs.length > 0) {
+    console.log("Jobs already exist - skipping job generation");
     return;
   }
   
@@ -174,8 +224,16 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
   const priorities = ["low", "medium", "high", "urgent"];
   
   // Get user IDs for technicians
-  const { data: profiles } = await supabase.from('profiles').select('id');
+  const { data: profiles, error: techError } = await supabase.from('profiles').select('id');
+  
+  if (techError) {
+    console.error("Error fetching technician profiles:", techError);
+  }
+  
   const technicianIds = profiles ? profiles.map(profile => profile.id) : [];
+  
+  console.log(`Generating ${count} test jobs for ${clientIds.length} clients...`);
+  console.log("Available technician IDs:", technicianIds);
   
   for (let i = 0; i < count; i++) {
     const clientId = getRandomElement(clientIds);
@@ -188,10 +246,13 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
     
     const jobId = `JOB-${2000 + i + 1}`;
     
+    const serviceType = getRandomElement(serviceTypes);
+    const tagName = serviceType.split(' ')[0];
+    
     jobs.push({
       id: jobId,
       client_id: clientId,
-      title: getRandomElement(serviceTypes),
+      title: serviceType,
       description: getRandomElement([
         "Customer reported issues with system performance",
         "Routine maintenance and inspection required",
@@ -208,39 +269,53 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
       schedule_start: scheduledDate.toISOString(),
       schedule_end: endDate.toISOString(),
       technician_id: technicianIds.length > 0 ? getRandomElement(technicianIds) : null,
-      service: getRandomElement(serviceTypes),
+      service: serviceType,
       revenue: status === "completed" ? getRandomInt(200, 2500) : status === "in-progress" ? getRandomInt(100, 2000) : 0,
-      tags: [getRandomElement(serviceTypes.map(s => s.split(' ')[0]))],
+      tags: [tagName],
       notes: getRandomElement([undefined, "Rush job", "Requires specialized equipment", "Second floor unit", "Hard to access location"])
     });
   }
   
   try {
-    console.log("Generating test jobs data...");
-    // Insert into Supabase
-    const { error } = await supabase.from('jobs').insert(jobs);
-    
-    if (error) {
-      console.error("Error generating test jobs:", error);
+    console.log("Inserting test jobs into database...");
+    // Insert into Supabase in batches to avoid payload size limits
+    const batchSize = 10;
+    for (let i = 0; i < jobs.length; i += batchSize) {
+      const batch = jobs.slice(i, i + batchSize);
+      const { error } = await supabase.from('jobs').insert(batch);
+      
+      if (error) {
+        console.error(`Error generating jobs batch ${i}-${i+batchSize}:`, error);
+        throw error;
+      }
     }
+    
+    console.log(`Successfully created ${jobs.length} jobs`);
   } catch (error) {
     console.error("Error generating test jobs:", error);
+    throw error;
   }
 };
 
-export const generateAllTestData = async (clientCount: number = 20, jobCount: number = 40): Promise<void> => {
+export const generateAllTestData = async (clientCount: number = 20, jobCount: number = 40): Promise<string[]> => {
   try {
+    console.log(`Starting generation of ${clientCount} clients and ${jobCount} jobs`);
+    
     // Generate clients first
     const clientIds = await generateTestClients(clientCount);
+    console.log(`Generated ${clientIds.length} client IDs`);
     
     // Then generate jobs for those clients
     if (clientIds.length > 0) {
       await generateTestJobs(clientIds, jobCount);
+    } else {
+      console.warn("No client IDs available, skipping job generation");
     }
     
-    return;
+    return clientIds;
   } catch (error) {
     console.error("Error generating test data:", error);
+    throw error;
   }
 };
 

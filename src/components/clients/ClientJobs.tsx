@@ -18,6 +18,7 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     async function fetchClientJobs() {
@@ -25,30 +26,50 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
       
       try {
         setLoading(true);
+        setError(null);
+        console.log("Fetching jobs for client:", clientId);
         
-        // Updated query to avoid join issues with technician_id
-        const { data, error } = await supabase
+        // Fetch jobs for the client
+        const { data: jobsData, error: jobsError } = await supabase
           .from('jobs')
           .select('*')
           .eq('client_id', clientId);
         
-        if (error) throw error;
+        if (jobsError) {
+          console.error('Error fetching client jobs:', jobsError);
+          setError(`Failed to load jobs: ${jobsError.message}`);
+          setLoading(false);
+          return;
+        }
         
-        // Fetch technicians separately if needed
-        const { data: profiles } = await supabase
+        console.log("Client jobs data received:", jobsData);
+        
+        if (!jobsData || jobsData.length === 0) {
+          console.log("No jobs found for this client");
+          setJobs([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch technicians separately
+        const { data: profiles, error: techError } = await supabase
           .from('profiles')
           .select('id, name');
+
+        if (techError) {
+          console.error('Error fetching profiles:', techError);
+        }
 
         // Create a map of technician IDs to names for easy lookup
         const technicianMap = new Map();
         if (profiles) {
           profiles.forEach((profile: any) => {
-            technicianMap.set(profile.id, profile.name);
+            technicianMap.set(profile.id, profile.name || 'Unnamed Technician');
           });
         }
         
         // Transform data to match component expectations
-        const formattedJobs = data.map(job => {
+        const formattedJobs = jobsData.map(job => {
           const technicianName = job.technician_id ? 
             technicianMap.get(job.technician_id) || 'Unassigned' : 
             'Unassigned';
@@ -60,20 +81,21 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
             service: job.service || 'General service',
             status: job.status,
             date: job.date,
-            time: new Date(job.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            time: job.date ? new Date(job.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:00',
             technician: {
               name: technicianName,
               initials: technicianName ? technicianName.substring(0, 2).toUpperCase() : 'UA'
             },
-            revenue: parseFloat(job.revenue?.toString() || '0'),
+            revenue: typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue?.toString() || '0'),
             tags: job.tags || []
           };
         });
         
+        console.log("Formatted client jobs:", formattedJobs);
         setJobs(formattedJobs);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching client jobs:', error);
-        toast.error('Failed to load client jobs');
+        setError(`Failed to load client jobs: ${error.message}`);
       } finally {
         setLoading(false);
       }
@@ -105,6 +127,18 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
                 <span className="sr-only">Loading...</span>
               </div>
               <p className="mt-2 text-sm text-gray-500">Loading jobs...</p>
+            </div>
+          ) : error ? (
+            <div className="p-8 text-center">
+              <p className="text-red-500">{error}</p>
+              <p className="mt-2 text-sm text-gray-500">Please try again later</p>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-gray-500 mb-4">This client has no jobs yet.</p>
+              <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">
+                <Plus size={18} className="mr-2" /> Create First Job
+              </Button>
             </div>
           ) : (
             <table className="w-full">
@@ -159,15 +193,6 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
                 ))}
               </tbody>
             </table>
-          )}
-          
-          {!loading && jobs.length === 0 && (
-            <div className="p-6 text-center">
-              <p className="text-gray-500 mb-4">This client has no jobs yet.</p>
-              <Button onClick={onCreateJob} className="bg-purple-500 hover:bg-purple-600">
-                <Plus size={18} className="mr-2" /> Create First Job
-              </Button>
-            </div>
           )}
         </div>
       </div>
