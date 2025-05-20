@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -407,7 +408,7 @@ export const ExpandedDashboardMetrics = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-4">
         <h2 className="text-xl font-semibold">Dashboard Metrics</h2>
-        <div className="flex gap-2 items-center">
+        <div>
           <Select value={timeFilter} onValueChange={(value) => handleTimeFilterChange(value as TimeFilter)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue>{getFilterLabel()}</SelectValue>
