@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -25,16 +24,6 @@ export const SecondaryMetrics = () => {
           throw jobsError;
         }
         
-        // Fetch clients data for satisfaction
-        const { data: clients, error: clientsError } = await supabase
-          .from('clients')
-          .select('rating');
-          
-        if (clientsError) {
-          console.error('Clients query error:', clientsError);
-          throw clientsError;
-        }
-        
         // Calculate completion rate
         const totalJobs = jobs?.length || 0;
         const completedJobs = jobs?.filter(job => job.status === 'completed')?.length || 0;
@@ -53,11 +42,9 @@ export const SecondaryMetrics = () => {
         // Calculate technician utilization (mocked as we don't have real utilization data)
         const technicianUtilization = 84; // Mocked value
         
-        // Calculate customer satisfaction
-        const clientsWithRating = clients?.filter(client => client.rating);
-        const averageSatisfaction = clientsWithRating?.length > 0
-          ? (clientsWithRating.reduce((sum, client) => sum + client.rating, 0) / clientsWithRating.length).toFixed(1)
-          : "0.0";
+        // Calculate customer satisfaction (now mocked since we removed rating column)
+        // Previously this used actual client ratings, now we'll use a mock value
+        const averageSatisfaction = "4.2"; // Mocked value
           
         // Calculate month-over-month changes (mocked)
         const previousMonthCompletion = completionRate - getRandomChange(2, 6);
