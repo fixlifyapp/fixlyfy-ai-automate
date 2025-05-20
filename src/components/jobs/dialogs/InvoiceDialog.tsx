@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -23,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvoiceCreated: (amount: number) => void;
+  onInvoiceCreated: (amount: number, invoiceNumber: string) => void;
   clientInfo: {
     name: string;
     address: string;
@@ -251,7 +250,7 @@ export const InvoiceDialog = ({
         }
       }
       
-      onInvoiceCreated(totalAmount);
+      onInvoiceCreated(totalAmount, invoiceNumber || '');
       toast.success(`Invoice ${editInvoice ? 'updated' : 'created'} successfully`);
       onOpenChange(false);
     } catch (error) {

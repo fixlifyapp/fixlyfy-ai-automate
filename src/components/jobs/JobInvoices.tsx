@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
+import { recordInvoiceCreated, recordPayment } from "@/services/jobHistoryService";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -49,6 +51,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isEditMode, setIsEditMode] = useState(false);
+  const { currentUser } = useRBAC();
   
   // Mock data for client and company info
   const clientInfo = {
@@ -179,6 +182,15 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         throw updateError;
       }
       
+      // Record payment in job history
+      await recordPayment(
+        jobId,
+        amount,
+        paymentMethod,
+        currentUser?.name,
+        currentUser?.id
+      );
+      
       toast.success("Payment recorded successfully");
       setIsPaymentDialogOpen(false);
       fetchInvoices();
@@ -188,7 +200,15 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     }
   };
 
-  const handleInvoiceCreated = (amount: number) => {
+  const handleInvoiceCreated = (amount: number, invoiceNumber: string) => {
+    // Record invoice creation in job history
+    recordInvoiceCreated(
+      jobId,
+      invoiceNumber,
+      amount,
+      currentUser?.name,
+      currentUser?.id
+    );
     fetchInvoices();
   };
 

@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Accordion, 
@@ -27,7 +26,8 @@ import {
   EyeOff,
   Star,
   Download,
-  Undo
+  Undo,
+  ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -63,8 +63,14 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     setShowRestrictedItems,
     togglePinnedItem,
     canViewItem,
-    deleteHistoryItem
+    deleteHistoryItem,
+    refreshHistory
   } = useJobHistory(jobId);
+
+  // Force refresh history items when component mounts
+  useEffect(() => {
+    refreshHistory();
+  }, []);
 
   // Define the filters
   const filters = [
@@ -74,8 +80,11 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
     { value: "payment", label: "Payments" },
     { value: "estimate", label: "Estimates" },
     { value: "invoice", label: "Invoices" },
+    { value: "estimate-conversion", label: "Estimate Conversions" },
     { value: "technician", label: "Technician" },
-    { value: "attachment", label: "Attachments" }
+    { value: "attachment", label: "Attachments" },
+    { value: "communication", label: "Communications" },
+    { value: "message", label: "Messages" }
   ];
 
   // Filter the history items based on the active filter, user role, and sort pinned items to the top
@@ -110,12 +119,18 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
         return <DollarSign className="text-green-500" />;
       case "estimate":
         return <Send className="text-indigo-500" />;
+      case "estimate-conversion":
+        return <ArrowRight className="text-violet-500" />;
       case "invoice":
-        return <FileText className="text-blue-500" />;
+        return <Receipt className="text-blue-500" />;
       case "technician":
         return <User className="text-purple-500" />;
       case "attachment":
         return <Paperclip className="text-gray-500" />;
+      case "message":
+        return <MessageSquare className="text-teal-500" />;
+      case "details-update":
+        return <FileText className="text-amber-500" />;
       default:
         return <Clock className="text-blue-500" />;
     }
@@ -137,12 +152,18 @@ export const JobHistory = ({ jobId }: JobHistoryProps) => {
         return "bg-green-100 text-green-700 border-green-200";
       case "estimate":
         return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "estimate-conversion":
+        return "bg-violet-100 text-violet-700 border-violet-200";
       case "invoice":
         return "bg-blue-100 text-blue-700 border-blue-200";
       case "technician":
         return "bg-purple-100 text-purple-700 border-purple-200";
       case "attachment":
         return "bg-gray-100 text-gray-700 border-gray-200";
+      case "message":
+        return "bg-teal-100 text-teal-700 border-teal-200";
+      case "details-update":
+        return "bg-amber-100 text-amber-700 border-amber-200";
       default:
         return "bg-blue-100 text-blue-700 border-blue-200";
     }
