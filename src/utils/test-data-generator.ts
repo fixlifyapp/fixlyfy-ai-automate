@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 interface Client {
-  id: string;
+  id?: string;
   name: string;
   email: string;
   phone: string;
@@ -18,20 +18,17 @@ interface Client {
 
 interface Job {
   id: string;
-  clientId: string;
+  client_id: string;
   title: string;
   description: string;
   status: string;
   priority: string;
-  scheduledDate: string;
-  estimatedDuration: number;
-  technicianId?: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  province: string;
-  serviceType: string;
-  price?: number;
+  date: string;
+  schedule_start: string;
+  schedule_end: string;
+  technician_id?: string;
+  service: string;
+  revenue?: number;
   notes?: string;
 }
 
@@ -90,7 +87,7 @@ const getRandomBusinessName = (): string => {
 };
 
 export const generateTestClients = async (count: number = 20): Promise<string[]> => {
-  const clients: Client[] = [];
+  const clients: any[] = [];
   const clientIds: string[] = [];
   
   // Generate individual clients (70%)
@@ -100,18 +97,15 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
     const emailName = name.toLowerCase().replace(' ', '.').replace(/[^a-z\.]/g, '');
     const location = getRandomLocation();
     
-    const clientId = `CLT-${1000 + i + 1}`;
-    clientIds.push(clientId);
-    
     clients.push({
-      id: clientId,
       name: name,
       email: `${emailName}@example.com`,
       phone: `(${getRandomInt(200, 999)}) ${getRandomInt(100, 999)}-${getRandomInt(1000, 9999)}`,
       address: `${getRandomInt(1, 999)} ${getRandomElement(["Main", "Oak", "Maple", "Pine", "Cedar", "Elm", "Yonge", "Bloor", "Queen", "King", "Dundas"])} ${getRandomElement(["St", "Ave", "Rd", "Blvd", "Dr", "Cres", "Lane"])}`,
       city: location.city,
-      postalCode: location.postalCode,
-      province: location.province,
+      state: location.province,
+      zip: location.postalCode,
+      country: "USA",
       type: "Residential",
       rating: getRandomInt(3, 5),
       status: getRandomElement(["active", "active", "active", "inactive"]), // Weighted towards active
@@ -126,18 +120,15 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
     const emailName = name.toLowerCase().replace(' ', '.').replace(/[^a-z\.]/g, '');
     const location = getRandomLocation();
     
-    const clientId = `CLT-${1000 + individualCount + i + 1}`;
-    clientIds.push(clientId);
-    
     clients.push({
-      id: clientId,
       name: name,
       email: `info@${emailName.toLowerCase()}.com`,
       phone: `(${getRandomInt(200, 999)}) ${getRandomInt(100, 999)}-${getRandomInt(1000, 9999)}`,
       address: `${getRandomInt(1, 999)} ${getRandomElement(["Business", "Commerce", "Industrial", "Corporate", "Enterprise", "Tech", "Market"])} ${getRandomElement(["Park", "Plaza", "Center", "Square", "Campus"])}`,
       city: location.city,
-      postalCode: location.postalCode,
-      province: location.province,
+      state: location.province,
+      zip: location.postalCode,
+      country: "USA",
       type: getRandomElement(["Commercial", "Property Manager", "Commercial"]),
       rating: getRandomInt(3, 5),
       status: getRandomElement(["active", "active", "active", "inactive"]), // Weighted towards active
@@ -147,9 +138,17 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
   
   try {
     console.log("Generating test clients data...");
-    // This would typically insert into a Supabase table - for now we're just returning the data
-    // In a real implementation you would do:
-    // const { error } = await supabase.from('clients').insert(clients);
+    // Insert into Supabase
+    const { data, error } = await supabase.from('clients').insert(clients).select('id');
+    
+    if (error) {
+      console.error("Error generating test clients:", error);
+      return [];
+    }
+    
+    if (data) {
+      clientIds.push(...data.map(client => client.id));
+    }
     
     return clientIds;
   } catch (error) {
@@ -159,25 +158,39 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
 };
 
 export const generateTestJobs = async (clientIds: string[], count: number = 40): Promise<void> => {
-  const jobs: Job[] = [];
+  if (clientIds.length === 0) {
+    console.error("No client IDs provided for job generation");
+    return;
+  }
+  
+  const jobs: any[] = [];
   const now = new Date();
   const pastDate = new Date();
   pastDate.setMonth(now.getMonth() - 2);
   const futureDate = new Date();
   futureDate.setMonth(now.getMonth() + 2);
   
-  const statuses = ["scheduled", "in-progress", "completed", "cancelled", "pending"];
+  const statuses = ["scheduled", "in-progress", "completed", "canceled", "pending"];
   const priorities = ["low", "medium", "high", "urgent"];
+  
+  // Get user IDs for technicians
+  const { data: profiles } = await supabase.from('profiles').select('id');
+  const technicianIds = profiles ? profiles.map(profile => profile.id) : [];
   
   for (let i = 0; i < count; i++) {
     const clientId = getRandomElement(clientIds);
     const status = getRandomElement(statuses);
-    const scheduledDate = getRandomDate(pastDate, futureDate).toISOString();
-    const location = getRandomLocation();
+    const scheduledDate = getRandomDate(pastDate, futureDate);
+    
+    // Calculate end time (1-5 hours after start)
+    const endDate = new Date(scheduledDate);
+    endDate.setHours(endDate.getHours() + getRandomInt(1, 5));
+    
+    const jobId = `JOB-${2000 + i + 1}`;
     
     jobs.push({
-      id: `JOB-${2000 + i + 1}`,
-      clientId: clientId,
+      id: jobId,
+      client_id: clientId,
       title: getRandomElement(serviceTypes),
       description: getRandomElement([
         "Customer reported issues with system performance",
@@ -191,37 +204,38 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
       ]),
       status: status,
       priority: getRandomElement(priorities),
-      scheduledDate: scheduledDate,
-      estimatedDuration: getRandomInt(1, 5),
-      technicianId: getRandomElement([undefined, "TECH-1", "TECH-2", "TECH-3", "TECH-4", "TECH-5"]),
-      address: `${getRandomInt(1, 999)} ${getRandomElement(["Main", "Oak", "Maple", "Pine", "Cedar", "Elm", "Yonge", "Bloor", "Queen", "King"])} ${getRandomElement(["St", "Ave", "Rd", "Blvd", "Dr", "Cres"])}`,
-      city: location.city,
-      postalCode: location.postalCode,
-      province: location.province,
-      serviceType: getRandomElement(serviceTypes),
-      price: status === "completed" ? getRandomInt(200, 2500) : undefined,
+      date: scheduledDate.toISOString(),
+      schedule_start: scheduledDate.toISOString(),
+      schedule_end: endDate.toISOString(),
+      technician_id: technicianIds.length > 0 ? getRandomElement(technicianIds) : null,
+      service: getRandomElement(serviceTypes),
+      revenue: status === "completed" ? getRandomInt(200, 2500) : status === "in-progress" ? getRandomInt(100, 2000) : 0,
+      tags: [getRandomElement(serviceTypes.map(s => s.split(' ')[0]))],
       notes: getRandomElement([undefined, "Rush job", "Requires specialized equipment", "Second floor unit", "Hard to access location"])
     });
   }
   
   try {
     console.log("Generating test jobs data...");
-    // This would typically insert into a Supabase table - for now we're just logging data
-    // In a real implementation you would do:
-    // const { error } = await supabase.from('jobs').insert(jobs);
+    // Insert into Supabase
+    const { error } = await supabase.from('jobs').insert(jobs);
+    
+    if (error) {
+      console.error("Error generating test jobs:", error);
+    }
   } catch (error) {
     console.error("Error generating test jobs:", error);
   }
 };
 
-export const generateAllTestData = async (): Promise<void> => {
+export const generateAllTestData = async (clientCount: number = 20, jobCount: number = 40): Promise<void> => {
   try {
     // Generate clients first
-    const clientIds = await generateTestClients(20);
+    const clientIds = await generateTestClients(clientCount);
     
     // Then generate jobs for those clients
     if (clientIds.length > 0) {
-      await generateTestJobs(clientIds, 40);
+      await generateTestJobs(clientIds, jobCount);
     }
     
     return;

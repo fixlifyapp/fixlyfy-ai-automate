@@ -7,34 +7,38 @@ import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { ReportsTechnicians } from "@/components/reports/ReportsTechnicians";
 import { ReportsJobs } from "@/components/reports/ReportsJobs";
 import { Button } from "@/components/ui/button";
-import { Database } from "lucide-react";
+import { Database, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTestData } from "@/utils/test-data-generator";
+import { useAuth } from "@/hooks/use-auth";
 
 const ReportsPage = () => {
   const [period, setPeriod] = useState('month');
   const [isGeneratingData, setIsGeneratingData] = useState(false);
-  const { generateTestClients, generateTestJobs } = useTestData();
+  const { generateAllTestData } = useTestData();
+  const { user } = useAuth();
   
   const handleGenerateTestData = async () => {
+    if (!user) {
+      toast.error("You need to be signed in to generate test data", {
+        description: "Please sign in first to use this feature"
+      });
+      return;
+    }
+    
     setIsGeneratingData(true);
-    toast.loading("Generating minimal test data...");
+    toast.loading("Generating test data...", { id: "generate-data" });
     
     try {
-      // Generate only 5 clients
-      const clientIds = await generateTestClients(5);
+      // Generate 20 clients and 40 jobs
+      await generateAllTestData(20, 40);
       
-      // Generate only 5 jobs
-      if (clientIds.length > 0) {
-        await generateTestJobs(clientIds, 5);
-      }
-      
-      toast.dismiss();
+      toast.dismiss("generate-data");
       toast.success("Test data created successfully", {
-        description: "5 clients and 5 jobs created for testing"
+        description: "20 clients and 40 jobs created for testing"
       });
     } catch (error) {
-      toast.dismiss();
+      toast.dismiss("generate-data");
       toast.error("Failed to generate test data", {
         description: "An error occurred while creating test data"
       });
@@ -60,8 +64,17 @@ const ReportsPage = () => {
           className="bg-violet-600 hover:bg-violet-700"
           disabled={isGeneratingData}
         >
-          <Database size={20} className="mr-2" />
-          {isGeneratingData ? "Generating..." : "Generate Test Data (5)"}
+          {isGeneratingData ? (
+            <>
+              <Loader2 size={20} className="mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Database size={20} className="mr-2" />
+              Generate Test Data
+            </>
+          )}
         </Button>
       </div>
       
