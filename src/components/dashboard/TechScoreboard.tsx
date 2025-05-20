@@ -141,6 +141,7 @@ export const TechScoreboard = ({ isRefreshing = false }: TechScoreboardProps) =>
       setTechnicians(sortedTechs);
     } catch (error) {
       console.error('Error fetching technician data:', error);
+      setTechnicians([]);
     } finally {
       setIsLoading(false);
     }
