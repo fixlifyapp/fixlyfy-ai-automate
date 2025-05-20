@@ -11,12 +11,14 @@ import { Database, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTestData } from "@/utils/test-data-generator";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ReportsPage = () => {
   const [period, setPeriod] = useState('month');
   const [isGeneratingData, setIsGeneratingData] = useState(false);
   const { generateAllTestData } = useTestData();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   
   const handleGenerateTestData = async () => {
     if (!user) {
@@ -50,7 +52,7 @@ const ReportsPage = () => {
   
   return (
     <PageLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Reports</h1>
           <p className="text-fixlyfy-text-secondary">
@@ -60,18 +62,18 @@ const ReportsPage = () => {
         <Button
           onClick={handleGenerateTestData}
           variant="default"
-          size="lg"
-          className="bg-violet-600 hover:bg-violet-700"
+          size={isMobile ? "default" : "lg"}
+          className="bg-violet-600 hover:bg-violet-700 w-full md:w-auto"
           disabled={isGeneratingData}
         >
           {isGeneratingData ? (
             <>
-              <Loader2 size={20} className="mr-2 animate-spin" />
+              <Loader2 size={isMobile ? 16 : 20} className="mr-2 animate-spin" />
               Generating...
             </>
           ) : (
             <>
-              <Database size={20} className="mr-2" />
+              <Database size={isMobile ? 16 : 20} className="mr-2" />
               Generate Test Data
             </>
           )}

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReportsJobsProps {
   period: string;
@@ -24,6 +25,7 @@ interface Job {
 export const ReportsJobs = ({ period }: ReportsJobsProps) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     async function fetchJobs() {
@@ -102,6 +104,43 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
     fetchJobs();
   }, [period]);
 
+  // Render mobile card view
+  const renderMobileJobs = () => {
+    return jobs.map((job) => (
+      <div key={job.id} className="fixlyfy-card mb-4 p-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-medium">Job #{job.id}</span>
+          <Badge className="bg-fixlyfy/10 text-fixlyfy">
+            {job.service}
+          </Badge>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <p className="text-fixlyfy-text-secondary">Client:</p>
+            <p>{job.client}</p>
+          </div>
+          <div>
+            <p className="text-fixlyfy-text-secondary">Technician:</p>
+            <p>{job.technician}</p>
+          </div>
+          <div>
+            <p className="text-fixlyfy-text-secondary">Date:</p>
+            <p>{format(job.date, 'MMM dd, yyyy')}</p>
+          </div>
+          <div>
+            <p className="text-fixlyfy-text-secondary">Duration:</p>
+            <p>{Math.floor(job.duration / 60)}h {job.duration % 60}m</p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-fixlyfy-text-secondary">Revenue:</p>
+            <p className="font-medium">${job.revenue.toFixed(2)}</p>
+          </div>
+        </div>
+      </div>
+    ));
+  };
+
   return (
     <div className="fixlyfy-card">
       <div className="p-6 border-b border-fixlyfy-border">
@@ -116,6 +155,10 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
         ) : jobs.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-fixlyfy-text-secondary">No completed jobs found. Use the "Generate Test Data" button to create sample jobs.</p>
+          </div>
+        ) : isMobile ? (
+          <div className="p-4">
+            {renderMobileJobs()}
           </div>
         ) : (
           <Table>

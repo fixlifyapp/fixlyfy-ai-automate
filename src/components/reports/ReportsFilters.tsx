@@ -8,6 +8,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReportsFiltersProps {
   period: string;
@@ -15,9 +16,11 @@ interface ReportsFiltersProps {
 }
 
 export const ReportsFilters = ({ period, setPeriod }: ReportsFiltersProps) => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="flex flex-wrap gap-3 items-center justify-between">
-      <div className="flex flex-wrap gap-3 items-center">
+    <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center w-full sm:w-auto">
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Time Period" />
@@ -43,13 +46,13 @@ export const ReportsFilters = ({ period, setPeriod }: ReportsFiltersProps) => {
           </SelectContent>
         </Select>
         
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" className="hidden sm:inline-flex">
           <Filter size={18} />
         </Button>
       </div>
       
-      <div>
-        <Button variant="outline" className="gap-2">
+      <div className="mt-3 sm:mt-0 w-full sm:w-auto">
+        <Button variant="outline" className="gap-2 w-full sm:w-auto">
           <Download size={18} /> Export
         </Button>
       </div>

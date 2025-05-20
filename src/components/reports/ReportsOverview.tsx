@@ -63,7 +63,7 @@ export const ReportsOverview = ({ period }: ReportsOverviewProps) => {
       <div className="p-6 border-b border-fixlyfy-border">
         <h2 className="text-lg font-medium">Key Metrics {period === 'month' ? 'This Month' : period === 'week' ? 'This Week' : period === 'quarter' ? 'This Quarter' : 'This Year'}</h2>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 p-6">
         {metrics.map((metric) => (
           <div key={metric.id} className="animate-fade-in" style={{ animationDelay: `${metric.id * 100}ms` }}>
             <p className="text-fixlyfy-text-secondary text-sm">{metric.name}</p>
