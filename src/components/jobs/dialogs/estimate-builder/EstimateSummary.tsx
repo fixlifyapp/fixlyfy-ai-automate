@@ -9,7 +9,6 @@ interface EstimateSummaryProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
-  // Add the missing properties
   calculateTotalMargin?: () => number;
   calculateMarginPercentage?: () => number;
 }
@@ -66,6 +65,13 @@ export const EstimateSummary = ({
             <span>Total:</span>
             <span>${grandTotal.toFixed(2)}</span>
           </div>
+
+          {calculateTotalMargin && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Profit Margin:</span>
+              <span>${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage?.().toFixed(2)}%)</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

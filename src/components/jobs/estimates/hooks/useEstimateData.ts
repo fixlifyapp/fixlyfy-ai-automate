@@ -15,6 +15,7 @@ export interface Estimate {
   created_at: string;
   updated_at: string;
   items?: LineItem[];
+  viewed?: boolean; // For UI tracking
 }
 
 export const useEstimateData = (jobId: string) => {
@@ -59,14 +60,15 @@ export const useEstimateData = (jobId: string) => {
                 id: item.id,
                 description: item.description || '',
                 quantity: item.quantity,
-                unitPrice: parseFloat(item.unit_price),
+                unitPrice: parseFloat(item.unit_price.toString()),
                 taxable: item.taxable,
-                total: item.quantity * parseFloat(item.unit_price)
+                total: item.quantity * parseFloat(item.unit_price.toString())
               })) || [];
               
               return {
                 ...estimate,
-                items
+                items,
+                viewed: false // Default to not viewed for UI tracking
               };
             })
           );

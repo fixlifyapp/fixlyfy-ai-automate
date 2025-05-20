@@ -3,28 +3,27 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "../../builder/types";
+import { Estimate } from "./useEstimateData";
 
 export const useEstimateWarranty = (
-  estimates: any[],
-  setEstimates: (estimates: any[]) => void,
-  selectedEstimate: any
+  estimates: Estimate[],
+  setEstimates: (estimates: Estimate[]) => void,
+  selectedEstimate: Estimate | null
 ) => {
   // Handle warranty selection and addition
   const handleWarrantySelection = async (selectedWarranty: Product | null, customNote: string) => {
     if (selectedWarranty && selectedEstimate) {
       try {
-        // Add the warranty to the estimate in Supabase
+        // Add the warranty to the line_items table
         const { data: newItem, error: itemError } = await supabase
-          .from('estimate_items')
+          .from('line_items')
           .insert({
-            estimate_id: selectedEstimate.id,
-            name: selectedWarranty.name,
-            description: selectedWarranty.description,
-            price: selectedWarranty.price,
+            parent_id: selectedEstimate.id,
+            parent_type: 'estimate',
+            description: selectedWarranty.name,
+            unit_price: selectedWarranty.price,
             quantity: 1,
-            taxable: false, // Warranties are typically not taxed
-            category: selectedWarranty.category,
-            tags: selectedWarranty.tags || [],
+            taxable: false // Warranties are typically not taxed
           })
           .select()
           .single();
@@ -33,11 +32,11 @@ export const useEstimateWarranty = (
           throw itemError;
         }
         
-        // Update the estimate amount
-        const newAmount = selectedEstimate.amount + selectedWarranty.price;
+        // Update the estimate total
+        const newTotal = selectedEstimate.total + selectedWarranty.price;
         const { error: updateError } = await supabase
           .from('estimates')
-          .update({ amount: newAmount })
+          .update({ total: newTotal })
           .eq('id', selectedEstimate.id);
           
         if (updateError) {
@@ -48,7 +47,7 @@ export const useEstimateWarranty = (
         if (customNote.trim()) {
           const { error: noteError } = await supabase
             .from('estimates')
-            .update({ technicians_note: customNote })
+            .update({ notes: customNote })
             .eq('id', selectedEstimate.id);
             
           if (noteError) {
@@ -62,26 +61,26 @@ export const useEstimateWarranty = (
             ? {
                 ...est,
                 items: [
-                  ...est.items,
+                  ...(est.items || []),
                   {
                     id: newItem.id, // Use the actual DB id
-                    name: selectedWarranty.name,
-                    description: selectedWarranty.description,
-                    price: selectedWarranty.price,
+                    description: selectedWarranty.name,
                     quantity: 1,
+                    unitPrice: selectedWarranty.price,
                     taxable: false,
-                    category: selectedWarranty.category,
-                    tags: selectedWarranty.tags || [],
+                    total: selectedWarranty.price,
+                    name: selectedWarranty.name,
+                    price: selectedWarranty.price
                   }
                 ],
-                amount: est.amount + selectedWarranty.price,
+                total: est.total + selectedWarranty.price,
                 techniciansNote: customNote || est.techniciansNote
               } 
             : est
         );
         
         setEstimates(updatedEstimates);
-        toast.success(`${selectedWarranty.name} added to estimate ${selectedEstimate.number}`);
+        toast.success(`${selectedWarranty.name} added to estimate ${selectedEstimate.estimate_number}`);
       } catch (error) {
         console.error('Error adding warranty:', error);
         toast.error('Failed to add warranty to estimate');
@@ -95,7 +94,7 @@ export const useEstimateWarranty = (
     
     try {
       // Find the item to get its price
-      const itemToRemove = selectedEstimate.items.find((item: any) => item.id === itemId);
+      const itemToRemove = selectedEstimate.items?.find(item => item.id === itemId);
       
       if (!itemToRemove) {
         toast.error('Item not found');
@@ -104,19 +103,22 @@ export const useEstimateWarranty = (
       
       // Delete the item from the database
       const { error: deleteError } = await supabase
-        .from('estimate_items')
+        .from('line_items')
         .delete()
         .eq('id', itemId)
-        .eq('estimate_id', selectedEstimate.id);
+        .eq('parent_id', selectedEstimate.id);
         
       if (deleteError) throw deleteError;
       
-      // Update the estimate amount
-      const newAmount = Math.max(0, selectedEstimate.amount - itemToRemove.price);
+      // Calculate item price
+      const itemPrice = itemToRemove.unitPrice * itemToRemove.quantity;
+      
+      // Update the estimate total
+      const newTotal = Math.max(0, selectedEstimate.total - itemPrice);
       
       const { error: updateError } = await supabase
         .from('estimates')
-        .update({ amount: newAmount })
+        .update({ total: newTotal })
         .eq('id', selectedEstimate.id);
         
       if (updateError) throw updateError;
@@ -126,8 +128,8 @@ export const useEstimateWarranty = (
         est.id === selectedEstimate.id
           ? {
               ...est,
-              items: est.items.filter((item: any) => item.id !== itemId),
-              amount: newAmount
+              items: (est.items || []).filter(item => item.id !== itemId),
+              total: newTotal
             }
           : est
       );

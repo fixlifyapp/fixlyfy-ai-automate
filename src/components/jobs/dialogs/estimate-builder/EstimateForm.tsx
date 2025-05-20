@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
 import { LineItem } from "@/components/jobs/builder/types";
@@ -427,7 +426,7 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
                   max="100"
                   step="0.01"
                   value={taxRate}
-                  onChange={(e) => setTaxRate(parseFloat(e.target.value))}
+                  onChange={(e) => handleTaxRateChange(e.target.value)}
                   className="w-20 h-8"
                 />
               </div>

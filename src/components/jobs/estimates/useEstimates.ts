@@ -1,16 +1,26 @@
 
 import { useState, useEffect } from "react";
-import { useEstimateData } from "./hooks/useEstimateData";
+import { useEstimateData, Estimate as EstimateDataType } from "./hooks/useEstimateData";
 import { useEstimateActions } from "./hooks/useEstimateActions";
 import { useEstimateCreation } from "./hooks/useEstimateCreation";
 import { useEstimateWarranty } from "./hooks/useEstimateWarranty";
 import { useEstimateUpsell } from "./hooks/useEstimateUpsell";
 import { useEstimateInfo } from "./hooks/useEstimateInfo";
-import { Estimate } from "@/hooks/useEstimates";
+import { Estimate as EstimateHookType } from "@/hooks/useEstimates";
+
+// Type conversion function to handle the type differences
+const convertEstimateType = (estimates: EstimateDataType[]): EstimateHookType[] => {
+  return estimates.map(est => ({
+    ...est,
+    number: est.estimate_number,
+    amount: est.total,
+    // Include any other properties needed from both types
+  }));
+};
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
   // Get estimates data
-  const { estimates, setEstimates, isLoading } = useEstimateData(jobId);
+  const { estimates: estimatesData, setEstimates: setEstimatesData, isLoading } = useEstimateData(jobId);
   
   // Dialog state management
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
@@ -22,9 +32,9 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const [error, setError] = useState<boolean>(false);
 
   // Get hooks for different functionalities
-  const estimateActions = useEstimateActions(jobId, estimates, setEstimates, onEstimateConverted);
-  const estimateCreation = useEstimateCreation(jobId, estimates, setEstimates);
-  const estimateUpsell = useEstimateUpsell(estimates, setEstimates);
+  const estimateActions = useEstimateActions(jobId, estimatesData, setEstimatesData, onEstimateConverted);
+  const estimateCreation = useEstimateCreation(jobId, estimatesData, setEstimatesData);
+  const estimateUpsell = useEstimateUpsell(estimatesData, setEstimatesData);
   
   // Get client and company info
   const estimateInfo = useEstimateInfo(jobId);
@@ -40,13 +50,13 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   
   // Get warranty functionality (depends on selectedEstimate from actions)
   const estimateWarranty = useEstimateWarranty(
-    estimates, 
-    setEstimates, 
+    estimatesData, 
+    setEstimatesData, 
     estimateActions.state.selectedEstimate
   );
 
   // Combined view estimate handler
-  const handleViewEstimate = (estimate: Estimate) => {
+  const handleViewEstimate = (estimate: EstimateDataType) => {
     const shouldShowUpsell = estimateUpsell.actions.handleViewEstimate(estimate);
     
     if (shouldShowUpsell) {
@@ -70,13 +80,13 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   };
 
   // Handle add warranty with dialog opening
-  const handleAddWarranty = (estimate: Estimate) => {
+  const handleAddWarranty = (estimate: EstimateDataType) => {
     estimateActions.actions.setSelectedEstimate(estimate);
     setIsWarrantyDialogOpen(true);
   };
 
   // Handle convert to invoice with dialog opening
-  const handleConvertToInvoice = (estimate: Estimate) => {
+  const handleConvertToInvoice = (estimate: EstimateDataType) => {
     estimateActions.actions.setSelectedEstimate(estimate);
     setIsConvertToInvoiceDialogOpen(true);
   };
@@ -98,7 +108,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   };
 
   return {
-    estimates,
+    estimates: estimatesData,
     isLoading,
     error,
     dialogs: {
