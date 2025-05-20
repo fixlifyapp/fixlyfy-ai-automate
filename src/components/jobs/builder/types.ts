@@ -14,14 +14,9 @@ export interface Product {
 
 export interface LineItem {
   id: string;
-  name: string;
-  description?: string;
+  description: string;
   quantity: number;
-  price: number;
-  unitPrice?: number;
-  discount?: number;
-  tax?: number;
-  total?: number;
-  ourPrice?: number;
+  unitPrice: number;
   taxable: boolean;
+  total?: number;
 }

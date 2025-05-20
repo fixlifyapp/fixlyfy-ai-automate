@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useEstimateInfo = (jobId?: string) => {
@@ -13,6 +13,31 @@ export const useEstimateInfo = (jobId?: string) => {
     email: "info@fixlyfy.com",
     legalText: "All estimates are valid for 30 days from the date of issue."
   });
+  
+  useEffect(() => {
+    if (jobId) {
+      // Fetch job information
+      const fetchJobInfo = async () => {
+        const { data: job, error } = await supabase
+          .from('jobs')
+          .select('*, clients(*)')
+          .eq('id', jobId)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching job info:', error);
+          return;
+        }
+        
+        if (job) {
+          setJobInfo(job);
+          setClientInfo(job.clients);
+        }
+      };
+      
+      fetchJobInfo();
+    }
+  }, [jobId]);
   
   // Generate a unique number for the estimate
   const generateUniqueNumber = (prefix: string) => {

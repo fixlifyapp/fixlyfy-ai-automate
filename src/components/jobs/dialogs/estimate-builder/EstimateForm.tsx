@@ -1,11 +1,15 @@
 
 import { useState, useEffect } from "react";
 import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
-import { EstimateEditor } from "./EstimateEditor";
-import { LineItemsTable } from "./LineItemsTable";
+import { LineItem } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { LineItem } from "@/components/jobs/builder/types";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Plus, Trash2 } from "lucide-react";
 
 interface EstimateFormProps {
   estimateId: string | null;
@@ -14,13 +18,13 @@ interface EstimateFormProps {
 }
 
 export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFormProps) {
-  const [estimate, setEstimate] = useState<any>(null);
+  const [estimateNumber, setEstimateNumber] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [notes, setNotes] = useState("");
-  const [taxRate, setTaxRate] = useState(0);
+  const [taxRate, setTaxRate] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [estimateNumber, setEstimateNumber] = useState("");
-  const estimateInfo = useEstimateInfo();
+  
+  const { generateUniqueNumber } = useEstimateInfo();
 
   // Fetch estimate data if editing an existing estimate
   useEffect(() => {
@@ -40,32 +44,26 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
           
           // Fetch estimate line items
           const { data: itemsData, error: itemsError } = await supabase
-            .from('estimate_items')
+            .from('line_items')
             .select('*')
-            .eq('estimate_id', estimateId);
+            .eq('parent_type', 'estimate')
+            .eq('parent_id', estimateId);
           
           if (itemsError) throw itemsError;
           
           if (estimateData) {
-            setEstimate(estimateData);
             setEstimateNumber(estimateData.estimate_number);
             setNotes(estimateData.notes || "");
-            setTaxRate(estimateData.tax_amount ? 
-              (estimateData.tax_amount / estimateData.subtotal) * 100 : 0);
-              
+            
             if (itemsData && itemsData.length > 0) {
               // Transform to LineItem format
               const items: LineItem[] = itemsData.map(item => ({
                 id: item.id,
-                name: item.name,
                 description: item.description || "",
                 quantity: item.quantity,
-                price: parseFloat(item.unit_price),
                 unitPrice: parseFloat(item.unit_price),
-                total: parseFloat(item.total),
-                taxable: true,
-                tax: parseFloat(item.tax_rate) || 0,
-                discount: 0
+                taxable: item.taxable,
+                total: item.quantity * parseFloat(item.unit_price)
               }));
               
               setLineItems(items);
@@ -77,77 +75,45 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
         }
       } else {
         // Initialize with default values for a new estimate
-        const newEstimateNumber = estimateInfo.generateUniqueNumber('EST');
+        const newEstimateNumber = generateUniqueNumber('EST');
         setEstimateNumber(newEstimateNumber);
-        setEstimate({
-          job_id: jobId,
-          estimate_number: newEstimateNumber,
-          status: 'draft',
-          subtotal: 0,
-          tax_amount: 0,
-          total: 0
-        });
         setLineItems([]);
         setNotes("");
-        setTaxRate(0);
       }
       
       setIsLoading(false);
     };
     
     fetchEstimateData();
-  }, [estimateId, jobId, estimateInfo]);
+  }, [estimateId, jobId, generateUniqueNumber]);
 
   // Handler to add empty line item
   const handleAddEmptyLineItem = () => {
     const newItem: LineItem = {
       id: `new-${Date.now()}`,
-      name: "New Item",
-      description: "",
-      price: 0,
-      unitPrice: 0,
+      description: "New Item",
       quantity: 1,
+      unitPrice: 0,
       taxable: true,
-      total: 0,
-      tax: 0,
-      discount: 0
+      total: 0
     };
     
     setLineItems(prev => [...prev, newItem]);
   };
 
-  // Handler to add custom line
-  const handleAddCustomLine = (name: string, price: number, quantity: number, taxable: boolean) => {
-    const newItem: LineItem = {
-      id: `custom-${Date.now()}`,
-      name,
-      description: name,
-      price,
-      unitPrice: price,
-      quantity,
-      taxable,
-      total: price * quantity,
-      tax: 0,
-      discount: 0
-    };
-    
-    setLineItems(prev => [...prev, newItem]);
-  };
-
-  // Handler to update line
-  const handleUpdateLine = (lineId: string, field: string, value: any) => {
-    setLineItems(prev =>
+  // Handler for line item changes
+  const handleLineItemChange = (id: string, field: keyof LineItem, value: any) => {
+    setLineItems(prev => 
       prev.map(item => {
-        if (item.id === lineId) {
-          const updatedItem = { ...item, [field]: value };
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
           
-          // Recalculate total if quantity or price changes
-          if (field === 'quantity' || field === 'price' || field === 'unitPrice') {
-            const price = updatedItem.unitPrice !== undefined ? updatedItem.unitPrice : updatedItem.price;
-            updatedItem.total = price * updatedItem.quantity;
+          // Recalculate total
+          if (field === 'quantity' || field === 'unitPrice') {
+            updated.total = updated.quantity * updated.unitPrice;
           }
           
-          return updatedItem;
+          return updated;
         }
         return item;
       })
@@ -155,28 +121,20 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
   };
 
   // Handler to remove line
-  const handleRemoveLine = (lineId: string) => {
-    setLineItems(prev => prev.filter(item => item.id !== lineId));
+  const handleRemoveLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
   };
 
   // Calculate subtotal
   const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => {
-      const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
-      return sum + (price * item.quantity);
-    }, 0);
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   };
 
   // Calculate tax amount
   const calculateTaxAmount = () => {
-    const taxableAmount = lineItems
+    return lineItems
       .filter(item => item.taxable)
-      .reduce((sum, item) => {
-        const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
-        return sum + (price * item.quantity);
-      }, 0);
-    
-    return taxableAmount * (taxRate / 100);
+      .reduce((sum, item) => sum + (item.quantity * item.unitPrice * (taxRate / 100)), 0);
   };
 
   // Calculate total
@@ -184,21 +142,9 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
     return calculateSubtotal() + calculateTaxAmount();
   };
 
-  // Handler for note changes
-  const handleNotesChange = (notes: string) => {
-    setNotes(notes);
-  };
-
-  // Handler for tax rate changes
-  const handleTaxRateChange = (rate: string) => {
-    setTaxRate(parseFloat(rate) || 0);
-  };
-
   // Handler to save estimate
   const handleSave = async () => {
     try {
-      const subtotal = calculateSubtotal();
-      const taxAmount = calculateTaxAmount();
       const total = calculateTotal();
       
       if (estimateId) {
@@ -207,49 +153,20 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
           .from('estimates')
           .update({
             notes,
-            subtotal,
-            tax_amount: taxAmount,
             total
           })
           .eq('id', estimateId);
         
         if (updateError) throw updateError;
         
-        // Delete existing line items to replace with updated ones
+        // Handle line items - delete existing ones first
         const { error: deleteError } = await supabase
-          .from('estimate_items')
+          .from('line_items')
           .delete()
-          .eq('estimate_id', estimateId);
+          .eq('parent_type', 'estimate')
+          .eq('parent_id', estimateId);
         
         if (deleteError) throw deleteError;
-        
-        // Insert updated line items
-        const itemsToInsert = lineItems.map(item => {
-          const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
-          const itemTotal = price * item.quantity;
-          const taxRate = item.taxable ? taxRate : 0;
-          const taxAmount = item.taxable ? itemTotal * (taxRate / 100) : 0;
-          
-          return {
-            estimate_id: estimateId,
-            product_id: item.id.startsWith('new-') || item.id.startsWith('custom-') ? null : item.id,
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: price,
-            tax_rate: taxRate,
-            tax_amount: taxAmount,
-            total: itemTotal
-          };
-        });
-        
-        const { error: insertError } = await supabase
-          .from('estimate_items')
-          .insert(itemsToInsert);
-        
-        if (insertError) throw insertError;
-        
-        toast.success("Estimate updated successfully");
       } else {
         // Create new estimate
         const { data: newEstimate, error: createError } = await supabase
@@ -258,8 +175,6 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
             job_id: jobId,
             estimate_number: estimateNumber,
             notes,
-            subtotal,
-            tax_amount: taxAmount,
             total,
             status: 'draft'
           })
@@ -268,38 +183,35 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
         
         if (createError) throw createError;
         
-        // Insert line items
-        const itemsToInsert = lineItems.map(item => {
-          const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
-          const itemTotal = price * item.quantity;
-          const taxRate = item.taxable ? taxRate : 0;
-          const taxAmount = item.taxable ? itemTotal * (taxRate / 100) : 0;
-          
-          return {
-            estimate_id: newEstimate.id,
-            product_id: item.id.startsWith('new-') || item.id.startsWith('custom-') ? null : item.id,
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: price,
-            tax_rate: taxRate,
-            tax_amount: taxAmount,
-            total: itemTotal
-          };
-        });
-        
-        if (itemsToInsert.length > 0) {
-          const { error: insertError } = await supabase
-            .from('estimate_items')
-            .insert(itemsToInsert);
-          
-          if (insertError) throw insertError;
+        // Set estimateId for line items
+        if (newEstimate) {
+          estimateId = newEstimate.id;
+        } else {
+          throw new Error("Failed to create estimate - no ID returned");
         }
-        
-        toast.success("Estimate created successfully");
       }
       
-      // Close dialog by triggering onSyncToInvoice
+      // Insert line items
+      if (estimateId && lineItems.length > 0) {
+        const itemsToInsert = lineItems.map(item => ({
+          parent_type: 'estimate',
+          parent_id: estimateId,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('line_items')
+          .insert(itemsToInsert);
+        
+        if (insertError) throw insertError;
+      }
+      
+      toast.success(estimateId ? "Estimate updated successfully" : "Estimate created successfully");
+      
+      // Close dialog
       if (onSyncToInvoice) {
         onSyncToInvoice();
       }
@@ -309,29 +221,15 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
     }
   };
 
-  // Custom product handler (for future implementation)
-  const handleAddProduct = (product: any) => {
-    const newItem: LineItem = {
-      id: product.id || `product-${Date.now()}`,
-      name: product.name,
-      description: product.description || product.name,
-      price: product.price,
-      unitPrice: product.price,
-      quantity: 1,
-      taxable: product.taxable !== undefined ? product.taxable : true,
-      total: product.price,
-      tax: 0,
-      discount: 0
-    };
-    
-    setLineItems(prev => [...prev, newItem]);
-  };
-
-  // Helper function to handle the invoice sync
-  const handleSyncToInvoice = async () => {
-    if (!estimate) return;
-    
+  // Handle converting to invoice
+  const handleConvertToInvoice = async () => {
     try {
+      if (!estimateId) {
+        // Save the estimate first if it's new
+        await handleSave();
+        return;
+      }
+      
       // Generate invoice number
       const invoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       const total = calculateTotal();
@@ -344,8 +242,6 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
           estimate_id: estimateId,
           invoice_number: invoiceNumber,
           notes,
-          subtotal: calculateSubtotal(),
-          tax_amount: calculateTaxAmount(),
           total,
           balance: total,
           status: 'unpaid'
@@ -355,43 +251,31 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
       
       if (error) throw error;
       
-      // Convert line items to invoice items
-      const invoiceItems = lineItems.map(item => {
-        const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
-        const itemTotal = price * item.quantity;
-        const taxRate = item.taxable ? taxRate : 0;
-        const taxAmount = item.taxable ? itemTotal * (taxRate / 100) : 0;
-        
-        return {
-          invoice_id: newInvoice.id,
-          product_id: item.id.startsWith('new-') || item.id.startsWith('custom-') ? null : item.id,
-          name: item.name,
+      // Convert estimate line items to invoice line items
+      if (newInvoice && lineItems.length > 0) {
+        const invoiceItems = lineItems.map(item => ({
+          parent_type: 'invoice',
+          parent_id: newInvoice.id,
           description: item.description,
           quantity: item.quantity,
-          unit_price: price,
-          tax_rate: taxRate,
-          tax_amount: taxAmount,
-          total: itemTotal
-        };
-      });
-      
-      if (invoiceItems.length > 0) {
-        const { error: insertError } = await supabase
-          .from('invoice_items')
-          .insert(invoiceItems);
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }));
         
+        const { error: insertError } = await supabase
+          .from('line_items')
+          .insert(invoiceItems);
+          
         if (insertError) throw insertError;
       }
       
-      // Update estimate status if it exists
-      if (estimateId) {
-        const { error: updateError } = await supabase
-          .from('estimates')
-          .update({ status: 'converted' })
-          .eq('id', estimateId);
+      // Update estimate status
+      const { error: updateError } = await supabase
+        .from('estimates')
+        .update({ status: 'converted' })
+        .eq('id', estimateId);
         
-        if (updateError) throw updateError;
-      }
+      if (updateError) throw updateError;
       
       toast.success("Estimate converted to invoice successfully");
       
@@ -400,58 +284,168 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
         onSyncToInvoice();
       }
     } catch (error) {
-      console.error('Error syncing to invoice:', error);
+      console.error('Error converting to invoice:', error);
       toast.error('Failed to convert estimate to invoice');
     }
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div>
-        <EstimateEditor
-          estimateNumber={estimateNumber}
-          lineItems={lineItems}
-          notes={notes}
-          taxRate={taxRate}
-          onNotesChange={handleNotesChange}
-          onTaxRateChange={handleTaxRateChange}
-          onAddProduct={handleAddProduct}
-          onRemoveLineItem={handleRemoveLine}
-          onUpdateLineItem={handleUpdateLine}
-          onEditLineItem={() => false}
-          onAddEmptyLineItem={handleAddEmptyLineItem}
-          onAddCustomLine={handleAddCustomLine}
-          onSyncToInvoice={handleSyncToInvoice}
-          calculateSubtotal={calculateSubtotal}
-          calculateTotalTax={calculateTaxAmount}
-          calculateGrandTotal={calculateTotal}
-          calculateTotalMargin={() => 0} // Placeholder for margin calculation
-          calculateMarginPercentage={() => 0} // Placeholder for margin percentage
-        />
-      </div>
-      <div>
-        <LineItemsTable
-          lineItems={lineItems}
-          onRemoveLineItem={handleRemoveLine}
-          onUpdateLineItem={handleUpdateLine}
-          onEditLineItem={() => false}
-        />
-        <div className="mt-6 flex gap-3">
-          <button 
-            onClick={handleSave} 
-            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            {estimateId ? "Update Estimate" : "Create Estimate"}
-          </button>
-          {onSyncToInvoice && (
-            <button 
-              onClick={handleSyncToInvoice} 
-              className="flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Sync to Invoice
-            </button>
-          )}
+    <div className="grid gap-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <Label htmlFor="estimate-number">Estimate Number</Label>
+          <Input 
+            id="estimate-number" 
+            value={estimateNumber} 
+            readOnly 
+            className="w-40 mt-1"
+          />
         </div>
+        
+        <div className="flex gap-2">
+          <Button onClick={handleSave}>
+            {estimateId ? "Update Estimate" : "Create Estimate"}
+          </Button>
+          <Button onClick={handleConvertToInvoice} variant="outline">
+            Convert to Invoice
+          </Button>
+        </div>
+      </div>
+      
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Line Items</h3>
+            <Button size="sm" variant="outline" onClick={handleAddEmptyLineItem}>
+              <Plus className="h-4 w-4 mr-1" /> Add Item
+            </Button>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-24">Quantity</TableHead>
+                <TableHead className="w-32">Unit Price</TableHead>
+                <TableHead className="w-20">Taxable</TableHead>
+                <TableHead className="w-32">Total</TableHead>
+                <TableHead className="w-16"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lineItems.map(item => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <Input 
+                      value={item.description}
+                      onChange={(e) => handleLineItemChange(item.id, 'description', e.target.value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input 
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => handleLineItemChange(item.id, 'quantity', parseInt(e.target.value))}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unitPrice}
+                      onChange={(e) => handleLineItemChange(item.id, 'unitPrice', parseFloat(e.target.value))}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <input 
+                      type="checkbox" 
+                      checked={item.taxable}
+                      onChange={(e) => handleLineItemChange(item.id, 'taxable', e.target.checked)}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    ${(item.quantity * item.unitPrice).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleRemoveLineItem(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              
+              {lineItems.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                    No items added yet. Click "Add Item" to get started.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <Label htmlFor="notes">Notes</Label>
+          <textarea 
+            id="notes"
+            className="w-full mt-1 p-2 border rounded-md min-h-[100px]"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Enter any notes or terms..."
+          />
+        </div>
+        
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <h3 className="text-lg font-medium">Summary</h3>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span>${calculateSubtotal().toFixed(2)}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="tax-rate" className="text-muted-foreground">Tax Rate (%):</Label>
+                <Input
+                  id="tax-rate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(parseFloat(e.target.value))}
+                  className="w-20 h-8"
+                />
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tax:</span>
+                <span>${calculateTaxAmount().toFixed(2)}</span>
+              </div>
+              
+              <div className="h-px bg-muted my-2"></div>
+              
+              <div className="flex justify-between font-medium">
+                <span>Total:</span>
+                <span>${calculateTotal().toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -9,8 +9,6 @@ interface EstimateSummaryProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
-  calculateTotalMargin: () => number;
-  calculateMarginPercentage: () => number;
 }
 
 export const EstimateSummary = ({
@@ -18,15 +16,11 @@ export const EstimateSummary = ({
   onTaxRateChange,
   calculateSubtotal,
   calculateTotalTax,
-  calculateGrandTotal,
-  calculateTotalMargin,
-  calculateMarginPercentage
+  calculateGrandTotal
 }: EstimateSummaryProps) => {
   const subtotal = calculateSubtotal();
   const taxTotal = calculateTotalTax();
   const grandTotal = calculateGrandTotal();
-  const marginTotal = calculateTotalMargin();
-  const marginPercentage = calculateMarginPercentage();
   
   return (
     <Card>
@@ -66,18 +60,6 @@ export const EstimateSummary = ({
           <div className="flex justify-between font-medium">
             <span>Total:</span>
             <span>${grandTotal.toFixed(2)}</span>
-          </div>
-        </div>
-        
-        <div className="space-y-2 pt-4 border-t">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Total Margin:</span>
-            <span>${marginTotal.toFixed(2)}</span>
-          </div>
-          
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Margin %:</span>
-            <span>{marginPercentage.toFixed(2)}%</span>
           </div>
         </div>
       </CardContent>

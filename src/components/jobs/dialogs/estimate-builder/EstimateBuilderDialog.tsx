@@ -69,7 +69,7 @@ export function EstimateBuilderDialog({
           {isLoading ? "Loading..." : title}
         </div>
         <EstimateForm 
-          estimateId={estimateId || null} 
+          estimateId={estimateId} 
           jobId={jobId}
           onSyncToInvoice={onSyncToInvoice}
         />

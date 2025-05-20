@@ -14,16 +14,8 @@ interface JobEstimatesTabProps {
   onEstimateConverted?: () => void;
 }
 
-type Estimate = {
-  id: string;
-  estimate_number: string;
-  created_at: string;
-  total: number;
-  status: string;
-};
-
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [estimates, setEstimates] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | undefined>(undefined);
@@ -83,18 +75,8 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
     }
   };
   
-  const handleConvertToInvoice = async (estimate: Estimate) => {
+  const handleConvertToInvoice = async (estimate: any) => {
     try {
-      // Get estimate items
-      const { data: estimateItems, error: itemsError } = await supabase
-        .from("estimate_items")
-        .select("*")
-        .eq("estimate_id", estimate.id);
-        
-      if (itemsError) {
-        throw itemsError;
-      }
-      
       // Generate unique invoice number
       const invoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
@@ -105,10 +87,10 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           job_id: jobId,
           estimate_id: estimate.id,
           invoice_number: invoiceNumber,
-          subtotal: estimate.total,
           total: estimate.total,
           balance: estimate.total,
-          status: 'unpaid'
+          status: 'unpaid',
+          notes: estimate.notes
         })
         .select()
         .single();
@@ -117,26 +99,34 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         throw invoiceError;
       }
       
+      // Get estimate line items
+      const { data: estimateItems, error: itemsError } = await supabase
+        .from("line_items")
+        .select("*")
+        .eq("parent_type", "estimate")
+        .eq("parent_id", estimate.id);
+        
+      if (itemsError) {
+        throw itemsError;
+      }
+      
       // Convert estimate items to invoice items
-      if (estimateItems && estimateItems.length > 0) {
+      if (estimateItems && estimateItems.length > 0 && invoice) {
         const invoiceItems = estimateItems.map(item => ({
-          invoice_id: invoice.id,
-          product_id: item.product_id,
-          name: item.name,
+          parent_type: "invoice",
+          parent_id: invoice.id,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          tax_rate: item.tax_rate,
-          tax_amount: item.tax_amount,
-          total: item.total
+          taxable: item.taxable
         }));
         
-        const { error: itemsInsertError } = await supabase
-          .from("invoice_items")
+        const { error: insertError } = await supabase
+          .from("line_items")
           .insert(invoiceItems);
           
-        if (itemsInsertError) {
-          throw itemsInsertError;
+        if (insertError) {
+          throw insertError;
         }
       }
       
@@ -234,7 +224,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
                 </div>
                 
                 <div className="text-lg font-semibold">
-                  ${estimate.total.toFixed(2)}
+                  ${parseFloat(estimate.total).toFixed(2)}
                 </div>
                 
                 <div className="flex flex-wrap gap-2 md:justify-end">
@@ -275,6 +265,8 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           estimateId={selectedEstimateId}
           jobId={jobId}
           onSyncToInvoice={() => {
+            fetchEstimates();
+            setIsEstimateBuilderOpen(false);
             if (onEstimateConverted) {
               onEstimateConverted();
             }
@@ -283,4 +275,4 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       </CardContent>
     </Card>
   );
-};
+}

@@ -2,17 +2,19 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Estimate } from "@/hooks/useEstimates";
+import { LineItem } from "@/components/jobs/builder/types";
 
-export interface EstimateItem {
+export interface Estimate {
   id: string;
-  name: string;
-  description: string;
-  price: number;
-  quantity: number;
-  taxable: boolean;
-  category: string;
-  tags: string[];
+  job_id: string;
+  date: string;
+  estimate_number: string;
+  status: string;
+  total: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  items?: LineItem[];
 }
 
 export const useEstimateData = (jobId: string) => {
@@ -24,63 +26,55 @@ export const useEstimateData = (jobId: string) => {
     const fetchEstimates = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data: estimatesData, error: estimatesError } = await supabase
           .from('estimates')
-          .select('*, estimate_items(*), recommended_products(*)')
+          .select('*')
           .eq('job_id', jobId)
           .order('created_at', { ascending: false });
         
-        if (error) {
-          throw error;
+        if (estimatesError) {
+          throw estimatesError;
         }
 
-        // Transform the data to match our Estimate interface
-        const transformedEstimates: Estimate[] = data.map((est) => {
-          // Extract estimate items
-          const items = est.estimate_items || [];
-          
-          // Extract recommended product (if any)
-          const recProduct = est.recommended_products && est.recommended_products.length > 0 
-            ? {
-                id: est.recommended_products[0].id,
-                name: est.recommended_products[0].name,
-                description: est.recommended_products[0].description || '',
-                price: est.recommended_products[0].price,
-                category: est.recommended_products[0].category || '',
-                tags: est.recommended_products[0].tags || [],
+        if (estimatesData?.length) {
+          const estimatesWithItems = await Promise.all(
+            estimatesData.map(async (estimate) => {
+              // Fetch line items for each estimate
+              const { data: itemsData, error: itemsError } = await supabase
+                .from('line_items')
+                .select('*')
+                .eq('parent_type', 'estimate')
+                .eq('parent_id', estimate.id);
+                
+              if (itemsError) {
+                console.error('Error fetching line items:', itemsError);
+                return {
+                  ...estimate,
+                  items: []
+                };
               }
-            : null;
-            
-          return {
-            id: est.id,
-            job_id: est.job_id,
-            number: est.number,
-            date: est.date,
-            amount: est.amount,
-            status: est.status,
-            viewed: est.viewed,
-            discount: est.discount || 0,
-            tax_rate: est.tax_rate || 0,
-            technicians_note: est.technicians_note || '',
-            created_at: est.created_at,
-            updated_at: est.updated_at,
-            items: items.map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              description: item.description || '',
-              price: item.price,
-              quantity: item.quantity,
-              taxable: item.taxable,
-              category: item.category || '',
-              tags: item.tags || [],
-            })),
-            estimate_items: items,
-            recommendedProduct: recProduct,
-            techniciansNote: est.technicians_note || '',
-          };
-        });
-        
-        setEstimates(transformedEstimates);
+              
+              // Transform items to match our LineItem interface
+              const items = itemsData?.map(item => ({
+                id: item.id,
+                description: item.description || '',
+                quantity: item.quantity,
+                unitPrice: parseFloat(item.unit_price),
+                taxable: item.taxable,
+                total: item.quantity * parseFloat(item.unit_price)
+              })) || [];
+              
+              return {
+                ...estimate,
+                items
+              };
+            })
+          );
+          
+          setEstimates(estimatesWithItems);
+        } else {
+          setEstimates([]);
+        }
       } catch (error) {
         console.error('Error fetching estimates:', error);
         toast.error('Failed to load estimates');
