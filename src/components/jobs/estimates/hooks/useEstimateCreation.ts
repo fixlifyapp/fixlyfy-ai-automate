@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,30 +19,41 @@ export const useEstimateCreation = (
     // This function just signals the dialog should open
     // The actual creation happens in handleEstimateCreated
     setEstimateItems([]);
+    setSelectedEstimateId(null);
   };
 
   // Handle editing an existing estimate
   const handleEditEstimate = (estimateId: string) => {
+    console.log("useEstimateCreation.handleEditEstimate called with ID:", estimateId);
     const estimate = estimates.find(est => est.id === estimateId);
     if (estimate) {
       setSelectedEstimateId(estimateId);
       loadEstimateItems(estimateId);
       toast.info(`Editing estimate ${estimate.number}`);
+    } else {
+      console.error("Estimate not found with ID:", estimateId);
+      toast.error("Estimate not found");
     }
   };
 
   // Load existing items for an estimate
   const loadEstimateItems = async (estimateId: string) => {
     try {
+      console.log("Loading estimate items for ID:", estimateId);
       const { data, error } = await supabase
         .from('estimate_items')
         .select('*')
         .eq('estimate_id', estimateId);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error loading items:", error);
+        throw error;
+      }
 
+      console.log("Loaded estimate items:", data);
+      
       // Fix: Map the database items to Product type with required fields
-      if (data) {
+      if (data && data.length > 0) {
         const mappedItems: Product[] = data.map(item => ({
           id: item.id,
           name: item.name,
@@ -55,8 +67,10 @@ export const useEstimateCreation = (
           ourPrice: 0, // Default ourPrice to 0
           sku: ""
         }));
+        console.log("Mapped estimate items:", mappedItems);
         setEstimateItems(mappedItems);
       } else {
+        console.log("No estimate items found, setting empty array");
         setEstimateItems([]);
       }
     } catch (error) {

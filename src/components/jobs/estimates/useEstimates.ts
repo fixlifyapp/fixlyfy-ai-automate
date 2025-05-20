@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEstimateData } from "./hooks/useEstimateData";
 import { useEstimateActions } from "./hooks/useEstimateActions";
@@ -53,14 +52,18 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     } else {
       // Just view/edit the estimate
       estimateCreation.actions.handleEditEstimate(estimate.id);
+      setIsEstimateBuilderOpen(true);
     }
   };
 
   // Handle edit estimate with improved debugging
   const handleEditEstimate = (estimateId: string) => {
     console.log("handleEditEstimate called with ID:", estimateId);
+    
+    // First, set the selectedEstimateId in the creation hook
     estimateCreation.actions.handleEditEstimate(estimateId);
-    // Make sure to open the estimate builder dialog
+    
+    // Then, make sure to open the estimate builder dialog
     setIsEstimateBuilderOpen(true);
   };
 
