@@ -18,7 +18,6 @@ export interface Client {
   type?: string;
   status?: string;
   notes?: string;
-  rating?: number;
   created_at?: string;
   updated_at?: string;
 }

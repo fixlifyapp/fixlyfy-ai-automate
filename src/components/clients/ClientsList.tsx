@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,7 +9,6 @@ import {
   MoreVertical, 
   Eye, 
   Trash,
-  Star,
   Mail,
   Phone,
   FileDown,
@@ -104,9 +104,9 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
       : clients;
       
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "Client ID,Name,Email,Phone,Status,Type,Rating\n"
+      + "Client ID,Name,Email,Phone,Status,Type\n"
       + exportData.map(client => 
-          `${client.id},${client.name},${client.email || ''},${client.phone || ''},${client.status || ''},${client.type || ''},${client.rating || ''}`
+          `${client.id},${client.name},${client.email || ''},${client.phone || ''},${client.status || ''},${client.type || ''}`
         ).join("\n");
         
     const encodedUri = encodeURI(csvContent);
@@ -116,16 +116,6 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const getRatingStars = (rating: number = 0) => {
-    return Array(5).fill(0).map((_, i) => (
-      <Star 
-        key={i}
-        size={14} 
-        className={i < rating ? "text-fixlyfy-warning fill-fixlyfy-warning" : "text-fixlyfy-text-secondary"}
-      />
-    ));
   };
 
   const getDisplayId = (client: any) => {
@@ -222,11 +212,8 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
               </div>
               
               <div className="p-4">
-                <div className="flex items-center mb-3">
-                  <div className="flex">
-                    {getRatingStars(client.rating)}
-                  </div>
-                  <Badge className="ml-2 bg-fixlyfy/10 text-fixlyfy">{client.type}</Badge>
+                <div className="mb-3">
+                  <Badge className="bg-fixlyfy/10 text-fixlyfy">{client.type}</Badge>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center">
@@ -286,7 +273,6 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Rating</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -338,11 +324,6 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                     <Badge className="bg-fixlyfy/10 text-fixlyfy">
                       {client.type || "Unknown"}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex">
-                      {getRatingStars(client.rating)}
-                    </div>
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>

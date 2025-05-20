@@ -11,7 +11,6 @@ export interface Client {
   zip: string;
   state: string;
   type: string;
-  rating: number;
   status: string;
   notes?: string;
   tags?: string[];
