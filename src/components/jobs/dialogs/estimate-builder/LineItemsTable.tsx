@@ -28,15 +28,31 @@ export const LineItemsTable = ({
     return afterDiscount;
   };
 
+  // Helper function to calculate the margin for a line item
+  const calculateMargin = (item: LineItem): number => {
+    const revenue = calculateLineTotal(item);
+    const cost = item.quantity * (item.ourPrice || 0);
+    return revenue - cost;
+  };
+
+  // Helper function to calculate margin percentage
+  const calculateMarginPercentage = (item: LineItem): number => {
+    const margin = calculateMargin(item);
+    const revenue = calculateLineTotal(item);
+    if (revenue === 0) return 0;
+    return (margin / revenue) * 100;
+  };
+
   return (
     <div className="border rounded-md overflow-hidden bg-white">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50%]">Description</TableHead>
-            <TableHead className="w-[80px]">Qty</TableHead>
-            <TableHead className="w-[120px]">Unit Price</TableHead>
-            <TableHead className="w-[80px]">Discount %</TableHead>
+            <TableHead className="w-[40%]">Description</TableHead>
+            <TableHead className="w-[70px]">Qty</TableHead>
+            <TableHead className="w-[100px]">Unit Price</TableHead>
+            <TableHead className="w-[100px]">Our Price</TableHead>
+            <TableHead className="w-[70px]">Discount</TableHead>
             <TableHead className="w-[120px] text-right">Total</TableHead>
             <TableHead className="w-[80px]"></TableHead>
           </TableRow>
@@ -79,6 +95,22 @@ export const LineItemsTable = ({
                 </TableCell>
                 <TableCell>
                   <div className="relative">
+                    <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      value={item.ourPrice || 0}
+                      min={0}
+                      step={0.01}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        onUpdateLineItem(item.id, "ourPrice", value);
+                      }}
+                      className="border-transparent focus:border-input bg-transparent pl-6"
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="relative">
                     <Input
                       type="number"
                       value={item.discount || 0}
@@ -90,8 +122,15 @@ export const LineItemsTable = ({
                     <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-medium">
-                  ${calculateLineTotal(item).toFixed(2)}
+                <TableCell className="text-right">
+                  <div>
+                    <div className="font-medium">${calculateLineTotal(item).toFixed(2)}</div>
+                    {item.ourPrice > 0 && (
+                      <div className="text-xs text-green-600">
+                        M: ${calculateMargin(item).toFixed(2)} ({calculateMarginPercentage(item).toFixed(0)}%)
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -119,7 +158,7 @@ export const LineItemsTable = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 No items added yet. Add items from the catalog or create a custom line item.
               </TableCell>
             </TableRow>

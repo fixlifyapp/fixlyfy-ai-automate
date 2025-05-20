@@ -5,15 +5,13 @@ import { useState } from "react";
 import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
 import { EstimateForm } from "./EstimateForm";
 import { EstimatePreview } from "./EstimatePreview";
-import { EstimateSyncOptions } from "./EstimateSyncOptions";
-import { EstimateUpsellOptions } from "./EstimateUpsellOptions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 import { CustomLineItemDialog } from "./CustomLineItemDialog";
 import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, FileText, Cog, ListPlus } from "lucide-react";
+import { ArrowLeft, FileText, ListPlus } from "lucide-react";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -43,6 +41,11 @@ export const EstimateBuilderDialog = ({
     onSyncToInvoice,
     jobId
   });
+  
+  // Set tax rate to 13% fixed
+  if (estimateBuilder.taxRate !== 13) {
+    estimateBuilder.setTaxRate(13);
+  }
   
   const handleProductSelect = (product: Product) => {
     estimateBuilder.handleAddProduct(product);
@@ -158,14 +161,6 @@ export const EstimateBuilderDialog = ({
                 <FileText size={20} />
                 <span>Preview</span>
               </button>
-              
-              <button 
-                onClick={() => setActiveTab("options")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "options" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
-                <Cog size={20} />
-                <span>Options</span>
-              </button>
             </div>
           )}
           
@@ -175,7 +170,6 @@ export const EstimateBuilderDialog = ({
                 <TabsList className="w-full bg-background">
                   <TabsTrigger value="form" className="flex-1">Form</TabsTrigger>
                   <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
-                  <TabsTrigger value="options" className="flex-1">Options</TabsTrigger>
                 </TabsList>
               </Tabs>
             )}
@@ -211,21 +205,6 @@ export const EstimateBuilderDialog = ({
                   calculateGrandTotal={estimateBuilder.calculateGrandTotal}
                   notes={estimateBuilder.notes || ""}
                 />
-              )}
-              
-              {activeTab === "options" && (
-                <div className="space-y-8">
-                  <EstimateUpsellOptions
-                    warranty={estimateBuilder.recommendedWarranty}
-                    techniciansNote={estimateBuilder.techniciansNote}
-                    onWarrantyChange={estimateBuilder.setRecommendedWarranty}
-                    onNotesChange={estimateBuilder.setTechniciansNote}
-                  />
-                  
-                  <EstimateSyncOptions
-                    onSyncToInvoice={estimateBuilder.handleSyncToInvoice}
-                  />
-                </div>
               )}
             </div>
             

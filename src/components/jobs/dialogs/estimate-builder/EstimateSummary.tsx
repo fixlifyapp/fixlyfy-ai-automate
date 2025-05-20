@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 
 interface EstimateSummaryProps {
   taxRate: number;
-  onTaxRateChange: (value: string) => void;
+  onTaxRateChange?: (value: string) => void;
   calculateSubtotal?: () => number;
   calculateTotalTax?: () => number;
   calculateGrandTotal?: () => number;
@@ -12,7 +12,7 @@ interface EstimateSummaryProps {
 }
 
 export const EstimateSummary = ({
-  taxRate,
+  taxRate = 13, // Default to 13%
   onTaxRateChange,
   calculateSubtotal = () => 0,
   calculateTotalTax = () => 0,
@@ -41,17 +41,7 @@ export const EstimateSummary = ({
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <span className="text-muted-foreground mr-2">Tax Rate:</span>
-            <div className="relative w-20">
-              <Input 
-                type="number"
-                min={0}
-                max={100}
-                value={taxRate}
-                onChange={(e) => onTaxRateChange(e.target.value)}
-                className="pl-2 pr-6 py-1 h-8"
-              />
-              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
-            </div>
+            <span className="font-medium">13%</span>
           </div>
           <span className="font-medium">${totalTax.toFixed(2)}</span>
         </div>
@@ -63,9 +53,9 @@ export const EstimateSummary = ({
         
         {showMargin && (
           <>
-            <div className="border-t pt-4 flex justify-between items-center text-sm text-muted-foreground">
-              <span>Margin:</span>
-              <span>${totalMargin.toFixed(2)} ({marginPercentage.toFixed(1)}%)</span>
+            <div className="border-t pt-4 flex justify-between items-center text-sm text-green-600">
+              <span className="font-medium">Margin:</span>
+              <span className="font-medium">${totalMargin.toFixed(2)} ({marginPercentage.toFixed(1)}%)</span>
             </div>
           </>
         )}
