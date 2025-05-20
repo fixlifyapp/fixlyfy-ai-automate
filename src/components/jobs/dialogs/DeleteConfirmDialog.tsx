@@ -16,6 +16,7 @@ interface DeleteConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isDeleting?: boolean;
+  confirmText?: string;
 }
 
 export function DeleteConfirmDialog({ 
@@ -23,7 +24,8 @@ export function DeleteConfirmDialog({
   description, 
   onOpenChange, 
   onConfirm, 
-  isDeleting = false 
+  isDeleting = false,
+  confirmText = "Delete"
 }: DeleteConfirmDialogProps) {
   return (
     <DialogContent>
@@ -51,7 +53,7 @@ export function DeleteConfirmDialog({
           className="gap-2"
         >
           <Trash2 size={16} />
-          {isDeleting ? "Deleting..." : "Delete"}
+          {isDeleting ? "Deleting..." : confirmText}
         </Button>
       </DialogFooter>
     </DialogContent>
