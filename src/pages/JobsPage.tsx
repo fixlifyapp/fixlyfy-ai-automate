@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -9,7 +8,7 @@ import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { toast } from "sonner";
 import { useJobs } from "@/hooks/useJobs";
-import { generateAllTestData } from "@/utils/test-data-generator";
+import { generateAllTestData } from "@/utils/test-data"; // Updated import path
 
 const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);

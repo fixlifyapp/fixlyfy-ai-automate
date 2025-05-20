@@ -9,7 +9,7 @@ import { ReportsJobs } from "@/components/reports/ReportsJobs";
 import { Button } from "@/components/ui/button";
 import { Database, Loader2, FileDown } from "lucide-react";
 import { toast } from "sonner";
-import { useTestData } from "@/utils/test-data-generator";
+import { useTestData } from "@/utils/test-data"; // Updated import path
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
