@@ -2,6 +2,12 @@
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const DashboardActions = ({ onRefresh }: { onRefresh?: () => void }) => {
   const navigate = useNavigate();
@@ -17,14 +23,28 @@ export const DashboardActions = ({ onRefresh }: { onRefresh?: () => void }) => {
         Refresh
       </Button>
       
-      <Button 
-        className="bg-fixlyfy hover:bg-fixlyfy/90"
-        size="sm"
-        onClick={() => navigate("/jobs")}
-      >
-        <Plus size={16} className="mr-2" />
-        New Job
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            className="bg-fixlyfy hover:bg-fixlyfy/90"
+            size="sm"
+          >
+            <Plus size={16} className="mr-2" />
+            New Job
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => navigate("/jobs/new")}>
+            Create Job
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/estimates/new")}>
+            Create Estimate
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/clients/new")}>
+            Add Client
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
