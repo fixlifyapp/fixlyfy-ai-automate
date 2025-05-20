@@ -18,6 +18,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Configure Supabase auth to use a longer session duration (7 days)
+    supabase.auth.setSession({
+      refresh_token: undefined,
+      access_token: undefined,
+      expires_in: 60 * 60 * 24 * 7 // 7 days in seconds
+    }).catch(console.error);
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {

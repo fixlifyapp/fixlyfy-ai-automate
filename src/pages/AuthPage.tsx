@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -25,12 +24,11 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
+      // Correctly structure the signInWithPassword call
+      // The session configuration goes at the top level, not inside options
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          expiresIn: SESSION_EXPIRY
-        }
+        password
       });
       
       if (error) {
@@ -57,7 +55,6 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
-      // Modified to not include email redirect - turns off email verification
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -75,13 +72,10 @@ export default function AuthPage() {
         });
         console.error("Sign up error:", error);
       } else if (data.user) {
-        // Automatically sign in after sign up with 7-day session
+        // Automatically sign in after sign up
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
-          password,
-          options: {
-            expiresIn: SESSION_EXPIRY
-          }
+          password
         });
         
         if (signInError) {
