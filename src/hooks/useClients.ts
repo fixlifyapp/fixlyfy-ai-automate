@@ -17,6 +17,7 @@ export interface Client {
   tags?: string[];
   type?: string;
   status?: string;
+  notes?: string;
   rating?: number;
   created_at?: string;
   updated_at?: string;
@@ -50,7 +51,8 @@ export const useClients = () => {
     fetchClients();
   }, [refreshTrigger]);
 
-  const addClient = async (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
+  // Update the type to accept partial client data with name as required
+  const addClient = async (client: { name: string } & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -66,7 +68,7 @@ export const useClients = () => {
     } catch (error) {
       console.error('Error adding client:', error);
       toast.error('Failed to add client');
-      return null;
+      throw error;
     }
   };
 

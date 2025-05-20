@@ -20,7 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useClients, type Client } from "@/hooks/useClients";
+import { useClients } from "@/hooks/useClients";
 import { toast } from "sonner";
 
 interface ClientsCreateModalProps {
@@ -38,9 +38,18 @@ export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalPro
     
     try {
       const formData = new FormData(e.target as HTMLFormElement);
+      const name = formData.get('name') as string;
       
-      const clientData: Partial<Client> = {
-        name: formData.get('name') as string,
+      // Ensure we have the required name field
+      if (!name || name.trim() === '') {
+        toast.error("Client name is required");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create client data with required name field and optional fields
+      const clientData = {
+        name,
         email: formData.get('email') as string,
         phone: formData.get('phone') as string,
         address: formData.get('address') as string,
