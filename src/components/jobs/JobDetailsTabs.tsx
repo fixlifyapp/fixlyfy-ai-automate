@@ -1,4 +1,3 @@
-
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -49,16 +48,12 @@ export const JobDetailsTabs = ({
               History
             </TabsTrigger>
           </TabsList>
-          {(onCreateEstimate || onCreateInvoice) && (
-            <div>
-              {onCreateEstimate && <Button size="sm" onClick={onCreateEstimate}>
-                <PlusCircle className="mr-1" size={16} /> Estimate
-              </Button>}
+          {(onCreateEstimate || onCreateInvoice) && <div>
+              {onCreateEstimate}
               {onCreateInvoice && <Button size="sm" onClick={onCreateInvoice} className="ml-2">
                 <PlusCircle className="mr-1" size={16} /> Invoice
               </Button>}
-            </div>
-          )}
+            </div>}
         </div>
         
         {children}
