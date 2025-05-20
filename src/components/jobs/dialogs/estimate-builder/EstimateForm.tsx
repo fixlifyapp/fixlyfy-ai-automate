@@ -1,3 +1,4 @@
+
 import { LineItem } from "@/components/jobs/builder/types";
 import { LineItemsTable } from "./LineItemsTable";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ interface EstimateFormProps {
 
 export const EstimateForm = ({ 
   estimateNumber, 
-  lineItems, 
+  lineItems = [], // Provide default empty array
   onRemoveLineItem, 
   onUpdateLineItem,
   onEditLineItem,
@@ -58,7 +59,7 @@ export const EstimateForm = ({
     <div className="space-y-8">
       {/* Line Items Table */}
       <LineItemsTable
-        lineItems={lineItems}
+        lineItems={Array.isArray(lineItems) ? lineItems : []} // Ensure lineItems is always an array
         onRemoveLineItem={onRemoveLineItem}
         onUpdateLineItem={onUpdateLineItem}
         onEditLineItem={onEditLineItem}
@@ -89,11 +90,11 @@ export const EstimateForm = ({
           <EstimateSummary
             taxRate={taxRate}
             onTaxRateChange={handleTaxRateChange}
-            calculateSubtotal={calculateSubtotal}
-            calculateTotalTax={calculateTotalTax}
-            calculateGrandTotal={calculateGrandTotal}
-            calculateTotalMargin={showMargin ? calculateTotalMargin : undefined}
-            calculateMarginPercentage={showMargin ? calculateMarginPercentage : undefined}
+            calculateSubtotal={calculateSubtotal || (() => 0)}
+            calculateTotalTax={calculateTotalTax || (() => 0)}
+            calculateGrandTotal={calculateGrandTotal || (() => 0)}
+            calculateTotalMargin={showMargin ? (calculateTotalMargin || (() => 0)) : undefined}
+            calculateMarginPercentage={showMargin ? (calculateMarginPercentage || (() => 0)) : undefined}
           />
         </div>
       </div>

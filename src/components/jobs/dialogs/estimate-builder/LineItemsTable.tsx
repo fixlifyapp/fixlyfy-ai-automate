@@ -13,7 +13,7 @@ interface LineItemsTableProps {
 }
 
 export const LineItemsTable = ({
-  lineItems,
+  lineItems = [], // Provide default empty array
   onUpdateLineItem,
   onEditLineItem,
   onRemoveLineItem
@@ -42,7 +42,7 @@ export const LineItemsTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lineItems.map((item) => (
+          {Array.isArray(lineItems) && lineItems.map((item) => (
             <TableRow key={item.id} className="hover:bg-muted/20 group">
               <TableCell>
                 <Input
@@ -116,7 +116,7 @@ export const LineItemsTable = ({
               </TableCell>
             </TableRow>
           ))}
-          {lineItems.length === 0 && (
+          {(!Array.isArray(lineItems) || lineItems.length === 0) && (
             <TableRow>
               <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                 No items added yet. Add items from the catalog or create a custom line item.
