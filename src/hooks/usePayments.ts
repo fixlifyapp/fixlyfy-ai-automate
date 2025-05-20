@@ -33,8 +33,8 @@ export const usePayments = (jobId?: string, invoiceId?: string) => {
       
       // Filter the data based on job_id or invoice_id
       const filteredData = data.filter(payment => {
-        if (jobId && payment.job_id === jobId) return true;
-        if (invoiceId && payment.invoice_id === invoiceId) return true;
+        if (jobId && payment.job_id) return payment.job_id === jobId;
+        if (invoiceId && payment.invoice_id) return payment.invoice_id === invoiceId;
         return false;
       });
       

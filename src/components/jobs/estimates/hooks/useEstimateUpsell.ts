@@ -28,11 +28,10 @@ export const useEstimateUpsell = (
           price: 99.99,
           category: "Services",
           taxable: true,
-          quantity: 1,
-          tags: [],
           cost: 50,
           ourPrice: 75,
           sku: ""
+          // Do not include quantity here as it's optional in the Product interface
         };
         
         setRecommendedProduct(fakeProduct);

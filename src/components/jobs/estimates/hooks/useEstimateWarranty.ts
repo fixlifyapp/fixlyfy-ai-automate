@@ -14,7 +14,7 @@ export const useEstimateWarranty = (
   const handleWarrantySelection = async (selectedWarranty: Product | null, customNote: string) => {
     if (selectedWarranty && selectedEstimate) {
       try {
-        // Add the warranty to the line_items table
+        // Add the warranty to the line_items table - not estimate_items
         const { data: newItem, error: itemError } = await supabase
           .from('line_items')
           .insert({
@@ -65,7 +65,8 @@ export const useEstimateWarranty = (
                   }
                 ],
                 total: est.total + selectedWarranty.price,
-                notes: customNote || est.notes
+                notes: customNote || est.notes,
+                techniciansNote: customNote || est.techniciansNote
               } 
             : est
         );
@@ -92,7 +93,7 @@ export const useEstimateWarranty = (
         return;
       }
       
-      // Delete the item from the database
+      // Delete the item from the database - use line_items, not estimate_items
       const { error: deleteError } = await supabase
         .from('line_items')
         .delete()

@@ -150,17 +150,17 @@ export const useProducts = (category?: string) => {
     try {
       setIsDeleting(true);
       
-      // Check for dependencies in estimate_items
-      const { data: estimateItems, error: checkError } = await supabase
-        .from('estimate_items')
+      // Check for dependencies in line_items, not estimate_items
+      const { data: lineItems, error: checkError } = await supabase
+        .from('line_items')
         .select('id')
         .eq('id', id)
         .limit(1);
         
       if (checkError) throw checkError;
       
-      // If product is used in any estimate, warn the user
-      if (estimateItems && estimateItems.length > 0) {
+      // If product is used in any line items, warn the user
+      if (lineItems && lineItems.length > 0) {
         toast.error('Cannot delete product as it is being used in estimates');
         return false;
       }

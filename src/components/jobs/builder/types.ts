@@ -1,15 +1,17 @@
-
 export interface Product {
   id: string;
   name: string;
   description?: string;
   category: string;
   price: number;
+  cost: number;
   ourPrice?: number;
-  cost?: number;
-  taxable?: boolean;
+  taxable: boolean;
   tags?: string[];
   sku?: string;
+  quantity?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LineItem {

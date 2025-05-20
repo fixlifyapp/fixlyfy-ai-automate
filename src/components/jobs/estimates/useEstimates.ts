@@ -14,7 +14,9 @@ const convertEstimateType = (estimate: EstimateDataType): EstimateHookType => {
     ...estimate,
     number: estimate.estimate_number,
     amount: estimate.total,
-    // Include any other properties needed from both types
+    // Ensure created_at and updated_at are present
+    created_at: estimate.created_at || new Date().toISOString(),
+    updated_at: estimate.updated_at || new Date().toISOString()
   };
 };
 
@@ -28,8 +30,20 @@ const convertEstimateHookType = (estimate: EstimateHookType): EstimateDataType =
     total: estimate.total || estimate.amount || 0,
     created_at: estimate.created_at || estimate.date,
     updated_at: estimate.updated_at || new Date().toISOString(),
-    // Add any missing required fields
+    // Add required fields
+    date: estimate.date,
+    status: estimate.status
   };
+};
+
+// Helper function to convert arrays of estimates
+const convertEstimatesArray = (estimates: EstimateDataType[]): EstimateHookType[] => {
+  return estimates.map(convertEstimateType);
+};
+
+// Helper function to convert back to EstimateDataType[]
+const convertBackEstimatesArray = (estimates: EstimateHookType[]): EstimateDataType[] => {
+  return estimates.map(convertEstimateHookType);
 };
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
@@ -45,10 +59,15 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
   const [error, setError] = useState<boolean>(false);
 
-  // Get hooks for different functionalities - safely convert types when passing data
-  const estimateActions = useEstimateActions(jobId, estimatesData, setEstimatesData, onEstimateConverted);
-  const estimateCreation = useEstimateCreation(jobId, estimatesData, setEstimatesData);
-  const estimateUpsell = useEstimateUpsell(estimatesData, setEstimatesData);
+  // Create a wrapper for setEstimatesData to handle type conversion
+  const setEstimatesWrapper = (newEstimates: EstimateDataType[]) => {
+    setEstimatesData(newEstimates);
+  };
+
+  // Get hooks for different functionalities
+  const estimateActions = useEstimateActions(jobId, estimatesData, setEstimatesWrapper, onEstimateConverted);
+  const estimateCreation = useEstimateCreation(jobId, estimatesData, setEstimatesWrapper);
+  const estimateUpsell = useEstimateUpsell(estimatesData, setEstimatesWrapper);
   
   // Get client and company info
   const estimateInfo = useEstimateInfo(jobId);
@@ -65,7 +84,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   // Get warranty functionality (depends on selectedEstimate from actions)
   const estimateWarranty = useEstimateWarranty(
     estimatesData, 
-    setEstimatesData, 
+    setEstimatesWrapper, 
     estimateActions.state.selectedEstimate
   );
 

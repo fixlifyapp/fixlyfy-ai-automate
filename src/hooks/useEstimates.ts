@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 
-// Define a simple Estimate interface that aligns with the one in useEstimateData
+// Define a more compatible Estimate interface that merges properties from both interfaces
 export interface Estimate {
   id: string;
   job_id: string;
@@ -15,8 +15,8 @@ export interface Estimate {
   items?: any[];
   recommendedProduct?: any;
   techniciansNote?: string;
-  created_at?: string;
-  updated_at?: string;
+  created_at?: string; // Make optional to match usage in useEstimates.ts
+  updated_at?: string; // Make optional to match usage in useEstimates.ts
   notes?: string;
 }
 
