@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -179,6 +178,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
       {isGridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {clients.map((client) => (
+            
             <div
               key={client.id}
               className="fixlyfy-card hover:shadow-lg transition-shadow relative"
@@ -201,6 +201,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                     <h3 className="font-medium">{client.name}</h3>
                     <p className="text-xs text-fixlyfy-text-secondary">{client.address}</p>
                   </div>
+                  
                   <Badge className={cn(
                     client.status === "active" && "bg-fixlyfy-success/10 text-fixlyfy-success",
                     client.status === "inactive" && "bg-fixlyfy-text-secondary/10 text-fixlyfy-text-secondary"
@@ -209,6 +210,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                   </Badge>
                 </div>
               </div>
+              
               <div className="p-4">
                 <div className="flex items-center mb-3">
                   <div className="flex">
@@ -298,6 +300,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       {client.id}
                     </span>
                   </TableCell>
+                  
                   <TableCell>
                     <div 
                       className="font-medium cursor-pointer"
