@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,22 +13,41 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from "sonner";
+import { useNavigate } from 'react-router-dom';
 
 export const UserMenu = () => {
   const { user, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
       await signOut();
       toast.success("Signed out successfully");
+      navigate('/auth');
     } catch (error: any) {
       toast.error("Error signing out");
       console.error("Sign out error:", error);
     }
   };
+  
+  const handleSettings = () => {
+    navigate('/settings');
+    setIsOpen(false);
+  };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <Button 
+        variant="outline" 
+        onClick={() => navigate('/auth')}
+        className="flex items-center gap-2"
+      >
+        <UserIcon size={16} />
+        <span>Sign In</span>
+      </Button>
+    );
+  }
 
   // Get user initials for the avatar fallback
   const getUserInitials = () => {
@@ -54,9 +73,9 @@ export const UserMenu = () => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <UserIcon className="mr-2 h-4 w-4" />
-          <span>Profile</span>
+        <DropdownMenuItem onClick={handleSettings}>
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
