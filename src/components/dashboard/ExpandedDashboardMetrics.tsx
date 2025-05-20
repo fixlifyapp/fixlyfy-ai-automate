@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -464,7 +463,6 @@ export const ExpandedDashboardMetrics = () => {
           icon={<DollarSign className="h-4 w-4 text-white" />}
           iconColor="bg-blue-500"
           change={calculateRevenueChange()}
-          isPositive={calculateRevenueChange() >= 0}
           isLoading={isLoading}
           changeLabel="vs previous period"
         />
@@ -474,7 +472,6 @@ export const ExpandedDashboardMetrics = () => {
           icon={<CalendarClock className="h-4 w-4 text-white" />}
           iconColor="bg-amber-500"
           change={calculateOpenJobsChange()}
-          isPositive={calculateOpenJobsChange() < 0} // For open jobs, negative change may be good
           isLoading={isLoading}
           changeLabel="vs previous period"
         />
