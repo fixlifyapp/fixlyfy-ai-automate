@@ -1,13 +1,30 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, addWeeks, subWeeks } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 interface ScheduleCalendarProps {
   view: 'day' | 'week' | 'month';
+}
+
+interface JobScheduleItem {
+  id: string;
+  client: string;
+  title: string;
+  date: Date;
+  duration: number;
+  technician: {
+    name: string;
+    initials: string;
+    avatar?: string;
+  };
+  status: string;
+  address: string;
 }
 
 // This is sample job data for the schedule
@@ -70,11 +87,79 @@ const timeSlots = Array.from({ length: 12 }, (_, index) => {
 });
 
 export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 4, 15)); // Fixed to May 15, 2025
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [scheduledJobs, setScheduledJobs] = useState<JobScheduleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  
+  // Fetch jobs from Supabase
+  useEffect(() => {
+    if (!user) return;
+    
+    async function fetchJobs() {
+      try {
+        setLoading(true);
+        
+        // For demo, I'm not filtering by date range yet, but you would do that in a real app
+        const { data, error } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            client:client_id(name),
+            technician:technician_id(id, name)
+          `)
+          .in('status', ['scheduled', 'in-progress', 'completed']);
+          
+        if (error) throw error;
+        
+        // Transform data to match component expectations
+        const formattedJobs = data.map(job => ({
+          id: job.id,
+          client: job.client?.name || 'No client',
+          title: job.title || 'Unnamed job',
+          date: new Date(job.date || new Date()),
+          duration: 120, // Default to 2 hours if not specified
+          technician: {
+            name: job.technician?.name || 'Unassigned',
+            initials: job.technician?.name ? 
+              job.technician.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 
+              'UA'
+          },
+          status: job.status || 'scheduled',
+          address: job.description || 'No address provided'
+        }));
+        
+        setScheduledJobs(formattedJobs);
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+        toast.error('Failed to load scheduled jobs');
+        // Fallback to demo data if needed
+        setScheduledJobs([
+          {
+            id: "JOB-1001",
+            client: "Michael Johnson",
+            title: "HVAC Repair",
+            date: new Date(2025, 4, 15, 13, 30),
+            duration: 120,
+            technician: {
+              name: "Robert Smith",
+              initials: "RS"
+            },
+            status: "scheduled",
+            address: "123 Main St, Apt 45",
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchJobs();
+  }, [user]);
   
   const handlePrevious = () => {
     if (view === 'day') {
@@ -97,7 +182,7 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
   };
   
   const handleToday = () => {
-    setCurrentDate(new Date(2025, 4, 15)); // Reset to fixed date
+    setCurrentDate(new Date());
   };
   
   const getJobsForTimeSlot = (time: string, day: Date) => {
@@ -157,6 +242,17 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
     </div>
   );
   
+  if (loading) {
+    return (
+      <div className="fixlyfy-card p-8 flex items-center justify-center">
+        <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-fixlyfy rounded-full" role="status">
+          <span className="sr-only">Loading...</span>
+        </div>
+        <span className="ml-2">Loading schedule...</span>
+      </div>
+    );
+  }
+  
   if (view === 'day') {
     return (
       <div className="fixlyfy-card overflow-hidden">
@@ -203,7 +299,7 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
                           job.status === 'in-progress' && "text-white",
                           job.status === 'completed' && "text-white"
                         )}>
-                          {job.technician}
+                          {job.technician.name}
                         </Badge>
                       </div>
                     </div>
@@ -279,7 +375,7 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
                         <div className="opacity-90">
                           {format(job.date, 'h:mm a')}
                         </div>
-                        <div className="mt-1 opacity-90">{job.technician}</div>
+                        <div className="mt-1 opacity-90">{job.technician.name}</div>
                       </div>
                     ))}
                   </div>
@@ -309,7 +405,10 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
         {Array.from({ length: 35 }, (_, i) => {
           // This is a simplified month view - in a real app you would calculate the actual days
           const dayNum = (i % 30) + 1;
-          const hasJob = scheduledJobs.some(job => job.date.getDate() === dayNum && job.date.getMonth() === 4);
+          const hasJob = scheduledJobs.some(job => {
+            // Check if any job date matches this calendar day
+            return job.date.getDate() === dayNum && job.date.getMonth() === currentDate.getMonth();
+          });
           
           return (
             <div 

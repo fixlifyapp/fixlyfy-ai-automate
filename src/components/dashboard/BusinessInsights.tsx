@@ -6,90 +6,133 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Brain, RefreshCw, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { clients } from "@/data/real-clients";
-import { jobs } from "@/data/real-jobs";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const BusinessInsights = () => {
   const [insights, setInsights] = useState<string | null>(null);
-  const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
+  const [testStatus, setTestStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [isGenerating, setIsGenerating] = useState(false);
   const [businessMetrics, setBusinessMetrics] = useState<any>(null);
+  const { user } = useAuth();
   
   useEffect(() => {
-    // Calculate real metrics based on the clients and jobs data
-    const completedJobs = jobs.filter(job => job.status === "completed");
-    const activeClients = clients.filter(client => client.status === "active");
+    if (!user) return;
     
-    const currentRevenue = completedJobs.reduce((total, job) => total + job.revenue, 0);
-    // Calculate previous revenue (simulate as 85% of current for demo)
-    const previousRevenue = currentRevenue * 0.85;
-    const revenueTrend = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
-    
-    // Count jobs by status
-    const jobsByStatus = {
-      completed: jobs.filter(job => job.status === "completed").length,
-      scheduled: jobs.filter(job => job.status === "scheduled").length,
-      inProgress: jobs.filter(job => job.status === "in-progress").length,
-      canceled: jobs.filter(job => job.status === "canceled").length
-    };
-    
-    // Technician performance
-    const technicianPerformance = jobs.reduce((acc: Record<string, any>, job) => {
-      const techName = job.technician.name;
-      if (!acc[techName]) {
-        acc[techName] = { jobs: 0, revenue: 0 };
+    async function fetchBusinessMetrics() {
+      try {
+        // Fetch clients data
+        const { data: clients, error: clientsError } = await supabase
+          .from('clients')
+          .select('*');
+          
+        if (clientsError) throw clientsError;
+        
+        // Fetch jobs data
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
+          .select('*, technician:technician_id(id, name)');
+          
+        if (jobsError) throw jobsError;
+        
+        // Calculate metrics based on the real data
+        const completedJobs = jobs.filter(job => job.status === "completed");
+        const activeClients = clients.filter(client => client.status === "active");
+        
+        const currentRevenue = completedJobs.reduce((total, job) => total + parseFloat(job.revenue || 0), 0);
+        // Calculate previous revenue (simulate as 85% of current for demo)
+        const previousRevenue = currentRevenue * 0.85;
+        const revenueTrend = currentRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+        
+        // Count jobs by status
+        const jobsByStatus = {
+          completed: jobs.filter(job => job.status === "completed").length,
+          scheduled: jobs.filter(job => job.status === "scheduled").length,
+          inProgress: jobs.filter(job => job.status === "in-progress").length,
+          canceled: jobs.filter(job => job.status === "canceled").length
+        };
+        
+        // Technician performance
+        const technicianPerformance = jobs.reduce((acc: Record<string, any>, job) => {
+          const techName = job.technician?.name || 'Unassigned';
+          if (!acc[techName]) {
+            acc[techName] = { jobs: 0, revenue: 0 };
+          }
+          acc[techName].jobs += 1;
+          if (job.status === "completed") {
+            acc[techName].revenue += parseFloat(job.revenue || 0);
+          }
+          return acc;
+        }, {});
+        
+        // Find top performer
+        let topPerformer = "None";
+        let maxJobs = 0;
+        
+        Object.entries(technicianPerformance).forEach(([name, data]: [string, any]) => {
+          if (data.jobs > maxJobs) {
+            maxJobs = data.jobs;
+            topPerformer = name;
+          }
+        });
+        
+        // Calculate customer metrics
+        const metrics = {
+          revenue: {
+            current: currentRevenue,
+            previous: previousRevenue,
+            trend: revenueTrend.toFixed(1)
+          },
+          jobs: jobsByStatus,
+          customers: {
+            new: Math.floor(activeClients.length * 0.2), // Simulate 20% new clients
+            returning: Math.floor(activeClients.length * 0.8), // Simulate 80% returning clients
+            satisfaction: 4.7 // Hardcoded for demo
+          },
+          technicians: {
+            utilization: 78, // Hardcoded for demo
+            efficiency: 82, // Hardcoded for demo
+            topPerformer: topPerformer
+          }
+        };
+        
+        setBusinessMetrics(metrics);
+      } catch (error) {
+        console.error("Error fetching business metrics:", error);
+        toast.error("Failed to load business insights data");
       }
-      acc[techName].jobs += 1;
-      if (job.status === "completed") {
-        acc[techName].revenue += job.revenue;
-      }
-      return acc;
-    }, {});
+    }
     
-    // Find top performer
-    let topPerformer = "None";
-    let maxJobs = 0;
-    
-    Object.entries(technicianPerformance).forEach(([name, data]: [string, any]) => {
-      if (data.jobs > maxJobs) {
-        maxJobs = data.jobs;
-        topPerformer = name;
-      }
-    });
-    
-    // Calculate customer metrics
-    const metrics = {
-      revenue: {
-        current: currentRevenue,
-        previous: previousRevenue,
-        trend: revenueTrend.toFixed(1)
-      },
-      jobs: jobsByStatus,
-      customers: {
-        new: Math.floor(activeClients.length * 0.2), // Simulate 20% new clients
-        returning: Math.floor(activeClients.length * 0.8), // Simulate 80% returning clients
-        satisfaction: 4.7 // Hardcoded for demo
-      },
-      technicians: {
-        utilization: 78, // Hardcoded for demo
-        efficiency: 82, // Hardcoded for demo
-        topPerformer: topPerformer
-      }
-    };
-    
-    setBusinessMetrics(metrics);
-  }, []);
+    fetchBusinessMetrics();
+  }, [user]);
   
   const testOpenAI = async () => {
     try {
-      setTestStatus("idle");
-      // Simulate API call for demonstration
-      setTimeout(() => {
+      setTestStatus("loading");
+      
+      // Test the OpenAI connection via edge function
+      const response = await fetch('https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/test-openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('OpenAI connection failed');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
         setTestStatus("success");
         toast.success("OpenAI connection successful!", {
           description: "Your AI insights feature is ready to use"
         });
-      }, 1500);
+      } else {
+        throw new Error(result.error || 'OpenAI connection failed');
+      }
     } catch (error) {
       setTestStatus("error");
       toast.error("OpenAI connection failed", {
@@ -100,7 +143,16 @@ export const BusinessInsights = () => {
   };
   
   if (!businessMetrics) {
-    return <Card className="h-full p-6"><div>Loading metrics...</div></Card>;
+    return (
+      <Card className="h-full">
+        <CardContent className="p-6 flex items-center justify-center h-full">
+          <div className="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-fixlyfy rounded-full" role="status">
+            <span className="sr-only">Loading...</span>
+          </div>
+          <span className="ml-2">Loading metrics...</span>
+        </CardContent>
+      </Card>
+    );
   }
   
   return (
@@ -122,7 +174,11 @@ export const BusinessInsights = () => {
             onClick={testOpenAI}
             variant="outline" 
             size="sm"
+            disabled={testStatus === "loading"}
           >
+            {testStatus === "loading" && (
+              <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent text-fixlyfy rounded-full" />
+            )}
             Test OpenAI Connection
           </Button>
           
