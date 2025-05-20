@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ export interface Product {
   category: string;
   price: number;
   cost: number;
+  ourPrice?: number;
   taxable: boolean;
   tags?: string[];
   sku?: string;
@@ -38,7 +39,12 @@ export const useProducts = (category?: string) => {
         
         if (error) throw error;
         
-        setProducts(data || []);
+        const formattedProducts = data?.map(item => ({
+          ...item,
+          ourPrice: item.ourprice || item.cost || 0
+        })) || [];
+        
+        setProducts(formattedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);
         toast.error('Failed to load products');
@@ -50,19 +56,45 @@ export const useProducts = (category?: string) => {
     fetchProducts();
   }, [category, refreshTrigger]);
 
+  // Get unique categories from products
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    products.forEach(product => {
+      if (product.category) {
+        uniqueCategories.add(product.category);
+      }
+    });
+    return Array.from(uniqueCategories);
+  }, [products]);
+
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Transform ourPrice to ourprice for the database
+      const dbProduct = {
+        ...product,
+        ourprice: product.ourPrice,
+      };
+      
+      // Remove ourPrice as it's not a column in the database
+      delete (dbProduct as any).ourPrice;
+      
       const { data, error } = await supabase
         .from('products')
-        .insert(product)
+        .insert(dbProduct)
         .select()
         .single();
         
       if (error) throw error;
       
-      setProducts(prev => [data, ...prev]);
+      // Transform the returned data to include ourPrice
+      const formattedProduct = {
+        ...data,
+        ourPrice: data.ourprice || data.cost || 0
+      };
+      
+      setProducts(prev => [formattedProduct, ...prev]);
       toast.success('Product added successfully');
-      return data;
+      return formattedProduct;
     } catch (error) {
       console.error('Error adding product:', error);
       toast.error('Failed to add product');
@@ -72,21 +104,35 @@ export const useProducts = (category?: string) => {
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     try {
+      // Transform ourPrice to ourprice for the database
+      const dbUpdates = { ...updates };
+      
+      if ('ourPrice' in updates) {
+        dbUpdates.ourprice = updates.ourPrice;
+        delete (dbUpdates as any).ourPrice;
+      }
+      
       const { data, error } = await supabase
         .from('products')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();
         
       if (error) throw error;
       
+      // Transform the returned data to include ourPrice
+      const formattedProduct = {
+        ...data,
+        ourPrice: data.ourprice || data.cost || 0
+      };
+      
       setProducts(prev => prev.map(product => 
-        product.id === id ? { ...product, ...data } : product
+        product.id === id ? { ...product, ...formattedProduct } : product
       ));
       
       toast.success('Product updated successfully');
-      return data;
+      return formattedProduct;
     } catch (error) {
       console.error('Error updating product:', error);
       toast.error('Failed to update product');
@@ -113,10 +159,15 @@ export const useProducts = (category?: string) => {
     }
   };
 
+  // Alias addProduct to createProduct for backward compatibility
+  const createProduct = addProduct;
+
   return {
     products,
     isLoading,
+    categories,
     addProduct,
+    createProduct,
     updateProduct,
     deleteProduct,
     refreshProducts: () => setRefreshTrigger(prev => prev + 1)

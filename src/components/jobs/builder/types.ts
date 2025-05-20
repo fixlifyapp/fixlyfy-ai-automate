@@ -2,12 +2,14 @@
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   category: string;
   price: number;
   ourPrice?: number;
+  cost?: number;
   taxable?: boolean;
   tags?: string[];
+  sku?: string;
 }
 
 export interface LineItem {
