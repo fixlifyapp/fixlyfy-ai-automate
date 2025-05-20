@@ -123,6 +123,15 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
           const endTime = job.schedule_end ? new Date(job.schedule_end) : new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
           const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (60 * 1000));
           
+          // Handle revenue parsing safely
+          const revenue = job.revenue !== null && job.revenue !== undefined
+            ? typeof job.revenue === 'number'
+              ? job.revenue
+              : typeof job.revenue === 'string'
+                ? parseFloat(job.revenue)
+                : 0
+            : 0;
+          
           return {
             id: job.id,
             client: job.client_id ? (clientMap.get(job.client_id) || 'Unknown Client') : 'Unknown Client',
@@ -130,7 +139,7 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
             technician: job.technician_id ? (technicianMap.get(job.technician_id) || 'Unassigned') : 'Unassigned',
             date: new Date(job.date),
             duration: durationMinutes,
-            revenue: typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue?.toString() || '0'),
+            revenue: revenue,
           };
         });
         

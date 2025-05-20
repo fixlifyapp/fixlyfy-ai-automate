@@ -74,6 +74,15 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
             technicianMap.get(job.technician_id) || 'Unassigned' : 
             'Unassigned';
           
+          // Handle revenue parsing safely
+          const revenue = job.revenue !== null && job.revenue !== undefined
+            ? typeof job.revenue === 'number'
+              ? job.revenue
+              : typeof job.revenue === 'string'
+                ? parseFloat(job.revenue)
+                : 0
+            : 0;
+          
           return {
             id: job.id,
             client: job.title, // Using title as client name since we're in client context
@@ -86,7 +95,7 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
               name: technicianName,
               initials: technicianName ? technicianName.substring(0, 2).toUpperCase() : 'UA'
             },
-            revenue: typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue?.toString() || '0'),
+            revenue: revenue,
             tags: job.tags || []
           };
         });
