@@ -1,7 +1,5 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ReactNode } from "react";
 
 interface JobDetailsTabsProps {
@@ -9,21 +7,16 @@ interface JobDetailsTabsProps {
   onTabChange?: (value: string) => void;
   children?: React.ReactNode;
   onEstimateTabClick?: () => void;
-  onCreateEstimate?: ReactNode;
-  onCreateInvoice?: ReactNode;
 }
 
 export const JobDetailsTabs = ({
   activeTab = "details",
   onTabChange,
   children,
-  onEstimateTabClick,
-  onCreateEstimate,
-  onCreateInvoice
+  onEstimateTabClick
 }: JobDetailsTabsProps) => {
-  // Remove the auto-trigger functionality
+  // Handle tab change functionality
   const handleTabChange = (value: string) => {
-    // Simply call the onTabChange callback without the special estimate handling
     if (onTabChange) {
       onTabChange(value);
     }
@@ -52,10 +45,6 @@ export const JobDetailsTabs = ({
               History
             </TabsTrigger>
           </TabsList>
-          {(onCreateEstimate || onCreateInvoice) && <div>
-              {onCreateEstimate}
-              {onCreateInvoice}
-            </div>}
         </div>
         
         {children}

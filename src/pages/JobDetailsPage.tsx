@@ -15,9 +15,6 @@ import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { ReactNode } from "react";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,21 +27,6 @@ const JobDetailsPage = () => {
     // Switch to invoices tab
     setActiveTab("invoices");
   };
-  
-  // Create button elements for Create Estimate and Create Invoice
-  const createEstimateButton: ReactNode = (
-    <Button variant="outline" size="sm" className="gap-2">
-      <PlusCircle size={16} />
-      New Estimate
-    </Button>
-  );
-  
-  const createInvoiceButton: ReactNode = (
-    <Button variant="outline" size="sm" className="gap-2 ml-2">
-      <PlusCircle size={16} />
-      New Invoice
-    </Button>
-  );
   
   return (
     <PageLayout>
@@ -60,8 +42,6 @@ const JobDetailsPage = () => {
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}
-              onCreateEstimate={createEstimateButton}
-              onCreateInvoice={createInvoiceButton}
             >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
