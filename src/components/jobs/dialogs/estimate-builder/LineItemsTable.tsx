@@ -50,8 +50,8 @@ export const LineItemsTable = ({
           <TableRow>
             <TableHead className="w-[40%]">Description</TableHead>
             <TableHead className="w-[70px]">Qty</TableHead>
-            <TableHead className="w-[100px]">Unit Price</TableHead>
-            <TableHead className="w-[100px]">Our Price</TableHead>
+            <TableHead className="w-[100px]">Customer Price ($)</TableHead>
+            <TableHead className="w-[100px]">Our Price ($)</TableHead>
             <TableHead className="w-[70px]">Discount</TableHead>
             <TableHead className="w-[120px] text-right">Total</TableHead>
             <TableHead className="w-[80px]"></TableHead>

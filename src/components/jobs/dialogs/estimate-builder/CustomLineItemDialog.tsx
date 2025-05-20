@@ -72,7 +72,7 @@ export const CustomLineItemDialog = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="price">Price</Label>
+              <Label htmlFor="price">Customer Price ($)</Label>
               <Input
                 id="price"
                 type="number"
@@ -102,7 +102,7 @@ export const CustomLineItemDialog = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="cost">Cost</Label>
+              <Label htmlFor="cost">Our Price ($)</Label>
               <Input
                 id="cost"
                 type="number"
