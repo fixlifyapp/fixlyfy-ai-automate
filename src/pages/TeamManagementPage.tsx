@@ -109,7 +109,13 @@ const TeamManagementPage = () => {
     try {
       toast.info("Importing test team data...");
       const newMembers = await generateTestTeamMembers(6);
-      toast.success("Successfully imported 6 test team members!");
+      if (newMembers.length > 0) {
+        // Add the new members to the display
+        setFilteredMembers(prevMembers => [...prevMembers, ...newMembers]);
+        toast.success("Successfully imported 6 test team members!");
+      } else {
+        toast.info("Team members already exist - no new data imported");
+      }
       setImportCompleted(true);
     } catch (error) {
       console.error("Error importing test team data:", error);

@@ -91,7 +91,7 @@ const teamRoles = ["technician", "technician", "technician", "technician", "disp
 const teamStatuses = ["active", "active", "active", "active", "suspended"];
 
 // Generate test team members data
-export const generateTestTeamMembers = async (count: number = 6): Promise<void> => {
+export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMember[]> => {
   // Check for existing team members first to avoid duplicating test data
   console.log("Checking for existing team members...");
   const { data: existingTeamMembers, error: checkError } = await supabase
@@ -106,12 +106,12 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<void> 
   
   if (existingTeamMembers && existingTeamMembers.length > 0) {
     console.log("Team members already exist - skipping team generation");
-    return;
+    return []; // Return empty array instead of void
   }
   
   console.log(`Generating ${count} test team members...`);
   
-  const teamMembers = [];
+  const teamMembers: TeamMember[] = [];
   
   for (let i = 0; i < count; i++) {
     const firstName = getRandomElement(["James", "Robert", "John", "Michael", "David", "Sarah", "Jennifer", "Emily", "Jessica", "Ava", "Muhammad", "Wei", "Chen", "Priya", "Ananya", "Omar", "Zara", "Carlos", "Sofia", "Olivia"]);
