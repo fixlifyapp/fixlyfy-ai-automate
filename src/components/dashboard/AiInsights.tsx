@@ -2,105 +2,150 @@
 import { cn } from "@/lib/utils";
 import { Brain, AlertTriangle, TrendingUp, Clock, Star, ArrowUpRight, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InsightsGenerator } from "@/components/ai/InsightsGenerator";
-
-const insights = [
-  {
-    id: 1,
-    title: 'Revenue Opportunity',
-    description: 'HVAC revenue is down 18% compared to last month. Consider a targeted promotion.',
-    type: 'warning',
-    action: 'Create Promotion',
-    actionUrl: '/marketing',
-    icon: AlertTriangle
-  },
-  {
-    id: 2,
-    title: 'Scheduling Optimization',
-    description: '3 technicians are underutilized next week. Optimize your schedule.',
-    type: 'info',
-    action: 'Optimize Schedule',
-    actionUrl: '/schedule',
-    icon: Clock
-  },
-  {
-    id: 3,
-    title: 'Customer Satisfaction',
-    description: 'Customer ratings improved by 12% this month. Great job!',
-    type: 'success',
-    action: 'View Details',
-    actionUrl: '/reports',
-    icon: Star
-  },
-  {
-    id: 4,
-    title: 'Performance Trend',
-    description: 'Your business efficiency has increased 8% over the last quarter.',
-    type: 'info',
-    action: 'View Analytics',
-    actionUrl: '/reports',
-    icon: TrendingUp
-  }
-];
-
-// Sample data for AI recommendations
-const businessData = {
-  revenue: {
-    current: 24680,
-    previous: 21340,
-    trend: 15.7
-  },
-  services: {
-    hvac: { completed: 45, revenue: 12800 },
-    plumbing: { completed: 32, revenue: 8600 },
-    electrical: { completed: 24, revenue: 6200 }
-  },
-  technicians: {
-    total: 8,
-    utilization: 78,
-    topPerforming: ["Robert Smith", "Emily Johnson"]
-  }
-};
+import { clients } from "@/data/real-clients";
+import { jobs } from "@/data/real-jobs";
 
 export const AiInsights = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [recommendation, setRecommendation] = useState<string | null>(null);
+  const [insights, setInsights] = useState<any[]>([]);
+  const [businessData, setBusinessData] = useState<any>(null);
+
+  useEffect(() => {
+    // Generate real insights based on client and job data
+    const activeClients = clients.filter(client => client.status === "active");
+    const completedJobs = jobs.filter(job => job.status === "completed");
+    
+    // Calculate HVAC revenue
+    const hvacJobs = jobs.filter(job => 
+      job.tags.includes("HVAC") && job.status === "completed"
+    );
+    const hvacRevenue = hvacJobs.reduce((sum, job) => sum + job.revenue, 0);
+    const totalRevenue = completedJobs.reduce((sum, job) => sum + job.revenue, 0);
+    
+    // Calculate technician utilization
+    const technicians = [...new Set(jobs.map(job => job.technician.name))];
+    const technicianData = technicians.reduce((acc: Record<string, any>, name) => {
+      const techJobs = jobs.filter(job => job.technician.name === name);
+      acc[name] = techJobs.length;
+      return acc;
+    }, {});
+    
+    // Find underutilized technicians
+    const avgJobsPerTech = jobs.length / technicians.length;
+    const underutilizedTechs = Object.entries(technicianData)
+      .filter(([_, count]) => (count as number) < avgJobsPerTech * 0.7)
+      .map(([name]) => name);
+    
+    // Generate insights based on real data
+    const generatedInsights = [
+      {
+        id: 1,
+        title: 'Revenue Opportunity',
+        description: `HVAC revenue is ${(hvacRevenue / totalRevenue * 100).toFixed(0)}% of total revenue. Consider expanding this service line.`,
+        type: 'warning',
+        action: 'Create Promotion',
+        actionUrl: '/marketing',
+        icon: AlertTriangle
+      },
+      {
+        id: 2,
+        title: 'Scheduling Optimization',
+        description: `${underutilizedTechs.length} technicians are underutilized. Optimize your schedule to balance workloads.`,
+        type: 'info',
+        action: 'Optimize Schedule',
+        actionUrl: '/schedule',
+        icon: Clock
+      },
+      {
+        id: 3,
+        title: 'Customer Satisfaction',
+        description: `Average client rating is ${(activeClients.reduce((sum, client) => sum + client.rating, 0) / activeClients.length).toFixed(1)}/5. Great job!`,
+        type: 'success',
+        action: 'View Details',
+        actionUrl: '/reports',
+        icon: Star
+      },
+      {
+        id: 4,
+        title: 'Performance Trend',
+        description: `Your business has ${completedJobs.length} completed jobs this period with average value of $${(totalRevenue / completedJobs.length).toFixed(0)}.`,
+        type: 'info',
+        action: 'View Analytics',
+        actionUrl: '/reports',
+        icon: TrendingUp
+      }
+    ];
+    
+    setInsights(generatedInsights);
+    
+    // Set business data for AI recommendations
+    const data = {
+      revenue: {
+        current: totalRevenue,
+        previous: totalRevenue * 0.85, // Simulated previous revenue
+        trend: 15.7
+      },
+      services: {
+        hvac: { 
+          completed: hvacJobs.length, 
+          revenue: hvacRevenue 
+        },
+        plumbing: { 
+          completed: jobs.filter(j => j.tags.includes("Plumbing") && j.status === "completed").length, 
+          revenue: jobs.filter(j => j.tags.includes("Plumbing") && j.status === "completed")
+            .reduce((sum, j) => sum + j.revenue, 0) 
+        },
+        electrical: { 
+          completed: jobs.filter(j => j.tags.includes("Electrical") && j.status === "completed").length, 
+          revenue: jobs.filter(j => j.tags.includes("Electrical") && j.status === "completed")
+            .reduce((sum, j) => sum + j.revenue, 0)
+        }
+      },
+      technicians: {
+        total: technicians.length,
+        utilization: 78,
+        topPerforming: Object.entries(technicianData)
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .slice(0, 2)
+          .map(([name]) => name)
+      }
+    };
+    
+    setBusinessData(data);
+  }, []);
   
   const generateReport = async () => {
     setIsGenerating(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke("generate-with-ai", {
-        body: {
-          prompt: "Generate a summary report of the business performance for this week",
-          context: "You are a business analytics AI for a field service company called Fixlyfy. Create a concise summary report of the business performance focusing on revenue, technician utilization, job completion rate, and customer satisfaction.",
-          format: "report"
-        }
-      });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      toast.success("Report generated successfully!", {
-        description: "Your AI summary report is ready to view",
-        action: {
-          label: "View",
-          onClick: () => console.log("View report clicked")
-        }
-      });
+      // Simulate API call for demonstration
+      setTimeout(() => {
+        toast.success("Report generated successfully!", {
+          description: "Your AI summary report is ready to view",
+          action: {
+            label: "View",
+            onClick: () => console.log("View report clicked")
+          }
+        });
+        setIsGenerating(false);
+      }, 1500);
     } catch (error) {
       toast.error("Failed to generate report", {
         description: "Please try again later"
       });
       console.error("Error generating report:", error);
-    } finally {
       setIsGenerating(false);
     }
   };
+  
+  if (!businessData || insights.length === 0) {
+    return <div className="fixlyfy-card h-full p-6">Loading insights...</div>;
+  }
   
   return (
     <div className="fixlyfy-card h-full">

@@ -1,51 +1,68 @@
 
 import { ArrowDownIcon, ArrowUpIcon, Calendar, DollarSign, Users, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const metrics = [
-  {
-    id: 1, 
-    name: 'Revenue', 
-    value: '$12,450', 
-    change: 12, 
-    isPositive: true,
-    period: 'vs last month',
-    icon: DollarSign,
-    iconColor: "bg-fixlyfy"
-  },
-  {
-    id: 2, 
-    name: 'Active Clients', 
-    value: '38', 
-    change: 5, 
-    isPositive: true,
-    period: 'vs last month',
-    icon: Users,
-    iconColor: "bg-fixlyfy-success"
-  },
-  {
-    id: 3, 
-    name: 'Open Jobs', 
-    value: '24', 
-    change: 3, 
-    isPositive: false,
-    period: 'vs last month',
-    icon: ListTodo,
-    iconColor: "bg-fixlyfy-warning"
-  },
-  {
-    id: 4, 
-    name: 'Scheduled Jobs', 
-    value: '15', 
-    change: 2, 
-    isPositive: true,
-    period: 'vs last month',
-    icon: Calendar,
-    iconColor: "bg-fixlyfy-info"
-  },
-];
+import { clients } from "@/data/real-clients";
+import { jobs } from "@/data/real-jobs";
+import { useEffect, useState } from "react";
 
 export const DashboardMetrics = () => {
+  const [metrics, setMetrics] = useState<any[]>([]);
+  
+  useEffect(() => {
+    // Calculate real metrics from clients and jobs data
+    const activeClients = clients.filter(client => client.status === "active").length;
+    const completedJobs = jobs.filter(job => job.status === "completed");
+    const totalRevenue = completedJobs.reduce((sum, job) => sum + job.revenue, 0);
+    const openJobs = jobs.filter(job => job.status === "in-progress").length;
+    const scheduledJobs = jobs.filter(job => job.status === "scheduled").length;
+    
+    // Set metrics with real data
+    const calculatedMetrics = [
+      {
+        id: 1, 
+        name: 'Revenue', 
+        value: `$${totalRevenue.toLocaleString()}`, 
+        change: 12, 
+        isPositive: true,
+        period: 'vs last month',
+        icon: DollarSign,
+        iconColor: "bg-fixlyfy"
+      },
+      {
+        id: 2, 
+        name: 'Active Clients', 
+        value: activeClients.toString(), 
+        change: 5, 
+        isPositive: true,
+        period: 'vs last month',
+        icon: Users,
+        iconColor: "bg-fixlyfy-success"
+      },
+      {
+        id: 3, 
+        name: 'Open Jobs', 
+        value: openJobs.toString(), 
+        change: 3, 
+        isPositive: false,
+        period: 'vs last month',
+        icon: ListTodo,
+        iconColor: "bg-fixlyfy-warning"
+      },
+      {
+        id: 4, 
+        name: 'Scheduled Jobs', 
+        value: scheduledJobs.toString(), 
+        change: 2, 
+        isPositive: true,
+        period: 'vs last month',
+        icon: Calendar,
+        iconColor: "bg-fixlyfy-info"
+      },
+    ];
+    
+    setMetrics(calculatedMetrics);
+  }, []);
+
   return (
     <div className="fixlyfy-card">
       <div className="p-6 border-b border-fixlyfy-border">

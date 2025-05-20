@@ -2,11 +2,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { jobs } from "@/data/real-jobs";
+import { getTagColor } from "@/data/tags";
 
 interface ClientJobsProps {
   clientId: string | undefined;
