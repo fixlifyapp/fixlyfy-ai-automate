@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { subDays, startOfMonth, endOfDay, startOfDay } from "date-fns";
+import { subDays, startOfMonth, endOfDay, startOfDay, format } from "date-fns";
 import { TimeFilter, DateRange } from "./DateRangeSelector";
 
 interface MetricsData {
