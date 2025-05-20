@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useEstimateData } from "./hooks/useEstimateData";
 import { useEstimateActions } from "./hooks/useEstimateActions";
 import { useEstimateCreation } from "./hooks/useEstimateCreation";
@@ -18,6 +18,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const [isConvertToInvoiceDialogOpen, setIsConvertToInvoiceDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
+  const [error, setError] = useState<boolean>(false);
 
   // Get hooks for different functionalities
   const estimateActions = useEstimateActions(jobId, estimates, setEstimates, onEstimateConverted);
@@ -26,6 +27,15 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   
   // Get client and company info
   const estimateInfo = useEstimateInfo(jobId);
+  
+  // Check if there was an error loading job information
+  useEffect(() => {
+    if (estimateInfo.jobInfo && estimateInfo.jobInfo.title === "Error Loading Job") {
+      setError(true);
+    } else {
+      setError(false);
+    }
+  }, [estimateInfo.jobInfo]);
   
   // Get warranty functionality (depends on selectedEstimate from actions)
   const estimateWarranty = useEstimateWarranty(
@@ -72,6 +82,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   return {
     estimates,
     isLoading,
+    error,
     dialogs: {
       isUpsellDialogOpen,
       setIsUpsellDialogOpen,

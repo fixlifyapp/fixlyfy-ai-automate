@@ -11,6 +11,7 @@ import { EstimateDialog } from "./dialogs/EstimateDialog";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { useEstimates } from "./estimates/useEstimates";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
+import { AlertCircle } from "lucide-react";
 
 interface JobEstimatesProps {
   jobId: string;
@@ -24,7 +25,8 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
     dialogs,
     state,
     handlers,
-    info
+    info,
+    error
   } = useEstimates(jobId, onEstimateConverted);
 
   return (
@@ -37,6 +39,16 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
             New Estimate
           </Button>
         </div>
+
+        {/* Show error message if any */}
+        {error && (
+          <div className="p-4 mb-4 border rounded-md bg-red-50 border-red-200">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle size={16} />
+              <span>There was a problem loading job information. You can still create estimates.</span>
+            </div>
+          </div>
+        )}
 
         <EstimatesList 
           estimates={estimates}

@@ -79,11 +79,12 @@ export const useEstimateInfo = (jobId?: string, clientId?: string) => {
   const fetchJobInfo = async (id: string) => {
     setIsLoading(true);
     try {
+      // Use maybeSingle instead of single to prevent errors when no job exists
       const { data, error } = await supabase
         .from('jobs')
         .select('id, title, description, service, client_id')
         .eq('id', id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
@@ -99,10 +100,28 @@ export const useEstimateInfo = (jobId?: string, clientId?: string) => {
         if (!clientId && data.client_id) {
           fetchClientInfo(data.client_id);
         }
+      } else {
+        // Set default values when no job is found
+        setJobInfo({
+          id: id || "",
+          title: "Job Not Found",
+          description: "The requested job could not be found",
+          service: undefined
+        });
+        console.log(`No job found with ID: ${id}`);
       }
     } catch (error) {
       console.error('Error fetching job:', error);
+      // Set a more friendly error message
       toast.error("Failed to load job information");
+      
+      // Still set default job info to prevent UI errors
+      setJobInfo({
+        id: id || "",
+        title: "Error Loading Job",
+        description: "There was an error loading the job details",
+        service: undefined
+      });
     } finally {
       setIsLoading(false);
     }
