@@ -13,6 +13,7 @@ export const useEstimateActions = (
 ) => {
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
 
   // Handle sending an estimate - Updated to use estimateId
   const handleSendEstimate = async (estimateId: string) => {
@@ -85,23 +86,92 @@ export const useEstimateActions = (
   
   // Confirm converting estimate to invoice
   const confirmConvertToInvoice = async () => {
-    if (!selectedEstimate) return;
+    if (!selectedEstimate || isConverting) return;
+    
+    setIsConverting(true);
     
     try {
-      // Mark the estimate as converted by updating its status
-      const { error } = await supabase
-        .from('estimates')
-        .update({ status: 'converted' })
-        .eq('id', selectedEstimate.id);
+      // Generate unique invoice number
+      const invoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
+      // Check if the estimate has already been converted
+      const { data: existingInvoices } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('estimate_id', selectedEstimate.id);
         
-      if (error) {
-        throw error;
+      if (existingInvoices && existingInvoices.length > 0) {
+        toast.warning(`This estimate has already been converted to invoice`);
+        setIsConverting(false);
+        return;
       }
       
-      toast.success(`Estimate ${selectedEstimate.number} converted to invoice`);
+      // Create invoice
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          job_id: jobId,
+          estimate_id: selectedEstimate.id,
+          invoice_number: invoiceNumber,
+          total: selectedEstimate.total || selectedEstimate.amount,
+          balance: selectedEstimate.total || selectedEstimate.amount,
+          status: 'unpaid',
+          notes: selectedEstimate.notes
+        })
+        .select()
+        .single();
+        
+      if (invoiceError) {
+        throw invoiceError;
+      }
       
-      // Update local state - remove the converted estimate
-      setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
+      // Get estimate line items
+      const { data: estimateItems, error: itemsError } = await supabase
+        .from("line_items")
+        .select("*")
+        .eq("parent_type", "estimate")
+        .eq("parent_id", selectedEstimate.id);
+        
+      if (itemsError) {
+        throw itemsError;
+      }
+      
+      // Convert estimate items to invoice items
+      if (estimateItems && estimateItems.length > 0 && invoice) {
+        const invoiceItems = estimateItems.map(item => ({
+          parent_type: "invoice",
+          parent_id: invoice.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          taxable: item.taxable
+        }));
+        
+        const { error: insertError } = await supabase
+          .from("line_items")
+          .insert(invoiceItems);
+          
+        if (insertError) {
+          throw insertError;
+        }
+      }
+      
+      // Update estimate status
+      const { error: updateError } = await supabase
+        .from("estimates")
+        .update({ status: "converted" })
+        .eq("id", selectedEstimate.id);
+        
+      if (updateError) {
+        throw updateError;
+      }
+      
+      toast.success("Estimate converted to invoice successfully");
+      
+      // Update local state
+      setEstimates(estimates.map(e => 
+        e.id === selectedEstimate.id ? {...e, status: 'converted'} : e
+      ));
       
       // Switch to the invoices tab if the callback is provided
       if (onEstimateConverted) {
@@ -110,6 +180,8 @@ export const useEstimateActions = (
     } catch (error) {
       console.error('Error converting estimate to invoice:', error);
       toast.error('Failed to convert estimate to invoice');
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -132,6 +204,7 @@ export const useEstimateActions = (
     state: {
       selectedEstimate,
       isDeleting,
+      isConverting,
     },
     actions: {
       handleSendEstimate,

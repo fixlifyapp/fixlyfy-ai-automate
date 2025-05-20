@@ -109,12 +109,11 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         return;
       }
       
-      // Record payment
+      // Record payment directly in the payments table
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           invoice_id: selectedInvoice.id,
-          job_id: jobId,
           amount,
           method: paymentMethod,
           date: new Date(paymentDate).toISOString(),

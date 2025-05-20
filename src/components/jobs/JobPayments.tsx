@@ -72,22 +72,81 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   };
 
   const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
-    // Get client ID from the job
-    const { data: job } = await supabase
-      .from('jobs')
-      .select('client_id, title')
-      .eq('id', jobId)
-      .single();
+    try {
+      // Get the invoice information
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('job_id', jobId)
+        .limit(1);
+        
+      if (!invoices || invoices.length === 0) {
+        toast.error('No invoice found for this job');
+        return;
+      }
       
-    if (!job?.client_id) {
-      toast.error('Cannot process payment: No client associated with this job');
-      return;
+      const invoiceId = invoices[0].id;
+      
+      // Create a payment directly in the database
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .insert({
+          invoice_id: invoiceId,
+          amount,
+          method,
+          reference: reference || "",
+          notes: notes || "",
+          date: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error recording payment:', error);
+        throw error;
+      }
+      
+      // Update invoice balance
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('balance, amount_paid, total')
+        .eq('id', invoiceId)
+        .single();
+        
+      if (invoiceError) {
+        console.error('Error fetching invoice:', invoiceError);
+        throw invoiceError;
+      }
+      
+      const newAmountPaid = (invoice.amount_paid || 0) + amount;
+      const newBalance = Math.max(0, invoice.total - newAmountPaid);
+      const newStatus = newBalance === 0 ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
+      
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          amount_paid: newAmountPaid,
+          balance: newBalance,
+          status: newStatus
+        })
+        .eq('id', invoiceId);
+        
+      if (updateError) {
+        console.error('Error updating invoice:', updateError);
+        throw updateError;
+      }
+      
+      toast.success('Payment recorded successfully');
+      
+      // Refresh payments list by adding the new payment
+      addPayment(
+        { amount, method, reference, notes },
+        "" // We don't need client ID since we're using invoice ID
+      );
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      toast.error("Failed to process payment");
     }
-    
-    await addPayment(
-      { amount, method, reference, notes },
-      job.client_id
-    );
   };
 
   const handleRefundPayment = (payment: Payment) => {
