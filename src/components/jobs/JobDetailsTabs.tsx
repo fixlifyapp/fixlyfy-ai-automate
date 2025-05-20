@@ -40,18 +40,6 @@ export const JobDetailsTabs = ({
               Overview
             </TabsTrigger>
             <TabsTrigger
-              value="estimates"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
-            >
-              Estimates
-            </TabsTrigger>
-            <TabsTrigger
-              value="invoices"
-              className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
-            >
-              Invoices
-            </TabsTrigger>
-            <TabsTrigger
               value="payments"
               className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12"
             >

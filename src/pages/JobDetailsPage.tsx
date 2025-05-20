@@ -9,10 +9,8 @@ import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
 import { JobDetailsQuickActions } from "@/components/jobs/JobDetailsQuickActions";
 import { TabsContent } from "@/components/ui/tabs";
-import { JobEstimates } from "@/components/jobs/JobEstimates";
 import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobPayments } from "@/components/jobs/JobPayments";
-import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 
@@ -21,17 +19,6 @@ const JobDetailsPage = () => {
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
   const jobHeaderData = useJobDetailsHeader(id || "");
-  
-  // Add function to handle switching to invoices tab when an estimate is converted
-  const handleSwitchToInvoicesTab = () => {
-    setActiveTab("invoices");
-  };
-  
-  const handleEstimateCreated = (amount: number) => {
-    if (jobHeaderData.handleEstimateCreated) {
-      jobHeaderData.handleEstimateCreated(amount);
-    }
-  };
   
   return (
     <PageLayout>
@@ -50,15 +37,6 @@ const JobDetailsPage = () => {
             >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
-              </TabsContent>
-              <TabsContent value="estimates">
-                <JobEstimates 
-                  jobId={id || ""} 
-                  onEstimateConverted={handleSwitchToInvoicesTab}
-                />
-              </TabsContent>
-              <TabsContent value="invoices">
-                <JobInvoices jobId={id || ""} />
               </TabsContent>
               <TabsContent value="payments">
                 <JobPayments jobId={id || ""} />

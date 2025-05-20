@@ -1,354 +1,235 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { LineItem, Product } from "@/components/jobs/builder/types";
+import { Product } from "@/components/jobs/builder/types";
+import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
+
+// Define the LineItem type
+export interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  tax: number;
+  total: number;
+  ourPrice: number;
+  taxable: boolean;
+}
 
 interface UseEstimateBuilderProps {
   estimateId: string | null;
   open: boolean;
-  jobId: string;
   onSyncToInvoice?: (estimate: any) => void;
+  jobId: string;
 }
 
 export const useEstimateBuilder = ({
   estimateId,
   open,
-  jobId,
-  onSyncToInvoice
+  onSyncToInvoice,
+  jobId
 }: UseEstimateBuilderProps) => {
-  const [estimateNumber, setEstimateNumber] = useState("");
+  const [estimateNumber, setEstimateNumber] = useState<string>("");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState<string>("");
+  const [taxRate, setTaxRate] = useState<number>(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [recommendedWarranty, setRecommendedWarranty] = useState<Product | null>(null);
-  const [techniciansNote, setTechniciansNote] = useState("");
-  const [taxRate, setTaxRate] = useState(10); // Default tax rate of 10%
-  const [showUpsellOptions, setShowUpsellOptions] = useState(false);
-  const [showSyncOptions, setShowSyncOptions] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [techniciansNote, setTechniciansNote] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { generateUniqueNumber } = useEstimateInfo();
 
-  // Reset state when dialog opens or estimateId changes
-  useEffect(() => {
-    if (open) {
-      if (!estimateId) {
-        // Clear state for new estimate
-        setLineItems([]);
-        setNotes("");
-        setEstimateNumber("");
-      } else {
-        // Load existing estimate data
-        fetchEstimateData();
-      }
-    }
-  }, [estimateId, open]);
+  // Function to calculate subtotal
+  const calculateSubtotal = useCallback(() => {
+    return lineItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  }, [lineItems]);
 
-  // Load estimate data when editing an existing estimate
+  // Function to calculate total tax
+  const calculateTotalTax = useCallback(() => {
+    return lineItems.reduce((sum, item) => {
+      const itemSubtotal = item.unitPrice * item.quantity;
+      return sum + (item.taxable ? itemSubtotal * (taxRate / 100) : 0);
+    }, 0);
+  }, [lineItems, taxRate]);
+
+  // Function to calculate grand total
+  const calculateGrandTotal = useCallback(() => {
+    return calculateSubtotal() + calculateTotalTax();
+  }, [calculateSubtotal, calculateTotalTax]);
+
+  // Function to calculate total margin
+  const calculateTotalMargin = useCallback(() => {
+    return lineItems.reduce((sum, item) => {
+      const cost = item.ourPrice * item.quantity;
+      const revenue = item.unitPrice * item.quantity;
+      return sum + (revenue - cost);
+    }, 0);
+  }, [lineItems]);
+
+  // Function to calculate margin percentage
+  const calculateMarginPercentage = useCallback(() => {
+    const totalMargin = calculateTotalMargin();
+    const subtotal = calculateSubtotal();
+    return subtotal > 0 ? (totalMargin / subtotal) * 100 : 0;
+  }, [calculateTotalMargin, calculateSubtotal]);
+
+  // Fetch estimate data from Supabase
   const fetchEstimateData = async () => {
-    if (!estimateId || !open) return;
-    
+    if (!estimateId) return;
+
     setIsLoading(true);
-    console.log("Fetching estimate data for ID:", estimateId);
-    
     try {
-      // Fetch estimate details
-      const { data: estimateData, error: estimateError } = await supabase
+      const { data: estimateData, error } = await supabase
         .from('estimates')
         .select('*')
         .eq('id', estimateId)
         .single();
-        
-      if (estimateError) {
-        console.error("Error fetching estimate:", estimateError);
-        toast.error("Failed to load estimate data");
+
+      if (error) {
+        console.error("Error fetching estimate:", error);
+        toast.error("Failed to load estimate");
         return;
       }
-      
+
       if (estimateData) {
-        console.log("Loaded estimate data:", estimateData);
-        setEstimateNumber(estimateData.number || "");
-        setNotes(estimateData.notes || "");
-        
-        // Fetch estimate items
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('estimate_items')
-          .select('*')
-          .eq('estimate_id', estimateId);
-          
-        if (itemsError) {
-          console.error("Error fetching estimate items:", itemsError);
-          toast.error("Failed to load estimate items");
-          return;
-        }
-        
-        if (itemsData && itemsData.length > 0) {
-          // Map the items to LineItem format
-          const mappedItems: LineItem[] = itemsData.map(item => ({
-            id: item.id,
-            description: item.name,
-            quantity: item.quantity || 1,
-            unitPrice: Number(item.price) || 0,
-            discount: 0, // Default discount if not in DB
-            tax: item.taxable ? taxRate : 0,
-            total: Number(item.price) * (item.quantity || 1),
-            ourPrice: 0, // Set default
-            taxable: item.taxable
-          }));
-          
-          console.log("Loaded estimate items:", mappedItems);
-          setLineItems(mappedItems);
-        } else {
-          console.log("No items found for estimate");
-          setLineItems([]);
-        }
+        setEstimateNumber(estimateData.number);
+        setLineItems(estimateData.items || []);
+        setNotes(estimateData.technicians_note || '');
+        setTaxRate(estimateData.tax_rate || 0);
       }
     } catch (error) {
-      console.error("Error in fetchEstimateData:", error);
-      toast.error("An error occurred while loading the estimate");
+      console.error("Error fetching estimate:", error);
+      toast.error("Failed to load estimate");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddProduct = (product: Product) => {
+  // Save estimate changes to Supabase
+  const saveEstimateChanges = async () => {
+    if (!estimateId) return false;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('estimates')
+        .update({
+          items: lineItems,
+          technicians_note: notes,
+          tax_rate: taxRate
+        })
+        .eq('id', estimateId);
+
+      if (error) {
+        console.error("Error updating estimate:", error);
+        toast.error("Failed to update estimate");
+        return false;
+      }
+
+      toast.success(`Estimate ${estimateNumber} updated`);
+      return true;
+    } catch (error) {
+      console.error("Error updating estimate:", error);
+      toast.error("Failed to update estimate");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle adding a product to the line items
+  const handleAddProduct = async (product: Product) => {
     const newLineItem: LineItem = {
-      id: `line-${Date.now()}`,
-      description: product.name,
+      id: `item-${Date.now()}`,
+      description: product.description || product.name,
       quantity: 1,
       unitPrice: product.price,
       discount: 0,
-      tax: product.taxable ? taxRate : 0, // Default tax rate or 0 if not taxable
+      tax: 0,
       total: product.price,
-      ourPrice: product.ourPrice,
-      taxable: product.taxable
+      ourPrice: product.cost || 0,
+      taxable: true
     };
-    
+
     setLineItems([...lineItems, newLineItem]);
-    toast.success(`${product.name} added to estimate`);
   };
 
-  const handleRemoveLineItem = (lineItemId: string) => {
-    setLineItems(lineItems.filter(item => item.id !== lineItemId));
+  // Handle removing a line item
+  const handleRemoveLineItem = (id: string) => {
+    setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
-  const handleUpdateLineItem = (lineItemId: string | null, field: string, value: any) => {
-    if (field === "notes") {
-      setNotes(value);
-      return;
-    }
-
-    if (field === "taxRate") {
-      setTaxRate(parseFloat(value) || 0);
-      return;
-    }
-
-    setLineItems(lineItems.map(item => {
-      if (item.id === lineItemId) {
-        const updatedItem = { ...item, [field]: value };
-        // Recalculate total
-        updatedItem.total = calculateLineTotal(updatedItem);
-        return updatedItem;
-      }
-      return item;
-    }));
+  // Handle updating a line item
+  const handleUpdateLineItem = (id: string | null, field: string, value: any) => {
+    setLineItems(
+      lineItems.map((item) =>
+        item.id === id
+          ? { ...item, [field]: value }
+          : item
+      )
+    );
   };
 
+  // Handle editing a line item
+  const handleEditLineItem = (id: string) => {
+    setSelectedLineItemId(id);
+    // Logic to open a modal or form to edit the line item
+  };
+
+  // Handle adding an empty line item
   const handleAddEmptyLineItem = () => {
-    // This is used to open the product search dialog
-    return;
+    // Logic to open product search
   };
 
+  // Handle adding a custom line
   const handleAddCustomLine = () => {
     const newLineItem: LineItem = {
-      id: `line-${Date.now()}`,
-      description: "",
+      id: `item-${Date.now()}`,
+      description: "Custom Item",
       quantity: 1,
       unitPrice: 0,
       discount: 0,
-      tax: taxRate,
+      tax: 0,
       total: 0,
       ourPrice: 0,
       taxable: true
     };
-    
     setLineItems([...lineItems, newLineItem]);
   };
 
-  const calculateLineTotal = (item: LineItem): number => {
-    const subtotal = item.quantity * item.unitPrice;
-    const discountAmount = subtotal * (item.discount / 100);
-    const afterDiscount = subtotal - discountAmount;
-    return afterDiscount;
-  };
-
-  const calculateSubtotal = (): number => {
-    return lineItems.reduce((total, item) => {
-      const subtotal = item.quantity * item.unitPrice;
-      const discountAmount = subtotal * (item.discount / 100);
-      return total + (subtotal - discountAmount);
-    }, 0);
-  };
-
-  const calculateTotalTax = (): number => {
-    return lineItems.reduce((total, item) => {
-      if (!item.taxable) return total;
-      
-      const subtotal = item.quantity * item.unitPrice;
-      const discountAmount = subtotal * (item.discount / 100);
-      const afterDiscount = subtotal - discountAmount;
-      const taxAmount = afterDiscount * (taxRate / 100);
-      return total + taxAmount;
-    }, 0);
-  };
-
-  const calculateGrandTotal = (): number => {
-    return calculateSubtotal() + calculateTotalTax();
-  };
-
-  const calculateTotalMargin = (): number => {
-    return lineItems.reduce((margin, item) => {
-      const revenue = item.quantity * item.unitPrice * (1 - item.discount / 100);
-      const cost = item.quantity * (item.ourPrice || 0);
-      return margin + (revenue - cost);
-    }, 0);
-  };
-
-  const calculateMarginPercentage = (): number => {
-    const totalRevenue = calculateSubtotal();
-    const margin = calculateTotalMargin();
-    return totalRevenue > 0 ? (margin / totalRevenue) * 100 : 0;
-  };
-
-  const handleEditLineItem = (lineItemId: string) => {
-    const lineItem = lineItems.find(item => item.id === lineItemId);
-    if (lineItem) {
-      // Create a temporary product from the line item for editing
-      setSelectedProduct({
-        id: lineItem.id,
-        name: lineItem.description,
-        description: lineItem.description,
-        category: "Custom",
-        price: lineItem.unitPrice,
-        ourPrice: lineItem.ourPrice || 0,
-        taxable: lineItem.taxable !== undefined ? lineItem.taxable : true,
-        tags: []
-      });
-      setSelectedLineItemId(lineItemId);
-      return true;
-    }
-    return false;
-  };
-
+  // Handle product saved
   const handleProductSaved = (product: Product) => {
-    if (selectedLineItemId) {
-      // Update the line item with the edited product details
-      setLineItems(lineItems.map(item => {
-        if (item.id === selectedLineItemId) {
-          return {
-            ...item,
-            description: product.name,
-            unitPrice: product.price,
-            ourPrice: product.ourPrice,
-            taxable: product.taxable,
-            total: calculateLineTotal({
-              ...item,
-              unitPrice: product.price,
-              taxable: product.taxable,
-            })
-          };
-        }
-        return item;
-      }));
-    }
-    setSelectedProduct(null);
-    setSelectedLineItemId(null);
+    setSelectedProduct(product);
+    // Logic to save the product
   };
 
+  // Handle product selected
   const handleProductSelected = (product: Product) => {
-    handleAddProduct(product);
+    setSelectedProduct(product);
+    // Logic to handle product selection
   };
 
+  // Handle sync to invoice
   const handleSyncToInvoice = () => {
     if (onSyncToInvoice) {
-      const estimate = {
-        id: estimateId || `est-${Date.now()}`,
-        number: estimateNumber,
-        items: lineItems,
-        total: calculateGrandTotal(),
-        subtotal: calculateSubtotal(),
-        tax: calculateTotalTax(),
-        notes,
-        date: new Date().toISOString()
-      };
-      
-      onSyncToInvoice(estimate);
+      onSyncToInvoice(lineItems);
       toast.success("Estimate synced to invoice");
     }
   };
 
-  // Saving changes to an existing estimate
-  const saveEstimateChanges = async () => {
-    if (!estimateId) return null;
-    
-    try {
-      // Update the estimate record
-      const { error: updateError } = await supabase
-        .from('estimates')
-        .update({
-          amount: calculateGrandTotal(),
-          notes: notes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', estimateId);
-        
-      if (updateError) {
-        console.error("Error updating estimate:", updateError);
-        toast.error("Failed to save changes to estimate");
-        return null;
+  useEffect(() => {
+    if (open) {
+      if (estimateId) {
+        fetchEstimateData();
+      } else {
+        // Generate a new estimate number
+        const newEstimateNumber = generateUniqueNumber('EST');
+        setEstimateNumber(newEstimateNumber);
       }
-      
-      // Delete all existing items for this estimate
-      const { error: deleteError } = await supabase
-        .from('estimate_items')
-        .delete()
-        .eq('estimate_id', estimateId);
-        
-      if (deleteError) {
-        console.error("Error deleting old estimate items:", deleteError);
-        toast.error("Failed to update estimate items");
-        return null;
-      }
-      
-      // Add the new items
-      if (lineItems.length > 0) {
-        const itemsToInsert = lineItems.map(item => ({
-          estimate_id: estimateId,
-          name: item.description,
-          description: item.description,
-          price: item.unitPrice,
-          quantity: item.quantity,
-          taxable: item.taxable
-        }));
-        
-        const { error: insertError } = await supabase
-          .from('estimate_items')
-          .insert(itemsToInsert);
-          
-        if (insertError) {
-          console.error("Error inserting new estimate items:", insertError);
-          toast.error("Failed to save all estimate items");
-        }
-      }
-      
-      toast.success("Estimate updated successfully");
-      return estimateId;
-    } catch (error) {
-      console.error("Error saving estimate changes:", error);
-      toast.error("An unexpected error occurred while saving");
-      return null;
     }
-  };
+  }, [open, estimateId, generateUniqueNumber]);
 
   return {
     estimateNumber,
@@ -359,36 +240,25 @@ export const useEstimateBuilder = ({
     recommendedWarranty,
     techniciansNote,
     taxRate,
-    showUpsellOptions,
-    showSyncOptions,
     isLoading,
-    setEstimateNumber,
-    setLineItems,
-    setNotes,
-    setSelectedProduct,
-    setSelectedLineItemId,
-    setRecommendedWarranty,
     setTechniciansNote,
-    setTaxRate,
-    setShowUpsellOptions,
-    setShowSyncOptions,
-    setIsLoading,
+    setRecommendedWarranty,
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
+    handleEditLineItem,
     handleAddEmptyLineItem,
     handleAddCustomLine,
-    calculateLineTotal,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
     calculateTotalMargin,
     calculateMarginPercentage,
-    handleEditLineItem,
     handleProductSaved,
     handleProductSelected,
     handleSyncToInvoice,
     saveEstimateChanges,
-    fetchEstimateData
+    setNotes,
+    setTaxRate
   };
 };
