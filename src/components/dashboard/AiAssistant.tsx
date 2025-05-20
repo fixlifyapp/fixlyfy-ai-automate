@@ -68,6 +68,10 @@ export const AiAssistant = () => {
         throw new Error(error.message);
       }
       
+      if (!data || !data.generatedText) {
+        throw new Error("Invalid response from AI service");
+      }
+      
       const aiMessage: Message = {
         id: messages.length + 2,
         content: data.generatedText,
