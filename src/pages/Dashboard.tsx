@@ -11,6 +11,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { CheckIcon } from "@/components/icons/CheckIcon";
+import { DashboardActions } from "@/components/dashboard/DashboardActions";
 
 // Define colors for charts
 const COLORS = ['#8A4DD5', '#B084F9', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#E5E7EB'];
@@ -26,6 +28,19 @@ const CustomTooltip = ({ active, payload }: any) => {
   }
   return null;
 };
+
+// Extended job type to handle optional fields
+interface ExtendedJob {
+  id: string;
+  title: string;
+  client_id: string;
+  status: string;
+  revenue: number | string;
+  date: string;
+  clients?: { name: string; };
+  tags?: string[];
+  service?: string;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -57,7 +72,7 @@ const Dashboard = () => {
         // Fetch jobs data
         const { data: jobs, error: jobsError } = await supabase
           .from('jobs')
-          .select('id, title, client_id, status, revenue, date, clients(name)');
+          .select('id, title, client_id, status, revenue, date, clients(name), tags, service');
           
         if (jobsError) throw jobsError;
         
@@ -74,7 +89,7 @@ const Dashboard = () => {
         const serviceCounts: Record<string, number> = {};
         let totalServiceCount = 0;
         
-        (jobs || []).forEach(job => {
+        (jobs || []).forEach((job: ExtendedJob) => {
           if (job.tags && job.tags.length > 0) {
             job.tags.forEach((tag: string) => {
               if (!serviceCounts[tag]) {
@@ -195,11 +210,21 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user]);
 
+  const handleRefresh = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-fixlyfy-text-secondary">Welcome to your business overview</p>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-fixlyfy-text-secondary">Welcome to your business overview</p>
+        </div>
+        <DashboardActions onRefresh={handleRefresh} />
       </div>
       
       {/* Business Metrics */}

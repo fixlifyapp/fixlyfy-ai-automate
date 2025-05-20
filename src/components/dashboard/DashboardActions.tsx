@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, Refresh } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export const DashboardActions = ({ onRefresh }: { onRefresh?: () => void }) => {
@@ -13,7 +13,7 @@ export const DashboardActions = ({ onRefresh }: { onRefresh?: () => void }) => {
         size="sm"
         onClick={onRefresh}
       >
-        <Refresh size={16} className="mr-2" />
+        <RefreshCw size={16} className="mr-2" />
         Refresh
       </Button>
       
