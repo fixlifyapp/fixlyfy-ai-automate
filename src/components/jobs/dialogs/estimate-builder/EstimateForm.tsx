@@ -1,11 +1,8 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { LineItemsTable } from "./LineItemsTable";
+import { Button } from "@/components/ui/button";
 import { LineItem } from "@/components/jobs/builder/types";
-import { EstimateSummary } from "./EstimateSummary";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 
 interface EstimateFormProps {
   estimateNumber: string;
@@ -34,75 +31,77 @@ export const EstimateForm = ({
   onAddEmptyLineItem,
   onAddCustomLine,
   taxRate,
-  setTaxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
   calculateTotalMargin,
   calculateMarginPercentage,
-  showMargin = false
+  showMargin = false,
 }: EstimateFormProps) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Estimate #{estimateNumber}</h2>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardContent className="p-0">
-              <LineItemsTable 
-                lineItems={lineItems} 
-                onRemoveLineItem={onRemoveLineItem}
-                onUpdateLineItem={onUpdateLineItem}
-                onEditLineItem={onEditLineItem}
-                showMargin={showMargin}
-              />
-            </CardContent>
-          </Card>
-          
-          <div className="mt-4 flex space-x-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="flex items-center"
-              onClick={onAddEmptyLineItem}
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Catalog Item
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="flex items-center"
-              onClick={onAddCustomLine}
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Custom Line
-            </Button>
-          </div>
-          
-          <div className="mt-6">
-            <label className="block text-sm font-medium mb-2">Notes</label>
-            <Textarea 
-              placeholder="Enter any additional notes for this estimate..."
-              className="min-h-[120px]"
-              value=""
-              onChange={(e) => onUpdateLineItem(null, "notes", e.target.value)}
-            />
-          </div>
-        </div>
-        
         <div>
-          <EstimateSummary
-            taxRate={taxRate}
-            onTaxRateChange={(value) => setTaxRate(parseFloat(value) || 0)}
-            calculateSubtotal={calculateSubtotal}
-            calculateTotalTax={calculateTotalTax}
-            calculateGrandTotal={calculateGrandTotal}
-            calculateTotalMargin={calculateTotalMargin}
-            calculateMarginPercentage={calculateMarginPercentage}
-            showMargin={showMargin}
-          />
+          <h2 className="text-lg font-semibold">Estimate #{estimateNumber}</h2>
+          <p className="text-sm text-muted-foreground">
+            Add items to your estimate below
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <LineItemsTable
+          lineItems={lineItems}
+          onRemoveLineItem={onRemoveLineItem}
+          onUpdateLineItem={onUpdateLineItem}
+          onEditLineItem={onEditLineItem}
+          showMargin={showMargin}
+          showOurPrice={showMargin}
+        />
+
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={onAddEmptyLineItem}
+          >
+            <PlusCircle size={16} />
+            <span>Add Product</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={onAddCustomLine}
+          >
+            <PlusCircle size={16} />
+            <span>Custom Line</span>
+          </Button>
+        </div>
+
+        <div className="bg-muted/30 rounded-md p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal:</span>
+            <span>${calculateSubtotal().toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <span>Tax ({taxRate}%):</span>
+            </span>
+            <span>${calculateTotalTax().toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between font-medium pt-2 border-t">
+            <span>Total:</span>
+            <span>${calculateGrandTotal().toFixed(2)}</span>
+          </div>
+          
+          {showMargin && calculateTotalMargin && calculateMarginPercentage && (
+            <div className="flex justify-between text-sm text-green-600 pt-2 border-t border-green-100">
+              <span>Total Margin:</span>
+              <span>${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage().toFixed(0)}%)</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

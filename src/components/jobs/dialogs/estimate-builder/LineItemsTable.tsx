@@ -10,6 +10,7 @@ interface LineItemsTableProps {
   onEditLineItem: (id: string) => boolean;
   onRemoveLineItem: (id: string) => void;
   showMargin?: boolean;
+  showOurPrice?: boolean;
 }
 
 export const LineItemsTable = ({
@@ -17,7 +18,8 @@ export const LineItemsTable = ({
   onUpdateLineItem,
   onEditLineItem,
   onRemoveLineItem,
-  showMargin = false
+  showMargin = false,
+  showOurPrice = false
 }: LineItemsTableProps) => {
   
   // Helper function to calculate the total for a line item
@@ -52,7 +54,9 @@ export const LineItemsTable = ({
             <TableHead className="w-[40%]">Description</TableHead>
             <TableHead className="w-[70px]">Qty</TableHead>
             <TableHead className="w-[100px]">Customer Price ($)</TableHead>
-            <TableHead className="w-[100px]">Our Price ($)</TableHead>
+            {showOurPrice && (
+              <TableHead className="w-[100px]">Our Price ($)</TableHead>
+            )}
             <TableHead className="w-[70px]">Discount</TableHead>
             <TableHead className="w-[120px] text-right">Total</TableHead>
             <TableHead className="w-[80px]"></TableHead>
@@ -75,11 +79,13 @@ export const LineItemsTable = ({
                     ${item.unitPrice.toFixed(2)}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <div className="pl-2">
-                    ${(item.ourPrice || 0).toFixed(2)}
-                  </div>
-                </TableCell>
+                {showOurPrice && (
+                  <TableCell>
+                    <div className="pl-2">
+                      ${(item.ourPrice || 0).toFixed(2)}
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="text-center">
                     {item.discount || 0}%
@@ -88,7 +94,7 @@ export const LineItemsTable = ({
                 <TableCell className="text-right">
                   <div>
                     <div className="font-medium">${calculateLineTotal(item).toFixed(2)}</div>
-                    {showMargin && item.ourPrice > 0 && (
+                    {showMargin && showOurPrice && item.ourPrice > 0 && (
                       <div className="text-xs text-green-600">
                         M: ${calculateMargin(item).toFixed(2)} ({calculateMarginPercentage(item).toFixed(0)}%)
                       </div>
@@ -121,7 +127,7 @@ export const LineItemsTable = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={showOurPrice ? 7 : 6} className="text-center py-8 text-muted-foreground">
                 No items added yet. Add items from the catalog or create a custom line item.
               </TableCell>
             </TableRow>
