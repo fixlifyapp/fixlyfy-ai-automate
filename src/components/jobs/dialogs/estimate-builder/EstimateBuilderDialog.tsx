@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { WarrantySelectionDialog } from "../WarrantySelectionDialog";
 import { ProductEditDialog } from "../ProductEditDialog";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
-import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/components/jobs/builder/types";
 import { EstimateEditor } from "./EstimateEditor";
 import { EstimatePreview } from "./EstimatePreview";
@@ -68,6 +67,7 @@ export const EstimateBuilderDialog = ({
     handleProductSaved,
     handleProductSelected,
     handleSyncToInvoice,
+    saveEstimateChanges
   } = useEstimateBuilder({
     estimateId, 
     open, 
@@ -75,11 +75,28 @@ export const EstimateBuilderDialog = ({
     jobId
   });
 
+  // Log the state to help with debugging
+  useEffect(() => {
+    if (open) {
+      console.log("EstimateBuilderDialog opened with ID:", estimateId);
+      console.log("Current estimate items:", lineItems);
+    }
+  }, [open, estimateId, lineItems]);
+
   // Handle saving draft
-  const handleSaveDraft = () => {
-    // In a real app, this would save the estimate to an API
-    toast.success(`Estimate ${estimateNumber} saved as draft`);
-    onOpenChange(false);
+  const handleSaveDraft = async () => {
+    if (estimateId) {
+      // If we're editing an existing estimate, save changes
+      const result = await saveEstimateChanges();
+      if (result) {
+        toast.success(`Estimate ${estimateNumber} updated`);
+        onOpenChange(false);
+      }
+    } else {
+      // In a real app, this would save a new estimate
+      toast.success(`Estimate ${estimateNumber} saved as draft`);
+      onOpenChange(false);
+    }
   };
 
   // Handle send estimate
@@ -94,13 +111,18 @@ export const EstimateBuilderDialog = ({
   };
 
   // Handle warranty confirmation
-  const handleWarrantyConfirmed = (selectedWarranty: Product | null, note: string) => {
+  const handleWarrantyConfirmed = async (selectedWarranty: Product | null, note: string) => {
     setIsWarrantyDialogOpen(false);
     
     // If a warranty was selected, store it for the customer upsell
     if (selectedWarranty) {
       setRecommendedWarranty(selectedWarranty);
       setTechniciansNote(note);
+    }
+    
+    // If editing, save changes first
+    if (estimateId) {
+      await saveEstimateChanges();
     }
     
     // In a real app, this would send the estimate to the API with warranty settings
@@ -110,6 +132,9 @@ export const EstimateBuilderDialog = ({
 
   // Check if estimate can be sent
   const canSendEstimate = lineItems.length > 0 && calculateGrandTotal() > 0;
+
+  // Get the action text based on whether we're creating or editing
+  const actionText = estimateId ? "Save Changes" : "Save Draft";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,7 +217,7 @@ export const EstimateBuilderDialog = ({
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
                 <Save size={16} />
-                Save Draft
+                {actionText}
               </Button>
               <Button 
                 onClick={handleSendEstimate} 

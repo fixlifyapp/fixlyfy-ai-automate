@@ -29,74 +29,87 @@ export const useEstimateBuilder = ({
   const [showSyncOptions, setShowSyncOptions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load estimate data when editing an existing estimate
+  // Reset state when dialog opens or estimateId changes
   useEffect(() => {
-    const fetchEstimateData = async () => {
-      if (!estimateId || !open) return;
+    if (open) {
+      if (!estimateId) {
+        // Clear state for new estimate
+        setLineItems([]);
+        setNotes("");
+        setEstimateNumber("");
+      } else {
+        // Load existing estimate data
+        fetchEstimateData();
+      }
+    }
+  }, [estimateId, open]);
+
+  // Load estimate data when editing an existing estimate
+  const fetchEstimateData = async () => {
+    if (!estimateId || !open) return;
+    
+    setIsLoading(true);
+    console.log("Fetching estimate data for ID:", estimateId);
+    
+    try {
+      // Fetch estimate details
+      const { data: estimateData, error: estimateError } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('id', estimateId)
+        .single();
+        
+      if (estimateError) {
+        console.error("Error fetching estimate:", estimateError);
+        toast.error("Failed to load estimate data");
+        return;
+      }
       
-      setIsLoading(true);
-      console.log("Fetching estimate data for ID:", estimateId);
-      
-      try {
-        // Fetch estimate details
-        const { data: estimateData, error: estimateError } = await supabase
-          .from('estimates')
+      if (estimateData) {
+        console.log("Loaded estimate data:", estimateData);
+        setEstimateNumber(estimateData.number || "");
+        setNotes(estimateData.notes || "");
+        
+        // Fetch estimate items
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('estimate_items')
           .select('*')
-          .eq('id', estimateId)
-          .single();
+          .eq('estimate_id', estimateId);
           
-        if (estimateError) {
-          console.error("Error fetching estimate:", estimateError);
-          toast.error("Failed to load estimate data");
+        if (itemsError) {
+          console.error("Error fetching estimate items:", itemsError);
+          toast.error("Failed to load estimate items");
           return;
         }
         
-        if (estimateData) {
-          console.log("Loaded estimate data:", estimateData);
-          setEstimateNumber(estimateData.number);
+        if (itemsData && itemsData.length > 0) {
+          // Map the items to LineItem format
+          const mappedItems: LineItem[] = itemsData.map(item => ({
+            id: item.id,
+            description: item.name,
+            quantity: item.quantity || 1,
+            unitPrice: Number(item.price) || 0,
+            discount: 0, // Default discount if not in DB
+            tax: item.taxable ? taxRate : 0,
+            total: Number(item.price) * (item.quantity || 1),
+            ourPrice: 0, // Set default
+            taxable: item.taxable
+          }));
           
-          // Fetch estimate items
-          const { data: itemsData, error: itemsError } = await supabase
-            .from('estimate_items')
-            .select('*')
-            .eq('estimate_id', estimateId);
-            
-          if (itemsError) {
-            console.error("Error fetching estimate items:", itemsError);
-            toast.error("Failed to load estimate items");
-            return;
-          }
-          
-          if (itemsData && itemsData.length > 0) {
-            // Map the items to LineItem format
-            const mappedItems: LineItem[] = itemsData.map(item => ({
-              id: item.id,
-              description: item.name,
-              quantity: item.quantity || 1,
-              unitPrice: Number(item.price) || 0,
-              discount: 0, // Default discount if not in DB
-              tax: item.taxable ? taxRate : 0,
-              total: Number(item.price) * (item.quantity || 1),
-              ourPrice: 0, // Set default
-              taxable: item.taxable
-            }));
-            
-            console.log("Loaded estimate items:", mappedItems);
-            setLineItems(mappedItems);
-          } else {
-            setLineItems([]);
-          }
+          console.log("Loaded estimate items:", mappedItems);
+          setLineItems(mappedItems);
+        } else {
+          console.log("No items found for estimate");
+          setLineItems([]);
         }
-      } catch (error) {
-        console.error("Error in fetchEstimateData:", error);
-        toast.error("An error occurred while loading the estimate");
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
-    fetchEstimateData();
-  }, [estimateId, open, taxRate]);
+    } catch (error) {
+      console.error("Error in fetchEstimateData:", error);
+      toast.error("An error occurred while loading the estimate");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAddProduct = (product: Product) => {
     const newLineItem: LineItem = {
@@ -274,6 +287,69 @@ export const useEstimateBuilder = ({
     }
   };
 
+  // Saving changes to an existing estimate
+  const saveEstimateChanges = async () => {
+    if (!estimateId) return null;
+    
+    try {
+      // Update the estimate record
+      const { error: updateError } = await supabase
+        .from('estimates')
+        .update({
+          amount: calculateGrandTotal(),
+          notes: notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', estimateId);
+        
+      if (updateError) {
+        console.error("Error updating estimate:", updateError);
+        toast.error("Failed to save changes to estimate");
+        return null;
+      }
+      
+      // Delete all existing items for this estimate
+      const { error: deleteError } = await supabase
+        .from('estimate_items')
+        .delete()
+        .eq('estimate_id', estimateId);
+        
+      if (deleteError) {
+        console.error("Error deleting old estimate items:", deleteError);
+        toast.error("Failed to update estimate items");
+        return null;
+      }
+      
+      // Add the new items
+      if (lineItems.length > 0) {
+        const itemsToInsert = lineItems.map(item => ({
+          estimate_id: estimateId,
+          name: item.description,
+          description: item.description,
+          price: item.unitPrice,
+          quantity: item.quantity,
+          taxable: item.taxable
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('estimate_items')
+          .insert(itemsToInsert);
+          
+        if (insertError) {
+          console.error("Error inserting new estimate items:", insertError);
+          toast.error("Failed to save all estimate items");
+        }
+      }
+      
+      toast.success("Estimate updated successfully");
+      return estimateId;
+    } catch (error) {
+      console.error("Error saving estimate changes:", error);
+      toast.error("An unexpected error occurred while saving");
+      return null;
+    }
+  };
+
   return {
     estimateNumber,
     lineItems,
@@ -312,5 +388,7 @@ export const useEstimateBuilder = ({
     handleProductSaved,
     handleProductSelected,
     handleSyncToInvoice,
+    saveEstimateChanges,
+    fetchEstimateData
   };
 };

@@ -29,6 +29,11 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
     error
   } = useEstimates(jobId, onEstimateConverted);
 
+  // Add debug logging to track estimate editing flow
+  console.log("Current selected estimate ID:", state.selectedEstimateId);
+  console.log("Estimate builder dialog state:", dialogs.isEstimateBuilderOpen);
+  console.log("All available estimates:", estimates);
+
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
@@ -75,6 +80,7 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
           estimateId={state.selectedEstimateId}
           jobId={jobId}
           onSyncToInvoice={handlers.handleSyncToInvoice}
+          key={state.selectedEstimateId} // Add key to force re-render on ID change
         />
         
         {/* Convert to Invoice Dialog */}
