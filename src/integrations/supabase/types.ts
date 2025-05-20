@@ -26,6 +26,7 @@ export type Database = {
           state: string | null
           status: string | null
           tags: string[] | null
+          type: string | null
           updated_at: string | null
           zip: string | null
         }
@@ -45,6 +46,7 @@ export type Database = {
           state?: string | null
           status?: string | null
           tags?: string[] | null
+          type?: string | null
           updated_at?: string | null
           zip?: string | null
         }
@@ -64,6 +66,7 @@ export type Database = {
           state?: string | null
           status?: string | null
           tags?: string[] | null
+          type?: string | null
           updated_at?: string | null
           zip?: string | null
         }

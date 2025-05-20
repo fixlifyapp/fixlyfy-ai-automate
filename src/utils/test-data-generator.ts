@@ -170,6 +170,8 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
   
   try {
     console.log("Inserting test clients into database...");
+    console.log("Sample client data:", clients[0]);
+    
     // Insert into Supabase
     const { data, error } = await supabase.from('clients').insert(clients).select('id');
     
@@ -269,6 +271,8 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
   
   try {
     console.log("Inserting test jobs into database...");
+    console.log("Sample job data:", jobs[0]);
+    
     // Insert into Supabase in batches to avoid payload size limits
     const batchSize = 10;
     for (let i = 0; i < jobs.length; i += batchSize) {

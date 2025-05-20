@@ -32,11 +32,11 @@ const ReportsPage = () => {
     toast.loading("Generating test data...", { id: "generate-data" });
     
     try {
-      // Improved error handling and more detailed logging
+      // Improved error handling and detailed logging
       console.log("Starting test data generation with user:", user);
       
       // Generate 10 clients and 20 jobs - fewer for faster processing
-      toast.loading("Creating test clients...", { id: "clients-data" });
+      toast.loading("Creating test clients and jobs...", { id: "clients-data" });
       const clientIds = await generateAllTestData(10, 20);
       console.log("Generated client IDs:", clientIds);
       
