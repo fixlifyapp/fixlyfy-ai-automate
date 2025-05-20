@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Brain, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const BusinessInsights = () => {
   const [insights, setInsights] = useState<string | null>(null);
