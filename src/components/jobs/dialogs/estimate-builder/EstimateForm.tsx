@@ -141,6 +141,14 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
     return calculateSubtotal() + calculateTaxAmount();
   };
 
+  // Add missing handleTaxRateChange function
+  const handleTaxRateChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+      setTaxRate(numValue);
+    }
+  };
+
   // Handler to save estimate
   const handleSave = async () => {
     try {

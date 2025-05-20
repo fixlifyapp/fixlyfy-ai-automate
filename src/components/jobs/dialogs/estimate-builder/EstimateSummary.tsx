@@ -66,10 +66,10 @@ export const EstimateSummary = ({
             <span>${grandTotal.toFixed(2)}</span>
           </div>
 
-          {calculateTotalMargin && (
+          {calculateTotalMargin && calculateMarginPercentage && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Profit Margin:</span>
-              <span>${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage?.().toFixed(2)}%)</span>
+              <span>${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage().toFixed(2)}%)</span>
             </div>
           )}
         </div>

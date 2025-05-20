@@ -36,23 +36,14 @@ export const useEstimateWarranty = (
         const newTotal = selectedEstimate.total + selectedWarranty.price;
         const { error: updateError } = await supabase
           .from('estimates')
-          .update({ total: newTotal })
+          .update({ 
+            total: newTotal,
+            notes: customNote.trim() ? customNote : selectedEstimate.notes 
+          })
           .eq('id', selectedEstimate.id);
           
         if (updateError) {
           throw updateError;
-        }
-        
-        // Save technician's note if provided
-        if (customNote.trim()) {
-          const { error: noteError } = await supabase
-            .from('estimates')
-            .update({ notes: customNote })
-            .eq('id', selectedEstimate.id);
-            
-          if (noteError) {
-            console.error('Error saving technician note:', noteError);
-          }
         }
         
         // Update local state with the newly created item
@@ -74,7 +65,7 @@ export const useEstimateWarranty = (
                   }
                 ],
                 total: est.total + selectedWarranty.price,
-                techniciansNote: customNote || est.techniciansNote
+                notes: customNote || est.notes
               } 
             : est
         );

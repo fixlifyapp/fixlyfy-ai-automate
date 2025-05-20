@@ -9,13 +9,27 @@ import { useEstimateInfo } from "./hooks/useEstimateInfo";
 import { Estimate as EstimateHookType } from "@/hooks/useEstimates";
 
 // Type conversion function to handle the type differences
-const convertEstimateType = (estimates: EstimateDataType[]): EstimateHookType[] => {
-  return estimates.map(est => ({
-    ...est,
-    number: est.estimate_number,
-    amount: est.total,
+const convertEstimateType = (estimate: EstimateDataType): EstimateHookType => {
+  return {
+    ...estimate,
+    number: estimate.estimate_number,
+    amount: estimate.total,
     // Include any other properties needed from both types
-  }));
+  };
+};
+
+// Type conversion for the other direction
+const convertEstimateHookType = (estimate: EstimateHookType): EstimateDataType => {
+  return {
+    ...estimate,
+    id: estimate.id,
+    job_id: estimate.job_id,
+    estimate_number: estimate.estimate_number || estimate.number || '',
+    total: estimate.total || estimate.amount || 0,
+    created_at: estimate.created_at || estimate.date,
+    updated_at: estimate.updated_at || new Date().toISOString(),
+    // Add any missing required fields
+  };
 };
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
@@ -31,7 +45,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
   const [error, setError] = useState<boolean>(false);
 
-  // Get hooks for different functionalities
+  // Get hooks for different functionalities - safely convert types when passing data
   const estimateActions = useEstimateActions(jobId, estimatesData, setEstimatesData, onEstimateConverted);
   const estimateCreation = useEstimateCreation(jobId, estimatesData, setEstimatesData);
   const estimateUpsell = useEstimateUpsell(estimatesData, setEstimatesData);

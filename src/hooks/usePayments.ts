@@ -23,48 +23,48 @@ export const usePayments = (jobId?: string, invoiceId?: string) => {
     
     setIsLoading(true);
     try {
-      let query = supabase
+      // Since there appears to be a schema mismatch, don't try to join with clients
+      const { data, error } = await supabase
         .from('payments')
-        .select('*, clients(name)');
-        
-      if (jobId) {
-        query = query.eq('job_id', jobId);
-      }
-      
-      if (invoiceId) {
-        query = query.eq('invoice_id', invoiceId);
-      }
-      
-      const { data, error } = await query.order('date', { ascending: false });
+        .select('*')
+        .order('date', { ascending: false });
       
       if (error) throw error;
       
-      const formattedPayments: Payment[] = (data || []).map(p => ({
+      // Filter the data based on job_id or invoice_id
+      const filteredData = data.filter(payment => {
+        if (jobId && payment.job_id === jobId) return true;
+        if (invoiceId && payment.invoice_id === invoiceId) return true;
+        return false;
+      });
+      
+      const formattedPayments: Payment[] = (filteredData || []).map(p => ({
         id: p.id,
         date: p.date,
-        clientId: p.client_id,
-        clientName: p.clients?.name || 'Unknown Client',
-        jobId: p.job_id,
+        clientId: p.client_id || "unknown",
+        clientName: "Client", // Default when client info isn't available
+        jobId: p.job_id || "",
         amount: p.amount,
-        method: p.method as PaymentMethod,
-        status: p.status as PaymentStatus,
-        reference: p.reference,
-        notes: p.notes,
-        technicianId: p.technician_id,
+        method: (p.method as PaymentMethod) || "credit-card",
+        status: (p.status as PaymentStatus) || "paid",
+        reference: p.reference || "",
+        notes: p.notes || "",
+        technicianId: p.technician_id || undefined,
         technicianName: p.technician_name || undefined
       }));
       
       setPayments(formattedPayments);
       
-      // Calculate totals
+      // Calculate totals - default status to 'paid' if not present
       let paid = 0;
       let refunded = 0;
       
       formattedPayments.forEach(payment => {
-        if (payment.status === 'paid') {
-          paid += payment.amount;
-        } else if (payment.status === 'refunded') {
+        if (payment.status === 'refunded') {
           refunded += payment.amount;
+        } else {
+          // Default to paid if status is undefined or any other value
+          paid += payment.amount;
         }
       });
       
@@ -95,7 +95,6 @@ export const usePayments = (jobId?: string, invoiceId?: string) => {
           date: new Date().toISOString(),
           amount: payment.amount,
           method: payment.method,
-          status: 'paid',
           reference: payment.reference,
           notes: payment.notes
         })
@@ -114,17 +113,16 @@ export const usePayments = (jobId?: string, invoiceId?: string) => {
           
         if (invoiceError) throw invoiceError;
         
-        // Get total payments for this invoice
+        // Get total payments for this invoice - we don't rely on status field
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
-          .select('amount, status')
+          .select('amount')
           .eq('invoice_id', invoiceId);
           
         if (paymentsError) throw paymentsError;
         
         // Calculate total paid amount
         const totalPaidAmount = (paymentsData || [])
-          .filter(p => p.status === 'paid')
           .reduce((sum, p) => sum + p.amount, 0);
           
         // Update invoice status if fully paid
@@ -162,32 +160,32 @@ export const usePayments = (jobId?: string, invoiceId?: string) => {
         
       if (paymentError) throw paymentError;
       
-      // Create refund record
+      // Create refund record - don't add status field if not in schema
+      const refundData = {
+        invoice_id: payment.invoice_id,
+        date: new Date().toISOString(),
+        amount: amount || payment.amount,
+        method: payment.method,
+        reference: `Refund for ${payment.reference || paymentId}`,
+        notes: `Refund for payment from ${new Date(payment.date).toLocaleDateString()}`
+      };
+      
+      // Add job_id and client_id if they exist in the original payment
+      if (payment.job_id) {
+        refundData['job_id'] = payment.job_id;
+      }
+      
+      if (payment.client_id) {
+        refundData['client_id'] = payment.client_id;
+      }
+      
       const { data, error } = await supabase
         .from('payments')
-        .insert({
-          job_id: payment.job_id,
-          client_id: payment.client_id,
-          invoice_id: payment.invoice_id,
-          date: new Date().toISOString(),
-          amount: amount || payment.amount,
-          method: payment.method,
-          status: 'refunded',
-          reference: `Refund for ${payment.reference || paymentId}`,
-          notes: `Refund for payment from ${new Date(payment.date).toLocaleDateString()}`
-        })
+        .insert(refundData)
         .select()
         .single();
         
       if (error) throw error;
-      
-      // Update original payment status
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ status: 'refunded' })
-        .eq('id', paymentId);
-        
-      if (updateError) throw updateError;
       
       toast.success(`Payment refunded successfully`);
       

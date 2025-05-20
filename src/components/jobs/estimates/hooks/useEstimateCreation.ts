@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +29,7 @@ export const useEstimateCreation = (
     if (estimate) {
       setSelectedEstimateId(estimateId);
       loadEstimateItems(estimateId);
-      toast.info(`Editing estimate ${estimate.number}`);
+      toast.info(`Editing estimate ${estimate.estimate_number || estimate.number}`);
     } else {
       console.error("Estimate not found with ID:", estimateId);
       toast.error("Estimate not found");
@@ -115,11 +116,11 @@ export const useEstimateCreation = (
           // Update the estimate's total amount
           const estimate = estimates.find(est => est.id === selectedEstimateId);
           if (estimate) {
-            const newAmount = Math.max(0, estimate.amount - itemToRemove.price);
+            const newTotal = Math.max(0, estimate.total - itemToRemove.price);
             
             const { error: updateError } = await supabase
               .from('estimates')
-              .update({ total: newAmount })
+              .update({ total: newTotal })
               .eq('id', selectedEstimateId);
               
             if (updateError) {
@@ -127,7 +128,7 @@ export const useEstimateCreation = (
             } else {
               // Update the local estimates array
               setEstimates(estimates.map(est => 
-                est.id === selectedEstimateId ? { ...est, amount: newAmount } : est
+                est.id === selectedEstimateId ? { ...est, total: newTotal } : est
               ));
             }
           }
@@ -198,20 +199,22 @@ export const useEstimateCreation = (
       // Create a new estimate object
       const newEstimate = {
         id: data.id,
-        number: data.estimate_number,
+        job_id: data.job_id,
+        estimate_number: data.estimate_number,
         date: data.date,
-        amount: data.total,
+        total: data.total,
         status: data.status,
         viewed: false,
         items: estimateItems.map(product => ({
-          name: product.name,
+          id: `temp-${Date.now()}-${Math.random()}`,
           description: product.description || '',
-          price: product.price,
           quantity: 1,
-          category: product.category
+          unitPrice: product.price,
+          taxable: product.taxable,
+          total: product.price
         })),
-        recommendedProduct: null,
-        techniciansNote: ""
+        created_at: data.created_at,
+        updated_at: data.updated_at
       };
       
       console.log('Created estimate:', newEstimate);

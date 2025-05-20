@@ -16,6 +16,8 @@ export interface Estimate {
   updated_at: string;
   items?: LineItem[];
   viewed?: boolean; // For UI tracking
+  recommendedProduct?: any; // Added for upsell functionality
+  techniciansNote?: string; // Added for technician notes
 }
 
 export const useEstimateData = (jobId: string) => {
@@ -60,15 +62,17 @@ export const useEstimateData = (jobId: string) => {
                 id: item.id,
                 description: item.description || '',
                 quantity: item.quantity,
-                unitPrice: parseFloat(item.unit_price.toString()),
+                unitPrice: Number(item.unit_price),
                 taxable: item.taxable,
-                total: item.quantity * parseFloat(item.unit_price.toString())
+                total: item.quantity * Number(item.unit_price)
               })) || [];
               
               return {
                 ...estimate,
                 items,
-                viewed: false // Default to not viewed for UI tracking
+                viewed: false, // Default to not viewed for UI tracking
+                recommendedProduct: null, // Default to no recommended product
+                techniciansNote: "" // Default to no technician's note
               };
             })
           );

@@ -5,16 +5,19 @@ import { useState } from 'react';
 export interface Estimate {
   id: string;
   job_id: string;
-  number: string;
-  estimate_number?: string; // Added for compatibility
+  number?: string;
+  estimate_number: string;
   date: string;
-  amount: number;
-  total?: number; // Added for compatibility
+  amount?: number;
+  total: number;
   status: string;
   viewed?: boolean;
   items?: any[];
   recommendedProduct?: any;
   techniciansNote?: string;
+  created_at?: string;
+  updated_at?: string;
+  notes?: string;
 }
 
 // Simplified placeholder version of useEstimates

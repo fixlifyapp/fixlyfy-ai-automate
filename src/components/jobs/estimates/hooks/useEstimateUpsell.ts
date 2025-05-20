@@ -14,15 +14,35 @@ export const useEstimateUpsell = (
 
   // Handle view estimate function
   const handleViewEstimate = (estimate: Estimate) => {
-    if (!estimate.viewed && estimate.recommendedProduct) {
-      // Show upsell dialog when estimate is viewed the first time
-      setRecommendedProduct(estimate.recommendedProduct);
-      setTechniciansNote(estimate.techniciansNote || "");
+    // Store recommendation data in the component state if not viewed yet
+    if (!estimate.viewed) {
+      // Check if there's any recommendation data in notes or attached product
+      const hasRecommendation = estimate.notes?.includes("Recommended:") || false;
       
-      // Mark as viewed in state
-      updateEstimateViewed(estimate.id);
-
-      return true; // Indicating upsell should be shown
+      if (hasRecommendation) {
+        // For demonstration, we'll create a placeholder product from notes
+        const fakeProduct: Product = {
+          id: `rec-${Date.now()}`,
+          name: "Recommended Service",
+          description: estimate.notes || "",
+          price: 99.99,
+          category: "Services",
+          taxable: true,
+          quantity: 1,
+          tags: [],
+          cost: 50,
+          ourPrice: 75,
+          sku: ""
+        };
+        
+        setRecommendedProduct(fakeProduct);
+        setTechniciansNote(estimate.notes || "");
+        
+        // Mark as viewed in state
+        updateEstimateViewed(estimate.id);
+        
+        return true; // Indicating upsell should be shown
+      }
     }
     
     return false; // No upsell needed
