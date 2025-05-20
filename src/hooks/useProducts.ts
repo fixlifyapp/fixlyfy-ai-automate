@@ -2,66 +2,70 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Product } from "@/components/jobs/builder/types";
 
-export interface ProductWithDbFields extends Product {
+export interface Product {
   id: string;
+  name: string;
+  description?: string;
+  category: string;
+  price: number;
+  cost: number;
+  taxable: boolean;
+  tags?: string[];
+  sku?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-export const useProducts = () => {
-  const [products, setProducts] = useState<ProductWithDbFields[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
+export const useProducts = (category?: string) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const fetchProducts = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      
-      setProducts(data || []);
-      
-      // Extract unique categories
-      if (data) {
-        const uniqueCategories = Array.from(new Set(data.map(product => product.category)));
-        setCategories(uniqueCategories);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        let query = supabase
+          .from('products')
+          .select('*');
+          
+        if (category) {
+          query = query.eq('category', category);
+        }
+        
+        const { data, error } = await query.order('name');
+        
+        if (error) throw error;
+        
+        setProducts(data || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Failed to load products');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      toast.error('Failed to load products');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    
+    fetchProducts();
+  }, [category, refreshTrigger]);
 
-  const createProduct = async (product: Omit<Product, 'id'>) => {
+  const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
         .from('products')
         .insert(product)
         .select()
         .single();
-      
+        
       if (error) throw error;
       
-      setProducts(prevProducts => [...prevProducts, data]);
-      toast.success(`Product "${product.name}" created successfully`);
-      
-      // Update categories if new category
-      if (product.category && !categories.includes(product.category)) {
-        setCategories(prev => [...prev, product.category]);
-      }
-      
+      setProducts(prev => [data, ...prev]);
+      toast.success('Product added successfully');
       return data;
     } catch (error) {
-      console.error('Error creating product:', error);
-      toast.error(`Failed to create product "${product.name}"`);
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product');
       return null;
     }
   };
@@ -74,66 +78,47 @@ export const useProducts = () => {
         .eq('id', id)
         .select()
         .single();
-      
+        
       if (error) throw error;
       
-      setProducts(prevProducts => 
-        prevProducts.map(p => p.id === id ? { ...p, ...data } : p)
-      );
+      setProducts(prev => prev.map(product => 
+        product.id === id ? { ...product, ...data } : product
+      ));
       
-      toast.success(`Product "${updates.name || 'product'}" updated successfully`);
-      
-      // Update categories if category changed
-      if (updates.category && !categories.includes(updates.category)) {
-        setCategories(prev => [...prev, updates.category]);
-      }
-      
+      toast.success('Product updated successfully');
       return data;
     } catch (error) {
       console.error('Error updating product:', error);
-      toast.error(`Failed to update product "${updates.name || 'product'}"`);
+      toast.error('Failed to update product');
       return null;
     }
   };
 
-  const deleteProduct = async (id: string, productName: string) => {
+  const deleteProduct = async (id: string) => {
     try {
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', id);
-      
+        
       if (error) throw error;
       
-      setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
-      toast.success(`Product "${productName}" deleted successfully`);
-      
-      // Re-calculate categories in case the last product of a category was deleted
-      const remainingCategories = Array.from(
-        new Set(products.filter(p => p.id !== id).map(p => p.category))
-      );
-      setCategories(remainingCategories);
-      
+      setProducts(prev => prev.filter(product => product.id !== id));
+      toast.success('Product deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting product:', error);
-      toast.error(`Failed to delete product "${productName}"`);
+      toast.error('Failed to delete product');
       return false;
     }
   };
 
-  // Load products on initial render
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   return {
     products,
-    categories,
     isLoading,
-    fetchProducts,
-    createProduct,
+    addProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    refreshProducts: () => setRefreshTrigger(prev => prev + 1)
   };
 };

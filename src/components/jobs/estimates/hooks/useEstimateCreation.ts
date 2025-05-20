@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useEstimateInfo } from "./useEstimateInfo";
 
 export const useEstimateCreation = (
   jobId: string,
@@ -9,6 +10,7 @@ export const useEstimateCreation = (
   setEstimates: (estimates: any[]) => void
 ) => {
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
+  const { generateUniqueNumber } = useEstimateInfo();
 
   // Handle creating a new estimate
   const handleCreateEstimate = () => {
@@ -28,8 +30,8 @@ export const useEstimateCreation = (
   // Handle estimate creation from the dialog
   const handleEstimateCreated = async (amount: number) => {
     try {
-      // Generate a new estimate number
-      const newEstimateNumber = `EST-${Math.floor(10000 + Math.random() * 90000)}`;
+      // Generate a new estimate number using the utility function
+      const newEstimateNumber = generateUniqueNumber('EST');
       
       console.log('Creating estimate for job:', jobId, 'with amount:', amount);
       
