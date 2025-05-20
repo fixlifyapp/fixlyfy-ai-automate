@@ -3,9 +3,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface TechnicianData {
+  name: string;
+  jobsCompleted: number;
+  revenue: number;
+  rating: number;
+}
+
+interface ReportsTechniciansProps {
+  period: string;
+  isLoading?: boolean;
+  technicianPerformance?: TechnicianData[];
+}
 
 // Mock data for technician performance
-const technicians = [
+const defaultTechnicians = [
   {
     id: 1,
     name: "Michael Rodriguez",
@@ -53,11 +67,52 @@ const technicians = [
   }
 ];
 
-interface ReportsTechniciansProps {
-  period: string;
-}
+export const ReportsTechnicians = ({ period, isLoading, technicianPerformance }: ReportsTechniciansProps) => {
+  const formatTechnicianData = () => {
+    if (!technicianPerformance) return defaultTechnicians;
+    
+    return technicianPerformance.map((tech, index) => ({
+      id: index + 1,
+      name: tech.name,
+      avatar: `/avatars/tech${index + 1}.jpg`,
+      completedJobs: tech.jobsCompleted,
+      avgRating: tech.rating,
+      efficiency: Math.min(Math.round(tech.revenue / 100), 100), // Simple calculation for efficiency
+      status: "active"
+    }));
+  };
 
-export const ReportsTechnicians = ({ period }: ReportsTechniciansProps) => {
+  const technicians = formatTechnicianData();
+
+  if (isLoading) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Technician Performance</CardTitle>
+          <CardDescription>
+            {period === 'week' && 'Performance for this week'}
+            {period === 'month' && 'Performance for this month'}
+            {period === 'quarter' && 'Performance for this quarter'}
+            {period === 'year' && 'Performance for this year'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-2 w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="h-full">
       <CardHeader>

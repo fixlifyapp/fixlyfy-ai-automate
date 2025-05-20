@@ -17,12 +17,16 @@ import {
   Cell,
   Sector
 } from 'recharts';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ReportsChartsProps {
   period: string;
+  isLoading?: boolean;
+  revenueByMonth?: { month: string; revenue: number; }[];
+  jobsByStatus?: { [key: string]: number; };
 }
 
-const revenueData = [
+const defaultRevenueData = [
   { name: 'Jan', HVAC: 8500, Plumbing: 4200, Electrical: 3400 },
   { name: 'Feb', HVAC: 7200, Plumbing: 3800, Electrical: 4100 },
   { name: 'Mar', HVAC: 6500, Plumbing: 6200, Electrical: 3900 },
@@ -32,7 +36,7 @@ const revenueData = [
   { name: 'Jul', HVAC: 12800, Plumbing: 7900, Electrical: 5800 },
 ];
 
-const jobsData = [
+const defaultJobsData = [
   { name: 'Jan', Completed: 48, Scheduled: 28, Canceled: 5 },
   { name: 'Feb', Completed: 42, Scheduled: 24, Canceled: 4 },
   { name: 'Mar', Completed: 38, Scheduled: 32, Canceled: 3 },
@@ -42,7 +46,7 @@ const jobsData = [
   { name: 'Jul', Completed: 72, Scheduled: 52, Canceled: 8 },
 ];
 
-const serviceBreakdownData = [
+const defaultServiceBreakdownData = [
   { name: 'HVAC', value: 45, color: '#8A4DD5' },
   { name: 'Plumbing', value: 30, color: '#B084F9' },
   { name: 'Electrical', value: 15, color: '#3B82F6' },
@@ -73,12 +77,51 @@ const renderActiveShape = (props: any) => {
   );
 };
 
-export const ReportsCharts = ({ period }: ReportsChartsProps) => {
+export const ReportsCharts = ({ 
+  period, 
+  isLoading, 
+  revenueByMonth, 
+  jobsByStatus 
+}: ReportsChartsProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const handlePieEnter = (_: any, index: number) => {
     setActiveIndex(index);
   };
+
+  // Convert revenueByMonth to chart format if available
+  const revenueData = revenueByMonth 
+    ? revenueByMonth.map(item => ({ name: item.month, Revenue: item.revenue }))
+    : defaultRevenueData;
+
+  // Convert jobsByStatus to chart format if available
+  const serviceBreakdownData = jobsByStatus
+    ? Object.entries(jobsByStatus).map(([name, value], index) => ({
+        name,
+        value,
+        color: [
+          '#8A4DD5',
+          '#B084F9',
+          '#3B82F6',
+          '#10B981',
+          '#F59E0B',
+          '#E5E7EB'
+        ][index % 6]
+      }))
+    : defaultServiceBreakdownData;
+
+  if (isLoading) {
+    return (
+      <div className="fixlyfy-card">
+        <div className="p-6 border-b border-fixlyfy-border">
+          <h2 className="text-lg font-medium">Performance Analytics</h2>
+        </div>
+        <div className="p-6">
+          <Skeleton className="h-[350px] w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixlyfy-card">
@@ -108,9 +151,15 @@ export const ReportsCharts = ({ period }: ReportsChartsProps) => {
                     cursor={{fill: 'rgba(138, 77, 213, 0.05)'}} 
                   />
                   <Legend />
-                  <Bar dataKey="HVAC" fill="#8A4DD5" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Plumbing" fill="#B084F9" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Electrical" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  {revenueByMonth ? (
+                    <Bar dataKey="Revenue" fill="#8A4DD5" radius={[4, 4, 0, 0]} />
+                  ) : (
+                    <>
+                      <Bar dataKey="HVAC" fill="#8A4DD5" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Plumbing" fill="#B084F9" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Electrical" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    </>
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -118,7 +167,7 @@ export const ReportsCharts = ({ period }: ReportsChartsProps) => {
           <TabsContent value="jobs">
             <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={jobsData}>
+                <LineChart data={defaultJobsData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />

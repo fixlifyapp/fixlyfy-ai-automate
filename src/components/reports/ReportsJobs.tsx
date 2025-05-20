@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReportsJobsProps {
   period: string;
+  isLoading?: boolean;
 }
 
 interface Job {
@@ -22,7 +23,7 @@ interface Job {
   revenue: number;
 }
 
-export const ReportsJobs = ({ period }: ReportsJobsProps) => {
+export const ReportsJobs = ({ period, isLoading: externalLoading }: ReportsJobsProps) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -193,13 +194,16 @@ export const ReportsJobs = ({ period }: ReportsJobsProps) => {
     ));
   };
 
+  // Use external loading state if provided, otherwise use internal loading state
+  const isLoadingData = externalLoading !== undefined ? externalLoading : loading;
+
   return (
     <div className="fixlyfy-card">
       <div className="p-6 border-b border-fixlyfy-border">
         <h2 className="text-lg font-medium">Recent Completed Jobs</h2>
       </div>
       <div className="overflow-hidden">
-        {loading ? (
+        {isLoadingData ? (
           <div className="flex justify-center items-center p-8">
             <Loader2 size={24} className="animate-spin text-fixlyfy" />
             <span className="ml-2">Loading jobs...</span>

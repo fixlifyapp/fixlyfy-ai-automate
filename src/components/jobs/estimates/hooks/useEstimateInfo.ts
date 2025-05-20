@@ -114,7 +114,7 @@ export const useEstimateInfo = (jobId?: string, clientId?: string) => {
     return companyInfo;
   };
   
-  // Get client information (missing method)
+  // Get client information
   const getClientInfo = (): ClientInfo => {
     return clientInfo;
   };
