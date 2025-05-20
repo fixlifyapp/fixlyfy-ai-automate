@@ -2,6 +2,9 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Product } from "@/components/jobs/builder/types";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FileWarning, Plus } from "lucide-react";
 
 export interface EstimateUpsellOptionsProps {
   warranty?: Product | null;
@@ -18,6 +21,38 @@ export const EstimateUpsellOptions = ({
 }: EstimateUpsellOptionsProps) => {
   return (
     <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium mb-4">Warranty Options</h3>
+        
+        {warranty ? (
+          <Card className="p-4 border-green-100 bg-green-50">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="text-md font-medium">{warranty.name}</h4>
+                <p className="text-sm text-muted-foreground">{warranty.description}</p>
+                <p className="text-md font-semibold mt-2">${warranty.price.toFixed(2)}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => onWarrantyChange(null)}>
+                Remove
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-4 border-dashed border-2 bg-muted/20">
+            <div className="flex items-center justify-center flex-col py-4">
+              <FileWarning className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">No warranty selected</p>
+              <Button size="sm" variant="outline" onClick={() => {
+                // This would typically open a warranty selection dialog
+                console.log("Open warranty selection");
+              }}>
+                <Plus className="h-4 w-4 mr-1" /> Add Warranty
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
+      
       <div>
         <h3 className="text-lg font-medium">Technician's Notes</h3>
         <p className="text-sm text-muted-foreground mb-4">

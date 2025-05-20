@@ -105,9 +105,11 @@ export const useEstimateBuilder = ({
           // Transform the items data into LineItem format
           const transformedItems: LineItem[] = itemsData.map(item => ({
             id: item.id,
+            name: item.description || "", // Add name property
             description: item.description || "",
             quantity: item.quantity,
             unitPrice: Number(item.unit_price),
+            price: Number(item.unit_price),
             discount: 0,
             tax: item.taxable ? taxRate : 0,
             total: Number(item.unit_price) * item.quantity,
@@ -131,18 +133,69 @@ export const useEstimateBuilder = ({
 
   // Save estimate changes to Supabase
   const saveEstimateChanges = async () => {
-    if (!estimateId) return false;
-
     setIsLoading(true);
     try {
-      console.log("Saving estimate changes for id:", estimateId);
+      console.log("Saving estimate changes");
       console.log("Line items to save:", lineItems);
       
-      // First update the estimate basic info
+      // If no estimate ID, create a new one
+      if (!estimateId) {
+        // Generate a new estimate number
+        const newEstimateNumber = estimateNumber || generateUniqueNumber('EST');
+        
+        // Create the estimate
+        const { data: newEstimate, error: createError } = await supabase
+          .from('estimates')
+          .insert({
+            job_id: jobId,
+            estimate_number: newEstimateNumber,
+            notes: notes,
+            total: calculateGrandTotal(),
+            status: 'draft'
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error("Error creating estimate:", createError);
+          toast.error("Failed to create estimate");
+          return false;
+        }
+        
+        console.log("Created new estimate:", newEstimate);
+        
+        // Now save all line items
+        if (lineItems.length > 0) {
+          const itemsToInsert = lineItems.map(item => ({
+            parent_id: newEstimate.id,
+            parent_type: 'estimate',
+            description: item.description || item.name || "",
+            unit_price: item.unitPrice,
+            quantity: item.quantity,
+            taxable: item.taxable
+          }));
+          
+          const { error: lineItemsError } = await supabase
+            .from('line_items')
+            .insert(itemsToInsert);
+            
+          if (lineItemsError) {
+            console.error("Error saving line items:", lineItemsError);
+            toast.error("Some line items may not have been saved");
+            return false;
+          }
+        }
+        
+        toast.success(`Estimate ${newEstimateNumber} created`);
+        return true;
+      }
+      
+      // For existing estimate, update it
       const { error } = await supabase
         .from('estimates')
         .update({
-          notes: notes
+          notes: notes,
+          total: calculateGrandTotal()
         })
         .eq('id', estimateId);
 
@@ -195,7 +248,7 @@ export const useEstimateBuilder = ({
           id: item.id,
           parent_id: estimateId,
           parent_type: 'estimate',
-          description: item.description,
+          description: item.description || item.name || "",
           unit_price: item.unitPrice,
           quantity: item.quantity,
           taxable: item.taxable
@@ -215,6 +268,11 @@ export const useEstimateBuilder = ({
             return false;
           }
         } else {
+          // For new items, generate a proper UUID
+          if (item.id.startsWith('item-')) {
+            delete (itemData as any).id;
+          }
+          
           // Insert new item
           const { error: insertError } = await supabase
             .from('line_items')
@@ -227,27 +285,12 @@ export const useEstimateBuilder = ({
           }
         }
       }
-      
-      // Update the estimate total amount
-      const total = calculateGrandTotal();
-      const { error: updateAmountError } = await supabase
-        .from('estimates')
-        .update({
-          total: total
-        })
-        .eq('id', estimateId);
-        
-      if (updateAmountError) {
-        console.error("Error updating estimate amount:", updateAmountError);
-        toast.error("Failed to update estimate total");
-        return false;
-      }
 
       toast.success(`Estimate ${estimateNumber} updated`);
       return true;
     } catch (error) {
-      console.error("Error updating estimate:", error);
-      toast.error("Failed to update estimate");
+      console.error("Error saving estimate:", error);
+      toast.error("Failed to save estimate");
       return false;
     } finally {
       setIsLoading(false);
@@ -255,27 +298,28 @@ export const useEstimateBuilder = ({
   };
 
   // Handle adding a product to the line items
-  const handleAddProduct = async (product: Product) => {
+  const handleAddProduct = (product: Product) => {
+    console.log("Adding product to estimate:", product);
     const newLineItem: LineItem = {
       id: `item-${Date.now()}`,
+      name: product.name,
       description: product.description || product.name,
       quantity: 1,
       unitPrice: product.price,
+      price: product.price,
       discount: 0,
       tax: 0,
       total: product.price,
       ourPrice: product.cost || 0,
-      taxable: true,
-      name: product.name,
-      price: product.price
+      taxable: product.taxable || true
     };
 
-    setLineItems([...lineItems, newLineItem]);
+    setLineItems(prev => [...prev, newLineItem]);
   };
 
   // Handle removing a line item
   const handleRemoveLineItem = (id: string) => {
-    setLineItems(lineItems.filter((item) => item.id !== id));
+    setLineItems(prev => prev.filter((item) => item.id !== id));
   };
 
   // Handle updating a line item
@@ -290,12 +334,20 @@ export const useEstimateBuilder = ({
       return;
     }
     
-    setLineItems(
-      lineItems.map((item) =>
-        item.id === id
-          ? { ...item, [field]: value }
-          : item
-      )
+    setLineItems(prev =>
+      prev.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          
+          // Recalculate item total when quantity or price changes
+          if (field === "quantity" || field === "unitPrice") {
+            updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+          }
+          
+          return updatedItem;
+        }
+        return item;
+      })
     );
   };
 
@@ -304,43 +356,6 @@ export const useEstimateBuilder = ({
     setSelectedLineItemId(id);
     // Open edit modal or perform other actions
     console.log(`Editing line item with ID: ${id}`);
-  };
-
-  // Handle adding an empty line item
-  const handleAddEmptyLineItem = () => {
-    // Open product search
-    console.log("Opening product search");
-  };
-
-  // Handle adding a custom line
-  const handleAddCustomLine = () => {
-    const newLineItem: LineItem = {
-      id: `item-${Date.now()}`,
-      description: "Custom Item",
-      name: "Custom Item",
-      quantity: 1,
-      unitPrice: 0,
-      price: 0,
-      discount: 0,
-      tax: 0,
-      total: 0,
-      ourPrice: 0,
-      taxable: true
-    };
-    setLineItems([...lineItems, newLineItem]);
-  };
-
-  // Handle product saved
-  const handleProductSaved = (product: Product) => {
-    setSelectedProduct(product);
-    // Add the edited product to line items
-    handleAddProduct(product);
-  };
-
-  // Handle product selected
-  const handleProductSelected = (product: Product) => {
-    setSelectedProduct(product);
-    handleAddProduct(product);
   };
 
   // Handle sync to invoice
@@ -359,6 +374,9 @@ export const useEstimateBuilder = ({
         // Generate a new estimate number
         const newEstimateNumber = generateUniqueNumber('EST');
         setEstimateNumber(newEstimateNumber);
+        
+        // Clear the line items for a new estimate
+        setLineItems([]);
       }
     }
   }, [open, estimateId, generateUniqueNumber]);
@@ -375,19 +393,16 @@ export const useEstimateBuilder = ({
     isLoading,
     setTechniciansNote,
     setRecommendedWarranty,
+    setLineItems,
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
     handleEditLineItem,
-    handleAddEmptyLineItem,
-    handleAddCustomLine,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
     calculateTotalMargin,
     calculateMarginPercentage,
-    handleProductSaved,
-    handleProductSelected,
     handleSyncToInvoice,
     saveEstimateChanges,
     setNotes,

@@ -28,7 +28,7 @@ export const EstimateBuilderDialog = ({
   onSyncToInvoice
 }: EstimateBuilderDialogProps) => {
   const [activeTab, setActiveTab] = useState("form");
-  const [isProductSearchOpen, setIsProductSearchOpen] = useState(estimateId ? false : true);
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
   
   const estimateBuilder = useEstimateBuilder({
@@ -60,7 +60,9 @@ export const EstimateBuilderDialog = ({
       total: (item.quantity || 1) * (item.unitPrice || 0)
     };
     
-    estimateBuilder.setLineItems([...estimateBuilder.lineItems, newLineItem]);
+    // Update lineItems by using the state update function from useEstimateBuilder
+    const updatedLineItems = [...estimateBuilder.lineItems, newLineItem];
+    estimateBuilder.setLineItems(updatedLineItems);
   };
   
   return (
@@ -111,7 +113,6 @@ export const EstimateBuilderDialog = ({
           
           <TabsContent value="options" className="py-4">
             <div className="space-y-8">
-              {/* Pass the correct props to EstimateUpsellOptions */}
               <EstimateUpsellOptions
                 warranty={estimateBuilder.recommendedWarranty}
                 techniciansNote={estimateBuilder.techniciansNote}
@@ -130,7 +131,7 @@ export const EstimateBuilderDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => estimateBuilder.saveEstimateChanges()}>
+          <Button onClick={estimateBuilder.saveEstimateChanges}>
             Save Estimate
           </Button>
         </div>
