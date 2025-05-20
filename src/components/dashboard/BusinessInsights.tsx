@@ -28,18 +28,31 @@ export const BusinessInsights = () => {
           
         if (clientsError) throw clientsError;
         
-        // Fetch jobs data
+        // Updated query to avoid join issues with technician_id
         const { data: jobs, error: jobsError } = await supabase
           .from('jobs')
-          .select('*, technician:technician_id(id, name)');
+          .select('*');
           
         if (jobsError) throw jobsError;
+        
+        // Fetch profiles separately
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name');
+          
+        // Create a map of technician IDs to names
+        const technicianMap = new Map();
+        if (profiles) {
+          profiles.forEach((profile: any) => {
+            technicianMap.set(profile.id, profile.name);
+          });
+        }
         
         // Calculate metrics based on the real data
         const completedJobs = jobs.filter(job => job.status === "completed");
         const activeClients = clients.filter(client => client.status === "active");
         
-        const currentRevenue = completedJobs.reduce((total, job) => total + parseFloat(job.revenue || 0), 0);
+        const currentRevenue = completedJobs.reduce((total, job) => total + parseFloat(job.revenue?.toString() || '0'), 0);
         // Calculate previous revenue (simulate as 85% of current for demo)
         const previousRevenue = currentRevenue * 0.85;
         const revenueTrend = currentRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
@@ -53,17 +66,22 @@ export const BusinessInsights = () => {
         };
         
         // Technician performance
-        const technicianPerformance = jobs.reduce((acc: Record<string, any>, job) => {
-          const techName = job.technician?.name || 'Unassigned';
-          if (!acc[techName]) {
-            acc[techName] = { jobs: 0, revenue: 0 };
+        const technicianPerformance: Record<string, any> = {};
+        
+        jobs.forEach(job => {
+          const techName = job.technician_id ? 
+            technicianMap.get(job.technician_id) || 'Unassigned' : 
+            'Unassigned';
+            
+          if (!technicianPerformance[techName]) {
+            technicianPerformance[techName] = { jobs: 0, revenue: 0 };
           }
-          acc[techName].jobs += 1;
+          technicianPerformance[techName].jobs += 1;
+          
           if (job.status === "completed") {
-            acc[techName].revenue += parseFloat(job.revenue || 0);
+            technicianPerformance[techName].revenue += parseFloat(job.revenue?.toString() || '0');
           }
-          return acc;
-        }, {});
+        });
         
         // Find top performer
         let topPerformer = "None";
@@ -110,12 +128,15 @@ export const BusinessInsights = () => {
     try {
       setTestStatus("loading");
       
+      // Fix the authentication method - use access token differently
+      const { data: { session } } = await supabase.auth.getSession();
+      
       // Test the OpenAI connection via edge function
       const response = await fetch('https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/test-openai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+          'Authorization': `Bearer ${session?.access_token}`
         }
       });
       

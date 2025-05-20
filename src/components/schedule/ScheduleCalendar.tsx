@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -104,34 +105,66 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
       try {
         setLoading(true);
         
-        // For demo, I'm not filtering by date range yet, but you would do that in a real app
+        // Updated query to avoid join issues with technician_id and client_id
         const { data, error } = await supabase
           .from('jobs')
-          .select(`
-            *,
-            client:client_id(name),
-            technician:technician_id(id, name)
-          `)
+          .select('*')
           .in('status', ['scheduled', 'in-progress', 'completed']);
           
         if (error) throw error;
         
+        // Fetch clients separately
+        const { data: clients } = await supabase
+          .from('clients')
+          .select('id, name');
+          
+        // Create a map of client IDs to names
+        const clientMap = new Map();
+        if (clients) {
+          clients.forEach((client: any) => {
+            clientMap.set(client.id, client.name);
+          });
+        }
+        
+        // Fetch technicians separately
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name');
+          
+        // Create a map of technician IDs to names
+        const technicianMap = new Map();
+        if (profiles) {
+          profiles.forEach((profile: any) => {
+            technicianMap.set(profile.id, profile.name);
+          });
+        }
+        
         // Transform data to match component expectations
-        const formattedJobs = data.map(job => ({
-          id: job.id,
-          client: job.client?.name || 'No client',
-          title: job.title || 'Unnamed job',
-          date: new Date(job.date || new Date()),
-          duration: 120, // Default to 2 hours if not specified
-          technician: {
-            name: job.technician?.name || 'Unassigned',
-            initials: job.technician?.name ? 
-              job.technician.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 
-              'UA'
-          },
-          status: job.status || 'scheduled',
-          address: job.description || 'No address provided'
-        }));
+        const formattedJobs = data.map(job => {
+          const technicianName = job.technician_id ? 
+            technicianMap.get(job.technician_id) || 'Unassigned' : 
+            'Unassigned';
+          
+          const clientName = job.client_id ?
+            clientMap.get(job.client_id) || 'No client' :
+            'No client';
+            
+          return {
+            id: job.id,
+            client: clientName,
+            title: job.title || 'Unnamed job',
+            date: new Date(job.date || new Date()),
+            duration: 120, // Default to 2 hours if not specified
+            technician: {
+              name: technicianName,
+              initials: technicianName ? 
+                technicianName.substring(0, 2).toUpperCase() : 
+                'UA'
+            },
+            status: job.status || 'scheduled',
+            address: job.description || 'No address provided'
+          };
+        });
         
         setScheduledJobs(formattedJobs);
       } catch (error) {

@@ -33,7 +33,7 @@ export const DashboardMetrics = () => {
         // Calculate real metrics from clients and jobs data
         const activeClients = clients.filter(client => client.status === "active").length;
         const completedJobs = jobs.filter(job => job.status === "completed");
-        const totalRevenue = completedJobs.reduce((sum, job) => sum + parseFloat(job.revenue || 0), 0);
+        const totalRevenue = completedJobs.reduce((sum, job) => sum + parseFloat(job.revenue?.toString() || '0'), 0);
         const openJobs = jobs.filter(job => job.status === "in-progress").length;
         const scheduledJobs = jobs.filter(job => job.status === "scheduled").length;
         

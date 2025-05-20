@@ -26,35 +26,49 @@ export const ClientJobs = ({ clientId, onCreateJob }: ClientJobsProps) => {
       try {
         setLoading(true);
         
+        // Updated query to avoid join issues with technician_id
         const { data, error } = await supabase
           .from('jobs')
-          .select(`
-            *,
-            technician:technician_id(
-              id, 
-              name
-            )
-          `)
+          .select('*')
           .eq('client_id', clientId);
         
         if (error) throw error;
         
+        // Fetch technicians separately if needed
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name');
+
+        // Create a map of technician IDs to names for easy lookup
+        const technicianMap = new Map();
+        if (profiles) {
+          profiles.forEach((profile: any) => {
+            technicianMap.set(profile.id, profile.name);
+          });
+        }
+        
         // Transform data to match component expectations
-        const formattedJobs = data.map(job => ({
-          id: job.id,
-          client: job.title, // Using title as client name since we're in client context
-          address: job.description || 'No address provided',
-          service: job.service || 'General service',
-          status: job.status,
-          date: job.date,
-          time: new Date(job.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          technician: {
-            name: job.technician?.name || 'Unassigned',
-            initials: job.technician?.name ? job.technician.name.substring(0, 2).toUpperCase() : 'UA'
-          },
-          revenue: parseFloat(job.revenue) || 0,
-          tags: job.tags || []
-        }));
+        const formattedJobs = data.map(job => {
+          const technicianName = job.technician_id ? 
+            technicianMap.get(job.technician_id) || 'Unassigned' : 
+            'Unassigned';
+          
+          return {
+            id: job.id,
+            client: job.title, // Using title as client name since we're in client context
+            address: job.description || 'No address provided',
+            service: job.service || 'General service',
+            status: job.status,
+            date: job.date,
+            time: new Date(job.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            technician: {
+              name: technicianName,
+              initials: technicianName ? technicianName.substring(0, 2).toUpperCase() : 'UA'
+            },
+            revenue: parseFloat(job.revenue?.toString() || '0'),
+            tags: job.tags || []
+          };
+        });
         
         setJobs(formattedJobs);
       } catch (error) {
