@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,14 +6,15 @@ import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, DollarSign, FileText, Trash2 } from "lucide-react";
-import { Payment, PaymentMethod } from "@/types/payment";
+import { PaymentMethod } from "@/types/payment";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { Dialog } from "@/components/ui/dialog";
-import { usePayments } from "@/hooks/usePayments";
+import { usePayments, Payment } from "@/hooks/usePayments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RefundDialog } from "../finance/dialogs/RefundDialog";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -21,6 +23,7 @@ interface JobPaymentsProps {
 export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -35,7 +38,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     deletePayment
   } = usePayments(jobId);
   
-  const getMethodIcon = (method: PaymentMethod) => {
+  const getMethodIcon = (method: string) => {
     switch (method) {
       case "credit-card":
         return <CreditCard size={16} className="text-blue-500" />;
@@ -87,8 +90,12 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   };
 
   const handleRefundPayment = (payment: Payment) => {
-    // In a real app, this would open a dialog to confirm and set refund amount
-    refundPayment(payment.id);
+    setSelectedPayment(payment);
+    setIsRefundDialogOpen(true);
+  };
+
+  const confirmRefund = (paymentId: string, notes?: string) => {
+    refundPayment(paymentId);
   };
 
   const handleDeletePayment = (payment: Payment) => {
@@ -110,6 +117,16 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // Convert Payment type to match RefundDialog's expected Payment type
+  const convertToRefundDialogPayment = (payment: Payment) => {
+    return {
+      ...payment,
+      clientId: payment.client_id || '',
+      clientName: 'Client', // Default value if not available
+      jobId: payment.job_id || jobId,
+    };
   };
 
   return (
@@ -228,6 +245,16 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
           isDeleting={isDeleting}
         />
       </Dialog>
+
+      {/* Refund Dialog */}
+      {selectedPayment && (
+        <RefundDialog
+          open={isRefundDialogOpen}
+          onOpenChange={setIsRefundDialogOpen}
+          payment={convertToRefundDialogPayment(selectedPayment)}
+          onRefund={confirmRefund}
+        />
+      )}
     </Card>
   );
 };
