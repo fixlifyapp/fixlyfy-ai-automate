@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
@@ -66,30 +67,28 @@ export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }:
           toDate = today.toISOString();
         }
         
-        // Get total revenue from paid invoices
-        const { data: invoicesData, error: invoicesError } = await supabase
-          .from('invoices')
-          .select('total')
-          .eq('status', 'paid')
+        // For revenue - use payments table instead of invoices
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payments')
+          .select('amount')
           .gte('date', fromDate)
           .lte('date', toDate);
           
-        if (invoicesError) throw invoicesError;
+        if (paymentsError) throw paymentsError;
         
-        const totalRevenue = invoicesData?.reduce((sum, invoice) => sum + invoice.total, 0) || 0;
+        const totalRevenue = paymentsData?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
         
-        // Get previous period revenue for comparison
+        // Get previous period revenue for comparison from payments
         const previousFromDate = new Date(new Date(fromDate).getTime() - (new Date(toDate).getTime() - new Date(fromDate).getTime())).toISOString();
         const previousToDate = new Date(new Date(fromDate).getTime() - 1).toISOString();
         
-        const { data: previousInvoicesData } = await supabase
-          .from('invoices')
-          .select('total')
-          .eq('status', 'paid')
+        const { data: previousPaymentsData } = await supabase
+          .from('payments')
+          .select('amount')
           .gte('date', previousFromDate)
           .lte('date', previousToDate);
           
-        const previousRevenue = previousInvoicesData?.reduce((sum, invoice) => sum + invoice.total, 0) || 1; // Avoid division by zero
+        const previousRevenue = previousPaymentsData?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 1; // Avoid division by zero
         const revenueChange = Math.round(((totalRevenue - previousRevenue) / previousRevenue) * 100);
         
         // Get jobs completed
@@ -169,6 +168,37 @@ export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }:
       } catch (error) {
         console.error('Error fetching KPI data:', error);
         toast.error('Failed to load KPI data');
+        
+        // Set placeholder data if there's an error
+        setKpis([
+          {
+            title: 'Total Revenue',
+            value: '$0',
+            change: 0,
+            isPositive: true,
+            icon: DollarSign,
+            iconColor: 'bg-fixlyfy',
+            loading: false
+          },
+          {
+            title: 'Jobs Completed',
+            value: '0',
+            change: 0,
+            isPositive: true,
+            icon: CheckCircle,
+            iconColor: 'bg-fixlyfy-success',
+            loading: false
+          },
+          {
+            title: 'Open Jobs',
+            value: '0',
+            change: 0,
+            isPositive: true,
+            icon: CalendarClock,
+            iconColor: 'bg-fixlyfy-warning',
+            loading: false
+          }
+        ]);
       } finally {
         setIsLoading(false);
       }

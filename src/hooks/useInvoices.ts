@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 
-// Define a simple Invoice interface for future implementation
+// Define a simple Invoice interface
 export interface Invoice {
   id: string;
   number: string;
@@ -20,8 +20,16 @@ export const useInvoices = (jobId?: string) => {
   return {
     invoices,
     isLoading,
-    createInvoiceFromEstimate: async () => null,
-    updateInvoiceStatus: async () => false,
-    refreshInvoices: () => {}
+    createInvoiceFromEstimate: async () => {
+      console.log("Invoice functionality is being rebuilt");
+      return null;
+    },
+    updateInvoiceStatus: async () => {
+      console.log("Invoice functionality is being rebuilt");
+      return false;
+    },
+    refreshInvoices: () => {
+      console.log("Invoice functionality is being rebuilt");
+    }
   };
 };

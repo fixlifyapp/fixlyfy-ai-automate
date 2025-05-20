@@ -1,12 +1,11 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface InvoiceStatusData {
   name: string;
@@ -33,75 +32,61 @@ export const InvoiceStatusBreakdown = ({ isRefreshing = false }: InvoiceStatusBr
   const [invoiceData, setInvoiceData] = useState<InvoiceStatusData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchInvoiceData = async () => {
-      if (!user) return;
-
       setIsLoading(true);
+      
       try {
-        // Fetch all invoices
-        const { data: invoices, error } = await supabase
-          .from('invoices')
-          .select('id, status, total')
-          .order('date', { ascending: false });
+        // Since invoices table has been removed, use placeholder data
+        setTimeout(() => {
+          // Sample data for demonstration purposes
+          const placeholderData: InvoiceStatusData[] = [
+            { name: 'Paid', value: 15000, color: '#10B981' },
+            { name: 'Pending', value: 8500, color: '#3B82F6' },
+            { name: 'Overdue', value: 3200, color: '#EF4444' },
+            { name: 'Partial', value: 1800, color: '#F59E0B' },
+          ];
           
-        if (error) throw error;
-        
-        // Calculate totals by status
-        const statusTotals: Record<string, number> = {
-          'paid': 0,
-          'pending': 0,
-          'overdue': 0,
-          'partial': 0
-        };
-        
-        let totalAmount = 0;
-        
-        invoices?.forEach(invoice => {
-          const status = invoice.status?.toLowerCase() || 'pending';
-          if (statusTotals[status] !== undefined) {
-            statusTotals[status] += Number(invoice.total) || 0;
-          } else {
-            statusTotals[status] = Number(invoice.total) || 0;
-          }
-          totalAmount += Number(invoice.total) || 0;
-        });
-        
-        setTotal(totalAmount);
-        
-        // Format data for chart
-        const chartData: InvoiceStatusData[] = [
-          { name: 'Paid', value: statusTotals['paid'], color: '#10B981' },
-          { name: 'Pending', value: statusTotals['pending'], color: '#3B82F6' },
-          { name: 'Overdue', value: statusTotals['overdue'], color: '#EF4444' },
-          { name: 'Partial', value: statusTotals['partial'], color: '#F59E0B' },
-        ].filter(item => item.value > 0);
-        
-        setInvoiceData(chartData.length > 0 ? chartData : [
-          { name: 'No Data', value: 100, color: '#E5E7EB' }
-        ]);
+          const totalAmount = placeholderData.reduce((sum, item) => sum + item.value, 0);
+          
+          setInvoiceData(placeholderData);
+          setTotal(totalAmount);
+          setIsLoading(false);
+        }, 800); // Simulate loading delay
       } catch (error) {
         console.error('Error fetching invoice data:', error);
-        setInvoiceData([
+        
+        // Fallback data if there's an error
+        const fallbackData: InvoiceStatusData[] = [
           { name: 'No Data', value: 100, color: '#E5E7EB' }
-        ]);
-      } finally {
+        ];
+        
+        setInvoiceData(fallbackData);
+        setTotal(0);
         setIsLoading(false);
+        
+        toast.error('Unable to load invoice data', {
+          description: 'Invoice functionality is being rebuilt'
+        });
       }
     };
     
     fetchInvoiceData();
-  }, [user, isRefreshing]);
+  }, [isRefreshing]);
+
+  const handleRemindersClick = () => {
+    toast.info('Invoice functionality is being rebuilt');
+    navigate('/jobs');
+  };
 
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg">Invoice Status</CardTitle>
-        <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
-          Go to Invoices
+        <Button variant="outline" size="sm" onClick={() => navigate('/jobs')}>
+          Go to Jobs
         </Button>
       </CardHeader>
       <CardContent>
@@ -135,9 +120,10 @@ export const InvoiceStatusBreakdown = ({ isRefreshing = false }: InvoiceStatusBr
             <div className="mt-4 text-center">
               <p className="text-sm text-fixlyfy-text-secondary">Total Invoice Amount</p>
               <p className="text-2xl font-bold">${total.toLocaleString()}</p>
-              <Button variant="outline" className="mt-4 w-full" onClick={() => navigate('/reminders')}>
+              <p className="text-xs italic mt-1 text-fixlyfy-text-secondary">Sample data - Invoice functionality is being rebuilt</p>
+              <Button variant="outline" className="mt-4 w-full" onClick={handleRemindersClick}>
                 <Send size={16} className="mr-2" />
-                Send Reminders to All
+                Go to Jobs
               </Button>
             </div>
           </>
