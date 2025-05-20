@@ -132,47 +132,7 @@ export const EstimateBuilderDialog = ({
   // Get the action text based on whether we're creating or editing
   const actionText = estimateId ? "Save Changes" : "Save Draft";
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
-        {/* Sticky Header */}
-        
-        
-        {/* Show loading indicator if data is still loading */}
-        {isLoading && <div className="flex items-center justify-center p-12">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy mb-4"></div>
-              <p className="text-fixlyfy-text-secondary">Loading estimate data...</p>
-            </div>
-          </div>}
-          
-        {!isLoading && <div className="px-6 pt-2 pb-6">
-            <TabsContent value="editor" className="mt-2">
-              <EstimateEditor estimateNumber={estimateNumber} lineItems={lineItems} notes={notes} taxRate={taxRate} onNotesChange={value => handleUpdateLineItem(null, "notes", value)} onTaxRateChange={value => handleUpdateLineItem(null, "taxRate", value)} onAddProduct={handleAddProduct} onRemoveLineItem={handleRemoveLineItem} onUpdateLineItem={handleUpdateLineItem} onEditLineItem={handleEditLineItem} onAddEmptyLineItem={openProductSearch} onAddCustomLine={handleAddCustomLine} onSyncToInvoice={handleSyncToInvoice} calculateSubtotal={calculateSubtotal} calculateTotalTax={calculateTotalTax} calculateGrandTotal={calculateGrandTotal} calculateTotalMargin={calculateTotalMargin} calculateMarginPercentage={calculateMarginPercentage} />
-            </TabsContent>
-            
-            <TabsContent value="preview" className="mt-2">
-              <EstimatePreview estimateNumber={estimateNumber} lineItems={lineItems} notes={notes} taxRate={taxRate} calculateSubtotal={calculateSubtotal} calculateTotalTax={calculateTotalTax} calculateGrandTotal={calculateGrandTotal} />
-            </TabsContent>
-          </div>}
-        
-        {/* Sticky Footer */}
-        <DialogFooter className="sticky bottom-0 border-t bg-background px-6 py-4 mt-0">
-          <div className="w-full flex flex-col sm:flex-row justify-between gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
-                <Save size={16} />
-                {actionText}
-              </Button>
-              <Button onClick={handleSendEstimate} className="gap-2 bg-indigo-600 hover:bg-indigo-700" disabled={!canSendEstimate}>
-                <Send size={16} />
-                Send to Customer
-              </Button>
-            </div>
-          </div>
-        </DialogFooter>
-      </DialogContent>
+      
       
       <WarrantySelectionDialog open={isWarrantyDialogOpen} onOpenChange={setIsWarrantyDialogOpen} onConfirm={handleWarrantyConfirmed} />
 
