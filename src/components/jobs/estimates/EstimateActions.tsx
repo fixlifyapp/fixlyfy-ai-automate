@@ -21,13 +21,19 @@ export const EstimateActions = ({
   onDelete,
   isProcessing = false,
 }: EstimateActionsProps) => {
+  // Add a console log to debug the estimate object
+  console.log("Estimate in EstimateActions:", estimate);
+  
   return (
     <div className="flex justify-end gap-2">
       <Button 
         variant="outline" 
         size="sm"
         className="text-xs"
-        onClick={() => onEdit(estimate.id)}
+        onClick={() => {
+          console.log("Edit button clicked for estimate ID:", estimate.id);
+          onEdit(estimate.id);
+        }}
         disabled={isProcessing}
       >
         Edit

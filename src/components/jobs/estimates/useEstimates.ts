@@ -56,6 +56,14 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     }
   };
 
+  // Handle edit estimate with improved debugging
+  const handleEditEstimate = (estimateId: string) => {
+    console.log("handleEditEstimate called with ID:", estimateId);
+    estimateCreation.actions.handleEditEstimate(estimateId);
+    // Make sure to open the estimate builder dialog
+    setIsEstimateBuilderOpen(true);
+  };
+
   // Handle add warranty with dialog opening
   const handleAddWarranty = (estimate: any) => {
     estimateActions.actions.setSelectedEstimate(estimate);
@@ -106,7 +114,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     },
     handlers: {
       handleCreateEstimate,
-      handleEditEstimate: estimateCreation.actions.handleEditEstimate,
+      handleEditEstimate,
       handleViewEstimate,
       handleSendEstimate: estimateActions.actions.handleSendEstimate,
       handleUpsellAccept: estimateUpsell.actions.handleUpsellAccept,
