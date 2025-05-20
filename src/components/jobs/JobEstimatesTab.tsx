@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 import { Badge } from "@/components/ui/badge";
+import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
+import { recordEstimateCreated } from "@/services/jobHistoryService";
 
 interface JobEstimatesTabProps {
   jobId: string;
@@ -18,6 +21,8 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
   const [isLoading, setIsLoading] = useState(true);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | undefined>(undefined);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
   
   const fetchEstimates = async () => {
     setIsLoading(true);
@@ -74,7 +79,25 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
     }
   };
   
+  const handleEstimateCreated = (estimateNumber: string, amount: number) => {
+    // Record in job history
+    recordEstimateCreated(
+      jobId,
+      estimateNumber,
+      amount
+    );
+    // Refresh estimates list
+    fetchEstimates();
+  };
+  
   const handleConvertToInvoice = async (estimate: any) => {
+    setSelectedEstimate(estimate);
+    setIsConvertDialogOpen(true);
+  };
+
+  const confirmConvertToInvoice = async () => {
+    if (!selectedEstimate) return;
+    
     try {
       // Generate unique invoice number
       const invoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
@@ -84,12 +107,12 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         .from("invoices")
         .insert({
           job_id: jobId,
-          estimate_id: estimate.id,
+          estimate_id: selectedEstimate.id,
           invoice_number: invoiceNumber,
-          total: estimate.total,
-          balance: estimate.total,
+          total: selectedEstimate.total,
+          balance: selectedEstimate.total,
           status: 'unpaid',
-          notes: estimate.notes
+          notes: selectedEstimate.notes
         })
         .select()
         .single();
@@ -103,7 +126,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         .from("line_items")
         .select("*")
         .eq("parent_type", "estimate")
-        .eq("parent_id", estimate.id);
+        .eq("parent_id", selectedEstimate.id);
         
       if (itemsError) {
         throw itemsError;
@@ -133,7 +156,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       const { error: updateError } = await supabase
         .from("estimates")
         .update({ status: "converted" })
-        .eq("id", estimate.id);
+        .eq("id", selectedEstimate.id);
         
       if (updateError) {
         throw updateError;
@@ -270,6 +293,14 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
               onEstimateConverted();
             }
           }}
+        />
+
+        <ConvertToInvoiceDialog
+          open={isConvertDialogOpen}
+          onOpenChange={setIsConvertDialogOpen}
+          estimate={selectedEstimate}
+          estimateNumber={selectedEstimate?.estimate_number}
+          onConfirm={confirmConvertToInvoice}
         />
       </CardContent>
     </Card>

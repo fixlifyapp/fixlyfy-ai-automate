@@ -9,19 +9,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { Estimate } from "@/hooks/useEstimates";
 
 interface ConvertToInvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  estimate?: Estimate;
   estimateNumber?: string;
+  onConfirm: () => void;
 }
 
 export const ConvertToInvoiceDialog = ({
   open,
   onOpenChange,
-  onConfirm,
+  estimate,
   estimateNumber,
+  onConfirm,
 }: ConvertToInvoiceDialogProps) => {
   const [isConverting, setIsConverting] = useState(false);
   
@@ -31,8 +34,12 @@ export const ConvertToInvoiceDialog = ({
       await onConfirm();
     } finally {
       setIsConverting(false);
+      onOpenChange(false);
     }
   };
+  
+  // Use either the estimate object or the direct estimateNumber prop
+  const displayEstimateNumber = estimate?.estimate_number || estimateNumber;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +49,7 @@ export const ConvertToInvoiceDialog = ({
         </DialogHeader>
         <div className="py-4">
           <p>
-            Are you sure you want to convert estimate {estimateNumber} to an invoice?
+            Are you sure you want to convert estimate {displayEstimateNumber} to an invoice?
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             This will create a new invoice with all the items from this estimate.

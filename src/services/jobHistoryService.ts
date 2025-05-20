@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { HistoryItem } from '@/hooks/useJobHistory';
 
@@ -213,6 +212,44 @@ export const recordInvoiceCreated = async (
     return data;
   } catch (error) {
     console.error('Error recording invoice creation:', error);
+    return null;
+  }
+};
+
+export const recordEstimateConverted = async (
+  jobId: string,
+  estimateNumber: string,
+  invoiceNumber: string,
+  amount: number,
+  userName?: string,
+  userId?: string
+) => {
+  try {
+    const historyItem = {
+      job_id: jobId,
+      type: 'estimate-conversion',
+      title: 'Estimate Converted to Invoice',
+      description: `Estimate #${estimateNumber} was converted to Invoice #${invoiceNumber} for $${amount.toFixed(2)}`,
+      user_id: userId,
+      user_name: userName,
+      meta: {
+        estimateNumber,
+        invoiceNumber,
+        amount
+      }
+    };
+    
+    const { data, error } = await supabase
+      .from('job_history')
+      .insert(historyItem)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error('Error recording estimate conversion:', error);
     return null;
   }
 };
