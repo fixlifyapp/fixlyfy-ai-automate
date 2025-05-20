@@ -9,6 +9,7 @@ interface EstimateSummaryProps {
   calculateGrandTotal?: () => number;
   calculateTotalMargin?: () => number;
   calculateMarginPercentage?: () => number;
+  showMargin?: boolean;
 }
 
 export const EstimateSummary = ({
@@ -18,15 +19,16 @@ export const EstimateSummary = ({
   calculateTotalTax = () => 0,
   calculateGrandTotal = () => 0,
   calculateTotalMargin,
-  calculateMarginPercentage
+  calculateMarginPercentage,
+  showMargin = false
 }: EstimateSummaryProps) => {
   const subtotal = typeof calculateSubtotal === 'function' ? calculateSubtotal() : 0;
   const totalTax = typeof calculateTotalTax === 'function' ? calculateTotalTax() : 0;
   const grandTotal = typeof calculateGrandTotal === 'function' ? calculateGrandTotal() : 0;
   
-  const showMargin = !!calculateTotalMargin && !!calculateMarginPercentage;
-  const totalMargin = showMargin && typeof calculateTotalMargin === 'function' ? calculateTotalMargin() : 0;
-  const marginPercentage = showMargin && typeof calculateMarginPercentage === 'function' ? calculateMarginPercentage() : 0;
+  const displayMargin = showMargin && !!calculateTotalMargin && !!calculateMarginPercentage;
+  const totalMargin = displayMargin && typeof calculateTotalMargin === 'function' ? calculateTotalMargin() : 0;
+  const marginPercentage = displayMargin && typeof calculateMarginPercentage === 'function' ? calculateMarginPercentage() : 0;
   
   return (
     <div className="border p-4 rounded-md">
@@ -51,7 +53,7 @@ export const EstimateSummary = ({
           <span className="font-bold text-lg">${grandTotal.toFixed(2)}</span>
         </div>
         
-        {showMargin && (
+        {displayMargin && (
           <>
             <div className="border-t pt-4 flex justify-between items-center text-sm text-green-600">
               <span className="font-medium">Margin:</span>

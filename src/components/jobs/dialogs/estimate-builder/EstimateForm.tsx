@@ -1,15 +1,17 @@
 
-import { LineItem } from "@/components/jobs/builder/types";
-import { LineItemsTable } from "./LineItemsTable";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Search } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { LineItemsTable } from "./LineItemsTable";
+import { LineItem } from "@/components/jobs/builder/types";
 import { EstimateSummary } from "./EstimateSummary";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus } from "lucide-react";
 
 interface EstimateFormProps {
   estimateNumber: string;
   lineItems: LineItem[];
   onRemoveLineItem: (id: string) => void;
-  onUpdateLineItem: (id: string | null, field: string, value: any) => void;
+  onUpdateLineItem: (id: string, field: string, value: any) => void;
   onEditLineItem: (id: string) => boolean;
   onAddEmptyLineItem: () => void;
   onAddCustomLine: () => void;
@@ -23,10 +25,10 @@ interface EstimateFormProps {
   showMargin?: boolean;
 }
 
-export const EstimateForm = ({ 
-  estimateNumber, 
-  lineItems = [], // Provide default empty array
-  onRemoveLineItem, 
+export const EstimateForm = ({
+  estimateNumber,
+  lineItems,
+  onRemoveLineItem,
   onUpdateLineItem,
   onEditLineItem,
   onAddEmptyLineItem,
@@ -38,63 +40,68 @@ export const EstimateForm = ({
   calculateGrandTotal,
   calculateTotalMargin,
   calculateMarginPercentage,
-  showMargin = true
+  showMargin = false
 }: EstimateFormProps) => {
-  // Implement handleTaxRateChange function
-  const handleTaxRateChange = (value: string) => {
-    // Convert to number, with boundary checks
-    const parsedValue = parseFloat(value);
-    if (isNaN(parsedValue)) {
-      setTaxRate(0);
-    } else if (parsedValue < 0) {
-      setTaxRate(0);
-    } else if (parsedValue > 100) {
-      setTaxRate(100);
-    } else {
-      setTaxRate(parsedValue);
-    }
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Line Items Table */}
-      <LineItemsTable
-        lineItems={Array.isArray(lineItems) ? lineItems : []} // Ensure lineItems is always an array
-        onRemoveLineItem={onRemoveLineItem}
-        onUpdateLineItem={onUpdateLineItem}
-        onEditLineItem={onEditLineItem}
-      />
-      
-      {/* Actions: Add Line Item */}
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h4 className="text-md font-semibold">Add Item</h4>
-        <div className="space-x-2">
-          <Button variant="outline" size="sm" onClick={onAddEmptyLineItem}>
-            <Search size={16} className="mr-2" />
-            Product
-          </Button>
-          <Button variant="outline" size="sm" onClick={onAddCustomLine}>
-            <PlusCircle size={16} className="mr-2" />
-            Custom Line
-          </Button>
-        </div>
+        <h2 className="text-2xl font-semibold">Estimate #{estimateNumber}</h2>
       </div>
       
-      {/* Estimate Summary section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="lg:col-span-1">
-          {/* Empty div for spacing or potential future content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardContent className="p-0">
+              <LineItemsTable 
+                lineItems={lineItems} 
+                onRemoveLineItem={onRemoveLineItem}
+                onUpdateLineItem={onUpdateLineItem}
+                onEditLineItem={onEditLineItem}
+                showMargin={showMargin}
+              />
+            </CardContent>
+          </Card>
+          
+          <div className="mt-4 flex space-x-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex items-center"
+              onClick={onAddEmptyLineItem}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Catalog Item
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="flex items-center"
+              onClick={onAddCustomLine}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Custom Line
+            </Button>
+          </div>
+          
+          <div className="mt-6">
+            <label className="block text-sm font-medium mb-2">Notes</label>
+            <Textarea 
+              placeholder="Enter any additional notes for this estimate..."
+              className="min-h-[120px]"
+              value=""
+              onChange={(e) => onUpdateLineItem(null, "notes", e.target.value)}
+            />
+          </div>
         </div>
         
-        <div className="lg:col-span-1">
+        <div>
           <EstimateSummary
             taxRate={taxRate}
-            onTaxRateChange={handleTaxRateChange}
-            calculateSubtotal={calculateSubtotal || (() => 0)}
-            calculateTotalTax={calculateTotalTax || (() => 0)}
-            calculateGrandTotal={calculateGrandTotal || (() => 0)}
-            calculateTotalMargin={showMargin ? (calculateTotalMargin || (() => 0)) : undefined}
-            calculateMarginPercentage={showMargin ? (calculateMarginPercentage || (() => 0)) : undefined}
+            onTaxRateChange={(value) => setTaxRate(parseFloat(value) || 0)}
+            calculateSubtotal={calculateSubtotal}
+            calculateTotalTax={calculateTotalTax}
+            calculateGrandTotal={calculateGrandTotal}
+            calculateTotalMargin={calculateTotalMargin}
+            calculateMarginPercentage={calculateMarginPercentage}
+            showMargin={showMargin}
           />
         </div>
       </div>

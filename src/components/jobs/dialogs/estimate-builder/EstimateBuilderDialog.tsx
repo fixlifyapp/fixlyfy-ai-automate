@@ -12,6 +12,7 @@ import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowLeft, FileText, ListPlus } from "lucide-react";
+import { useEstimates } from "@/hooks/useEstimates";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -122,6 +123,14 @@ export const EstimateBuilderDialog = ({
     setIsProductEditDialogOpen(false);
   };
   
+  // Handle saving estimate and closing the dialog
+  const handleSaveEstimate = async () => {
+    const success = await estimateBuilder.saveEstimateChanges();
+    if (success) {
+      onOpenChange(false); // Close dialog immediately after successful save
+    }
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 h-[90vh] overflow-hidden flex flex-col">
@@ -212,7 +221,7 @@ export const EstimateBuilderDialog = ({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={estimateBuilder.saveEstimateChanges}>
+              <Button onClick={handleSaveEstimate}>
                 Save Estimate
               </Button>
             </div>
