@@ -69,6 +69,244 @@ export type Database = {
         }
         Relationships: []
       }
+      estimate_items: {
+        Row: {
+          description: string | null
+          estimate_id: string | null
+          id: string
+          name: string
+          product_id: string | null
+          quantity: number | null
+          tax_amount: number | null
+          tax_rate: number | null
+          total: number | null
+          unit_price: number
+        }
+        Insert: {
+          description?: string | null
+          estimate_id?: string | null
+          id?: string
+          name: string
+          product_id?: string | null
+          quantity?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total?: number | null
+          unit_price: number
+        }
+        Update: {
+          description?: string | null
+          estimate_id?: string | null
+          id?: string
+          name?: string
+          product_id?: string | null
+          quantity?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_items_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimates: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          estimate_number: string
+          id: string
+          job_id: string | null
+          notes: string | null
+          status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          total: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          estimate_number: string
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          estimate_number?: string
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          description: string | null
+          id: string
+          invoice_id: string | null
+          name: string
+          product_id: string | null
+          quantity: number | null
+          tax_amount: number | null
+          tax_rate: number | null
+          total: number | null
+          unit_price: number
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          name: string
+          product_id?: string | null
+          quantity?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total?: number | null
+          unit_price: number
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          name?: string
+          product_id?: string | null
+          quantity?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount_paid: number | null
+          balance: number | null
+          client_id: string | null
+          created_at: string | null
+          estimate_id: string | null
+          id: string
+          invoice_number: string
+          job_id: string | null
+          notes: string | null
+          status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          total: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          balance?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          estimate_id?: string | null
+          id?: string
+          invoice_number: string
+          job_id?: string | null
+          notes?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount_paid?: number | null
+          balance?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          estimate_id?: string | null
+          id?: string
+          invoice_number?: string
+          job_id?: string | null
+          notes?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_history: {
         Row: {
           created_at: string | null

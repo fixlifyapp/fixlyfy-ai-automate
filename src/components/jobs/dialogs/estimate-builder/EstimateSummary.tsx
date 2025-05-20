@@ -1,6 +1,7 @@
 
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Info } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 interface EstimateSummaryProps {
   taxRate: number;
@@ -21,72 +22,65 @@ export const EstimateSummary = ({
   calculateTotalMargin,
   calculateMarginPercentage
 }: EstimateSummaryProps) => {
+  const subtotal = calculateSubtotal();
+  const taxTotal = calculateTotalTax();
+  const grandTotal = calculateGrandTotal();
+  const marginTotal = calculateTotalMargin();
+  const marginPercentage = calculateMarginPercentage();
   
-  const handleTaxRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onTaxRateChange(e.target.value);
-  };
-
   return (
-    <div className="border rounded-md p-6 bg-card">
-      <h3 className="font-semibold text-lg mb-4">Summary</h3>
-      <div className="space-y-3">
-        <div className="flex justify-between">
-          <span>Subtotal:</span>
-          <span>${calculateSubtotal().toFixed(2)}</span>
-        </div>
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <h3 className="text-lg font-medium">Summary</h3>
         
-        <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal:</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
+          
           <div className="flex items-center gap-2">
-            <span>Tax:</span>
-            <div className="relative w-16">
+            <Label htmlFor="tax-rate" className="text-sm text-muted-foreground">Tax Rate:</Label>
+            <div className="relative w-20">
               <Input
+                id="tax-rate"
                 type="number"
-                min={0}
-                max={100}
+                min="0"
+                max="100"
+                step="0.01"
                 value={taxRate}
-                onChange={handleTaxRateChange}
-                className="h-7 px-2 py-1 text-right pr-5"
+                onChange={(e) => onTaxRateChange(e.target.value)}
+                className="pl-2 pr-6 h-7 text-right"
               />
               <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground text-xs">%</span>
             </div>
           </div>
-          <span>${calculateTotalTax().toFixed(2)}</span>
-        </div>
-        
-        <div className="pt-3 border-t">
-          <div className="flex justify-between font-semibold text-lg">
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Tax:</span>
+            <span>${taxTotal.toFixed(2)}</span>
+          </div>
+          
+          <div className="h-px bg-muted my-2"></div>
+          
+          <div className="flex justify-between font-medium">
             <span>Total:</span>
-            <span>${calculateGrandTotal().toFixed(2)}</span>
+            <span>${grandTotal.toFixed(2)}</span>
           </div>
         </div>
         
-        {/* Profit margin - visible only to staff */}
-        <div className="mt-4 pt-4 border-t border-dashed">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1 text-green-600">
-              <span className="font-medium">Profit Margin</span>
-              <span className="tooltip-container">
-                <Info size={14} className="text-muted-foreground" />
-                <span className="tooltip-text text-xs bg-background border p-2 rounded shadow-md absolute -top-10 left-0 hidden group-hover:block w-48">
-                  This information is for internal use only
-                </span>
-              </span>
-            </div>
-            <span className="text-green-600 font-medium">
-              ${calculateTotalMargin().toFixed(2)}
-            </span>
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Margin:</span>
+            <span>${marginTotal.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center mt-1">
-            <span className="text-sm text-muted-foreground">Percentage:</span>
-            <span className="text-sm text-green-600">
-              {calculateMarginPercentage().toFixed(0)}%
-            </span>
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Margin %:</span>
+            <span>{marginPercentage.toFixed(2)}%</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            This information is for internal use only
-          </p>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -1,29 +1,285 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Edit, Trash, ArrowRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
+import { Badge } from "@/components/ui/badge";
 
 interface JobEstimatesTabProps {
   jobId: string;
   onEstimateConverted?: () => void;
 }
 
+type Estimate = {
+  id: string;
+  estimate_number: string;
+  created_at: string;
+  total: number;
+  status: string;
+};
+
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
+  const [selectedEstimateId, setSelectedEstimateId] = useState<string | undefined>(undefined);
+  
+  const fetchEstimates = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("estimates")
+        .select("*")
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      setEstimates(data || []);
+    } catch (error) {
+      console.error("Error fetching estimates:", error);
+      toast.error("Failed to load estimates");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchEstimates();
+  }, [jobId]);
+  
+  const handleCreateEstimate = () => {
+    setSelectedEstimateId(undefined);
+    setIsEstimateBuilderOpen(true);
+  };
+  
+  const handleEditEstimate = (estimateId: string) => {
+    setSelectedEstimateId(estimateId);
+    setIsEstimateBuilderOpen(true);
+  };
+  
+  const handleDeleteEstimate = async (estimateId: string) => {
+    try {
+      const { error } = await supabase
+        .from("estimates")
+        .delete()
+        .eq("id", estimateId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setEstimates(estimates.filter(est => est.id !== estimateId));
+      toast.success("Estimate deleted successfully");
+    } catch (error) {
+      console.error("Error deleting estimate:", error);
+      toast.error("Failed to delete estimate");
+    }
+  };
+  
+  const handleConvertToInvoice = async (estimate: Estimate) => {
+    try {
+      // Get estimate items
+      const { data: estimateItems, error: itemsError } = await supabase
+        .from("estimate_items")
+        .select("*")
+        .eq("estimate_id", estimate.id);
+        
+      if (itemsError) {
+        throw itemsError;
+      }
+      
+      // Generate unique invoice number
+      const invoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
+      // Create invoice
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          job_id: jobId,
+          estimate_id: estimate.id,
+          invoice_number: invoiceNumber,
+          subtotal: estimate.total,
+          total: estimate.total,
+          balance: estimate.total,
+          status: 'unpaid'
+        })
+        .select()
+        .single();
+        
+      if (invoiceError) {
+        throw invoiceError;
+      }
+      
+      // Convert estimate items to invoice items
+      if (estimateItems && estimateItems.length > 0) {
+        const invoiceItems = estimateItems.map(item => ({
+          invoice_id: invoice.id,
+          product_id: item.product_id,
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_rate: item.tax_rate,
+          tax_amount: item.tax_amount,
+          total: item.total
+        }));
+        
+        const { error: itemsInsertError } = await supabase
+          .from("invoice_items")
+          .insert(invoiceItems);
+          
+        if (itemsInsertError) {
+          throw itemsInsertError;
+        }
+      }
+      
+      // Update estimate status
+      const { error: updateError } = await supabase
+        .from("estimates")
+        .update({ status: "converted" })
+        .eq("id", estimate.id);
+        
+      if (updateError) {
+        throw updateError;
+      }
+      
+      toast.success("Estimate converted to invoice successfully");
+      
+      // Refresh estimates list
+      fetchEstimates();
+      
+      // Notify parent component
+      if (onEstimateConverted) {
+        onEstimateConverted();
+      }
+    } catch (error) {
+      console.error("Error converting estimate to invoice:", error);
+      toast.error("Failed to convert estimate to invoice");
+    }
+  };
+
+  // Function to render status badge with appropriate color
+  const renderStatusBadge = (status: string) => {
+    let color = "";
+    
+    switch (status.toLowerCase()) {
+      case "draft":
+        color = "bg-gray-200 text-gray-800";
+        break;
+      case "sent":
+        color = "bg-blue-100 text-blue-800";
+        break;
+      case "approved":
+        color = "bg-green-100 text-green-800";
+        break;
+      case "rejected":
+        color = "bg-red-100 text-red-800";
+        break;
+      case "converted":
+        color = "bg-purple-100 text-purple-800";
+        break;
+      default:
+        color = "bg-gray-200";
+    }
+    
+    return (
+      <Badge className={color}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+  
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-medium">Estimates</h3>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleCreateEstimate}>
             <PlusCircle size={16} />
             New Estimate
           </Button>
         </div>
-
-        <div className="text-center py-16 text-muted-foreground">
-          <p>Estimate functionality is being rebuilt.</p>
-          <p className="mt-2">Please check back later.</p>
-        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
+          </div>
+        ) : estimates.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <p>No estimates found for this job.</p>
+            <p className="mt-2">Create your first estimate by clicking the New Estimate button.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {estimates.map((estimate) => (
+              <div 
+                key={estimate.id} 
+                className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <h4 className="font-medium">{estimate.estimate_number}</h4>
+                    {renderStatusBadge(estimate.status)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Created on {format(new Date(estimate.created_at), 'MMM dd, yyyy')}
+                  </p>
+                </div>
+                
+                <div className="text-lg font-semibold">
+                  ${estimate.total.toFixed(2)}
+                </div>
+                
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <Button variant="outline" size="sm" onClick={() => handleEditEstimate(estimate.id)}>
+                    <Edit size={16} className="mr-2" />
+                    Edit
+                  </Button>
+                  
+                  {estimate.status !== 'converted' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleConvertToInvoice(estimate)}
+                    >
+                      <ArrowRight size={16} className="mr-2" />
+                      Convert to Invoice
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => handleDeleteEstimate(estimate.id)}
+                  >
+                    <Trash size={16} className="mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <EstimateBuilderDialog
+          open={isEstimateBuilderOpen}
+          onOpenChange={setIsEstimateBuilderOpen}
+          estimateId={selectedEstimateId}
+          jobId={jobId}
+          onSyncToInvoice={() => {
+            if (onEstimateConverted) {
+              onEstimateConverted();
+            }
+          }}
+        />
       </CardContent>
     </Card>
   );

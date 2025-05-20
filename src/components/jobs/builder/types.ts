@@ -14,12 +14,14 @@ export interface Product {
 
 export interface LineItem {
   id: string;
-  description: string;
+  name: string;
+  description?: string;
   quantity: number;
-  unitPrice: number;
-  discount: number;
-  tax: number;
-  total: number;
+  price: number;
+  unitPrice?: number;
+  discount?: number;
+  tax?: number;
+  total?: number;
   ourPrice?: number;
-  taxable?: boolean;
+  taxable: boolean;
 }

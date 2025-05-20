@@ -3,18 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash } from "lucide-react";
-
-interface LineItem {
-  id: string;
-  description?: string;
-  name: string;
-  quantity: number;
-  price: number;
-  discount?: number;
-  tax?: number;
-  taxable: boolean;
-  unitPrice?: number;
-}
+import { LineItem } from "@/components/jobs/builder/types";
 
 interface LineItemsTableProps {
   lineItems: LineItem[];
