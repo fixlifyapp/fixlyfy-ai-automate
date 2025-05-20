@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +36,14 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
     return matchesSearch && matchesCategory;
   });
 
+  // Function to handle row click which now immediately adds the product and closes dialog
+  const handleRowClick = (product: Product) => {
+    onProductSelect(product);
+    onOpenChange(false);
+    setSearchQuery("");
+  };
+
+  // Keep the original functions for backward compatibility
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
   };
@@ -50,7 +57,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
     }
   };
   
-  // New function to handle quick add product and close dialog
+  // Keep the quick add function for the plus button
   const handleQuickAddProduct = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click from selecting the product
     onProductSelect(product);
@@ -139,17 +146,11 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                     (selectedCategory === "frequently-used" ? frequentlyUsed : filteredProducts).map((product) => (
                       <TableRow 
                         key={product.id} 
-                        className={cn(
-                          "cursor-pointer hover:bg-muted/50 transition-colors",
-                          selectedProduct?.id === product.id ? "bg-muted/80" : ""
-                        )}
-                        onClick={() => handleSelectProduct(product)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleRowClick(product)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            {selectedProduct?.id === product.id && (
-                              <Check size={16} className="text-primary" />
-                            )}
                             <div>
                               <p className="font-medium">{product.name}</p>
                               <p className="text-sm text-muted-foreground line-clamp-1">{product.description}</p>
