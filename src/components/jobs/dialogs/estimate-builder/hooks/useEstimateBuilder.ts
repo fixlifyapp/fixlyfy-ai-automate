@@ -9,7 +9,7 @@ import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateIn
 export interface UseEstimateBuilderProps {
   estimateId: string | null;
   open: boolean;
-  onSyncToInvoice?: (estimate: any) => void;
+  onSyncToInvoice?: (estimate?: any) => void;
   jobId: string;
 }
 
@@ -32,11 +32,13 @@ export const useEstimateBuilder = ({
 
   // Function to calculate subtotal
   const calculateSubtotal = useCallback(() => {
+    if (!Array.isArray(lineItems) || lineItems.length === 0) return 0;
     return lineItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   }, [lineItems]);
 
   // Function to calculate total tax
   const calculateTotalTax = useCallback(() => {
+    if (!Array.isArray(lineItems) || lineItems.length === 0) return 0;
     return lineItems.reduce((sum, item) => {
       const itemSubtotal = item.unitPrice * item.quantity;
       return sum + (item.taxable ? itemSubtotal * (taxRate / 100) : 0);
@@ -50,6 +52,7 @@ export const useEstimateBuilder = ({
 
   // Function to calculate total margin
   const calculateTotalMargin = useCallback(() => {
+    if (!Array.isArray(lineItems) || lineItems.length === 0) return 0;
     return lineItems.reduce((sum, item) => {
       const cost = (item.ourPrice || 0) * item.quantity;
       const revenue = item.unitPrice * item.quantity;
@@ -137,6 +140,13 @@ export const useEstimateBuilder = ({
     try {
       console.log("Saving estimate changes");
       console.log("Line items to save:", lineItems);
+      
+      // Check if we have at least one line item
+      if (!Array.isArray(lineItems) || lineItems.length === 0) {
+        toast.error("Please add at least one item to the estimate");
+        setIsLoading(false);
+        return false;
+      }
       
       // If no estimate ID, create a new one
       if (!estimateId) {
@@ -304,13 +314,13 @@ export const useEstimateBuilder = ({
       id: `item-${Date.now()}`,
       name: product.name,
       description: product.description || product.name,
-      quantity: 1,
+      quantity: product.quantity || 1,
       unitPrice: product.price,
       price: product.price,
       discount: 0,
       tax: 0,
-      total: product.price,
-      ourPrice: product.cost || 0,
+      total: product.price * (product.quantity || 1),
+      ourPrice: product.ourPrice || product.cost || 0,
       taxable: product.taxable || true
     };
 
@@ -354,14 +364,28 @@ export const useEstimateBuilder = ({
   // Handle editing a line item
   const handleEditLineItem = (id: string) => {
     setSelectedLineItemId(id);
-    // Open edit modal or perform other actions
-    console.log(`Editing line item with ID: ${id}`);
+    // Find the line item
+    const lineItem = lineItems.find(item => item.id === id);
+    if (lineItem) {
+      setSelectedProduct({
+        id: lineItem.id,
+        name: lineItem.name || lineItem.description,
+        description: lineItem.description,
+        category: "",
+        price: lineItem.unitPrice,
+        cost: lineItem.ourPrice || 0,
+        taxable: lineItem.taxable,
+        quantity: lineItem.quantity
+      });
+      return true;
+    }
+    return false;
   };
 
   // Handle sync to invoice
   const handleSyncToInvoice = () => {
     if (onSyncToInvoice) {
-      onSyncToInvoice(lineItems);
+      onSyncToInvoice();
       toast.success("Estimate synced to invoice");
     }
   };
@@ -379,7 +403,7 @@ export const useEstimateBuilder = ({
         setLineItems([]);
       }
     }
-  }, [open, estimateId, generateUniqueNumber]);
+  }, [open, estimateId]);
 
   return {
     estimateNumber,

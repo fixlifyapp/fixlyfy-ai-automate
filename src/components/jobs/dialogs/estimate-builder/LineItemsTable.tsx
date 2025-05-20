@@ -42,81 +42,82 @@ export const LineItemsTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.isArray(lineItems) && lineItems.map((item) => (
-            <TableRow key={item.id} className="hover:bg-muted/20 group">
-              <TableCell>
-                <Input
-                  value={item.description || (item.name || "")}
-                  onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
-                  className="border-transparent focus:border-input bg-transparent"
-                />
-              </TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  value={item.quantity}
-                  min={1}
-                  onChange={(e) => onUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
-                  className="border-transparent focus:border-input bg-transparent w-16"
-                />
-              </TableCell>
-              <TableCell>
-                <div className="relative">
-                  <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+          {Array.isArray(lineItems) && lineItems.length > 0 ? (
+            lineItems.map((item) => (
+              <TableRow key={item.id} className="hover:bg-muted/20 group">
+                <TableCell>
+                  <Input
+                    value={item.description || (item.name || "")}
+                    onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
+                    className="border-transparent focus:border-input bg-transparent"
+                  />
+                </TableCell>
+                <TableCell>
                   <Input
                     type="number"
-                    value={item.unitPrice}
-                    min={0}
-                    step={0.01}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      onUpdateLineItem(item.id, "unitPrice", value);
-                    }}
-                    className="border-transparent focus:border-input bg-transparent pl-6"
+                    value={item.quantity}
+                    min={1}
+                    onChange={(e) => onUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                    className="border-transparent focus:border-input bg-transparent w-16"
                   />
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    value={item.discount || 0}
-                    min={0}
-                    max={100}
-                    onChange={(e) => onUpdateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)}
-                    className="border-transparent focus:border-input bg-transparent pr-6 w-16"
-                  />
-                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right font-medium">
-                ${calculateLineTotal(item).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEditLineItem(item.id)}
-                    title="Edit product details"
-                    className="h-8 w-8"
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemoveLineItem(item.id)}
-                    title="Remove item"
-                    className="h-8 w-8 text-destructive"
-                  >
-                    <Trash size={16} />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-          {(!Array.isArray(lineItems) || lineItems.length === 0) && (
+                </TableCell>
+                <TableCell>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      value={item.unitPrice}
+                      min={0}
+                      step={0.01}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        onUpdateLineItem(item.id, "unitPrice", value);
+                      }}
+                      className="border-transparent focus:border-input bg-transparent pl-6"
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={item.discount || 0}
+                      min={0}
+                      max={100}
+                      onChange={(e) => onUpdateLineItem(item.id, "discount", parseFloat(e.target.value) || 0)}
+                      className="border-transparent focus:border-input bg-transparent pr-6 w-16"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  ${calculateLineTotal(item).toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEditLineItem(item.id)}
+                      title="Edit product details"
+                      className="h-8 w-8"
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRemoveLineItem(item.id)}
+                      title="Remove item"
+                      className="h-8 w-8 text-destructive"
+                    >
+                      <Trash size={16} />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
             <TableRow>
               <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                 No items added yet. Add items from the catalog or create a custom line item.

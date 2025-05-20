@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 import { CustomLineItemDialog } from "./CustomLineItemDialog";
 import { Product, LineItem } from "@/components/jobs/builder/types";
+import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -30,6 +31,8 @@ export const EstimateBuilderDialog = ({
   const [activeTab, setActiveTab] = useState("form");
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
   
   const estimateBuilder = useEstimateBuilder({
     estimateId: estimateId || null,
@@ -63,6 +66,54 @@ export const EstimateBuilderDialog = ({
     // Update lineItems by using the state update function from useEstimateBuilder
     const updatedLineItems = [...estimateBuilder.lineItems, newLineItem];
     estimateBuilder.setLineItems(updatedLineItems);
+    setIsCustomLineItemDialogOpen(false);
+  };
+
+  const handleEditLineItem = (id: string) => {
+    // Find the line item in the current lineItems array
+    const lineItem = estimateBuilder.lineItems.find(item => item.id === id);
+    if (lineItem) {
+      // Create a product object from the line item to edit
+      const productToEdit: Product = {
+        id: lineItem.id,
+        name: lineItem.name || lineItem.description,
+        description: lineItem.description,
+        category: "",
+        price: lineItem.unitPrice,
+        ourPrice: lineItem.ourPrice || 0,
+        cost: lineItem.ourPrice || 0,
+        taxable: lineItem.taxable,
+        tags: [],
+        quantity: lineItem.quantity
+      };
+      setSelectedProduct(productToEdit);
+      setIsProductEditDialogOpen(true);
+      return true;
+    }
+    return false;
+  };
+
+  const handleProductUpdate = (updatedProduct: Product) => {
+    // Find the line item and update it
+    const updatedLineItems = estimateBuilder.lineItems.map(item => {
+      if (item.id === updatedProduct.id) {
+        return {
+          ...item,
+          name: updatedProduct.name,
+          description: updatedProduct.description || updatedProduct.name,
+          unitPrice: updatedProduct.price,
+          price: updatedProduct.price,
+          ourPrice: updatedProduct.ourPrice || 0,
+          taxable: updatedProduct.taxable,
+          quantity: updatedProduct.quantity || item.quantity,
+          total: (updatedProduct.quantity || item.quantity) * updatedProduct.price
+        };
+      }
+      return item;
+    });
+    
+    estimateBuilder.setLineItems(updatedLineItems);
+    setIsProductEditDialogOpen(false);
   };
   
   return (
@@ -85,7 +136,7 @@ export const EstimateBuilderDialog = ({
               lineItems={estimateBuilder.lineItems || []}
               onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
               onUpdateLineItem={estimateBuilder.handleUpdateLineItem}
-              onEditLineItem={estimateBuilder.handleEditLineItem}
+              onEditLineItem={handleEditLineItem}
               onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
               onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
               taxRate={estimateBuilder.taxRate}
@@ -149,6 +200,14 @@ export const EstimateBuilderDialog = ({
         open={isCustomLineItemDialogOpen}
         onOpenChange={setIsCustomLineItemDialogOpen}
         onSave={handleCustomLineItemSave}
+      />
+
+      {/* Product Edit Dialog */}
+      <ProductEditInEstimateDialog
+        open={isProductEditDialogOpen}
+        onOpenChange={setIsProductEditDialogOpen}
+        product={selectedProduct}
+        onSave={handleProductUpdate}
       />
     </Dialog>
   );

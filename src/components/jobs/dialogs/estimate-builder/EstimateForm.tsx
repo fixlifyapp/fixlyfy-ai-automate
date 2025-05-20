@@ -10,7 +10,7 @@ interface EstimateFormProps {
   lineItems: LineItem[];
   onRemoveLineItem: (id: string) => void;
   onUpdateLineItem: (id: string | null, field: string, value: any) => void;
-  onEditLineItem: (id: string) => void;
+  onEditLineItem: (id: string) => boolean;
   onAddEmptyLineItem: () => void;
   onAddCustomLine: () => void;
   taxRate: number;
@@ -39,7 +39,7 @@ export const EstimateForm = ({
   calculateTotalMargin,
   calculateMarginPercentage,
   showMargin = true
-}) => {
+}: EstimateFormProps) => {
   // Implement handleTaxRateChange function
   const handleTaxRateChange = (value: string) => {
     // Convert to number, with boundary checks

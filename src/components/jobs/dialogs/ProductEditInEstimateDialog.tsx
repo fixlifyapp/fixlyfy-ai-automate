@@ -15,6 +15,7 @@ import { Product } from "../builder/types";
 import { X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProductEditInEstimateDialogProps {
   open: boolean;
@@ -33,16 +34,20 @@ export const ProductEditInEstimateDialog = ({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState(0);
+  const [ourPrice, setOurPrice] = useState(0);
   const [taxable, setTaxable] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (product) {
       setName(product.name);
       setDescription(product.description || "");
-      setCategory(product.category);
+      setCategory(product.category || "");
       setPrice(product.price);
+      setOurPrice(product.ourPrice || product.cost || 0);
+      setQuantity(product.quantity || 1);
       setTaxable(product.taxable !== undefined ? product.taxable : true);
       setTags(product.tags || []);
     } else {
@@ -51,6 +56,8 @@ export const ProductEditInEstimateDialog = ({
       setDescription("");
       setCategory("");
       setPrice(0);
+      setOurPrice(0);
+      setQuantity(1);
       setTaxable(true);
       setTags([]);
     }
@@ -84,21 +91,19 @@ export const ProductEditInEstimateDialog = ({
       return;
     }
     
-    // Enhance description for warranty products
-    let enhancedDescription = description;
-    if (category.toLowerCase() === "warranty") {
-      if (!description.includes("peace of mind") && !description.includes("protection")) {
-        enhancedDescription = `${description} Provides peace of mind and protects your investment.`;
-      }
-    }
+    // Calculate profit margin for display
+    const margin = price - ourPrice;
+    const marginPercentage = price > 0 ? (margin / price) * 100 : 0;
     
     const updatedProduct: Product = {
       ...product,
       name,
-      description: enhancedDescription,
+      description,
       category,
       price,
-      ourPrice: 0, // Always set ourPrice to 0 in estimates
+      quantity,
+      cost: ourPrice, // Set cost to ourPrice
+      ourPrice,
       taxable,
       tags
     };
@@ -114,14 +119,25 @@ export const ProductEditInEstimateDialog = ({
     }
   };
 
-  // Add a special note for warranty products
-  const isWarranty = category.toLowerCase() === "warranty";
+  // Calculate profit margin
+  const margin = price - ourPrice;
+  const marginPercentage = price > 0 ? (margin / price) * 100 : 0;
+
+  // Categories list (typically you would fetch this from your backend)
+  const categories = [
+    "Maintenance Plans",
+    "Repairs",
+    "Parts",
+    "Services",
+    "Warranty",
+    "Accessories"
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Product in Estimate</DialogTitle>
+          <DialogTitle>Edit Product</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -141,34 +157,68 @@ export const ProductEditInEstimateDialog = ({
               id="product-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={isWarranty ? "Describe how this warranty solves customer problems" : "Enter product description"}
+              placeholder="Enter product description"
             />
-            {isWarranty && (
-              <p className="text-xs text-green-600 italic mt-1">
-                Tip: Describe how this warranty provides peace of mind and protects the customer's investment
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="product-category">Category</Label>
-            <Input
-              id="product-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Enter category"
-            />
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="product-price">Customer Price ($)</Label>
+              <Input
+                id="product-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-our-price">
+                Our Price ($) <span className="text-sm text-muted-foreground">(Internal)</span>
+              </Label>
+              <Input
+                id="product-our-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={ourPrice}
+                onChange={(e) => setOurPrice(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+
+          <div className="bg-muted/30 p-3 rounded-md border">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Profit Margin:</span>
+              <span className="font-medium">${margin.toFixed(2)} ({marginPercentage.toFixed(0)}%)</span>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="product-price">Price ($)</Label>
+            <Label htmlFor="product-quantity">Quantity</Label>
             <Input
-              id="product-price"
+              id="product-quantity"
               type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
             />
           </div>
 

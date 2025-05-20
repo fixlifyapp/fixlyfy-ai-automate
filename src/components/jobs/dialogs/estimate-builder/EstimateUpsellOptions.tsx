@@ -5,6 +5,8 @@ import { Product } from "@/components/jobs/builder/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileWarning, Plus } from "lucide-react";
+import { useState } from "react";
+import { useProducts } from "@/hooks/useProducts";
 
 export interface EstimateUpsellOptionsProps {
   warranty?: Product | null;
@@ -19,6 +21,14 @@ export const EstimateUpsellOptions = ({
   onWarrantyChange,
   onNotesChange
 }: EstimateUpsellOptionsProps) => {
+  const [showWarrantyOptions, setShowWarrantyOptions] = useState(false);
+  const { products, isLoading } = useProducts("Warranty");
+
+  const handleWarrantySelect = (product: Product) => {
+    onWarrantyChange(product);
+    setShowWarrantyOptions(false);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,14 +52,43 @@ export const EstimateUpsellOptions = ({
             <div className="flex items-center justify-center flex-col py-4">
               <FileWarning className="h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground mb-3">No warranty selected</p>
-              <Button size="sm" variant="outline" onClick={() => {
-                // This would typically open a warranty selection dialog
-                console.log("Open warranty selection");
-              }}>
+              <Button size="sm" variant="outline" onClick={() => setShowWarrantyOptions(!showWarrantyOptions)}>
                 <Plus className="h-4 w-4 mr-1" /> Add Warranty
               </Button>
             </div>
           </Card>
+        )}
+
+        {/* Warranty selection options */}
+        {showWarrantyOptions && (
+          <div className="mt-4 space-y-3">
+            <h4 className="text-sm font-medium">Available Warranties</h4>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading warranties...</p>
+            ) : products.length > 0 ? (
+              <div className="space-y-2">
+                {products.map(product => (
+                  <Card 
+                    key={product.id} 
+                    className="p-3 cursor-pointer hover:bg-muted/10"
+                    onClick={() => handleWarrantySelect(product)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h5 className="font-medium">{product.name}</h5>
+                        <p className="text-sm text-muted-foreground">{product.description}</p>
+                      </div>
+                      <p className="font-semibold">${product.price.toFixed(2)}</p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                <p>No warranty products found. Add warranty products to your catalog.</p>
+              </div>
+            )}
+          </div>
         )}
       </div>
       
