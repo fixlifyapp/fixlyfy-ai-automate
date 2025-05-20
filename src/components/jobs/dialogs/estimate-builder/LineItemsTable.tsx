@@ -21,7 +21,7 @@ export const LineItemsTable = ({
   
   // Helper function to calculate the total for a line item
   const calculateLineTotal = (item: LineItem): number => {
-    const price = item.unitPrice !== undefined ? item.unitPrice : item.price;
+    const price = item.unitPrice;
     const subtotal = item.quantity * price;
     const discountAmount = item.discount ? subtotal * (item.discount / 100) : 0;
     const afterDiscount = subtotal - discountAmount;
@@ -46,7 +46,7 @@ export const LineItemsTable = ({
             <TableRow key={item.id} className="hover:bg-muted/20 group">
               <TableCell>
                 <Input
-                  value={item.description || item.name}
+                  value={item.description || (item.name || "")}
                   onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
                   className="border-transparent focus:border-input bg-transparent"
                 />
@@ -65,16 +65,12 @@ export const LineItemsTable = ({
                   <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
                     type="number"
-                    value={item.unitPrice !== undefined ? item.unitPrice : item.price}
+                    value={item.unitPrice}
                     min={0}
                     step={0.01}
                     onChange={(e) => {
                       const value = parseFloat(e.target.value) || 0;
-                      if (item.unitPrice !== undefined) {
-                        onUpdateLineItem(item.id, "unitPrice", value);
-                      } else {
-                        onUpdateLineItem(item.id, "price", value);
-                      }
+                      onUpdateLineItem(item.id, "unitPrice", value);
                     }}
                     className="border-transparent focus:border-input bg-transparent pl-6"
                   />

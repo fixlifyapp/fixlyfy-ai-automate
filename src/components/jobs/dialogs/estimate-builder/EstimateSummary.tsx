@@ -9,6 +9,9 @@ interface EstimateSummaryProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
+  // Add the missing properties
+  calculateTotalMargin?: () => number;
+  calculateMarginPercentage?: () => number;
 }
 
 export const EstimateSummary = ({

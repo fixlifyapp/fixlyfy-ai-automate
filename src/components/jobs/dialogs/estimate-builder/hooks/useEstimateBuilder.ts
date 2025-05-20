@@ -2,37 +2,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Product } from "@/components/jobs/builder/types";
+import { Product, LineItem } from "@/components/jobs/builder/types";
 import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
 
-// Define the LineItem type
-export interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  tax: number;
-  total: number;
-  ourPrice: number;
-  taxable: boolean;
-}
-
-// Define the EstimateData type to match our database structure
-interface EstimateData {
-  id: string;
-  job_id: string;
-  number: string;
-  date: string;
-  amount: number;
-  status: string;
-  viewed: boolean;
-  technicians_note: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface UseEstimateBuilderProps {
+// Define the function interface
+export interface UseEstimateBuilderProps {
   estimateId: string | null;
   open: boolean;
   onSyncToInvoice?: (estimate: any) => void;
@@ -77,7 +51,7 @@ export const useEstimateBuilder = ({
   // Function to calculate total margin
   const calculateTotalMargin = useCallback(() => {
     return lineItems.reduce((sum, item) => {
-      const cost = item.ourPrice * item.quantity;
+      const cost = (item.ourPrice || 0) * item.quantity;
       const revenue = item.unitPrice * item.quantity;
       return sum + (revenue - cost);
     }, 0);
@@ -113,14 +87,15 @@ export const useEstimateBuilder = ({
 
       if (estimateData) {
         console.log("Fetched estimate data:", estimateData);
-        setEstimateNumber(estimateData.number);
-        setNotes(estimateData.technicians_note || '');
+        setEstimateNumber(estimateData.estimate_number);
+        setNotes(estimateData.notes || '');
         
-        // Fetch the line items from estimate_items table
+        // Fetch the line items from line_items table
         const { data: itemsData, error: itemsError } = await supabase
-          .from('estimate_items')
+          .from('line_items')
           .select('*')
-          .eq('estimate_id', estimateId);
+          .eq('parent_type', 'estimate')
+          .eq('parent_id', estimateId);
           
         if (itemsError) {
           console.error("Error fetching estimate items:", itemsError);
@@ -130,12 +105,12 @@ export const useEstimateBuilder = ({
           // Transform the items data into LineItem format
           const transformedItems: LineItem[] = itemsData.map(item => ({
             id: item.id,
-            description: item.description || item.name,
+            description: item.description || "",
             quantity: item.quantity,
-            unitPrice: Number(item.price),
+            unitPrice: Number(item.unit_price),
             discount: 0,
             tax: item.taxable ? taxRate : 0,
-            total: Number(item.price) * item.quantity,
+            total: Number(item.unit_price) * item.quantity,
             ourPrice: 0, // Default value
             taxable: item.taxable
           }));
@@ -167,7 +142,7 @@ export const useEstimateBuilder = ({
       const { error } = await supabase
         .from('estimates')
         .update({
-          technicians_note: notes
+          notes: notes
         })
         .eq('id', estimateId);
 
@@ -180,9 +155,10 @@ export const useEstimateBuilder = ({
       // Handle the line items using upsert and delete operations
       // Get existing items for this estimate
       const { data: existingItems, error: fetchError } = await supabase
-        .from('estimate_items')
+        .from('line_items')
         .select('id')
-        .eq('estimate_id', estimateId);
+        .eq('parent_type', 'estimate')
+        .eq('parent_id', estimateId);
         
       if (fetchError) {
         console.error("Error fetching existing items:", fetchError);
@@ -199,7 +175,7 @@ export const useEstimateBuilder = ({
       // Delete items not in our current list
       if (itemsToDelete.length > 0) {
         const { error: deleteError } = await supabase
-          .from('estimate_items')
+          .from('line_items')
           .delete()
           .in('id', itemsToDelete);
           
@@ -217,10 +193,10 @@ export const useEstimateBuilder = ({
         // Prepare item data for upsert
         const itemData = {
           id: item.id,
-          estimate_id: estimateId,
-          name: item.description,
+          parent_id: estimateId,
+          parent_type: 'estimate',
           description: item.description,
-          price: item.unitPrice,
+          unit_price: item.unitPrice,
           quantity: item.quantity,
           taxable: item.taxable
         };
@@ -228,10 +204,10 @@ export const useEstimateBuilder = ({
         if (isExisting) {
           // Update existing item
           const { error: updateError } = await supabase
-            .from('estimate_items')
+            .from('line_items')
             .update(itemData)
             .eq('id', item.id)
-            .eq('estimate_id', estimateId);
+            .eq('parent_id', estimateId);
             
           if (updateError) {
             console.error("Error updating item:", updateError, item);
@@ -241,7 +217,7 @@ export const useEstimateBuilder = ({
         } else {
           // Insert new item
           const { error: insertError } = await supabase
-            .from('estimate_items')
+            .from('line_items')
             .insert(itemData);
             
           if (insertError) {
@@ -257,7 +233,7 @@ export const useEstimateBuilder = ({
       const { error: updateAmountError } = await supabase
         .from('estimates')
         .update({
-          amount: total
+          total: total
         })
         .eq('id', estimateId);
         
@@ -289,7 +265,9 @@ export const useEstimateBuilder = ({
       tax: 0,
       total: product.price,
       ourPrice: product.cost || 0,
-      taxable: true
+      taxable: true,
+      name: product.name,
+      price: product.price
     };
 
     setLineItems([...lineItems, newLineItem]);
@@ -339,8 +317,10 @@ export const useEstimateBuilder = ({
     const newLineItem: LineItem = {
       id: `item-${Date.now()}`,
       description: "Custom Item",
+      name: "Custom Item",
       quantity: 1,
       unitPrice: 0,
+      price: 0,
       discount: 0,
       tax: 0,
       total: 0,

@@ -19,4 +19,11 @@ export interface LineItem {
   unitPrice: number;
   taxable: boolean;
   total?: number;
+  
+  // Additional properties used in the code
+  discount?: number;
+  ourPrice?: number;
+  tax?: number;
+  price?: number;
+  name?: string;
 }

@@ -61,9 +61,9 @@ export function EstimateForm({ estimateId, jobId, onSyncToInvoice }: EstimateFor
                 id: item.id,
                 description: item.description || "",
                 quantity: item.quantity,
-                unitPrice: parseFloat(item.unit_price),
+                unitPrice: parseFloat(item.unit_price.toString()),
                 taxable: item.taxable,
-                total: item.quantity * parseFloat(item.unit_price)
+                total: item.quantity * parseFloat(item.unit_price.toString())
               }));
               
               setLineItems(items);
