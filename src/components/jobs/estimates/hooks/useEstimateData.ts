@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Estimate } from "@/hooks/useEstimates";
 
 export interface EstimateItem {
   id: string;
@@ -12,18 +13,6 @@ export interface EstimateItem {
   taxable: boolean;
   category: string;
   tags: string[];
-}
-
-export interface Estimate {
-  id: string;
-  number: string;
-  date: string;
-  amount: number;
-  status: string;
-  viewed: boolean;
-  items: EstimateItem[];
-  recommendedProduct: any;
-  techniciansNote: string;
 }
 
 export const useEstimateData = (jobId: string) => {
@@ -46,7 +35,7 @@ export const useEstimateData = (jobId: string) => {
         }
 
         // Transform the data to match our Estimate interface
-        const transformedEstimates = data.map((est) => {
+        const transformedEstimates: Estimate[] = data.map((est) => {
           // Extract estimate items
           const items = est.estimate_items || [];
           
@@ -64,11 +53,17 @@ export const useEstimateData = (jobId: string) => {
             
           return {
             id: est.id,
+            job_id: est.job_id,
             number: est.number,
             date: est.date,
             amount: est.amount,
             status: est.status,
             viewed: est.viewed,
+            discount: est.discount || 0,
+            tax_rate: est.tax_rate || 0,
+            technicians_note: est.technicians_note || '',
+            created_at: est.created_at,
+            updated_at: est.updated_at,
             items: items.map((item: any) => ({
               id: item.id,
               name: item.name,
@@ -79,6 +74,7 @@ export const useEstimateData = (jobId: string) => {
               category: item.category || '',
               tags: item.tags || [],
             })),
+            estimate_items: items,
             recommendedProduct: recProduct,
             techniciansNote: est.technicians_note || '',
           };

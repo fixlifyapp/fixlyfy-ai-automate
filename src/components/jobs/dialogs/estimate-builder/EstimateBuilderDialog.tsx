@@ -17,8 +17,14 @@ interface EstimateBuilderDialogProps {
   onSyncToInvoice?: () => void;
 }
 
+// Define an extended EstimateData interface that includes discount and tax_rate
+interface ExtendedEstimate extends Estimate {
+  discount: number;
+  tax_rate: number;
+}
+
 export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, onSyncToInvoice }: EstimateBuilderDialogProps) {
-  const [estimate, setEstimate] = useState<Estimate | null>(null);
+  const [estimate, setEstimate] = useState<ExtendedEstimate | null>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const estimateInfo = useEstimateInfo();
   const estimateBuilder = useEstimateBuilder({
@@ -39,6 +45,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
   const loadEstimate = useCallback(async () => {
     if (estimateId) {
       try {
+        // Initialize with default values including discount and tax_rate
         setEstimate({
           id: estimateId,
           job_id: jobId,
@@ -52,7 +59,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
           technicians_note: '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        } as ExtendedEstimate);
         
         // Fetch estimate details from Supabase
         const { data, error } = await supabase
@@ -72,7 +79,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
             discount: data.discount || 0,
             tax_rate: data.tax_rate || 0,
             technicians_note: data.technicians_note || ""
-          } as Estimate);
+          } as ExtendedEstimate);
         }
         
         // Fetch estimate items
@@ -95,6 +102,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
         toast.error("Failed to load estimate");
       }
     } else {
+      // For new estimates, initialize with default values including discount and tax_rate
       setEstimate({
         job_id: jobId,
         discount: 0,
@@ -107,7 +115,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
         viewed: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      } as Estimate);
+      } as ExtendedEstimate);
       setLineItems([]);
     }
   }, [estimateId, jobId, estimateInfo]);
@@ -245,7 +253,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
         // Optimistically update the local state
         setEstimate(prev => prev ? { ...prev, discount } : null);
         
-        // Update the discount in the database
+        // Update the database with 'discount' column
         await supabase
           .from('estimates')
           .update({ discount })
@@ -267,7 +275,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
         // Optimistically update the local state
         setEstimate(prev => prev ? { ...prev, tax_rate } : null);
         
-        // Update the tax in the database
+        // Update the database with 'tax_rate' column
         await supabase
           .from('estimates')
           .update({ tax_rate })
@@ -316,7 +324,7 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
             <EstimateEditor
               lineItems={lineItems}
               onAddEmptyLineItem={addEmptyLineItem}
-              onAddCustomLine={addCustomLine}
+              onAddCustomLine={(name, price, quantity, taxable) => addCustomLine(name, price, quantity, taxable)}
               onRemoveLine={removeLine}
               onUpdateLine={updateLine}
               onUpdateDiscount={handleUpdateDiscount}

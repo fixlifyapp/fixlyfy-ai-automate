@@ -6,6 +6,7 @@ import { useEstimateCreation } from "./hooks/useEstimateCreation";
 import { useEstimateWarranty } from "./hooks/useEstimateWarranty";
 import { useEstimateUpsell } from "./hooks/useEstimateUpsell";
 import { useEstimateInfo } from "./hooks/useEstimateInfo";
+import { Estimate } from "@/hooks/useEstimates";
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
   // Get estimates data
@@ -45,7 +46,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   );
 
   // Combined view estimate handler
-  const handleViewEstimate = (estimate: any) => {
+  const handleViewEstimate = (estimate: Estimate) => {
     const shouldShowUpsell = estimateUpsell.actions.handleViewEstimate(estimate);
     
     if (shouldShowUpsell) {
@@ -69,13 +70,13 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   };
 
   // Handle add warranty with dialog opening
-  const handleAddWarranty = (estimate: any) => {
+  const handleAddWarranty = (estimate: Estimate) => {
     estimateActions.actions.setSelectedEstimate(estimate);
     setIsWarrantyDialogOpen(true);
   };
 
   // Handle convert to invoice with dialog opening
-  const handleConvertToInvoice = (estimate: any) => {
+  const handleConvertToInvoice = (estimate: Estimate) => {
     estimateActions.actions.setSelectedEstimate(estimate);
     setIsConvertToInvoiceDialogOpen(true);
   };
@@ -89,6 +90,11 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const handleDeleteEstimate = (estimateId: string) => {
     estimateActions.actions.handleDeleteEstimate(estimateId);
     setIsDeleteConfirmOpen(true);
+  };
+
+  // Convert the handleSendEstimate to accept string ID instead of estimate object
+  const handleSendEstimate = (estimateId: string) => {
+    estimateActions.actions.handleSendEstimate(estimateId);
   };
 
   return {
@@ -120,7 +126,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
       handleCreateEstimate,
       handleEditEstimate,
       handleViewEstimate,
-      handleSendEstimate: estimateActions.actions.handleSendEstimate,
+      handleSendEstimate,
       handleUpsellAccept: estimateUpsell.actions.handleUpsellAccept,
       handleConvertToInvoice,
       confirmConvertToInvoice: estimateActions.actions.confirmConvertToInvoice,

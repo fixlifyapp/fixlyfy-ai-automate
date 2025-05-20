@@ -20,6 +20,7 @@ interface JobEstimatesTabProps {
 }
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
+  // Get the complete useEstimates hook with all properties and handlers
   const {
     estimates,
     isLoading,
@@ -35,7 +36,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-medium">Estimates</h3>
-          <Button onClick={() => handlers.handleCreateEstimate && handlers.handleCreateEstimate()} className="gap-2">
+          <Button onClick={handlers.handleCreateEstimate} className="gap-2">
             <PlusCircle size={16} />
             New Estimate
           </Button>
@@ -57,7 +58,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onEdit={handlers.handleEditEstimate}
           onConvert={handlers.handleConvertToInvoice}
           onAddWarranty={handlers.handleAddWarranty}
-          onSend={handlers.handleSendEstimate}
+          onSend={(estimateId: string) => handlers.handleSendEstimate(estimateId)}
           onDelete={handlers.handleDeleteEstimate}
         />
         

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 
-// Define the Estimate type which was missing
+// Define the Estimate type with ALL required properties
 export interface Estimate {
   id: string;
   job_id: string;
@@ -16,21 +16,32 @@ export interface Estimate {
   created_at: string;
   updated_at: string;
   estimate_items?: any[];
+  // Add the missing properties from the error
+  items?: any[];
+  recommendedProduct?: any;
+  techniciansNote?: string;
 }
 
-// This is just a placeholder to make the import work
-// The actual implementation is in another file
+// Now fix the useEstimates hook implementation to include all required properties and methods
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
+  // Import the actual implementation from the components directory
+  const { 
+    estimates,
+    isLoading,
+    error,
+    dialogs,
+    state,
+    handlers,
+    info
+  } = require("@/components/jobs/estimates/useEstimates").useEstimates(jobId, onEstimateConverted);
+  
   return {
-    estimates: [] as Estimate[],
-    isLoading: false,
-    dialogs: {},
-    state: {},
-    handlers: {
-      handleSyncToInvoice: () => {},
-      handleSendEstimate: (estimate: Estimate) => {}
-    },
-    info: {},
-    error: null
+    estimates,
+    isLoading,
+    dialogs,
+    state,
+    handlers,
+    info,
+    error
   };
 };

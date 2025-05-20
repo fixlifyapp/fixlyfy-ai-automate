@@ -3,17 +3,18 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "../../builder/types";
+import { Estimate } from "@/hooks/useEstimates";
 
 export const useEstimateActions = (
   jobId: string,
-  estimates: any[],
-  setEstimates: (estimates: any[]) => void,
+  estimates: Estimate[],
+  setEstimates: (estimates: Estimate[]) => void,
   onEstimateConverted?: () => void
 ) => {
-  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Handle sending an estimate
+  // Handle sending an estimate - Updated to use estimateId
   const handleSendEstimate = async (estimateId: string) => {
     try {
       const { error } = await supabase
@@ -38,7 +39,7 @@ export const useEstimateActions = (
   };
 
   // Handle adding warranty to estimate
-  const handleAddWarranty = (estimate: any) => {
+  const handleAddWarranty = (estimate: Estimate) => {
     setSelectedEstimate(estimate);
   };
 
@@ -78,7 +79,7 @@ export const useEstimateActions = (
   };
 
   // Handle converting estimate to invoice
-  const handleConvertToInvoice = (estimate: any) => {
+  const handleConvertToInvoice = (estimate: Estimate) => {
     setSelectedEstimate(estimate);
   };
   
@@ -113,8 +114,13 @@ export const useEstimateActions = (
   };
 
   // Handle syncing estimate to invoice
-  const handleSyncToInvoice = (estimate: any) => {
-    toast.success(`Estimate ${estimate.number} synced to invoice`);
+  const handleSyncToInvoice = () => {
+    if (!selectedEstimate) {
+      toast.error("No estimate selected for syncing");
+      return;
+    }
+    
+    toast.success(`Estimate ${selectedEstimate.number} synced to invoice`);
     
     // Switch to the invoices tab if the callback is provided
     if (onEstimateConverted) {
