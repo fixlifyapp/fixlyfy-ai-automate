@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +16,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
 import { Payment as RefundDialogPayment } from "@/types/payment";
-import { recordPayment } from "@/services/jobHistoryService";
-import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -28,7 +27,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { currentUser } = useRBAC();
   
   const { 
     payments, 
@@ -137,15 +135,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         console.error('Error updating invoice:', updateError);
         throw updateError;
       }
-      
-      // Record in job history
-      await recordPayment(
-        jobId,
-        amount,
-        method,
-        currentUser?.name,
-        currentUser?.id
-      );
       
       toast.success('Payment recorded successfully');
       
