@@ -32,8 +32,6 @@ export const JobDetailsHeader = () => {
             onCompleteJob={jobHeaderData.handleCompleteJob}
             onCancelJob={jobHeaderData.handleCancelJob}
             onReschedule={jobHeaderData.handleReschedule}
-            onCreateEstimate={() => jobHeaderData.setIsEstimateDialogOpen(true)}
-            onCreateInvoice={() => jobHeaderData.setIsInvoiceDialogOpen(true)}
           />
         </div>
       </div>

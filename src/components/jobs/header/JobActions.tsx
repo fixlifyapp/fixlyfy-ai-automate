@@ -41,14 +41,6 @@ export const JobActions = ({
           <DropdownMenuItem onClick={onReschedule}>Reschedule</DropdownMenuItem>
         )}
         
-        {onCreateEstimate && (
-          <DropdownMenuItem onClick={onCreateEstimate}>Create Estimate</DropdownMenuItem>
-        )}
-        
-        {onCreateInvoice && (
-          <DropdownMenuItem onClick={onCreateInvoice}>Create Invoice</DropdownMenuItem>
-        )}
-        
         <DropdownMenuSeparator />
         {onCancelJob && (
           <DropdownMenuItem onClick={onCancelJob} className="text-fixlyfy-error">
