@@ -16,12 +16,28 @@ interface JobActionsProps {
   onCompleteJob?: () => void;
   onCancelJob?: () => void;
   onReschedule?: () => void;
+  onInvoiceClick?: () => void;
+  onEstimateClick?: () => void;
+  hasEstimate?: boolean;
+  onSyncEstimateToInvoice?: () => void;
+  previousEstimates?: { id: string; number: string; }[];
+  previousInvoices?: { id: string; number: string; }[];
+  onLoadPreviousEstimate?: () => void;
+  onLoadPreviousInvoice?: () => void;
 }
 
 export const JobActions = ({ 
   onCompleteJob,
   onCancelJob,
   onReschedule,
+  onInvoiceClick,
+  onEstimateClick,
+  hasEstimate,
+  onSyncEstimateToInvoice,
+  previousEstimates,
+  previousInvoices,
+  onLoadPreviousEstimate,
+  onLoadPreviousInvoice
 }: JobActionsProps) => {
   return (
     <DropdownMenu>

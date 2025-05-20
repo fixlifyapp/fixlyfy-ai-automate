@@ -56,7 +56,7 @@ export const EstimateBuilderDialog = ({
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
-    handleEditLineItem,
+    handleEditLineItem: originalHandleEditLineItem,
     handleAddEmptyLineItem: openProductSearch,
     handleAddCustomLine,
     calculateSubtotal,
@@ -74,6 +74,12 @@ export const EstimateBuilderDialog = ({
     onSyncToInvoice, 
     jobId
   });
+  
+  // Wrap the original handleEditLineItem to adapt the return type
+  const handleEditLineItem = (id: string): boolean => {
+    originalHandleEditLineItem(id);
+    return true; // Return boolean as required by the interface
+  };
 
   // Log the state to help with debugging
   useEffect(() => {
