@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
@@ -25,7 +26,7 @@ interface KpiSummaryCardsProps {
 }
 
 // Dynamic import of icons
-import { DollarSign, CheckCircle, CalendarClock, Clock, LineChart, UserCheck } from "lucide-react";
+import { DollarSign, CheckCircle, CalendarClock } from "lucide-react";
 
 export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }: KpiSummaryCardsProps) => {
   const [kpis, setKpis] = useState<KpiData[]>([]);
@@ -136,22 +137,7 @@ export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }:
         const previousOpenJobs = previousOpenJobsData?.length || 1; // Avoid division by zero
         const openJobsChange = Math.round(((openJobs - previousOpenJobs) / previousOpenJobs) * 100);
         
-        // For demo purposes, calculate average response time (we don't have this data directly)
-        const avgResponseTime = 24; // hours, mocked for now
-        const prevAvgResponseTime = 26; // hours, mocked for now
-        const responseTimeChange = Math.round(((avgResponseTime - prevAvgResponseTime) / prevAvgResponseTime) * 100);
-        
-        // For demo purposes, calculate conversion rate (we don't have this data directly)
-        const conversionRate = 65; // percentage, mocked for now
-        const prevConversionRate = 62; // percentage, mocked for now
-        const conversionRateChange = Math.round(((conversionRate - prevConversionRate) / prevConversionRate) * 100);
-        
-        // For demo purposes, calculate client satisfaction (we don't have this data directly)
-        const clientSatisfaction = 4.8; // out of 5, mocked for now
-        const prevClientSatisfaction = 4.7; // out of 5, mocked for now
-        const clientSatisfactionChange = Math.round(((clientSatisfaction - prevClientSatisfaction) / prevClientSatisfaction) * 100);
-        
-        // Set KPI data
+        // Set KPI data - removing Client Satisfaction, Conversion Rate and Avg Response Time
         setKpis([
           {
             title: 'Total Revenue',
@@ -179,33 +165,6 @@ export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }:
             icon: CalendarClock,
             iconColor: 'bg-fixlyfy-warning',
             loading: false
-          },
-          {
-            title: 'Avg Response Time',
-            value: `${avgResponseTime} hrs`,
-            change: responseTimeChange,
-            isPositive: responseTimeChange <= 0, // For response time, negative change is good
-            icon: Clock,
-            iconColor: 'bg-fixlyfy-info',
-            loading: false
-          },
-          {
-            title: 'Conversion Rate',
-            value: `${conversionRate}%`,
-            change: conversionRateChange,
-            isPositive: conversionRateChange >= 0,
-            icon: LineChart,
-            iconColor: 'bg-fixlyfy-primary',
-            loading: false
-          },
-          {
-            title: 'Client Satisfaction',
-            value: clientSatisfaction.toString(),
-            change: clientSatisfactionChange,
-            isPositive: clientSatisfactionChange >= 0,
-            icon: UserCheck,
-            iconColor: 'bg-fixlyfy-success/80',
-            loading: false
           }
         ]);
       } catch (error) {
@@ -220,9 +179,9 @@ export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }:
   }, [user, timePeriod, dateRange, isRefreshing]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {isLoading || isRefreshing
-        ? Array.from({ length: 6 }).map((_, index) => (
+        ? Array.from({ length: 3 }).map((_, index) => (
             <Card key={index} className="animate-pulse">
               <CardContent className="p-4">
                 <div className="flex items-center mb-2">
