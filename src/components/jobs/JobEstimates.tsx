@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
 import { UpsellDialog } from "@/components/jobs/dialogs/UpsellDialog";
-import { EstimateBuilderDialog } from "@/components/jobs/dialogs/EstimateBuilderDialog";
 import { Dialog } from "@/components/ui/dialog";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
@@ -12,6 +11,7 @@ import { EstimatesList } from "./estimates/EstimatesList";
 import { useEstimates } from "./estimates/useEstimates";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
 import { AlertCircle } from "lucide-react";
+import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 
 interface JobEstimatesProps {
   jobId: string;
