@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Product } from "./builder/types";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { LineItem } from "./builder/types";
+import { InvoiceDialog } from "./dialogs/InvoiceDialog";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -55,6 +55,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [estimateItems, setEstimateItems] = useState<LineItem[]>([]);
   const [hasEstimate, setHasEstimate] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   
   // Load existing invoices and estimates - in a real app, this would come from your database
   useEffect(() => {
@@ -150,8 +151,8 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   }, [jobId]);
 
   const handleCreateInvoice = () => {
-    setSelectedInvoice(null);
-    setIsCreateDialogOpen(true);
+    // Open the InvoiceDialog instead of the InvoiceCreationDialog
+    setIsInvoiceDialogOpen(true);
   };
   
   const handleEditInvoice = (invoice: Invoice) => {
@@ -298,6 +299,32 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       setIsDeleting(false);
       setIsDeleteConfirmOpen(false);
     }
+  };
+
+  const handleInvoiceCreated = (amount: number) => {
+    // Generate a new invoice ID and number
+    const newInvoiceId = `inv-${Math.floor(Math.random() * 10000)}`;
+    const newInvoiceNumber = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
+    
+    // Create a new invoice
+    const newInvoice = {
+      id: newInvoiceId,
+      invoiceNumber: newInvoiceNumber,
+      date: new Date().toISOString(),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      items: [], // This would be populated from the form data in a real app
+      subtotal: amount,
+      tax: amount * 0.13, // Assuming 13% tax
+      total: amount * 1.13,
+      status: "draft" as const,
+      jobId,
+      payments: []
+    };
+    
+    // Add the new invoice to the list
+    setInvoices([newInvoice, ...invoices]);
+    
+    toast.success(`Invoice ${newInvoiceNumber} created`);
   };
 
   return (
@@ -464,6 +491,27 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
             isDeleting={isDeleting}
           />
         </Dialog>
+        
+        {/* Add the InvoiceDialog component */}
+        <InvoiceDialog
+          open={isInvoiceDialogOpen}
+          onOpenChange={setIsInvoiceDialogOpen}
+          onInvoiceCreated={handleInvoiceCreated}
+          clientInfo={{
+            name: "Client Name", // This would come from job data in a real app
+            address: "123 Client St",
+            phone: "(555) 555-5555",
+            email: "client@example.com"
+          }}
+          companyInfo={{
+            name: "Your Company", // This would come from company settings in a real app
+            logo: "",
+            address: "456 Company Ave",
+            phone: "(555) 123-4567",
+            email: "company@example.com",
+            legalText: "Standard terms and conditions apply."
+          }}
+        />
       </CardContent>
     </Card>
   );
