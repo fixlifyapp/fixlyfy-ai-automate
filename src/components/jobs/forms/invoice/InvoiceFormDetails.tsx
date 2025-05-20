@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import {
   Form,
@@ -32,7 +31,7 @@ export const InvoiceFormDetails = ({
 }: InvoiceFormDetailsProps) => {
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((data) => form.handleSubmit(data))} className="space-y-6">
+      <form onSubmit={form.handleSubmit(form.handleSubmit)} className="space-y-6">
         <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control}
@@ -76,7 +75,7 @@ export const InvoiceFormDetails = ({
         </div>
 
         <InvoiceLineItems 
-          control={form.control} 
+          form={form} 
           previousItems={previousItems}
         />
 

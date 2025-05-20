@@ -3,18 +3,18 @@ import { Button } from "@/components/ui/button";
 import { FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useFieldArray, Control } from "react-hook-form";
+import { useFieldArray, UseFormReturn } from "react-hook-form";
 import { InvoiceFormValues } from "./schema";
 import { Plus, Trash } from "lucide-react";
 
 interface InvoiceLineItemsProps {
-  control: Control<InvoiceFormValues>;
+  form: UseFormReturn<InvoiceFormValues>;
   previousItems?: any[];
 }
 
-export const InvoiceLineItems = ({ control, previousItems }: InvoiceLineItemsProps) => {
+export const InvoiceLineItems = ({ form, previousItems }: InvoiceLineItemsProps) => {
   const { fields, append, remove } = useFieldArray({
-    control,
+    control: form.control,
     name: "items",
   });
 
@@ -40,10 +40,10 @@ export const InvoiceLineItems = ({ control, previousItems }: InvoiceLineItemsPro
               <FormControl>
                 <Input 
                   placeholder="Enter product name" 
-                  {...control.register(`items.${index}.description`)}
+                  {...form.register(`items.${index}.description`)}
                 />
               </FormControl>
-              <FormMessage>{control.formState.errors.items?.[index]?.description?.message}</FormMessage>
+              <FormMessage>{form.formState.errors.items?.[index]?.description?.message}</FormMessage>
             </FormItem>
           </div>
           <div className="col-span-2">
@@ -54,10 +54,10 @@ export const InvoiceLineItems = ({ control, previousItems }: InvoiceLineItemsPro
                   type="number" 
                   min="1" 
                   step="1" 
-                  {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                  {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
                 />
               </FormControl>
-              <FormMessage>{control.formState.errors.items?.[index]?.quantity?.message}</FormMessage>
+              <FormMessage>{form.formState.errors.items?.[index]?.quantity?.message}</FormMessage>
             </FormItem>
           </div>
           <div className="col-span-2">
@@ -68,10 +68,10 @@ export const InvoiceLineItems = ({ control, previousItems }: InvoiceLineItemsPro
                   type="number" 
                   min="0.01" 
                   step="0.01" 
-                  {...control.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+                  {...form.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
                 />
               </FormControl>
-              <FormMessage>{control.formState.errors.items?.[index]?.unitPrice?.message}</FormMessage>
+              <FormMessage>{form.formState.errors.items?.[index]?.unitPrice?.message}</FormMessage>
             </FormItem>
           </div>
           <div className="col-span-2">
@@ -82,12 +82,12 @@ export const InvoiceLineItems = ({ control, previousItems }: InvoiceLineItemsPro
                   type="number" 
                   min="0" 
                   step="0.01" 
-                  {...control.register(`items.${index}.ourPrice`, { valueAsNumber: true })}
+                  {...form.register(`items.${index}.ourPrice`, { valueAsNumber: true })}
                   className="bg-yellow-50"
                   title="Internal use only - not shown on invoice"
                 />
               </FormControl>
-              <FormMessage>{control.formState.errors.items?.[index]?.ourPrice?.message}</FormMessage>
+              <FormMessage>{form.formState.errors.items?.[index]?.ourPrice?.message}</FormMessage>
               {index === 0 && (
                 <p className="text-xs text-muted-foreground italic">Internal only - not visible to client</p>
               )}
@@ -98,14 +98,14 @@ export const InvoiceLineItems = ({ control, previousItems }: InvoiceLineItemsPro
               {index === 0 && <div className="absolute -top-6 text-sm font-medium">Taxable</div>}
               <FormControl>
                 <Checkbox
-                  checked={control.watch(`items.${index}.taxable`)}
+                  checked={form.watch(`items.${index}.taxable`)}
                   onCheckedChange={(checked) => {
-                    control.setValue(`items.${index}.taxable`, Boolean(checked));
+                    form.setValue(`items.${index}.taxable`, Boolean(checked));
                   }}
                 />
               </FormControl>
               <div className="text-sm">
-                {control.watch(`items.${index}.taxable`) ? 'Yes' : 'No'}
+                {form.watch(`items.${index}.taxable`) ? 'Yes' : 'No'}
               </div>
               <Button 
                 type="button" 
