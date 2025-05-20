@@ -21,6 +21,12 @@ const JobDetailsPage = () => {
   const { hasPermission } = useRBAC();
   const jobHeaderData = useJobDetailsHeader(id || "");
   
+  // Handle estimate conversion
+  const handleEstimateConverted = () => {
+    // Switch to payments tab
+    setActiveTab("payments");
+  };
+  
   return (
     <PageLayout>
       <div className="container mx-auto px-4">
@@ -42,7 +48,7 @@ const JobDetailsPage = () => {
                 <JobDetails jobId={id || ""} />
               </TabsContent>
               <TabsContent value="estimates">
-                <JobEstimatesTab jobId={id || ""} />
+                <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
               </TabsContent>
               <TabsContent value="payments">
                 <JobPayments jobId={id || ""} />
