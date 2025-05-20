@@ -13,7 +13,7 @@ export interface Estimate {
   total: number;
   notes?: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string; // Ensure this is required to match with useEstimates.ts
   items?: LineItem[];
   viewed?: boolean; // For UI tracking
   recommendedProduct?: any; // Added for upsell functionality

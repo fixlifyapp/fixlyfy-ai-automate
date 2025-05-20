@@ -15,8 +15,8 @@ export interface Estimate {
   items?: any[];
   recommendedProduct?: any;
   techniciansNote?: string;
-  created_at: string; // Changed from optional to required to match useEstimateData.ts
-  updated_at?: string;
+  created_at: string;
+  updated_at: string; // Changed from optional to required to match useEstimateData.ts
   notes?: string;
 }
 
