@@ -50,9 +50,7 @@ export const JobDetailsTabs = ({
           </TabsList>
           {(onCreateEstimate || onCreateInvoice) && <div>
               {onCreateEstimate}
-              {onCreateInvoice && <Button size="sm" onClick={onCreateInvoice} className="ml-2">
-                <PlusCircle className="mr-1" size={16} /> Invoice
-              </Button>}
+              {onCreateInvoice}
             </div>}
         </div>
         
