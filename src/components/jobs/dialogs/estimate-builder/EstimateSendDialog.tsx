@@ -9,11 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { WarrantySelectionStep } from "./WarrantySelectionStep";
-import { Product, LineItem } from "../../builder/types";
+import { Product } from "../../builder/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CheckCircle, Mail, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface EstimateSendDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ export const EstimateSendDialog = ({
   clientInfo,
   estimateNumber
 }: EstimateSendDialogProps) => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<SendStep>("warranty");
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState<string>("");
@@ -99,9 +101,27 @@ export const EstimateSendDialog = ({
     }
   };
   
-  // Close the dialog after confirmation
+  // Close the dialog and redirect to estimates tab
   const handleCloseAfterSend = () => {
+    // Close the dialog
     onOpenChange(false);
+    
+    // Get the current URL path
+    const currentPath = window.location.pathname;
+    
+    // If we're on a job details page, navigate to the estimates tab
+    if (currentPath.includes('/jobs/')) {
+      // Extract the job ID from the current URL
+      const jobId = currentPath.split('/').pop();
+      
+      // Use navigate to stay on same page but switch to estimates tab
+      // We'll use the current URL plus a query param to trigger the tab change
+      const jobDetailsUrl = `/jobs/${jobId}`;
+      
+      // Navigate to job details with estimates tab selected
+      // We'll handle this in the JobDetailsPage component
+      navigate(jobDetailsUrl, { state: { activeTab: "estimates" } });
+    }
   };
   
   return (

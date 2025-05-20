@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
 import { JobDetails } from "@/components/jobs/JobDetails";
@@ -18,9 +18,20 @@ import { JobInvoices } from "@/components/jobs/JobInvoices";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
   const jobHeaderData = useJobDetailsHeader(id || "");
+  
+  // Check for activeTab in location state when component mounts or location changes
+  useEffect(() => {
+    if (location.state && location.state.activeTab) {
+      setActiveTab(location.state.activeTab);
+      
+      // Clear the state to prevent persistent tab selection on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
   
   // Handle estimate conversion
   const handleEstimateConverted = () => {
