@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEstimateData, Estimate as EstimateDataType } from "./hooks/useEstimateData";
 import { useEstimateActions } from "./hooks/useEstimateActions";
@@ -14,9 +13,8 @@ const convertEstimateType = (estimate: EstimateDataType): EstimateHookType => {
     ...estimate,
     number: estimate.estimate_number,
     amount: estimate.total,
-    // Ensure created_at and updated_at are present
-    created_at: estimate.created_at || new Date().toISOString(),
-    updated_at: estimate.updated_at || new Date().toISOString()
+    // Ensure created_at is always present
+    created_at: estimate.created_at
   };
 };
 
@@ -28,7 +26,7 @@ const convertEstimateHookType = (estimate: EstimateHookType): EstimateDataType =
     job_id: estimate.job_id,
     estimate_number: estimate.estimate_number || estimate.number || '',
     total: estimate.total || estimate.amount || 0,
-    created_at: estimate.created_at || estimate.date,
+    created_at: estimate.created_at, // This is now required
     updated_at: estimate.updated_at || new Date().toISOString(),
     // Add required fields
     date: estimate.date,
