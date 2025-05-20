@@ -51,12 +51,10 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
+      // Modified to not include email redirect - turns off email verification
       const { data, error } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin + '/auth'
-        }
+        password
       });
       
       if (error) {
@@ -64,11 +62,24 @@ export default function AuthPage() {
           description: error.message
         });
         console.error("Sign up error:", error);
-      } else {
-        toast.success("Account created successfully", {
-          description: "Please check your email to verify your account."
+      } else if (data.user) {
+        // Automatically sign in after sign up
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
         });
-        setAuthTab("login");
+        
+        if (signInError) {
+          toast.error("Auto sign in failed", {
+            description: "Account created, but we couldn't sign you in automatically. Please sign in manually."
+          });
+          setAuthTab("login");
+        } else {
+          toast.success("Account created successfully", {
+            description: "You are now signed in."
+          });
+          navigate('/dashboard');
+        }
       }
     } catch (error: any) {
       toast.error("Unexpected error", {
