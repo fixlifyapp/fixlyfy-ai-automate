@@ -14,7 +14,7 @@ interface DashboardActionsProps {
   isRefreshing?: boolean;
 }
 
-export const DashboardActions = ({ onRefresh, isRefreshing }: DashboardActionsProps) => {
+export const DashboardActions = ({ onRefresh, isRefreshing = false }: DashboardActionsProps) => {
   const navigate = useNavigate();
   
   return (

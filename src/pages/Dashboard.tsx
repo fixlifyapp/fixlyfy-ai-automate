@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { KpiSummaryCards } from "@/components/dashboard/KpiSummaryCards";
@@ -10,6 +9,8 @@ import { ClientStats } from "@/components/dashboard/ClientStats";
 import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterControls";
 import { DashboardActions } from "@/components/dashboard/DashboardActions";
+import { TechScoreboard } from "@/components/dashboard/TechScoreboard";
+import { DispatchScoreboard } from "@/components/dashboard/DispatchScoreboard";
 
 // Define time period types for filters
 export type TimePeriod = "week" | "month" | "quarter" | "custom";
@@ -45,7 +46,7 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-fixlyfy-text-secondary">Welcome to your business overview</p>
         </div>
-        <DashboardActions onRefresh={handleRefresh} />
+        <DashboardActions onRefresh={handleRefresh} isRefreshing={isRefreshing} />
       </div>
 
       {/* Filter Controls */}
@@ -64,6 +65,12 @@ const Dashboard = () => {
           dateRange={dateRange} 
           isRefreshing={isRefreshing}
         />
+      </div>
+      
+      {/* Scoreboard Section (New) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <TechScoreboard isRefreshing={isRefreshing} />
+        <DispatchScoreboard isRefreshing={isRefreshing} />
       </div>
       
       {/* Trend Charts Section */}

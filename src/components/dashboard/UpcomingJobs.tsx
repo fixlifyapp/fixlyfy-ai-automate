@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { useNavigate } from "react-router-dom";
 
 interface Job {
   id: string;
-  job_number: string;
   title: string;
   scheduled_date: string;
   status: string;
@@ -48,29 +46,29 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
         
         const { data: upcoming, error: upcomingError } = await supabase
           .from('jobs')
-          .select('id, job_number, title, scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
-          .gte('scheduled_date', today.toISOString())
-          .lte('scheduled_date', nextWeek.toISOString())
+          .select('id, title, schedule_start as scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
+          .gte('schedule_start', today.toISOString())
+          .lte('schedule_start', nextWeek.toISOString())
           .in('status', ['scheduled', 'pending'])
-          .order('scheduled_date', { ascending: true })
+          .order('schedule_start', { ascending: true })
           .limit(5);
           
         if (upcomingError) throw upcomingError;
         
-        setUpcomingJobs(upcoming || []);
+        setUpcomingJobs(upcoming as Job[] || []);
         
         // Fetch overdue jobs
         const { data: overdue, error: overdueError } = await supabase
           .from('jobs')
-          .select('id, job_number, title, scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
-          .lt('scheduled_date', today.toISOString())
+          .select('id, title, schedule_start as scheduled_date, status, client:client_id(name, phone), technician:technician_id(name)')
+          .lt('schedule_start', today.toISOString())
           .in('status', ['scheduled', 'pending'])
-          .order('scheduled_date', { ascending: false })
+          .order('schedule_start', { ascending: false })
           .limit(5);
           
         if (overdueError) throw overdueError;
         
-        setOverdueJobs(overdue || []);
+        setOverdueJobs(overdue as Job[] || []);
       } catch (error) {
         console.error('Error fetching job data:', error);
       } finally {
@@ -144,7 +142,7 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
                       <div key={job.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-md hover:bg-gray-50">
                         <div>
                           <p className="font-medium text-sm">
-                            {job.job_number} - {job.title || job.client?.name}
+                            {job.id} - {job.title || job.client?.name}
                           </p>
                           <p className="text-sm text-fixlyfy-text-secondary">
                             {formatDate(job.scheduled_date)} • {job.technician?.name || 'Unassigned'}
@@ -176,7 +174,7 @@ export const UpcomingJobs = ({ isRefreshing = false }: UpcomingJobsProps) => {
                       <div key={job.id} className="flex justify-between items-center p-3 border border-fixlyfy-error/10 rounded-md bg-fixlyfy-error/5">
                         <div>
                           <p className="font-medium text-sm">
-                            {job.job_number} - {job.title || job.client?.name}
+                            {job.id} - {job.title || job.client?.name}
                           </p>
                           <p className="text-sm text-fixlyfy-error">
                             {formatDate(job.scheduled_date)} • {job.technician?.name || 'Unassigned'}
