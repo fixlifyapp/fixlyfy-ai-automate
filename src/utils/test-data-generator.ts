@@ -22,7 +22,6 @@ interface Job {
   title: string;
   description: string;
   status: string;
-  priority: string;
   date: string;
   schedule_start: string;
   schedule_end: string;
@@ -225,7 +224,6 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
   futureDate.setMonth(now.getMonth() + 2);
   
   const statuses = ["scheduled", "in-progress", "completed", "canceled", "pending"];
-  const priorities = ["low", "medium", "high", "urgent"];
   
   console.log(`Generating ${count} test jobs for ${clientIds.length} clients...`);
   
@@ -258,7 +256,6 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
         "Parts replacement needed"
       ]),
       status: status,
-      priority: getRandomElement(priorities),
       date: scheduledDate.toISOString(),
       schedule_start: scheduledDate.toISOString(),
       schedule_end: endDate.toISOString(),
