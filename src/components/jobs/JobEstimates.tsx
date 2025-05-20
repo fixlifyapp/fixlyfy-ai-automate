@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,8 +134,13 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
   };
 
   const handleEditEstimate = (estimateId: string) => {
-    setSelectedEstimateId(estimateId);
-    setIsEstimateBuilderOpen(true);
+    // Find the estimate to edit
+    const estimate = estimates.find(est => est.id === estimateId);
+    if (estimate) {
+      setSelectedEstimateId(estimateId);
+      setIsEstimateBuilderOpen(true);
+      toast.info(`Editing estimate ${estimate.number}`);
+    }
   };
 
   const handleViewEstimate = (estimate: any) => {
@@ -174,8 +180,13 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
   
   const confirmConvertToInvoice = () => {
     // In a real app, this would create a new invoice from the estimate
+    if (!selectedEstimate) return;
+    
     toast.success(`Estimate ${selectedEstimate.number} converted to invoice`);
     setIsConvertToInvoiceDialogOpen(false);
+    
+    // Remove the estimate from the list since it's now an invoice
+    setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
     
     // Switch to the invoices tab if the callback is provided
     if (onEstimateConverted) {
@@ -232,9 +243,32 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
   };
   
   const handleWarrantySelection = (selectedWarranty: Product | null, customNote: string) => {
-    if (selectedWarranty) {
+    if (selectedWarranty && selectedEstimate) {
+      // Add the warranty to the estimate
+      const updatedEstimates = estimates.map(est => 
+        est.id === selectedEstimate.id 
+          ? {
+              ...est,
+              items: [
+                ...est.items,
+                {
+                  id: `item-w-${Date.now()}`,
+                  name: selectedWarranty.name,
+                  description: selectedWarranty.description,
+                  price: selectedWarranty.price,
+                  quantity: 1,
+                  taxable: true,
+                  category: selectedWarranty.category,
+                  tags: selectedWarranty.tags || [],
+                }
+              ],
+              amount: est.amount + selectedWarranty.price
+            } 
+          : est
+      );
+      
+      setEstimates(updatedEstimates);
       toast.success(`${selectedWarranty.name} added to estimate ${selectedEstimate.number}`);
-      // In a real app, this would update the estimate with the warranty
     }
     setIsWarrantyDialogOpen(false);
   };
@@ -248,7 +282,7 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
     const newEstimate = {
       id: newEstimateId,
       number: newEstimateNumber,
-      date: new Date().toISOString(),
+      date: new Date().toISOString().split('T')[0],
       amount: amount,
       status: "draft",
       viewed: false,
@@ -309,7 +343,7 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
                         variant="outline" 
                         size="sm"
                         className="text-xs"
-                        onClick={() => handleViewEstimate(estimate)}
+                        onClick={() => handleEditEstimate(estimate.id)}
                       >
                         Edit
                       </Button>
