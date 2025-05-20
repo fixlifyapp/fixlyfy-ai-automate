@@ -140,4 +140,5 @@ export function PaymentDialog({
         </form>
       </DialogContent>
     </Dialog>
-  }
+  );
+}
