@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
@@ -195,7 +194,7 @@ export const KpiSummaryCards = ({ timePeriod, dateRange, isRefreshing = false }:
           ))
         : kpis.map((kpi, index) => (
             <Card key={index} className="transition-all duration-300 hover:shadow-md">
-              <CardContent className="p-4">
+              <CardContent>
                 <div className="flex items-center mb-2">
                   <div className={cn("p-2 rounded-md mr-2 text-white", kpi.iconColor)}>
                     <kpi.icon className="h-4 w-4" />
