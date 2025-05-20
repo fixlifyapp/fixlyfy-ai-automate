@@ -1,19 +1,25 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 
 interface JobDetailsTabsProps {
   activeTab?: string;
   onTabChange?: (value: string) => void;
   children?: React.ReactNode;
   onEstimateTabClick?: () => void;
+  onCreateEstimate?: () => void;
+  onCreateInvoice?: () => void;
 }
 
 export const JobDetailsTabs = ({ 
   activeTab = "details", 
   onTabChange,
   children,
-  onEstimateTabClick
+  onEstimateTabClick,
+  onCreateEstimate,
+  onCreateInvoice
 }: JobDetailsTabsProps) => {
   // Remove the auto-trigger functionality
   const handleTabChange = (value: string) => {
@@ -58,6 +64,18 @@ export const JobDetailsTabs = ({
               History
             </TabsTrigger>
           </TabsList>
+          <div className="flex gap-2">
+            {onCreateEstimate && (
+              <Button size="sm" onClick={onCreateEstimate}>
+                <PlusCircle className="mr-1" size={16} /> Estimate
+              </Button>
+            )}
+            {onCreateInvoice && (
+              <Button size="sm" onClick={onCreateInvoice}>
+                <PlusCircle className="mr-1" size={16} /> Invoice
+              </Button>
+            )}
+          </div>
         </div>
         
         {children}

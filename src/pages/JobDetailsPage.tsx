@@ -35,6 +35,8 @@ const JobDetailsPage = () => {
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}
+              onCreateEstimate={() => jobHeaderData.setIsEstimateDialogOpen(true)}
+              onCreateInvoice={() => jobHeaderData.setIsInvoiceDialogOpen(true)}
             >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
