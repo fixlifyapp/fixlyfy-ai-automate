@@ -19,7 +19,7 @@ import { TeamFilters } from "@/components/team/TeamFilters";
 import { TeamMember } from "@/types/team";
 import { TeamMemberProfile } from "@/types/team-member";
 import { toast } from "sonner";
-import { generateTestTeamMembers } from "@/utils/test-data-generator";
+import { generateTestTeamMembers } from "@/utils/test-data";
 import { supabase } from "@/integrations/supabase/client";
 
 // Helper function to convert TeamMember to TeamMemberProfile
