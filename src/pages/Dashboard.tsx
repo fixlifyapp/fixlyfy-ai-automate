@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { KpiSummaryCards } from "@/components/dashboard/KpiSummaryCards";
@@ -11,6 +12,7 @@ import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterC
 import { DashboardActions } from "@/components/dashboard/DashboardActions";
 import { TechScoreboard } from "@/components/dashboard/TechScoreboard";
 import { DispatchScoreboard } from "@/components/dashboard/DispatchScoreboard";
+import { ExpandedDashboardMetrics } from "@/components/dashboard/ExpandedDashboardMetrics";
 
 // Define time period types for filters
 export type TimePeriod = "week" | "month" | "quarter" | "custom";
@@ -58,6 +60,11 @@ const Dashboard = () => {
         />
       </div>
       
+      {/* Expanded Dashboard Metrics (New) */}
+      <div className="mb-8">
+        <ExpandedDashboardMetrics />
+      </div>
+      
       {/* KPI Summary Cards */}
       <div className="mb-6">
         <KpiSummaryCards 
@@ -67,7 +74,7 @@ const Dashboard = () => {
         />
       </div>
       
-      {/* Scoreboard Section (New) */}
+      {/* Scoreboard Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <TechScoreboard isRefreshing={isRefreshing} />
         <DispatchScoreboard isRefreshing={isRefreshing} />
