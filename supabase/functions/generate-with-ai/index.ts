@@ -49,7 +49,9 @@ serve(async (req) => {
       data,
       mode = "text",
       temperature = 0.7,
-      maxTokens = 800
+      maxTokens = 800,
+      fetchBusinessData = false,
+      userId
     } = requestData;
 
     // Validate that we have either prompt or userPrompt
@@ -70,9 +72,132 @@ serve(async (req) => {
     console.log("Using context:", finalSystemContext);
     console.log("Using prompt:", finalUserPrompt);
 
-    // Prepare the message content, including data if provided
+    // If fetchBusinessData is true, get business data from Supabase
+    let businessData = null;
     let userMessageContent = finalUserPrompt;
-    if (data) {
+    
+    if (fetchBusinessData && userId) {
+      console.log("Fetching business data for user:", userId);
+      
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.error("Missing Supabase configuration");
+      } else {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        
+        try {
+          // Fetch jobs data
+          const { data: jobs, error: jobsError } = await supabase
+            .from('jobs')
+            .select('*');
+            
+          if (jobsError) {
+            console.error("Error fetching jobs:", jobsError);
+          }
+          
+          // Fetch clients data
+          const { data: clients, error: clientsError } = await supabase
+            .from('clients')
+            .select('*');
+            
+          if (clientsError) {
+            console.error("Error fetching clients:", clientsError);
+          }
+          
+          // Calculate business metrics
+          if (jobs && clients) {
+            const completedJobs = jobs.filter(job => job.status === "completed");
+            const activeClients = clients.filter(client => client.status === "active");
+            const totalRevenue = completedJobs.reduce((sum, job) => sum + parseFloat(job.revenue?.toString() || '0'), 0);
+            
+            // Group jobs by service type
+            const serviceTypes = {};
+            jobs.forEach(job => {
+              if (job.tags && job.tags.length > 0) {
+                job.tags.forEach(tag => {
+                  if (!serviceTypes[tag]) {
+                    serviceTypes[tag] = 0;
+                  }
+                  serviceTypes[tag]++;
+                });
+              }
+            });
+            
+            // Calculate top service
+            let topService = { name: "None", count: 0 };
+            Object.entries(serviceTypes).forEach(([name, count]) => {
+              if ((count as number) > topService.count) {
+                topService = { name, count: count as number };
+              }
+            });
+            
+            // Calculate technician performance
+            const techPerformance = {};
+            jobs.forEach(job => {
+              if (job.technician_id) {
+                if (!techPerformance[job.technician_id]) {
+                  techPerformance[job.technician_id] = { jobs: 0, completed: 0 };
+                }
+                techPerformance[job.technician_id].jobs++;
+                if (job.status === "completed") {
+                  techPerformance[job.technician_id].completed++;
+                }
+              }
+            });
+            
+            // Find top technician
+            let topTech = { id: "None", performance: 0 };
+            Object.entries(techPerformance).forEach(([id, perf]: [string, any]) => {
+              const performance = perf.jobs > 0 ? perf.completed / perf.jobs : 0;
+              if (performance > topTech.performance) {
+                topTech = { id, performance };
+              }
+            });
+            
+            // Create business data object
+            businessData = {
+              metrics: {
+                clients: {
+                  total: clients.length,
+                  active: activeClients.length,
+                  newLastMonth: Math.floor(clients.length * 0.2)  // Approximation
+                },
+                jobs: {
+                  total: jobs.length,
+                  completed: completedJobs.length,
+                  inProgress: jobs.filter(job => job.status === "in-progress").length,
+                  scheduled: jobs.filter(job => job.status === "scheduled").length
+                },
+                revenue: {
+                  total: totalRevenue,
+                  average: completedJobs.length > 0 ? totalRevenue / completedJobs.length : 0
+                },
+                services: {
+                  topService: topService.name,
+                  distribution: serviceTypes
+                },
+                technicians: {
+                  performance: techPerformance,
+                  topPerformer: topTech.id
+                }
+              },
+              period: "current month"
+            };
+            
+            console.log("Generated business data:", JSON.stringify(businessData));
+            
+            // Include business data in the prompt
+            userMessageContent = `Here is the current business data: ${JSON.stringify(businessData)}\n\n${finalUserPrompt}`;
+          }
+        } catch (error) {
+          console.error("Error calculating business metrics:", error);
+        }
+      }
+    } else if (data) {
+      // If data is provided directly in the request
       userMessageContent = `Here is the data: ${JSON.stringify(data)}\n\n${finalUserPrompt}`;
     }
     
@@ -118,9 +243,9 @@ serve(async (req) => {
 
     console.log("Successfully generated response");
 
-    // Return the AI-generated content in the format expected by the frontend
+    // Return the AI-generated content and optionally the business data
     return new Response(
-      JSON.stringify({ generatedText }),
+      JSON.stringify({ generatedText, businessData }),
       { 
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }

@@ -12,7 +12,7 @@ interface InsightsGeneratorProps {
   onInsightsGenerated?: (insights: string) => void;
   systemContext?: string;
   autoGenerate?: boolean;
-  mode?: "text" | "insights" | "analytics" | "recommendations";
+  mode?: "text" | "insights" | "analytics" | "recommendations" | "business";
   variant?: "default" | "compact";
 }
 
@@ -28,7 +28,7 @@ export const InsightsGenerator = ({
   const [insights, setInsights] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   
-  const { generateInsights, isLoading, error: aiError } = useAI({
+  const { generateText, generateInsights, isLoading, error: aiError } = useAI({
     systemContext,
     mode
   });
@@ -36,7 +36,24 @@ export const InsightsGenerator = ({
   const handleGenerateInsights = async () => {
     setGenerationError(null);
     try {
-      const generatedInsights = await generateInsights(data, topic);
+      let generatedInsights;
+      
+      if (mode === "business") {
+        generatedInsights = await generateText(
+          `Generate insights about ${topic} using the business data provided.`, 
+          { 
+            systemContext: systemContext || "You are a business analyst. Analyze the data and provide actionable insights.",
+            mode: "business",
+            fetchBusinessData: true
+          }
+        );
+      } else {
+        generatedInsights = await generateInsights(data, topic, {
+          systemContext,
+          mode
+        });
+      }
+      
       if (generatedInsights) {
         setInsights(generatedInsights);
         onInsightsGenerated?.(generatedInsights);

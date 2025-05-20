@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 export interface BusinessData {
   revenue: {
@@ -35,9 +36,12 @@ export const useBusinessData = () => {
   const [businessData, setBusinessData] = useState<BusinessData | null>(null);
   const [insights, setInsights] = useState<BusinessInsight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) return;
+      
       setIsLoading(true);
       try {
         // Fetch clients
@@ -69,8 +73,33 @@ export const useBusinessData = () => {
         const hvacJobs = (jobs || []).filter(job => 
           job.tags && job.tags.includes("HVAC") && job.status === "completed"
         );
-        const hvacRevenue = hvacJobs.reduce((sum, job) => sum + (job.revenue || 0), 0);
-        const totalRevenue = completedJobs.reduce((sum, job) => sum + (job.revenue || 0), 0);
+        const hvacRevenue = hvacJobs.reduce((sum, job) => {
+          const revenue = typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue || '0');
+          return sum + revenue;
+        }, 0);
+        
+        const totalRevenue = completedJobs.reduce((sum, job) => {
+          const revenue = typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue || '0');
+          return sum + revenue;
+        }, 0);
+        
+        // Calculate plumbing revenue
+        const plumbingJobs = (jobs || []).filter(job => 
+          job.tags && job.tags.includes("Plumbing") && job.status === "completed"
+        );
+        const plumbingRevenue = plumbingJobs.reduce((sum, job) => {
+          const revenue = typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue || '0');
+          return sum + revenue;
+        }, 0);
+        
+        // Calculate electrical revenue
+        const electricalJobs = (jobs || []).filter(job => 
+          job.tags && job.tags.includes("Electrical") && job.status === "completed"
+        );
+        const electricalRevenue = electricalJobs.reduce((sum, job) => {
+          const revenue = typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue || '0');
+          return sum + revenue;
+        }, 0);
         
         // Calculate technician utilization
         const technicianIds = [...new Set((jobs || []).map(job => job.technician_id))].filter(id => id);
@@ -104,19 +133,17 @@ export const useBusinessData = () => {
               revenue: hvacRevenue 
             },
             plumbing: { 
-              completed: (jobs || []).filter(j => j.tags && j.tags.includes("Plumbing") && j.status === "completed").length, 
-              revenue: (jobs || []).filter(j => j.tags && j.tags.includes("Plumbing") && j.status === "completed")
-                .reduce((sum, j) => sum + (j.revenue || 0), 0) 
+              completed: plumbingJobs.length, 
+              revenue: plumbingRevenue 
             },
             electrical: { 
-              completed: (jobs || []).filter(j => j.tags && j.tags.includes("Electrical") && j.status === "completed").length, 
-              revenue: (jobs || []).filter(j => j.tags && j.tags.includes("Electrical") && j.status === "completed")
-                .reduce((sum, j) => sum + (j.revenue || 0), 0)
+              completed: electricalJobs.length, 
+              revenue: electricalRevenue 
             }
           },
           technicians: {
             total: technicianIds.length,
-            utilization: 78,
+            utilization: 78, // Estimated utilization percentage
             topPerforming: Object.entries(technicianData)
               .sort((a, b) => (b[1] as number) - (a[1] as number))
               .slice(0, 2)
@@ -125,20 +152,10 @@ export const useBusinessData = () => {
         };
         
         setBusinessData(data);
-        return { data, underutilizedTechs, completedJobs, totalRevenue, hvacRevenue };
-      } catch (error) {
-        console.error("Error fetching data for insights:", error);
-        toast.error("Failed to load business insights");
-        return null;
-      }
-    };
-    
-    fetchData().then((result) => {
-      if (result) {
+        
+        // Import icons for insights
         import("lucide-react").then(({ AlertTriangle, Clock, Star, TrendingUp }) => {
           // Generate insights based on real data
-          const { underutilizedTechs, completedJobs, totalRevenue, hvacRevenue } = result;
-          
           const generatedInsights = [
             {
               id: 1,
@@ -184,10 +201,17 @@ export const useBusinessData = () => {
           
           setInsights(generatedInsights);
         });
+        
+      } catch (error) {
+        console.error("Error fetching data for insights:", error);
+        toast.error("Failed to load business insights");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
-  }, []);
+    };
+    
+    fetchData();
+  }, [user]);
   
   return { businessData, insights, isLoading };
 };

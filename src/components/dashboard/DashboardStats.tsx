@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 export const DashboardStats = () => {
   const [stats, setStats] = useState({
@@ -13,9 +14,12 @@ export const DashboardStats = () => {
     completionRate: 0,
     isLoading: true
   });
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchStats = async () => {
+      if (!user) return;
+      
       try {
         // Fetch clients count
         const { count: clientCount, error: clientError } = await supabase
@@ -32,10 +36,10 @@ export const DashboardStats = () => {
         if (jobsError) throw jobsError;
         
         // Calculate stats from jobs data
-        const totalJobs = jobs.length;
-        const completedJobs = jobs.filter(job => job.status === 'completed').length;
-        const totalRevenue = jobs.reduce((sum, job) => 
-          sum + (typeof job.revenue === 'number' ? job.revenue : 0), 0);
+        const totalJobs = jobs ? jobs.length : 0;
+        const completedJobs = jobs ? jobs.filter(job => job.status === 'completed').length : 0;
+        const totalRevenue = jobs ? jobs.reduce((sum, job) => 
+          sum + (typeof job.revenue === 'number' ? job.revenue : parseFloat(job.revenue || '0')), 0) : 0;
         const completionRate = totalJobs > 0 ? (completedJobs / totalJobs) * 100 : 0;
         
         setStats({
@@ -53,32 +57,38 @@ export const DashboardStats = () => {
     };
     
     fetchStats();
-  }, []);
+  }, [user]);
+
+  // Calculate monthly change percentages (mocked for now)
+  // In a real app, you would compare with historical data
+  const getChangePercent = (value: number, base: number) => {
+    return Math.round(((value - base) / base) * 100) || 0;
+  };
 
   // Format stats for display
   const formattedStats = [
     {
       name: 'Total Clients',
       value: stats.clientCount.toString(),
-      change: 5, // Mock change percent
+      change: getChangePercent(stats.clientCount, stats.clientCount * 0.95),
       isPositive: true
     },
     {
       name: 'Active Jobs',
       value: stats.jobCount.toString(),
-      change: 8,
+      change: getChangePercent(stats.jobCount, stats.jobCount * 0.92),
       isPositive: true
     },
     {
       name: 'Revenue',
       value: `$${stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      change: 12,
+      change: getChangePercent(stats.revenue, stats.revenue * 0.89),
       isPositive: true
     },
     {
       name: 'Completion Rate',
       value: `${stats.completionRate.toFixed(1)}%`,
-      change: 3,
+      change: getChangePercent(stats.completionRate, stats.completionRate * 0.97),
       isPositive: true
     }
   ];

@@ -1,16 +1,21 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { CheckCircle, Users, DollarSign, Star, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const SecondaryMetrics = () => {
   const [metrics, setMetrics] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const calculateMetrics = async () => {
+      if (!user) return;
+      
       try {
         setIsLoading(true);
         
@@ -39,14 +44,29 @@ export const SecondaryMetrics = () => {
           ? Math.round(totalRevenue / completedJobsWithRevenue.length) 
           : 0;
           
-        // Calculate technician utilization (mocked as we don't have real utilization data)
-        const technicianUtilization = 84; // Mocked value
-        
-        // Calculate customer satisfaction (now mocked since we removed rating column)
-        // Previously this used actual client ratings, now we'll use a mock value
-        const averageSatisfaction = "4.2"; // Mocked value
+        // Calculate technician utilization (estimate based on job counts per technician)
+        // Fetch technician assignments
+        const { data: techs } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'technician');
           
-        // Calculate month-over-month changes (mocked)
+        const techCount = techs?.length || 1;
+        const jobsPerTech = totalJobs / techCount;
+        
+        // Estimate utilization between 70-95% based on jobs per tech ratio
+        // This is a simplified calculation for demo purposes
+        let technicianUtilization = 75; // default base utilization
+        if (jobsPerTech > 5) technicianUtilization = 95;
+        else if (jobsPerTech > 3) technicianUtilization = 85;
+        else if (jobsPerTech > 1) technicianUtilization = 75;
+        
+        // Calculate customer satisfaction (mocked since we don't have ratings)
+        // In a real system, this would come from actual customer ratings
+        const averageSatisfaction = "4.2"; 
+          
+        // Calculate month-over-month changes
+        // In a real system, this would compare with last month's actual data
         const previousMonthCompletion = completionRate - getRandomChange(2, 6);
         const previousMonthAvgValue = averageJobValue - getRandomChange(10, 20);
         const previousMonthUtilization = technicianUtilization - getRandomChange(1, 3);
@@ -103,7 +123,7 @@ export const SecondaryMetrics = () => {
     };
     
     calculateMetrics();
-  }, []);
+  }, [user]);
   
   // Helper function for mock data
   function getRandomChange(min: number, max: number): number {
