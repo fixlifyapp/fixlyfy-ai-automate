@@ -134,6 +134,22 @@ export const useJobDetailsHeader = (id: string) => {
     toast.success(`Payment of $${amount.toFixed(2)} recorded`);
   };
 
+  // Add the missing handler methods
+  const handleCompleteJob = () => {
+    setStatus("completed");
+    toast.success("Job marked as completed");
+  };
+
+  const handleCancelJob = () => {
+    setStatus("cancelled");
+    toast.success("Job cancelled successfully");
+  };
+
+  const handleReschedule = () => {
+    toast.success("Job rescheduling initiated");
+    // In a real app, this would open a rescheduling dialog
+  };
+
   return {
     job,
     status,
@@ -161,6 +177,10 @@ export const useJobDetailsHeader = (id: string) => {
     handleEstimateCreated,
     handleSyncEstimateToInvoice,
     handlePaymentRecorded,
-    jobPayments
+    jobPayments,
+    // Add the missing methods to the returned object
+    handleCompleteJob,
+    handleCancelJob,
+    handleReschedule
   };
 };
