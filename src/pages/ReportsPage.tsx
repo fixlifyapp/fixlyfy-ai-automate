@@ -107,7 +107,9 @@ const ReportsPage = () => {
       
       // Calculate revenue
       const totalRevenue = paymentsData?.reduce((sum, payment) => {
-        return payment.status === 'paid' ? sum + payment.amount : sum;
+        // Check if payment has status, otherwise assume it's paid
+        const paymentStatus = (payment as any).status || 'paid';
+        return paymentStatus === 'paid' ? sum + payment.amount : sum;
       }, 0) || 0;
       
       const averageJobValue = totalJobs > 0 ? totalRevenue / totalJobs : 0;
@@ -119,7 +121,9 @@ const ReportsPage = () => {
         const months: Record<string, number> = {};
         
         paymentsData.forEach(payment => {
-          if (payment.status !== 'paid') return;
+          // Check if payment has status, otherwise assume it's paid
+          const paymentStatus = (payment as any).status || 'paid';
+          if (paymentStatus !== 'paid') return;
           
           const date = new Date(payment.date);
           const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;

@@ -10,7 +10,7 @@ export interface Payment {
   id: string;
   amount: number;
   date: string;
-  method: string;
+  method: PaymentMethod; // Change from string to PaymentMethod
   created_at: string;
   notes: string;
   reference: string;
@@ -32,10 +32,30 @@ type PaymentInput = {
 
 // Enhanced version of usePayments
 export const usePayments = (jobId?: string) => {
-  const [payments, setPayments] = useState<Payment[]>(jobId 
-    ? mockPayments.filter(p => p.jobId === jobId) 
-    : mockPayments
-  );
+  // Fix the initial state by ensuring mockPayments are cast to the proper type
+  const [payments, setPayments] = useState<Payment[]>(() => {
+    const filteredPayments = jobId 
+      ? mockPayments.filter(p => p.jobId === jobId) 
+      : mockPayments;
+    
+    // Convert the mock payments to match our Payment interface
+    return filteredPayments.map(p => ({
+      id: p.id,
+      amount: p.amount,
+      date: p.date,
+      method: p.method,
+      created_at: p.date, // Use date as created_at
+      notes: p.notes || "",
+      reference: p.reference || "",
+      invoice_id: "",
+      job_id: p.jobId,
+      client_id: p.clientId,
+      status: p.status,
+      technician_id: p.technicianId,
+      technician_name: p.technicianName
+    }));
+  });
+  
   const [isLoading] = useState(false);
 
   // Calculate payment totals

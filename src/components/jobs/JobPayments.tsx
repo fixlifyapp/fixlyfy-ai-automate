@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
+import { Payment as RefundDialogPayment } from "@/types/payment";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -38,7 +39,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     deletePayment
   } = usePayments(jobId);
   
-  const getMethodIcon = (method: string) => {
+  const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
       case "credit-card":
         return <CreditCard size={16} className="text-blue-500" />;
@@ -120,12 +121,20 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   };
 
   // Convert Payment type to match RefundDialog's expected Payment type
-  const convertToRefundDialogPayment = (payment: Payment) => {
+  const convertToRefundDialogPayment = (payment: Payment): RefundDialogPayment => {
     return {
-      ...payment,
+      id: payment.id,
+      date: payment.date,
       clientId: payment.client_id || '',
-      clientName: 'Client', // Default value if not available
+      clientName: payment.technician_name || 'Client', // Use technician_name if available, or default
       jobId: payment.job_id || jobId,
+      amount: payment.amount,
+      method: payment.method,
+      status: payment.status as "paid" | "refunded" | "disputed",
+      reference: payment.reference,
+      notes: payment.notes,
+      technicianId: payment.technician_id,
+      technicianName: payment.technician_name
     };
   };
 
