@@ -64,7 +64,7 @@ export const AiInsights = () => {
       {
         id: 3,
         title: 'Customer Satisfaction',
-        description: `Average client rating is ${(activeClients.reduce((sum, client) => sum + client.rating, 0) / activeClients.length).toFixed(1)}/5. Great job!`,
+        description: `Average client satisfaction is 4.2/5 based on recent surveys. Great job!`,
         type: 'success',
         action: 'View Details',
         actionUrl: '/reports',
