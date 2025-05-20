@@ -7,7 +7,7 @@ export interface Product {
   price: number;
   ourPrice?: number;
   taxable?: boolean;
-  tags: string[];
+  tags?: string[];
 }
 
 export interface LineItem {

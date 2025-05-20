@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Plus, Search } from "lucide-react";
 import { Product } from "./types";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductCatalogProps {
   onAddProduct: (product: Product) => void;
@@ -14,55 +16,9 @@ interface ProductCatalogProps {
 export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { products, categories, isLoading } = useProducts();
   
-  // Mock product catalog
-  // In a real app, this would be fetched from an API
-  const productCatalog: Product[] = [
-    {
-      id: "prod-1",
-      name: "Repair Service",
-      description: "Standard HVAC repair service",
-      category: "Services",
-      price: 220,
-      tags: ["repair", "service"]
-    },
-    {
-      id: "prod-2",
-      name: "Defrost System",
-      description: "Defrost System Replacement",
-      category: "Parts",
-      price: 149,
-      tags: ["part", "defrost"]
-    },
-    {
-      id: "prod-3",
-      name: "6-Month Warranty",
-      description: "Extended warranty covering parts and labor",
-      category: "Warranties",
-      price: 49,
-      tags: ["warranty", "protection"]
-    },
-    {
-      id: "prod-4",
-      name: "Filter Replacement",
-      description: "HVAC filter replacement",
-      category: "Parts",
-      price: 35,
-      tags: ["filter", "part"]
-    },
-    {
-      id: "prod-5",
-      name: "Diagnostic Service",
-      description: "Complete system diagnostic",
-      category: "Services",
-      price: 89,
-      tags: ["diagnostic", "service"]
-    }
-  ];
-  
-  const categories = Array.from(new Set(productCatalog.map(product => product.category)));
-  
-  const filteredProducts = productCatalog.filter(product => {
+  const filteredProducts = products.filter(product => {
     const matchesSearch = searchQuery === "" || 
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -116,7 +72,13 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
       </div>
       
       <div className="max-h-[300px] overflow-y-auto">
-        {filteredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="w-full h-12" />
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <ul className="divide-y">
             {filteredProducts.map(product => (
               <li key={product.id} className="p-3 hover:bg-muted/40">
@@ -149,7 +111,7 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
                   </div>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {product.tags.map((tag, index) => (
+                  {product.tags && product.tags.map((tag, index) => (
                     <Badge 
                       key={index} 
                       variant="outline" 

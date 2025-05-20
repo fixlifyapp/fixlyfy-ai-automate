@@ -2,15 +2,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, Pencil, Search, Save, X } from "lucide-react";
+import { PlusCircle, Pencil, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
 import { Product } from "./builder/types";
 import { ProductEditDialog } from "./dialogs/ProductEditDialog";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobProductsProps {
   jobId: string;
@@ -23,98 +23,20 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
-  // Mock products for the demo
-  // In a real app, this would be fetched from an API
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: "prod-1",
-      name: "Repair Service",
-      description: "Standard HVAC repair service",
-      category: "Services",
-      price: 220,
-      ourPrice: 150,
-      taxable: true,
-      tags: ["repair", "service"]
-    },
-    {
-      id: "prod-2",
-      name: "Defrost System",
-      description: "Defrost System Replacement",
-      category: "Parts",
-      price: 149,
-      ourPrice: 85,
-      taxable: true,
-      tags: ["part", "defrost"]
-    },
-    {
-      id: "prod-3",
-      name: "6-Month Warranty",
-      description: "Extended warranty covering parts and labor",
-      category: "Warranties",
-      price: 49,
-      ourPrice: 10,
-      taxable: false,
-      tags: ["warranty", "protection"]
-    },
-    {
-      id: "prod-4",
-      name: "1-Year Warranty",
-      description: "1-year extended warranty and priority service",
-      category: "Warranties",
-      price: 89,
-      ourPrice: 20,
-      taxable: false,
-      tags: ["warranty", "protection"]
-    },
-    {
-      id: "prod-5",
-      name: "2-Year Warranty",
-      description: "2-year comprehensive warranty package",
-      category: "Warranties",
-      price: 149,
-      ourPrice: 30,
-      taxable: false,
-      tags: ["warranty", "protection"]
-    },
-    {
-      id: "prod-6",
-      name: "5-Year Warranty",
-      description: "Premium 5-year warranty with full coverage",
-      category: "Warranties",
-      price: 299,
-      ourPrice: 70,
-      taxable: false,
-      tags: ["warranty", "protection", "premium"]
-    },
-    {
-      id: "prod-7",
-      name: "Filter Replacement",
-      description: "HVAC filter replacement",
-      category: "Parts",
-      price: 35,
-      ourPrice: 15,
-      taxable: true,
-      tags: ["filter", "part"]
-    },
-    {
-      id: "prod-8",
-      name: "Diagnostic Service",
-      description: "Complete system diagnostic",
-      category: "Services",
-      price: 89,
-      ourPrice: 45,
-      taxable: true,
-      tags: ["diagnostic", "service"]
-    }
-  ]);
-  
-  const categories = Array.from(new Set(products.map(product => product.category)));
+  const { 
+    products, 
+    categories, 
+    isLoading, 
+    createProduct, 
+    updateProduct, 
+    deleteProduct 
+  } = useProducts();
   
   const filteredProducts = products.filter(product => {
     const matchesSearch = !searchQuery || 
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
     
     const matchesCategory = !selectedCategory || product.category === selectedCategory;
     
@@ -131,28 +53,20 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
     setIsCreateDialogOpen(true);
   };
 
-  const handleSaveProduct = (product: Product) => {
+  const handleSaveProduct = async (product: Product) => {
     if (selectedProduct) {
       // Editing existing product
-      setProducts(prevProducts => 
-        prevProducts.map(p => p.id === product.id ? product : p)
-      );
-      toast.success("Product updated successfully");
+      await updateProduct(product.id, product);
     } else {
       // Creating new product
-      const newProduct = {
-        ...product,
-        id: `prod-${Date.now()}`
-      };
-      setProducts([...products, newProduct]);
-      toast.success("Product created successfully");
+      await createProduct(product);
     }
     setIsEditDialogOpen(false);
     setIsCreateDialogOpen(false);
   };
 
   const getMarginPercentage = (product: Product) => {
-    const margin = product.price - product.ourPrice;
+    const margin = product.price - (product.ourPrice || 0);
     return margin > 0 ? ((margin / product.price) * 100).toFixed(0) : "0";
   };
 
@@ -211,7 +125,13 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
           </div>
         </div>
 
-        {filteredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="w-full h-16" />
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -232,7 +152,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-muted-foreground">{product.description}</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {product.tags.map((tag, index) => (
+                        {product.tags && product.tags.map((tag, index) => (
                           <Badge 
                             key={index} 
                             variant="outline" 
@@ -246,7 +166,7 @@ export const JobProducts = ({ jobId }: JobProductsProps) => {
                   </TableCell>
                   <TableCell>{product.category}</TableCell>
                   <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">${product.ourPrice.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${(product.ourPrice || 0).toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     <span className={getMarginColor(parseInt(getMarginPercentage(product)))}>
                       {getMarginPercentage(product)}%

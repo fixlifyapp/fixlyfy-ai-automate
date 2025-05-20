@@ -5,13 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, DollarSign, Ban, FileText, Trash2 } from "lucide-react";
+import { CreditCard, DollarSign, FileText, Trash2 } from "lucide-react";
 import { Payment, PaymentMethod } from "@/types/payment";
-import { payments as samplePayments } from "@/data/payments";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { Dialog } from "@/components/ui/dialog";
-import { toast } from "sonner";
+import { usePayments } from "@/hooks/usePayments";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -19,16 +19,21 @@ interface JobPaymentsProps {
 
 export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [balance, setBalance] = useState(475.99);
-  const [invoiceAmount] = useState(475.99);
-  const [payments, setPayments] = useState<Payment[]>(
-    // Filter sample payments to only show those for this job
-    samplePayments.filter(payment => payment.jobId === jobId)
-  );
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  
+  const { 
+    payments, 
+    isLoading,
+    totalPaid,
+    totalRefunded,
+    netAmount,
+    addPayment,
+    refundPayment,
+    deletePayment
+  } = usePayments(jobId);
+  
   const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
       case "credit-card":
@@ -36,7 +41,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       case "cash":
         return <DollarSign size={16} className="text-green-500" />;
       case "e-transfer":
-        return <Ban size={16} className="text-purple-500" />; // Changed from Bank to Ban
+        return <FileText size={16} className="text-purple-500" />; 
       case "cheque":
         return <FileText size={16} className="text-orange-500" />;
       default:
@@ -61,25 +66,28 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     );
   };
 
-  const handlePaymentProcessed = (amount: number) => {
-    // Create a new payment record
-    const newPayment: Payment = {
-      id: `payment-${Date.now()}`,
-      date: new Date().toISOString(),
-      clientId: "client-123", // This would come from the job data in a real app
-      clientName: "Michael Johnson", // This would come from the job data in a real app
-      jobId: jobId,
-      amount: amount,
-      method: "credit-card", // This comes from the dialog in a real implementation
-      status: "paid",
-      reference: `txn-${Date.now()}`,
-    };
+  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
+    // Get client ID from the job
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('client_id, title')
+      .eq('id', jobId)
+      .single();
+      
+    if (!job?.client_id) {
+      toast.error('Cannot process payment: No client associated with this job');
+      return;
+    }
     
-    // Add the new payment to the list
-    setPayments([newPayment, ...payments]);
-    
-    // Update the balance
-    setBalance(prevBalance => prevBalance - amount);
+    await addPayment(
+      { amount, method, reference, notes },
+      job.client_id
+    );
+  };
+
+  const handleRefundPayment = (payment: Payment) => {
+    // In a real app, this would open a dialog to confirm and set refund amount
+    refundPayment(payment.id);
   };
 
   const handleDeletePayment = (payment: Payment) => {
@@ -93,40 +101,15 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     setIsDeleting(true);
     
     try {
-      // In a real app, this would be an actual API call
-      // await fetch(`/api/payments/${selectedPayment.id}`, {
-      //   method: 'DELETE',
-      // });
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Recalculate balance if the deleted payment was a 'paid' payment
-      if (selectedPayment.status === "paid") {
-        setBalance(prevBalance => prevBalance + selectedPayment.amount);
-      }
-      
-      // Remove payment from local state
-      setPayments(payments.filter(p => p.id !== selectedPayment.id));
-      toast.success("Payment deleted successfully");
+      await deletePayment(selectedPayment.id);
+      setIsDeleteConfirmOpen(false);
     } catch (error) {
       console.error("Failed to delete payment:", error);
       toast.error("Failed to delete payment");
     } finally {
       setIsDeleting(false);
-      setIsDeleteConfirmOpen(false);
     }
   };
-
-  // Calculate remaining balance
-  const totalPaid = payments.reduce((total, payment) => {
-    if (payment.status === "paid") {
-      return total + payment.amount;
-    }
-    return total;
-  }, 0);
-  
-  const remainingBalance = invoiceAmount - totalPaid;
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
@@ -135,11 +118,13 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
           <div>
             <h3 className="text-lg font-medium">Payments</h3>
             <div className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium">${totalPaid.toFixed(2)}</span> paid of <span className="font-medium">${invoiceAmount.toFixed(2)}</span>
-              {" • "}
-              <span className={remainingBalance > 0 ? "text-orange-500 font-medium" : "text-green-500 font-medium"}>
-                ${remainingBalance.toFixed(2)} {remainingBalance > 0 ? "remaining" : "paid in full"}
-              </span>
+              <span className="font-medium">${netAmount.toFixed(2)}</span> net payments
+              {totalRefunded > 0 && (
+                <>
+                  {" • "}
+                  <span className="text-orange-500 font-medium">${totalRefunded.toFixed(2)} refunded</span>
+                </>
+              )}
             </div>
           </div>
           
@@ -149,7 +134,13 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
           </Button>
         </div>
 
-        {payments.length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2].map(i => (
+              <Skeleton key={i} className="w-full h-16" />
+            ))}
+          </div>
+        ) : payments.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -188,6 +179,16 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
                     {getStatusBadge(payment.status)}
                   </TableCell>
                   <TableCell className="text-right">
+                    {payment.status === 'paid' && (
+                      <Button
+                        onClick={() => handleRefundPayment(payment)}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-amber-600 mr-1 border-amber-200 hover:bg-amber-50"
+                      >
+                        Refund
+                      </Button>
+                    )}
                     <Button
                       onClick={() => handleDeletePayment(payment)}
                       size="sm"
@@ -212,7 +213,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       <PaymentDialog 
         open={isPaymentDialogOpen} 
         onOpenChange={setIsPaymentDialogOpen}
-        balance={remainingBalance} 
+        balance={100} // This would come from actual invoice data in a real app
         onPaymentProcessed={handlePaymentProcessed}
       />
 
