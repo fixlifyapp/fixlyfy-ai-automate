@@ -41,7 +41,10 @@ export const JobInfoSection = ({
       
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-medium">{job.client}</h2>
+          <div className="flex flex-col">
+            <h2 className="text-lg font-medium">{job.client}</h2>
+            <span className="text-sm text-muted-foreground">Job #{job.id}</span>
+          </div>
           <ClientContactButtons
             onCallClick={onCallClick}
             onMessageClick={onMessageClick}
