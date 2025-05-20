@@ -1,243 +1,227 @@
-
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Send, Save } from "lucide-react";
-import { toast } from "sonner";
-import { WarrantySelectionDialog } from "../WarrantySelectionDialog";
-import { ProductEditDialog } from "../ProductEditDialog";
-import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
-import { Product } from "@/components/jobs/builder/types";
+import { useState, useEffect, useCallback } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EstimateEditor } from "./EstimateEditor";
-import { EstimatePreview } from "./EstimatePreview";
-import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
+import { LineItemsTable } from "./LineItemsTable";
+import { Estimate } from "@/hooks/useEstimates";
+import { useEstimatesInfo } from "@/components/jobs/estimates/hooks/useEstimatesInfo";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  estimateId: string | null;
+  estimateId?: string;
   jobId: string;
-  onSyncToInvoice?: (estimate: any) => void;
+  onSyncToInvoice?: () => void;
 }
 
-export const EstimateBuilderDialog = ({
-  open,
-  onOpenChange,
-  estimateId,
-  jobId,
-  onSyncToInvoice
-}: EstimateBuilderDialogProps) => {
-  const [activeTab, setActiveTab] = useState("editor");
-  const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
-  const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
-  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, onSyncToInvoice }: EstimateBuilderDialogProps) {
+  const [estimate, setEstimate] = useState<Estimate | null>(null);
+  const [lineItems, setLineItems] = useState<any[]>([]);
+  const { fetchEstimate, addEmptyLineItem, addCustomLine, removeLine, updateLine, updateDiscount, updateTax, updateNote } = useEstimatesInfo();
+  const router = useRouter();
 
-  // Use the refactored hook for state management
-  const {
-    estimateNumber,
-    lineItems,
-    notes,
-    selectedProduct,
-    selectedLineItemId,
-    recommendedWarranty,
-    techniciansNote,
-    taxRate,
-    isLoading,
-    setTechniciansNote,
-    setRecommendedWarranty,
-    handleAddProduct,
-    handleRemoveLineItem,
-    handleUpdateLineItem,
-    handleEditLineItem: originalHandleEditLineItem,
-    handleAddEmptyLineItem: openProductSearch,
-    handleAddCustomLine,
-    calculateSubtotal,
-    calculateTotalTax,
-    calculateGrandTotal,
-    calculateTotalMargin,
-    calculateMarginPercentage,
-    handleProductSaved,
-    handleProductSelected,
-    handleSyncToInvoice,
-    saveEstimateChanges
-  } = useEstimateBuilder({
-    estimateId,
-    open,
-    onSyncToInvoice,
-    jobId
-  });
-
-  // Wrap the original handleEditLineItem to return a boolean
-  const handleEditLineItem = (id: string): boolean => {
-    originalHandleEditLineItem(id);
-    return true; // Return boolean as required by the interface
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      setEstimate(null);
+      setLineItems([]);
+    }
   };
 
-  // Log the state to help with debugging
-  useEffect(() => {
-    if (open) {
-      console.log("EstimateBuilderDialog opened with ID:", estimateId);
-      console.log("Current estimate items:", lineItems);
-    }
-  }, [open, estimateId, lineItems]);
-
-  // Handle saving draft
-  const handleSaveDraft = async () => {
+  const loadEstimate = useCallback(async () => {
     if (estimateId) {
-      // If we're editing an existing estimate, save changes
-      const result = await saveEstimateChanges();
-      if (result) {
-        toast.success(`Estimate ${estimateNumber} updated`);
-        onOpenChange(false);
+      try {
+        const fetchedEstimate = await fetchEstimate(estimateId);
+        if (fetchedEstimate) {
+          setEstimate(fetchedEstimate);
+          setLineItems(fetchedEstimate.estimate_items || []);
+        } else {
+          toast.error("Failed to load estimate");
+        }
+      } catch (error) {
+        console.error("Error loading estimate:", error);
+        toast.error("Failed to load estimate");
       }
     } else {
-      // In a real app, this would save a new estimate
-      toast.success(`Estimate ${estimateNumber} saved as draft`);
-      onOpenChange(false);
+      setEstimate({
+        job_id: jobId,
+        discount: 0,
+        tax_rate: 0,
+        technicians_note: ""
+      } as Estimate);
+      setLineItems([]);
+    }
+  }, [estimateId, fetchEstimate, jobId]);
+
+  useEffect(() => {
+    if (open) {
+      loadEstimate();
+    }
+  }, [open, loadEstimate]);
+
+  const handleAddEmptyLineItem = async () => {
+    if (estimate) {
+      const newLineItem = await addEmptyLineItem(estimate.id);
+      if (newLineItem) {
+        setLineItems(prev => [...prev, newLineItem]);
+      }
+    } else {
+      toast.error("Estimate not loaded");
     }
   };
 
-  // Handle send estimate
-  const handleSendEstimate = () => {
-    // Validate estimate before sending
-    if (lineItems.length === 0) {
-      toast.error("Please add at least one item to the estimate");
-      return;
+  const handleAddCustomLine = async (name: string, price: number, quantity: number, taxable: boolean) => {
+    if (estimate) {
+      try {
+        const newLineItem = await addCustomLine(estimate.id, name, price, quantity, taxable);
+        if (newLineItem) {
+          setLineItems(prev => [...prev, newLineItem]);
+        }
+      } catch (error) {
+        console.error("Error adding custom line:", error);
+        toast.error("Failed to add custom line");
+      }
+    } else {
+      toast.error("Estimate not loaded");
     }
-    setIsWarrantyDialogOpen(true);
   };
 
-  // Handle warranty confirmation
-  const handleWarrantyConfirmed = async (selectedWarranty: Product | null, note: string) => {
-    setIsWarrantyDialogOpen(false);
-
-    // If a warranty was selected, store it for the customer upsell
-    if (selectedWarranty) {
-      setRecommendedWarranty(selectedWarranty);
-      setTechniciansNote(note);
+  const handleRemoveLine = async (lineId: string) => {
+    if (estimate) {
+      try {
+        await removeLine(lineId);
+        setLineItems(prev => prev.filter(item => item.id !== lineId));
+      } catch (error) {
+        console.error("Error removing line:", error);
+        toast.error("Failed to remove line");
+      }
+    } else {
+      toast.error("Estimate not loaded");
     }
-
-    // If editing, save changes first
-    if (estimateId) {
-      await saveEstimateChanges();
-    }
-
-    // In a real app, this would send the estimate to the API with warranty settings
-    toast.success(`Estimate ${estimateNumber} sent to customer${selectedWarranty ? ' with warranty recommendation' : ''}`);
-    onOpenChange(false);
   };
 
-  // Check if estimate can be sent
-  const canSendEstimate = lineItems.length > 0 && calculateGrandTotal() > 0;
+  const handleUpdateLine = async (lineId: string, updates: any) => {
+    if (estimate) {
+      try {
+        const updatedLine = await updateLine(lineId, updates);
+        if (updatedLine) {
+          setLineItems(prev =>
+            prev.map(item => (item.id === lineId ? { ...item, ...updatedLine } : item))
+          );
+        }
+      } catch (error) {
+        console.error("Error updating line:", error);
+        toast.error("Failed to update line");
+      }
+    } else {
+      toast.error("Estimate not loaded");
+    }
+  };
 
-  // Get the action text based on whether we're creating or editing
-  const actionText = estimateId ? "Save Changes" : "Save Draft";
+  const handleUpdateDiscount = async (discount: number) => {
+    if (estimate) {
+      try {
+        // Optimistically update the local state
+        setEstimate(prev => ({ ...prev, discount }));
+        
+        // Update the discount in the database
+        await supabase
+          .from('estimates')
+          .update({ discount })
+          .eq('id', estimate.id);
+      } catch (error) {
+        console.error("Error updating discount:", error);
+        toast.error("Failed to update discount");
+        // Revert the local state in case of an error
+        loadEstimate();
+      }
+    } else {
+      toast.error("Estimate not loaded");
+    }
+  };
+
+  const handleUpdateTax = async (tax_rate: number) => {
+    if (estimate) {
+      try {
+        // Optimistically update the local state
+        setEstimate(prev => ({ ...prev, tax_rate }));
+        
+        // Update the tax in the database
+        await supabase
+          .from('estimates')
+          .update({ tax_rate })
+          .eq('id', estimate.id);
+      } catch (error) {
+        console.error("Error updating tax:", error);
+        toast.error("Failed to update tax");
+        // Revert the local state in case of an error
+        loadEstimate();
+      }
+    } else {
+      toast.error("Estimate not loaded");
+    }
+  };
+
+  const handleUpdateNote = async (technicians_note: string) => {
+    if (estimate) {
+      try {
+        // Optimistically update the local state
+        setEstimate(prev => ({ ...prev, technicians_note }));
+        
+        // Update the note in the database
+        await supabase
+          .from('estimates')
+          .update({ technicians_note })
+          .eq('id', estimate.id);
+      } catch (error) {
+        console.error("Error updating note:", error);
+        toast.error("Failed to update note");
+        // Revert the local state in case of an error
+        loadEstimate();
+      }
+    } else {
+      toast.error("Estimate not loaded");
+    }
+  };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {estimateId ? `Edit Estimate ${estimateNumber}` : "Create New Estimate"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="editor">Editor</TabsTrigger>
-            <TabsTrigger value="preview">
-              Preview
-              {lineItems.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  ${calculateGrandTotal().toFixed(2)}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="editor" className="pt-4">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-6xl">
+        <div className="text-lg font-semibold mb-4">
+          Estimate Builder
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
             <EstimateEditor
               lineItems={lineItems}
-              onAddEmptyLineItem={openProductSearch}
+              onAddEmptyLineItem={handleAddEmptyLineItem}
               onAddCustomLine={handleAddCustomLine}
-              onEditLine={handleEditLineItem}
-              onRemoveLine={handleRemoveLineItem}
-              onUpdateLine={handleUpdateLineItem}
-              calculateSubtotal={calculateSubtotal}
-              calculateTotalTax={calculateTotalTax}
-              calculateGrandTotal={calculateGrandTotal}
-              calculateMarginPercentage={calculateMarginPercentage}
-              calculateTotalMargin={calculateTotalMargin}
-              isLoading={isLoading}
-              taxRate={taxRate}
+              onRemoveLine={handleRemoveLine}
+              onUpdateLine={handleUpdateLine}
+              onUpdateDiscount={handleUpdateDiscount}
+              onUpdateTax={handleUpdateTax}
+              onUpdateNote={handleUpdateNote}
+              discount={estimate?.discount || 0}
+              taxRate={estimate?.tax_rate || 0}
+              note={estimate?.technicians_note || ""}
             />
-          </TabsContent>
-          <TabsContent value="preview" className="pt-4">
-            <EstimatePreview
-              estimateNumber={estimateNumber}
-              lineItems={lineItems}
-              calculateSubtotal={calculateSubtotal}
-              calculateTotalTax={calculateTotalTax}
-              calculateGrandTotal={calculateGrandTotal}
-              notes={notes || ""}
-              taxRate={taxRate}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between sm:gap-0">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSaveDraft}
-              className="flex gap-1"
-              disabled={isLoading || lineItems.length === 0}
-            >
-              <Save size={16} />
-              {actionText}
-            </Button>
-            <Button
-              onClick={handleSendEstimate}
-              className="flex gap-1"
-              disabled={isLoading || !canSendEstimate}
-            >
-              <Send size={16} />
-              Send to Customer
-            </Button>
           </div>
-          {estimateId && onSyncToInvoice && (
-            <Button 
-              variant="outline" 
-              onClick={() => handleSyncToInvoice()}
-              className="w-full sm:w-auto"
-              disabled={isLoading || lineItems.length === 0}
-            >
-              Sync to Invoice
-            </Button>
-          )}
-        </DialogFooter>
+          <div>
+            <LineItemsTable
+              lineItems={lineItems}
+              onRemoveLine={handleRemoveLine}
+              onUpdateLine={handleUpdateLine}
+            />
+            {onSyncToInvoice && (
+              <button onClick={onSyncToInvoice} className="mt-4 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Sync to Invoice
+              </button>
+            )}
+          </div>
+        </div>
       </DialogContent>
-      
-      <WarrantySelectionDialog 
-        open={isWarrantyDialogOpen} 
-        onOpenChange={setIsWarrantyDialogOpen} 
-        onConfirm={handleWarrantyConfirmed} 
-      />
-
-      <ProductEditDialog 
-        open={isProductEditDialogOpen} 
-        onOpenChange={setIsProductEditDialogOpen} 
-        product={selectedProduct} 
-        onSave={handleProductSaved} 
-        categories={["Custom"]} 
-      />
-      
-      <ProductSearch 
-        open={isProductSearchOpen} 
-        onOpenChange={setIsProductSearchOpen} 
-        onProductSelect={handleProductSelected} 
-      />
     </Dialog>
   );
-};
+}

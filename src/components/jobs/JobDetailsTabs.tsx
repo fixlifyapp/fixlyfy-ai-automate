@@ -49,14 +49,16 @@ export const JobDetailsTabs = ({
               History
             </TabsTrigger>
           </TabsList>
-          <div className="flex gap-2">
-            {onCreateEstimate && <Button size="sm" onClick={onCreateEstimate}>
+          {(onCreateEstimate || onCreateInvoice) && (
+            <div>
+              {onCreateEstimate && <Button size="sm" onClick={onCreateEstimate}>
                 <PlusCircle className="mr-1" size={16} /> Estimate
               </Button>}
-            {onCreateInvoice && <Button size="sm" onClick={onCreateInvoice}>
-                 Invoice
+              {onCreateInvoice && <Button size="sm" onClick={onCreateInvoice} className="ml-2">
+                <PlusCircle className="mr-1" size={16} /> Invoice
               </Button>}
-          </div>
+            </div>
+          )}
         </div>
         
         {children}
