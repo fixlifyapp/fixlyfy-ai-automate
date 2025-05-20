@@ -4,16 +4,18 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { Button } from "@/components/ui/button";
-import { Plus, Grid, List, Loader2 } from "lucide-react";
+import { Plus, Grid, List, Loader2, Upload } from "lucide-react";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { toast } from "sonner";
 import { useJobs } from "@/hooks/useJobs";
+import { generateAllTestData } from "@/utils/test-data-generator";
 
 const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Use the useJobs hook to fetch job data from Supabase
   const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
@@ -122,6 +124,22 @@ const JobsPage = () => {
   const handleClearSelection = () => {
     setSelectedJobs([]);
   };
+
+  // Handle importing test data
+  const handleImportTestData = async () => {
+    setIsImporting(true);
+    try {
+      toast.info("Importing test data...");
+      await generateAllTestData(20, 40);
+      toast.success("Successfully imported 40 test jobs!");
+      refreshJobs();
+    } catch (error) {
+      console.error("Error importing test data:", error);
+      toast.error("Failed to import test data");
+    } finally {
+      setIsImporting(false);
+    }
+  };
   
   return (
     <PageLayout>
@@ -132,9 +150,19 @@ const JobsPage = () => {
             Manage and track all your service jobs in one place.
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
-          <Plus size={18} className="mr-2" /> Create Job
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleImportTestData} 
+            variant="outline"
+            disabled={isImporting}
+          >
+            <Upload size={18} className="mr-2" /> 
+            {isImporting ? "Importing..." : "Import Test Data"}
+          </Button>
+          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
+            <Plus size={18} className="mr-2" /> Create Job
+          </Button>
+        </div>
       </div>
       
       {selectedJobs.length > 0 && (
