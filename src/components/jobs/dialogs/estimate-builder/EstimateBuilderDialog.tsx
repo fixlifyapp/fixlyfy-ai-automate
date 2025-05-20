@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -11,8 +10,10 @@ import { CustomLineItemDialog } from "./CustomLineItemDialog";
 import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, FileText, ListPlus } from "lucide-react";
+import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
+import { EstimateSendDialog } from "./EstimateSendDialog";
+import { useJobs } from "@/hooks/useJobs";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -34,7 +35,12 @@ export const EstimateBuilderDialog = ({
   const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Fetch client info from the job
+  const { job } = useJobs(jobId);
+  const clientInfo = job?.client;
   
   const estimateBuilder = useEstimateBuilder({
     estimateId: estimateId || null,
@@ -57,6 +63,7 @@ export const EstimateBuilderDialog = ({
   };
   
   const handleCustomLineItemSave = (item: Partial<LineItem>) => {
+    // ... keep existing code (creating a new line item and adding it to the estimate)
     const newLineItem: LineItem = {
       id: `item-${Date.now()}`,
       description: item.description || item.name || "Custom Item",
@@ -77,7 +84,7 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleEditLineItem = (id: string) => {
-    // Find the line item in the current lineItems array
+    // ... keep existing code (finding and editing a line item)
     const lineItem = estimateBuilder.lineItems.find(item => item.id === id);
     if (lineItem) {
       // Create a product object from the line item to edit
@@ -101,7 +108,7 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleProductUpdate = (updatedProduct: Product) => {
-    // Find the line item and update it
+    // ... keep existing code (updating a product in line items)
     const updatedLineItems = estimateBuilder.lineItems.map(item => {
       if (item.id === updatedProduct.id) {
         return {
@@ -123,11 +130,22 @@ export const EstimateBuilderDialog = ({
     setIsProductEditDialogOpen(false);
   };
   
-  // Handle saving estimate and closing the dialog
-  const handleSaveEstimate = async () => {
-    const success = await estimateBuilder.saveEstimateChanges();
-    if (success) {
-      onOpenChange(false); // Close dialog immediately after successful save
+  // Open send dialog instead of just saving
+  const handleSendEstimate = () => {
+    setIsSendDialogOpen(true);
+  };
+  
+  // Handle adding a warranty product
+  const handleAddWarranty = (warranty: Product | null, note: string) => {
+    if (warranty) {
+      estimateBuilder.handleAddProduct({
+        ...warranty,
+        ourPrice: 0 // Reset ourPrice for warranty in customer estimate
+      });
+      
+      if (note) {
+        estimateBuilder.setNotes(note);
+      }
     }
   };
   
@@ -221,8 +239,12 @@ export const EstimateBuilderDialog = ({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveEstimate}>
-                Save Estimate
+              <Button 
+                onClick={handleSendEstimate}
+                className="flex items-center gap-1"
+              >
+                <Send size={16} />
+                Send to Client
               </Button>
             </div>
           </div>
@@ -249,6 +271,16 @@ export const EstimateBuilderDialog = ({
         onOpenChange={setIsProductEditDialogOpen}
         product={selectedProduct}
         onSave={handleProductUpdate}
+      />
+      
+      {/* Estimate Send Dialog with Warranty Selection */}
+      <EstimateSendDialog
+        open={isSendDialogOpen}
+        onOpenChange={setIsSendDialogOpen}
+        onSave={estimateBuilder.saveEstimateChanges}
+        onAddWarranty={handleAddWarranty}
+        clientInfo={clientInfo}
+        estimateNumber={estimateBuilder.estimateNumber}
       />
     </Dialog>
   );
