@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { Product } from "./builder/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
+import { EstimateDialog } from "./dialogs/EstimateDialog";
 
 interface JobEstimatesProps {
   jobId: string;
@@ -32,6 +32,7 @@ interface EstimateItem {
 export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) => {
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
+  const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [recommendedProduct, setRecommendedProduct] = useState<Product | null>(null);
   const [techniciansNote, setTechniciansNote] = useState("");
@@ -127,8 +128,8 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
   ]);
 
   const handleCreateEstimate = () => {
-    setSelectedEstimateId(null);
-    setIsEstimateBuilderOpen(true);
+    // Open the EstimateDialog instead of the EstimateBuilder
+    setIsEstimateDialogOpen(true);
   };
 
   const handleEditEstimate = (estimateId: string) => {
@@ -236,6 +237,30 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
       // In a real app, this would update the estimate with the warranty
     }
     setIsWarrantyDialogOpen(false);
+  };
+
+  const handleEstimateCreated = (amount: number) => {
+    // Generate a new estimate ID and number
+    const newEstimateId = `est-${Math.floor(Math.random() * 10000)}`;
+    const newEstimateNumber = `EST-${Math.floor(10000 + Math.random() * 90000)}`;
+    
+    // Create a new estimate
+    const newEstimate = {
+      id: newEstimateId,
+      number: newEstimateNumber,
+      date: new Date().toISOString(),
+      amount: amount,
+      status: "draft",
+      viewed: false,
+      items: [], // This would be populated from the form data in a real app
+      recommendedProduct: null,
+      techniciansNote: ""
+    };
+    
+    // Add the new estimate to the list
+    setEstimates([newEstimate, ...estimates]);
+    
+    toast.success(`Estimate ${newEstimateNumber} created`);
   };
 
   return (
@@ -389,6 +414,27 @@ export const JobEstimates = ({ jobId, onEstimateConverted }: JobEstimatesProps) 
           open={isWarrantyDialogOpen}
           onOpenChange={setIsWarrantyDialogOpen}
           onConfirm={handleWarrantySelection}
+        />
+        
+        {/* Estimate Creation Dialog */}
+        <EstimateDialog
+          open={isEstimateDialogOpen}
+          onOpenChange={setIsEstimateDialogOpen}
+          onEstimateCreated={handleEstimateCreated}
+          clientInfo={{
+            name: "Client Name", // This would come from job data in a real app
+            address: "123 Client St",
+            phone: "(555) 555-5555",
+            email: "client@example.com"
+          }}
+          companyInfo={{
+            name: "Your Company", // This would come from company settings in a real app
+            logo: "",
+            address: "456 Company Ave",
+            phone: "(555) 123-4567",
+            email: "company@example.com",
+            legalText: "Standard terms and conditions apply."
+          }}
         />
       </CardContent>
     </Card>
