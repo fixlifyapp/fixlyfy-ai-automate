@@ -13,7 +13,7 @@ import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
-import { JobEstimates } from "@/components/jobs/JobEstimates";
+import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -67,7 +67,7 @@ const JobDetailsPage = () => {
                 <JobDetails jobId={id || ""} />
               </TabsContent>
               <TabsContent value="estimates">
-                <JobEstimates jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+                <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
               </TabsContent>
               <TabsContent value="invoices">
                 <JobInvoices jobId={id || ""} />
