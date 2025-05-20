@@ -1,3 +1,4 @@
+
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,9 @@ export const JobDetailsTabs = ({
           <TabsList className="bg-transparent p-0 h-12">
             <TabsTrigger value="details" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="estimates" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
+              Estimates
             </TabsTrigger>
             <TabsTrigger value="payments" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
               Payments

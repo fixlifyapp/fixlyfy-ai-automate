@@ -13,7 +13,7 @@ import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
-import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
+import { JobEstimates } from "@/components/jobs/JobEstimates";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +48,7 @@ const JobDetailsPage = () => {
                 <JobDetails jobId={id || ""} />
               </TabsContent>
               <TabsContent value="estimates">
-                <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+                <JobEstimates jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
               </TabsContent>
               <TabsContent value="payments">
                 <JobPayments jobId={id || ""} />
