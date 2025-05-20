@@ -32,34 +32,33 @@ const ReportsPage = () => {
     toast.loading("Generating test data...", { id: "generate-data" });
     
     try {
-      // Generate 20 clients and 40 jobs - showing more detailed feedback
+      // Improved error handling and more detailed logging
+      console.log("Starting test data generation with user:", user);
+      
+      // Generate 10 clients and 20 jobs - fewer for faster processing
       toast.loading("Creating test clients...", { id: "clients-data" });
-      const clientIds = await generateAllTestData(20, 40);
+      const clientIds = await generateAllTestData(10, 20);
+      console.log("Generated client IDs:", clientIds);
+      
       toast.dismiss("clients-data");
+      toast.dismiss("generate-data");
       
       if (clientIds && clientIds.length > 0) {
-        toast.loading("Creating test jobs...", { id: "jobs-data" });
-        // Jobs generation happens inside generateAllTestData now
-        toast.dismiss("jobs-data");
-        
-        toast.dismiss("generate-data");
         toast.success("Test data created successfully", {
-          description: `${clientIds.length} clients and 40 jobs created for testing`
+          description: `${clientIds.length} clients and 20 jobs created for testing`
         });
       } else {
-        toast.dismiss("generate-data");
         toast.error("No clients were created", {
           description: "Please check console for details"
         });
       }
     } catch (error) {
+      console.error("Detailed test data generation error:", error);
       toast.dismiss("clients-data");
-      toast.dismiss("jobs-data");
       toast.dismiss("generate-data");
       toast.error("Failed to generate test data", {
-        description: "An error occurred while creating test data"
+        description: "An error occurred while creating test data. See console for details."
       });
-      console.error("Test data generation error:", error);
     } finally {
       setIsGeneratingData(false);
     }

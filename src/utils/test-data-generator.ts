@@ -92,6 +92,7 @@ export const generateTestClients = async (count: number = 20): Promise<string[]>
   const clientIds: string[] = [];
   
   // Check for existing clients first to avoid duplicating test data
+  console.log("Checking for existing clients...");
   const { data: existingClients, error: checkError } = await supabase
     .from('clients')
     .select('id')
@@ -198,6 +199,7 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
   }
   
   // Check for existing jobs first to avoid duplicating test data
+  console.log("Checking for existing jobs...");
   const { data: existingJobs, error: checkError } = await supabase
     .from('jobs')
     .select('id')
@@ -223,17 +225,7 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
   const statuses = ["scheduled", "in-progress", "completed", "canceled", "pending"];
   const priorities = ["low", "medium", "high", "urgent"];
   
-  // Get user IDs for technicians
-  const { data: profiles, error: techError } = await supabase.from('profiles').select('id');
-  
-  if (techError) {
-    console.error("Error fetching technician profiles:", techError);
-  }
-  
-  const technicianIds = profiles ? profiles.map(profile => profile.id) : [];
-  
   console.log(`Generating ${count} test jobs for ${clientIds.length} clients...`);
-  console.log("Available technician IDs:", technicianIds);
   
   for (let i = 0; i < count; i++) {
     const clientId = getRandomElement(clientIds);
@@ -268,7 +260,6 @@ export const generateTestJobs = async (clientIds: string[], count: number = 40):
       date: scheduledDate.toISOString(),
       schedule_start: scheduledDate.toISOString(),
       schedule_end: endDate.toISOString(),
-      technician_id: technicianIds.length > 0 ? getRandomElement(technicianIds) : null,
       service: serviceType,
       revenue: status === "completed" ? getRandomInt(200, 2500) : status === "in-progress" ? getRandomInt(100, 2000) : 0,
       tags: [tagName],
