@@ -24,3 +24,27 @@ export type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
 // For components that need partial form values (like during initialization)
 export type PartialInvoiceFormValues = Partial<InvoiceFormValues>;
+
+// Interface for the InvoiceForm component props
+export interface InvoiceFormProps {
+  type: "invoice" | "estimate";
+  onSubmit: (data: InvoiceFormValues) => void;
+  onCancel: () => void;
+  defaultInvoiceNumber?: string;
+  companyInfo: {
+    name: string;
+    logo: string;
+    address: string;
+    phone: string;
+    email: string;
+    legalText: string;
+  };
+  clientInfo: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+  };
+  showWarrantyUpsell?: boolean;
+  previousItems?: any[];
+}
