@@ -48,3 +48,10 @@ export const teamMembers: TeamMember[] = [
     lastLogin: new Date("2025-05-10T09:30:00").toISOString(),
   }
 ];
+
+// Function to update team members with generated test data
+export const updateTeamMembers = (newMembers: TeamMember[]) => {
+  // In a real app, this would update the database
+  // Here, we're just returning the new data for display
+  return newMembers;
+};

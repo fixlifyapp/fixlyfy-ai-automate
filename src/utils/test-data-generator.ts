@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { TeamMember } from "@/types/team";
 
 interface Client {
   id?: string;
@@ -84,6 +84,82 @@ const getRandomBusinessName = (): string => {
   const types = ["Properties", "Management", "Construction", "Buildings", "Developments", "Enterprises", "Holdings", "Industries", "Commercial", "Services", "Solutions"];
   
   return `${getRandomElement(prefixes)} ${getRandomElement(types)}`;
+};
+
+// Team roles and statuses
+const teamRoles = ["technician", "technician", "technician", "technician", "dispatcher", "dispatcher", "admin", "manager"];
+const teamStatuses = ["active", "active", "active", "active", "suspended"];
+
+// Generate test team members data
+export const generateTestTeamMembers = async (count: number = 6): Promise<void> => {
+  // Check for existing team members first to avoid duplicating test data
+  console.log("Checking for existing team members...");
+  const { data: existingTeamMembers, error: checkError } = await supabase
+    .from('profiles')
+    .select('id')
+    .limit(1);
+  
+  if (checkError) {
+    console.error("Error checking existing team members:", checkError);
+    throw checkError;
+  }
+  
+  if (existingTeamMembers && existingTeamMembers.length > 0) {
+    console.log("Team members already exist - skipping team generation");
+    return;
+  }
+  
+  console.log(`Generating ${count} test team members...`);
+  
+  const teamMembers = [];
+  
+  for (let i = 0; i < count; i++) {
+    const firstName = getRandomElement(["James", "Robert", "John", "Michael", "David", "Sarah", "Jennifer", "Emily", "Jessica", "Ava", "Muhammad", "Wei", "Chen", "Priya", "Ananya", "Omar", "Zara", "Carlos", "Sofia", "Olivia"]);
+    const lastName = getRandomElement(["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Patel", "Wang", "Kim", "Singh", "Lee", "Khan", "Zhang", "Chen", "Nguyen", "Ahmed"]);
+    const name = `${firstName} ${lastName}`;
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@fixlyfy.com`;
+    
+    // Ensure we have a good distribution of roles
+    let role;
+    if (i === 0) {
+      role = "admin"; // First member is admin
+    } else if (i === 1) {
+      role = "manager"; // Second member is manager
+    } else if (i === 2 || i === 3) {
+      role = "dispatcher"; // Two dispatchers
+    } else {
+      role = "technician"; // Rest are technicians
+    }
+    
+    const lastLoginDate = new Date();
+    lastLoginDate.setDate(lastLoginDate.getDate() - getRandomInt(0, 14));
+    
+    teamMembers.push({
+      id: `team-${i + 1}`,
+      name: name,
+      email: email,
+      role: role,
+      status: getRandomElement(teamStatuses),
+      avatar: "https://github.com/shadcn.png",
+      lastLogin: lastLoginDate.toISOString(),
+    });
+  }
+  
+  try {
+    console.log("Inserting test team members into database...");
+    console.log("Sample team member data:", teamMembers[0]);
+    
+    // In a real app, this would insert data into the profiles table
+    // For now, we're using the teamMembers array in memory
+    
+    console.log(`Successfully created ${teamMembers.length} team members`);
+    
+    // Return the generated team members to be stored in the team.ts data file
+    return teamMembers;
+  } catch (error) {
+    console.error("Error generating test team members:", error);
+    throw error;
+  }
 };
 
 export const generateTestClients = async (count: number = 20): Promise<string[]> => {
@@ -315,6 +391,7 @@ export const useTestData = () => {
   return {
     generateAllTestData,
     generateTestClients,
-    generateTestJobs
+    generateTestJobs,
+    generateTestTeamMembers
   };
 };

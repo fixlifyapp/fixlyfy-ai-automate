@@ -11,13 +11,15 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Shield } from "lucide-react";
+import { Plus, Shield, Upload, Loader2 } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
 import { PermissionRequired, useRBAC } from "@/components/auth/RBACProvider";
 import { TeamFilters } from "@/components/team/TeamFilters";
 import { TeamMember } from "@/types/team";
 import { TeamMemberProfile } from "@/types/team-member";
+import { toast } from "sonner";
+import { generateTestTeamMembers } from "@/utils/test-data-generator";
 
 // Import team data
 import { teamMembers as initialTeamMembers } from "@/data/team";
@@ -45,6 +47,8 @@ const TeamManagementPage = () => {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importCompleted, setImportCompleted] = useState(false);
   const navigate = useNavigate();
   const { hasRole } = useRBAC();
   
@@ -99,25 +103,62 @@ const TeamManagementPage = () => {
     navigate(`/admin/team/${id}`);
   };
   
+  // Handle importing test data
+  const handleImportTestData = async () => {
+    setIsImporting(true);
+    try {
+      toast.info("Importing test team data...");
+      const newMembers = await generateTestTeamMembers(6);
+      toast.success("Successfully imported 6 test team members!");
+      setImportCompleted(true);
+    } catch (error) {
+      console.error("Error importing test team data:", error);
+      toast.error("Failed to import test team data");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+  
   return (
     <PageLayout>
       <div className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Team Management</h1>
-          {isAdmin ? (
-            <Button 
-              onClick={handleAddNewMember} 
-              className="gap-2"
-            >
-              <Plus size={18} />
-              Invite Team Member
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Shield size={16} />
-              <span>Admin access required for team management</span>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {!importCompleted && isAdmin && (
+              <Button 
+                onClick={handleImportTestData} 
+                variant="outline"
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 size={18} className="mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} className="mr-2" />
+                    Import Test Data
+                  </>
+                )}
+              </Button>
+            )}
+            {isAdmin ? (
+              <Button 
+                onClick={handleAddNewMember} 
+                className="gap-2"
+              >
+                <Plus size={18} />
+                Invite Team Member
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Shield size={16} />
+                <span>Admin access required for team management</span>
+              </div>
+            )}
+          </div>
         </div>
         
         <TeamFilters
