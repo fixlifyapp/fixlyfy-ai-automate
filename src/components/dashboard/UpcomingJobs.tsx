@@ -31,14 +31,17 @@ export const UpcomingJobs = () => {
         setIsLoading(true);
         
         // Get upcoming jobs (scheduled jobs)
-        const { data: jobs, error } = await supabase
+        const { data: jobs, error: jobsError } = await supabase
           .from('jobs')
-          .select('id, title, client_id, service, address, status, date, schedule_start, schedule_end, priority')
+          .select('id, title, client_id, service, status, date, schedule_start, schedule_end')
           .in('status', ['scheduled', 'in-progress'])
           .order('schedule_start', { ascending: true })
           .limit(4);
         
-        if (error) throw error;
+        if (jobsError) {
+          console.error('Jobs query error:', jobsError);
+          throw jobsError;
+        }
         
         // If no jobs found
         if (!jobs || jobs.length === 0) {
@@ -52,10 +55,14 @@ export const UpcomingJobs = () => {
           .map(job => job.client_id)
           .filter(id => id !== null) as string[];
         
-        const { data: clients } = await supabase
+        const { data: clients, error: clientsError } = await supabase
           .from('clients')
           .select('id, name, address')
-          .in('id', clientIds);
+          .in('id', clientIds.length > 0 ? clientIds : ['no-clients']);
+        
+        if (clientsError) {
+          console.error('Clients query error:', clientsError);
+        }
         
         // Create map of client ids to names
         const clientMap = new Map();
@@ -72,7 +79,7 @@ export const UpcomingJobs = () => {
         const formattedJobs = jobs.map(job => {
           const clientInfo = job.client_id ? clientMap.get(job.client_id) : null;
           const clientName = clientInfo ? clientInfo.name : 'Unknown Client';
-          const address = job.address || (clientInfo ? clientInfo.address : 'No address');
+          const address = clientInfo ? clientInfo.address || 'No address' : 'No address';
           
           // Format date and time
           const scheduleDate = job.schedule_start ? new Date(job.schedule_start) : new Date();
@@ -102,14 +109,15 @@ export const UpcomingJobs = () => {
             address: address || 'No address provided',
             date: dateDisplay,
             time: timeDisplay,
-            status: job.status,
-            priority: job.priority || 'medium' as 'low' | 'medium' | 'high'
+            status: job.status || 'scheduled',
+            priority: 'medium' as 'low' | 'medium' | 'high' // Default priority since it's not in the DB
           };
         });
         
         setUpcomingJobs(formattedJobs);
       } catch (error) {
         console.error('Error fetching upcoming jobs:', error);
+        setUpcomingJobs([]);
       } finally {
         setIsLoading(false);
       }

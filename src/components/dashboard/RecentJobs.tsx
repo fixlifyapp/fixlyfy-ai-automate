@@ -33,11 +33,14 @@ export const RecentJobs = () => {
         // Fetch recent jobs from Supabase
         const { data: jobsData, error: jobsError } = await supabase
           .from('jobs')
-          .select('id, title, service, address, status, schedule_start, client_id, technician_id')
+          .select('id, title, service, status, schedule_start, client_id, technician_id')
           .order('created_at', { ascending: false })
           .limit(4);
         
-        if (jobsError) throw jobsError;
+        if (jobsError) {
+          console.error('Jobs query error:', jobsError);
+          throw jobsError;
+        }
         
         if (!jobsData || jobsData.length === 0) {
           setRecentJobs([]);
@@ -56,10 +59,14 @@ export const RecentJobs = () => {
           .filter(id => id !== null) as string[];
         
         // Fetch clients data
-        const { data: clientsData } = await supabase
+        const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
           .select('id, name, address')
-          .in('id', clientIds);
+          .in('id', clientIds.length > 0 ? clientIds : ['no-clients']);
+          
+        if (clientsError) {
+          console.error('Clients query error:', clientsError);
+        }
           
         // Create a map of client IDs to names
         const clientMap = new Map();
@@ -72,10 +79,14 @@ export const RecentJobs = () => {
         }
         
         // Fetch technicians data
-        const { data: techniciansData } = await supabase
+        const { data: techniciansData, error: techniciansError } = await supabase
           .from('profiles')
           .select('id, name, avatar_url')
-          .in('id', technicianIds);
+          .in('id', technicianIds.length > 0 ? technicianIds : ['no-technicians']);
+          
+        if (techniciansError) {
+          console.error('Technicians query error:', techniciansError);
+        }
           
         // Create a map of technician IDs to names
         const techMap = new Map();
@@ -90,7 +101,7 @@ export const RecentJobs = () => {
         // Format the job data
         const formattedJobs = jobsData.map(job => {
           const clientName = job.client_id ? clientMap.get(job.client_id) || 'Unknown Client' : 'Unknown Client';
-          const address = job.client_id ? clientAddressMap.get(job.client_id) || job.address || 'No address' : job.address || 'No address';
+          const address = job.client_id ? clientAddressMap.get(job.client_id) || 'No address' : 'No address';
           const techName = job.technician_id ? techMap.get(job.technician_id) || 'Unassigned' : 'Unassigned';
           const techAvatar = job.technician_id ? techAvatarMap.get(job.technician_id) || '' : '';
           

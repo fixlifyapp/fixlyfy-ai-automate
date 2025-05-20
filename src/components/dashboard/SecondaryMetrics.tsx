@@ -20,14 +20,20 @@ export const SecondaryMetrics = () => {
           .from('jobs')
           .select('status, revenue, created_at, updated_at');
           
-        if (jobsError) throw jobsError;
+        if (jobsError) {
+          console.error('Jobs query error:', jobsError);
+          throw jobsError;
+        }
         
         // Fetch clients data for satisfaction
         const { data: clients, error: clientsError } = await supabase
           .from('clients')
           .select('rating');
           
-        if (clientsError) throw clientsError;
+        if (clientsError) {
+          console.error('Clients query error:', clientsError);
+          throw clientsError;
+        }
         
         // Calculate completion rate
         const totalJobs = jobs?.length || 0;
@@ -36,7 +42,10 @@ export const SecondaryMetrics = () => {
         
         // Calculate average job value
         const completedJobsWithRevenue = jobs?.filter(job => job.status === 'completed' && job.revenue);
-        const totalRevenue = completedJobsWithRevenue?.reduce((sum, job) => sum + parseFloat(job.revenue), 0) || 0;
+        const totalRevenue = completedJobsWithRevenue?.reduce((sum, job) => {
+          const revenue = typeof job.revenue === 'string' ? parseFloat(job.revenue) : job.revenue;
+          return sum + (revenue || 0);
+        }, 0) || 0;
         const averageJobValue = completedJobsWithRevenue?.length > 0 
           ? Math.round(totalRevenue / completedJobsWithRevenue.length) 
           : 0;
@@ -171,7 +180,7 @@ export const SecondaryMetrics = () => {
               )}
               {metric.name.includes("Satisfaction") && (
                 <Progress 
-                  value={parseFloat(metric.value) * 20} 
+                  value={parseFloat(metric.value as string) * 20} 
                   className="h-1.5 bg-fixlyfy-warning/20"
                 />
               )}
