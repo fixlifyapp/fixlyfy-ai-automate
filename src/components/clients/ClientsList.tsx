@@ -51,7 +51,13 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
           
         if (error) throw error;
         
-        setClients(data || []);
+        // Format the client IDs for display
+        const formattedClients = data?.map((client, index) => ({
+          ...client,
+          displayId: `C-${1001 + index}`
+        })) || [];
+        
+        setClients(formattedClients);
       } catch (error) {
         console.error('Error fetching clients:', error);
         toast.error('Failed to load clients');
@@ -120,6 +126,10 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
         className={i < rating ? "text-fixlyfy-warning fill-fixlyfy-warning" : "text-fixlyfy-text-secondary"}
       />
     ));
+  };
+
+  const getDisplayId = (client: any) => {
+    return client.displayId || client.id;
   };
 
   if (isLoading) {
@@ -196,7 +206,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                 <div className="flex justify-between items-start">
                   <div>
                     <Badge variant="outline" className="mb-2">
-                      {client.id}
+                      {getDisplayId(client)}
                     </Badge>
                     <h3 className="font-medium">{client.name}</h3>
                     <p className="text-xs text-fixlyfy-text-secondary">{client.address}</p>
@@ -231,7 +241,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                 <div className="mt-4 flex justify-between items-center">
                   <div className="text-sm">
                     <span className="text-fixlyfy-text-secondary">Client ID:</span>
-                    <span className="ml-2 font-medium">{client.id}</span>
+                    <span className="ml-2 font-medium">{getDisplayId(client)}</span>
                   </div>
                   <Button 
                     variant="outline" 
@@ -297,7 +307,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       className="font-medium hover:text-fixlyfy transition-colors cursor-pointer"
                       onClick={() => client.id && handleClientClick(client.id)}
                     >
-                      {client.id}
+                      {getDisplayId(client)}
                     </span>
                   </TableCell>
                   
