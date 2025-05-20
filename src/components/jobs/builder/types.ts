@@ -20,7 +20,7 @@ export interface LineItem {
   taxable: boolean;
   total?: number;
   
-  // Additional properties used in the code
+  // Additional properties that are used in the code but not in the database
   discount?: number;
   ourPrice?: number;
   tax?: number;

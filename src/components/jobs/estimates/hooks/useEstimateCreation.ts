@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstimateInfo } from "./useEstimateInfo";
-import { Product } from "@/hooks/useProducts";
+import { Product, LineItem } from "@/components/jobs/builder/types";
 
 export const useEstimateCreation = (
   jobId: string,
@@ -41,9 +40,10 @@ export const useEstimateCreation = (
     try {
       console.log("Loading estimate items for ID:", estimateId);
       const { data, error } = await supabase
-        .from('estimate_items')
+        .from('line_items')
         .select('*')
-        .eq('estimate_id', estimateId);
+        .eq('parent_type', 'estimate')
+        .eq('parent_id', estimateId);
       
       if (error) {
         console.error("Supabase error loading items:", error);
@@ -52,20 +52,20 @@ export const useEstimateCreation = (
 
       console.log("Loaded estimate items:", data);
       
-      // Fix: Map the database items to Product type with required fields
+      // Map the database items to Product type with required fields
       if (data && data.length > 0) {
         const mappedItems: Product[] = data.map(item => ({
           id: item.id,
-          name: item.name,
+          name: item.description || "", // Use description as name
           description: item.description || "",
-          category: item.category || "",
-          price: Number(item.price),
-          quantity: item.quantity,
-          taxable: item.taxable,
-          tags: item.tags || [],
+          category: "",  // Default category
+          price: Number(item.unit_price),
+          quantity: item.quantity || 1,
+          taxable: item.taxable === undefined ? true : item.taxable,
+          tags: [],  // Default empty tags
           cost: 0, // Default cost
           ourPrice: 0, // Default ourPrice to 0
-          sku: ""
+          sku: ""  // Default empty sku
         }));
         console.log("Mapped estimate items:", mappedItems);
         setEstimateItems(mappedItems);
@@ -99,10 +99,10 @@ export const useEstimateCreation = (
         
         // Remove from database if it's an existing estimate
         const { error } = await supabase
-          .from('estimate_items')
+          .from('line_items')
           .delete()
           .eq('id', productId)
-          .eq('estimate_id', selectedEstimateId);
+          .eq('parent_id', selectedEstimateId);
           
         if (error) {
           console.error('Error removing product from estimate:', error);
@@ -119,7 +119,7 @@ export const useEstimateCreation = (
             
             const { error: updateError } = await supabase
               .from('estimates')
-              .update({ amount: newAmount })
+              .update({ total: newAmount })
               .eq('id', selectedEstimateId);
               
             if (updateError) {
@@ -162,8 +162,8 @@ export const useEstimateCreation = (
         .from('estimates')
         .insert({
           job_id: jobId, 
-          number: newEstimateNumber,
-          amount: amount,
+          estimate_number: newEstimateNumber,
+          total: amount,
           status: 'draft'
         })
         .select()
@@ -177,18 +177,16 @@ export const useEstimateCreation = (
       // Save estimate items if there are any
       if (estimateItems.length > 0) {
         const itemsToInsert = estimateItems.map(product => ({
-          estimate_id: data.id,
-          name: product.name,
-          description: product.description || '',
-          category: product.category,
-          price: product.price,
+          parent_id: data.id,
+          parent_type: 'estimate',
+          description: product.description || product.name,
+          unit_price: product.price,
           quantity: 1,
-          taxable: product.taxable || true,
-          tags: product.tags || []
+          taxable: product.taxable || true
         }));
 
         const { error: itemsError } = await supabase
-          .from('estimate_items')
+          .from('line_items')
           .insert(itemsToInsert);
 
         if (itemsError) {
@@ -200,9 +198,9 @@ export const useEstimateCreation = (
       // Create a new estimate object
       const newEstimate = {
         id: data.id,
-        number: data.number,
+        number: data.estimate_number,
         date: data.date,
-        amount: data.amount,
+        amount: data.total,
         status: data.status,
         viewed: false,
         items: estimateItems.map(product => ({

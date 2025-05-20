@@ -19,7 +19,9 @@ export const EstimateSummary = ({
   onTaxRateChange,
   calculateSubtotal,
   calculateTotalTax,
-  calculateGrandTotal
+  calculateGrandTotal,
+  calculateTotalMargin,
+  calculateMarginPercentage
 }: EstimateSummaryProps) => {
   const subtotal = calculateSubtotal();
   const taxTotal = calculateTotalTax();
