@@ -15,16 +15,28 @@ import { JobPayments } from "@/components/jobs/JobPayments";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
+import { EstimateDialog } from "@/components/jobs/dialogs/EstimateDialog";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
   const jobHeaderData = useJobDetailsHeader(id || "");
+  const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   
   // Add function to handle switching to invoices tab when an estimate is converted
   const handleSwitchToInvoicesTab = () => {
     setActiveTab("invoices");
+  };
+  
+  const handleEstimateTabClick = () => {
+    setIsEstimateDialogOpen(true);
+  };
+
+  const handleEstimateCreated = (amount: number) => {
+    if (jobHeaderData.handleEstimateCreated) {
+      jobHeaderData.handleEstimateCreated(amount);
+    }
   };
   
   return (
@@ -41,6 +53,7 @@ const JobDetailsPage = () => {
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}
+              onEstimateTabClick={handleEstimateTabClick}
             >
               <TabsContent value="details">
                 <JobDetails jobId={id || ""} />
@@ -69,6 +82,27 @@ const JobDetailsPage = () => {
             <JobDetailsQuickActions />
           </div>
         </div>
+
+        {/* Estimate Dialog */}
+        <EstimateDialog
+          open={isEstimateDialogOpen}
+          onOpenChange={setIsEstimateDialogOpen}
+          onEstimateCreated={handleEstimateCreated}
+          clientInfo={{
+            name: jobHeaderData.job.client,
+            address: jobHeaderData.job.address,
+            phone: jobHeaderData.job.phone,
+            email: jobHeaderData.job.email,
+          }}
+          companyInfo={{
+            name: jobHeaderData.job.companyName,
+            logo: jobHeaderData.job.companyLogo,
+            address: jobHeaderData.job.companyAddress,
+            phone: jobHeaderData.job.companyPhone,
+            email: jobHeaderData.job.companyEmail,
+            legalText: jobHeaderData.job.legalText,
+          }}
+        />
       </div>
     </PageLayout>
   );

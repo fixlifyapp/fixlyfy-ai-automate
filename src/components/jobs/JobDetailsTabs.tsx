@@ -1,24 +1,48 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect } from "react";
 
 interface JobDetailsTabsProps {
   activeTab?: string;
   onTabChange?: (value: string) => void;
   children?: React.ReactNode;
+  onEstimateTabClick?: () => void;
 }
 
 export const JobDetailsTabs = ({ 
   activeTab = "details", 
   onTabChange,
-  children
+  children,
+  onEstimateTabClick
 }: JobDetailsTabsProps) => {
+  const [shouldTriggerEstimateAction, setShouldTriggerEstimateAction] = useState(false);
+
+  const handleTabChange = (value: string) => {
+    if (value === "estimates" && onEstimateTabClick) {
+      setShouldTriggerEstimateAction(true);
+    }
+    
+    if (onTabChange) {
+      onTabChange(value);
+    }
+  };
+
+  // Run the estimate action only after the tab has been switched
+  useEffect(() => {
+    if (shouldTriggerEstimateAction && activeTab === "estimates") {
+      if (onEstimateTabClick) {
+        onEstimateTabClick();
+      }
+      setShouldTriggerEstimateAction(false);
+    }
+  }, [activeTab, onEstimateTabClick, shouldTriggerEstimateAction]);
+
   return (
     <div className="mb-6">
       <Tabs
         defaultValue={activeTab}
-        onValueChange={(value) => {
-          if (onTabChange) onTabChange(value);
-        }}
+        value={activeTab}
+        onValueChange={handleTabChange}
         className="w-full"
       >
         <div className="flex justify-between items-center border-b mb-4">
