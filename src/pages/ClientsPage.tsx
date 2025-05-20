@@ -2,14 +2,62 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Grid, List } from "lucide-react";
+import { Download, Grid, List, Loader2 } from "lucide-react";
 import { ClientsList } from "@/components/clients/ClientsList";
 import { ClientsFilters } from "@/components/clients/ClientsFilters";
-import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { clients as realClients } from "@/data/real-clients";
+import { Client } from "@/utils/test-data/types";
 
 const ClientsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  
+  const handleImportRealClients = async () => {
+    setIsImporting(true);
+    try {
+      toast.info("Starting import of real clients...");
+      
+      // Convert the real clients data to match the Supabase clients table schema
+      const clientsToImport = realClients.map(client => ({
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        status: client.status,
+        type: client.type,
+        rating: client.rating,
+        city: client.address?.split(',')[1]?.trim().split(' ')[0] || "",
+        state: client.address?.split(',')[1]?.trim().split(' ')[1] || "",
+        zip: client.address?.split(',')[1]?.trim().split(' ')[2] || "",
+        tags: [client.type],
+      }));
+      
+      // Insert the clients into the Supabase database
+      const { data, error } = await supabase
+        .from('clients')
+        .upsert(clientsToImport, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success(`Successfully imported ${clientsToImport.length} clients!`);
+      
+      // Force reload the page to show the imported clients
+      window.location.reload();
+    } catch (error) {
+      console.error("Error importing clients:", error);
+      toast.error("Failed to import clients. Please check console for details.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
   
   return (
     <PageLayout>
@@ -20,8 +68,20 @@ const ClientsPage = () => {
             Manage your customer database and track interactions.
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
-          <Plus size={18} className="mr-2" /> Add Client
+        <Button 
+          onClick={handleImportRealClients} 
+          className="bg-fixlyfy hover:bg-fixlyfy/90"
+          disabled={isImporting}
+        >
+          {isImporting ? (
+            <>
+              <Loader2 size={18} className="mr-2 animate-spin" /> Importing...
+            </>
+          ) : (
+            <>
+              <Download size={18} className="mr-2" /> Import Real Clients
+            </>
+          )}
         </Button>
       </div>
       
@@ -50,8 +110,6 @@ const ClientsPage = () => {
       </div>
       
       <ClientsList isGridView={isGridView} />
-      
-      <ClientsCreateModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
     </PageLayout>
   );
 };

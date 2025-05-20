@@ -1,7 +1,7 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,8 @@ import {
   Mail,
   Phone,
   FileDown,
-  Edit
+  Edit,
+  Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,7 +25,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { clients } from "@/data/real-clients";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Client } from "@/utils/test-data/types";
 
 interface ClientsListProps {
   isGridView: boolean;
@@ -32,8 +35,34 @@ interface ClientsListProps {
 
 export const ClientsList = ({ isGridView }: ClientsListProps) => {
   const navigate = useNavigate();
+  const [clients, setClients] = useState<Client[]>([]);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch clients from Supabase
+  useEffect(() => {
+    const fetchClients = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        setClients(data || []);
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        toast.error('Failed to load clients');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClients();
+  }, []);
 
   const handleClientClick = (clientId: string) => {
     navigate(`/clients/${clientId}`);
@@ -53,26 +82,26 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
     if (selectAll) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(clients.map(client => client.id));
+      setSelectedClients(clients.map(client => client.id || ''));
     }
     setSelectAll(!selectAll);
   };
 
   const handleBulkEdit = () => {
     // This would open a bulk edit modal in a real implementation
-    alert(`Editing ${selectedClients.length} clients`);
+    toast.info(`Editing ${selectedClients.length} clients`);
   };
 
   const handleExportClients = () => {
-    // In a real implementation, we would generate CSV/Excel with client data
+    // Export selected or all clients
     const exportData = selectedClients.length > 0 
-      ? clients.filter(client => selectedClients.includes(client.id))
+      ? clients.filter(client => client.id && selectedClients.includes(client.id))
       : clients;
       
     const csvContent = "data:text/csv;charset=utf-8," 
-      + "Client ID,Name,Email,Phone,Status,Type,Revenue,Rating\n"
+      + "Client ID,Name,Email,Phone,Status,Type,Rating\n"
       + exportData.map(client => 
-          `${client.id},${client.name},${client.email},${client.phone},${client.status},${client.type},${client.revenue},${client.rating}`
+          `${client.id},${client.name},${client.email || ''},${client.phone || ''},${client.status || ''},${client.type || ''},${client.rating || ''}`
         ).join("\n");
         
     const encodedUri = encodeURI(csvContent);
@@ -84,7 +113,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
     document.body.removeChild(link);
   };
 
-  const getRatingStars = (rating: number) => {
+  const getRatingStars = (rating: number = 0) => {
     return Array(5).fill(0).map((_, i) => (
       <Star 
         key={i}
@@ -93,6 +122,24 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
       />
     ));
   };
+
+  if (isLoading) {
+    return (
+      <div className="fixlyfy-card p-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-fixlyfy animate-spin mr-2" />
+        <p>Loading clients...</p>
+      </div>
+    );
+  }
+
+  if (clients.length === 0) {
+    return (
+      <div className="fixlyfy-card p-8 text-center">
+        <p className="text-fixlyfy-text-secondary mb-4">No clients found</p>
+        <p className="text-sm">Import clients to get started</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -138,13 +185,13 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
             >
               <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
                 <Checkbox 
-                  checked={selectedClients.includes(client.id)} 
-                  onCheckedChange={() => handleCheckboxChange(client.id)}
+                  checked={selectedClients.includes(client.id || '')} 
+                  onCheckedChange={() => handleCheckboxChange(client.id || '')}
                 />
               </div>
               <div
                 className="p-4 border-b border-fixlyfy-border cursor-pointer"
-                onClick={() => handleClientClick(client.id)}
+                onClick={() => client.id && handleClientClick(client.id)}
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -181,8 +228,8 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                 </div>
                 <div className="mt-4 flex justify-between items-center">
                   <div className="text-sm">
-                    <span className="text-fixlyfy-text-secondary">Lifetime Value:</span>
-                    <span className="ml-2 font-medium">${client.revenue.toFixed(2)}</span>
+                    <span className="text-fixlyfy-text-secondary">Client ID:</span>
+                    <span className="ml-2 font-medium">{client.id}</span>
                   </div>
                   <Button 
                     variant="outline" 
@@ -190,7 +237,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                     className="text-fixlyfy border-fixlyfy/20"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleClientClick(client.id);
+                      client.id && handleClientClick(client.id);
                     }}
                   >
                     View
@@ -227,7 +274,6 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Lifetime Value</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -240,14 +286,14 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox 
-                      checked={selectedClients.includes(client.id)} 
-                      onCheckedChange={() => handleCheckboxChange(client.id)}
+                      checked={selectedClients.includes(client.id || '')} 
+                      onCheckedChange={() => handleCheckboxChange(client.id || '')}
                     />
                   </TableCell>
                   <TableCell>
                     <span 
                       className="font-medium hover:text-fixlyfy transition-colors cursor-pointer"
-                      onClick={() => handleClientClick(client.id)}
+                      onClick={() => client.id && handleClientClick(client.id)}
                     >
                       {client.id}
                     </span>
@@ -255,7 +301,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                   <TableCell>
                     <div 
                       className="font-medium cursor-pointer"
-                      onClick={() => handleClientClick(client.id)}
+                      onClick={() => client.id && handleClientClick(client.id)}
                     >
                       {client.name}
                     </div>
@@ -272,16 +318,13 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       client.status === "active" && "bg-fixlyfy-success/10 text-fixlyfy-success",
                       client.status === "inactive" && "bg-fixlyfy-text-secondary/10 text-fixlyfy-text-secondary"
                     )}>
-                      {client.status === "active" ? "Active" : "Inactive"}
+                      {client.status || "Unknown"}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge className="bg-fixlyfy/10 text-fixlyfy">
-                      {client.type}
+                      {client.type || "Unknown"}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    ${client.revenue.toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <div className="flex">
@@ -298,7 +341,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleClientClick(client.id)}>
+                        <DropdownMenuItem onClick={() => client.id && handleClientClick(client.id)}>
                           <Eye size={16} className="mr-2" /> View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleBulkEdit()}>

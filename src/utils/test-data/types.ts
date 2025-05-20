@@ -14,6 +14,12 @@ export interface Client {
   rating: number;
   status: string;
   notes?: string;
+  tags?: string[];
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  company?: string;
+  country?: string;
 }
 
 export interface Job {
