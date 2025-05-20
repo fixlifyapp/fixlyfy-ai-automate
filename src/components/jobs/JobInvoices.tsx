@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InvoiceDialog } from "./dialogs/InvoiceDialog";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -36,16 +36,36 @@ type Invoice = {
   amount_paid: number;
   balance: number;
   status: string;
+  notes?: string;
 };
 
 export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Mock data for client and company info
+  const clientInfo = {
+    name: "Client Name",
+    address: "123 Client St",
+    phone: "123-456-7890",
+    email: "client@example.com"
+  };
+  
+  const companyInfo = {
+    name: "Your Company",
+    logo: "/placeholder.svg",
+    address: "123 Business Ave",
+    phone: "555-555-5555",
+    email: "company@example.com",
+    legalText: "Terms and conditions apply."
+  };
   
   const fetchInvoices = async () => {
     setIsLoading(true);
@@ -92,6 +112,18 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     }
   };
   
+  const handleEditInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsEditMode(true);
+    setIsInvoiceDialogOpen(true);
+  };
+  
+  const handleNewInvoice = () => {
+    setSelectedInvoice(null);
+    setIsEditMode(false);
+    setIsInvoiceDialogOpen(true);
+  };
+  
   const openPaymentDialog = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setPaymentAmount(invoice.balance.toString());
@@ -116,8 +148,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
           invoice_id: selectedInvoice.id,
           amount,
           method: paymentMethod,
-          date: new Date(paymentDate).toISOString(),
-          status: "paid"
+          date: new Date(paymentDate).toISOString()
         });
         
       if (paymentError) {
@@ -157,6 +188,10 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     }
   };
 
+  const handleInvoiceCreated = (amount: number) => {
+    fetchInvoices();
+  };
+
   // Function to render status badge with appropriate color
   const renderStatusBadge = (status: string) => {
     let color = "";
@@ -187,7 +222,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-medium">Invoices</h3>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleNewInvoice}>
             <PlusCircle size={16} />
             New Invoice
           </Button>
@@ -236,7 +271,11 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
                 </div>
                 
                 <div className="flex flex-wrap gap-2 md:justify-end">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleEditInvoice(invoice)}
+                  >
                     <Edit size={16} className="mr-2" />
                     Edit
                   </Button>
@@ -334,6 +373,16 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Invoice Dialog */}
+        <InvoiceDialog 
+          open={isInvoiceDialogOpen}
+          onOpenChange={setIsInvoiceDialogOpen}
+          onInvoiceCreated={handleInvoiceCreated}
+          clientInfo={clientInfo}
+          companyInfo={companyInfo}
+          editInvoice={isEditMode ? selectedInvoice : undefined}
+        />
       </CardContent>
     </Card>
   );
