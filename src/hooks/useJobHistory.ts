@@ -39,10 +39,11 @@ export const useJobHistory = (jobId: string) => {
         
         if (error) throw error;
         
-        // Convert Json to Record<string, any>
+        // Convert the data to HistoryItem type with proper visibility handling
         const typedData: HistoryItem[] = data?.map(item => ({
           ...item,
           meta: item.meta as unknown as Record<string, any>,
+          visibility: (item.visibility as 'all' | 'restricted') || 'all'
         })) || [];
         
         setHistoryItems(typedData);
@@ -80,10 +81,11 @@ export const useJobHistory = (jobId: string) => {
         
       if (error) throw error;
       
-      // Convert Json to Record<string, any>
+      // Convert to HistoryItem type with proper visibility handling
       const typedData: HistoryItem = {
         ...data,
         meta: data.meta as unknown as Record<string, any>,
+        visibility: (data.visibility as 'all' | 'restricted') || 'all'
       };
       
       // Update local state
@@ -107,10 +109,11 @@ export const useJobHistory = (jobId: string) => {
         
       if (error) throw error;
       
-      // Convert Json to Record<string, any>
+      // Convert to HistoryItem type with proper visibility handling
       const typedData: HistoryItem = {
         ...data,
         meta: data.meta as unknown as Record<string, any>,
+        visibility: (data.visibility as 'all' | 'restricted') || 'all'
       };
       
       // Update local state

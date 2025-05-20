@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
@@ -31,14 +31,14 @@ const JobDetailsPage = () => {
   };
   
   // Create button elements for Create Estimate and Create Invoice
-  const createEstimateButton = (
+  const createEstimateButton: ReactNode = (
     <Button variant="outline" size="sm" className="gap-2" onClick={() => jobHeaderData.setIsEstimateDialogOpen(true)}>
       <PlusCircle size={16} />
       New Estimate
     </Button>
   );
   
-  const createInvoiceButton = (
+  const createInvoiceButton: ReactNode = (
     <Button variant="outline" size="sm" className="gap-2 ml-2" onClick={() => jobHeaderData.setIsInvoiceDialogOpen(true)}>
       <PlusCircle size={16} />
       New Invoice

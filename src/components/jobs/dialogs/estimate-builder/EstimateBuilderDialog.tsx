@@ -47,6 +47,9 @@ export function EstimateBuilderDialog({ open, onOpenChange, estimateId, jobId, o
           amount: 0,
           status: 'draft',
           viewed: false,
+          discount: 0,
+          tax_rate: 0,
+          technicians_note: '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, AlertCircle } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
-import { useEstimates } from "./estimates/useEstimates";
+import { useEstimates, Estimate } from "@/hooks/useEstimates";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
 import { Dialog } from "@/components/ui/dialog";
@@ -57,7 +57,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onEdit={handlers.handleEditEstimate}
           onConvert={handlers.handleConvertToInvoice}
           onAddWarranty={handlers.handleAddWarranty}
-          onSend={(estimate) => handlers.handleSendEstimate && handlers.handleSendEstimate(estimate)}
+          onSend={handlers.handleSendEstimate}
           onDelete={handlers.handleDeleteEstimate}
         />
         
