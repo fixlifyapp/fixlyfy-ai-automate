@@ -21,9 +21,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { UserRole } from "@/components/auth/types";
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
+import { UserRole } from "@/components/auth/types";
 
 interface AddTeamMemberModalProps {
   open: boolean;

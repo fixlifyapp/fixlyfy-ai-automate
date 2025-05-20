@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { TeamMember } from "@/types/team";
 
@@ -125,7 +124,7 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
       // Generate email since it's not in the profiles table
       email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
       role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
-      status: "active",
+      status: "active" as "active" | "suspended",
       avatar: profile.avatar_url || "https://github.com/shadcn.png",
       lastLogin: profile.updated_at,
     })) || [];
@@ -161,8 +160,8 @@ export const generateTestTeamMembers = async (count: number = 6): Promise<TeamMe
 
     // Define status options with explicit type
     const statusOptions = ["active", "suspended"] as const;
-    // Use type assertion when accessing random element
-    const status = getRandomElement([...statusOptions]) as "active" | "suspended";
+    // Fix the typing issue by using a proper array instead of readonly array
+    const status = getRandomElement(Array.from(statusOptions)) as "active" | "suspended";
     
     teamMembers.push({
       id: `team-${i + 1}`,

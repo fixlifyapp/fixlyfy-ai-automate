@@ -47,7 +47,6 @@ const TeamManagementPage = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [importCompleted, setImportCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { hasRole } = useRBAC();
@@ -154,9 +153,8 @@ const TeamManagementPage = () => {
         setTeamMembers(prevMembers => [...prevMembers, ...newMembers]);
         toast.success(`Successfully imported ${newMembers.length} team members!`);
       } else {
-        toast.info("Team members already exist - no new data imported");
+        toast.info("No new team members imported");
       }
-      setImportCompleted(true);
     } catch (error) {
       console.error("Error importing test team data:", error);
       toast.error("Failed to import test team data");
@@ -171,7 +169,7 @@ const TeamManagementPage = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Team Management</h1>
           <div className="flex gap-2">
-            {!importCompleted && isAdmin && (
+            {isAdmin && (
               <Button 
                 onClick={handleImportTestData} 
                 variant="outline"
