@@ -17,6 +17,9 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [authTab, setAuthTab] = useState("login");
 
+  // Set session expiry to 7 days (in seconds)
+  const SESSION_EXPIRY = 60 * 60 * 24 * 7; // 7 days in seconds
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -24,7 +27,10 @@ export default function AuthPage() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
+        options: {
+          expiresIn: SESSION_EXPIRY
+        }
       });
       
       if (error) {
@@ -54,7 +60,13 @@ export default function AuthPage() {
       // Modified to not include email redirect - turns off email verification
       const { data, error } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          data: {
+            // Can add additional user metadata here if needed
+          },
+          emailRedirectTo: window.location.origin + "/dashboard"
+        }
       });
       
       if (error) {
@@ -63,10 +75,13 @@ export default function AuthPage() {
         });
         console.error("Sign up error:", error);
       } else if (data.user) {
-        // Automatically sign in after sign up
+        // Automatically sign in after sign up with 7-day session
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
-          password
+          password,
+          options: {
+            expiresIn: SESSION_EXPIRY
+          }
         });
         
         if (signInError) {
