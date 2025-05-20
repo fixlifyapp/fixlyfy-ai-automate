@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { KpiSummaryCards } from "@/components/dashboard/KpiSummaryCards";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
 import { AiInsightsPanel } from "@/components/dashboard/AiInsightsPanel";
 import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
@@ -65,14 +64,7 @@ const Dashboard = () => {
         <ExpandedDashboardMetrics />
       </div>
       
-      {/* KPI Summary Cards */}
-      <div className="mb-6">
-        <KpiSummaryCards 
-          timePeriod={timePeriod} 
-          dateRange={dateRange} 
-          isRefreshing={isRefreshing}
-        />
-      </div>
+      {/* KPI Summary Cards section has been removed */}
       
       {/* Scoreboard Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
