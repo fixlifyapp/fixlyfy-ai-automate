@@ -170,7 +170,8 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
         city: formData.city,
         state: formData.state,
         zip: formData.zip,
-        updated_at: new Date()
+        // Convert Date to ISO string for Supabase
+        updated_at: new Date().toISOString()
       };
       
       const { error } = await supabase
@@ -208,13 +209,15 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
     
     try {
       // Create invoice in the database
+      const currentDate = new Date().toISOString();
+      
       const { data, error } = await supabase
         .from('invoices')
         .insert({
           invoice_number: `INV-${Date.now().toString().slice(-6)}`,
           total: parseFloat(invoiceData.amount) || 0,
           notes: invoiceData.description,
-          date: new Date(),
+          date: currentDate,
           balance: parseFloat(invoiceData.amount) || 0
         })
         .select();
