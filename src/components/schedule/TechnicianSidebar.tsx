@@ -1,57 +1,74 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { jobs } from "@/data/real-jobs";
+import { Search, Loader2 } from "lucide-react";
+import { fetchTeamMembers } from "@/data/team";
+import { TeamMember } from "@/types/team";
+import { toast } from "sonner";
 
-// Derive technicians from the real jobs data
-const deriveTechnicians = () => {
-  const techMap = new Map();
-  
-  jobs.forEach(job => {
-    if (!techMap.has(job.technician.name)) {
-      techMap.set(job.technician.name, {
-        id: job.technician.name.toLowerCase().replace(/\s+/g, '-'),
-        name: job.technician.name,
-        avatar: job.technician.avatar,
-        initials: job.technician.initials,
-        jobCount: 1,
-        specialties: new Set()
-      });
-    } else {
-      const tech = techMap.get(job.technician.name);
-      tech.jobCount++;
-    }
-    
-    // Add job tags as specialties
-    if (job.tags) {
-      job.tags.forEach(tag => {
-        const tech = techMap.get(job.technician.name);
-        if (tech && tech.specialties) {
-          tech.specialties.add(tag);
-        }
-      });
-    }
-  });
-  
-  // Convert to array and process specialties
-  return Array.from(techMap.values()).map(tech => ({
-    ...tech,
-    specialties: Array.from(tech.specialties).slice(0, 2) // Take first two specialties
-  }));
-};
-
-const technicians = deriveTechnicians();
+interface TechnicianWithJobCount extends TeamMember {
+  jobCount: number;
+  specialties?: string[];
+}
 
 export const TechnicianSidebar = () => {
-  const [selectedTechs, setSelectedTechs] = useState<string[]>(technicians.map(t => t.id));
+  const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredTechs = technicians.filter(tech => 
-    tech.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [technicians, setTechnicians] = useState<TechnicianWithJobCount[]>([]);
+  const [filteredTechs, setFilteredTechs] = useState<TechnicianWithJobCount[]>([]);
+  
+  // Load technicians from Supabase
+  useEffect(() => {
+    const loadTechnicians = async () => {
+      setIsLoading(true);
+      try {
+        const members = await fetchTeamMembers();
+        
+        // For now, add mock job counts and specialties
+        const techsWithCounts = members.map((tech, index) => ({
+          ...tech,
+          jobCount: Math.floor(Math.random() * 20) + 1,
+          specialties: [
+            ["HVAC", "Plumbing", "Electrical", "Installation", "Maintenance", "Repair"][
+              Math.floor(Math.random() * 6)
+            ],
+            ["Commercial", "Residential", "Emergency", "Scheduled", "Warranty"][
+              Math.floor(Math.random() * 5)
+            ]
+          ]
+        }));
+        
+        setTechnicians(techsWithCounts);
+        setFilteredTechs(techsWithCounts);
+        // Select all technicians by default
+        setSelectedTechs(techsWithCounts.map(t => t.id));
+      } catch (error) {
+        console.error("Error loading technicians:", error);
+        toast.error("Failed to load technicians");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTechnicians();
+  }, []);
+  
+  // Filter technicians based on search
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredTechs(technicians);
+    } else {
+      const lowercaseTerm = searchQuery.toLowerCase();
+      const filtered = technicians.filter(tech => 
+        tech.name.toLowerCase().includes(lowercaseTerm) || 
+        tech.email.toLowerCase().includes(lowercaseTerm)
+      );
+      setFilteredTechs(filtered);
+    }
+  }, [searchQuery, technicians]);
 
   const handleTechSelect = (techId: string) => {
     setSelectedTechs(prev => {
@@ -69,6 +86,15 @@ export const TechnicianSidebar = () => {
     } else {
       setSelectedTechs([]);
     }
+  };
+
+  // Get initials from name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -106,51 +132,53 @@ export const TechnicianSidebar = () => {
       </div>
       
       <div className="max-h-[500px] overflow-y-auto">
-        {filteredTechs.map((tech) => (
-          <div
-            key={tech.id}
-            className="p-4 border-b border-fixlyfy-border last:border-b-0 hover:bg-fixlyfy-bg-hover"
-          >
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id={`tech-${tech.id}`}
-                checked={selectedTechs.includes(tech.id)}
-                onCheckedChange={() => handleTechSelect(tech.id)}
-              />
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={tech.avatar} />
-                <AvatarFallback>{tech.initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <label
-                  htmlFor={`tech-${tech.id}`}
-                  className="font-medium text-sm cursor-pointer"
-                >
-                  {tech.name}
-                </label>
-                <p className="text-xs text-fixlyfy-text-secondary">
-                  {tech.jobCount} job{tech.jobCount !== 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
-            {tech.specialties && tech.specialties.length > 0 && (
-              <div className="ml-8 mt-2 flex flex-wrap gap-1">
-                {tech.specialties.map((specialty, i) => (
-                  <span key={i} className="text-xs bg-fixlyfy-bg-interface px-2 py-0.5 rounded-full text-fixlyfy-text-secondary">
-                    {specialty}
-                  </span>
-                ))}
-                {tech.specialties.length > 2 && (
-                  <span className="text-xs bg-fixlyfy-bg-interface px-2 py-0.5 rounded-full text-fixlyfy-text-secondary">
-                    +{(tech.specialties as any).size - 2} more
-                  </span>
-                )}
-              </div>
-            )}
+        {isLoading ? (
+          <div className="flex justify-center items-center p-8">
+            <Loader2 size={24} className="animate-spin text-primary mr-2" />
+            <span>Loading technicians...</span>
           </div>
-        ))}
+        ) : (
+          filteredTechs.map((tech) => (
+            <div
+              key={tech.id}
+              className="p-4 border-b border-fixlyfy-border last:border-b-0 hover:bg-fixlyfy-bg-hover"
+            >
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id={`tech-${tech.id}`}
+                  checked={selectedTechs.includes(tech.id)}
+                  onCheckedChange={() => handleTechSelect(tech.id)}
+                />
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={tech.avatar} />
+                  <AvatarFallback>{getInitials(tech.name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <label
+                    htmlFor={`tech-${tech.id}`}
+                    className="font-medium text-sm cursor-pointer"
+                  >
+                    {tech.name}
+                  </label>
+                  <p className="text-xs text-fixlyfy-text-secondary">
+                    {tech.jobCount} job{tech.jobCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+              {tech.specialties && tech.specialties.length > 0 && (
+                <div className="ml-8 mt-2 flex flex-wrap gap-1">
+                  {tech.specialties.map((specialty, i) => (
+                    <span key={i} className="text-xs bg-fixlyfy-bg-interface px-2 py-0.5 rounded-full text-fixlyfy-text-secondary">
+                      {specialty}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
         
-        {filteredTechs.length === 0 && (
+        {filteredTechs.length === 0 && !isLoading && (
           <div className="p-4 text-center text-fixlyfy-text-secondary">
             No technicians found
           </div>

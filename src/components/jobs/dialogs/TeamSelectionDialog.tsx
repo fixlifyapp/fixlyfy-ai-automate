@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { User } from "lucide-react";
+import { User, Loader2 } from "lucide-react";
+import { fetchTeamMembers } from "@/data/team";
+import { TeamMember } from "@/types/team";
 
 interface TeamSelectionDialogProps {
   open: boolean;
@@ -27,15 +29,40 @@ export function TeamSelectionDialog({
   onSave,
 }: TeamSelectionDialogProps) {
   const [selectedTeam, setSelectedTeam] = useState(initialTeam);
+  const [isLoading, setIsLoading] = useState(true);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   
-  // Mock team data with colors
-  const teams = [
-    { id: "1", name: "Robert Smith", color: "bg-purple-100 text-purple-600" },
-    { id: "2", name: "Jane Cooper", color: "bg-blue-100 text-blue-600" },
-    { id: "3", name: "Michael Johnson", color: "bg-green-100 text-green-600" },
-    { id: "4", name: "Sarah Williams", color: "bg-pink-100 text-pink-600" },
-    { id: "5", name: "David Martinez", color: "bg-amber-100 text-amber-600" }
+  // Define team colors based on index
+  const teamColors = [
+    "bg-purple-100 text-purple-600",
+    "bg-blue-100 text-blue-600",
+    "bg-green-100 text-green-600",
+    "bg-pink-100 text-pink-600",
+    "bg-amber-100 text-amber-600",
+    "bg-cyan-100 text-cyan-600",
+    "bg-indigo-100 text-indigo-600",
+    "bg-rose-100 text-rose-600"
   ];
+  
+  // Fetch team members when dialog opens
+  useEffect(() => {
+    if (open) {
+      const loadTeamMembers = async () => {
+        setIsLoading(true);
+        try {
+          const members = await fetchTeamMembers();
+          setTeamMembers(members);
+        } catch (error) {
+          console.error("Error loading team members:", error);
+          toast.error("Failed to load team members");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadTeamMembers();
+    }
+  }, [open]);
 
   const handleSave = () => {
     onSave(selectedTeam);
@@ -50,29 +77,36 @@ export function TeamSelectionDialog({
           <DialogTitle>Assign Team Member</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <RadioGroup 
-            value={selectedTeam} 
-            onValueChange={setSelectedTeam}
-            className="space-y-3"
-          >
-            {teams.map((team) => (
-              <div key={team.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={team.name} id={`team-${team.id}`} />
-                <Label htmlFor={`team-${team.id}`} className="flex items-center gap-2">
-                  <div className={`w-8 h-8 rounded-full ${team.color.split(" ")[0]} flex items-center justify-center`}>
-                    <User size={16} className={team.color.split(" ")[1]} />
-                  </div>
-                  <span className={team.color.split(" ")[1]}>{team.name}</span>
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 size={24} className="animate-spin text-primary mr-2" />
+              <span>Loading team members...</span>
+            </div>
+          ) : (
+            <RadioGroup 
+              value={selectedTeam} 
+              onValueChange={setSelectedTeam}
+              className="space-y-3"
+            >
+              {teamMembers.map((member, index) => (
+                <div key={member.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={member.name} id={`team-${member.id}`} />
+                  <Label htmlFor={`team-${member.id}`} className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full ${teamColors[index % teamColors.length].split(" ")[0]} flex items-center justify-center`}>
+                      <User size={16} className={teamColors[index % teamColors.length].split(" ")[1]} />
+                    </div>
+                    <span className={teamColors[index % teamColors.length].split(" ")[1]}>{member.name}</span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={isLoading || !selectedTeam}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

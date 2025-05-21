@@ -2,15 +2,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { TechnicianCard } from "./TechnicianCard";
-
-interface Technician {
-  name: string;
-  job_count: number;
-  total_revenue: number;
-}
+import { TechnicianMetric } from "@/hooks/useTeamMetrics";
 
 interface TopTechniciansProps {
-  technicians: Technician[];
+  technicians: TechnicianMetric[];
   isLoading: boolean;
   formatValue: (value: number) => string;
 }
@@ -31,12 +26,13 @@ export const TopTechnicians = ({
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {technicians.map((tech, index) => (
             <TechnicianCard
-              key={index}
+              key={tech.id}
               name={tech.name}
               jobCount={tech.job_count}
               revenue={tech.total_revenue}
               index={index}
               formatValue={formatValue}
+              avatar={tech.avatar}
             />
           ))}
         </div>
