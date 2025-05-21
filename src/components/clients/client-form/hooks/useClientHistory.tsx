@@ -3,9 +3,32 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// Define specific history item types to avoid recursive type issues
+interface BaseHistoryItem {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+  date: string;
+  description: string;
+}
+
+interface JobHistoryItem extends BaseHistoryItem {
+  type: 'job';
+  jobId: string;
+}
+
+interface InvoiceHistoryItem extends BaseHistoryItem {
+  type: 'invoice';
+  amount: number;
+  invoiceId: string;
+}
+
+type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
+
 export const useClientHistory = (clientId?: string) => {
   const { toast } = useToast();
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +61,7 @@ export const useClientHistory = (clientId?: string) => {
         if (invoicesError) throw invoicesError;
         
         // Combine jobs and invoices into history entries
-        const jobEntries = (jobs || []).map(job => ({
+        const jobEntries: JobHistoryItem[] = (jobs || []).map(job => ({
           id: `job-${job.id}`,
           type: 'job',
           title: job.title,
@@ -48,7 +71,7 @@ export const useClientHistory = (clientId?: string) => {
           jobId: job.id
         }));
         
-        const invoiceEntries = (invoices || []).map(invoice => ({
+        const invoiceEntries: InvoiceHistoryItem[] = (invoices || []).map(invoice => ({
           id: `invoice-${invoice.id}`,
           type: 'invoice',
           title: `Invoice #${invoice.invoice_number}`,
@@ -60,7 +83,7 @@ export const useClientHistory = (clientId?: string) => {
         }));
         
         // Combine all entries and sort by date
-        const allHistory = [...jobEntries, ...invoiceEntries].sort(
+        const allHistory: HistoryItem[] = [...jobEntries, ...invoiceEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         
@@ -78,7 +101,7 @@ export const useClientHistory = (clientId?: string) => {
     };
     
     fetchHistory();
-  }, [clientId]);
+  }, [clientId, toast]);
   
   return {
     history,
