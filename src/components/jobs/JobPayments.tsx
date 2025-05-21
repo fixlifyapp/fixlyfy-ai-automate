@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -159,8 +160,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         reference
       );
       
-      // No toast notifications will be shown due to our updated implementation
-      
       // Refresh payments list by fetching the latest data
       fetchPayments();
       
@@ -168,7 +167,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
-      // No toast notifications will be shown
     }
   };
 
@@ -177,8 +175,39 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     setIsRefundDialogOpen(true);
   };
 
-  const confirmRefund = (paymentId: string) => {
-    refundPayment(paymentId);
+  const confirmRefund = async (paymentId: string) => {
+    const result = await refundPayment(paymentId);
+    if (result) {
+      // Record the refund in history
+      if (selectedPayment) {
+        await recordRefund(selectedPayment);
+      }
+    }
+  };
+  
+  const recordRefund = async (payment: Payment) => {
+    try {
+      // Add a history item for the refund
+      await supabase
+        .from('job_history')
+        .insert({
+          job_id: jobId,
+          type: 'payment',
+          title: 'Payment Refunded',
+          description: `Payment of $${payment.amount.toFixed(2)} via ${payment.method} was refunded`,
+          user_id: currentUser?.id,
+          user_name: currentUser?.name,
+          meta: {
+            amount: payment.amount,
+            method: payment.method,
+            reference: payment.reference,
+            refunded: true
+          },
+          visibility: 'restricted'
+        });
+    } catch (error) {
+      console.error('Error recording refund in history:', error);
+    }
   };
 
   const handleDeletePayment = (payment: Payment) => {

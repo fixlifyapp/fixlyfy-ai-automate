@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
+import { recordInvoiceCreated } from "@/services/jobHistoryService";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -49,6 +52,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isEditMode, setIsEditMode] = useState(false);
+  const { currentUser } = useRBAC();
   
   // Mock data for client and company info
   const clientInfo = {
@@ -188,8 +192,19 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     }
   };
 
-  const handleInvoiceCreated = (amount: number) => {
+  const handleInvoiceCreated = async (amount: number, invoiceNumber?: string) => {
     fetchInvoices();
+    
+    // Record in job history
+    if (invoiceNumber) {
+      await recordInvoiceCreated(
+        jobId,
+        invoiceNumber,
+        amount,
+        currentUser?.name,
+        currentUser?.id
+      );
+    }
   };
 
   // Function to render status badge with appropriate color
@@ -382,6 +397,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
           clientInfo={clientInfo}
           companyInfo={companyInfo}
           editInvoice={isEditMode ? selectedInvoice : undefined}
+          jobId={jobId}
         />
       </CardContent>
     </Card>

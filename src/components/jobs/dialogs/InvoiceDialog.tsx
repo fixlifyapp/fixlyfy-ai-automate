@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
 import { Calculator, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { recordInvoiceCreated } from "@/services/jobHistoryService";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvoiceCreated: (amount: number) => void;
+  onInvoiceCreated: (amount: number, invoiceNumber?: string) => void;
   clientInfo: {
     name: string;
     address: string;
@@ -36,6 +37,7 @@ interface InvoiceDialogProps {
     status: string;
     notes?: string;
   } | null;
+  jobId: string;
 }
 
 export const InvoiceDialog = ({ 
@@ -44,7 +46,8 @@ export const InvoiceDialog = ({
   onInvoiceCreated,
   clientInfo,
   companyInfo,
-  editInvoice
+  editInvoice,
+  jobId
 }: InvoiceDialogProps) => {
   const [amount, setAmount] = useState(0);
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
@@ -54,6 +57,7 @@ export const InvoiceDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"form" | "preview">("form");
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const { currentUser } = useRBAC();
 
   // Reset state when the dialog opens/closes
   useEffect(() => {
@@ -178,7 +182,7 @@ export const InvoiceDialog = ({
             amount_paid: 0,
             status: "unpaid",
             notes: description,
-            job_id: "JOB-2034" // This should come from props in a real implementation
+            job_id: jobId
           })
           .select()
           .single();
@@ -188,6 +192,15 @@ export const InvoiceDialog = ({
         }
         
         invoiceId = newInvoice.id;
+        
+        // Record the invoice creation in job history
+        await recordInvoiceCreated(
+          jobId,
+          invoiceNumber,
+          total,
+          currentUser?.name,
+          currentUser?.id
+        );
       } else {
         // Update existing invoice
         const { error } = await supabase
@@ -228,7 +241,7 @@ export const InvoiceDialog = ({
           .insert(lineItemsToInsert);
       }
       
-      onInvoiceCreated(total);
+      onInvoiceCreated(total, invoiceNumber);
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving invoice:", error);
@@ -456,7 +469,7 @@ export const InvoiceDialog = ({
                 Cancel
               </Button>
               <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
-                Send to Client
+                {editInvoice ? "Update Invoice" : "Send to Client"}
               </Button>
             </div>
           </div>

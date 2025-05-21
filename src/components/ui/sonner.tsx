@@ -1,6 +1,6 @@
 
 import { useTheme } from "next-themes"
-import { Toaster as Sonner, toast } from "sonner"
+import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -33,24 +33,34 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-// Enhanced toast with success and error variations but with empty implementations
+// Enhanced toast with success and error variations
+// These are no-op (empty) implementations to silence notifications
 const enhancedToast = {
-  success: (message: string, options?: Parameters<typeof toast>[1]) => {
-    // No-op implementation to silence notifications
+  success: (message: string) => {
+    console.log('Toast success (silenced):', message);
     return { id: '', dismiss: () => {} };
   },
-  error: (message: string, options?: Parameters<typeof toast>[1]) => {
-    // No-op implementation to silence notifications
+  error: (message: string) => {
+    console.log('Toast error (silenced):', message);
     return { id: '', dismiss: () => {} };
   }
 }
 
 // Override the default toast function to be a no-op
-const noopToast = Object.assign(
-  (message: any) => ({ id: '', dismiss: () => {} }),
+const toast = Object.assign(
+  (message: any) => {
+    console.log('Toast (silenced):', message);
+    return { id: '', dismiss: () => {} };
+  },
   {
-    success: () => ({ id: '', dismiss: () => {} }),
-    error: () => ({ id: '', dismiss: () => {} }),
+    success: (message: string) => {
+      console.log('Toast success (silenced):', message);
+      return { id: '', dismiss: () => {} };
+    },
+    error: (message: string) => {
+      console.log('Toast error (silenced):', message);
+      return { id: '', dismiss: () => {} };
+    },
     info: () => ({ id: '', dismiss: () => {} }),
     warning: () => ({ id: '', dismiss: () => {} }),
     custom: () => ({ id: '', dismiss: () => {} }),
@@ -61,4 +71,4 @@ const noopToast = Object.assign(
   }
 );
 
-export { Toaster, noopToast as toast, enhancedToast }
+export { Toaster, toast, enhancedToast }
