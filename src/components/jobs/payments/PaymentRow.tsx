@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import { PaymentActions } from "./PaymentActions";
 import { getMethodIcon } from "./utils";
+import React from "react";
 
 interface PaymentRowProps {
   payment: Payment;
@@ -13,6 +14,9 @@ interface PaymentRowProps {
 }
 
 export const PaymentRow = ({ payment, onRefund, onDelete }: PaymentRowProps) => {
+  const iconData = getMethodIcon(payment.method);
+  const IconComponent = iconData.icon;
+  
   return (
     <TableRow key={payment.id}>
       <TableCell>
@@ -25,7 +29,7 @@ export const PaymentRow = ({ payment, onRefund, onDelete }: PaymentRowProps) => 
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          {getMethodIcon(payment.method)}
+          <IconComponent size={iconData.size} className={iconData.className} />
           <span className="capitalize">{payment.method.replace('-', ' ')}</span>
         </div>
       </TableCell>

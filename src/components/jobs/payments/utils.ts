@@ -4,20 +4,43 @@ import { CreditCard, DollarSign, FileText } from "lucide-react";
 import React from "react";
 
 /**
- * Returns the appropriate icon for each payment method
+ * Returns the appropriate icon component for each payment method
+ * This function returns the component type, not JSX, for type safety
  */
 export const getMethodIcon = (method: PaymentMethod) => {
+  const iconProps = { size: 16 };
+  
   switch (method) {
     case "credit-card":
-      return <CreditCard size={16} className="text-blue-500" />;
+      return {
+        icon: CreditCard,
+        className: "text-blue-500",
+        ...iconProps
+      };
     case "cash":
-      return <DollarSign size={16} className="text-green-500" />;
+      return {
+        icon: DollarSign,
+        className: "text-green-500",
+        ...iconProps
+      };
     case "e-transfer":
-      return <FileText size={16} className="text-purple-500" />; 
+      return {
+        icon: FileText,
+        className: "text-purple-500",
+        ...iconProps
+      };
     case "cheque":
-      return <FileText size={16} className="text-orange-500" />;
+      return {
+        icon: FileText,
+        className: "text-orange-500",
+        ...iconProps
+      };
     default:
-      return <CreditCard size={16} />;
+      return {
+        icon: CreditCard,
+        className: "",
+        ...iconProps
+      };
   }
 };
 
