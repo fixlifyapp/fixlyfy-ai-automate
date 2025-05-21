@@ -1,4 +1,3 @@
-
 import {
   BarChart2,
   Bot,
@@ -34,9 +33,9 @@ export const Sidebar = () => {
       <div className="p-4 flex justify-between items-center">
         <Link to="/" className="flex items-center gap-3">
           <Logo className="w-8 h-8" />
-          {!collapsed && <span className="font-bold text-xl hidden lg:block">Fixlify AI</span>}
         </Link>
       </div>
+      
       
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
         <NavItem to="/" icon={Home} label="Dashboard" collapsed={collapsed} />
