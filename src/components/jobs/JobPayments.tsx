@@ -1,9 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
-import { DollarSign } from "lucide-react";
+import { DollarSign, BellRing } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { usePayments, Payment } from "@/hooks/payments";
 import { toast } from "@/components/ui/sonner";
@@ -16,6 +16,7 @@ import { usePaymentJobHistory } from "./payments/usePaymentJobHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { PaymentMethod } from "@/types/payment";
+import { sendPaymentConfirmationSMS, sendRefundConfirmationSMS } from "@/services/notificationService";
 
 // Import CSS for animations
 import "@/styles/toast-animations.css";
@@ -30,6 +31,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [clientPhone, setClientPhone] = useState<string | null>(null);
   const { currentUser } = useRBAC();
   
   const { 
@@ -46,6 +48,37 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   
   const { recordRefund, recordNewPayment } = usePaymentJobHistory(jobId);
 
+  // Fetch client phone number when component mounts
+  useEffect(() => {
+    const fetchClientInfo = async () => {
+      try {
+        // Get the job to find client ID
+        const { data: job } = await supabase
+          .from('jobs')
+          .select('client_id')
+          .eq('id', jobId)
+          .single();
+          
+        if (job && job.client_id) {
+          // Get client phone number
+          const { data: client } = await supabase
+            .from('clients')
+            .select('phone')
+            .eq('id', job.client_id)
+            .single();
+            
+          if (client && client.phone) {
+            setClientPhone(client.phone);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch client info:", error);
+      }
+    };
+    
+    fetchClientInfo();
+  }, [jobId]);
+
   const handleRefundPayment = (payment: Payment) => {
     setSelectedPayment(payment);
     setIsRefundDialogOpen(true);
@@ -55,6 +88,21 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     const result = await refundPayment(paymentId);
     if (result && selectedPayment) {
       await recordRefund(selectedPayment);
+      
+      // Send SMS notification for refund if we have client's phone number
+      if (clientPhone) {
+        try {
+          await sendRefundConfirmationSMS(
+            clientPhone,
+            selectedPayment.amount,
+            jobId
+          );
+          toast.success("Refund SMS notification sent");
+        } catch (error) {
+          console.error("Failed to send refund notification:", error);
+          toast.error("Failed to send refund notification");
+        }
+      }
     }
   };
 
@@ -147,6 +195,23 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       // Record in job history
       await recordNewPayment(amount, method as PaymentMethod, reference);
       
+      // Send SMS notification if we have client's phone number
+      if (clientPhone) {
+        try {
+          await sendPaymentConfirmationSMS(
+            clientPhone, 
+            amount, 
+            method as PaymentMethod,
+            jobId,
+            reference
+          );
+          toast.success("Payment confirmation SMS sent");
+        } catch (error) {
+          console.error("Failed to send SMS notification:", error);
+          toast.error("Failed to send SMS notification");
+        }
+      }
+      
       // Refresh payments list by fetching the latest data
       fetchPayments();
       
@@ -184,10 +249,20 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
             <PaymentSummary netAmount={netAmount} totalRefunded={totalRefunded} />
           </div>
           
-          <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
-            <DollarSign size={16} />
-            Add Payment
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="gap-2" 
+              onClick={() => toast.info("SMS notifications are enabled for payments")}
+            >
+              <BellRing size={16} />
+              SMS Enabled
+            </Button>
+            <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
+              <DollarSign size={16} />
+              Add Payment
+            </Button>
+          </div>
         </div>
 
         <PaymentsTable 
@@ -228,4 +303,3 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     </Card>
   );
 };
-
