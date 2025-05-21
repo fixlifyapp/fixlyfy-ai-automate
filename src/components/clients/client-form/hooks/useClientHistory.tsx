@@ -24,7 +24,8 @@ interface InvoiceHistoryItem extends BaseHistoryItem {
   invoiceId: string;
 }
 
-type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
+// Use a discriminated union type
+export type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
 
 export const useClientHistory = (clientId?: string) => {
   const { toast } = useToast();
@@ -83,7 +84,7 @@ export const useClientHistory = (clientId?: string) => {
         }));
         
         // Combine all entries and sort by date
-        const allHistory: HistoryItem[] = [...jobEntries, ...invoiceEntries].sort(
+        const allHistory = [...jobEntries, ...invoiceEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         

@@ -8,7 +8,7 @@ import { useEstimates } from "./estimates/useEstimates";
 import { EstimateDialog } from "./dialogs/EstimateDialog";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
-import { EstimateUpsellDialog } from "./estimates/dialogs/EstimateUpsellDialog";
+import { UpsellDialog } from "./dialogs/UpsellDialog";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
 
@@ -86,12 +86,13 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           open={dialogs.isDeleteConfirmOpen}
         />
 
-        <EstimateUpsellDialog
+        <UpsellDialog
           open={dialogs.isUpsellDialogOpen}
           onOpenChange={dialogs.setIsUpsellDialogOpen}
-          product={state.recommendedProduct}
-          technicianNote={state.techniciansNote}
-          onAcceptUpsell={handlers.handleUpsellAccept}
+          recommendedProduct={state.recommendedProduct}
+          techniciansNote={state.techniciansNote}
+          jobId={jobId}
+          onAccept={handlers.handleUpsellAccept}
         />
 
         <EstimateBuilderDialog
