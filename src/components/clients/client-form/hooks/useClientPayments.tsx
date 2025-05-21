@@ -19,32 +19,44 @@ export const useClientPayments = (clientId?: string) => {
       try {
         setIsLoading(true);
         
-        // First get invoices for the client
-        const { data: invoices, error: invoiceError } = await supabase
-          .from('invoices')
+        // Get jobs for the client
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
           .select('id')
           .eq('client_id', clientId);
           
-        if (invoiceError) throw invoiceError;
+        if (jobsError) throw jobsError;
         
-        if (!invoices || invoices.length === 0) {
-          setPayments([]);
-          setIsLoading(false);
-          return;
+        let paymentData: any[] = [];
+        
+        if (jobs && jobs.length > 0) {
+          const jobIds = jobs.map(job => job.id);
+          
+          // Get invoices for those jobs
+          const { data: invoices, error: invoiceError } = await supabase
+            .from('invoices')
+            .select('id')
+            .in('job_id', jobIds);
+            
+          if (invoiceError) throw invoiceError;
+          
+          if (invoices && invoices.length > 0) {
+            const invoiceIds = invoices.map(inv => inv.id);
+            
+            // Then get payments for those invoices
+            const { data: payments, error: paymentError } = await supabase
+              .from('payments')
+              .select('*, invoices(*)')
+              .in('invoice_id', invoiceIds)
+              .order('date', { ascending: false });
+              
+            if (paymentError) throw paymentError;
+            
+            paymentData = payments || [];
+          }
         }
         
-        const invoiceIds = invoices.map(inv => inv.id);
-        
-        // Then get payments for those invoices
-        const { data: paymentData, error: paymentError } = await supabase
-          .from('payments')
-          .select('*, invoices(invoice_number, date, total)')
-          .in('invoice_id', invoiceIds)
-          .order('date', { ascending: false });
-          
-        if (paymentError) throw paymentError;
-        
-        setPayments(paymentData || []);
+        setPayments(paymentData);
       } catch (error) {
         console.error("Error loading client payments:", error);
         toast({
@@ -58,7 +70,7 @@ export const useClientPayments = (clientId?: string) => {
     };
     
     fetchPayments();
-  }, [clientId]);
+  }, [clientId, toast]);
   
   return {
     payments,
