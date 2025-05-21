@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,6 @@ import { PlusCircle, Edit, Trash, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { enhancedToast } from "@/components/ui/sonner";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 import { Badge } from "@/components/ui/badge";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
@@ -25,9 +25,10 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
   
   const fetchEstimates = async () => {
+    if (!jobId) return;
+    
     setIsLoading(true);
     try {
-      // Using eq for job_id column matches exact job_id
       const { data, error } = await supabase
         .from("estimates")
         .select("*")
@@ -35,13 +36,15 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         .order("created_at", { ascending: false });
         
       if (error) {
-        throw error;
+        console.error("Error fetching estimates:", error);
+        // Silently fail without showing toast
+        return;
       }
       
       setEstimates(data || []);
     } catch (error) {
-      console.error("Error fetching estimates:", error);
-      // enhancedToast.error call will be silenced by our updated implementation
+      console.error("Error in fetchEstimates:", error);
+      // Silently fail without showing toast
     } finally {
       setIsLoading(false);
     }
@@ -75,10 +78,10 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       }
       
       setEstimates(estimates.filter(est => est.id !== estimateId));
-      enhancedToast.success("Estimate deleted successfully");
+      toast.success("Estimate deleted successfully");
     } catch (error) {
       console.error("Error deleting estimate:", error);
-      enhancedToast.error("Failed to delete estimate");
+      toast.error("Failed to delete estimate");
     }
   };
   
@@ -165,7 +168,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         throw updateError;
       }
       
-      enhancedToast.success("Estimate converted to invoice successfully");
+      toast.success("Estimate converted to invoice successfully");
       
       // Close the dialog
       setIsConvertDialogOpen(false);
@@ -179,7 +182,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       }
     } catch (error) {
       console.error("Error converting estimate to invoice:", error);
-      enhancedToast.error("Failed to convert estimate to invoice");
+      toast.error("Failed to convert estimate to invoice");
     }
   };
 
