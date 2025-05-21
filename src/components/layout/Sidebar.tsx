@@ -3,8 +3,6 @@ import {
   BarChart2,
   Bot,
   DollarSign,
-  File,
-  FileText,
   Home,
   ListChecks,
   MessageSquare,
@@ -25,8 +23,6 @@ export const Sidebar = () => {
       <div className="p-4">
         <Link to="/" className="flex items-center gap-3">
           <Logo className="w-8 h-8" />
-          <span className="font-bold text-xl hidden lg:block">FixliFy</span>
-          <span className="hidden lg:inline-block bg-gradient-primary text-white px-2 py-0.5 rounded-md text-sm font-bold">AI</span>
         </Link>
       </div>
       
@@ -35,9 +31,7 @@ export const Sidebar = () => {
         <NavItem to="/jobs" icon={ListChecks} label="Jobs" />
         <NavItem to="/clients" icon={Users} label="Clients" />
         <NavItem to="/finance" icon={DollarSign} label="Finance" />
-        <NavItem to="/invoices" icon={FileText} label="Invoices" />
         <NavItem to="/products" icon={Package} label="Products" />
-        <NavItem to="/documents" icon={File} label="Documents" />
         <NavItem to="/messages" icon={MessageSquare} label="Messages" />
         <NavItem to="/reports" icon={BarChart2} label="Reports" />
         <NavItem to="/automations" icon={Zap} label="Automations" />

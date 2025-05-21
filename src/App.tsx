@@ -17,10 +17,8 @@ import SchedulePage from '@/pages/SchedulePage';
 import TeamManagementPage from '@/pages/TeamManagementPage';
 import TeamMemberProfilePage from '@/pages/TeamMemberProfilePage';
 import ProductsPage from '@/pages/ProductsPage';
-import DocumentsPage from '@/pages/DocumentsPage';
 import SettingsPage from '@/pages/SettingsPage';
 import ReportsPage from '@/pages/ReportsPage';
-import InvoicesPage from '@/pages/InvoicesPage';
 import InventoryPage from '@/pages/InventoryPage';
 import AdminRolesPage from '@/pages/AdminRolesPage';
 import AutomationsPage from '@/pages/AutomationsPage';
@@ -92,11 +90,6 @@ function App() {
                   <ProductsPage />
                 </ProtectedRoute>
               } />
-              <Route path="/documents" element={
-                <ProtectedRoute>
-                  <DocumentsPage />
-                </ProtectedRoute>
-              } />
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <SettingsPage />
@@ -105,11 +98,6 @@ function App() {
               <Route path="/reports" element={
                 <ProtectedRoute>
                   <ReportsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/invoices" element={
-                <ProtectedRoute>
-                  <InvoicesPage />
                 </ProtectedRoute>
               } />
               <Route path="/inventory" element={
