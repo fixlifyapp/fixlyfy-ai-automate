@@ -37,7 +37,7 @@ export const EstimatePreview = ({
         </div>
         <div className="text-right">
           <img src="/placeholder.svg" alt="Company Logo" className="h-12 mb-2" />
-          <p className="font-medium">Fixlyfy Services</p>
+          <p className="font-medium">Fixlify AI</p>
           <p className="text-sm text-muted-foreground">456 Business Ave, Suite 789</p>
           <p className="text-sm text-muted-foreground">(555) 987-6543</p>
         </div>

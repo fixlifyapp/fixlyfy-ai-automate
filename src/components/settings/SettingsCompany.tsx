@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,7 @@ export const SettingsCompany = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="company-name">Company Name</Label>
-            <Input id="company-name" defaultValue="Fixlyfy Services Inc." />
+            <Input id="company-name" defaultValue="Fixlify AI Inc." />
           </div>
           <div className="space-y-2">
             <Label htmlFor="business-type">Business Type</Label>
@@ -54,11 +53,11 @@ export const SettingsCompany = () => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="company-email">Email</Label>
-            <Input id="company-email" defaultValue="contact@fixlyfy.com" />
+            <Input id="company-email" defaultValue="contact@fixlify.com" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="company-website">Website</Label>
-            <Input id="company-website" defaultValue="https://www.fixlyfy.com" />
+            <Input id="company-website" defaultValue="https://www.fixlify.com" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="tax-id">Tax ID / EIN</Label>

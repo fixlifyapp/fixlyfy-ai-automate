@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { 
@@ -138,7 +137,7 @@ export const Sidebar = () => {
             <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold">
               F
             </div>
-            <span className="ml-2 font-bold text-fixlyfy text-xl">Fixlyfy</span>
+            <span className="ml-2 font-bold text-fixlyfy text-xl">Fixlify AI</span>
           </div>
         )}
         {collapsed && (
