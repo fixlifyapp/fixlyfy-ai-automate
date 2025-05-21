@@ -3,36 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EstimateActions } from "./EstimateActions";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface EstimateItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  quantity: number;
-  taxable: boolean;
-  category: string;
-  tags: string[];
-}
-
-interface Estimate {
-  id: string;
-  number: string;
-  date: string;
-  amount: number;
-  status: string;
-  viewed: boolean;
-  items: EstimateItem[];
-  recommendedProduct: any;
-  techniciansNote: string;
-}
+import { Estimate } from "@/hooks/useEstimates";
+import { formatCurrency } from "@/lib/utils";
 
 interface EstimatesListProps {
   estimates: Estimate[];
   isLoading?: boolean;
   onEdit: (estimateId: string) => void;
-  onConvert: (estimate: any) => void;
-  onAddWarranty: (estimate: any) => void;
+  onConvert: (estimate: Estimate) => void;
+  onAddWarranty: (estimate: Estimate) => void;
   onSend: (estimateId: string) => void;
   onDelete: (estimateId: string) => void;
 }
@@ -78,9 +57,9 @@ export const EstimatesList = ({
       <TableBody>
         {estimates.map((estimate) => (
           <TableRow key={estimate.id}>
-            <TableCell className="font-medium">{estimate.number}</TableCell>
+            <TableCell className="font-medium">{estimate.estimate_number || estimate.number}</TableCell>
             <TableCell>{new Date(estimate.date).toLocaleDateString()}</TableCell>
-            <TableCell>${estimate.amount.toFixed(2)}</TableCell>
+            <TableCell>{formatCurrency(estimate.total || estimate.amount || 0)}</TableCell>
             <TableCell>
               <Badge 
                 variant="outline" 

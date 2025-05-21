@@ -28,6 +28,47 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   return {
     estimates,
     isLoading,
-    error: false
+    error: false,
+    dialogs: {
+      isUpsellDialogOpen: false,
+      setIsUpsellDialogOpen: () => {},
+      isEstimateBuilderOpen: false,
+      setIsEstimateBuilderOpen: () => {},
+      isEstimateDialogOpen: false,
+      setIsEstimateDialogOpen: () => {},
+      isConvertToInvoiceDialogOpen: false,
+      setIsConvertToInvoiceDialogOpen: () => {},
+      isDeleteConfirmOpen: false, 
+      setIsDeleteConfirmOpen: () => {},
+      isWarrantyDialogOpen: false,
+      setIsWarrantyDialogOpen: () => {}
+    },
+    state: {
+      selectedEstimateId: null,
+      recommendedProduct: null,
+      techniciansNote: "",
+      selectedEstimate: null,
+      isDeleting: false,
+    },
+    handlers: {
+      handleCreateEstimate: () => {},
+      handleEditEstimate: (id: string) => {},
+      handleViewEstimate: (estimate: any) => {},
+      handleSendEstimate: (id: string) => {},
+      handleUpsellAccept: (product: any) => {},
+      handleConvertToInvoice: (estimate: any) => {},
+      confirmConvertToInvoice: async () => {},
+      handleDeleteEstimate: (id: string) => {},
+      confirmDeleteEstimate: async () => {},
+      handleSyncToInvoice: () => {},
+      handleAddWarranty: (estimate: any) => {},
+      handleWarrantySelection: (warranty: any, note: string) => {},
+      handleEstimateCreated: (amount: number) => {}
+    },
+    info: {
+      clientInfo: {},
+      companyInfo: {},
+      jobInfo: {}
+    }
   };
 };
