@@ -29,7 +29,8 @@ export const useInvoiceCreation = (clientId?: string) => {
           total: parseFloat(invoiceData.amount) || 0,
           notes: invoiceData.description,
           date: currentDate,
-          balance: parseFloat(invoiceData.amount) || 0
+          balance: parseFloat(invoiceData.amount) || 0,
+          client_id: clientId // Link invoice to the client
         })
         .select();
         

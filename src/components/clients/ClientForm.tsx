@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Loader } from "lucide-react";
@@ -10,6 +11,9 @@ import { ClientInsights } from "./client-form/ClientInsights";
 import { ClientDetailsTab } from "./client-form/ClientDetailsTab";
 import { EmptyTabContent } from "./client-form/EmptyTabContent";
 import { InvoiceModal } from "./client-form/InvoiceModal";
+import { PaymentsTab } from "./client-form/PaymentsTab";
+import { PropertiesTab } from "./client-form/PropertiesTab";
+import { HistoryTab } from "./client-form/HistoryTab";
 
 // Import custom hooks
 import { useClientData } from "./client-form/hooks/useClientData";
@@ -124,7 +128,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             />
           </TabsContent>
           
-          {/* Other tabs with empty states */}
+          {/* Jobs Tab */}
           <TabsContent value="jobs" className="space-y-6">
             <EmptyTabContent 
               message="No jobs found for this client."
@@ -133,26 +137,22 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             />
           </TabsContent>
           
+          {/* Payments Tab */}
           <TabsContent value="payments" className="space-y-6">
-            <EmptyTabContent 
-              message="No payments found for this client."
-              actionLabel="Create First Invoice"
-              onAction={handleCreateInvoice}
+            <PaymentsTab 
+              clientId={clientId} 
+              onCreateInvoice={handleCreateInvoice} 
             />
           </TabsContent>
           
+          {/* Properties Tab */}
           <TabsContent value="properties" className="space-y-6">
-            <EmptyTabContent 
-              message="No properties found for this client."
-              actionLabel="Add Property"
-              onAction={() => {}}
-            />
+            <PropertiesTab clientId={clientId} />
           </TabsContent>
           
+          {/* History Tab */}
           <TabsContent value="history" className="space-y-6">
-            <EmptyTabContent 
-              message="No history entries found for this client."
-            />
+            <HistoryTab clientId={clientId} />
           </TabsContent>
         </Tabs>
       </div>
