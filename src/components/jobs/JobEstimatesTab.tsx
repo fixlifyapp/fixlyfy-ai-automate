@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
       setEstimates(data || []);
     } catch (error) {
       console.error("Error fetching estimates:", error);
-      enhancedToast.error("Failed to load estimates");
+      // enhancedToast.error call will be silenced by our updated implementation
     } finally {
       setIsLoading(false);
     }

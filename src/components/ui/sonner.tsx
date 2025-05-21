@@ -10,7 +10,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group fixed top-[15%]"
+      className="toaster group hidden" // Hide all toasts
       position="top-center"
       toastOptions={{
         classNames: {
@@ -26,31 +26,39 @@ const Toaster = ({ ...props }: ToasterProps) => {
           error:
             "group toast error-toast",
         },
-        duration: 5000,
+        duration: 0, // Set to 0 to disable automatic dismissal
       }}
       {...props}
     />
   )
 }
 
-// Enhanced toast with success and error variations
+// Enhanced toast with success and error variations but with empty implementations
 const enhancedToast = {
-  success: (message: string, options?: Parameters<typeof toast>[1]) => 
-    toast.success(message, {
-      ...options,
-      className: "success-toast toast-center",
-      style: {
-        ...options?.style,
-      }
-    }),
-  error: (message: string, options?: Parameters<typeof toast>[1]) => 
-    toast.error(message, {
-      ...options,
-      className: "error-toast toast-center",
-      style: {
-        ...options?.style,
-      }
-    })
+  success: (message: string, options?: Parameters<typeof toast>[1]) => {
+    // No-op implementation to silence notifications
+    return { id: '', dismiss: () => {} };
+  },
+  error: (message: string, options?: Parameters<typeof toast>[1]) => {
+    // No-op implementation to silence notifications
+    return { id: '', dismiss: () => {} };
+  }
 }
 
-export { Toaster, toast, enhancedToast }
+// Override the default toast function to be a no-op
+const noopToast: typeof toast = Object.assign(
+  (message: string) => ({ id: '', dismiss: () => {} }),
+  {
+    ...toast,
+    success: () => ({ id: '', dismiss: () => {} }),
+    error: () => ({ id: '', dismiss: () => {} }),
+    info: () => ({ id: '', dismiss: () => {} }),
+    warning: () => ({ id: '', dismiss: () => {} }),
+    custom: () => ({ id: '', dismiss: () => {} }),
+    promise: () => ({ id: '', dismiss: () => {} }),
+    dismiss: () => {},
+    update: () => {},
+  }
+);
+
+export { Toaster, noopToast as toast, enhancedToast }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { usePayments, Payment } from "@/hooks/usePayments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
 import { Payment as RefundDialogPayment } from "@/types/payment";
 import { recordPayment } from "@/services/jobHistoryService";
@@ -160,9 +159,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         reference
       );
       
-      toast.success('Payment recorded successfully', {
-        className: 'success-toast toast-center'
-      });
+      // No toast notifications will be shown due to our updated implementation
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
@@ -171,9 +168,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
-      toast.error("Failed to process payment", {
-        className: 'error-toast toast-center'
-      });
+      // No toast notifications will be shown
     }
   };
 

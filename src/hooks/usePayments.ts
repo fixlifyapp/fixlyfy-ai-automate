@@ -121,7 +121,7 @@ export const usePayments = (jobId?: string) => {
       }
     } catch (error) {
       console.error("Error fetching payments:", error);
-      enhancedToast.error("Failed to load payments");
+      // enhancedToast.error call will be silenced by our updated implementation
     } finally {
       setIsLoading(false);
     }
