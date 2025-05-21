@@ -7,7 +7,7 @@ interface LogoProps {
 
 export const Logo: React.FC<LogoProps> = ({ className }) => {
   return (
-    <div className="flex items-center">
+    <>
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -40,6 +40,6 @@ export const Logo: React.FC<LogoProps> = ({ className }) => {
         <span className="font-bold text-xl">FixliFy</span>
         <span className="bg-gradient-primary text-white px-2 py-0.5 rounded-md text-sm font-bold">AI</span>
       </div>
-    </div>
+    </>
   );
 };
