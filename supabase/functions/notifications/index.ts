@@ -21,11 +21,8 @@ interface NotificationRequest {
   type: string;
   phoneNumber: string;
   data: Record<string, any>;
-}
-
-interface TestSmsRequest {
-  phoneNumber: string;
-  message: string;
+  isTest?: boolean;
+  message?: string;
 }
 
 serve(async (req) => {
@@ -35,21 +32,19 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
+    const requestData = await req.json();
     
-    // Special route for testing SMS
-    if (url.pathname.endsWith('/test-sms')) {
-      const { phoneNumber, message } = await req.json() as TestSmsRequest;
-      
-      console.log(`Sending test SMS to ${phoneNumber}: ${message}`);
+    // Handle test SMS requests
+    if (requestData.isTest && requestData.phoneNumber && requestData.message) {
+      console.log(`Sending test SMS to ${requestData.phoneNumber}: ${requestData.message}`);
       
       const response = await notificationapi.send({
         type: 'test_sms',
         to: {
-          number: phoneNumber
+          number: requestData.phoneNumber
         },
         sms: {
-          message: message
+          message: requestData.message
         }
       });
       
@@ -64,8 +59,8 @@ serve(async (req) => {
       );
     }
     
-    // Regular notification path
-    const { type, phoneNumber, data } = await req.json() as NotificationRequest;
+    // Handle regular notification requests
+    const { type, phoneNumber, data } = requestData;
     
     let message = '';
     let notificationType = '';
@@ -121,6 +116,11 @@ serve(async (req) => {
       case 'custom':
         notificationType = 'custom_notification';
         message = data.message;
+        break;
+
+      case 'welcome':
+        notificationType = 'welcome';
+        message = data.message || "Welcome to our service!";
         break;
       
       default:

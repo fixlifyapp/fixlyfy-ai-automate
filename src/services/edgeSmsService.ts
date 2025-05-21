@@ -43,12 +43,13 @@ export const sendTestSms = async (
   message: string
 ) => {
   try {
+    // For test SMS, we need to use a different path structure
     const { data: response, error } = await supabase.functions.invoke('notifications', {
       body: {
         phoneNumber,
-        message
-      },
-      functionName: 'test-sms'
+        message,
+        isTest: true
+      }
     });
 
     if (error) {
@@ -119,6 +120,18 @@ export const sendCustomNotification = async (
   message: string
 ) => {
   return await sendSmsNotification('custom', phoneNumber, {
+    message
+  });
+};
+
+/**
+ * Send a welcome notification directly
+ */
+export const sendWelcomeMessage = async (
+  phoneNumber: string,
+  message: string = "Welcome to our service!"
+) => {
+  return await sendSmsNotification('welcome', phoneNumber, {
     message
   });
 };
