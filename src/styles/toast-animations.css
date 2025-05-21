@@ -1,0 +1,33 @@
+
+@keyframes toast-timer {
+  0% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+/* Success toast styling */
+.success-toast {
+  background-color: #F2FCE2 !important;
+  border-color: #BDE99F !important;
+  color: #3A7613 !important;
+}
+
+/* Error toast styling */
+.error-toast {
+  background-color: #FEECEE !important; 
+  border-color: #FAC6CC !important;
+  color: #ea384c !important;
+}
+
+/* Center position for toasts */
+.toast-center {
+  position: fixed !important;
+  top: 15% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  max-width: 420px !important;
+  width: calc(100% - 32px) !important;
+}

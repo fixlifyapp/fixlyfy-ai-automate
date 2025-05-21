@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { payments as mockPayments } from "@/data/payments";
@@ -113,6 +114,7 @@ export const usePayments = (jobId?: string) => {
           ...p,
           status: 'paid', // Default status for new payments
           job_id: jobId,
+          method: p.method as PaymentMethod // Fix TypeScript error by casting
         })) as Payment[];
         
         setPayments(formattedPayments);
@@ -162,9 +164,16 @@ export const usePayments = (jobId?: string) => {
         throw paymentError;
       }
       
-      // Update the payment locally
+      // Update the payment locally with proper typing
       const formattedPayment: Payment = {
-        ...newPayment,
+        id: newPayment.id,
+        amount: newPayment.amount,
+        date: newPayment.date || new Date().toISOString(),
+        method: newPayment.method as PaymentMethod,
+        created_at: newPayment.created_at || new Date().toISOString(),
+        notes: newPayment.notes || "",
+        reference: newPayment.reference || "",
+        invoice_id: newPayment.invoice_id || invoiceId,
         status: 'paid',
         job_id: jobId,
         client_id: clientId
@@ -221,8 +230,8 @@ export const usePayments = (jobId?: string) => {
     totalRefunded,
     netAmount,
     addPayment,
-    refundPayment: async () => {}, // Implement as needed
-    deletePayment: async () => {}, // Implement as needed
+    refundPayment,
+    deletePayment,
     fetchPayments
   };
 };

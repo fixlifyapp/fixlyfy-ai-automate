@@ -3,142 +3,179 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import { PaymentMethod } from "@/types/payment";
+import { Check, DollarSign, CreditCard, FileText } from "lucide-react";
 
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   balance: number;
-  onPaymentProcessed: (amount: number, method: PaymentMethod, reference?: string, notes?: string) => Promise<void>;
+  onPaymentProcessed: (amount: number, method: PaymentMethod, reference?: string, notes?: string) => void;
 }
 
-export function PaymentDialog({
-  open,
-  onOpenChange,
-  balance,
-  onPaymentProcessed
-}: PaymentDialogProps) {
+export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed }: PaymentDialogProps) => {
   const [amount, setAmount] = useState<number>(balance);
   const [method, setMethod] = useState<PaymentMethod>("credit-card");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (amount <= 0) return;
     
-    if (amount <= 0) {
-      toast.error("Payment amount must be greater than zero");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
+    setIsLoading(true);
     try {
       await onPaymentProcessed(amount, method, reference, notes);
-      onOpenChange(false);
-      
-      // Reset form
-      setAmount(balance);
-      setMethod("credit-card");
-      setReference("");
-      setNotes("");
+      resetForm();
     } catch (error) {
-      console.error("Error processing payment:", error);
-      toast.error("Failed to process payment");
+      console.error("Payment processing error:", error);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setAmount(balance);
+    setMethod("credit-card");
+    setReference("");
+    setNotes("");
+  };
+
+  const getMethodIcon = (paymentMethod: PaymentMethod) => {
+    switch (paymentMethod) {
+      case "credit-card":
+        return <CreditCard size={18} className="text-blue-500" />;
+      case "cash":
+        return <DollarSign size={18} className="text-green-500" />;
+      case "e-transfer":
+        return <FileText size={18} className="text-purple-500" />;
+      case "cheque":
+        return <FileText size={18} className="text-orange-500" />;
+      default:
+        return <CreditCard size={18} />;
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Payment</DialogTitle>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) resetForm();
+      onOpenChange(newOpen);
+    }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="text-xl flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-green-500" />
+            Record Payment
+          </DialogTitle>
+          <DialogDescription>
+            Enter payment details below to record a new payment.
+          </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">Amount</Label>
-              <div className="col-span-3 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2">$</span>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(parseFloat(e.target.value))}
-                  className="pl-7"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="method" className="text-right">Method</Label>
-              <Select value={method} onValueChange={(value) => setMethod(value as PaymentMethod)}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="credit-card">Credit Card</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="e-transfer">E-Transfer</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="reference" className="text-right">Reference</Label>
-              <Input
-                id="reference"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                className="col-span-3"
-                placeholder="Transaction ID, Check #, etc."
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="notes" className="text-right align-top mt-3">Notes</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="col-span-3"
-                rows={3}
-              />
+        <div className="space-y-4 py-2">
+          <div>
+            <Label htmlFor="payment-amount" className="text-sm font-medium">
+              Payment Amount ($)
+            </Label>
+            <Input 
+              id="payment-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Remaining balance: ${(balance - amount).toFixed(2)}
+            </p>
+          </div>
+          
+          <div>
+            <Label className="text-sm font-medium">Payment Method</Label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {(['credit-card', 'cash', 'e-transfer', 'cheque'] as PaymentMethod[]).map((paymentMethod) => (
+                <Button
+                  key={paymentMethod}
+                  type="button"
+                  variant={method === paymentMethod ? "default" : "outline"}
+                  className={`justify-start h-auto py-2 px-3 ${method === paymentMethod ? "" : "border-muted-foreground/20"}`}
+                  onClick={() => setMethod(paymentMethod)}
+                >
+                  <div className="flex items-center gap-2">
+                    {getMethodIcon(paymentMethod)}
+                    <span className="capitalize">
+                      {paymentMethod.replace('-', ' ')}
+                    </span>
+                  </div>
+                  {method === paymentMethod && (
+                    <Check className="ml-auto h-4 w-4" />
+                  )}
+                </Button>
+              ))}
             </div>
           </div>
           
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Processing..." : "Add Payment"}
-            </Button>
-          </DialogFooter>
-        </form>
+          <div>
+            <Label htmlFor="payment-reference" className="text-sm font-medium">
+              Reference Number
+              <span className="text-xs font-normal text-muted-foreground ml-1">
+                (Optional)
+              </span>
+            </Label>
+            <Input
+              id="payment-reference"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="Transaction ID, check #, etc."
+              className="mt-1"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="payment-notes" className="text-sm font-medium">
+              Notes
+              <span className="text-xs font-normal text-muted-foreground ml-1">
+                (Optional)
+              </span>
+            </Label>
+            <Textarea
+              id="payment-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any additional payment details..."
+              className="mt-1"
+              rows={3}
+            />
+          </div>
+        </div>
+        
+        <DialogFooter className="border-t pt-4 mt-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={amount <= 0 || isLoading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isLoading ? "Processing..." : "Record Payment"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+};

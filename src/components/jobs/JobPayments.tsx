@@ -19,6 +19,9 @@ import { Payment as RefundDialogPayment } from "@/types/payment";
 import { recordPayment } from "@/services/jobHistoryService";
 import { useRBAC } from "@/components/auth/RBACProvider";
 
+// Import CSS for animations
+import "@/styles/toast-animations.css";
+
 interface JobPaymentsProps {
   jobId: string;
 }
@@ -157,7 +160,9 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         reference
       );
       
-      toast.success('Payment recorded successfully');
+      toast.success('Payment recorded successfully', {
+        className: 'success-toast toast-center'
+      });
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
@@ -166,7 +171,9 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
-      toast.error("Failed to process payment");
+      toast.error("Failed to process payment", {
+        className: 'error-toast toast-center'
+      });
     }
   };
 
@@ -175,7 +182,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     setIsRefundDialogOpen(true);
   };
 
-  const confirmRefund = (paymentId: string, notes?: string) => {
+  const confirmRefund = (paymentId: string) => {
     refundPayment(paymentId);
   };
 
@@ -235,7 +242,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
             </div>
           </div>
           
-          <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
             <DollarSign size={16} />
             Add Payment
           </Button>
