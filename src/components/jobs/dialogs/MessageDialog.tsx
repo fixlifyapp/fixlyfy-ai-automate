@@ -8,13 +8,15 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Loader2, Send } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   client: {
     name: string;
-    phone?: string;  // Added phone as optional property
+    phone?: string;
   };
 }
 
@@ -34,67 +36,79 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
       isClient: true
     }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!message.trim()) return;
+    if (!client.phone) {
+      toast.error("No phone number available for this client");
+      return;
+    }
 
-    // Add the new message to the list
-    const newMessage = {
-      text: message,
-      sender: "You",
-      timestamp: new Date().toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true
-      }),
-      isClient: false
-    };
+    setIsLoading(true);
 
-    setMessages([...messages, newMessage]);
-    toast.success("Message sent to client");
-    setMessage("");
-    
-    // Simulate a reply after a delay (in a real app, this would come from the API)
-    if (Math.random() > 0.5) {
-      setTimeout(() => {
-        const clientReply = {
-          text: "Thanks for the update! I'll check with you later.",
-          sender: client.name,
-          timestamp: new Date().toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true
-          }),
-          isClient: true
-        };
-        setMessages(prevMessages => [...prevMessages, clientReply]);
-      }, 3000);
+    try {
+      // Add the new message to the local list
+      const newMessage = {
+        text: message,
+        sender: "You",
+        timestamp: new Date().toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: true
+        }),
+        isClient: false
+      };
+
+      setMessages([...messages, newMessage]);
+      
+      // Send SMS via Twilio edge function
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          to: client.phone,
+          body: message
+        }
+      });
+      
+      if (error) {
+        console.error("Error sending SMS:", error);
+        toast.error("Failed to send SMS. Please try again.");
+      } else if (data.success) {
+        toast.success("Message sent to client");
+        setMessage("");
+      } else {
+        toast.error(`Failed to send SMS: ${data.error || 'Unknown error'}`);
+      }
+      
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Message History with {client.name}</DialogTitle>
+          <DialogTitle>Message {client.name}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
           <div className="h-64 overflow-y-auto border rounded-md p-3 mb-4 space-y-3">
             {messages.map((msg, index) => (
               <div 
                 key={index} 
-                className={`flex flex-col max-w-[80%] ${msg.isClient ? 'self-end items-end ml-auto' : ''}`}
+                className={`flex flex-col ${msg.isClient ? 'self-end items-end ml-auto' : ''}`}
               >
                 <div 
                   className={`${
                     msg.isClient 
                       ? 'bg-fixlyfy text-white' 
                       : 'bg-muted'
-                  } p-3 rounded-lg`}
+                  } p-3 rounded-lg max-w-[80%] ${msg.isClient ? 'ml-auto' : ''}`}
                 >
                   <p className="text-sm">{msg.text}</p>
                 </div>
@@ -112,6 +126,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
               rows={2}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              disabled={isLoading}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -119,7 +134,17 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
                 }
               }}
             />
-            <Button onClick={handleSendMessage}>Send</Button>
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isLoading || !message.trim()}
+              className="self-end"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>

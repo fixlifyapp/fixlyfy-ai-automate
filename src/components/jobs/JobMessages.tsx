@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, PlusCircle, Bot } from "lucide-react";
+import { MessageSquare, PlusCircle, Bot, Loader2 } from "lucide-react";
 import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
 import { useAI } from "@/hooks/use-ai";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobMessagesProps {
   jobId: string;
@@ -13,7 +14,7 @@ interface JobMessagesProps {
 
 export const JobMessages = ({ jobId }: JobMessagesProps) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
-  const { generateText, isLoading } = useAI({
+  const { generateText, isLoading: isAILoading } = useAI({
     systemContext: "You are an assistant helping with job messaging for a field service company. Keep responses professional, friendly, and concise."
   });
   
@@ -34,9 +35,10 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
       recipient: "technician"
     }
   ]);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   const handleSuggestResponse = async () => {
-    if (isLoading) return;
+    if (isAILoading) return;
     
     try {
       const lastMessage = messages[messages.length - 1];
@@ -54,20 +56,54 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           action: {
             label: "Use",
             onClick: () => {
-              const newMessage = {
-                id: `msg-${Date.now()}`,
-                date: new Date().toISOString(),
-                content: suggestedResponse,
-                sender: "technician",
-                recipient: "client"
-              };
-              setMessages([...messages, newMessage]);
+              handleUseSuggestion(suggestedResponse);
             }
           }
         });
       }
     } catch (error) {
       toast.error("Failed to generate response suggestion");
+    }
+  };
+  
+  const handleUseSuggestion = async (content: string) => {
+    setIsSendingMessage(true);
+    
+    try {
+      // In a real app, client info would be fetched based on jobId
+      const clientPhone = "(555) 123-4567"; // Example phone number
+      
+      // Call the Twilio edge function
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          to: clientPhone,
+          body: content
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (data.success) {
+        const newMessage = {
+          id: `msg-${Date.now()}`,
+          date: new Date().toISOString(),
+          content: content,
+          sender: "technician",
+          recipient: "client"
+        };
+        
+        setMessages([...messages, newMessage]);
+        toast.success("Message sent to client");
+      } else {
+        toast.error(`Failed to send message: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message to client");
+    } finally {
+      setIsSendingMessage(false);
     }
   };
 
@@ -80,15 +116,16 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
             <Button 
               variant="outline"
               onClick={handleSuggestResponse}
-              disabled={isLoading}
+              disabled={isAILoading || isSendingMessage}
               className="gap-2"
             >
-              <Bot size={16} />
-              {isLoading ? "Thinking..." : "Suggest Response"}
+              {isAILoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
+              {isAILoading ? "Thinking..." : "Suggest Response"}
             </Button>
             <Button 
               onClick={() => setIsMessageDialogOpen(true)} 
               className="gap-2"
+              disabled={isSendingMessage}
             >
               <PlusCircle size={16} />
               New Message
