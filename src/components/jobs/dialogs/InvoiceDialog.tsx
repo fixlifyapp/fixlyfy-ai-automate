@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -201,6 +200,41 @@ export const InvoiceDialog = ({
           currentUser?.name,
           currentUser?.id
         );
+        
+        // Get client phone number to send SMS notification
+        try {
+          // Get the job to find client ID
+          const { data: job } = await supabase
+            .from('jobs')
+            .select('client_id')
+            .eq('id', jobId)
+            .single();
+            
+          if (job && job.client_id) {
+            // Get client phone number
+            const { data: client } = await supabase
+              .from('clients')
+              .select('phone')
+              .eq('id', job.client_id)
+              .single();
+              
+            if (client && client.phone) {
+              // Import here to avoid circular dependency
+              const { sendInvoiceNotificationSMS } = await import('@/services/notificationService');
+              
+              // Send SMS notification
+              await sendInvoiceNotificationSMS(
+                client.phone,
+                invoiceNumber,
+                total,
+                jobId
+              );
+              toast.success("Invoice SMS notification sent");
+            }
+          }
+        } catch (error) {
+          console.error("Failed to send SMS notification:", error);
+        }
       } else {
         // Update existing invoice
         const { error } = await supabase
@@ -245,6 +279,7 @@ export const InvoiceDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving invoice:", error);
+      toast.error("Failed to save invoice");
     } finally {
       setIsLoading(false);
     }
