@@ -1,12 +1,6 @@
 
-import notificationapi from 'notificationapi-node-server-sdk';
+import { sendSmsNotification } from '@/services/edgeSmsService';
 import { PaymentMethod } from '@/types/payment';
-
-// Initialize the NotificationAPI client
-notificationapi.init(
-  '3tisis9bog6dutu8lmkq4zbosq',
-  'dujef4sag9zj997zy85hc95sgqmdg2db6xkwcij1ya2zjstmguihno4u4n'
-);
 
 /**
  * Send payment confirmation SMS to client
@@ -24,24 +18,12 @@ export const sendPaymentConfirmationSMS = async (
   reference?: string,
 ) => {
   try {
-    // Format payment method to be more readable
-    const formattedMethod = method.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    
-    // Create a human-readable message
-    const message = `Thank you for your payment of $${amount.toFixed(2)} via ${formattedMethod}${reference ? ` (Ref: ${reference})` : ''} for Job #${jobId}. Your payment has been received successfully.`;
-    
-    // Send the SMS notification
-    const response = await notificationapi.send({
-      type: 'payment_confirmation',
-      to: {
-        number: phoneNumber
-      },
-      sms: {
-        message: message
-      }
+    return await sendSmsNotification('payment', phoneNumber, {
+      amount,
+      method,
+      jobId,
+      reference
     });
-    
-    return response;
   } catch (error) {
     console.error('Failed to send SMS notification:', error);
     throw error;
@@ -60,19 +42,10 @@ export const sendRefundConfirmationSMS = async (
   jobId: string
 ) => {
   try {
-    const message = `A refund of $${amount.toFixed(2)} has been processed for Job #${jobId}. The refund should appear in your account within 3-5 business days.`;
-    
-    const response = await notificationapi.send({
-      type: 'refund_confirmation',
-      to: {
-        number: phoneNumber
-      },
-      sms: {
-        message: message
-      }
+    return await sendSmsNotification('refund', phoneNumber, {
+      amount,
+      jobId
     });
-    
-    return response;
   } catch (error) {
     console.error('Failed to send refund SMS notification:', error);
     throw error;
@@ -95,20 +68,12 @@ export const sendInvoiceNotificationSMS = async (
   dueDate?: string
 ) => {
   try {
-    const dueDateText = dueDate ? ` Payment is due by ${dueDate}.` : '';
-    const message = `Invoice #${invoiceNumber} for $${amount.toFixed(2)} has been created for Job #${jobId}.${dueDateText} Thank you for your business.`;
-    
-    const response = await notificationapi.send({
-      type: 'invoice_notification',
-      to: {
-        number: phoneNumber
-      },
-      sms: {
-        message: message
-      }
+    return await sendSmsNotification('invoice', phoneNumber, {
+      invoiceNumber,
+      amount,
+      jobId,
+      dueDate
     });
-    
-    return response;
   } catch (error) {
     console.error('Failed to send invoice SMS notification:', error);
     throw error;
@@ -129,19 +94,11 @@ export const sendEstimateNotificationSMS = async (
   jobId: string
 ) => {
   try {
-    const message = `Estimate #${estimateNumber} for $${amount.toFixed(2)} has been created for Job #${jobId}. Please review it at your convenience.`;
-    
-    const response = await notificationapi.send({
-      type: 'estimate_notification',
-      to: {
-        number: phoneNumber
-      },
-      sms: {
-        message: message
-      }
+    return await sendSmsNotification('estimate', phoneNumber, {
+      estimateNumber,
+      amount,
+      jobId
     });
-    
-    return response;
   } catch (error) {
     console.error('Failed to send estimate SMS notification:', error);
     throw error;
@@ -160,20 +117,10 @@ export const sendClientMessageSMS = async (
   jobId?: string
 ) => {
   try {
-    const jobReference = jobId ? ` (Job #${jobId})` : '';
-    const fullMessage = `New message${jobReference}: ${message}`;
-    
-    const response = await notificationapi.send({
-      type: 'client_message',
-      to: {
-        number: phoneNumber
-      },
-      sms: {
-        message: fullMessage
-      }
+    return await sendSmsNotification('message', phoneNumber, {
+      message,
+      jobId
     });
-    
-    return response;
   } catch (error) {
     console.error('Failed to send client message SMS:', error);
     throw error;

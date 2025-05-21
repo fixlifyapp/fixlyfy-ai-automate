@@ -43,12 +43,12 @@ export const sendTestSms = async (
   message: string
 ) => {
   try {
-    // For test SMS, we need to use a different path structure
+    // For test SMS, we use the same edge function with different parameters
     const { data: response, error } = await supabase.functions.invoke('notifications', {
       body: {
+        isTest: true,
         phoneNumber,
-        message,
-        isTest: true
+        message
       }
     });
 
