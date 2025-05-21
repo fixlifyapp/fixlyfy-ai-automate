@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageSquare, PlusCircle, Bot, Loader2 } from "lucide-react";
-import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
+import { MessageDialog } from "@/components/messages/MessageDialog";
 import { useAI } from "@/hooks/use-ai";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";

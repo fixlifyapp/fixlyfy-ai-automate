@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -6,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clients } from "@/data/clients";
-import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
+import { MessageDialog } from "@/components/messages/MessageDialog";
 
 interface Message {
   id: string;
