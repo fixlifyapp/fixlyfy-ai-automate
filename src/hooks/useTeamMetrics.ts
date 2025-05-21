@@ -21,14 +21,20 @@ export const useTeamMetrics = (dateRange?: { start: string; end: string }) => {
       setError(null);
       
       try {
-        // Get all jobs with technician IDs
+        // First get all technicians from profiles
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, avatar_url');
+          
+        if (profilesError) throw profilesError;
+        
+        // Then get jobs data to calculate metrics
         let query = supabase
           .from('jobs')
           .select(`
             id,
             revenue,
-            technician_id,
-            profiles:technician_id (name, avatar_url)
+            technician_id
           `);
           
         // Filter by date range if provided
@@ -40,45 +46,42 @@ export const useTeamMetrics = (dateRange?: { start: string; end: string }) => {
         // Only include completed jobs for revenue calculations
         query = query.eq('status', 'completed');
           
-        const { data: jobs, error } = await query;
+        const { data: jobs, error: jobsError } = await query;
         
-        if (error) throw error;
+        if (jobsError) throw jobsError;
         
-        // Group jobs by technician and calculate metrics
+        // Initialize metrics for all technicians
         const techMetricsMap = new Map<string, TechnicianMetric>();
         
-        for (const job of (jobs || [])) {
-          if (job.technician_id && job.profiles) {
-            const techId = job.technician_id;
-            const techName = job.profiles.name || 'Unknown';
-            const avatar = job.profiles.avatar_url;
-            const revenue = job.revenue || 0;
-            
-            if (!techMetricsMap.has(techId)) {
-              techMetricsMap.set(techId, {
-                id: techId,
-                name: techName,
-                job_count: 1,
-                total_revenue: revenue,
-                avatar
-              });
-            } else {
-              const current = techMetricsMap.get(techId)!;
-              techMetricsMap.set(techId, {
-                ...current,
-                job_count: current.job_count + 1,
-                total_revenue: current.total_revenue + revenue
-              });
-            }
+        // Initialize all technicians with 0 metrics
+        profiles.forEach(profile => {
+          techMetricsMap.set(profile.id, {
+            id: profile.id,
+            name: profile.name || 'Unknown',
+            job_count: 0,
+            total_revenue: 0,
+            avatar: profile.avatar_url
+          });
+        });
+        
+        // Update metrics based on jobs data
+        (jobs || []).forEach(job => {
+          if (job.technician_id && techMetricsMap.has(job.technician_id)) {
+            const current = techMetricsMap.get(job.technician_id)!;
+            techMetricsMap.set(job.technician_id, {
+              ...current,
+              job_count: current.job_count + 1,
+              total_revenue: current.total_revenue + (job.revenue || 0)
+            });
           }
-        }
+        });
         
         // Convert to array and sort by revenue
         const techMetricsArray = Array.from(techMetricsMap.values())
           .sort((a, b) => b.total_revenue - a.total_revenue);
         
         setTechnicians(techMetricsArray);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching team metrics:", error);
         setError("Failed to load team metrics");
       } finally {

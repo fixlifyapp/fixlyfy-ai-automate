@@ -45,9 +45,13 @@ export const updateTeamMembers = (newMembers: TeamMember[]): TeamMember[] => {
 // Function to add a team member to Supabase
 export const addTeamMember = async (member: Omit<TeamMember, "id">): Promise<TeamMember | null> => {
   try {
+    // Generate a UUID for the new team member
+    const newId = crypto.randomUUID();
+    
     const { data, error } = await supabase
       .from('profiles')
       .insert({
+        id: newId,
         name: member.name,
         role: member.role,
         avatar_url: member.avatar,

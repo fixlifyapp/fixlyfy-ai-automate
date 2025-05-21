@@ -1,107 +1,79 @@
 
-import { DollarSign, CalendarClock } from "lucide-react";
-import { MetricCard } from "./metrics/MetricCard";
-import { DateRangeSelector } from "./metrics/DateRangeSelector";
+import { useState, useMemo } from "react";
+import { useTeamMetrics, TechnicianMetric } from "@/hooks/useTeamMetrics";
 import { TopTechnicians } from "./metrics/TopTechnicians";
-import { useMetricsData } from "./metrics/useMetricsData";
+import { DateRangeSelector } from "./metrics/DateRangeSelector";
+import { formatCurrency } from "@/lib/utils";
 
-export const ExpandedDashboardMetrics = () => {
-  const {
-    metrics,
-    isLoading,
-    timeFilter,
-    customDateRange,
-    getFilterLabel,
-    handleTimeFilterChange,
-    handleDateRangeChange,
-    formatValue,
-    fetchMetricsData,
-    calculateRevenueChange,
-    calculateOpenJobsChange
-  } = useMetricsData();
+interface ExpandedDashboardMetricsProps {
+  onClose: () => void;
+}
+
+export const ExpandedDashboardMetrics = ({
+  onClose,
+}: ExpandedDashboardMetricsProps) => {
+  const [dateRange, setDateRange] = useState<{
+    start: string;
+    end: string;
+  }>({
+    start: new Date(new Date().getFullYear(), 0, 1).toISOString(),
+    end: new Date().toISOString(),
+  });
+
+  const { technicians, isLoading } = useTeamMetrics(dateRange);
+
+  const formatValue = (value: number): string => {
+    return formatCurrency(value);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <h2 className="text-xl font-semibold">Dashboard Metrics</h2>
+    <div className="expand-animation z-50 bg-white fixed inset-0 overflow-y-auto">
+      <div className="container mx-auto px-6 py-8 max-w-screen-lg">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Performance Metrics</h1>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-x"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
         <DateRangeSelector
-          timeFilter={timeFilter}
-          customDateRange={customDateRange}
+          value={{
+            from: new Date(dateRange.start),
+            to: new Date(dateRange.end),
+          }}
+          onChange={({ from, to }) => {
+            if (from && to) {
+              setDateRange({
+                start: from.toISOString(),
+                end: to.toISOString(),
+              });
+            }
+          }}
+        />
+
+        <TopTechnicians
+          technicians={technicians}
           isLoading={isLoading}
-          getFilterLabel={getFilterLabel}
-          onTimeFilterChange={handleTimeFilterChange}
-          onDateRangeChange={handleDateRangeChange}
-          onRefresh={fetchMetricsData}
+          formatValue={formatValue}
         />
       </div>
-      
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <MetricCard
-          title="Total Revenue"
-          value={formatValue(metrics.totalRevenue)}
-          icon={<DollarSign className="h-4 w-4 text-white" />}
-          iconColor="bg-blue-500"
-          change={calculateRevenueChange()}
-          isLoading={isLoading}
-          changeLabel="vs previous period"
-        />
-        <MetricCard
-          title="Open Jobs"
-          value={metrics.openJobs.toString()}
-          icon={<CalendarClock className="h-4 w-4 text-white" />}
-          iconColor="bg-amber-500"
-          change={calculateOpenJobsChange()}
-          isLoading={isLoading}
-          changeLabel="vs previous period"
-        />
-        <MetricCard
-          title="Sales (Invoiced Total)"
-          value={formatValue(metrics.salesTotal)}
-          icon={<span className="text-white text-lg">$</span>}
-          iconColor="bg-blue-500"
-          isLoading={isLoading}
-          changeLabel="Invoices marked as paid or sent"
-        />
-        <MetricCard
-          title="Amount Collected"
-          value={formatValue(metrics.amountCollected)}
-          icon={<span className="text-white text-lg">💰</span>}
-          iconColor="bg-green-500"
-          isLoading={isLoading}
-          changeLabel="Sum of actual payments logged"
-        />
-        <MetricCard
-          title="Jobs Completed"
-          value={metrics.jobsCompleted.toString()}
-          icon={<span className="text-white text-lg">✅</span>}
-          iconColor="bg-fixlyfy-success"
-          isLoading={isLoading}
-          changeLabel="Jobs with status completed"
-        />
-        <MetricCard
-          title="Jobs Cancelled"
-          value={metrics.jobsCancelled.toString()}
-          icon={<span className="text-white text-lg">❌</span>}
-          iconColor="bg-fixlyfy-error"
-          isLoading={isLoading}
-          changeLabel="Jobs with status cancelled"
-        />
-        <MetricCard
-          title="Jobs Created"
-          value={metrics.jobsCreated.toString()}
-          icon={<span className="text-white text-lg">🆕</span>}
-          iconColor="bg-indigo-500"
-          isLoading={isLoading}
-          changeLabel="All jobs created in period"
-        />
-      </div>
-      
-      {/* Top Performing Technicians */}
-      <TopTechnicians 
-        technicians={metrics.topTechnicians}
-        isLoading={isLoading}
-        formatValue={formatValue}
-      />
     </div>
   );
 };
