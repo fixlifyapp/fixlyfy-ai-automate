@@ -24,6 +24,7 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
         size="icon"
         className="h-7 w-7 text-fixlyfy hover:bg-fixlyfy/10"
         onClick={onMessageClick}
+        aria-label="Send message"
       >
         <MessageSquare size={14} />
       </Button>

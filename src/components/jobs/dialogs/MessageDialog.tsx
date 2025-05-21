@@ -28,6 +28,48 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
+  // Real-time subscription for new messages
+  useEffect(() => {
+    if (!open || !client.id) return;
+    
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: conversationId ? `conversation_id=eq.${conversationId}` : undefined
+        },
+        (payload) => {
+          // Only process messages that aren't already in our list
+          const newMsg = payload.new;
+          if (newMsg && !messages.some(msg => msg.id === newMsg.id)) {
+            const formattedMessage = {
+              text: newMsg.body,
+              sender: newMsg.direction === 'outbound' ? 'You' : client.name,
+              timestamp: new Date(newMsg.created_at).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: true
+              }),
+              isClient: newMsg.direction === 'inbound'
+            };
+            
+            setMessages(prev => [...prev, formattedMessage]);
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, client.id, conversationId, messages]);
+
   // Fetch messages when dialog opens
   useEffect(() => {
     if (open && client.id) {
@@ -60,6 +102,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
           
         if (messagesData) {
           const formattedMessages = messagesData.map(msg => ({
+            id: msg.id,
             text: msg.body,
             sender: msg.direction === 'outbound' ? 'You' : client.name,
             timestamp: new Date(msg.created_at).toLocaleString('en-US', {
@@ -77,6 +120,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
       } else if (client.id) {
         // If no conversation exists yet, create a sample conversation starter
         setMessages([{
+          id: 'welcome',
           text: "Hello! How can I assist you today?",
           sender: "You",
           timestamp: new Date().toLocaleString('en-US', {
@@ -109,6 +153,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
     try {
       // Add the new message to the local list
       const newMessage = {
+        id: `temp-${Date.now()}`,
         text: message,
         sender: "You",
         timestamp: new Date().toLocaleString('en-US', {
@@ -131,7 +176,8 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
           .from('conversations')
           .insert({
             client_id: client.id,
-            status: 'active'
+            status: 'active',
+            last_message_at: new Date().toISOString()
           })
           .select()
           .single();
@@ -183,7 +229,6 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
             .eq('direction', 'outbound');
         }
         
-        toast.success("Message sent to client");
         setMessage("");
       } else {
         toast.error(`Failed to send SMS: ${data.error || 'Unknown error'}`);
@@ -212,7 +257,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
             <div className="h-64 overflow-y-auto border rounded-md p-3 mb-4 space-y-3">
               {messages.map((msg, index) => (
                 <div 
-                  key={index} 
+                  key={msg.id || index} 
                   className={`flex flex-col ${msg.isClient ? 'self-end items-end ml-auto' : ''}`}
                 >
                   <div 

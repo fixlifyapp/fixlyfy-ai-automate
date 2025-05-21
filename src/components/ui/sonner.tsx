@@ -33,32 +33,34 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-// Enhanced toast with success and error variations but with empty implementations
-const enhancedToast = {
-  success: (message: string, options?: Parameters<typeof toast>[1]) => {
+// Updated type definitions for the toast override
+const customToast = {
+  success: (message: string | React.ReactNode, options?: any) => {
     // No-op implementation to silence notifications
     return { id: '', dismiss: () => {} };
   },
-  error: (message: string, options?: Parameters<typeof toast>[1]) => {
+  error: (message: string | React.ReactNode, options?: any) => {
+    // No-op implementation to silence notifications
+    return { id: '', dismiss: () => {} };
+  },
+  info: (message: string | React.ReactNode, options?: any) => {
+    // No-op implementation to silence notifications
+    return { id: '', dismiss: () => {} };
+  },
+  warning: (message: string | React.ReactNode, options?: any) => {
     // No-op implementation to silence notifications
     return { id: '', dismiss: () => {} };
   }
 }
 
-// Override the default toast function to be a no-op
-const noopToast: typeof toast = Object.assign(
-  (message: string) => ({ id: '', dismiss: () => {} }),
+// Override the default toast function with properly typed no-op functions
+export { Toaster }
+export const toast = Object.assign(
+  (message: string | React.ReactNode) => ({ id: '', dismiss: () => {} }),
   {
     ...toast,
-    success: () => ({ id: '', dismiss: () => {} }),
-    error: () => ({ id: '', dismiss: () => {} }),
-    info: () => ({ id: '', dismiss: () => {} }),
-    warning: () => ({ id: '', dismiss: () => {} }),
-    custom: () => ({ id: '', dismiss: () => {} }),
-    promise: () => ({ id: '', dismiss: () => {} }),
+    ...customToast,
     dismiss: () => {},
     update: () => {},
   }
 );
-
-export { Toaster, noopToast as toast, enhancedToast }

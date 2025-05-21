@@ -40,6 +40,53 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     }
   }, [jobId]);
 
+  // Real-time subscription for incoming messages
+  useEffect(() => {
+    if (!jobId) return;
+
+    // First, find the conversation ID for the current job
+    const getConversationId = async () => {
+      try {
+        const { data: conversation } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('job_id', jobId)
+          .single();
+
+        if (conversation) {
+          // Set up real-time listener for this conversation
+          const channel = supabase
+            .channel('job-messages')
+            .on(
+              'postgres_changes',
+              {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `conversation_id=eq.${conversation.id}`
+              },
+              (payload) => {
+                // Make sure we don't duplicate messages
+                const newMessage = payload.new;
+                if (newMessage && !messages.some(msg => msg.id === newMessage.id)) {
+                  fetchMessages(); // Refresh messages when a new one comes in
+                }
+              }
+            )
+            .subscribe();
+
+          return () => {
+            supabase.removeChannel(channel);
+          };
+        }
+      } catch (error) {
+        console.error("Error setting up real-time subscription:", error);
+      }
+    };
+
+    getConversationId();
+  }, [jobId, messages]);
+
   const fetchJobDetails = async () => {
     try {
       const { data: job } = await supabase
