@@ -1,6 +1,6 @@
 
 import { useTheme } from "next-themes"
-import { Toaster as Sonner, toast } from "sonner"
+import { Toaster as Sonner, toast as sonnerToast } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -58,9 +58,12 @@ export { Toaster }
 export const toast = Object.assign(
   (message: string | React.ReactNode) => ({ id: '', dismiss: () => {} }),
   {
-    ...toast,
+    ...sonnerToast,
     ...customToast,
     dismiss: () => {},
     update: () => {},
   }
 );
+
+// Export a renamed version for external components to use
+export const enhancedToast = toast;

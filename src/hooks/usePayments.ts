@@ -1,6 +1,6 @@
+
 import { useState, useMemo, useCallback } from "react";
-import { toast } from "sonner";
-import { enhancedToast } from "@/components/ui/sonner";
+import { toast, enhancedToast } from "@/components/ui/sonner";
 import { payments as mockPayments } from "@/data/payments";
 import { supabase } from "@/integrations/supabase/client";
 import { PaymentMethod } from "@/types/payment";
@@ -121,7 +121,7 @@ export const usePayments = (jobId?: string) => {
       }
     } catch (error) {
       console.error("Error fetching payments:", error);
-      // enhancedToast.error call will be silenced by our updated implementation
+      // toast.error call will be silenced by our updated implementation
     } finally {
       setIsLoading(false);
     }
@@ -182,12 +182,12 @@ export const usePayments = (jobId?: string) => {
       
       // Add to local state
       setPayments(prev => [formattedPayment, ...prev]);
-      enhancedToast.success("Payment added successfully");
+      toast.success("Payment added successfully");
       
       return formattedPayment;
     } catch (error) {
       console.error("Error adding payment:", error);
-      enhancedToast.error("Failed to add payment");
+      toast.error("Failed to add payment");
       throw error;
     }
   };
@@ -200,11 +200,11 @@ export const usePayments = (jobId?: string) => {
         prev.map(p => p.id === paymentId ? { ...p, status: 'refunded' } : p)
       );
       
-      enhancedToast.success("Payment refunded successfully");
+      toast.success("Payment refunded successfully");
       return true;
     } catch (error) {
       console.error("Error refunding payment:", error);
-      enhancedToast.error("Failed to refund payment");
+      toast.error("Failed to refund payment");
       return false;
     }
   };
@@ -214,11 +214,11 @@ export const usePayments = (jobId?: string) => {
     try {
       // Update local state
       setPayments(prev => prev.filter(p => p.id !== paymentId));
-      enhancedToast.success("Payment deleted successfully");
+      toast.success("Payment deleted successfully");
       return true;
     } catch (error) {
       console.error("Error deleting payment:", error);
-      enhancedToast.error("Failed to delete payment");
+      toast.error("Failed to delete payment");
       throw error;
     }
   };
