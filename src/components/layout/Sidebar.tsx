@@ -8,14 +8,14 @@ import {
   Calendar, 
   Settings, 
   BarChart3, 
-  Mail, 
-  Zap,
   Menu, 
   ChevronRight,
   Package,
   UserCheck,
   Receipt,
-  Brain
+  Brain,
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -82,6 +82,14 @@ const menuItems = [
     permission: null // Accessible to all
   },
   {
+    name: 'Connect Center',
+    icon: MessageSquare, 
+    path: '/connect', 
+    badge: '15',
+    highlight: false,
+    permission: null // Accessible to all
+  },
+  {
     name: 'Automations',
     icon: Zap,
     path: '/automations',
@@ -94,14 +102,6 @@ const menuItems = [
     path: '/reports',
     highlight: false,
     permission: 'reports.view' // Specific permission for reports
-  },
-  { 
-    name: 'Messages', 
-    icon: Mail, 
-    path: '/messages', 
-    badge: '3',
-    highlight: false,
-    permission: null // Accessible to all
   }
 ];
 

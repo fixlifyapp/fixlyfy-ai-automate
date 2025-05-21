@@ -18,7 +18,7 @@ import SchedulePage from "./pages/SchedulePage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AutomationsPage from "./pages/AutomationsPage";
-import MessagesPage from "./pages/MessagesPage";
+import ConnectCenterPage from "./pages/ConnectCenterPage";
 import ProductsPage from "./pages/ProductsPage";
 import PreviewPage from "./pages/PreviewPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
@@ -87,9 +87,9 @@ const App = () => (
                   <AutomationsPage />
                 </ProtectedRoute>
               } />
-              <Route path="/messages" element={
+              <Route path="/connect" element={
                 <ProtectedRoute>
-                  <MessagesPage />
+                  <ConnectCenterPage />
                 </ProtectedRoute>
               } />
               <Route path="/products" element={
