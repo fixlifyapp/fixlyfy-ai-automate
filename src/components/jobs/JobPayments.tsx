@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { PaymentMethod } from "@/types/payment";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { Dialog } from "@/components/ui/dialog";
-import { usePayments, Payment } from "@/hooks/usePayments";
+import { usePayments, Payment } from "@/hooks/payments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
