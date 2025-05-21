@@ -15,6 +15,7 @@ import { PaymentSummary } from "./payments/PaymentSummary";
 import { usePaymentJobHistory } from "./payments/usePaymentJobHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { PaymentMethod } from "@/types/payment";
 
 // Import CSS for animations
 import "@/styles/toast-animations.css";
@@ -78,7 +79,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     }
   };
 
-  const handlePaymentProcessed = async (amount: number, method: any, reference?: string, notes?: string) => {
+  const handlePaymentProcessed = async (amount: number, method: string, reference?: string, notes?: string) => {
     try {
       // Get the invoice information
       const { data: invoices } = await supabase
@@ -144,7 +145,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       }
       
       // Record in job history
-      await recordNewPayment(amount, method, reference);
+      await recordNewPayment(amount, method as PaymentMethod, reference);
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
@@ -227,3 +228,4 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     </Card>
   );
 };
+

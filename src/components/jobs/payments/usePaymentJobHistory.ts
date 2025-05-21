@@ -4,6 +4,7 @@ import { Payment } from "@/hooks/payments";
 import { recordPayment } from "@/services/jobHistoryService";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useCallback } from "react";
+import { PaymentMethod } from "@/types/payment";
 
 export const usePaymentJobHistory = (jobId: string) => {
   const { currentUser } = useRBAC();
@@ -35,7 +36,7 @@ export const usePaymentJobHistory = (jobId: string) => {
   
   const recordNewPayment = useCallback(async (
     amount: number,
-    method: string,
+    method: PaymentMethod,
     reference?: string
   ) => {
     try {
