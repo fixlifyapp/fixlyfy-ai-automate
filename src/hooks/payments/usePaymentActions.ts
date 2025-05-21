@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { Payment, PaymentInput } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { enhancedToast } from "@/components/ui/sonner";
+import { PaymentMethod } from "@/types/payment";
 
 export const usePaymentActions = (
   jobId?: string, 
@@ -56,7 +57,7 @@ export const usePaymentActions = (
         id: newPayment.id,
         amount: newPayment.amount,
         date: newPayment.date || new Date().toISOString(),
-        method: newPayment.method,
+        method: newPayment.method as PaymentMethod, // Properly cast to PaymentMethod type
         created_at: newPayment.created_at || new Date().toISOString(),
         notes: newPayment.notes || "",
         reference: newPayment.reference || "",

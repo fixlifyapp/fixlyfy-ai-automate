@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Payment } from "./types";
 import { payments as mockPayments } from "@/data/payments";
+import { PaymentMethod } from "@/types/payment";
 
 export const useFetchPayments = (jobId?: string) => {
   const [payments, setPayments] = useState<Payment[]>(() => {
@@ -70,7 +71,7 @@ export const useFetchPayments = (jobId?: string) => {
           ...p,
           status: 'paid', // Default status for new payments
           job_id: jobId,
-          method: p.method as PaymentMethod // Fix TypeScript error by casting
+          method: p.method as PaymentMethod // Properly cast to PaymentMethod type
         })) as Payment[];
         
         setPayments(formattedPayments);
