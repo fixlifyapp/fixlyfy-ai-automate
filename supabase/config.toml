@@ -98,4 +98,3 @@ backend = "postgres"
 
 [functions.notifications]
 verify_jwt = true
-

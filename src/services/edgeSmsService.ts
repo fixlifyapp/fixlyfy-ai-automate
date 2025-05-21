@@ -43,11 +43,12 @@ export const sendTestSms = async (
   message: string
 ) => {
   try {
-    const { data: response, error } = await supabase.functions.invoke('notifications/test-sms', {
+    const { data: response, error } = await supabase.functions.invoke('notifications', {
       body: {
         phoneNumber,
         message
-      }
+      },
+      functionName: 'test-sms'
     });
 
     if (error) {
