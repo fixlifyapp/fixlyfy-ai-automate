@@ -1,3 +1,4 @@
+
 import {
   BarChart2,
   Bot,
@@ -17,7 +18,7 @@ import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { NavGroupItem } from "@/components/layout/NavGroupItem";
 import { NavItem } from "@/components/layout/NavItem";
-import { UserMenu } from "@/components/layout/UserMenu";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const sidebarLinks = [
   {
