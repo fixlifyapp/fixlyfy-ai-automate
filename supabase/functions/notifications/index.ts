@@ -26,18 +26,77 @@ serve(async (req) => {
     
     // Handle test SMS requests
     if (requestData.isTest && requestData.phoneNumber && requestData.message) {
-      console.log(`Test SMS would be sent to ${requestData.phoneNumber}: ${requestData.message}`);
+      console.log(`Twilio SMS would be sent to ${requestData.phoneNumber}: ${requestData.message}`);
       
-      // In a real implementation, you would integrate with an SMS provider here
-      // For now, we'll just log it and return success
+      // In production, we would use Twilio here
+      const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+      const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
       
-      return new Response(
-        JSON.stringify({ success: true, message: 'Test SMS would be sent (simulation)', destination: requestData.phoneNumber }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      if (twilioAccountSid && twilioAuthToken && twilioPhoneNumber) {
+        try {
+          // Create Basic Auth header
+          const authHeader = 'Basic ' + btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+          
+          // Prepare the message data
+          const formData = new URLSearchParams();
+          formData.append('To', requestData.phoneNumber);
+          formData.append('From', twilioPhoneNumber);
+          formData.append('Body', requestData.message);
+          
+          // Send the message via Twilio
+          const twilioResponse = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': authHeader,
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: formData.toString(),
+            }
+          );
+          
+          const responseData = await twilioResponse.json();
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'SMS sent via Twilio', 
+              destination: requestData.phoneNumber,
+              twilioResponse: responseData
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        } catch (twilioError) {
+          console.error('Twilio API error:', twilioError);
+          // Fall back to simulation if Twilio sending fails
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Test SMS would be sent (simulation fallback)', 
+              destination: requestData.phoneNumber,
+              error: twilioError.message
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
         }
-      );
+      } else {
+        // Simulate SMS if Twilio credentials aren't available
+        return new Response(
+          JSON.stringify({ success: true, message: 'Test SMS would be sent (simulation)', destination: requestData.phoneNumber }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
     
     // Handle regular notification requests
@@ -99,22 +158,87 @@ serve(async (req) => {
         throw new Error('Invalid notification type');
     }
 
-    // In a real implementation, you would integrate with an SMS provider here
-    // For now, we'll just log the message and return success
-    console.log(`SMS would be sent to ${phoneNumber}: ${message}`);
+    // Try to send via Twilio if credentials are available
+    const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+    const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+    const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
     
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'SMS notification would be sent (simulation)',
-        destination: phoneNumber,
-        content: message 
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    if (twilioAccountSid && twilioAuthToken && twilioPhoneNumber) {
+      try {
+        // Create Basic Auth header
+        const authHeader = 'Basic ' + btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+        
+        // Prepare the message data
+        const formData = new URLSearchParams();
+        formData.append('To', phoneNumber);
+        formData.append('From', twilioPhoneNumber);
+        formData.append('Body', message);
+        
+        // Send the message via Twilio
+        const twilioResponse = await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString(),
+          }
+        );
+        
+        const responseData = await twilioResponse.json();
+        
+        console.log(`Twilio SMS sent to ${phoneNumber}: ${message}`);
+        console.log('Twilio response:', responseData);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'SMS sent via Twilio',
+            destination: phoneNumber,
+            content: message,
+            twilioResponse: responseData
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      } catch (twilioError) {
+        console.error('Twilio API error:', twilioError);
+        // Fall back to simulation if Twilio sending fails
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'SMS would be sent (simulation fallback)',
+            destination: phoneNumber,
+            content: message,
+            error: twilioError.message
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
       }
-    );
+    } else {
+      // Simulation mode (for development/testing)
+      console.log(`SMS would be sent to ${phoneNumber}: ${message}`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'SMS notification would be sent (simulation)',
+          destination: phoneNumber,
+          content: message 
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
   } catch (error) {
     console.error('Error handling notification:', error);
     

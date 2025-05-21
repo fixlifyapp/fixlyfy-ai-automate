@@ -98,3 +98,9 @@ backend = "postgres"
 
 [functions.notifications]
 verify_jwt = true
+
+[functions.twilio]
+verify_jwt = true
+
+[functions.twilio-webhook]
+verify_jwt = false

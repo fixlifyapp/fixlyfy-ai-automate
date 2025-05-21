@@ -1,213 +1,88 @@
-import { useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  ListTodo, 
-  Users, 
-  Calendar, 
-  Settings, 
-  BarChart3, 
-  Mail, 
-  Zap,
-  Menu, 
-  ChevronRight,
+import {
+  BarChart2,
+  Bot,
+  DollarSign,
+  File,
+  FileText,
+  Home,
+  ListChecks,
+  MessageSquare,
   Package,
-  UserCheck,
-  Receipt,
-  Brain
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { useRBAC } from '@/components/auth/RBACProvider';
+  Settings,
+  Users,
+  Zap,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
-// Define menu items with required permissions
-const menuItems = [
-  { 
-    name: 'Dashboard', 
-    icon: LayoutDashboard, 
-    path: '/', 
-    highlight: false,
-    permission: null // Accessible to all
-  },
-  { 
-    name: 'Jobs', 
-    icon: ListTodo, 
-    path: '/jobs', 
-    badge: '12', 
-    highlight: true,
-    permission: 'jobs.view.own' // At minimum, users can view their own jobs
-  },
-  { 
-    name: 'Clients', 
-    icon: Users, 
-    path: '/clients',
-    highlight: false,
-    permission: 'jobs.view.own' // If you can view jobs, you can see clients
-  },
-  { 
-    name: 'Schedule', 
-    icon: Calendar, 
-    path: '/schedule',
-    highlight: false,
-    permission: 'jobs.view.own' // Basic scheduling access
-  },
-  {
-    name: 'Products',
-    icon: Package,
-    path: '/products',
-    highlight: false,
-    permission: 'jobs.view.own' // Basic products access
-  },
-  {
-    name: 'Finance',
-    icon: Receipt,
-    path: '/finance',
-    highlight: false,
-    permission: 'payments.view' // Only users with payment view permission can see Finance
-  },
-  {
-    name: 'Team',
-    icon: UserCheck,
-    path: '/admin/team',
-    highlight: false,
-    permission: 'users.view' // Users with user view permission can see team
-  },
-  {
-    name: 'AI Assistant',
-    icon: Brain,
-    path: '/ai-assistant',
-    highlight: false,
-    permission: null // Accessible to all
-  },
-  {
-    name: 'Automations',
-    icon: Zap,
-    path: '/automations',
-    highlight: false,
-    permission: 'settings.view' // Only those with settings access can see automations
-  },
-  { 
-    name: 'Reports', 
-    icon: BarChart3, 
-    path: '/reports',
-    highlight: false,
-    permission: 'reports.view' // Specific permission for reports
-  },
-  { 
-    name: 'Messages', 
-    icon: Mail, 
-    path: '/messages', 
-    badge: '3',
-    highlight: false,
-    permission: null // Accessible to all
-  }
-];
+import { Logo } from "@/components/Logo";
+import { NavGroupItem } from "@/components/layout/NavGroupItem";
+import { NavItem } from "@/components/layout/NavItem";
+import { UserMenu } from "@/components/layout/UserMenu";
 
-const bottomMenuItems = [
-  { 
-    name: 'Settings', 
-    icon: Settings, 
-    path: '/settings',
-    highlight: false,
-    permission: null // Settings page is accessible but content is controlled
-  }
+const sidebarLinks = [
+  {
+    to: "/",
+    icon: Home,
+    label: "Dashboard",
+  },
+  {
+    to: "/jobs",
+    icon: ListChecks,
+    label: "Jobs",
+  },
+  {
+    to: "/clients",
+    icon: Users,
+    label: "Clients",
+  },
 ];
 
 export const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
-  const { hasPermission } = useRBAC();
-  
-  // Filter menu items based on permissions
-  const filteredMenuItems = menuItems.filter(item => 
-    !item.permission || hasPermission(item.permission)
-  );
-  
   return (
-    <div 
-      className={cn(
-        "h-screen bg-fixlyfy-bg-sidebar border-r border-fixlyfy-border flex flex-col transition-all duration-300",
-        collapsed ? "w-[70px]" : "w-[240px]"
-      )}
-    >
-      <div className="p-4 flex items-center justify-between">
-        {!collapsed && (
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold">
-              F
-            </div>
-            <span className="ml-2 font-bold text-fixlyfy text-xl">Fixlify AI</span>
-          </div>
-        )}
-        {collapsed && (
-          <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold mx-auto">
-            F
-          </div>
-        )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={cn("text-fixlyfy-text-secondary", collapsed && "mx-auto mt-4")}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <ChevronRight size={20} /> : <Menu size={20} />}
-        </Button>
+    <aside className="h-full w-16 lg:w-64 border-r border-fixlyfy-border bg-card hidden md:flex flex-col">
+      <div className="p-4">
+        <Link to="/" className="flex items-center gap-3">
+          <Logo className="w-8 h-8" />
+          <span className="font-bold text-xl hidden lg:block">FixlyFy</span>
+        </Link>
       </div>
       
-      <div className="flex-1 overflow-y-auto hide-scrollbar pt-4">
-        <div className="space-y-1 px-3">
-          {filteredMenuItems.map((item) => (
-            <Link 
-              key={item.name} 
-              to={item.path}
-              className={cn(
-                "flex items-center py-2 px-3 rounded-lg group transition-colors relative",
-                location.pathname === item.path 
-                  ? "bg-fixlyfy text-white" 
-                  : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
-              )}
-            >
-              <item.icon size={20} className={cn(
-                collapsed ? "mx-auto" : "mr-3"
-              )} />
-              {!collapsed && (
-                <span className="flex-1">{item.name}</span>
-              )}
-              {!collapsed && item.badge && (
-                <Badge className="bg-fixlyfy-light text-white">{item.badge}</Badge>
-              )}
-              {collapsed && item.badge && (
-                <Badge className="bg-fixlyfy-light text-white absolute top-0 right-0 translate-x-1 -translate-y-1">
-                  {item.badge}
-                </Badge>
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
-      
-      <div className="p-3 space-y-1">
-        {bottomMenuItems.map((item) => (
-          <Link 
-            key={item.name} 
-            to={item.path}
-            className={cn(
-              "flex items-center py-2 px-3 rounded-lg group transition-colors",
-              location.pathname === item.path 
-                ? "bg-fixlyfy text-white" 
-                : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
-            )}
-          >
-            <item.icon size={20} className={cn(
-              collapsed ? "mx-auto" : "mr-3"
-            )} />
-            {!collapsed && (
-              <span className="flex-1">{item.name}</span>
-            )}
-          </Link>
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+        {sidebarLinks.map((link) => (
+          <NavItem 
+            key={link.to} 
+            to={link.to} 
+            icon={link.icon} 
+            label={link.label} 
+          />
         ))}
+
+        <NavGroupItem label="Finance">
+          <NavItem to="/finance" icon={DollarSign} label="Finance" />
+          <NavItem to="/invoices" icon={FileText} label="Invoices" />
+        </NavGroupItem>
+
+        <NavGroupItem label="Resources">
+          <NavItem to="/products" icon={Package} label="Products" />
+          <NavItem to="/documents" icon={File} label="Documents" />
+          <NavItem to="/messages" icon={MessageSquare} label="Messages" />
+        </NavGroupItem>
+
+        <NavGroupItem label="Reports">
+          <NavItem to="/reports" icon={BarChart2} label="Reports" />
+          <NavItem to="/automations" icon={Zap} label="Automations" />
+          <NavItem to="/ai-assistant" icon={Bot} label="AI Assistant" />
+        </NavGroupItem>
+        
+        <NavGroupItem label="Settings">
+          <NavItem to="/team" icon={Users} label="Team" />
+          <NavItem to="/settings" icon={Settings} label="Settings" />
+        </NavGroupItem>
+      </nav>
+      
+      <div className="p-4 border-t border-fixlyfy-border mt-auto hidden lg:block">
+        <UserMenu />
       </div>
-    </div>
+    </aside>
   );
 };
