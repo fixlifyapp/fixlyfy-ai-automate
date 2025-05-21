@@ -1,21 +1,19 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { CreditCard, DollarSign, FileText, Trash2 } from "lucide-react";
-import { PaymentMethod } from "@/types/payment";
-import { formatDistanceToNow } from "date-fns";
-import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
+import { DollarSign } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { usePayments, Payment } from "@/hooks/payments";
-import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
 import { Payment as RefundDialogPayment } from "@/types/payment";
-import { recordPayment } from "@/services/jobHistoryService";
+import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
+import { PaymentsTable } from "./payments/PaymentsTable";
+import { PaymentSummary } from "./payments/PaymentSummary";
+import { usePaymentJobHistory } from "./payments/usePaymentJobHistory";
+import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
 
 // Import CSS for animations
@@ -45,46 +43,42 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     fetchPayments
   } = usePayments(jobId);
   
-  // Fetch payments when component mounts or jobId changes
-  useEffect(() => {
-    if (jobId) {
-      fetchPayments();
-    }
-  }, [jobId, fetchPayments]);
+  const { recordRefund, recordNewPayment } = usePaymentJobHistory(jobId);
 
-  const getMethodIcon = (method: PaymentMethod) => {
-    switch (method) {
-      case "credit-card":
-        return <CreditCard size={16} className="text-blue-500" />;
-      case "cash":
-        return <DollarSign size={16} className="text-green-500" />;
-      case "e-transfer":
-        return <FileText size={16} className="text-purple-500" />; 
-      case "cheque":
-        return <FileText size={16} className="text-orange-500" />;
-      default:
-        return <CreditCard size={16} />;
+  const handleRefundPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsRefundDialogOpen(true);
+  };
+
+  const confirmRefund = async (paymentId: string) => {
+    const result = await refundPayment(paymentId);
+    if (result && selectedPayment) {
+      await recordRefund(selectedPayment);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      paid: "bg-green-50 text-green-700 border-green-200",
-      refunded: "bg-amber-50 text-amber-700 border-amber-200",
-      disputed: "bg-red-50 text-red-700 border-red-200"
-    };
+  const handleDeletePayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeletePayment = async () => {
+    if (!selectedPayment) return;
     
-    return (
-      <Badge 
-        variant="outline" 
-        className={statusStyles[status as keyof typeof statusStyles] || ""}
-      >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
+    setIsDeleting(true);
+    
+    try {
+      await deletePayment(selectedPayment.id);
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error("Failed to delete payment:", error);
+      toast.error("Failed to delete payment");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
+  const handlePaymentProcessed = async (amount: number, method: any, reference?: string, notes?: string) => {
     try {
       // Get the invoice information
       const { data: invoices } = await supabase
@@ -150,14 +144,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       }
       
       // Record in job history
-      await recordPayment(
-        jobId,
-        amount,
-        method,
-        currentUser?.name,
-        currentUser?.id,
-        reference
-      );
+      await recordNewPayment(amount, method, reference);
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
@@ -166,67 +153,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
-    }
-  };
-
-  const handleRefundPayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsRefundDialogOpen(true);
-  };
-
-  const confirmRefund = async (paymentId: string) => {
-    const result = await refundPayment(paymentId);
-    if (result) {
-      // Record the refund in history
-      if (selectedPayment) {
-        await recordRefund(selectedPayment);
-      }
-    }
-  };
-  
-  const recordRefund = async (payment: Payment) => {
-    try {
-      // Add a history item for the refund
-      await supabase
-        .from('job_history')
-        .insert({
-          job_id: jobId,
-          type: 'payment',
-          title: 'Payment Refunded',
-          description: `Payment of $${payment.amount.toFixed(2)} via ${payment.method} was refunded`,
-          user_id: currentUser?.id,
-          user_name: currentUser?.name,
-          meta: {
-            amount: payment.amount,
-            method: payment.method,
-            reference: payment.reference,
-            refunded: true
-          },
-          visibility: 'restricted'
-        });
-    } catch (error) {
-      console.error('Error recording refund in history:', error);
-    }
-  };
-
-  const handleDeletePayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  const confirmDeletePayment = async () => {
-    if (!selectedPayment) return;
-    
-    setIsDeleting(true);
-    
-    try {
-      await deletePayment(selectedPayment.id);
-      setIsDeleteConfirmOpen(false);
-    } catch (error) {
-      console.error("Failed to delete payment:", error);
-      toast.error("Failed to delete payment");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -254,15 +180,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-lg font-medium">Payments</h3>
-            <div className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium">${netAmount.toFixed(2)}</span> net payments
-              {totalRefunded > 0 && (
-                <>
-                  {" • "}
-                  <span className="text-orange-500 font-medium">${totalRefunded.toFixed(2)} refunded</span>
-                </>
-              )}
-            </div>
+            <PaymentSummary netAmount={netAmount} totalRefunded={totalRefunded} />
           </div>
           
           <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
@@ -271,80 +189,12 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
           </Button>
         </div>
 
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2].map(i => (
-              <Skeleton key={i} className="w-full h-16" />
-            ))}
-          </div>
-        ) : payments.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payments.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell>
-                    <div>
-                      {new Date(payment.date).toLocaleDateString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(payment.date), { addSuffix: true })}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getMethodIcon(payment.method)}
-                      <span className="capitalize">{payment.method.replace('-', ' ')}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {payment.reference || "—"}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    ${payment.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(payment.status)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {payment.status === 'paid' && (
-                      <Button
-                        onClick={() => handleRefundPayment(payment)}
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-amber-600 mr-1 border-amber-200 hover:bg-amber-50"
-                      >
-                        Refund
-                      </Button>
-                    )}
-                    <Button
-                      onClick={() => handleDeletePayment(payment)}
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 size={16} />
-                      <span className="sr-only">Delete payment</span>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No payments recorded yet. Add your first payment.</p>
-          </div>
-        )}
+        <PaymentsTable 
+          payments={payments}
+          isLoading={isLoading}
+          onRefund={handleRefundPayment}
+          onDelete={handleDeletePayment}
+        />
       </CardContent>
       
       <PaymentDialog 
