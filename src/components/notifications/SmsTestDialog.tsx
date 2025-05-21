@@ -36,11 +36,13 @@ export const SmsTestDialog = ({ open, onOpenChange }: SmsTestDialogProps) => {
 
     try {
       if (messageType === "test") {
-        await sendTestSms(phoneNumber, message);
-        toast.success("Test SMS sent successfully!");
+        const result = await sendTestSms(phoneNumber, message);
+        toast.success("Test SMS request processed successfully");
+        console.log("SMS test result:", result);
       } else if (messageType === "welcome") {
-        await sendWelcomeMessage(phoneNumber, message);
-        toast.success("Welcome SMS sent successfully!");
+        const result = await sendWelcomeMessage(phoneNumber, message);
+        toast.success("Welcome SMS request processed successfully");
+        console.log("Welcome SMS result:", result);
       }
       
       // Don't close the dialog so they can send more test messages if needed

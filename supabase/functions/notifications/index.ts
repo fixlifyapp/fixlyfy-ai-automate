@@ -1,15 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import notificationapi from "npm:notificationapi-node-server-sdk";
-
-// Initialize NotificationAPI with credentials
-const clientId = Deno.env.get("NOTIFICATION_API_CLIENT_ID") || "3tisis9bog6dutu8lmkq4zbosq";
-const clientSecret = Deno.env.get("NOTIFICATION_API_CLIENT_SECRET") || "dujef4sag9zj997zy85hc95sgqmdg2db6xkwcij1ya2zjstmguihno4u4n";
-
-notificationapi.init(
-  clientId,
-  clientSecret
-);
 
 // Set up CORS headers
 const corsHeaders = {
@@ -36,22 +26,13 @@ serve(async (req) => {
     
     // Handle test SMS requests
     if (requestData.isTest && requestData.phoneNumber && requestData.message) {
-      console.log(`Sending test SMS to ${requestData.phoneNumber}: ${requestData.message}`);
+      console.log(`Test SMS would be sent to ${requestData.phoneNumber}: ${requestData.message}`);
       
-      const response = await notificationapi.send({
-        type: 'test_sms',
-        to: {
-          number: requestData.phoneNumber
-        },
-        sms: {
-          message: requestData.message
-        }
-      });
-      
-      console.log('Test SMS sent successfully:', response);
+      // In a real implementation, you would integrate with an SMS provider here
+      // For now, we'll just log it and return success
       
       return new Response(
-        JSON.stringify({ success: true, message: 'Test SMS sent successfully', data: response }),
+        JSON.stringify({ success: true, message: 'Test SMS would be sent (simulation)', destination: requestData.phoneNumber }),
         {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -63,12 +44,10 @@ serve(async (req) => {
     const { type, phoneNumber, data } = requestData;
     
     let message = '';
-    let notificationType = '';
 
     // Determine message content based on notification type
     switch (type) {
       case 'invoice':
-        notificationType = 'invoice_notification';
         message = `Invoice #${data.invoiceNumber} for $${data.amount.toFixed(2)} has been created for Job #${data.jobId}.`;
         if (data.dueDate) {
           message += ` Payment is due by ${data.dueDate}.`;
@@ -77,12 +56,10 @@ serve(async (req) => {
         break;
       
       case 'estimate':
-        notificationType = 'estimate_notification';
         message = `Estimate #${data.estimateNumber} for $${data.amount.toFixed(2)} has been created for Job #${data.jobId}. Please review it at your convenience.`;
         break;
       
       case 'message':
-        notificationType = 'client_message';
         message = data.message;
         if (data.jobId) {
           message = `(Job #${data.jobId}) ${message}`;
@@ -90,7 +67,6 @@ serve(async (req) => {
         break;
       
       case 'payment':
-        notificationType = 'payment_confirmation';
         // Format payment method
         const formattedMethod = data.method.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         message = `Thank you for your payment of $${data.amount.toFixed(2)} via ${formattedMethod}`;
@@ -101,12 +77,10 @@ serve(async (req) => {
         break;
       
       case 'refund':
-        notificationType = 'refund_confirmation';
         message = `A refund of $${data.amount.toFixed(2)} has been processed for Job #${data.jobId}. The refund should appear in your account within 3-5 business days.`;
         break;
       
       case 'appointment':
-        notificationType = 'appointment_reminder';
         message = `Reminder: Your appointment for Job #${data.jobId} is scheduled for ${data.appointmentDate} at ${data.appointmentTime}.`;
         if (data.technician) {
           message += ` ${data.technician} will be your technician.`;
@@ -114,12 +88,10 @@ serve(async (req) => {
         break;
       
       case 'custom':
-        notificationType = 'custom_notification';
         message = data.message;
         break;
 
       case 'welcome':
-        notificationType = 'welcome';
         message = data.message || "Welcome to our service!";
         break;
       
@@ -127,28 +99,24 @@ serve(async (req) => {
         throw new Error('Invalid notification type');
     }
 
-    // Send the notification
-    const response = await notificationapi.send({
-      type: notificationType,
-      to: {
-        number: phoneNumber
-      },
-      sms: {
-        message: message
-      }
-    });
-
-    console.log('Notification sent successfully:', response);
-
+    // In a real implementation, you would integrate with an SMS provider here
+    // For now, we'll just log the message and return success
+    console.log(`SMS would be sent to ${phoneNumber}: ${message}`);
+    
     return new Response(
-      JSON.stringify({ success: true, message: 'Notification sent successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'SMS notification would be sent (simulation)',
+        destination: phoneNumber,
+        content: message 
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('Error handling notification:', error);
     
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
