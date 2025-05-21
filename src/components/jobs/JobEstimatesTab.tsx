@@ -1,3 +1,4 @@
+
 // Import toast from the sonner implementation instead of enhancedToast
 import { toast } from "@/components/ui/sonner";
 import { useState, useEffect } from "react";
@@ -25,13 +26,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Copy, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { supabase } from "@/integrations/supabase/client";
 import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
 
 interface JobEstimatesTabProps {
   jobId: string;
+  onEstimateConverted?: () => void;
 }
 
 interface EstimateItem {
@@ -42,7 +43,7 @@ interface EstimateItem {
   total: number;
 }
 
-export const JobEstimatesTab = ({ jobId }: JobEstimatesTabProps) => {
+export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
   const [estimateItems, setEstimateItems] = useState<EstimateItem[]>([]);
   const [newDescription, setNewDescription] = useState("");
   const [newQuantity, setNewQuantity] = useState(1);
@@ -64,17 +65,29 @@ export const JobEstimatesTab = ({ jobId }: JobEstimatesTabProps) => {
   const fetchEstimateItems = async () => {
     setIsLoading(true);
     try {
+      // Using the line_items table instead of the non-existent estimate_items table
       const { data, error } = await supabase
-        .from('estimate_items')
+        .from('line_items')
         .select('*')
-        .eq('job_id', jobId);
-
+        .eq('parent_type', 'estimate');
+      
+      // Filter items by job_id if needed later by joining with estimates table
+      
       if (error) {
         throw error;
       }
 
       if (data) {
-        setEstimateItems(data);
+        // Transform the data to match EstimateItem interface
+        const formattedItems: EstimateItem[] = data.map(item => ({
+          id: item.id,
+          description: item.description || '',
+          quantity: item.quantity,
+          unit_price: Number(item.unit_price),
+          total: item.quantity * Number(item.unit_price)
+        }));
+        
+        setEstimateItems(formattedItems);
       }
     } catch (error: any) {
       console.error("Error fetching estimate items:", error.message);
@@ -91,15 +104,53 @@ export const JobEstimatesTab = ({ jobId }: JobEstimatesTabProps) => {
     }
 
     try {
+      // First get or create an estimate for this job
+      let estimateId: string;
+      
+      // Check if estimate exists for this job
+      const { data: existingEstimates, error: estimateError } = await supabase
+        .from('estimates')
+        .select('id')
+        .eq('job_id', jobId)
+        .limit(1);
+        
+      if (estimateError) {
+        throw estimateError;
+      }
+      
+      if (existingEstimates && existingEstimates.length > 0) {
+        estimateId = existingEstimates[0].id;
+      } else {
+        // Create new estimate
+        const { data: newEstimate, error: createError } = await supabase
+          .from('estimates')
+          .insert([{
+            job_id: jobId,
+            estimate_number: `EST-${Date.now()}`,
+            date: new Date().toISOString(),
+            status: 'draft'
+          }])
+          .select('*')
+          .single();
+          
+        if (createError) {
+          throw createError;
+        }
+        
+        estimateId = newEstimate.id;
+      }
+      
+      // Now add the line item 
       const total = newQuantity * newUnitPrice;
       const { data, error } = await supabase
-        .from('estimate_items')
+        .from('line_items')
         .insert([{
-          job_id: jobId,
+          parent_id: estimateId,
+          parent_type: 'estimate',
           description: newDescription,
           quantity: newQuantity,
           unit_price: newUnitPrice,
-          total: total
+          taxable: true
         }])
         .select('*')
         .single();
@@ -109,7 +160,15 @@ export const JobEstimatesTab = ({ jobId }: JobEstimatesTabProps) => {
       }
 
       if (data) {
-        setEstimateItems([...estimateItems, data]);
+        const newItem: EstimateItem = {
+          id: data.id,
+          description: data.description || '',
+          quantity: data.quantity,
+          unit_price: Number(data.unit_price),
+          total: data.quantity * Number(data.unit_price)
+        };
+        
+        setEstimateItems([...estimateItems, newItem]);
         setNewDescription("");
         setNewQuantity(1);
         setNewUnitPrice(0);
@@ -134,7 +193,7 @@ export const JobEstimatesTab = ({ jobId }: JobEstimatesTabProps) => {
 
     try {
       const { error } = await supabase
-        .from('estimate_items')
+        .from('line_items')
         .delete()
         .eq('id', itemToDelete);
 
