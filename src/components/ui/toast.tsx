@@ -120,11 +120,8 @@ const ToastTimer = React.forwardRef<
 >(({ duration = 5000 }, ref) => (
   <div ref={ref} className="absolute bottom-0 left-0 right-0 h-1 bg-transparent overflow-hidden">
     <div 
-      className="h-full bg-current opacity-20" 
-      style={{ 
-        animation: `toast-timer ${duration}ms linear forwards`,
-        transformOrigin: 'left'
-      }} 
+      className="toast-progress"
+      aria-hidden="true"
     />
   </div>
 ))

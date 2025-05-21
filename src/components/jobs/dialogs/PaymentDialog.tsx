@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PaymentMethod } from "@/types/payment";
 import { Check, DollarSign, CreditCard, FileText } from "lucide-react";
+import { ToastTimer } from "@/components/ui/toast";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -36,6 +37,7 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
     try {
       await onPaymentProcessed(amount, method, reference, notes);
       resetForm();
+      onOpenChange(false);
     } catch (error) {
       console.error("Payment processing error:", error);
     } finally {
@@ -70,7 +72,7 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
       if (!newOpen) resetForm();
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md sm:max-w-lg sm:rounded-lg fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg">
         <DialogHeader className="border-b pb-4">
           <DialogTitle className="text-xl flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-500" />
@@ -175,6 +177,7 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
             {isLoading ? "Processing..." : "Record Payment"}
           </Button>
         </DialogFooter>
+        <ToastTimer />
       </DialogContent>
     </Dialog>
   );

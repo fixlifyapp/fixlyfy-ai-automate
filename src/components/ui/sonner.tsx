@@ -15,16 +15,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg relative",
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg relative toast-center",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
           success:
-            "group toast group-[.toaster]:bg-green-50 group-[.toaster]:text-green-800 group-[.toaster]:border-green-200",
+            "group toast success-toast",
           error:
-            "group toast group-[.toaster]:bg-red-50 group-[.toaster]:text-red-800 group-[.toaster]:border-red-200",
+            "group toast error-toast",
         },
         duration: 5000,
       }}
@@ -38,21 +38,17 @@ const enhancedToast = {
   success: (message: string, options?: Parameters<typeof toast>[1]) => 
     toast.success(message, {
       ...options,
+      className: "success-toast toast-center",
       style: {
         ...options?.style,
-        backgroundColor: '#F2FCE2', 
-        color: '#3A7613',
-        border: '1px solid #BDE99F'
       }
     }),
   error: (message: string, options?: Parameters<typeof toast>[1]) => 
     toast.error(message, {
       ...options,
+      className: "error-toast toast-center",
       style: {
         ...options?.style,
-        backgroundColor: '#FEECEE', 
-        color: '#ea384c',
-        border: '1px solid #FAC6CC'
       }
     })
 }
