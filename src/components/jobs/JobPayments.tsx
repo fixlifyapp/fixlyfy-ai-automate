@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { DollarSign, BellRing } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { usePayments, Payment } from "@/hooks/payments";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
 import { Payment as RefundDialogPayment } from "@/types/payment";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";

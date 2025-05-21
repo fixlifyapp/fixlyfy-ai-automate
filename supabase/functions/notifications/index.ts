@@ -23,6 +23,11 @@ interface NotificationRequest {
   data: Record<string, any>;
 }
 
+interface TestSmsRequest {
+  phoneNumber: string;
+  message: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -30,7 +35,36 @@ serve(async (req) => {
   }
 
   try {
-    // Parse the request body
+    const url = new URL(req.url);
+    
+    // Special route for testing SMS
+    if (url.pathname.endsWith('/test-sms')) {
+      const { phoneNumber, message } = await req.json() as TestSmsRequest;
+      
+      console.log(`Sending test SMS to ${phoneNumber}: ${message}`);
+      
+      const response = await notificationapi.send({
+        type: 'test_sms',
+        to: {
+          number: phoneNumber
+        },
+        sms: {
+          message: message
+        }
+      });
+      
+      console.log('Test SMS sent successfully:', response);
+      
+      return new Response(
+        JSON.stringify({ success: true, message: 'Test SMS sent successfully', data: response }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // Regular notification path
     const { type, phoneNumber, data } = await req.json() as NotificationRequest;
     
     let message = '';

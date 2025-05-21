@@ -34,6 +34,35 @@ export const sendSmsNotification = async (
 };
 
 /**
+ * Send a test SMS message
+ * @param phoneNumber - Phone number to send test SMS to
+ * @param message - Test message content
+ */
+export const sendTestSms = async (
+  phoneNumber: string,
+  message: string
+) => {
+  try {
+    const { data: response, error } = await supabase.functions.invoke('notifications/test-sms', {
+      body: {
+        phoneNumber,
+        message
+      }
+    });
+
+    if (error) {
+      console.error('Error invoking test SMS function:', error);
+      throw error;
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Failed to send test SMS:', error);
+    throw error;
+  }
+};
+
+/**
  * Send an invoice notification
  */
 export const sendInvoiceNotification = async (
