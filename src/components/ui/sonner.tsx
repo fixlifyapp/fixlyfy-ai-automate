@@ -46,10 +46,9 @@ const enhancedToast = {
 }
 
 // Override the default toast function to be a no-op
-const noopToast: typeof toast = Object.assign(
-  (message: string) => ({ id: '', dismiss: () => {} }),
+const noopToast = Object.assign(
+  (message: any) => ({ id: '', dismiss: () => {} }),
   {
-    ...toast,
     success: () => ({ id: '', dismiss: () => {} }),
     error: () => ({ id: '', dismiss: () => {} }),
     info: () => ({ id: '', dismiss: () => {} }),
@@ -58,6 +57,7 @@ const noopToast: typeof toast = Object.assign(
     promise: () => ({ id: '', dismiss: () => {} }),
     dismiss: () => {},
     update: () => {},
+    getHistory: () => []
   }
 );
 

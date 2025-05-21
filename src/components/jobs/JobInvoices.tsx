@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -83,7 +83,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       setInvoices(data || []);
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      toast.error("Failed to load invoices");
+      // Toast is silenced by our implementation
     } finally {
       setIsLoading(false);
     }
