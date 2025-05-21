@@ -20,6 +20,7 @@ export const JobDetailsHeader = () => {
           job={jobHeaderData.job}
           invoiceAmount={jobHeaderData.invoiceAmount}
           balance={jobHeaderData.balance}
+          amountPaid={jobHeaderData.paymentsMade.reduce((total, payment) => total + payment, 0)}
           status={jobHeaderData.status}
           onStatusChange={jobHeaderData.handleStatusChange}
           onCallClick={() => jobHeaderData.setIsCallDialogOpen(true)}
@@ -72,6 +73,7 @@ export const JobDetailsHeader = () => {
           email: jobHeaderData.job.companyEmail,
           legalText: jobHeaderData.job.legalText
         }}
+        jobId={id || ""}
       />
       
       <EstimateDialog 

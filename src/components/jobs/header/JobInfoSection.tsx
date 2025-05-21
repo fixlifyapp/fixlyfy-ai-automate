@@ -18,6 +18,7 @@ interface JobInfoSectionProps {
   };
   invoiceAmount: number;
   balance: number;
+  amountPaid?: number;
   status: string;
   onStatusChange: (newStatus: string) => void;
   onCallClick: () => void;
@@ -29,6 +30,7 @@ export const JobInfoSection = ({
   job,
   invoiceAmount,
   balance,
+  amountPaid = 0,
   status,
   onStatusChange,
   onCallClick,
@@ -52,11 +54,17 @@ export const JobInfoSection = ({
           />
         </div>
         
-        <div className="flex gap-4 text-sm mt-1 sm:mt-0 sm:ml-4">
+        <div className="flex flex-wrap gap-4 text-sm mt-1 sm:mt-0 sm:ml-4">
           <div>
             <span className="text-muted-foreground">Total:</span>{" "}
             <span className="font-medium">${invoiceAmount.toFixed(2)}</span>
           </div>
+          {amountPaid > 0 && (
+            <div>
+              <span className="text-muted-foreground">Paid:</span>{" "}
+              <span className="font-medium text-green-500">${amountPaid.toFixed(2)}</span>
+            </div>
+          )}
           <div>
             <span className="text-muted-foreground">Balance:</span>{" "}
             <span className={`font-medium ${balance > 0 ? "text-orange-500" : "text-green-500"}`}>
