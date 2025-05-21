@@ -24,6 +24,7 @@ const Dashboard = () => {
   });
   
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showExpandedMetrics, setShowExpandedMetrics] = useState(false);
 
   const handleFilterChange = (period: TimePeriod, range?: { from: Date | undefined; to: Date | undefined }) => {
     setTimePeriod(period);
@@ -38,6 +39,10 @@ const Dashboard = () => {
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
+  };
+
+  const handleToggleExpandedMetrics = () => {
+    setShowExpandedMetrics(!showExpandedMetrics);
   };
 
   return (
@@ -61,7 +66,16 @@ const Dashboard = () => {
       
       {/* Expanded Dashboard Metrics (New) */}
       <div className="mb-8">
-        <ExpandedDashboardMetrics />
+        <button 
+          onClick={handleToggleExpandedMetrics}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+        >
+          View Detailed Metrics
+        </button>
+        
+        {showExpandedMetrics && (
+          <ExpandedDashboardMetrics onClose={handleToggleExpandedMetrics} />
+        )}
       </div>
       
       {/* KPI Summary Cards section has been removed */}

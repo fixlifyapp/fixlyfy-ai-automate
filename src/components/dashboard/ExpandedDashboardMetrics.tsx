@@ -4,6 +4,7 @@ import { useTeamMetrics, TechnicianMetric } from "@/hooks/useTeamMetrics";
 import { TopTechnicians } from "./metrics/TopTechnicians";
 import { DateRangeSelector } from "./metrics/DateRangeSelector";
 import { formatCurrency } from "@/lib/utils";
+import { addDays, startOfMonth, subDays } from "date-fns";
 
 interface ExpandedDashboardMetricsProps {
   onClose: () => void;
@@ -12,15 +13,70 @@ interface ExpandedDashboardMetricsProps {
 export const ExpandedDashboardMetrics = ({
   onClose,
 }: ExpandedDashboardMetricsProps) => {
-  const [dateRange, setDateRange] = useState<{
-    start: string;
-    end: string;
+  const [timeFilter, setTimeFilter] = useState<"today" | "yesterday" | "last7days" | "thisMonth" | "custom">("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState<{
+    from: Date;
+    to: Date;
   }>({
-    start: new Date(new Date().getFullYear(), 0, 1).toISOString(),
-    end: new Date().toISOString(),
+    from: startOfMonth(new Date()),
+    to: new Date(),
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { technicians, isLoading } = useTeamMetrics(dateRange);
+  // Calculate date range based on the selected filter
+  const dateRange = useMemo(() => {
+    const today = new Date();
+    
+    switch (timeFilter) {
+      case "today":
+        return { start: today.toISOString(), end: today.toISOString() };
+      case "yesterday":
+        const yesterday = subDays(today, 1);
+        return { start: yesterday.toISOString(), end: yesterday.toISOString() };
+      case "last7days":
+        return { start: subDays(today, 7).toISOString(), end: today.toISOString() };
+      case "thisMonth":
+        return { start: startOfMonth(today).toISOString(), end: today.toISOString() };
+      case "custom":
+        return { 
+          start: customDateRange.from.toISOString(), 
+          end: customDateRange.to.toISOString() 
+        };
+      default:
+        return { start: startOfMonth(today).toISOString(), end: today.toISOString() };
+    }
+  }, [timeFilter, customDateRange]);
+
+  const { technicians, isLoading: isMetricsLoading } = useTeamMetrics(dateRange);
+  
+  const getFilterLabel = () => {
+    switch (timeFilter) {
+      case "today": return "Today";
+      case "yesterday": return "Yesterday";
+      case "last7days": return "Last 7 Days";
+      case "thisMonth": return "This Month";
+      case "custom": return "Custom Range";
+      default: return "This Month";
+    }
+  };
+  
+  const handleTimeFilterChange = (filter: "today" | "yesterday" | "last7days" | "thisMonth" | "custom") => {
+    setTimeFilter(filter);
+  };
+  
+  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+    if (range.from && range.to) {
+      setCustomDateRange({ from: range.from, to: range.to });
+    }
+  };
+  
+  const handleRefresh = () => {
+    setIsLoading(true);
+    // Simulate refresh
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
 
   const formatValue = (value: number): string => {
     return formatCurrency(value);
@@ -54,23 +110,18 @@ export const ExpandedDashboardMetrics = ({
         </div>
 
         <DateRangeSelector
-          value={{
-            from: new Date(dateRange.start),
-            to: new Date(dateRange.end),
-          }}
-          onChange={({ from, to }) => {
-            if (from && to) {
-              setDateRange({
-                start: from.toISOString(),
-                end: to.toISOString(),
-              });
-            }
-          }}
+          timeFilter={timeFilter}
+          customDateRange={customDateRange}
+          isLoading={isLoading || isMetricsLoading}
+          getFilterLabel={getFilterLabel}
+          onTimeFilterChange={handleTimeFilterChange}
+          onDateRangeChange={handleDateRangeChange}
+          onRefresh={handleRefresh}
         />
 
         <TopTechnicians
           technicians={technicians}
-          isLoading={isLoading}
+          isLoading={isLoading || isMetricsLoading}
           formatValue={formatValue}
         />
       </div>
