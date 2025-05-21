@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -160,6 +161,9 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
+      
+      // Close the payment dialog
+      setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
       toast.error("Failed to process payment");
