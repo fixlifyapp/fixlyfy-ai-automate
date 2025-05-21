@@ -35,7 +35,7 @@ export const useRealTimeMessages = ({
           }
         } catch (error) {
           console.error("Error finding conversation:", error);
-          return;
+          return null; // Return null if there's an error
         }
       }
 
@@ -61,11 +61,23 @@ export const useRealTimeMessages = ({
           supabase.removeChannel(channel);
         };
       }
+      
+      return null; // Return null if no conversation ID was found
     };
 
-    const cleanup = setupRealTimeListener();
+    // Create a variable to store the cleanup function
+    let cleanupFunction: (() => void) | null = null;
+
+    // Call the async function and store the cleanup function when the promise resolves
+    setupRealTimeListener().then(cleanup => {
+      cleanupFunction = cleanup;
+    });
+
+    // Return a cleanup function for the effect
     return () => {
-      if (cleanup) cleanup();
+      if (cleanupFunction) {
+        cleanupFunction();
+      }
     };
   }, [jobId, conversationId, onNewMessage]);
 };
