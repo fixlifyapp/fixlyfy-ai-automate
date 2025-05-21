@@ -13,7 +13,8 @@ import {
   Phone,
   FileDown,
   Edit,
-  Loader2
+  Loader2,
+  MessageSquare
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,13 +52,18 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
           
         if (error) throw error;
         
-        // Format the client IDs for display
-        const formattedClients = data?.map((client, index) => ({
-          ...client,
-          displayId: `C-${1001 + index}`
-        })) || [];
-        
-        setClients(formattedClients);
+        if (data) {
+          // Format the client IDs for display
+          const formattedClients = data.map((client, index) => ({
+            ...client,
+            displayId: `C-${1001 + index}`
+          }));
+          
+          setClients(formattedClients);
+          console.log("Fetched clients:", formattedClients);
+        } else {
+          setClients([]);
+        }
       } catch (error) {
         console.error('Error fetching clients:', error);
         toast.error('Failed to load clients');
@@ -97,6 +103,10 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
     toast.info(`Editing ${selectedClients.length} clients`);
   };
 
+  const handleMessageClient = (clientId: string) => {
+    navigate(`/connect/messages?client=${clientId}`);
+  };
+
   const handleExportClients = () => {
     // Export selected or all clients
     const exportData = selectedClients.length > 0 
@@ -119,7 +129,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
   };
 
   const getDisplayId = (client: any) => {
-    return client.displayId || client.id;
+    return client.displayId || client.id?.substring(0, 8) || '';
   };
 
   if (isLoading) {
@@ -135,7 +145,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
     return (
       <div className="fixlyfy-card p-8 text-center">
         <p className="text-fixlyfy-text-secondary mb-4">No clients found</p>
-        <p className="text-sm">Import clients to get started</p>
+        <p className="text-sm">Import clients or create new ones to get started</p>
       </div>
     );
   }
@@ -178,7 +188,6 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
       {isGridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {clients.map((client) => (
-            
             <div
               key={client.id}
               className="fixlyfy-card hover:shadow-lg transition-shadow relative"
@@ -230,17 +239,30 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                     <span className="text-fixlyfy-text-secondary">Client ID:</span>
                     <span className="ml-2 font-medium">{getDisplayId(client)}</span>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-fixlyfy border-fixlyfy/20"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      client.id && handleClientClick(client.id);
-                    }}
-                  >
-                    View
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-fixlyfy border-fixlyfy/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        client.id && handleClientClick(client.id);
+                      }}
+                    >
+                      View
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-indigo-500 border-indigo-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        client.id && client.phone && handleMessageClient(client.id);
+                      }}
+                    >
+                      <MessageSquare size={14} />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -326,27 +348,37 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => client.id && handleClientClick(client.id)}>
-                          <Eye size={16} className="mr-2" /> View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleBulkEdit()}>
-                          <Edit size={16} className="mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-fixlyfy-error">
-                          <Trash size={16} className="mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => client.id && client.phone && handleMessageClient(client.id)}
+                        title="Message Client"
+                      >
+                        <MessageSquare size={16} className="text-indigo-500" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => client.id && handleClientClick(client.id)}>
+                            <Eye size={16} className="mr-2" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBulkEdit()}>
+                            <Edit size={16} className="mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-fixlyfy-error">
+                            <Trash size={16} className="mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
