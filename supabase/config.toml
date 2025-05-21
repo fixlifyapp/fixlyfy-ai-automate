@@ -78,4 +78,4 @@ url = ""
 [functions.test-openai]
 
 [functions.send-sms]
-
+verify_jwt = false

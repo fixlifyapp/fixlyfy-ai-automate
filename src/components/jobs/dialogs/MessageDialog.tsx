@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -17,26 +17,85 @@ interface MessageDialogProps {
   client: {
     name: string;
     phone?: string;
+    id?: string;
   };
 }
 
 export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps) => {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      text: "Hello! Just confirming our appointment tomorrow at 1:30 PM.",
-      sender: "You",
-      timestamp: "May 14 9:30 AM",
-      isClient: false
-    },
-    {
-      text: "Yes, I'll be there. Thank you for the reminder.",
-      sender: client.name,
-      timestamp: "May 14 10:15 AM",
-      isClient: true
-    }
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  // Fetch messages when dialog opens
+  useEffect(() => {
+    if (open && client.id) {
+      fetchMessages();
+    }
+  }, [open, client.id]);
+
+  const fetchMessages = async () => {
+    if (!client.id) return;
+    
+    setIsLoadingMessages(true);
+    
+    try {
+      // First, check if a conversation exists for this client
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('client_id', client.id);
+      
+      if (conversations && conversations.length > 0) {
+        const conversation = conversations[0];
+        setConversationId(conversation.id);
+        
+        // Fetch messages for this conversation
+        const { data: messagesData } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversation.id)
+          .order('created_at', { ascending: true });
+          
+        if (messagesData) {
+          const formattedMessages = messagesData.map(msg => ({
+            text: msg.body,
+            sender: msg.direction === 'outbound' ? 'You' : client.name,
+            timestamp: new Date(msg.created_at).toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+              hour12: true
+            }),
+            isClient: msg.direction === 'inbound'
+          }));
+          
+          setMessages(formattedMessages);
+        }
+      } else if (client.id) {
+        // If no conversation exists yet, create a sample conversation starter
+        setMessages([{
+          text: "Hello! How can I assist you today?",
+          sender: "You",
+          timestamp: new Date().toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true
+          }),
+          isClient: false
+        }]);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      toast.error("Failed to load messages");
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -64,6 +123,41 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
 
       setMessages([...messages, newMessage]);
       
+      let currentConversationId = conversationId;
+      
+      // If no conversation exists, create one
+      if (!currentConversationId && client.id) {
+        const { data: newConversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            client_id: client.id,
+            status: 'active'
+          })
+          .select()
+          .single();
+        
+        if (convError) {
+          throw convError;
+        }
+        
+        currentConversationId = newConversation.id;
+        setConversationId(currentConversationId);
+      }
+      
+      // Store the message in the database if we have a conversation
+      if (currentConversationId) {
+        await supabase
+          .from('messages')
+          .insert({
+            conversation_id: currentConversationId,
+            body: message,
+            direction: 'outbound',
+            sender: 'You',
+            recipient: client.phone,
+            status: 'pending'
+          });
+      }
+      
       // Send SMS via Twilio edge function
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
@@ -76,6 +170,19 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
         console.error("Error sending SMS:", error);
         toast.error("Failed to send SMS. Please try again.");
       } else if (data.success) {
+        // Update the message status in the database
+        if (currentConversationId) {
+          await supabase
+            .from('messages')
+            .update({ 
+              status: 'delivered',
+              message_sid: data.sid
+            })
+            .eq('conversation_id', currentConversationId)
+            .eq('body', message)
+            .eq('direction', 'outbound');
+        }
+        
         toast.success("Message sent to client");
         setMessage("");
       } else {
@@ -97,27 +204,33 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
           <DialogTitle>Message {client.name}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <div className="h-64 overflow-y-auto border rounded-md p-3 mb-4 space-y-3">
-            {messages.map((msg, index) => (
-              <div 
-                key={index} 
-                className={`flex flex-col ${msg.isClient ? 'self-end items-end ml-auto' : ''}`}
-              >
+          {isLoadingMessages ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-fixlyfy" />
+            </div>
+          ) : (
+            <div className="h-64 overflow-y-auto border rounded-md p-3 mb-4 space-y-3">
+              {messages.map((msg, index) => (
                 <div 
-                  className={`${
-                    msg.isClient 
-                      ? 'bg-fixlyfy text-white' 
-                      : 'bg-muted'
-                  } p-3 rounded-lg max-w-[80%] ${msg.isClient ? 'ml-auto' : ''}`}
+                  key={index} 
+                  className={`flex flex-col ${msg.isClient ? 'self-end items-end ml-auto' : ''}`}
                 >
-                  <p className="text-sm">{msg.text}</p>
+                  <div 
+                    className={`${
+                      msg.isClient 
+                        ? 'bg-fixlyfy text-white' 
+                        : 'bg-muted'
+                    } p-3 rounded-lg max-w-[80%] ${msg.isClient ? 'ml-auto' : ''}`}
+                  >
+                    <p className="text-sm">{msg.text}</p>
+                  </div>
+                  <span className="text-xs text-fixlyfy-text-secondary mt-1">
+                    {msg.sender}, {msg.timestamp}
+                  </span>
                 </div>
-                <span className="text-xs text-fixlyfy-text-secondary mt-1">
-                  {msg.sender}, {msg.timestamp}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           <div className="flex gap-2">
             <textarea 
@@ -126,7 +239,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
               rows={2}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || isLoadingMessages}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -136,7 +249,7 @@ export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps
             />
             <Button 
               onClick={handleSendMessage} 
-              disabled={isLoading || !message.trim()}
+              disabled={isLoading || !message.trim() || isLoadingMessages}
               className="self-end"
             >
               {isLoading ? (

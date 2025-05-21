@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageSquare, PlusCircle, Bot, Loader2 } from "lucide-react";
@@ -12,42 +12,99 @@ interface JobMessagesProps {
   jobId: string;
 }
 
+interface Message {
+  id: string;
+  body: string;
+  direction: string;
+  sender?: string;
+  recipient?: string;
+  message_sid?: string;
+  created_at: string;
+}
+
 export const JobMessages = ({ jobId }: JobMessagesProps) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const { generateText, isLoading: isAILoading } = useAI({
     systemContext: "You are an assistant helping with job messaging for a field service company. Keep responses professional, friendly, and concise."
   });
   
-  // In a real app, these would be fetched from an API based on jobId
-  const [messages, setMessages] = useState([
-    {
-      id: "msg-001",
-      date: "2023-05-15",
-      content: "Hello! Just confirming our appointment tomorrow at 1:30 PM.",
-      sender: "technician",
-      recipient: "client"
-    },
-    {
-      id: "msg-002",
-      date: "2023-05-15",
-      content: "Yes, I'll be there. Thank you for the reminder.",
-      sender: "client",
-      recipient: "technician"
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [client, setClient] = useState({ name: "", phone: "", id: "" });
+  const [isLoading, setIsLoading] = useState(true);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  useEffect(() => {
+    if (jobId) {
+      fetchJobDetails();
+      fetchMessages();
+    }
+  }, [jobId]);
+
+  const fetchJobDetails = async () => {
+    try {
+      const { data: job } = await supabase
+        .from('jobs')
+        .select('*, clients:client_id(*)')
+        .eq('id', jobId)
+        .single();
+      
+      if (job && job.clients) {
+        setClient({
+          name: job.clients.name,
+          phone: job.clients.phone || "",
+          id: job.clients.id
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching job details:", error);
+      toast.error("Failed to load client information");
+    }
+  };
+
+  const fetchMessages = async () => {
+    setIsLoading(true);
+    try {
+      // First find the conversation for this job
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('job_id', jobId)
+        .single();
+      
+      if (conversation) {
+        // Fetch messages for this conversation
+        const { data } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversation.id)
+          .order('created_at', { ascending: true });
+        
+        if (data) {
+          setMessages(data);
+        }
+      } else {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      // If no conversation found, it's likely there are no messages yet
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSuggestResponse = async () => {
     if (isAILoading) return;
     
     try {
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage.sender === "technician") {
+      if (!lastMessage || lastMessage.direction === "outbound") {
         toast.info("Waiting for client response before suggesting a reply.");
         return;
       }
       
-      const prompt = `Generate a professional response to this customer message: "${lastMessage.content}"`;
+      const prompt = `Generate a professional response to this customer message: "${lastMessage.body}"`;
       const suggestedResponse = await generateText(prompt);
       
       if (suggestedResponse) {
@@ -67,16 +124,18 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
   };
   
   const handleUseSuggestion = async (content: string) => {
+    if (!client.phone) {
+      toast.error("No phone number available for this client");
+      return;
+    }
+    
     setIsSendingMessage(true);
     
     try {
-      // In a real app, client info would be fetched based on jobId
-      const clientPhone = "(555) 123-4567"; // Example phone number
-      
       // Call the Twilio edge function
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
-          to: clientPhone,
+          to: client.phone,
           body: content
         }
       });
@@ -86,15 +145,49 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
       }
       
       if (data.success) {
-        const newMessage = {
-          id: `msg-${Date.now()}`,
-          date: new Date().toISOString(),
-          content: content,
-          sender: "technician",
-          recipient: "client"
-        };
+        // Find or create conversation
+        let conversationId;
+        const { data: existingConversation } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('job_id', jobId);
         
-        setMessages([...messages, newMessage]);
+        if (existingConversation && existingConversation.length > 0) {
+          conversationId = existingConversation[0].id;
+        } else {
+          const { data: newConversation } = await supabase
+            .from('conversations')
+            .insert({
+              job_id: jobId,
+              client_id: client.id,
+              status: 'active'
+            })
+            .select('id')
+            .single();
+          
+          if (newConversation) {
+            conversationId = newConversation.id;
+          }
+        }
+        
+        // Store the message in the database
+        if (conversationId) {
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              body: content,
+              direction: 'outbound',
+              sender: 'You',
+              recipient: client.phone,
+              status: 'delivered',
+              message_sid: data.sid
+            });
+          
+          // Refresh messages
+          fetchMessages();
+        }
+        
         toast.success("Message sent to client");
       } else {
         toast.error(`Failed to send message: ${data.error || 'Unknown error'}`);
@@ -116,7 +209,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
             <Button 
               variant="outline"
               onClick={handleSuggestResponse}
-              disabled={isAILoading || isSendingMessage}
+              disabled={isAILoading || isSendingMessage || messages.length === 0}
               className="gap-2"
             >
               {isAILoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
@@ -133,23 +226,27 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           </div>
         </div>
 
-        {messages.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 size={24} className="animate-spin text-fixlyfy" />
+          </div>
+        ) : messages.length > 0 ? (
           <div className="space-y-4">
             {messages.map((message) => (
               <div 
                 key={message.id} 
-                className={`flex ${message.sender === 'technician' ? 'justify-start' : 'justify-end'}`}
+                className={`flex ${message.direction === 'outbound' ? 'justify-start' : 'justify-end'}`}
               >
                 <div 
                   className={`max-w-[80%] p-3 rounded-lg ${
-                    message.sender === 'technician' 
+                    message.direction === 'outbound' 
                       ? 'bg-muted text-foreground' 
                       : 'bg-fixlyfy text-white'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm">{message.body}</p>
                   <span className="text-xs text-fixlyfy-text-secondary block mt-1">
-                    {new Date(message.date).toLocaleString()}
+                    {new Date(message.created_at).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -165,10 +262,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
         <MessageDialog
           open={isMessageDialogOpen}
           onOpenChange={setIsMessageDialogOpen}
-          client={{
-            name: "Michael Johnson",
-            phone: "(555) 123-4567"
-          }}
+          client={client}
         />
       </CardContent>
     </Card>
