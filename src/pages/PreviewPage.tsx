@@ -15,11 +15,11 @@ const PreviewPage = () => {
     date: new Date().toLocaleDateString(),
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
     companyInfo: {
-      name: "Fixlify AI",
+      name: "Fixlyfy Services",
       logo: "/placeholder.svg",
       address: "456 Business Ave, Suite 789",
       phone: "(555) 987-6543",
-      email: "info@fixlify.com",
+      email: "info@fixlyfy.com",
       legalText: "All services are subject to our terms and conditions. Payment due within 30 days."
     },
     clientInfo: {

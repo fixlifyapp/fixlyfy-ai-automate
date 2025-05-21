@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LineItem } from "@/components/jobs/builder/types";
 
@@ -12,29 +13,21 @@ export interface Estimate {
   total: number;
   notes?: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string; // Ensure this is required to match with useEstimates.ts
   items?: LineItem[];
-  viewed?: boolean;
-  recommendedProduct?: any;
-  techniciansNote?: string;
+  viewed?: boolean; // For UI tracking
+  recommendedProduct?: any; // Added for upsell functionality
+  techniciansNote?: string; // Added for technician notes
 }
 
 export const useEstimateData = (jobId: string) => {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
 
   // Fetch estimates from Supabase
   useEffect(() => {
     const fetchEstimates = async () => {
-      if (!jobId) {
-        setIsLoading(false);
-        return;
-      }
-      
       setIsLoading(true);
-      setError(null);
-      
       try {
         const { data: estimatesData, error: estimatesError } = await supabase
           .from('estimates')
@@ -43,11 +36,7 @@ export const useEstimateData = (jobId: string) => {
           .order('created_at', { ascending: false });
         
         if (estimatesError) {
-          console.error('Error fetching estimates:', estimatesError);
-          setError(estimatesError);
-          setEstimates([]);
-          setIsLoading(false);
-          return;
+          throw estimatesError;
         }
 
         if (estimatesData?.length) {
@@ -81,9 +70,9 @@ export const useEstimateData = (jobId: string) => {
               return {
                 ...estimate,
                 items,
-                viewed: false,
-                recommendedProduct: null,
-                techniciansNote: ""
+                viewed: false, // Default to not viewed for UI tracking
+                recommendedProduct: null, // Default to no recommended product
+                techniciansNote: "" // Default to no technician's note
               };
             })
           );
@@ -93,21 +82,21 @@ export const useEstimateData = (jobId: string) => {
           setEstimates([]);
         }
       } catch (error) {
-        console.error('Error in useEstimateData:', error);
-        setError(error instanceof Error ? error : new Error('Unknown error occurred'));
-        setEstimates([]);
+        console.error('Error fetching estimates:', error);
+        toast.error('Failed to load estimates');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchEstimates();
+    if (jobId) {
+      fetchEstimates();
+    }
   }, [jobId]);
 
   return {
     estimates,
     setEstimates,
-    isLoading,
-    error
+    isLoading
   };
 };

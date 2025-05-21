@@ -1,20 +1,29 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/sonner";
-import { Calculator, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { InvoiceForm } from "../forms/InvoiceForm";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Calculator, Info } from "lucide-react";
+import { InvoiceProductSelector } from "../invoices/InvoiceProductSelector";
+import { Product } from "../builder/types";
 import { supabase } from "@/integrations/supabase/client";
-import { recordInvoiceCreated } from "@/services/jobHistoryService";
-import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvoiceCreated: (amount: number, invoiceNumber?: string) => void;
+  onInvoiceCreated: (amount: number) => void;
   clientInfo: {
     name: string;
     address: string;
@@ -36,7 +45,6 @@ interface InvoiceDialogProps {
     status: string;
     notes?: string;
   } | null;
-  jobId: string;
 }
 
 export const InvoiceDialog = ({ 
@@ -45,8 +53,7 @@ export const InvoiceDialog = ({
   onInvoiceCreated,
   clientInfo,
   companyInfo,
-  editInvoice,
-  jobId
+  editInvoice
 }: InvoiceDialogProps) => {
   const [amount, setAmount] = useState(0);
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
@@ -54,9 +61,6 @@ export const InvoiceDialog = ({
   const [invoiceName, setInvoiceName] = useState("Service Invoice");
   const [taxRate] = useState(13); // Fixed 13% tax rate
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"form" | "preview">("form");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const { currentUser } = useRBAC();
 
   // Reset state when the dialog opens/closes
   useEffect(() => {
@@ -64,17 +68,13 @@ export const InvoiceDialog = ({
       if (editInvoice) {
         setAmount(editInvoice.total);
         setDescription(editInvoice.notes || "");
-        setInvoiceNumber(editInvoice.invoice_number);
         // Fetch invoice line items if editing
         fetchInvoiceLineItems(editInvoice.id);
       } else {
-        // Generate random invoice number for new invoices
-        setInvoiceNumber(`INV-${Math.floor(900000 + Math.random() * 100000)}`);
         setAmount(0);
         setInvoiceItems([]);
         setDescription("");
         setInvoiceName("Service Invoice");
-        setActiveTab("form");
       }
     }
   }, [open, editInvoice]);
@@ -95,93 +95,105 @@ export const InvoiceDialog = ({
       
       if (data) {
         const formattedItems = data.map(item => ({
+          id: item.id,
+          name: item.description,
           description: item.description,
           quantity: item.quantity || 1,
-          price: item.unit_price,
-          discount: 0
+          unitPrice: item.unit_price,
+          taxable: item.taxable
         }));
         
         setInvoiceItems(formattedItems);
       }
     } catch (error) {
       console.error("Error fetching invoice line items:", error);
+      toast.error("Failed to load invoice details");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Calculate total 
-  const calculateSubtotal = () => {
-    if (invoiceItems.length > 0) {
-      return invoiceItems.reduce((total, item) => {
-        const price = parseFloat(item.price || 0);
-        const quantity = parseInt(item.quantity || 1);
-        const discount = parseFloat(item.discount || 0);
-        const lineTotal = (price * quantity) - discount;
-        return total + lineTotal;
-      }, 0);
-    }
-    return amount;
+  // Function to handle the amount change
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setAmount(isNaN(value) ? 0 : value);
   };
 
-  // Calculate tax
+  // Calculate tax amount
   const calculateTax = () => {
-    const subtotal = calculateSubtotal();
-    return (subtotal * taxRate) / 100;
+    const subtotal = invoiceItems.length > 0 
+      ? invoiceItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) 
+      : amount;
+    return subtotal * (taxRate / 100);
   };
 
   // Calculate total with tax
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
+    const subtotal = invoiceItems.length > 0 
+      ? invoiceItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) 
+      : amount;
+    return subtotal + calculateTax();
   };
 
-  // Add a new empty line item
-  const addLineItem = () => {
-    setInvoiceItems([...invoiceItems, {
-      description: "",
-      quantity: 1,
-      price: 0,
-      discount: 0
+  // Function to add product to invoice
+  const handleAddProduct = (product: Product) => {
+    setInvoiceItems(prev => [...prev, {
+      id: `item-${Date.now()}`,
+      name: product.name,
+      description: product.description || product.name,
+      quantity: product.quantity || 1,
+      unitPrice: product.price,
+      ourPrice: product.ourPrice || product.cost || 0,
+      taxable: product.taxable || true
     }]);
   };
-
-  // Update a line item
-  const updateLineItem = (index: number, field: string, value: any) => {
-    const updatedItems = [...invoiceItems];
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value
-    };
-    setInvoiceItems(updatedItems);
+  
+  // Function to remove product from invoice
+  const handleRemoveProduct = (id: string) => {
+    setInvoiceItems(prev => prev.filter(item => item.id !== id));
   };
 
-  // Remove a line item
-  const removeLineItem = (index: number) => {
-    const updatedItems = [...invoiceItems];
-    updatedItems.splice(index, 1);
-    setInvoiceItems(updatedItems);
+  // Handle updating a product in the invoice
+  const handleUpdateProduct = (productId: string, updatedProduct: any) => {
+    setInvoiceItems(prev => 
+      prev.map(item => item.id === productId ? {
+        ...item,
+        ...updatedProduct,
+        ourPrice: 0 // Ensure ourPrice is 0 for any product added to invoices
+      } : item)
+    );
   };
 
-  // Handle submit invoice
-  const handleSubmit = async () => {
+  // Function to handle the form submission  
+  const handleSubmitInvoice = async () => {
     setIsLoading(true);
+    
     try {
-      const total = calculateTotal();
+      // Calculate the total amount including tax
+      const totalAmount = calculateTotal();
+      
+      if (totalAmount <= 0) {
+        toast.error("Please enter a valid invoice amount or add products");
+        return;
+      }
       
       let invoiceId = editInvoice?.id;
+      let invoiceNumber = editInvoice?.invoice_number;
       
       if (!editInvoice) {
         // Create new invoice
+        invoiceNumber = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
+        
         const { data: newInvoice, error } = await supabase
           .from("invoices")
           .insert({
             invoice_number: invoiceNumber,
-            total: total,
-            balance: total,
+            total: totalAmount,
+            balance: totalAmount,
             amount_paid: 0,
             status: "unpaid",
             notes: description,
-            job_id: jobId
+            job_id: "JOB-2034" // This should come from props in a real implementation
           })
           .select()
           .single();
@@ -191,57 +203,13 @@ export const InvoiceDialog = ({
         }
         
         invoiceId = newInvoice.id;
-        
-        // Record the invoice creation in job history
-        await recordInvoiceCreated(
-          jobId,
-          invoiceNumber,
-          total,
-          currentUser?.name,
-          currentUser?.id
-        );
-        
-        // Get client phone number to send SMS notification
-        try {
-          // Get the job to find client ID
-          const { data: job } = await supabase
-            .from('jobs')
-            .select('client_id')
-            .eq('id', jobId)
-            .single();
-            
-          if (job && job.client_id) {
-            // Get client phone number
-            const { data: client } = await supabase
-              .from('clients')
-              .select('phone')
-              .eq('id', job.client_id)
-              .single();
-              
-            if (client && client.phone) {
-              // Import here to avoid circular dependency
-              const { sendInvoiceNotificationSMS } = await import('@/services/notificationService');
-              
-              // Send SMS notification
-              await sendInvoiceNotificationSMS(
-                client.phone,
-                invoiceNumber,
-                total,
-                jobId
-              );
-              toast.success("Invoice SMS notification sent");
-            }
-          }
-        } catch (error) {
-          console.error("Failed to send SMS notification:", error);
-        }
       } else {
         // Update existing invoice
         const { error } = await supabase
           .from("invoices")
           .update({
-            total: total,
-            balance: total,
+            total: totalAmount,
+            balance: totalAmount,
             notes: description,
             updated_at: new Date().toISOString()
           })
@@ -251,35 +219,44 @@ export const InvoiceDialog = ({
           throw error;
         }
         
-        // Delete existing line items to replace them
-        await supabase
+        // Delete existing line items so we can replace them
+        const { error: deleteError } = await supabase
           .from("line_items")
           .delete()
           .eq("parent_id", invoiceId)
           .eq("parent_type", "invoice");
+          
+        if (deleteError) {
+          throw deleteError;
+        }
       }
       
-      // Insert line items
-      if (invoiceItems.length > 0 && invoiceId) {
+      // Insert line items if we have any
+      if (invoiceItems.length > 0) {
         const lineItemsToInsert = invoiceItems.map(item => ({
           parent_id: invoiceId,
           parent_type: "invoice",
-          description: item.description,
+          description: item.name,
           quantity: item.quantity,
-          unit_price: item.price,
-          taxable: true
+          unit_price: item.unitPrice,
+          taxable: item.taxable
         }));
         
-        await supabase
+        const { error: lineItemsError } = await supabase
           .from("line_items")
           .insert(lineItemsToInsert);
+          
+        if (lineItemsError) {
+          throw lineItemsError;
+        }
       }
       
-      onInvoiceCreated(total, invoiceNumber);
+      onInvoiceCreated(totalAmount);
+      toast.success(`Invoice ${editInvoice ? 'updated' : 'created'} successfully`);
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving invoice:", error);
-      toast.error("Failed to save invoice");
+      toast.error(`Failed to ${editInvoice ? 'update' : 'create'} invoice`);
     } finally {
       setIsLoading(false);
     }
@@ -287,228 +264,162 @@ export const InvoiceDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden">
-        <div className="flex h-[90vh]">
-          {/* Sidebar */}
-          <div className="w-16 bg-gray-50 border-r flex flex-col items-center py-6">
-            <div 
-              className={`cursor-pointer p-3 rounded-lg mb-4 ${activeTab === "form" ? "bg-primary/10" : ""}`}
-              onClick={() => setActiveTab("form")}
-            >
-              <Calculator className={`h-6 w-6 ${activeTab === "form" ? "text-primary" : "text-gray-500"}`} />
-              <span className="text-xs mt-1 block text-center">Form</span>
-            </div>
-            <div 
-              className={`cursor-pointer p-3 rounded-lg ${activeTab === "preview" ? "bg-primary/10" : ""}`}
-              onClick={() => setActiveTab("preview")}
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className={`h-6 w-6 ${activeTab === "preview" ? "text-primary" : "text-gray-500"}`}
-              >
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              <span className="text-xs mt-1 block text-center">Preview</span>
-            </div>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="p-6 border-b">
+          <DialogTitle className="text-xl">
+            {editInvoice ? 'Edit Invoice' : 'Create New Invoice'}
+          </DialogTitle>
+          <DialogDescription>
+            {editInvoice 
+              ? 'Update the invoice details below.'
+              : 'Create an invoice by adding products or entering details below.'
+            }
+          </DialogDescription>
+        </DialogHeader>
+        
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
           </div>
-          
-          {/* Main content */}
-          <div className="flex-1 overflow-y-auto">
-            {activeTab === "form" ? (
-              <div className="p-6">
-                <div className="mb-6 border-b pb-4">
-                  <h2 className="text-2xl font-semibold">Invoice #{invoiceNumber}</h2>
-                  <p className="text-gray-500">Add items to your invoice below</p>
+        ) : (
+          <div className="p-6 space-y-6">
+            {/* Main Form Layout - Responsive Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left column - Core details */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="invoice-name" className="text-sm font-medium">Invoice Name</Label>
+                  <Input
+                    id="invoice-name"
+                    placeholder="Service Invoice"
+                    className="mt-1"
+                    value={invoiceName}
+                    onChange={(e) => setInvoiceName(e.target.value)}
+                  />
                 </div>
                 
-                <div className="mb-6">
-                  {/* Invoice items table */}
-                  <div className="w-full">
-                    <div className="grid grid-cols-12 gap-4 mb-2 font-medium border-b pb-2">
-                      <div className="col-span-5">Description</div>
-                      <div className="col-span-2 text-center">Qty</div>
-                      <div className="col-span-2 text-center">Customer Price ($)</div>
-                      <div className="col-span-2 text-center">Discount</div>
-                      <div className="col-span-1 text-center">Total</div>
-                    </div>
-                    
-                    {invoiceItems.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        No items added yet. Add items from the catalog or create a custom line item.
-                      </div>
-                    ) : (
-                      invoiceItems.map((item, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-4 mb-3 items-center">
-                          <div className="col-span-5">
-                            <Input
-                              value={item.description}
-                              onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                              placeholder="Enter item description"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value))}
-                              className="text-center"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.price}
-                              onChange={(e) => updateLineItem(index, 'price', parseFloat(e.target.value))}
-                              className="text-center"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.discount}
-                              onChange={(e) => updateLineItem(index, 'discount', parseFloat(e.target.value))}
-                              className="text-center"
-                            />
-                          </div>
-                          <div className="col-span-1 text-right">
-                            ${((item.price * item.quantity) - (item.discount || 0)).toFixed(2)}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  
-                  <div className="mt-4">
-                    <Button onClick={addLineItem} variant="outline" size="sm" className="flex items-center gap-1">
-                      <Plus size={16} />
-                      Add Product
-                    </Button>
-                    <Button onClick={() => {}} variant="outline" size="sm" className="ml-2">
-                      Custom Line
-                    </Button>
-                  </div>
+                <div>
+                  <Label htmlFor="invoice-description" className="text-sm font-medium">Description</Label>
+                  <Textarea
+                    id="invoice-description"
+                    placeholder="Describe the invoice details..."
+                    className="mt-1 min-h-[80px]"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
                 </div>
                 
-                <div className="border-t pt-4">
-                  <div className="flex justify-end">
-                    <div className="w-64">
-                      <div className="flex justify-between mb-2">
-                        <span>Subtotal:</span>
-                        <span>${calculateSubtotal().toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span>Tax ({taxRate}%):</span>
-                        <span>${calculateTax().toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span>${calculateTotal().toFixed(2)}</span>
-                      </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="invoice-category" className="text-sm font-medium">Category</Label>
+                    <select 
+                      id="invoice-category"
+                      className="w-full mt-1 border border-input bg-background px-3 py-2 rounded-md text-sm"
+                    >
+                      <option value="repair">Repair</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="installation">Installation</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="invoice-status" className="text-sm font-medium">Status</Label>
+                    <div className="mt-2">
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                        {editInvoice ? editInvoice.status : 'Draft'}
+                      </Badge>
                     </div>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="p-6">
-                <div className="border rounded-lg p-6">
-                  <div className="flex justify-between mb-6">
-                    <div>
-                      <h2 className="text-2xl font-bold">INVOICE</h2>
-                      <p>#{invoiceNumber}</p>
-                    </div>
-                    <div className="text-right">
-                      <h3 className="font-bold">{companyInfo.name}</h3>
-                      <p className="text-sm">{companyInfo.address}</p>
-                      <p className="text-sm">{companyInfo.phone}</p>
-                    </div>
+              
+              {/* Right column - Pricing */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="invoice-amount" className="flex items-center gap-2 text-sm font-medium">
+                    Customer Price ($)
+                    <span className="text-xs text-muted-foreground">(before tax)</span>
+                  </Label>
+                  <Input
+                    id="invoice-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="mt-1"
+                    value={invoiceItems.length > 0 ? '' : (amount === 0 ? '' : amount)}
+                    onChange={handleAmountChange}
+                    disabled={invoiceItems.length > 0}
+                  />
+                  {invoiceItems.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Using line items for pricing
+                    </p>
+                  )}
+                </div>
+                
+                <div className="bg-muted/30 border rounded-md p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span>
+                      ${invoiceItems.length > 0 
+                        ? invoiceItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toFixed(2) 
+                        : amount.toFixed(2)}
+                    </span>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <h4 className="font-medium mb-1">Bill To:</h4>
-                      <p>{clientInfo.name}</p>
-                      <p className="text-sm">{clientInfo.address}</p>
-                      <p className="text-sm">{clientInfo.phone}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="mb-1"><span className="font-medium">Date:</span> {new Date().toLocaleDateString()}</p>
-                      <p><span className="font-medium">Due Date:</span> {new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString()}</p>
-                    </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      Tax ({taxRate}%):
+                    </span>
+                    <span>${calculateTax().toFixed(2)}</span>
                   </div>
                   
-                  <table className="w-full mb-6">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Description</th>
-                        <th className="text-center py-2">Qty</th>
-                        <th className="text-right py-2">Price</th>
-                        <th className="text-right py-2">Discount</th>
-                        <th className="text-right py-2">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoiceItems.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="text-center py-4 text-gray-500">No items added yet</td>
-                        </tr>
-                      ) : (
-                        invoiceItems.map((item, index) => (
-                          <tr key={index} className="border-b">
-                            <td className="py-2">{item.description || "Unnamed item"}</td>
-                            <td className="text-center py-2">{item.quantity}</td>
-                            <td className="text-right py-2">${parseFloat(item.price).toFixed(2)}</td>
-                            <td className="text-right py-2">${parseFloat(item.discount || 0).toFixed(2)}</td>
-                            <td className="text-right py-2">${((item.price * item.quantity) - (item.discount || 0)).toFixed(2)}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                  
-                  <div className="flex justify-end">
-                    <div className="w-64">
-                      <div className="flex justify-between mb-1">
-                        <span>Subtotal:</span>
-                        <span>${calculateSubtotal().toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between mb-1">
-                        <span>Tax ({taxRate}%):</span>
-                        <span>${calculateTax().toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                        <span>Total:</span>
-                        <span>${calculateTotal().toFixed(2)}</span>
-                      </div>
-                    </div>
+                  <div className="flex justify-between font-medium pt-2 border-t border-border">
+                    <span>Total:</span>
+                    <span>${calculateTotal().toFixed(2)}</span>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
             
-            <div className="p-4 border-t flex justify-end">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
-                {editInvoice ? "Update Invoice" : "Send to Client"}
-              </Button>
+            {/* Taxable checkbox */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="taxable"
+                className="rounded border-gray-300"
+                checked={true}
+                readOnly
+              />
+              <Label htmlFor="taxable" className="text-sm cursor-pointer">Taxable Item (13% tax will be applied)</Label>
+            </div>
+            
+            {/* Product Selector Section */}
+            <div className="pt-4 border-t">
+              <h3 className="text-base font-medium mb-3 flex items-center gap-2">
+                <Calculator size={18} />
+                Product Selection
+              </h3>
+              
+              <InvoiceProductSelector
+                selectedProducts={invoiceItems}
+                onAddProduct={handleAddProduct}
+                onRemoveProduct={handleRemoveProduct}
+                onUpdateProduct={handleUpdateProduct}
+              />
             </div>
           </div>
-        </div>
+        )}
+        
+        <DialogFooter className="p-6 border-t bg-muted/30">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmitInvoice} disabled={isLoading}>
+            {isLoading ? 'Saving...' : (editInvoice ? 'Update Invoice' : 'Create Invoice')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,6 @@
 
 import { useTheme } from "next-themes"
-import { Toaster as Sonner } from "sonner"
+import { Toaster as Sonner, toast } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -33,42 +33,32 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-// Enhanced toast with success and error variations
-// These are no-op (empty) implementations to silence notifications
+// Enhanced toast with success and error variations but with empty implementations
 const enhancedToast = {
-  success: (message: string) => {
-    console.log('Toast success (silenced):', message);
+  success: (message: string, options?: Parameters<typeof toast>[1]) => {
+    // No-op implementation to silence notifications
     return { id: '', dismiss: () => {} };
   },
-  error: (message: string) => {
-    console.log('Toast error (silenced):', message);
+  error: (message: string, options?: Parameters<typeof toast>[1]) => {
+    // No-op implementation to silence notifications
     return { id: '', dismiss: () => {} };
   }
 }
 
 // Override the default toast function to be a no-op
-const toast = Object.assign(
-  (message: any) => {
-    console.log('Toast (silenced):', message);
-    return { id: '', dismiss: () => {} };
-  },
+const noopToast: typeof toast = Object.assign(
+  (message: string) => ({ id: '', dismiss: () => {} }),
   {
-    success: (message: string) => {
-      console.log('Toast success (silenced):', message);
-      return { id: '', dismiss: () => {} };
-    },
-    error: (message: string) => {
-      console.log('Toast error (silenced):', message);
-      return { id: '', dismiss: () => {} };
-    },
+    ...toast,
+    success: () => ({ id: '', dismiss: () => {} }),
+    error: () => ({ id: '', dismiss: () => {} }),
     info: () => ({ id: '', dismiss: () => {} }),
     warning: () => ({ id: '', dismiss: () => {} }),
     custom: () => ({ id: '', dismiss: () => {} }),
     promise: () => ({ id: '', dismiss: () => {} }),
     dismiss: () => {},
     update: () => {},
-    getHistory: () => []
   }
 );
 
-export { Toaster, toast, enhancedToast }
+export { Toaster, noopToast as toast, enhancedToast }

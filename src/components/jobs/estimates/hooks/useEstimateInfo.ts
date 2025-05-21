@@ -6,11 +6,11 @@ export const useEstimateInfo = (jobId?: string) => {
   const [jobInfo, setJobInfo] = useState<any>(null);
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [companyInfo, setCompanyInfo] = useState<any>({
-    name: "Fixlify AI",
+    name: "Fixlyfy Services",
     logo: "/placeholder.svg",
     address: "123 Business Ave",
     phone: "(555) 123-4567",
-    email: "info@fixlify.com",
+    email: "info@fixlyfy.com",
     legalText: "All estimates are valid for 30 days from the date of issue."
   });
   

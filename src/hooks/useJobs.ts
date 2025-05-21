@@ -58,15 +58,7 @@ export const useJobs = (clientId?: string) => {
           
         // Filter by client if provided
         if (clientId) {
-          // Check if clientId is a UUID or a string like JOB-XXXX
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId);
-          
-          if (isUuid) {
-            query = query.eq('client_id', clientId);
-          } else {
-            console.warn('Invalid UUID format for client_id filter, skipping filter');
-            // Skip the filter rather than causing an error
-          }
+          query = query.eq('client_id', clientId);
         }
         
         // Execute query
@@ -85,7 +77,7 @@ export const useJobs = (clientId?: string) => {
         setJobs(transformedJobs);
       } catch (error) {
         console.error('Error fetching jobs:', error);
-        // Silently fail instead of showing toast
+        toast.error('Failed to load jobs');
       } finally {
         setIsLoading(false);
       }

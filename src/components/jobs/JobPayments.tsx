@@ -1,22 +1,22 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDialog } from "./dialogs/PaymentDialog";
-import { DollarSign, BellRing } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { CreditCard, DollarSign, FileText, Trash2 } from "lucide-react";
+import { PaymentMethod } from "@/types/payment";
+import { formatDistanceToNow } from "date-fns";
+import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { Dialog } from "@/components/ui/dialog";
-import { usePayments, Payment } from "@/hooks/payments";
-import { toast } from "sonner";
+import { usePayments, Payment } from "@/hooks/usePayments";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/sonner";
 import { RefundDialog } from "../finance/dialogs/RefundDialog";
 import { Payment as RefundDialogPayment } from "@/types/payment";
-import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
-import { PaymentsTable } from "./payments/PaymentsTable";
-import { PaymentSummary } from "./payments/PaymentSummary";
-import { usePaymentJobHistory } from "./payments/usePaymentJobHistory";
-import { supabase } from "@/integrations/supabase/client";
+import { recordPayment } from "@/services/jobHistoryService";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { PaymentMethod } from "@/types/payment";
-import { sendPaymentConfirmationSMS, sendRefundConfirmationSMS } from "@/services/notificationService";
 
 // Import CSS for animations
 import "@/styles/toast-animations.css";
@@ -31,7 +31,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [clientPhone, setClientPhone] = useState<string | null>(null);
   const { currentUser } = useRBAC();
   
   const { 
@@ -46,88 +45,46 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     fetchPayments
   } = usePayments(jobId);
   
-  const { recordRefund, recordNewPayment } = usePaymentJobHistory(jobId);
-
-  // Fetch client phone number when component mounts
+  // Fetch payments when component mounts or jobId changes
   useEffect(() => {
-    const fetchClientInfo = async () => {
-      try {
-        // Get the job to find client ID
-        const { data: job } = await supabase
-          .from('jobs')
-          .select('client_id')
-          .eq('id', jobId)
-          .single();
-          
-        if (job && job.client_id) {
-          // Get client phone number
-          const { data: client } = await supabase
-            .from('clients')
-            .select('phone')
-            .eq('id', job.client_id)
-            .single();
-            
-          if (client && client.phone) {
-            setClientPhone(client.phone);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch client info:", error);
-      }
+    if (jobId) {
+      fetchPayments();
+    }
+  }, [jobId, fetchPayments]);
+
+  const getMethodIcon = (method: PaymentMethod) => {
+    switch (method) {
+      case "credit-card":
+        return <CreditCard size={16} className="text-blue-500" />;
+      case "cash":
+        return <DollarSign size={16} className="text-green-500" />;
+      case "e-transfer":
+        return <FileText size={16} className="text-purple-500" />; 
+      case "cheque":
+        return <FileText size={16} className="text-orange-500" />;
+      default:
+        return <CreditCard size={16} />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusStyles = {
+      paid: "bg-green-50 text-green-700 border-green-200",
+      refunded: "bg-amber-50 text-amber-700 border-amber-200",
+      disputed: "bg-red-50 text-red-700 border-red-200"
     };
     
-    fetchClientInfo();
-  }, [jobId]);
-
-  const handleRefundPayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsRefundDialogOpen(true);
+    return (
+      <Badge 
+        variant="outline" 
+        className={statusStyles[status as keyof typeof statusStyles] || ""}
+      >
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
   };
 
-  const confirmRefund = async (paymentId: string) => {
-    const result = await refundPayment(paymentId);
-    if (result && selectedPayment) {
-      await recordRefund(selectedPayment);
-      
-      // Send SMS notification for refund if we have client's phone number
-      if (clientPhone) {
-        try {
-          await sendRefundConfirmationSMS(
-            clientPhone,
-            selectedPayment.amount,
-            jobId
-          );
-          toast.success("Refund SMS notification sent");
-        } catch (error) {
-          console.error("Failed to send refund notification:", error);
-          toast.error("Failed to send refund notification");
-        }
-      }
-    }
-  };
-
-  const handleDeletePayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  const confirmDeletePayment = async () => {
-    if (!selectedPayment) return;
-    
-    setIsDeleting(true);
-    
-    try {
-      await deletePayment(selectedPayment.id);
-      setIsDeleteConfirmOpen(false);
-    } catch (error) {
-      console.error("Failed to delete payment:", error);
-      toast.error("Failed to delete payment");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handlePaymentProcessed = async (amount: number, method: string, reference?: string, notes?: string) => {
+  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
     try {
       // Get the invoice information
       const { data: invoices } = await supabase
@@ -193,24 +150,16 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       }
       
       // Record in job history
-      await recordNewPayment(amount, method as PaymentMethod, reference);
+      await recordPayment(
+        jobId,
+        amount,
+        method,
+        currentUser?.name,
+        currentUser?.id,
+        reference
+      );
       
-      // Send SMS notification if we have client's phone number
-      if (clientPhone) {
-        try {
-          await sendPaymentConfirmationSMS(
-            clientPhone, 
-            amount, 
-            method as PaymentMethod,
-            jobId,
-            reference
-          );
-          toast.success("Payment confirmation SMS sent");
-        } catch (error) {
-          console.error("Failed to send SMS notification:", error);
-          toast.error("Failed to send SMS notification");
-        }
-      }
+      // No toast notifications will be shown due to our updated implementation
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
@@ -219,6 +168,37 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
+      // No toast notifications will be shown
+    }
+  };
+
+  const handleRefundPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsRefundDialogOpen(true);
+  };
+
+  const confirmRefund = (paymentId: string) => {
+    refundPayment(paymentId);
+  };
+
+  const handleDeletePayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeletePayment = async () => {
+    if (!selectedPayment) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      await deletePayment(selectedPayment.id);
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error("Failed to delete payment:", error);
+      toast.error("Failed to delete payment");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -246,31 +226,97 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-lg font-medium">Payments</h3>
-            <PaymentSummary netAmount={netAmount} totalRefunded={totalRefunded} />
+            <div className="text-sm text-muted-foreground mt-1">
+              <span className="font-medium">${netAmount.toFixed(2)}</span> net payments
+              {totalRefunded > 0 && (
+                <>
+                  {" • "}
+                  <span className="text-orange-500 font-medium">${totalRefunded.toFixed(2)} refunded</span>
+                </>
+              )}
+            </div>
           </div>
           
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="gap-2" 
-              onClick={() => toast.info("SMS notifications are enabled for payments")}
-            >
-              <BellRing size={16} />
-              SMS Enabled
-            </Button>
-            <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
-              <DollarSign size={16} />
-              Add Payment
-            </Button>
-          </div>
+          <Button onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
+            <DollarSign size={16} />
+            Add Payment
+          </Button>
         </div>
 
-        <PaymentsTable 
-          payments={payments}
-          isLoading={isLoading}
-          onRefund={handleRefundPayment}
-          onDelete={handleDeletePayment}
-        />
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2].map(i => (
+              <Skeleton key={i} className="w-full h-16" />
+            ))}
+          </div>
+        ) : payments.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.map((payment) => (
+                <TableRow key={payment.id}>
+                  <TableCell>
+                    <div>
+                      {new Date(payment.date).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(payment.date), { addSuffix: true })}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getMethodIcon(payment.method)}
+                      <span className="capitalize">{payment.method.replace('-', ' ')}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {payment.reference || "—"}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    ${payment.amount.toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(payment.status)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {payment.status === 'paid' && (
+                      <Button
+                        onClick={() => handleRefundPayment(payment)}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-amber-600 mr-1 border-amber-200 hover:bg-amber-50"
+                      >
+                        Refund
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => handleDeletePayment(payment)}
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                      <span className="sr-only">Delete payment</span>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No payments recorded yet. Add your first payment.</p>
+          </div>
+        )}
       </CardContent>
       
       <PaymentDialog 

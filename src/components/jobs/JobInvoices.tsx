@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -24,8 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
-import { recordInvoiceCreated } from "@/services/jobHistoryService";
-import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface JobInvoicesProps {
   jobId: string;
@@ -52,7 +49,6 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isEditMode, setIsEditMode] = useState(false);
-  const { currentUser } = useRBAC();
   
   // Mock data for client and company info
   const clientInfo = {
@@ -87,7 +83,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       setInvoices(data || []);
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      // Toast is silenced by our implementation
+      toast.error("Failed to load invoices");
     } finally {
       setIsLoading(false);
     }
@@ -192,19 +188,8 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
     }
   };
 
-  const handleInvoiceCreated = async (amount: number, invoiceNumber?: string) => {
+  const handleInvoiceCreated = (amount: number) => {
     fetchInvoices();
-    
-    // Record in job history
-    if (invoiceNumber) {
-      await recordInvoiceCreated(
-        jobId,
-        invoiceNumber,
-        amount,
-        currentUser?.name,
-        currentUser?.id
-      );
-    }
   };
 
   // Function to render status badge with appropriate color
@@ -397,7 +382,6 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
           clientInfo={clientInfo}
           companyInfo={companyInfo}
           editInvoice={isEditMode ? selectedInvoice : undefined}
-          jobId={jobId}
         />
       </CardContent>
     </Card>

@@ -15,41 +15,13 @@ import { useRBAC } from "@/components/auth/RBACProvider";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
-import { supabase } from "@/integrations/supabase/client";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>("details");
-  const [isJobValid, setIsJobValid] = useState<boolean>(true);
   const { hasPermission } = useRBAC();
   const jobHeaderData = useJobDetailsHeader(id || "");
-  
-  // Check if the job exists when the component mounts
-  useEffect(() => {
-    const checkJobExists = async () => {
-      if (!id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('jobs')
-          .select('id')
-          .eq('id', id)
-          .maybeSingle();
-          
-        if (error) {
-          console.error("Error checking job:", error);
-        }
-        
-        setIsJobValid(!!data);
-      } catch (err) {
-        console.error("Error in checkJobExists:", err);
-        setIsJobValid(true); // Assume valid on error to avoid blocking UI
-      }
-    };
-    
-    checkJobExists();
-  }, [id]);
   
   // Check for activeTab in location state when component mounts or location changes
   useEffect(() => {
@@ -66,19 +38,6 @@ const JobDetailsPage = () => {
     // Switch to invoices tab
     setActiveTab("invoices");
   };
-  
-  if (!isJobValid) {
-    return (
-      <PageLayout>
-        <div className="container mx-auto px-4 py-8">
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-4">Job Not Found</h2>
-            <p>The job you are looking for does not exist or you don't have permission to view it.</p>
-          </Card>
-        </div>
-      </PageLayout>
-    );
-  }
   
   return (
     <PageLayout>

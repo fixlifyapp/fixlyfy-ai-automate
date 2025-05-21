@@ -1,67 +1,214 @@
 
-import {
-  BarChart2,
-  Bot,
-  DollarSign,
-  Home,
-  ListChecks,
-  MessageSquare,
-  Package,
-  Settings,
-  Users,
+import { useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  ListTodo, 
+  Users, 
+  Calendar, 
+  Settings, 
+  BarChart3, 
+  Mail, 
   Zap,
-  ChevronLeft,
+  Menu, 
   ChevronRight,
-  Menu,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+  Package,
+  UserCheck,
+  Receipt,
+  Brain
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { useRBAC } from '@/components/auth/RBACProvider';
 
-import { Logo } from "@/components/Logo";
-import { NavItem } from "@/components/layout/NavItem";
-import { UserMenu } from "@/components/auth/UserMenu";
+// Define menu items with required permissions
+const menuItems = [
+  { 
+    name: 'Dashboard', 
+    icon: LayoutDashboard, 
+    path: '/', 
+    highlight: false,
+    permission: null // Accessible to all
+  },
+  { 
+    name: 'Jobs', 
+    icon: ListTodo, 
+    path: '/jobs', 
+    badge: '12', 
+    highlight: true,
+    permission: 'jobs.view.own' // At minimum, users can view their own jobs
+  },
+  { 
+    name: 'Clients', 
+    icon: Users, 
+    path: '/clients',
+    highlight: false,
+    permission: 'jobs.view.own' // If you can view jobs, you can see clients
+  },
+  { 
+    name: 'Schedule', 
+    icon: Calendar, 
+    path: '/schedule',
+    highlight: false,
+    permission: 'jobs.view.own' // Basic scheduling access
+  },
+  {
+    name: 'Products',
+    icon: Package,
+    path: '/products',
+    highlight: false,
+    permission: 'jobs.view.own' // Basic products access
+  },
+  {
+    name: 'Finance',
+    icon: Receipt,
+    path: '/finance',
+    highlight: false,
+    permission: 'payments.view' // Only users with payment view permission can see Finance
+  },
+  {
+    name: 'Team',
+    icon: UserCheck,
+    path: '/admin/team',
+    highlight: false,
+    permission: 'users.view' // Users with user view permission can see team
+  },
+  {
+    name: 'AI Assistant',
+    icon: Brain,
+    path: '/ai-assistant',
+    highlight: false,
+    permission: null // Accessible to all
+  },
+  {
+    name: 'Automations',
+    icon: Zap,
+    path: '/automations',
+    highlight: false,
+    permission: 'settings.view' // Only those with settings access can see automations
+  },
+  { 
+    name: 'Reports', 
+    icon: BarChart3, 
+    path: '/reports',
+    highlight: false,
+    permission: 'reports.view' // Specific permission for reports
+  },
+  { 
+    name: 'Messages', 
+    icon: Mail, 
+    path: '/messages', 
+    badge: '3',
+    highlight: false,
+    permission: null // Accessible to all
+  }
+];
+
+const bottomMenuItems = [
+  { 
+    name: 'Settings', 
+    icon: Settings, 
+    path: '/settings',
+    highlight: false,
+    permission: null // Settings page is accessible but content is controlled
+  }
+];
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-
-  const toggleSidebar = () => {
-    setCollapsed(!collapsed);
-  };
-
+  const location = useLocation();
+  const { hasPermission } = useRBAC();
+  
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.permission || hasPermission(item.permission)
+  );
+  
   return (
-    <aside 
-      className={`h-full ${collapsed ? 'w-16' : 'w-16 lg:w-64'} border-r border-fixlyfy-border bg-card flex flex-col transition-all duration-300`}
+    <div 
+      className={cn(
+        "h-screen bg-fixlyfy-bg-sidebar border-r border-fixlyfy-border flex flex-col transition-all duration-300",
+        collapsed ? "w-[70px]" : "w-[240px]"
+      )}
     >
-      <div className="p-4 flex justify-between items-center">
-        <Link to="/" className="flex items-center gap-3">
-          <Logo className="w-8 h-8" />
-          {!collapsed && <span className="lg:block hidden">Fixlify AI</span>}
-        </Link>
-      </div>
-      
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-        <NavItem to="/" icon={Home} label="Dashboard" collapsed={collapsed} />
-        <NavItem to="/jobs" icon={ListChecks} label="Jobs" collapsed={collapsed} />
-        <NavItem to="/clients" icon={Users} label="Clients" collapsed={collapsed} />
-        <NavItem to="/finance" icon={DollarSign} label="Finance" collapsed={collapsed} />
-        <NavItem to="/products" icon={Package} label="Products" collapsed={collapsed} />
-        <NavItem to="/messages" icon={MessageSquare} label="Messages" collapsed={collapsed} />
-        <NavItem to="/reports" icon={BarChart2} label="Reports" collapsed={collapsed} />
-        <NavItem to="/automations" icon={Zap} label="Automations" collapsed={collapsed} />
-        <NavItem to="/ai-assistant" icon={Bot} label="AI Assistant" collapsed={collapsed} />
-        <NavItem to="/team" icon={Users} label="Team" collapsed={collapsed} />
-        <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
-      </nav>
-      
-      <div className="p-4 border-t border-fixlyfy-border mt-auto">
-        {!collapsed && <div className="hidden lg:block"><UserMenu /></div>}
-        <button 
-          onClick={toggleSidebar}
-          className="mt-2 w-full flex justify-center items-center p-2 text-fixlyfy hover:bg-fixlyfy/10 rounded-md transition-all"
+      <div className="p-4 flex items-center justify-between">
+        {!collapsed && (
+          <div className="flex items-center">
+            <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold">
+              F
+            </div>
+            <span className="ml-2 font-bold text-fixlyfy text-xl">Fixlyfy</span>
+          </div>
+        )}
+        {collapsed && (
+          <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold mx-auto">
+            F
+          </div>
+        )}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn("text-fixlyfy-text-secondary", collapsed && "mx-auto mt-4")}
+          onClick={() => setCollapsed(!collapsed)}
         >
-          {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-        </button>
+          {collapsed ? <ChevronRight size={20} /> : <Menu size={20} />}
+        </Button>
       </div>
-    </aside>
+      
+      <div className="flex-1 overflow-y-auto hide-scrollbar pt-4">
+        <div className="space-y-1 px-3">
+          {filteredMenuItems.map((item) => (
+            <Link 
+              key={item.name} 
+              to={item.path}
+              className={cn(
+                "flex items-center py-2 px-3 rounded-lg group transition-colors relative",
+                location.pathname === item.path 
+                  ? "bg-fixlyfy text-white" 
+                  : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
+              )}
+            >
+              <item.icon size={20} className={cn(
+                collapsed ? "mx-auto" : "mr-3"
+              )} />
+              {!collapsed && (
+                <span className="flex-1">{item.name}</span>
+              )}
+              {!collapsed && item.badge && (
+                <Badge className="bg-fixlyfy-light text-white">{item.badge}</Badge>
+              )}
+              {collapsed && item.badge && (
+                <Badge className="bg-fixlyfy-light text-white absolute top-0 right-0 translate-x-1 -translate-y-1">
+                  {item.badge}
+                </Badge>
+              )}
+            </Link>
+          ))}
+        </div>
+      </div>
+      
+      <div className="p-3 space-y-1">
+        {bottomMenuItems.map((item) => (
+          <Link 
+            key={item.name} 
+            to={item.path}
+            className={cn(
+              "flex items-center py-2 px-3 rounded-lg group transition-colors",
+              location.pathname === item.path 
+                ? "bg-fixlyfy text-white" 
+                : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
+            )}
+          >
+            <item.icon size={20} className={cn(
+              collapsed ? "mx-auto" : "mr-3"
+            )} />
+            {!collapsed && (
+              <span className="flex-1">{item.name}</span>
+            )}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 };

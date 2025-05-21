@@ -8,9 +8,6 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { sendClientMessageSMS } from "@/services/notificationService";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 interface MessageDialogProps {
   open: boolean;
@@ -19,13 +16,10 @@ interface MessageDialogProps {
     name: string;
     phone?: string;  // Added phone as optional property
   };
-  jobId?: string;
 }
 
-export const MessageDialog = ({ open, onOpenChange, client, jobId }: MessageDialogProps) => {
+export const MessageDialog = ({ open, onOpenChange, client }: MessageDialogProps) => {
   const [message, setMessage] = useState("");
-  const [sendSMS, setSendSMS] = useState(true);
-  const [isSending, setIsSending] = useState(false);
   const [messages, setMessages] = useState([
     {
       text: "Hello! Just confirming our appointment tomorrow at 1:30 PM.",
@@ -41,60 +35,44 @@ export const MessageDialog = ({ open, onOpenChange, client, jobId }: MessageDial
     }
   ]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!message.trim()) return;
-    setIsSending(true);
 
-    try {
-      // Add the new message to the list
-      const newMessage = {
-        text: message,
-        sender: "You",
-        timestamp: new Date().toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: 'numeric',
-          hour12: true
-        }),
-        isClient: false
-      };
+    // Add the new message to the list
+    const newMessage = {
+      text: message,
+      sender: "You",
+      timestamp: new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      }),
+      isClient: false
+    };
 
-      setMessages([...messages, newMessage]);
-      
-      // Send SMS notification if enabled and phone number exists
-      if (sendSMS && client.phone) {
-        await sendClientMessageSMS(client.phone, message, jobId);
-        toast.success("Message sent to client via SMS");
-      } else {
-        toast.success("Message sent to client");
-      }
-      
-      setMessage("");
-      
-      // Simulate a reply after a delay (in a real app, this would come from the API)
-      if (Math.random() > 0.5) {
-        setTimeout(() => {
-          const clientReply = {
-            text: "Thanks for the update! I'll check with you later.",
-            sender: client.name,
-            timestamp: new Date().toLocaleString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: 'numeric',
-              hour12: true
-            }),
-            isClient: true
-          };
-          setMessages(prevMessages => [...prevMessages, clientReply]);
-        }, 3000);
-      }
-    } catch (error) {
-      toast.error("Failed to send message");
-      console.error("Error sending message:", error);
-    } finally {
-      setIsSending(false);
+    setMessages([...messages, newMessage]);
+    toast.success("Message sent to client");
+    setMessage("");
+    
+    // Simulate a reply after a delay (in a real app, this would come from the API)
+    if (Math.random() > 0.5) {
+      setTimeout(() => {
+        const clientReply = {
+          text: "Thanks for the update! I'll check with you later.",
+          sender: client.name,
+          timestamp: new Date().toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true
+          }),
+          isClient: true
+        };
+        setMessages(prevMessages => [...prevMessages, clientReply]);
+      }, 3000);
     }
   };
 
@@ -127,19 +105,6 @@ export const MessageDialog = ({ open, onOpenChange, client, jobId }: MessageDial
             ))}
           </div>
           
-          {client.phone && (
-            <div className="flex items-center space-x-2 mb-3">
-              <Switch 
-                id="sms-notification"
-                checked={sendSMS}
-                onCheckedChange={setSendSMS}
-              />
-              <Label htmlFor="sms-notification">
-                Send as SMS to {client.phone}
-              </Label>
-            </div>
-          )}
-          
           <div className="flex gap-2">
             <textarea 
               className="w-full p-2 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none" 
@@ -153,11 +118,8 @@ export const MessageDialog = ({ open, onOpenChange, client, jobId }: MessageDial
                   handleSendMessage();
                 }
               }}
-              disabled={isSending}
             />
-            <Button onClick={handleSendMessage} disabled={isSending}>
-              {isSending ? "Sending..." : "Send"}
-            </Button>
+            <Button onClick={handleSendMessage}>Send</Button>
           </div>
         </div>
       </DialogContent>

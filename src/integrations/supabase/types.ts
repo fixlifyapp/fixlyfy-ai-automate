@@ -69,51 +69,6 @@ export type Database = {
         }
         Relationships: []
       }
-      conversations: {
-        Row: {
-          client_id: string | null
-          created_at: string | null
-          id: string
-          job_id: string | null
-          last_message_at: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          client_id?: string | null
-          created_at?: string | null
-          id?: string
-          job_id?: string | null
-          last_message_at?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          client_id?: string | null
-          created_at?: string | null
-          id?: string
-          job_id?: string | null
-          last_message_at?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversations_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       estimates: {
         Row: {
           created_at: string | null
@@ -369,56 +324,6 @@ export type Database = {
           unit_price?: number
         }
         Relationships: []
-      }
-      messages: {
-        Row: {
-          body: string
-          conversation_id: string | null
-          created_at: string | null
-          direction: string
-          id: string
-          media_url: string | null
-          message_sid: string | null
-          read_at: string | null
-          recipient: string | null
-          sender: string | null
-          status: string | null
-        }
-        Insert: {
-          body: string
-          conversation_id?: string | null
-          created_at?: string | null
-          direction: string
-          id?: string
-          media_url?: string | null
-          message_sid?: string | null
-          read_at?: string | null
-          recipient?: string | null
-          sender?: string | null
-          status?: string | null
-        }
-        Update: {
-          body?: string
-          conversation_id?: string | null
-          created_at?: string | null
-          direction?: string
-          id?: string
-          media_url?: string | null
-          message_sid?: string | null
-          read_at?: string | null
-          recipient?: string | null
-          sender?: string | null
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       payments: {
         Row: {
