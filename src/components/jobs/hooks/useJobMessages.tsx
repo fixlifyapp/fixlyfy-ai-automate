@@ -1,169 +1,39 @@
 
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAI } from "@/hooks/use-ai";
+import { useState, useEffect, useCallback } from "react";
+import { 
+  fetchJobClientDetails, 
+  fetchConversationMessages, 
+  sendClientMessage 
+} from "./messaging/messagingUtils";
+import { useMessageAI } from "./messaging/useMessageAI";
+import { useRealTimeMessages } from "./messaging/useRealTimeMessages";
 
 interface UseJobMessagesProps {
   jobId: string;
 }
 
-interface Message {
-  id: string;
-  body: string;
-  direction: string;
-  sender?: string;
-  recipient?: string;
-  message_sid?: string;
-  created_at: string;
-}
-
 export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [client, setClient] = useState({ name: "", phone: "", id: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const { generateText, isLoading: isAILoading } = useAI({
-    systemContext: "You are an assistant helping with job messaging for a field service company. Keep responses professional, friendly, and concise."
-  });
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (jobId) {
-      fetchJobDetails();
-      fetchMessages();
-    }
-  }, [jobId]);
-
-  // Real-time subscription for incoming messages
-  useEffect(() => {
-    if (!jobId) return;
-
-    // First, find the conversation ID for the current job
-    const getConversationId = async () => {
-      try {
-        const { data: conversation } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('job_id', jobId)
-          .single();
-
-        if (conversation) {
-          // Set up real-time listener for this conversation
-          const channel = supabase
-            .channel('job-messages')
-            .on(
-              'postgres_changes',
-              {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages',
-                filter: `conversation_id=eq.${conversation.id}`
-              },
-              (payload) => {
-                // Make sure we don't duplicate messages
-                const newMessage = payload.new;
-                if (newMessage && !messages.some(msg => msg.id === newMessage.id)) {
-                  fetchMessages(); // Refresh messages when a new one comes in
-                }
-              }
-            )
-            .subscribe();
-
-          return () => {
-            supabase.removeChannel(channel);
-          };
-        }
-      } catch (error) {
-        console.error("Error setting up real-time subscription:", error);
-      }
-    };
-
-    getConversationId();
-  }, [jobId, messages]);
-
-  const fetchJobDetails = async () => {
-    try {
-      const { data: job } = await supabase
-        .from('jobs')
-        .select('*, clients:client_id(*)')
-        .eq('id', jobId)
-        .single();
-      
-      if (job && job.clients) {
-        setClient({
-          name: job.clients.name,
-          phone: job.clients.phone || "",
-          id: job.clients.id
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching job details:", error);
-      toast.error("Failed to load client information");
-    }
-  };
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     setIsLoading(true);
     try {
-      // First find the conversation for this job
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('job_id', jobId)
-        .single();
-      
-      if (conversation) {
-        // Fetch messages for this conversation
-        const { data } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conversation.id)
-          .order('created_at', { ascending: true });
-        
-        if (data) {
-          setMessages(data);
-        }
-      } else {
-        setMessages([]);
-      }
+      const { messages: fetchedMessages, conversationId: fetchedConversationId } = await fetchConversationMessages(jobId);
+      setMessages(fetchedMessages);
+      setConversationId(fetchedConversationId);
     } catch (error) {
-      console.error("Error fetching messages:", error);
-      // If no conversation found, it's likely there are no messages yet
+      console.error("Error in fetchMessages:", error);
       setMessages([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [jobId]);
 
-  const handleSuggestResponse = async () => {
-    if (isAILoading) return;
-    
-    try {
-      const lastMessage = messages[messages.length - 1];
-      if (!lastMessage || lastMessage.direction === "outbound") {
-        toast.info("Waiting for client response before suggesting a reply.");
-        return;
-      }
-      
-      const prompt = `Generate a professional response to this customer message: "${lastMessage.body}"`;
-      const suggestedResponse = await generateText(prompt);
-      
-      if (suggestedResponse) {
-        toast.success("AI suggestion ready", {
-          description: suggestedResponse,
-          action: {
-            label: "Use",
-            onClick: () => {
-              handleUseSuggestion(suggestedResponse);
-            }
-          }
-        });
-      }
-    } catch (error) {
-      toast.error("Failed to generate response suggestion");
-    }
-  };
-  
+  // Handle using AI suggestion
   const handleUseSuggestion = async (content: string) => {
     if (!client.phone) {
       toast.error("No phone number available for this client");
@@ -173,73 +43,55 @@ export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
     setIsSendingMessage(true);
     
     try {
-      // Call the Twilio edge function
-      const { data, error } = await supabase.functions.invoke('send-sms', {
-        body: {
-          to: client.phone,
-          body: content
-        }
+      const result = await sendClientMessage({
+        content,
+        clientPhone: client.phone,
+        jobId,
+        clientId: client.id,
+        existingConversationId: conversationId
       });
       
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      if (data.success) {
-        // Find or create conversation
-        let conversationId;
-        const { data: existingConversation } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('job_id', jobId);
-        
-        if (existingConversation && existingConversation.length > 0) {
-          conversationId = existingConversation[0].id;
-        } else {
-          const { data: newConversation } = await supabase
-            .from('conversations')
-            .insert({
-              job_id: jobId,
-              client_id: client.id,
-              status: 'active'
-            })
-            .select('id')
-            .single();
-          
-          if (newConversation) {
-            conversationId = newConversation.id;
-          }
+      if (result.success) {
+        // Update conversation ID if it's new
+        if (result.conversationId && !conversationId) {
+          setConversationId(result.conversationId);
         }
         
-        // Store the message in the database
-        if (conversationId) {
-          await supabase
-            .from('messages')
-            .insert({
-              conversation_id: conversationId,
-              body: content,
-              direction: 'outbound',
-              sender: 'You',
-              recipient: client.phone,
-              status: 'delivered',
-              message_sid: data.sid
-            });
-          
-          // Refresh messages
-          fetchMessages();
-        }
-        
-        toast.success("Message sent to client");
-      } else {
-        toast.error(`Failed to send message: ${data.error || 'Unknown error'}`);
+        // Refresh messages
+        fetchMessages();
       }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message to client");
     } finally {
       setIsSendingMessage(false);
     }
   };
+
+  // Initialize AI features
+  const { isAILoading, handleSuggestResponse } = useMessageAI({ 
+    messages,
+    onUseSuggestion: handleUseSuggestion
+  });
+
+  // Set up real-time subscription
+  useRealTimeMessages({
+    jobId,
+    conversationId,
+    onNewMessage: fetchMessages
+  });
+
+  // Initialize client details and messages
+  useEffect(() => {
+    if (jobId) {
+      const initializeData = async () => {
+        const clientDetails = await fetchJobClientDetails(jobId);
+        if (clientDetails) {
+          setClient(clientDetails);
+        }
+        fetchMessages();
+      };
+      
+      initializeData();
+    }
+  }, [jobId, fetchMessages]);
 
   return {
     messages,
@@ -251,3 +103,6 @@ export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
     handleUseSuggestion
   };
 };
+
+// Import toast for error handling
+import { toast } from "sonner";
