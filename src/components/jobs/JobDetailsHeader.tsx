@@ -20,7 +20,8 @@ export const JobDetailsHeader = () => {
           job={jobHeaderData.job}
           invoiceAmount={jobHeaderData.invoiceAmount}
           balance={jobHeaderData.balance}
-          amountPaid={jobHeaderData.paymentsMade.reduce((total, payment) => total + payment, 0)}
+          amountPaid={jobHeaderData.paymentsMade && jobHeaderData.paymentsMade.length > 0 ? 
+            jobHeaderData.paymentsMade.reduce((total, payment) => total + payment, 0) : 0}
           status={jobHeaderData.status}
           onStatusChange={jobHeaderData.handleStatusChange}
           onCallClick={() => jobHeaderData.setIsCallDialogOpen(true)}

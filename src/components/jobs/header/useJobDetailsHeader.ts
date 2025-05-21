@@ -157,6 +157,7 @@ export const useJobDetailsHeader = (id: string) => {
     invoiceAmount,
     estimateAmount,
     hasEstimate,
+    paymentsMade, // Make sure this property is included in the return value
     isCallDialogOpen,
     setIsCallDialogOpen,
     isMessageDialogOpen,
