@@ -1,6 +1,6 @@
-
 import { useState, useMemo, useCallback } from "react";
-import { enhancedToast } from "sonner";
+import { toast } from "sonner";
+import { enhancedToast } from "@/components/ui/sonner";
 import { payments as mockPayments } from "@/data/payments";
 import { supabase } from "@/integrations/supabase/client";
 import { PaymentMethod } from "@/types/payment";
@@ -121,6 +121,7 @@ export const usePayments = (jobId?: string) => {
       }
     } catch (error) {
       console.error("Error fetching payments:", error);
+      enhancedToast.error("Failed to load payments");
     } finally {
       setIsLoading(false);
     }
