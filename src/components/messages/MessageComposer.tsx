@@ -21,7 +21,7 @@ export const MessageComposer = ({
   const [isSending, setIsSending] = useState(false);
   const { user } = useAuth();
 
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!message.trim() || !conversationId || !recipientPhone || !senderPhone) return;

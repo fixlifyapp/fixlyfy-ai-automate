@@ -1,31 +1,32 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 
-import { AuthPage } from '@/pages/AuthPage';
-import { Dashboard } from '@/pages/Dashboard';
-import { JobsPage } from '@/pages/JobsPage';
+import AuthPage from '@/pages/AuthPage';
+import Dashboard from '@/pages/Dashboard';
+import JobsPage from '@/pages/JobsPage';
 import JobDetailsPage from '@/pages/JobDetailsPage';
-import { ClientsPage } from '@/pages/ClientsPage';
-import { ClientDetailPage } from '@/pages/ClientDetailPage';
-import { FinancePage } from '@/pages/FinancePage';
-import { SchedulePage } from '@/pages/SchedulePage';
-import { TeamManagementPage } from '@/pages/TeamManagementPage';
-import { TeamMemberProfilePage } from '@/pages/TeamMemberProfilePage';
-import { ProductsPage } from '@/pages/ProductsPage';
-import { DocumentsPage } from '@/pages/DocumentsPage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { ReportsPage } from '@/pages/ReportsPage';
-import { InvoicesPage } from '@/pages/InvoicesPage';
-import { InventoryPage } from '@/pages/InventoryPage';
-import { AdminRolesPage } from '@/pages/AdminRolesPage';
-import { AutomationsPage } from '@/pages/AutomationsPage';
-import { AiAssistantPage } from '@/pages/AiAssistantPage';
+import ClientsPage from '@/pages/ClientsPage';
+import ClientDetailPage from '@/pages/ClientDetailPage';
+import FinancePage from '@/pages/FinancePage';
+import SchedulePage from '@/pages/SchedulePage';
+import TeamManagementPage from '@/pages/TeamManagementPage';
+import TeamMemberProfilePage from '@/pages/TeamMemberProfilePage';
+import ProductsPage from '@/pages/ProductsPage';
+import DocumentsPage from '@/pages/DocumentsPage';
+import SettingsPage from '@/pages/SettingsPage';
+import ReportsPage from '@/pages/ReportsPage';
+import InvoicesPage from '@/pages/InvoicesPage';
+import InventoryPage from '@/pages/InventoryPage';
+import AdminRolesPage from '@/pages/AdminRolesPage';
+import AutomationsPage from '@/pages/AutomationsPage';
+import AiAssistantPage from '@/pages/AiAssistantPage';
 import MessagesPage from '@/pages/MessagesPage';
-import { NotFound } from '@/pages/NotFound';
+import NotFound from '@/pages/NotFound';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { PreviewPage } from '@/pages/PreviewPage';
+import PreviewPage from '@/pages/PreviewPage';
 
 const queryClient = new QueryClient();
 
