@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PaymentsTable } from "@/components/finance/PaymentsTable";
@@ -7,20 +7,44 @@ import { PaymentsFilters } from "@/components/finance/PaymentsFilters";
 import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
 import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { payments as initialPayments } from "@/data/payments";
 import { Payment, PaymentMethod } from "@/types/payment";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { usePayments } from "@/hooks/usePayments";
+import { FinanceAiInsights } from "@/components/finance/FinanceAiInsights";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 export default function FinancePage() {
-  const [payments, setPayments] = useState<Payment[]>(initialPayments);
-  const [filteredPayments, setFilteredPayments] = useState<Payment[]>(initialPayments);
+  // Get all payments from the usePayments hook
+  const { payments: allPayments, isLoading, fetchPayments, refundPayment, deletePayment } = usePayments();
+  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAiInsights, setShowAiInsights] = useState(() => {
+    const savedPreference = localStorage.getItem("finance_show_ai_insights");
+    return savedPreference !== null ? savedPreference === "true" : true;
+  });
   const { hasPermission } = useRBAC();
+
+  // Set up realtime sync for payments
+  useRealtimeSync({
+    tables: ["payments"],
+    onUpdate: fetchPayments,
+    enabled: true
+  });
+
+  useEffect(() => {
+    // Fetch payments when component mounts
+    fetchPayments();
+  }, [fetchPayments]);
+
+  useEffect(() => {
+    // Update filtered payments when all payments change
+    setFilteredPayments(allPayments);
+  }, [allPayments]);
 
   const handleRefund = (payment: Payment) => {
     setSelectedPayment(payment);
@@ -32,22 +56,18 @@ export default function FinancePage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const processRefund = (paymentId: string, notes?: string) => {
-    setPayments(prevPayments =>
-      prevPayments.map(payment =>
-        payment.id === paymentId
-          ? { ...payment, status: "refunded", notes: notes || payment.notes }
-          : payment
-      )
-    );
-    setFilteredPayments(prevPayments =>
-      prevPayments.map(payment =>
-        payment.id === paymentId
-          ? { ...payment, status: "refunded", notes: notes || payment.notes }
-          : payment
-      )
-    );
-    toast.success("Payment successfully refunded");
+  const processRefund = async (paymentId: string, notes?: string) => {
+    try {
+      const success = await refundPayment(paymentId);
+      if (success) {
+        toast.success("Payment successfully refunded");
+      }
+    } catch (error) {
+      console.error("Failed to refund payment:", error);
+      toast.error("Failed to refund payment");
+    } finally {
+      setIsRefundDialogOpen(false);
+    }
   };
 
   const processDelete = async () => {
@@ -56,19 +76,7 @@ export default function FinancePage() {
     setIsDeleting(true);
     
     try {
-      // In a real app, this would be an API call
-      // await fetch(`/api/payments/${selectedPayment.id}`, {
-      //   method: 'DELETE',
-      // });
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Remove payment from both arrays
-      const newPayments = payments.filter(p => p.id !== selectedPayment.id);
-      setPayments(newPayments);
-      setFilteredPayments(filteredPayments.filter(p => p.id !== selectedPayment.id));
-      
+      await deletePayment(selectedPayment.id);
       toast.success("Payment successfully deleted");
     } catch (error) {
       console.error("Failed to delete payment:", error);
@@ -92,7 +100,7 @@ export default function FinancePage() {
     technician: string | "all",
     client: string | "all"
   ) => {
-    let filtered = [...payments];
+    let filtered = [...allPayments];
 
     if (startDate) {
       // Fix: Use setHours to set the time to the start of the day
@@ -123,6 +131,12 @@ export default function FinancePage() {
     setFilteredPayments(filtered);
   };
 
+  const toggleAiInsights = () => {
+    const newValue = !showAiInsights;
+    setShowAiInsights(newValue);
+    localStorage.setItem("finance_show_ai_insights", newValue.toString());
+  };
+
   const canRefund = hasPermission("payments.refund");
   const canDelete = hasPermission("payments.delete");
 
@@ -131,15 +145,28 @@ export default function FinancePage() {
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Finance</h1>
-          <Button
-            onClick={handleExportCSV}
-            variant="outline"
-          >
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={toggleAiInsights}
+              variant="outline"
+              size="sm"
+            >
+              {showAiInsights ? "Hide Insights" : "Show Insights"}
+            </Button>
+            <Button
+              onClick={handleExportCSV}
+              variant="outline"
+            >
+              Export CSV
+            </Button>
+          </div>
         </div>
         <p className="text-muted-foreground">Manage payments, refunds and financial transactions</p>
       </div>
+
+      {showAiInsights && (
+        <FinanceAiInsights onClose={toggleAiInsights} />
+      )}
 
       <PaymentsFilters onFilterChange={applyFilters} />
 
@@ -150,6 +177,7 @@ export default function FinancePage() {
           onDelete={handleDelete}
           canRefund={canRefund}
           canDelete={canDelete}
+          isLoading={isLoading}
         />
       </div>
 
