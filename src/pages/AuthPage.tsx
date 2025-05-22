@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -101,15 +102,15 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-fixlify-bg">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center">
-            <div className="h-12 w-12 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold text-xl mb-4">
+            <div className="h-12 w-12 rounded-md fixlify-gradient flex items-center justify-center text-white font-bold text-xl mb-4">
               F
             </div>
           </div>
-          <CardTitle className="text-2xl">Fixlyfy</CardTitle>
+          <CardTitle className="text-2xl">Fixlify</CardTitle>
           <CardDescription>
             Field service management simplified
           </CardDescription>
@@ -146,7 +147,7 @@ export default function AuthPage() {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
+                  className="w-full bg-fixlify hover:bg-fixlify/90"
                   disabled={loading}
                 >
                   {loading ? (
@@ -187,7 +188,7 @@ export default function AuthPage() {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
+                  className="w-full bg-fixlify hover:bg-fixlify/90"
                   disabled={loading}
                 >
                   {loading ? (
@@ -203,7 +204,7 @@ export default function AuthPage() {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="mt-2 text-xs text-center text-muted-foreground">
-            By continuing, you agree to Fixlyfy's Terms of Service and Privacy Policy.
+            By continuing, you agree to Fixlify's Terms of Service and Privacy Policy.
           </p>
         </CardFooter>
       </Card>

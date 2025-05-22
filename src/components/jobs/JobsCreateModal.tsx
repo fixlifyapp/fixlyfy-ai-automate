@@ -15,6 +15,7 @@ import { Job, useJobs } from "@/hooks/useJobs";
 import { supabase } from "@/integrations/supabase/client";
 import { useClients } from "@/hooks/useClients";
 import { Client } from "@/hooks/useClients";
+
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -262,14 +263,13 @@ export const JobsCreateModal = ({
             <Textarea id="description" placeholder="Describe the job details, customer requirements, etc." value={description} onChange={e => setDescription(e.target.value)} />
           </div>
           
-          
         </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button type="submit" className="bg-fixlify hover:bg-fixlify/90" onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
