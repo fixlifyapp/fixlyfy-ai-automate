@@ -16,6 +16,7 @@ import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { toast } from "sonner";
+import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,44 +55,46 @@ const JobDetailsPage = () => {
   
   return (
     <PageLayout>
-      <div className="container mx-auto px-4">
-        <div className="mb-6">
-          <Card className="border-fixlyfy-border shadow-sm">
-            <JobDetailsHeader jobId={id || ""} />
-          </Card>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <JobDetailsTabs 
-              activeTab={activeTab} 
-              onTabChange={setActiveTab}
-            >
-              <TabsContent value="details">
-                <JobDetails jobId={id || ""} />
-              </TabsContent>
-              <TabsContent value="estimates">
-                <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
-              </TabsContent>
-              <TabsContent value="invoices">
-                <JobInvoices jobId={id || ""} />
-              </TabsContent>
-              <TabsContent value="payments">
-                <JobPayments jobId={id || ""} />
-              </TabsContent>
-              <TabsContent value="messages">
-                <JobMessages jobId={id || ""} />
-              </TabsContent>
-              <TabsContent value="history">
-                <JobHistory jobId={id || ""} />
-              </TabsContent>
-            </JobDetailsTabs>
+      <JobDetailsProvider jobId={id || ""}>
+        <div className="container mx-auto px-4">
+          <div className="mb-6">
+            <Card className="border-fixlyfy-border shadow-sm">
+              <JobDetailsHeader />
+            </Card>
           </div>
-          <div className="lg:col-span-1 space-y-6">
-            <JobDetailsQuickActions jobId={id || ""} />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <JobDetailsTabs 
+                activeTab={activeTab} 
+                onTabChange={setActiveTab}
+              >
+                <TabsContent value="details">
+                  <JobDetails jobId={id || ""} />
+                </TabsContent>
+                <TabsContent value="estimates">
+                  <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+                </TabsContent>
+                <TabsContent value="invoices">
+                  <JobInvoices jobId={id || ""} />
+                </TabsContent>
+                <TabsContent value="payments">
+                  <JobPayments jobId={id || ""} />
+                </TabsContent>
+                <TabsContent value="messages">
+                  <JobMessages jobId={id || ""} />
+                </TabsContent>
+                <TabsContent value="history">
+                  <JobHistory jobId={id || ""} />
+                </TabsContent>
+              </JobDetailsTabs>
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              <JobDetailsQuickActions jobId={id || ""} />
+            </div>
           </div>
         </div>
-      </div>
+      </JobDetailsProvider>
     </PageLayout>
   );
 };

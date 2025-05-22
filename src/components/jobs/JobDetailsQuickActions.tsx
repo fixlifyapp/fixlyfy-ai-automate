@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown, Clock, DollarSign, Zap, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,7 +8,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { useJobDetails } from "./context/JobDetailsContext";
 
 interface JobDetailsQuickActionsProps {
   jobId: string;
@@ -87,7 +86,7 @@ const quickActions = [{
   icon: Bell
 }];
 export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) => {
-  const [job, setJob] = useState<any>(null);
+  const { job, updateJobStatus } = useJobDetails();
   const [isLoading, setIsLoading] = useState(true);
   const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2, 3, 4]);
   const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
@@ -100,37 +99,10 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
     systemContext: "You are an AI assistant for a field service business. Generate concise, practical insights for technicians and managers about service jobs."
   });
 
-  // Fetch job data
+  // Set loading state based on job data availability
   useEffect(() => {
-    if (!jobId) return;
-    
-    const fetchJob = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('jobs')
-          .select(`
-            *,
-            clients(id, name, email, phone, address, city, state, zip, country)
-          `)
-          .eq('id', jobId)
-          .single();
-          
-        if (error) {
-          console.error("Error fetching job for quick actions:", error);
-          toast.error("Error loading job data");
-        } else if (data) {
-          setJob(data);
-        }
-      } catch (error) {
-        console.error("Error in job fetch:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchJob();
-  }, [jobId]);
+    setIsLoading(!job);
+  }, [job]);
   
   const handleFeedback = (id: number, isPositive: boolean) => {
     console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
@@ -163,17 +135,8 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
     if (!jobId) return;
     
     try {
-      const { error } = await supabase
-        .from('jobs')
-        .update({ status: 'completed' })
-        .eq('id', jobId);
-        
-      if (error) {
-        console.error("Error completing job:", error);
-        toast.error("Failed to complete job");
-      } else {
-        toast.success("Job marked as completed");
-      }
+      await updateJobStatus('completed');
+      toast.success("Job marked as completed");
     } catch (error) {
       console.error("Error in handleCompleteJob:", error);
       toast.error("Failed to complete job");
