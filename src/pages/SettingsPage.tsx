@@ -6,10 +6,11 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
+import { SettingsConfiguration } from "@/components/settings/SettingsConfiguration";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
-import { Settings, UserPlus, Users, UsersRound } from "lucide-react";
+import { Settings, UserPlus, Users, UsersRound, Tags } from "lucide-react";
 
 const SettingsPage = () => {
   return (
@@ -41,7 +42,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid grid-cols-4 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -61,6 +62,12 @@ const SettingsPage = () => {
               Company
             </TabsTrigger>
             <TabsTrigger 
+              value="configuration" 
+              className="py-4 rounded-none data-[state=active]:bg-white"
+            >
+              Configuration
+            </TabsTrigger>
+            <TabsTrigger 
               value="integrations" 
               className="py-4 rounded-none data-[state=active]:bg-white"
             >
@@ -78,6 +85,10 @@ const SettingsPage = () => {
           
           <TabsContent value="company" className="p-6">
             <SettingsCompany />
+          </TabsContent>
+          
+          <TabsContent value="configuration" className="p-6">
+            <SettingsConfiguration />
           </TabsContent>
           
           <TabsContent value="integrations" className="p-6">

@@ -114,6 +114,45 @@ export type Database = {
           },
         ]
       }
+      custom_fields: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_value: string | null
+          entity_type: string
+          field_type: string
+          id: string
+          name: string
+          options: Json | null
+          placeholder: string | null
+          required: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_value?: string | null
+          entity_type: string
+          field_type: string
+          id?: string
+          name: string
+          options?: Json | null
+          placeholder?: string | null
+          required?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_value?: string | null
+          entity_type?: string
+          field_type?: string
+          id?: string
+          name?: string
+          options?: Json | null
+          placeholder?: string | null
+          required?: boolean | null
+        }
+        Relationships: []
+      }
       estimates: {
         Row: {
           created_at: string | null
@@ -272,6 +311,69 @@ export type Database = {
           },
         ]
       }
+      job_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          sequence: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          sequence?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          sequence?: number | null
+        }
+        Relationships: []
+      }
+      job_types: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           client_id: string | null
@@ -336,6 +438,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_sources: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
       }
       line_items: {
         Row: {
