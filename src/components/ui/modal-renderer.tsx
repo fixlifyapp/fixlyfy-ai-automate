@@ -7,7 +7,7 @@ import { User } from "lucide-react";
 import { TeamSelectionDialog } from "@/components/jobs/dialogs/TeamSelectionDialog";
 import { AssignTechnicianDialog } from "@/components/jobs/dialogs/AssignTechnicianDialog";
 import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
-import { PrioritySelectionDialog } from "@/components/jobs/dialogs/PrioritySelectionDialog";
+import { PrioritySelectionDialog } from "@/components/jobs/dialogs/refactored/PrioritySelectionDialog";
 import { SourceSelectionDialog } from "@/components/jobs/dialogs/SourceSelectionDialog";
 import { JobTypeDialog } from "@/components/jobs/dialogs/JobTypeDialog";
 import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
@@ -41,7 +41,7 @@ export const ModalRenderer = () => {
       return <DeleteConfirmDialog {...commonProps} {...modalProps} />;
       
     case "prioritySelection":
-      return <PrioritySelectionDialog {...commonProps} {...modalProps} />;
+      return <PrioritySelectionDialog />;
       
     case "sourceSelection":
       return <SourceSelectionDialog {...commonProps} {...modalProps} />;
@@ -59,7 +59,8 @@ export const ModalRenderer = () => {
       return <MarkAsPaidDialog {...commonProps} {...modalProps} />;
       
     case "invoiceCreate":
-      return <InvoiceModal {...commonProps} {...modalProps} />;
+      // Convert 'open' to 'isOpen' for InvoiceModal
+      return <InvoiceModal isOpen={commonProps.open} onOpenChange={commonProps.onOpenChange} {...modalProps} />;
       
     case "convertToInvoice":
       return <ConvertToInvoiceDialog {...commonProps} {...modalProps} />;
