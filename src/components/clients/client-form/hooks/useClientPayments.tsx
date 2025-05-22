@@ -3,10 +3,23 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export interface ClientPayment {
+  id: string;
+  date: string;
+  amount: number;
+  method: string;
+  status: string;
+  invoice_number?: string;
+  job_title?: string;
+  job_id?: string;
+}
+
 export const useClientPayments = (clientId?: string) => {
   const { toast } = useToast();
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<ClientPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [paidInvoices, setPaidInvoices] = useState(0);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -22,12 +35,14 @@ export const useClientPayments = (clientId?: string) => {
         // Get jobs for the client
         const { data: jobs, error: jobsError } = await supabase
           .from('jobs')
-          .select('id')
+          .select('id, title, client_id')
           .eq('client_id', clientId);
           
         if (jobsError) throw jobsError;
         
-        let paymentData: any[] = [];
+        let paymentData: ClientPayment[] = [];
+        let totalAmount = 0;
+        let invoiceCount = 0;
         
         if (jobs && jobs.length > 0) {
           const jobIds = jobs.map(job => job.id);
@@ -35,10 +50,25 @@ export const useClientPayments = (clientId?: string) => {
           // Get invoices for those jobs
           const { data: invoices, error: invoiceError } = await supabase
             .from('invoices')
-            .select('id')
+            .select('id, job_id, invoice_number, total, status')
             .in('job_id', jobIds);
             
           if (invoiceError) throw invoiceError;
+          
+          const invoiceMap = new Map();
+          invoices?.forEach(inv => {
+            invoiceMap.set(inv.id, {
+              invoice_number: inv.invoice_number,
+              job_id: inv.job_id,
+              total: inv.total,
+              status: inv.status
+            });
+            
+            if (inv.status === 'paid') {
+              totalAmount += Number(inv.total);
+              invoiceCount++;
+            }
+          });
           
           if (invoices && invoices.length > 0) {
             const invoiceIds = invoices.map(inv => inv.id);
@@ -46,17 +76,41 @@ export const useClientPayments = (clientId?: string) => {
             // Then get payments for those invoices
             const { data: payments, error: paymentError } = await supabase
               .from('payments')
-              .select('*, invoices(*)')
+              .select('id, invoice_id, amount, method, date, status')
               .in('invoice_id', invoiceIds)
               .order('date', { ascending: false });
               
             if (paymentError) throw paymentError;
             
-            paymentData = payments || [];
+            // Create a map of job titles for quick lookup
+            const jobTitlesMap = new Map();
+            jobs.forEach(job => {
+              jobTitlesMap.set(job.id, job.title);
+            });
+            
+            // Format the payment data with all relevant info
+            paymentData = (payments || []).map(payment => {
+              const invoice = invoiceMap.get(payment.invoice_id);
+              const jobId = invoice?.job_id;
+              const jobTitle = jobId ? jobTitlesMap.get(jobId) : null;
+              
+              return {
+                id: payment.id,
+                date: payment.date,
+                amount: payment.amount,
+                method: payment.method,
+                status: payment.status || 'paid',
+                invoice_number: invoice?.invoice_number,
+                job_title: jobTitle,
+                job_id: jobId
+              };
+            });
           }
         }
         
         setPayments(paymentData);
+        setTotalRevenue(totalAmount);
+        setPaidInvoices(invoiceCount);
       } catch (error) {
         console.error("Error loading client payments:", error);
         toast({
@@ -75,5 +129,7 @@ export const useClientPayments = (clientId?: string) => {
   return {
     payments,
     isLoading,
+    totalRevenue,
+    paidInvoices
   };
 };
