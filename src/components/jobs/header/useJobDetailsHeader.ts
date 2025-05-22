@@ -130,13 +130,14 @@ export const useJobDetailsHeader = (id: string) => {
             amount: payment.amount || 0,
             method: validatePaymentMethod(payment.method),
             date: payment.date || new Date().toISOString(),
-            status: validatePaymentStatus(payment.status || 'paid'),
+            // FIX: Use default status since it's not in the DB data
+            status: validatePaymentStatus('paid'), // Default to 'paid' when not specified
             reference: payment.reference || '',
             notes: payment.notes || '',
             jobId: id,
             clientId: client.id || '',
-            clientName: client.name || 'Unknown Client',
-            created_at: payment.created_at
+            clientName: client.name || 'Unknown Client'
+            // FIX: Remove created_at as it's not in the Payment type
           }));
           
           setJobPayments(transformedPayments);
@@ -276,8 +277,8 @@ export const useJobDetailsHeader = (id: string) => {
         notes: data.notes || '',
         jobId: id,
         clientId: job.clientId,
-        clientName: job.client,
-        created_at: data.created_at
+        clientName: job.client
+        // FIX: Remove created_at property as it's not in the Payment type
       };
       
       setJobPayments(prevPayments => [...prevPayments, formattedPayment]);
