@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { useJobDetailsHeader } from "@/hooks/useJobDetailsHeader";
+import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
 import { JobActions } from "@/components/jobs/header/JobActions";
 import { useState, useEffect } from "react";
@@ -66,18 +66,22 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
 
   const handleCallClick = () => {
     if (jobHeaderData.client && jobHeaderData.client.phone) {
-      openModal("callClient", {
-        clientName: jobHeaderData.client.name,
-        phone: jobHeaderData.client.phone
+      // We'll use a standard modal type instead
+      openModal("deleteConfirm", {
+        title: "Call Client",
+        description: `Call ${jobHeaderData.client.name} at ${jobHeaderData.client.phone}?`,
+        onConfirm: () => window.open(`tel:${jobHeaderData.client.phone}`)
       });
     }
   };
 
   const handleMessageClick = () => {
     if (jobHeaderData.client && jobHeaderData.client.phone) {
-      openModal("messageClient", {
-        clientName: jobHeaderData.client.name,
-        phone: jobHeaderData.client.phone
+      // We'll use a standard modal type instead
+      openModal("deleteConfirm", {
+        title: "Message Client",
+        description: `Message ${jobHeaderData.client.name} at ${jobHeaderData.client.phone}?`,
+        onConfirm: () => window.open(`sms:${jobHeaderData.client.phone}`)
       });
     }
   };
@@ -88,9 +92,9 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
         <JobInfoSection 
           job={{
             id: jobHeaderData.id,
-            title: jobHeaderData.title,
-            client: jobHeaderData.client?.name || "Unknown Client",
             clientId: jobHeaderData.client?.id || "",
+            client: jobHeaderData.client?.name || "Unknown Client",
+            service: jobHeaderData.service || "",
             address: jobHeaderData.client?.address || "",
             phone: jobHeaderData.client?.phone || "",
             email: jobHeaderData.client?.email || ""
