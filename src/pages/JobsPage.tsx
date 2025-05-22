@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
@@ -10,6 +9,7 @@ import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { toast } from "sonner";
 import { useJobs } from "@/hooks/useJobs";
 import { generateAllTestData } from "@/utils/test-data"; // Updated import path
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
@@ -19,6 +19,15 @@ const JobsPage = () => {
   
   // Use the useJobs hook to fetch job data from Supabase
   const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
+  
+  // Set up realtime sync for jobs, clients, and related tables
+  useRealtimeSync({
+    tables: ['jobs', 'clients', 'invoices', 'payments'],
+    onUpdate: () => {
+      console.log("Realtime update triggered - refreshing jobs data");
+      refreshJobs();
+    }
+  });
   
   // Handler for bulk status updates
   const handleUpdateJobsStatus = (jobIds: string[], newStatus: string) => {

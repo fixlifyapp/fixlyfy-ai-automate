@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PaymentMethod, PaymentStatus } from "@/types/payment";
+import { useClientPaymentsRealtime } from "./useClientPaymentsRealtime";
 
 export interface ClientPayment {
   id: string;
@@ -22,117 +23,123 @@ export const useClientPayments = (clientId?: string) => {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [paidInvoices, setPaidInvoices] = useState(0);
 
-  useEffect(() => {
-    const fetchPayments = async () => {
-      if (!clientId) {
-        setPayments([]);
-        setIsLoading(false);
-        return;
-      }
+  // Create a fetchPayments function that can be used as a callback
+  const fetchPayments = useCallback(async () => {
+    if (!clientId) {
+      setPayments([]);
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
       
-      try {
-        setIsLoading(true);
+      // Get jobs for the client
+      const { data: jobs, error: jobsError } = await supabase
+        .from('jobs')
+        .select('id, title, client_id')
+        .eq('client_id', clientId);
         
-        // Get jobs for the client
-        const { data: jobs, error: jobsError } = await supabase
-          .from('jobs')
-          .select('id, title, client_id')
-          .eq('client_id', clientId);
-          
-        if (jobsError) throw jobsError;
+      if (jobsError) throw jobsError;
+      
+      let paymentData: ClientPayment[] = [];
+      let totalAmount = 0;
+      let invoiceCount = 0;
+      
+      if (jobs && jobs.length > 0) {
+        const jobIds = jobs.map(job => job.id);
         
-        let paymentData: ClientPayment[] = [];
-        let totalAmount = 0;
-        let invoiceCount = 0;
+        // Get invoices for those jobs
+        const { data: invoices, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id, job_id, invoice_number, total, status')
+          .in('job_id', jobIds);
+          
+        if (invoiceError) throw invoiceError;
         
-        if (jobs && jobs.length > 0) {
-          const jobIds = jobs.map(job => job.id);
-          
-          // Get invoices for those jobs
-          const { data: invoices, error: invoiceError } = await supabase
-            .from('invoices')
-            .select('id, job_id, invoice_number, total, status')
-            .in('job_id', jobIds);
-            
-          if (invoiceError) throw invoiceError;
-          
-          const invoiceMap = new Map();
-          invoices?.forEach(inv => {
-            invoiceMap.set(inv.id, {
-              invoice_number: inv.invoice_number,
-              job_id: inv.job_id,
-              total: inv.total,
-              status: inv.status
-            });
-            
-            if (inv.status === 'paid') {
-              totalAmount += Number(inv.total);
-              invoiceCount++;
-            }
+        const invoiceMap = new Map();
+        invoices?.forEach(inv => {
+          invoiceMap.set(inv.id, {
+            invoice_number: inv.invoice_number,
+            job_id: inv.job_id,
+            total: inv.total,
+            status: inv.status
           });
           
-          if (invoices && invoices.length > 0) {
-            const invoiceIds = invoices.map(inv => inv.id);
+          if (inv.status === 'paid') {
+            totalAmount += Number(inv.total);
+            invoiceCount++;
+          }
+        });
+        
+        if (invoices && invoices.length > 0) {
+          const invoiceIds = invoices.map(inv => inv.id);
+          
+          // Then get payments for those invoices
+          const { data: payments, error: paymentError } = await supabase
+            .from('payments')
+            .select('id, invoice_id, amount, method, date')
+            .in('invoice_id', invoiceIds)
+            .order('date', { ascending: false });
             
-            // Then get payments for those invoices
-            const { data: payments, error: paymentError } = await supabase
-              .from('payments')
-              .select('id, invoice_id, amount, method, date')
-              .in('invoice_id', invoiceIds)
-              .order('date', { ascending: false });
+          if (paymentError) throw paymentError;
+          
+          // Create a map of job titles for quick lookup
+          const jobTitlesMap = new Map();
+          jobs.forEach(job => {
+            jobTitlesMap.set(job.id, job.title);
+          });
+          
+          // Format the payment data with all relevant info
+          if (payments) {
+            paymentData = payments.map(payment => {
+              const invoice = invoiceMap.get(payment.invoice_id);
+              const jobId = invoice?.job_id;
+              const jobTitle = jobId ? jobTitlesMap.get(jobId) : null;
               
-            if (paymentError) throw paymentError;
-            
-            // Create a map of job titles for quick lookup
-            const jobTitlesMap = new Map();
-            jobs.forEach(job => {
-              jobTitlesMap.set(job.id, job.title);
+              return {
+                id: payment.id,
+                date: payment.date,
+                amount: payment.amount,
+                method: payment.method,
+                status: 'paid', // Default status since column doesn't exist yet
+                invoice_number: invoice?.invoice_number,
+                job_title: jobTitle,
+                job_id: jobId
+              };
             });
-            
-            // Format the payment data with all relevant info
-            if (payments) {
-              paymentData = payments.map(payment => {
-                const invoice = invoiceMap.get(payment.invoice_id);
-                const jobId = invoice?.job_id;
-                const jobTitle = jobId ? jobTitlesMap.get(jobId) : null;
-                
-                return {
-                  id: payment.id,
-                  date: payment.date,
-                  amount: payment.amount,
-                  method: payment.method,
-                  status: 'paid', // Default status since column doesn't exist yet
-                  invoice_number: invoice?.invoice_number,
-                  job_title: jobTitle,
-                  job_id: jobId
-                };
-              });
-            }
           }
         }
-        
-        setPayments(paymentData);
-        setTotalRevenue(totalAmount);
-        setPaidInvoices(invoiceCount);
-      } catch (error) {
-        console.error("Error loading client payments:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load payment history",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
-    fetchPayments();
+      
+      setPayments(paymentData);
+      setTotalRevenue(totalAmount);
+      setPaidInvoices(invoiceCount);
+    } catch (error) {
+      console.error("Error loading client payments:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment history",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [clientId, toast]);
+  
+  // Set up initial data fetch
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+  
+  // Set up real-time updates
+  useClientPaymentsRealtime(clientId, fetchPayments);
   
   return {
     payments,
     isLoading,
     totalRevenue,
-    paidInvoices
+    paidInvoices,
+    refreshPayments: fetchPayments
   };
 };

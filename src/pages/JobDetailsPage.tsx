@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -14,12 +13,15 @@ import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { toast } from "sonner";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Check for activeTab in location state when component mounts or location changes
   useEffect(() => {
@@ -30,6 +32,18 @@ const JobDetailsPage = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location]);
+  
+  // Handle realtime updates for this job and related data
+  useRealtimeSync({
+    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'job_history'],
+    onUpdate: () => {
+      console.log("Realtime update triggered for job details");
+      setRefreshTrigger(prev => prev + 1);
+      toast.info("Job data has been updated");
+    },
+    filter: id ? { job_id: id } : undefined,
+    enabled: !!id
+  });
   
   // Handle estimate conversion
   const handleEstimateConverted = () => {

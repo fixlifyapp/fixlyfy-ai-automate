@@ -15,7 +15,7 @@ interface PaymentsTabProps {
 }
 
 export const PaymentsTab = ({ clientId, onCreateInvoice }: PaymentsTabProps) => {
-  const { payments, isLoading, totalRevenue, paidInvoices } = useClientPayments(clientId);
+  const { payments, isLoading, totalRevenue, paidInvoices, refreshPayments } = useClientPayments(clientId);
   const navigate = useNavigate();
   
   const handleViewJob = (jobId?: string) => {
