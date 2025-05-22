@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown, Clock, DollarSign, Zap, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,17 +8,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 interface AiSuggestion {
   id: number;
   tip: string;
@@ -32,90 +21,81 @@ interface AiSuggestion {
 }
 
 // Initial AI suggestions categorized by type
-const initialAiSuggestions: AiSuggestion[] = [
-  {
-    id: 1,
-    tip: "This is a returning customer with 5+ jobs. Consider offering a loyalty discount.",
-    type: "info",
-    category: "customer",
-    action: {
-      label: "Create Discount",
-      onClick: () => toast.success("Loyalty discount created")
-    }
-  },
-  {
-    id: 2,
-    tip: "The appliance is 8 years old. Suggest a maintenance plan for better performance.",
-    type: "recommendation",
-    category: "upsell",
-    action: {
-      label: "Add to Estimate",
-      onClick: () => toast.success("Maintenance plan added to estimate")
-    }
-  },
-  {
-    id: 3,
-    tip: "Similar jobs typically require these additional parts: air filter, capacitor.",
-    type: "insight",
-    category: "efficiency",
-    action: {
-      label: "Order Parts",
-      onClick: () => toast.success("Parts ordered")
-    }
-  },
-  {
-    id: 4,
-    tip: "Estimates-to-invoice conversion for this client type is only 42% — consider adjusting your pricing approach.",
-    type: "warning",
-    category: "sales",
-    action: {
-      label: "View Conversion Insights",
-      onClick: () => toast.success("Viewing detailed conversion insights")
-    }
-  },
-  {
-    id: 5,
-    tip: "Adding a 1-Year Warranty increases estimate acceptance by 94% for this job type.",
-    type: "upsell",
-    category: "sales",
-    action: {
-      label: "Include Warranty",
-      onClick: () => toast.success("1-Year Warranty included in estimate")
-    }
+const initialAiSuggestions: AiSuggestion[] = [{
+  id: 1,
+  tip: "This is a returning customer with 5+ jobs. Consider offering a loyalty discount.",
+  type: "info",
+  category: "customer",
+  action: {
+    label: "Create Discount",
+    onClick: () => toast.success("Loyalty discount created")
   }
-];
-
-const quickActions = [
-  {
-    id: 1,
-    name: "Complete Job",
-    variant: "default",
-    className: "bg-fixlyfy hover:bg-fixlyfy/90 w-full",
-    icon: CheckCircle
-  },
-  {
-    id: 2,
-    name: "Send Reminder",
-    variant: "outline",
-    className: "w-full",
-    icon: Bell
+}, {
+  id: 2,
+  tip: "The appliance is 8 years old. Suggest a maintenance plan for better performance.",
+  type: "recommendation",
+  category: "upsell",
+  action: {
+    label: "Add to Estimate",
+    onClick: () => toast.success("Maintenance plan added to estimate")
   }
-];
-
+}, {
+  id: 3,
+  tip: "Similar jobs typically require these additional parts: air filter, capacitor.",
+  type: "insight",
+  category: "efficiency",
+  action: {
+    label: "Order Parts",
+    onClick: () => toast.success("Parts ordered")
+  }
+}, {
+  id: 4,
+  tip: "Estimates-to-invoice conversion for this client type is only 42% — consider adjusting your pricing approach.",
+  type: "warning",
+  category: "sales",
+  action: {
+    label: "View Conversion Insights",
+    onClick: () => toast.success("Viewing detailed conversion insights")
+  }
+}, {
+  id: 5,
+  tip: "Adding a 1-Year Warranty increases estimate acceptance by 94% for this job type.",
+  type: "upsell",
+  category: "sales",
+  action: {
+    label: "Include Warranty",
+    onClick: () => toast.success("1-Year Warranty included in estimate")
+  }
+}];
+const quickActions = [{
+  id: 1,
+  name: "Complete Job",
+  variant: "default",
+  className: "bg-fixlyfy hover:bg-fixlyfy/90 w-full",
+  icon: CheckCircle
+}, {
+  id: 2,
+  name: "Send Reminder",
+  variant: "outline",
+  className: "w-full",
+  icon: Bell
+}];
 export const JobDetailsQuickActions = () => {
-  const { id } = useParams();
+  const {
+    id
+  } = useParams();
   const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2, 3, 4]);
   const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState(initialAiSuggestions);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
-  
-  const { generateText } = useAI({
+  const {
+    generateText
+  } = useAI({
     systemContext: "You are an AI assistant for a field service business. Generate concise, practical insights for technicians and managers about service jobs."
   });
-  
   const handleFeedback = (id: number, isPositive: boolean) => {
     console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
-    
+
     // Remove the suggestion if feedback is negative
     if (!isPositive) {
       setAiSuggestions(aiSuggestions.filter(suggestion => suggestion.id !== id));
@@ -124,42 +104,36 @@ export const JobDetailsQuickActions = () => {
       toast.success("Thanks for your feedback! Glad this was helpful.");
     }
   };
-
   const handleQuickAction = (actionId: number) => {
     switch (actionId) {
-      case 1: // Complete Job
+      case 1:
+        // Complete Job
         setIsCompleteJobDialogOpen(true);
         break;
-      case 2: // Send Reminder
+      case 2:
+        // Send Reminder
         toast.success("Reminder sent to client");
         break;
       default:
         break;
     }
   };
-
   const handleCompleteJob = () => {
     toast.success("Job marked as completed");
     setIsCompleteJobDialogOpen(false);
   };
-  
   const generateNewSuggestion = async () => {
     if (isGeneratingSuggestion) return;
-    
     setIsGeneratingSuggestion(true);
-    
     try {
       const categories = ["revenue", "efficiency", "customer", "sales", "upsell"];
       const suggestionTypes = ["info", "recommendation", "insight", "warning", "upsell"];
-      
       const categoryIndex = Math.floor(Math.random() * categories.length);
       const selectedCategory = categories[categoryIndex] as "revenue" | "efficiency" | "customer" | "sales" | "upsell";
-      
       const typeIndex = Math.floor(Math.random() * suggestionTypes.length);
       const selectedType = suggestionTypes[typeIndex] as "info" | "recommendation" | "insight" | "warning" | "upsell";
-      
       let promptTemplate = `Generate a practical business insight for a field service technician about job ID ${id}.`;
-      
+
       // Customize prompt based on category
       switch (selectedCategory) {
         case "revenue":
@@ -178,16 +152,10 @@ export const JobDetailsQuickActions = () => {
           promptTemplate += " Focus on product or service upselling opportunities.";
           break;
       }
-      
       promptTemplate += " Make it practical, specific, and under 100 characters. Return just the text of the suggestion.";
-      
       const newSuggestionText = await generateText(promptTemplate);
-      
       if (newSuggestionText) {
-        const actionLabel = selectedType === "warning" ? "View Details" : 
-                           selectedType === "upsell" ? "Add to Estimate" :
-                           selectedType === "recommendation" ? "Apply Now" : "Learn More";
-        
+        const actionLabel = selectedType === "warning" ? "View Details" : selectedType === "upsell" ? "Add to Estimate" : selectedType === "recommendation" ? "Apply Now" : "Learn More";
         const newSuggestion: AiSuggestion = {
           id: Date.now(),
           tip: newSuggestionText,
@@ -198,7 +166,6 @@ export const JobDetailsQuickActions = () => {
             onClick: () => toast.success(`Action taken on: ${newSuggestionText}`)
           }
         };
-        
         setAiSuggestions([...aiSuggestions, newSuggestion]);
         setOpenSuggestions([...openSuggestions, aiSuggestions.length]);
       }
@@ -209,9 +176,7 @@ export const JobDetailsQuickActions = () => {
       setIsGeneratingSuggestion(false);
     }
   };
-  
-  return (
-    <>
+  return <>
       {/* AI Suggestions Panel */}
       <Card className="border-fixlyfy-border bg-fixlyfy/5 mb-6">
         <CardHeader className="flex flex-row items-center justify-between p-4 border-b border-fixlyfy-border">
@@ -222,132 +187,52 @@ export const JobDetailsQuickActions = () => {
             <h3 className="text-lg font-medium">AI Insights</h3>
           </div>
           <div>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={generateNewSuggestion}
-              disabled={isGeneratingSuggestion}
-            >
+            <Button size="sm" variant="outline" onClick={generateNewSuggestion} disabled={isGeneratingSuggestion}>
               {isGeneratingSuggestion ? "Thinking..." : "Generate Insight"}
             </Button>
           </div>
         </CardHeader>
         
         <CardContent className="p-4 space-y-3">
-          {aiSuggestions.length > 0 ? (
-            aiSuggestions.map((suggestion, idx) => (
-              <div 
-                key={suggestion.id} 
-                className={cn(
-                  "p-4 rounded-lg border animate-fade-in",
-                  suggestion.type === 'info' && "border-fixlyfy-info/20 bg-fixlyfy-info/5",
-                  suggestion.type === 'recommendation' && "border-fixlyfy/20 bg-fixlyfy/5",
-                  suggestion.type === 'insight' && "border-fixlyfy-warning/20 bg-fixlyfy-warning/5",
-                  suggestion.type === 'warning' && "border-red-400/20 bg-red-400/5",
-                  suggestion.type === 'upsell' && "border-green-400/20 bg-green-400/5",
-                )}
-                style={{ animationDelay: `${idx * 150}ms` }}
-              >
+          {aiSuggestions.length > 0 ? aiSuggestions.map((suggestion, idx) => <div key={suggestion.id} className={cn("p-4 rounded-lg border animate-fade-in", suggestion.type === 'info' && "border-fixlyfy-info/20 bg-fixlyfy-info/5", suggestion.type === 'recommendation' && "border-fixlyfy/20 bg-fixlyfy/5", suggestion.type === 'insight' && "border-fixlyfy-warning/20 bg-fixlyfy-warning/5", suggestion.type === 'warning' && "border-red-400/20 bg-red-400/5", suggestion.type === 'upsell' && "border-green-400/20 bg-green-400/5")} style={{
+          animationDelay: `${idx * 150}ms`
+        }}>
                 <div className="flex items-start gap-3">
-                  <div className={cn(
-                    "mt-0.5 p-1.5 rounded-md",
-                    suggestion.type === 'info' && "bg-fixlyfy-info/20",
-                    suggestion.type === 'recommendation' && "bg-fixlyfy/20",
-                    suggestion.type === 'insight' && "bg-fixlyfy-warning/20",
-                    suggestion.type === 'warning' && "bg-red-400/20",
-                    suggestion.type === 'upsell' && "bg-green-400/20",
-                  )}>
-                    {suggestion.category === "revenue" ? (
-                      <DollarSign size={14} />
-                    ) : suggestion.category === "efficiency" ? (
-                      <Clock size={14} />
-                    ) : suggestion.category === "customer" ? (
-                      <UserPlus size={14} />
-                    ) : suggestion.category === "sales" ? (
-                      <Zap size={14} />
-                    ) : (
-                      <Brain size={14} />
-                    )}
+                  <div className={cn("mt-0.5 p-1.5 rounded-md", suggestion.type === 'info' && "bg-fixlyfy-info/20", suggestion.type === 'recommendation' && "bg-fixlyfy/20", suggestion.type === 'insight' && "bg-fixlyfy-warning/20", suggestion.type === 'warning' && "bg-red-400/20", suggestion.type === 'upsell' && "bg-green-400/20")}>
+                    {suggestion.category === "revenue" ? <DollarSign size={14} /> : suggestion.category === "efficiency" ? <Clock size={14} /> : suggestion.category === "customer" ? <UserPlus size={14} /> : suggestion.category === "sales" ? <Zap size={14} /> : <Brain size={14} />}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-fixlyfy-text-secondary">{suggestion.tip}</p>
                     <div className="flex justify-between items-center mt-2">
                       <div className="flex gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 w-7 p-0" 
-                          onClick={() => handleFeedback(suggestion.id, true)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleFeedback(suggestion.id, true)}>
                           <ThumbsUp size={14} />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 w-7 p-0" 
-                          onClick={() => handleFeedback(suggestion.id, false)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleFeedback(suggestion.id, false)}>
                           <ThumbsDown size={14} />
                         </Button>
                       </div>
-                      {suggestion.action && (
-                        <Button 
-                          variant="link" 
-                          size="sm" 
-                          className="p-0 h-6 text-xs font-medium"
-                          onClick={suggestion.action.onClick}
-                        >
+                      {suggestion.action && <Button variant="link" size="sm" className="p-0 h-6 text-xs font-medium" onClick={suggestion.action.onClick}>
                           {suggestion.action.label}
-                        </Button>
-                      )}
+                        </Button>}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-fixlyfy-text-secondary">
+              </div>) : <div className="p-8 text-center text-fixlyfy-text-secondary">
               <AlertTriangle className="mx-auto mb-2 h-10 w-10 text-fixlyfy-warning/50" />
               <p>No insights available.</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2"
-                onClick={generateNewSuggestion}
-              >
+              <Button variant="outline" size="sm" className="mt-2" onClick={generateNewSuggestion}>
                 Generate New Insight
               </Button>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
       
       {/* Quick Actions Block */}
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardHeader className="p-4 border-b border-fixlyfy-border">
-          <h3 className="text-lg font-medium">Quick Actions</h3>
-        </CardHeader>
-        
-        <CardContent className="p-4 space-y-3">
-          {quickActions.map((action) => (
-            <Button 
-              key={action.id} 
-              variant={action.variant as any} 
-              className={cn(action.className, "flex items-center gap-2")}
-              onClick={() => handleQuickAction(action.id)}
-            >
-              <action.icon size={18} />
-              {action.name}
-            </Button>
-          ))}
-        </CardContent>
-      </Card>
+      
 
       {/* Complete Job Dialog */}
-      <AlertDialog 
-        open={isCompleteJobDialogOpen} 
-        onOpenChange={setIsCompleteJobDialogOpen}
-      >
+      <AlertDialog open={isCompleteJobDialogOpen} onOpenChange={setIsCompleteJobDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Complete Job?</AlertDialogTitle>
@@ -361,6 +246,5 @@ export const JobDetailsQuickActions = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
-  );
+    </>;
 };
