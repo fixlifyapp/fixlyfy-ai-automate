@@ -35,13 +35,42 @@ export const ModalRenderer = () => {
   const renderModalContent = () => {
     switch (modalType) {
       case "createEstimate":
-        return <EstimateFormModal {...modalProps} onOpenChange={(open) => !open && closeModal()} open={true} />;
+        return (
+          <EstimateFormModal 
+            jobId={modalProps.jobId || ""}
+            client={modalProps.client || ""}
+            onSuccess={modalProps.onSuccess}
+            title={modalProps.title}
+            onOpenChange={(open) => !open && closeModal()} 
+            open={true} 
+          />
+        );
       
       case "createInvoice":
-        return <InvoiceFormModal {...modalProps} onOpenChange={(open) => !open && closeModal()} open={true} />;
+        return (
+          <InvoiceFormModal 
+            jobId={modalProps.jobId || ""}
+            client={modalProps.client || ""}
+            estimateId={modalProps.estimateId}
+            onSuccess={modalProps.onSuccess}
+            title={modalProps.title}
+            onOpenChange={(open) => !open && closeModal()} 
+            open={true} 
+          />
+        );
         
       case "collectPayment":
-        return <PaymentModal {...modalProps} onOpenChange={(open) => !open && closeModal()} open={true} />;
+        return (
+          <PaymentModal 
+            jobId={modalProps.jobId || ""}
+            client={modalProps.client || ""}
+            balance={modalProps.balance}
+            onSuccess={modalProps.onSuccess}
+            title={modalProps.title}
+            onOpenChange={(open) => !open && closeModal()} 
+            open={true} 
+          />
+        );
         
       case "callClient":
         return (
