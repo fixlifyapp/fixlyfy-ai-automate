@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { payments } from "@/data/payments";
 import { Payment } from "@/types/payment";
 
@@ -14,12 +15,13 @@ export interface JobInfo {
   phone: string;
   email: string;
   total: number;
-  companyName: string;
-  companyLogo: string;
-  companyAddress: string;
-  companyPhone: string;
-  companyEmail: string;
-  legalText: string;
+  status?: string;
+  companyName?: string;
+  companyLogo?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyEmail?: string;
+  legalText?: string;
 }
 
 export const useJobDetailsHeader = (id: string) => {
@@ -48,58 +50,125 @@ export const useJobDetailsHeader = (id: string) => {
     
     setIsLoading(true);
     
-    // In a real app, this would fetch job details from API
-    // Simulate API call
-    setTimeout(() => {
-      const jobInfo = getJobInfo();
-      setJob(jobInfo);
-      
-      // Initialize invoice amount from job total
-      setInvoiceAmount(jobInfo.total);
-      
-      // Load existing payments for this job
-      const existingPayments = payments.filter(payment => payment.jobId === id);
-      setJobPayments(existingPayments);
-      
-      // Extract payment amounts
-      const existingPaymentAmounts = existingPayments.map(payment => payment.amount);
-      setPaymentsMade(existingPaymentAmounts);
-      
-      // Set status from job data if available
-      setStatus(jobInfo.status || "scheduled");
-      
-      setIsLoading(false);
-    }, 500);
-  }, [id]);
-  
-  const getJobInfo = () => {
-    // In a real app, this would fetch job details from API
-    return {
-      id: id,
-      clientId: "client-123",
-      client: "Michael Johnson",
-      service: "HVAC Repair",
-      address: "123 Main St, Apt 45",
-      phone: "(555) 123-4567",
-      email: "michael.johnson@example.com",
-      total: 475.99,
-      status: "scheduled",
-      companyName: "Fixlyfy Services",
-      companyLogo: "/placeholder.svg",
-      companyAddress: "456 Business Ave, Suite 789",
-      companyPhone: "(555) 987-6543",
-      companyEmail: "info@fixlyfy.com",
-      legalText: "All services are subject to our terms and conditions. Payment due within 30 days."
+    const fetchJobData = async () => {
+      try {
+        // Fetch job details from Supabase
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients(id, name, email, phone, address, city, state, zip, country)
+          `)
+          .eq('id', id)
+          .single();
+        
+        if (jobError) {
+          console.error("Error fetching job:", jobError);
+          toast.error("Error loading job details");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!jobData) {
+          console.error("Job not found");
+          toast.error("Job not found");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Extract client information
+        const client = jobData.clients || {};
+        
+        // Create formatted address from client data
+        const formattedAddress = [
+          client.address,
+          client.city,
+          client.state,
+          client.zip,
+          client.country
+        ].filter(Boolean).join(', ');
+        
+        // Create job info object
+        const jobInfo: JobInfo = {
+          id: jobData.id,
+          clientId: client.id || "",
+          client: client.name || "Unknown Client",
+          service: jobData.service || "General Service",
+          address: formattedAddress,
+          phone: client.phone || "",
+          email: client.email || "",
+          total: jobData.revenue || 0,
+          status: jobData.status || "scheduled"
+        };
+        
+        setJob(jobInfo);
+        setStatus(jobData.status || "scheduled");
+        
+        // Set invoice amount from job total
+        setInvoiceAmount(jobData.revenue || 0);
+        
+        // Fetch payments for this job
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('invoice_id', id);
+        
+        if (paymentsData && paymentsData.length > 0) {
+          setJobPayments(paymentsData);
+          
+          // Extract payment amounts
+          const paymentAmounts = paymentsData.map(payment => payment.amount || 0);
+          setPaymentsMade(paymentAmounts);
+        }
+        
+        // Fetch estimates for this job
+        const { data: estimatesData } = await supabase
+          .from('estimates')
+          .select('*')
+          .eq('job_id', id);
+        
+        if (estimatesData && estimatesData.length > 0) {
+          setHasEstimate(true);
+          setEstimateAmount(estimatesData[0].total || 0);
+        }
+        
+      } catch (error) {
+        console.error("Error in useJobDetailsHeader:", error);
+        toast.error("Error loading job details");
+      } finally {
+        setIsLoading(false);
+      }
     };
-  };
+    
+    fetchJobData();
+  }, [id]);
 
   // Calculate balance based on invoice amount minus payments
   // Note: Estimates don't affect the balance
   const balance = invoiceAmount - paymentsMade.reduce((total, payment) => total + payment, 0);
 
-  const handleStatusChange = (newStatus: string) => {
-    setStatus(newStatus);
-    toast.success(`Job status updated to ${newStatus}`);
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id) return;
+    
+    try {
+      // Update job status in database
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: newStatus })
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Error updating job status:", error);
+        toast.error("Failed to update job status");
+        return;
+      }
+      
+      setStatus(newStatus);
+      toast.success(`Job status updated to ${newStatus}`);
+    } catch (error) {
+      console.error("Error in handleStatusChange:", error);
+      toast.error("Failed to update job status");
+    }
   };
 
   const handleEditClient = () => {
@@ -125,37 +194,49 @@ export const useJobDetailsHeader = (id: string) => {
   };
 
   // Handle recording a payment
-  const handlePaymentRecorded = (amount: number) => {
-    // Update the payments list
-    setPaymentsMade(prevPayments => [...prevPayments, amount]);
+  const handlePaymentRecorded = async (amount: number) => {
+    if (!id || !job?.clientId) return;
     
-    // Create a new payment record (in a real app, this would be saved to the database)
-    const newPayment: Payment = {
-      id: `payment-${Date.now()}`,
-      date: new Date().toISOString(),
-      clientId: job?.clientId || "",
-      clientName: job?.client || "",
-      jobId: id,
-      amount: amount,
-      method: "credit-card", // Default method
-      status: "paid"
-    };
-    
-    // Update the payments list
-    setJobPayments(prevPayments => [...prevPayments, newPayment]);
-    
-    toast.success(`Payment of $${amount.toFixed(2)} recorded`);
+    try {
+      // Create payment record in database
+      const newPayment = {
+        amount: amount,
+        date: new Date().toISOString(),
+        invoice_id: id,
+        method: "credit-card",
+        reference: `Payment for job ${id}`
+      };
+      
+      const { data, error } = await supabase
+        .from('payments')
+        .insert(newPayment)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Error recording payment:", error);
+        toast.error("Failed to record payment");
+        return;
+      }
+      
+      // Update the payments list
+      setPaymentsMade(prevPayments => [...prevPayments, amount]);
+      setJobPayments(prevPayments => [...prevPayments, data]);
+      
+      toast.success(`Payment of $${amount.toFixed(2)} recorded`);
+    } catch (error) {
+      console.error("Error in handlePaymentRecorded:", error);
+      toast.error("Failed to record payment");
+    }
   };
 
   // Add the missing handler methods
   const handleCompleteJob = () => {
-    setStatus("completed");
-    toast.success("Job marked as completed");
+    handleStatusChange("completed");
   };
 
   const handleCancelJob = () => {
-    setStatus("cancelled");
-    toast.success("Job cancelled successfully");
+    handleStatusChange("cancelled");
   };
 
   const handleReschedule = () => {

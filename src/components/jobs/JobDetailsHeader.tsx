@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
@@ -6,12 +7,15 @@ import { useState, useEffect } from "react";
 import { useModal } from "@/components/ui/modal-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface JobDetailsHeaderProps {
   jobId: string;
 }
 
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
+  const navigate = useNavigate();
+  
   // Safely use the modal context with a fallback
   let openModal: (type: any, props?: any) => void;
   try {
@@ -111,7 +115,13 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
           onStatusChange={handleLocalStatusChange}
           onCallClick={handleCallClick}
           onMessageClick={handleMessageClick}
-          onEditClient={handleEditClient}
+          onEditClient={() => {
+            if (job.clientId) {
+              navigate(`/clients/${job.clientId}`);
+            } else {
+              handleEditClient();
+            }
+          }}
           invoiceAmount={invoiceAmount}
           balance={balance}
         />
