@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -30,62 +29,90 @@ export const useJobs = (clientId?: string) => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { currentUser } = useRBAC();
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      try {
-        // Prepare query
-        let query = supabase
-          .from('jobs')
-          .select(`
-            id,
-            title,
-            description,
-            service,
-            status,
-            client_id,
-            technician_id,
-            schedule_start,
-            schedule_end,
-            date,
-            revenue,
-            tags,
-            created_at,
-            updated_at,
-            clients(name)
-          `);
-          
-        // Filter by client if provided
-        if (clientId) {
-          query = query.eq('client_id', clientId);
-        }
+  
+  // Function to fetch jobs from Supabase
+  const fetchJobs = async () => {
+    setIsLoading(true);
+    try {
+      // Prepare query
+      let query = supabase
+        .from('jobs')
+        .select(`
+          id,
+          title,
+          description,
+          service,
+          status,
+          client_id,
+          technician_id,
+          schedule_start,
+          schedule_end,
+          date,
+          revenue,
+          tags,
+          created_at,
+          updated_at,
+          clients(name)
+        `);
         
-        // Execute query
-        const { data, error } = await query.order('date', { ascending: false });
-        
-        if (error) throw error;
-        
-        // Transform data to include client name
-        const transformedJobs = data.map(job => ({
-          ...job,
-          client: {
-            name: job.clients?.name || 'Unknown Client'
-          }
-        }));
-        
-        setJobs(transformedJobs);
-      } catch (error) {
-        console.error('Error fetching jobs:', error);
-        toast.error('Failed to load jobs');
-      } finally {
-        setIsLoading(false);
+      // Filter by client if provided
+      if (clientId) {
+        query = query.eq('client_id', clientId);
       }
-    };
-    
+      
+      // Execute query
+      const { data, error } = await query.order('date', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Transform data to include client name
+      const transformedJobs = data.map(job => ({
+        ...job,
+        client: {
+          name: job.clients?.name || 'Unknown Client'
+        }
+      }));
+      
+      setJobs(transformedJobs);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      toast.error('Failed to load jobs');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Set up initial data fetch and refresh on dependency changes
+  useEffect(() => {
     fetchJobs();
   }, [clientId, refreshTrigger]);
-
+  
+  // Set up realtime subscription to keep data in sync across the app
+  useEffect(() => {
+    // Enable realtime subscriptions for the jobs table
+    const channel = supabase
+      .channel('public:jobs')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'jobs'
+        },
+        (payload) => {
+          console.log('Jobs table changed:', payload);
+          // Refresh the jobs data when table changes
+          fetchJobs();
+        }
+      )
+      .subscribe();
+      
+    // Clean up the subscription when the component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [clientId]); // Re-subscribe when clientId changes
+  
   const addJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       // Generate a job ID in the format JOB-XXXXX

@@ -13,8 +13,8 @@ const ClientDetailPage = () => {
   const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   
-  const handleCreateJob = () => {
-    setIsCreateJobModalOpen(true);
+  const handleJobCreated = (job: any) => {
+    navigate(`/jobs/${job.id}`);
   };
 
   return (
@@ -34,7 +34,7 @@ const ClientDetailPage = () => {
       <div className="space-y-8">
         <div>
           <h2 className="text-xl font-semibold mb-4">Client Information</h2>
-          <ClientForm clientId={id} onCreateJob={handleCreateJob} />
+          <ClientForm clientId={id} onCreateJob={() => setIsCreateJobModalOpen(true)} />
         </div>
         
         <ClientJobs clientId={id} />
@@ -44,6 +44,7 @@ const ClientDetailPage = () => {
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         preselectedClientId={id}
+        onSuccess={handleJobCreated}
       />
     </PageLayout>
   );

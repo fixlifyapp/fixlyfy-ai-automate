@@ -23,9 +23,9 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   } = useJobs(clientId);
   const navigate = useNavigate();
 
-  const handleJobCreated = () => {
-    refreshJobs();
+  const handleJobCreated = (job: any) => {
     toast.success("Job created successfully!");
+    refreshJobs();
   };
 
   const handleViewJob = (jobId: string) => {
