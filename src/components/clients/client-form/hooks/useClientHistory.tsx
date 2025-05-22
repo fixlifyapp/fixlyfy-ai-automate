@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 // Define specific history item types with proper discrimination
-interface BaseHistoryItem {
+export interface BaseHistoryItem {
   id: string;
   title: string;
   status: string;
@@ -12,13 +12,12 @@ interface BaseHistoryItem {
   description: string;
 }
 
-// Use literal string type for better type discrimination
-interface JobHistoryItem extends BaseHistoryItem {
+export interface JobHistoryItem extends BaseHistoryItem {
   type: 'job';
   jobId: string;
 }
 
-interface InvoiceHistoryItem extends BaseHistoryItem {
+export interface InvoiceHistoryItem extends BaseHistoryItem {
   type: 'invoice';
   amount: number;
   invoiceId: string;
@@ -61,30 +60,30 @@ export const useClientHistory = (clientId?: string) => {
           
         if (invoicesError) throw invoicesError;
         
-        // Map jobs to JobHistoryItem type with explicit type annotation
-        const jobEntries = (jobs || []).map(job => ({
+        // Map jobs to history items with explicit type
+        const jobEntries: JobHistoryItem[] = (jobs || []).map(job => ({
           id: `job-${job.id}`,
-          type: 'job' as const, // Use const assertion for literal type
+          type: 'job',
           title: job.title,
           status: job.status,
           date: job.date,
           description: `Job ${job.status}`,
           jobId: job.id
-        })) as JobHistoryItem[];
+        }));
         
-        // Map invoices to InvoiceHistoryItem type with explicit type annotation
-        const invoiceEntries = (invoices || []).map(invoice => ({
+        // Map invoices to history items with explicit type
+        const invoiceEntries: InvoiceHistoryItem[] = (invoices || []).map(invoice => ({
           id: `invoice-${invoice.id}`,
-          type: 'invoice' as const, // Use const assertion for literal type
+          type: 'invoice',
           title: `Invoice #${invoice.invoice_number}`,
           status: invoice.status,
           date: invoice.date,
           amount: invoice.total,
           description: `${invoice.status === 'paid' ? 'Paid' : 'Created'} invoice for $${invoice.total}`,
           invoiceId: invoice.id
-        })) as InvoiceHistoryItem[];
+        }));
         
-        // Combine entries with proper typing
+        // Combine entries
         const allHistory: HistoryItem[] = [...jobEntries, ...invoiceEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );

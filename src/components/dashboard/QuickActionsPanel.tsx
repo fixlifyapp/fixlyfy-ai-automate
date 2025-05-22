@@ -15,7 +15,7 @@ export const QuickActionsPanel = () => {
   return (
     <div className="flex items-center gap-2">
       <Button 
-        className="bg-fixlyfy hover:bg-fixlyfy/90"
+        className="bg-fixlify hover:bg-fixlify/90"
         onClick={() => navigate("/jobs")}
       >
         <Plus size={16} className="mr-2" />
