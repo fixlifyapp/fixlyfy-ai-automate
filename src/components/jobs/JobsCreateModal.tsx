@@ -1,30 +1,12 @@
-
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,22 +15,25 @@ import { Job, useJobs } from "@/hooks/useJobs";
 import { supabase } from "@/integrations/supabase/client";
 import { useClients } from "@/hooks/useClients";
 import { Client } from "@/hooks/useClients";
-
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preselectedClientId?: string;
   onSuccess?: (job: Job) => void;
 }
-
-export const JobsCreateModal = ({ 
-  open, 
-  onOpenChange, 
+export const JobsCreateModal = ({
+  open,
+  onOpenChange,
   preselectedClientId,
-  onSuccess 
+  onSuccess
 }: JobsCreateModalProps) => {
-  const { addJob } = useJobs();
-  const { clients, isLoading: isLoadingClients } = useClients();
+  const {
+    addJob
+  } = useJobs();
+  const {
+    clients,
+    isLoading: isLoadingClients
+  } = useClients();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -58,9 +43,15 @@ export const JobsCreateModal = ({
   const [technician, setTechnician] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [timeValue, setTimeValue] = useState<string>("09:00");
-  const [items, setItems] = useState<{ name: string; quantity: number; price: number }[]>([
-    { name: "", quantity: 1, price: 0 }
-  ]);
+  const [items, setItems] = useState<{
+    name: string;
+    quantity: number;
+    price: number;
+  }[]>([{
+    name: "",
+    quantity: 1,
+    price: 0
+  }]);
 
   // Set preselected client when modal opens or preselectedClientId changes
   useEffect(() => {
@@ -68,11 +59,13 @@ export const JobsCreateModal = ({
       setSelectedClient(preselectedClientId);
     }
   }, [open, preselectedClientId]);
-
   const handleAddItem = () => {
-    setItems([...items, { name: "", quantity: 1, price: 0 }]);
+    setItems([...items, {
+      name: "",
+      quantity: 1,
+      price: 0
+    }]);
   };
-
   const handleRemoveItem = (index: number) => {
     if (items.length > 1) {
       const newItems = [...items];
@@ -80,13 +73,14 @@ export const JobsCreateModal = ({
       setItems(newItems);
     }
   };
-
   const handleItemChange = (index: number, field: keyof typeof items[0], value: string | number) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    newItems[index] = {
+      ...newItems[index],
+      [field]: value
+    };
     setItems(newItems);
   };
-
   const resetForm = () => {
     setDate(new Date());
     setSelectedClient(preselectedClientId || "");
@@ -96,27 +90,29 @@ export const JobsCreateModal = ({
     setTechnician("");
     setDescription("");
     setTimeValue("09:00");
-    setItems([{ name: "", quantity: 1, price: 0 }]);
+    setItems([{
+      name: "",
+      quantity: 1,
+      price: 0
+    }]);
   };
-
   const handleSubmit = async () => {
     if (!selectedClient) {
       toast.error("Please select a client");
       return;
     }
-
     try {
       setIsSubmitting(true);
-      
+
       // Calculate total revenue from items
-      const revenue = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      
+      const revenue = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
       // Format the scheduled date by combining the date and time
       const scheduledDate = date ? new Date(date) : new Date();
       const [hours, minutes] = timeValue.split(':').map(Number);
       scheduledDate.setHours(hours);
       scheduledDate.setMinutes(minutes);
-      
+
       // Create the job object
       const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
         title: jobType ? `${jobType} Service` : "New Service Job",
@@ -126,7 +122,8 @@ export const JobsCreateModal = ({
         service: jobType,
         technician_id: technician || undefined,
         schedule_start: scheduledDate.toISOString(),
-        schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours duration by default
+        schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        // 2 hours duration by default
         date: scheduledDate.toISOString(),
         revenue: revenue,
         tags: serviceArea ? [serviceArea, priority] : [priority]
@@ -134,15 +131,14 @@ export const JobsCreateModal = ({
 
       // Add the job using the useJobs hook
       const newJob = await addJob(jobData);
-      
       if (newJob) {
         toast.success(`Job created successfully: ${newJob.id}`);
-        
+
         // Call onSuccess callback if provided
         if (onSuccess) {
           onSuccess(newJob);
         }
-        
+
         // Reset form and close modal
         resetForm();
         onOpenChange(false);
@@ -156,12 +152,10 @@ export const JobsCreateModal = ({
       setIsSubmitting(false);
     }
   };
-
-  return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!newOpen) resetForm();
-      onOpenChange(newOpen);
-    }}>
+  return <Dialog open={open} onOpenChange={newOpen => {
+    if (!newOpen) resetForm();
+    onOpenChange(newOpen);
+  }}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
@@ -179,13 +173,7 @@ export const JobsCreateModal = ({
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingClients ? (
-                    <SelectItem value="loading" disabled>Loading clients...</SelectItem>
-                  ) : (
-                    clients.map((client: Client) => (
-                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                    ))
-                  )}
+                  {isLoadingClients ? <SelectItem value="loading" disabled>Loading clients...</SelectItem> : clients.map((client: Client) => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -241,32 +229,16 @@ export const JobsCreateModal = ({
               <div className="flex gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
+                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {date ? format(date, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
+                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className="pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
-                <Input 
-                  type="time" 
-                  value={timeValue}
-                  onChange={(e) => setTimeValue(e.target.value)}
-                />
+                <Input type="time" value={timeValue} onChange={e => setTimeValue(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
@@ -287,88 +259,23 @@ export const JobsCreateModal = ({
           
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description" 
-              placeholder="Describe the job details, customer requirements, etc."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <Textarea id="description" placeholder="Describe the job details, customer requirements, etc." value={description} onChange={e => setDescription(e.target.value)} />
           </div>
           
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <Label>Items & Parts</Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleAddItem}
-                className="text-fixlyfy border-fixlyfy/20"
-              >
-                <Plus size={14} className="mr-1" /> Add Item
-              </Button>
-            </div>
-            
-            {items.map((item, index) => (
-              <div key={index} className="flex gap-3">
-                <Input 
-                  placeholder="Item name" 
-                  className="flex-grow" 
-                  value={item.name}
-                  onChange={(e) => handleItemChange(index, "name", e.target.value)}
-                />
-                <Input 
-                  type="number" 
-                  placeholder="Qty" 
-                  className="w-20" 
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
-                />
-                <Input 
-                  type="number" 
-                  placeholder="Price" 
-                  className="w-24" 
-                  min="0"
-                  step="0.01"
-                  value={item.price}
-                  onChange={(e) => handleItemChange(index, "price", parseFloat(e.target.value) || 0)}
-                />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => handleRemoveItem(index)}
-                  disabled={items.length === 1}
-                >
-                  <X size={16} />
-                </Button>
-              </div>
-            ))}
-          </div>
+          
         </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            className="bg-fixlyfy hover:bg-fixlyfy/90" 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
+          <Button type="submit" className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
-              </>
-            ) : (
-              'Create Job'
-            )}
+              </> : 'Create Job'}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 };
