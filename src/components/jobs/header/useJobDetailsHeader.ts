@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { payments } from "@/data/payments";
-import { Payment } from "@/types/payment";
+import { Payment, PaymentMethod, PaymentStatus } from "@/types/payment";
 
 export interface JobInfo {
   id: string;
@@ -128,9 +128,9 @@ export const useJobDetailsHeader = (id: string) => {
           const transformedPayments: Payment[] = paymentsData.map(payment => ({
             id: payment.id,
             amount: payment.amount || 0,
-            method: payment.method || 'credit-card',
+            method: validatePaymentMethod(payment.method),
             date: payment.date || new Date().toISOString(),
-            status: 'completed',
+            status: validatePaymentStatus(payment.status || 'paid'),
             reference: payment.reference || '',
             notes: payment.notes || '',
             jobId: id,
@@ -167,6 +167,24 @@ export const useJobDetailsHeader = (id: string) => {
     
     fetchJobData();
   }, [id]);
+
+  // Helper function to validate and convert payment method strings to PaymentMethod type
+  const validatePaymentMethod = (method?: string): PaymentMethod => {
+    const validMethods: PaymentMethod[] = ['cash', 'credit-card', 'e-transfer', 'cheque'];
+    if (method && validMethods.includes(method as PaymentMethod)) {
+      return method as PaymentMethod;
+    }
+    return 'credit-card'; // Default fallback
+  };
+
+  // Helper function to validate and convert payment status strings to PaymentStatus type
+  const validatePaymentStatus = (status?: string): PaymentStatus => {
+    const validStatuses: PaymentStatus[] = ['paid', 'refunded', 'disputed'];
+    if (status && validStatuses.includes(status as PaymentStatus)) {
+      return status as PaymentStatus;
+    }
+    return 'paid'; // Default fallback
+  };
 
   // Calculate balance based on invoice amount minus payments
   // Note: Estimates don't affect the balance
@@ -251,9 +269,9 @@ export const useJobDetailsHeader = (id: string) => {
       const formattedPayment: Payment = {
         id: data.id,
         amount: data.amount || 0,
-        method: data.method || 'credit-card',
+        method: validatePaymentMethod(data.method),
         date: data.date || new Date().toISOString(),
-        status: 'completed',
+        status: validatePaymentStatus('paid'),
         reference: data.reference || '',
         notes: data.notes || '',
         jobId: id,
