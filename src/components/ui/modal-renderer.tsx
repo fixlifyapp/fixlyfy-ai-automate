@@ -70,6 +70,24 @@ export const ModalRenderer = () => {
         }}
       />;
       
+    case "messageClient":
+      // We use ConfirmationModal as a generic dialog for messaging
+      return <ConfirmationModal 
+        {...commonProps} 
+        {...modalProps}
+        title={modalProps.title || "Message Client"}
+        description={modalProps.description || "Send a message to this client?"}
+        onConfirm={() => {
+          if (modalProps.phone) {
+            window.open(`sms:${modalProps.phone}`);
+          }
+        }}
+        variant="success"
+        confirmText="Send Message"
+      >
+        {/* Empty children to satisfy type requirements */}
+      </ConfirmationModal>;
+      
     case "prioritySelection":
       return <PrioritySelectionDialog />;
       

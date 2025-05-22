@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
@@ -72,22 +71,24 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
 
   const handleCallClick = () => {
     if (job.phone) {
-      // We'll use a standard modal type instead
-      openModal("deleteConfirm", {
+      // Use the proper modal type that's defined in ModalType
+      openModal("callClient", {
         title: "Call Client",
         description: `Call ${job.client} at ${job.phone}?`,
-        onConfirm: () => window.open(`tel:${job.phone}`)
+        clientName: job.client,
+        phone: job.phone
       });
     }
   };
 
   const handleMessageClick = () => {
     if (job.phone) {
-      // We'll use a standard modal type instead
-      openModal("deleteConfirm", {
+      // Use the proper modal type that's defined in ModalType
+      openModal("messageClient", {
         title: "Message Client",
         description: `Message ${job.client} at ${job.phone}?`,
-        onConfirm: () => window.open(`sms:${job.phone}`)
+        clientName: job.client,
+        phone: job.phone
       });
     }
   };

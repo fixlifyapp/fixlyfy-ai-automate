@@ -16,7 +16,9 @@ export type ModalType =
   | "markAsPaid"
   | "invoiceCreate"
   | "convertToInvoice"
-  | "jobDetailsEdit";
+  | "jobDetailsEdit"
+  | "callClient"
+  | "messageClient";
 
 // Base props that all modals will have
 export interface BaseModalProps {
