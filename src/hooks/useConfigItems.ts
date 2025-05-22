@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { TablesInsert, TablesRow, TablesUpdate } from "@/integrations/supabase/types";
 
 // Generic type for configuration items
 export interface ConfigItem {
@@ -11,6 +12,7 @@ export interface ConfigItem {
   description?: string;
   color?: string;
   created_at?: string;
+  category?: string;
 }
 
 export interface JobType extends ConfigItem {
@@ -44,15 +46,13 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
   const fetchItems = async () => {
     setIsLoading(true);
     try {
-      let query = supabase
-        .from(tableName)
+      const { data, error } = await supabase
+        .from(tableName as any)
         .select('*');
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       
-      setItems(data as T[]);
+      setItems(data as unknown as T[]);
     } catch (error) {
       console.error(`Error fetching ${tableName}:`, error);
       toast.error(`Failed to load ${tableName}`);
@@ -84,15 +84,15 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
   const addItem = async (item: Omit<T, 'id' | 'created_at'>) => {
     try {
       const { data, error } = await supabase
-        .from(tableName)
-        .insert(item)
+        .from(tableName as any)
+        .insert(item as any)
         .select()
         .single();
         
       if (error) throw error;
       
       toast.success(`${tableName.replace('_', ' ')} added successfully`);
-      return data as T;
+      return data as unknown as T;
     } catch (error) {
       console.error(`Error adding ${tableName}:`, error);
       toast.error(`Failed to add ${tableName.replace('_', ' ')}`);
@@ -103,8 +103,8 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
   const updateItem = async (id: string, updates: Partial<T>) => {
     try {
       const { data, error } = await supabase
-        .from(tableName)
-        .update(updates)
+        .from(tableName as any)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();
@@ -112,7 +112,7 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
       if (error) throw error;
       
       toast.success(`${tableName.replace('_', ' ')} updated successfully`);
-      return data as T;
+      return data as unknown as T;
     } catch (error) {
       console.error(`Error updating ${tableName}:`, error);
       toast.error(`Failed to update ${tableName.replace('_', ' ')}`);
@@ -123,7 +123,7 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
   const deleteItem = async (id: string) => {
     try {
       const { error } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .delete()
         .eq('id', id);
         

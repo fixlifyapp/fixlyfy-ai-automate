@@ -29,6 +29,7 @@ export function TagsConfig() {
           </span>
         </div>
       )}
+      initialValues={{ category: 'General' }}
     />
   );
 }
