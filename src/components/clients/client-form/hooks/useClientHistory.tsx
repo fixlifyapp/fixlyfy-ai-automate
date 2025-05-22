@@ -3,27 +3,28 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Define specific history item types with proper discrimination
-export interface BaseHistoryItem {
+// Define specific history item types to avoid recursive type issues
+interface BaseHistoryItem {
   id: string;
+  type: string;
   title: string;
   status: string;
   date: string;
   description: string;
 }
 
-export interface JobHistoryItem extends BaseHistoryItem {
+interface JobHistoryItem extends BaseHistoryItem {
   type: 'job';
   jobId: string;
 }
 
-export interface InvoiceHistoryItem extends BaseHistoryItem {
+interface InvoiceHistoryItem extends BaseHistoryItem {
   type: 'invoice';
   amount: number;
   invoiceId: string;
 }
 
-// Use discriminated union type
+// Use a discriminated union type
 export type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
 
 export const useClientHistory = (clientId?: string) => {
@@ -60,7 +61,7 @@ export const useClientHistory = (clientId?: string) => {
           
         if (invoicesError) throw invoicesError;
         
-        // Map jobs to history items with explicit type
+        // Map jobs to JobHistoryItem type
         const jobEntries: JobHistoryItem[] = (jobs || []).map(job => ({
           id: `job-${job.id}`,
           type: 'job',
@@ -71,7 +72,7 @@ export const useClientHistory = (clientId?: string) => {
           jobId: job.id
         }));
         
-        // Map invoices to history items with explicit type
+        // Map invoices to InvoiceHistoryItem type
         const invoiceEntries: InvoiceHistoryItem[] = (invoices || []).map(invoice => ({
           id: `invoice-${invoice.id}`,
           type: 'invoice',
@@ -83,8 +84,8 @@ export const useClientHistory = (clientId?: string) => {
           invoiceId: invoice.id
         }));
         
-        // Combine entries
-        const allHistory: HistoryItem[] = [...jobEntries, ...invoiceEntries].sort(
+        // Combine all entries and sort by date
+        const allHistory = [...jobEntries, ...invoiceEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         

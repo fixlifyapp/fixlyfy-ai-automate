@@ -54,7 +54,7 @@
   }
 
   body {
-    @apply bg-fixlify-bg-interface text-fixlify-text antialiased;
+    @apply bg-fixlyfy-bg-interface text-fixlyfy-text antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -71,31 +71,31 @@
 }
 
 @layer components {
-  .fixlify-card {
-    @apply bg-white rounded-[12px] shadow-card border border-fixlify-border;
+  .fixlyfy-card {
+    @apply bg-white rounded-[12px] shadow-card border border-fixlyfy-border;
   }
   
-  .fixlify-gradient {
+  .fixlyfy-gradient {
     @apply bg-gradient-primary;
   }
   
-  .fixlify-badge-success {
-    @apply bg-fixlify-success/10 text-fixlify-success px-2.5 py-0.5 rounded-full text-xs font-medium;
+  .fixlyfy-badge-success {
+    @apply bg-fixlyfy-success/10 text-fixlyfy-success px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
   
-  .fixlify-badge-warning {
-    @apply bg-fixlify-warning/10 text-fixlify-warning px-2.5 py-0.5 rounded-full text-xs font-medium;
+  .fixlyfy-badge-warning {
+    @apply bg-fixlyfy-warning/10 text-fixlyfy-warning px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
   
-  .fixlify-badge-error {
-    @apply bg-fixlify-error/10 text-fixlify-error px-2.5 py-0.5 rounded-full text-xs font-medium;
+  .fixlyfy-badge-error {
+    @apply bg-fixlyfy-error/10 text-fixlyfy-error px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
   
-  .fixlify-badge-info {
-    @apply bg-fixlify-info/10 text-fixlify-info px-2.5 py-0.5 rounded-full text-xs font-medium;
+  .fixlyfy-badge-info {
+    @apply bg-fixlyfy-info/10 text-fixlyfy-info px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 
-  .fixlify-badge-primary {
-    @apply bg-fixlify/10 text-fixlify px-2.5 py-0.5 rounded-full text-xs font-medium;
+  .fixlyfy-badge-primary {
+    @apply bg-fixlyfy/10 text-fixlyfy px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 }

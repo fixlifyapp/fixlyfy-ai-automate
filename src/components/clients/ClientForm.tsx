@@ -52,10 +52,10 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   
   if (isLoading) {
     return (
-      <div className="fixlify-card p-8 text-center">
+      <div className="fixlyfy-card p-8 text-center">
         <div className="flex flex-col items-center justify-center">
-          <Loader className="h-8 w-8 animate-spin text-fixlify mb-4" />
-          <div className="text-fixlify-text-secondary">Loading client details...</div>
+          <Loader className="h-8 w-8 animate-spin text-fixlyfy mb-4" />
+          <div className="text-fixlyfy-text-secondary">Loading client details...</div>
         </div>
       </div>
     );
@@ -63,8 +63,8 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   
   if (!client) {
     return (
-      <div className="fixlify-card p-8 text-center">
-        <div className="text-fixlify-text-secondary">Client not found</div>
+      <div className="fixlyfy-card p-8 text-center">
+        <div className="text-fixlyfy-text-secondary">Client not found</div>
         <Button 
           variant="outline" 
           className="mt-4"
@@ -78,7 +78,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   
   return (
     <div className="space-y-6">
-      <div className="fixlify-card p-6">
+      <div className="fixlyfy-card p-6">
         <ClientFormHeader
           client={client}
           isSaving={isSaving}
