@@ -86,9 +86,13 @@ export const useClientHistory = (clientId?: string) => {
         }));
         
         // Combine all entries and sort by date
-        const allHistory = [...jobEntries, ...invoiceEntries].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
+        const allHistory = [...jobEntries, ...invoiceEntries];
+        // Use a proper sorting function that doesn't cause excessive type instantiation
+        allHistory.sort((a, b) => {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return dateB - dateA;
+        });
         
         setHistory(allHistory);
       } catch (error) {

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PaymentMethod, PaymentStatus } from "@/types/payment";
 
 export interface ClientPayment {
   id: string;
@@ -76,7 +77,7 @@ export const useClientPayments = (clientId?: string) => {
             // Then get payments for those invoices
             const { data: payments, error: paymentError } = await supabase
               .from('payments')
-              .select('id, invoice_id, amount, method, date, status')
+              .select('id, invoice_id, amount, method, date')
               .in('invoice_id', invoiceIds)
               .order('date', { ascending: false });
               
@@ -89,22 +90,24 @@ export const useClientPayments = (clientId?: string) => {
             });
             
             // Format the payment data with all relevant info
-            paymentData = (payments || []).map(payment => {
-              const invoice = invoiceMap.get(payment.invoice_id);
-              const jobId = invoice?.job_id;
-              const jobTitle = jobId ? jobTitlesMap.get(jobId) : null;
-              
-              return {
-                id: payment.id,
-                date: payment.date,
-                amount: payment.amount,
-                method: payment.method,
-                status: payment.status || 'paid',
-                invoice_number: invoice?.invoice_number,
-                job_title: jobTitle,
-                job_id: jobId
-              };
-            });
+            if (payments) {
+              paymentData = payments.map(payment => {
+                const invoice = invoiceMap.get(payment.invoice_id);
+                const jobId = invoice?.job_id;
+                const jobTitle = jobId ? jobTitlesMap.get(jobId) : null;
+                
+                return {
+                  id: payment.id,
+                  date: payment.date,
+                  amount: payment.amount,
+                  method: payment.method,
+                  status: 'paid', // Default status since column doesn't exist yet
+                  invoice_number: invoice?.invoice_number,
+                  job_title: jobTitle,
+                  job_id: jobId
+                };
+              });
+            }
           }
         }
         
