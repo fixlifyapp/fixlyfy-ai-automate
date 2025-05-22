@@ -1,7 +1,6 @@
 
 import { Card } from "@/components/ui/card";
 import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
-import { useParams } from "react-router-dom";
 import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
 import { JobActions } from "@/components/jobs/header/JobActions";
 import { CallDialog } from "@/components/jobs/dialogs/CallDialog";
@@ -9,9 +8,12 @@ import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
 import { InvoiceDialog } from "@/components/jobs/dialogs/InvoiceDialog";
 import { EstimateDialog } from "@/components/jobs/dialogs/EstimateDialog";
 
-export const JobDetailsHeader = () => {
-  const { id } = useParams();
-  const jobHeaderData = useJobDetailsHeader(id || "");
+interface JobDetailsHeaderProps {
+  jobId: string;
+}
+
+export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
+  const jobHeaderData = useJobDetailsHeader(jobId);
   
   return (
     <div className="p-6">

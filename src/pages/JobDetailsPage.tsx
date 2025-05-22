@@ -12,7 +12,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 
@@ -21,7 +20,6 @@ const JobDetailsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
-  const jobHeaderData = useJobDetailsHeader(id || "");
   
   // Check for activeTab in location state when component mounts or location changes
   useEffect(() => {
@@ -44,7 +42,7 @@ const JobDetailsPage = () => {
       <div className="container mx-auto px-4">
         <div className="mb-6">
           <Card className="border-fixlyfy-border shadow-sm">
-            <JobDetailsHeader />
+            <JobDetailsHeader jobId={id || ""} />
           </Card>
         </div>
         

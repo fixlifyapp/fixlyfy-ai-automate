@@ -23,7 +23,16 @@ export interface JobInfo {
 }
 
 export const useJobDetailsHeader = (id: string) => {
-  const navigate = useNavigate();
+  // Use a try-catch to handle cases where the router context isn't available
+  let navigate;
+  try {
+    navigate = useNavigate();
+  } catch (error) {
+    console.warn("Navigation context not available:", error);
+    // Provide a fallback navigate function that does nothing
+    navigate = () => {};
+  }
+  
   const [status, setStatus] = useState<string>("scheduled");
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -46,6 +55,8 @@ export const useJobDetailsHeader = (id: string) => {
   
   // Load job info and initial payment data
   useEffect(() => {
+    if (!id) return;
+    
     const job = getJobInfo();
     
     // Initialize invoice amount from job total

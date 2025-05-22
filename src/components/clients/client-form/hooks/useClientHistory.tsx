@@ -65,7 +65,7 @@ export const useClientHistory = (clientId?: string) => {
         // Map jobs to JobHistoryItem type
         const jobEntries: JobHistoryItem[] = (jobs || []).map(job => ({
           id: `job-${job.id}`,
-          type: 'job' as const,
+          type: 'job',
           title: job.title,
           status: job.status,
           date: job.date,
@@ -76,7 +76,7 @@ export const useClientHistory = (clientId?: string) => {
         // Map invoices to InvoiceHistoryItem type
         const invoiceEntries: InvoiceHistoryItem[] = (invoices || []).map(invoice => ({
           id: `invoice-${invoice.id}`,
-          type: 'invoice' as const,
+          type: 'invoice',
           title: `Invoice #${invoice.invoice_number}`,
           status: invoice.status,
           date: invoice.date,
