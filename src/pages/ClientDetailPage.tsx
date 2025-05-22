@@ -6,7 +6,6 @@ import { ClientForm } from "@/components/clients/ClientForm";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { ClientJobs } from "@/components/clients/ClientJobs";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
@@ -32,12 +31,7 @@ const ClientDetailPage = () => {
       </div>
       
       <div className="space-y-8">
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Client Information</h2>
-          <ClientForm clientId={id} onCreateJob={() => setIsCreateJobModalOpen(true)} />
-        </div>
-        
-        <ClientJobs clientId={id} />
+        <ClientForm clientId={id} onCreateJob={() => setIsCreateJobModalOpen(true)} />
       </div>
       
       <JobsCreateModal 

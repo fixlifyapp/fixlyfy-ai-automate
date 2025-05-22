@@ -14,18 +14,18 @@ interface BaseHistoryItem {
 }
 
 // Define specific history item types that extend the base type
-interface JobHistoryItem extends BaseHistoryItem {
+export interface JobHistoryItem extends BaseHistoryItem {
   type: 'job';
   jobId: string;
 }
 
-interface InvoiceHistoryItem extends BaseHistoryItem {
+export interface InvoiceHistoryItem extends BaseHistoryItem {
   type: 'invoice';
   amount: number;
   invoiceId: string;
 }
 
-// Use a discriminated union type for all history items
+// Use a union type for all history items
 export type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
 
 export const useClientHistory = (clientId?: string) => {
@@ -65,7 +65,7 @@ export const useClientHistory = (clientId?: string) => {
         // Map jobs to JobHistoryItem type
         const jobEntries: JobHistoryItem[] = (jobs || []).map(job => ({
           id: `job-${job.id}`,
-          type: 'job',
+          type: 'job' as const,
           title: job.title,
           status: job.status,
           date: job.date,
@@ -76,7 +76,7 @@ export const useClientHistory = (clientId?: string) => {
         // Map invoices to InvoiceHistoryItem type
         const invoiceEntries: InvoiceHistoryItem[] = (invoices || []).map(invoice => ({
           id: `invoice-${invoice.id}`,
-          type: 'invoice',
+          type: 'invoice' as const,
           title: `Invoice #${invoice.invoice_number}`,
           status: invoice.status,
           date: invoice.date,

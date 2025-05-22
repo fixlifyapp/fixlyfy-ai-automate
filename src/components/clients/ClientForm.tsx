@@ -17,6 +17,7 @@ import { PropertiesTab } from "./client-form/PropertiesTab";
 // Import custom hooks
 import { useClientData } from "./client-form/hooks/useClientData";
 import { useInvoiceCreation } from "./client-form/hooks/useInvoiceCreation";
+import { ClientJobs } from "./ClientJobs";
 
 interface ClientFormProps {
   clientId?: string;
@@ -126,11 +127,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           
           {/* Jobs Tab */}
           <TabsContent value="jobs" className="space-y-6">
-            <EmptyTabContent 
-              message="No jobs found for this client."
-              actionLabel="Create First Job"
-              onAction={onCreateJob}
-            />
+            <ClientJobs clientId={clientId} />
           </TabsContent>
           
           {/* Payments Tab */}
