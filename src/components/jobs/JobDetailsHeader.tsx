@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useJobDetails } from "./context/JobDetailsContext";
+import { Button } from "@/components/ui/button";
+import { FileText, DollarSign, PlusCircle } from "lucide-react";
 
 interface JobDetailsHeaderProps {
   jobId?: string;
@@ -92,6 +94,47 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
     toast.success("Job rescheduling initiated");
     // In a real app, this would open a rescheduling dialog
   };
+
+  // New handlers for estimate, invoice, payment flows
+  const handleCreateEstimate = () => {
+    openModal("createEstimate", {
+      title: "Create Estimate",
+      jobId: job.id,
+      client: job.client,
+      onSuccess: () => {
+        toast.success("Estimate created successfully");
+        // Navigate to the estimates tab
+        navigate(`/jobs/${job.id}`, { state: { activeTab: "estimates" } });
+      }
+    });
+  };
+
+  const handleGenerateInvoice = () => {
+    openModal("createInvoice", {
+      title: "Generate Invoice",
+      jobId: job.id,
+      client: job.client,
+      onSuccess: () => {
+        toast.success("Invoice generated successfully");
+        // Navigate to the invoices tab
+        navigate(`/jobs/${job.id}`, { state: { activeTab: "invoices" } });
+      }
+    });
+  };
+
+  const handleCollectPayment = () => {
+    openModal("collectPayment", {
+      title: "Collect Payment",
+      jobId: job.id,
+      client: job.client,
+      balance: balance,
+      onSuccess: () => {
+        toast.success("Payment recorded successfully");
+        // Navigate to the payments tab
+        navigate(`/jobs/${job.id}`, { state: { activeTab: "payments" } });
+      }
+    });
+  };
   
   return (
     <div className="p-6">
@@ -111,12 +154,45 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
           balance={balance}
         />
         
-        <div>
+        <div className="space-y-2">
           <JobActions 
             onCompleteJob={handleCompleteJob}
             onCancelJob={handleCancelJob}
             onReschedule={handleReschedule}
           />
+          
+          {/* Financial Action Buttons */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-green-200 text-green-700 hover:bg-green-50"
+              onClick={handleCreateEstimate}
+            >
+              <PlusCircle size={16} />
+              Create Estimate
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+              onClick={handleGenerateInvoice}
+            >
+              <FileText size={16} />
+              Generate Invoice
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={handleCollectPayment}
+            >
+              <DollarSign size={16} />
+              Collect Payment
+            </Button>
+          </div>
         </div>
       </div>
     </div>
