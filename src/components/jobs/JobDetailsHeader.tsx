@@ -5,22 +5,35 @@ import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
 import { JobActions } from "@/components/jobs/header/JobActions";
 import { useState, useEffect } from "react";
 import { useModal } from "@/components/ui/modal-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobDetailsHeaderProps {
   jobId: string;
 }
 
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
-  const { jobHeaderData, isLoading } = useJobDetailsHeader(jobId);
+  const { 
+    job, 
+    isLoading, 
+    status, 
+    handleStatusChange, 
+    handleEditClient,
+    handleCompleteJob,
+    handleCancelJob,
+    handleReschedule,
+    invoiceAmount,
+    balance
+  } = useJobDetailsHeader(jobId);
+  
   const { openModal } = useModal();
-  const [status, setStatus] = useState<string>("scheduled");
-
-  // Update status when jobHeaderData changes
+  const [currentStatus, setCurrentStatus] = useState<string>("scheduled");
+  
+  // Update status when job data changes
   useEffect(() => {
-    if (jobHeaderData?.status) {
-      setStatus(jobHeaderData.status);
+    if (status) {
+      setCurrentStatus(status);
     }
-  }, [jobHeaderData]);
+  }, [status]);
 
   if (isLoading) {
     return (
@@ -33,7 +46,7 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
     );
   }
 
-  if (!jobHeaderData) {
+  if (!job) {
     return (
       <div className="p-6">
         <div className="text-red-500">Error loading job details</div>
@@ -41,47 +54,29 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
     );
   }
 
-  const handleStatusChange = (newStatus: string) => {
-    // Implementation to change status would be here
-    setStatus(newStatus);
-  };
-
-  const handleEditClient = () => {
-    // Navigate to client page logic would be here
-  };
-
-  const handleCompleteJob = () => {
-    // Complete job logic would be here
-    setStatus("completed");
-  };
-
-  const handleCancelJob = () => {
-    // Cancel job logic would be here
-    setStatus("cancelled");
-  };
-
-  const handleReschedule = () => {
-    // Reschedule job logic would be here
+  const handleLocalStatusChange = (newStatus: string) => {
+    handleStatusChange(newStatus);
+    setCurrentStatus(newStatus);
   };
 
   const handleCallClick = () => {
-    if (jobHeaderData.client && jobHeaderData.client.phone) {
+    if (job.phone) {
       // We'll use a standard modal type instead
       openModal("deleteConfirm", {
         title: "Call Client",
-        description: `Call ${jobHeaderData.client.name} at ${jobHeaderData.client.phone}?`,
-        onConfirm: () => window.open(`tel:${jobHeaderData.client.phone}`)
+        description: `Call ${job.client} at ${job.phone}?`,
+        onConfirm: () => window.open(`tel:${job.phone}`)
       });
     }
   };
 
   const handleMessageClick = () => {
-    if (jobHeaderData.client && jobHeaderData.client.phone) {
+    if (job.phone) {
       // We'll use a standard modal type instead
       openModal("deleteConfirm", {
         title: "Message Client",
-        description: `Message ${jobHeaderData.client.name} at ${jobHeaderData.client.phone}?`,
-        onConfirm: () => window.open(`sms:${jobHeaderData.client.phone}`)
+        description: `Message ${job.client} at ${job.phone}?`,
+        onConfirm: () => window.open(`sms:${job.phone}`)
       });
     }
   };
@@ -91,22 +86,22 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
         <JobInfoSection 
           job={{
-            id: jobHeaderData.id,
-            clientId: jobHeaderData.client?.id || "",
-            client: jobHeaderData.client?.name || "Unknown Client",
-            service: jobHeaderData.service || "",
-            address: jobHeaderData.client?.address || "",
-            phone: jobHeaderData.client?.phone || "",
-            email: jobHeaderData.client?.email || ""
+            id: job.id,
+            clientId: job.clientId,
+            client: job.client,
+            service: job.service,
+            address: job.address,
+            phone: job.phone,
+            email: job.email,
+            total: job.total || 0 // Ensure total is provided
           }}
-          status={status}
-          onStatusChange={handleStatusChange}
+          status={currentStatus}
+          onStatusChange={handleLocalStatusChange}
           onCallClick={handleCallClick}
           onMessageClick={handleMessageClick}
           onEditClient={handleEditClient}
-          // For now, we'll pass placeholders for these values
-          invoiceAmount={0}
-          balance={0}
+          invoiceAmount={invoiceAmount}
+          balance={balance}
         />
         
         <div>
