@@ -13,7 +13,6 @@ import { EmptyTabContent } from "./client-form/EmptyTabContent";
 import { InvoiceModal } from "./client-form/InvoiceModal";
 import { PaymentsTab } from "./client-form/PaymentsTab";
 import { PropertiesTab } from "./client-form/PropertiesTab";
-import { HistoryTab } from "./client-form/HistoryTab";
 
 // Import custom hooks
 import { useClientData } from "./client-form/hooks/useClientData";
@@ -101,7 +100,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1">
             <TabsTrigger value="details" className="relative">
               <User size={16} className="mr-2" />
               Details
@@ -114,9 +113,6 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             </TabsTrigger>
             <TabsTrigger value="properties" className="relative">
               Properties
-            </TabsTrigger>
-            <TabsTrigger value="history" className="relative">
-              History
             </TabsTrigger>
           </TabsList>
           
@@ -148,11 +144,6 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           {/* Properties Tab */}
           <TabsContent value="properties" className="space-y-6">
             <PropertiesTab clientId={clientId} />
-          </TabsContent>
-          
-          {/* History Tab */}
-          <TabsContent value="history" className="space-y-6">
-            <HistoryTab clientId={clientId} />
           </TabsContent>
         </Tabs>
       </div>
