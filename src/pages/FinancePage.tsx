@@ -14,10 +14,11 @@ import { toast } from "sonner";
 import { usePayments } from "@/hooks/usePayments";
 import { FinanceAiInsights } from "@/components/finance/FinanceAiInsights";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { mapPaymentFromHook } from "@/utils/payment-mapper";
 
 export default function FinancePage() {
   // Get all payments from the usePayments hook
-  const { payments: allPayments, isLoading, fetchPayments, refundPayment, deletePayment } = usePayments();
+  const { payments: allPaymentsFromHook, isLoading, fetchPayments, refundPayment, deletePayment } = usePayments();
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -42,9 +43,21 @@ export default function FinancePage() {
   }, [fetchPayments]);
 
   useEffect(() => {
-    // Update filtered payments when all payments change
-    setFilteredPayments(allPayments);
-  }, [allPayments]);
+    // Map the payments from the hook to our expected Payment type
+    const mappedPayments: Payment[] = allPaymentsFromHook.map(payment => {
+      const mappedPayment = mapPaymentFromHook(payment);
+      
+      // If we have additional data from the mock payments, use it
+      if (payment.technician_name) {
+        mappedPayment.technicianName = payment.technician_name;
+      }
+      
+      return mappedPayment;
+    });
+    
+    // Update filtered payments with the mapped payments
+    setFilteredPayments(mappedPayments);
+  }, [allPaymentsFromHook]);
 
   const handleRefund = (payment: Payment) => {
     setSelectedPayment(payment);
@@ -100,7 +113,7 @@ export default function FinancePage() {
     technician: string | "all",
     client: string | "all"
   ) => {
-    let filtered = [...allPayments];
+    let filtered = [...filteredPayments];
 
     if (startDate) {
       // Fix: Use setHours to set the time to the start of the day

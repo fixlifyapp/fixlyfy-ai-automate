@@ -15,7 +15,8 @@ export interface QuickAction {
   name: string;
   variant: string;
   className: string;
-  icon: React.ComponentType<{ size?: number | undefined; className?: string | undefined }>;
+  // Updated icon type to match Lucide React's type
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string }>;
 }
 
 export interface AiFinanceInsight {
