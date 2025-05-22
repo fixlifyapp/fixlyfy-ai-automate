@@ -76,16 +76,26 @@ export const useJobDetailsHeader = (id: string) => {
           return;
         }
         
-        // Extract client information
-        const client = jobData.clients || {};
+        // Extract client information with type safety
+        const client = jobData.clients || { 
+          id: "",
+          name: "Unknown Client",
+          email: "",
+          phone: "",
+          address: "",
+          city: "",
+          state: "",
+          zip: "",
+          country: ""
+        };
         
         // Create formatted address from client data
         const formattedAddress = [
-          client.address,
-          client.city,
-          client.state,
-          client.zip,
-          client.country
+          client.address || '',
+          client.city || '',
+          client.state || '',
+          client.zip || '',
+          client.country || ''
         ].filter(Boolean).join(', ');
         
         // Create job info object
@@ -114,10 +124,25 @@ export const useJobDetailsHeader = (id: string) => {
           .eq('invoice_id', id);
         
         if (paymentsData && paymentsData.length > 0) {
-          setJobPayments(paymentsData);
+          // Transform payment data to match the Payment type
+          const transformedPayments: Payment[] = paymentsData.map(payment => ({
+            id: payment.id,
+            amount: payment.amount || 0,
+            method: payment.method || 'credit-card',
+            date: payment.date || new Date().toISOString(),
+            status: 'completed',
+            reference: payment.reference || '',
+            notes: payment.notes || '',
+            jobId: id,
+            clientId: client.id || '',
+            clientName: client.name || 'Unknown Client',
+            created_at: payment.created_at
+          }));
+          
+          setJobPayments(transformedPayments);
           
           // Extract payment amounts
-          const paymentAmounts = paymentsData.map(payment => payment.amount || 0);
+          const paymentAmounts = transformedPayments.map(payment => payment.amount || 0);
           setPaymentsMade(paymentAmounts);
         }
         
@@ -221,7 +246,23 @@ export const useJobDetailsHeader = (id: string) => {
       
       // Update the payments list
       setPaymentsMade(prevPayments => [...prevPayments, amount]);
-      setJobPayments(prevPayments => [...prevPayments, data]);
+      
+      // Add the new payment to jobPayments with correct type
+      const formattedPayment: Payment = {
+        id: data.id,
+        amount: data.amount || 0,
+        method: data.method || 'credit-card',
+        date: data.date || new Date().toISOString(),
+        status: 'completed',
+        reference: data.reference || '',
+        notes: data.notes || '',
+        jobId: id,
+        clientId: job.clientId,
+        clientName: job.client,
+        created_at: data.created_at
+      };
+      
+      setJobPayments(prevPayments => [...prevPayments, formattedPayment]);
       
       toast.success(`Payment of $${amount.toFixed(2)} recorded`);
     } catch (error) {

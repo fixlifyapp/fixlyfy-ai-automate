@@ -82,6 +82,8 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
         clientName: job.client,
         phone: job.phone
       });
+    } else {
+      toast.warning("No phone number available for this client");
     }
   };
 
@@ -94,9 +96,20 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
         clientName: job.client,
         phone: job.phone
       });
+    } else {
+      toast.warning("No phone number available for this client");
     }
   };
 
+  // Log client info for debugging
+  console.log("Current job client info:", {
+    client: job.client,
+    clientId: job.clientId,
+    phone: job.phone,
+    email: job.email,
+    address: job.address
+  });
+  
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
