@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Define specific history item types to avoid recursive type issues
+// Define specific history item types with explicit non-recursive structure
 interface BaseHistoryItem {
   id: string;
   type: string;
@@ -24,7 +24,7 @@ interface InvoiceHistoryItem extends BaseHistoryItem {
   invoiceId: string;
 }
 
-// Use a discriminated union type
+// Union type of all possible history items
 export type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
 
 export const useClientHistory = (clientId?: string) => {
