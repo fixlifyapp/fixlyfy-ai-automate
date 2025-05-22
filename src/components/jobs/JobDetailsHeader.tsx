@@ -1,6 +1,5 @@
 
 import { Card } from "@/components/ui/card";
-import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
 import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
 import { JobActions } from "@/components/jobs/header/JobActions";
 import { useState, useEffect } from "react";
@@ -8,13 +7,31 @@ import { useModal } from "@/components/ui/modal-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobDetailsHeaderProps {
   jobId: string;
 }
 
+export interface JobInfo {
+  id: string;
+  clientId: string;
+  client: string;
+  service: string;
+  address: string;
+  phone: string;
+  email: string;
+  total: number;
+  status?: string;
+}
+
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
   const navigate = useNavigate();
+  const [job, setJob] = useState<JobInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentStatus, setCurrentStatus] = useState<string>("scheduled");
+  const [invoiceAmount, setInvoiceAmount] = useState(0);
+  const [balance, setBalance] = useState(0);
   
   // Safely use the modal context with a fallback
   let openModal: (type: any, props?: any) => void;
@@ -27,27 +44,147 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
     openModal = () => toast.error("Modal functionality unavailable");
   }
   
-  const { 
-    job, 
-    isLoading, 
-    status, 
-    handleStatusChange, 
-    handleEditClient,
-    handleCompleteJob,
-    handleCancelJob,
-    handleReschedule,
-    invoiceAmount,
-    balance
-  } = useJobDetailsHeader(jobId);
-  
-  const [currentStatus, setCurrentStatus] = useState<string>("scheduled");
-  
-  // Update status when job data changes
+  // Load job data
   useEffect(() => {
-    if (status) {
-      setCurrentStatus(status);
+    if (!jobId) return;
+    
+    setIsLoading(true);
+    
+    const fetchJobData = async () => {
+      try {
+        // Fetch job details from Supabase
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients(id, name, email, phone, address, city, state, zip, country)
+          `)
+          .eq('id', jobId)
+          .single();
+        
+        if (jobError) {
+          console.error("Error fetching job:", jobError);
+          toast.error("Error loading job details");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!jobData) {
+          console.error("Job not found");
+          toast.error("Job not found");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Extract client information with type safety
+        const client = jobData.clients || { 
+          id: "",
+          name: "Unknown Client",
+          email: "",
+          phone: "",
+          address: "",
+          city: "",
+          state: "",
+          zip: "",
+          country: ""
+        };
+        
+        // Create formatted address from client data
+        const formattedAddress = [
+          client.address || '',
+          client.city || '',
+          client.state || '',
+          client.zip || '',
+          client.country || ''
+        ].filter(Boolean).join(', ');
+        
+        // Create job info object
+        const jobInfo: JobInfo = {
+          id: jobData.id,
+          clientId: client.id || "",
+          client: client.name || "Unknown Client",
+          service: jobData.service || "General Service",
+          address: formattedAddress,
+          phone: client.phone || "",
+          email: client.email || "",
+          total: jobData.revenue || 0,
+          status: jobData.status || "scheduled"
+        };
+        
+        setJob(jobInfo);
+        setCurrentStatus(jobData.status || "scheduled");
+        
+        // Set invoice amount from job total
+        setInvoiceAmount(jobData.revenue || 0);
+        
+        // Fetch payments for this job to calculate balance
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('invoice_id', jobId);
+          
+        const totalPayments = paymentsData 
+          ? paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0) 
+          : 0;
+          
+        setBalance(jobData.revenue - totalPayments);
+        
+      } catch (error) {
+        console.error("Error in fetching job details:", error);
+        toast.error("Error loading job details");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchJobData();
+  }, [jobId]);
+  
+  // Handle status change
+  const handleStatusChange = async (newStatus: string) => {
+    if (!jobId) return;
+    
+    try {
+      // Update job status in database
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: newStatus })
+        .eq('id', jobId);
+        
+      if (error) {
+        console.error("Error updating job status:", error);
+        toast.error("Failed to update job status");
+        return;
+      }
+      
+      setCurrentStatus(newStatus);
+      toast.success(`Job status updated to ${newStatus}`);
+    } catch (error) {
+      console.error("Error in handleStatusChange:", error);
+      toast.error("Failed to update job status");
     }
-  }, [status]);
+  };
+  
+  // Handle Edit Client action
+  const handleEditClient = () => {
+    if (job?.clientId) {
+      navigate(`/clients/${job.clientId}`);
+    }
+  };
+  
+  // Job action handlers
+  const handleCompleteJob = () => {
+    handleStatusChange("completed");
+  };
+
+  const handleCancelJob = () => {
+    handleStatusChange("cancelled");
+  };
+
+  const handleReschedule = () => {
+    toast.success("Job rescheduling initiated");
+    // In a real app, this would open a rescheduling dialog
+  };
 
   if (isLoading) {
     return (
@@ -67,11 +204,6 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
       </div>
     );
   }
-
-  const handleLocalStatusChange = (newStatus: string) => {
-    handleStatusChange(newStatus);
-    setCurrentStatus(newStatus);
-  };
 
   const handleCallClick = () => {
     if (job.phone) {
@@ -100,32 +232,14 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
       toast.warning("No phone number available for this client");
     }
   };
-
-  // Log client info for debugging
-  console.log("Current job client info:", {
-    client: job.client,
-    clientId: job.clientId,
-    phone: job.phone,
-    email: job.email,
-    address: job.address
-  });
   
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
         <JobInfoSection 
-          job={{
-            id: job.id,
-            clientId: job.clientId,
-            client: job.client,
-            service: job.service,
-            address: job.address,
-            phone: job.phone,
-            email: job.email,
-            total: job.total || 0 // Ensure total is provided
-          }}
+          job={job}
           status={currentStatus}
-          onStatusChange={handleLocalStatusChange}
+          onStatusChange={handleStatusChange}
           onCallClick={handleCallClick}
           onMessageClick={handleMessageClick}
           onEditClient={() => {

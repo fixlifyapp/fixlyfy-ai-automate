@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Brain, CheckCircle, FileText, Bell, UserPlus, ThumbsUp, ThumbsDown, Clock, DollarSign, Zap, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -5,11 +6,14 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader"; // Import the main hook consistently
+import { supabase } from "@/integrations/supabase/client";
+
+interface JobDetailsQuickActionsProps {
+  jobId: string;
+}
 
 interface AiSuggestion {
   id: number;
@@ -82,10 +86,9 @@ const quickActions = [{
   className: "w-full",
   icon: Bell
 }];
-export const JobDetailsQuickActions = () => {
-  const { id } = useParams();
-  const { job, handleCompleteJob } = useJobDetailsHeader(id || ""); // Use the main hook for consistency
-  
+export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) => {
+  const [job, setJob] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2, 3, 4]);
   const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState(initialAiSuggestions);
@@ -96,6 +99,38 @@ export const JobDetailsQuickActions = () => {
   } = useAI({
     systemContext: "You are an AI assistant for a field service business. Generate concise, practical insights for technicians and managers about service jobs."
   });
+
+  // Fetch job data
+  useEffect(() => {
+    if (!jobId) return;
+    
+    const fetchJob = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients(id, name, email, phone, address, city, state, zip, country)
+          `)
+          .eq('id', jobId)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching job for quick actions:", error);
+          toast.error("Error loading job data");
+        } else if (data) {
+          setJob(data);
+        }
+      } catch (error) {
+        console.error("Error in job fetch:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchJob();
+  }, [jobId]);
   
   const handleFeedback = (id: number, isPositive: boolean) => {
     console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
@@ -124,12 +159,26 @@ export const JobDetailsQuickActions = () => {
     }
   };
   
-  const handleCompleteJobConfirm = () => {
-    // Use the handleCompleteJob from the main hook
-    if (handleCompleteJob) {
-      handleCompleteJob();
+  const handleCompleteJob = async () => {
+    if (!jobId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: 'completed' })
+        .eq('id', jobId);
+        
+      if (error) {
+        console.error("Error completing job:", error);
+        toast.error("Failed to complete job");
+      } else {
+        toast.success("Job marked as completed");
+      }
+    } catch (error) {
+      console.error("Error in handleCompleteJob:", error);
+      toast.error("Failed to complete job");
     }
-    toast.success("Job marked as completed");
+    
     setIsCompleteJobDialogOpen(false);
   };
   
@@ -143,7 +192,7 @@ export const JobDetailsQuickActions = () => {
       const selectedCategory = categories[categoryIndex] as "revenue" | "efficiency" | "customer" | "sales" | "upsell";
       const typeIndex = Math.floor(Math.random() * suggestionTypes.length);
       const selectedType = suggestionTypes[typeIndex] as "info" | "recommendation" | "insight" | "warning" | "upsell";
-      let promptTemplate = `Generate a practical business insight for a field service technician about job ID ${id}.`;
+      let promptTemplate = `Generate a practical business insight for a field service technician about job ID ${jobId}.`;
 
       // Customize prompt based on category
       switch (selectedCategory) {
@@ -278,7 +327,7 @@ export const JobDetailsQuickActions = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCompleteJobConfirm}>Yes, Complete Job</AlertDialogAction>
+            <AlertDialogAction onClick={handleCompleteJob}>Yes, Complete Job</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

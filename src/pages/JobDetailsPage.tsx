@@ -16,7 +16,6 @@ import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { toast } from "sonner";
-import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader"; // Use the main hook consistently
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,9 +23,6 @@ const JobDetailsPage = () => {
   const [activeTab, setActiveTab] = useState<string>("details");
   const { hasPermission } = useRBAC();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
-  // Get job details from the main hook to have a single source of truth
-  const { job, isLoading: jobLoading } = useJobDetailsHeader(id || "");
   
   // Check for activeTab in location state when component mounts or location changes
   useEffect(() => {
@@ -92,7 +88,7 @@ const JobDetailsPage = () => {
             </JobDetailsTabs>
           </div>
           <div className="lg:col-span-1 space-y-6">
-            <JobDetailsQuickActions />
+            <JobDetailsQuickActions jobId={id || ""} />
           </div>
         </div>
       </div>
