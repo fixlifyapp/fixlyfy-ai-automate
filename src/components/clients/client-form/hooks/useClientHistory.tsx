@@ -61,10 +61,10 @@ export const useClientHistory = (clientId?: string) => {
           
         if (invoicesError) throw invoicesError;
         
-        // Combine jobs and invoices into history entries
+        // Explicitly type the job entries
         const jobEntries: JobHistoryItem[] = (jobs || []).map(job => ({
           id: `job-${job.id}`,
-          type: 'job',
+          type: 'job' as const,
           title: job.title,
           status: job.status,
           date: job.date,
@@ -72,9 +72,10 @@ export const useClientHistory = (clientId?: string) => {
           jobId: job.id
         }));
         
+        // Explicitly type the invoice entries
         const invoiceEntries: InvoiceHistoryItem[] = (invoices || []).map(invoice => ({
           id: `invoice-${invoice.id}`,
-          type: 'invoice',
+          type: 'invoice' as const,
           title: `Invoice #${invoice.invoice_number}`,
           status: invoice.status,
           date: invoice.date,
@@ -83,8 +84,9 @@ export const useClientHistory = (clientId?: string) => {
           invoiceId: invoice.id
         }));
         
-        // Combine all entries and sort by date
-        const allHistory = [...jobEntries, ...invoiceEntries].sort(
+        // Combine all entries with proper typing and sort by date
+        const combinedHistory: HistoryItem[] = [...jobEntries, ...invoiceEntries];
+        const allHistory = combinedHistory.sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         
