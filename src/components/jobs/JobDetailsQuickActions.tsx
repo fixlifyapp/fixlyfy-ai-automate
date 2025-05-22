@@ -9,6 +9,8 @@ import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader"; // Import the main hook consistently
+
 interface AiSuggestion {
   id: number;
   tip: string;
@@ -81,18 +83,20 @@ const quickActions = [{
   icon: Bell
 }];
 export const JobDetailsQuickActions = () => {
-  const {
-    id
-  } = useParams();
+  const { id } = useParams();
+  const { job, handleCompleteJob } = useJobDetailsHeader(id || ""); // Use the main hook for consistency
+  
   const [openSuggestions, setOpenSuggestions] = useState<number[]>([0, 1, 2, 3, 4]);
   const [isCompleteJobDialogOpen, setIsCompleteJobDialogOpen] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState(initialAiSuggestions);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  
   const {
     generateText
   } = useAI({
     systemContext: "You are an AI assistant for a field service business. Generate concise, practical insights for technicians and managers about service jobs."
   });
+  
   const handleFeedback = (id: number, isPositive: boolean) => {
     console.log(`Feedback for suggestion ${id}: ${isPositive ? 'positive' : 'negative'}`);
 
@@ -104,6 +108,7 @@ export const JobDetailsQuickActions = () => {
       toast.success("Thanks for your feedback! Glad this was helpful.");
     }
   };
+  
   const handleQuickAction = (actionId: number) => {
     switch (actionId) {
       case 1:
@@ -118,10 +123,16 @@ export const JobDetailsQuickActions = () => {
         break;
     }
   };
-  const handleCompleteJob = () => {
+  
+  const handleCompleteJobConfirm = () => {
+    // Use the handleCompleteJob from the main hook
+    if (handleCompleteJob) {
+      handleCompleteJob();
+    }
     toast.success("Job marked as completed");
     setIsCompleteJobDialogOpen(false);
   };
+  
   const generateNewSuggestion = async () => {
     if (isGeneratingSuggestion) return;
     setIsGeneratingSuggestion(true);
@@ -176,6 +187,7 @@ export const JobDetailsQuickActions = () => {
       setIsGeneratingSuggestion(false);
     }
   };
+  
   return <>
       {/* AI Suggestions Panel */}
       <Card className="border-fixlyfy-border bg-fixlyfy/5 mb-6">
@@ -229,7 +241,31 @@ export const JobDetailsQuickActions = () => {
       </Card>
       
       {/* Quick Actions Block */}
-      
+      {job && (
+        <Card className="border-fixlyfy-border mb-6">
+          <CardHeader className="p-4 border-b border-fixlyfy-border">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-md bg-fixlyfy/10 flex items-center justify-center">
+                <Zap size={18} className="text-fixlyfy" />
+              </div>
+              <h3 className="text-lg font-medium">Quick Actions</h3>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 grid grid-cols-1 gap-3">
+            {quickActions.map(action => (
+              <Button
+                key={action.id}
+                variant={action.variant as any}
+                className={action.className}
+                onClick={() => handleQuickAction(action.id)}
+              >
+                <action.icon size={18} className="mr-2" />
+                {action.name}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Complete Job Dialog */}
       <AlertDialog open={isCompleteJobDialogOpen} onOpenChange={setIsCompleteJobDialogOpen}>
@@ -242,7 +278,7 @@ export const JobDetailsQuickActions = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCompleteJob}>Yes, Complete Job</AlertDialogAction>
+            <AlertDialogAction onClick={handleCompleteJobConfirm}>Yes, Complete Job</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
