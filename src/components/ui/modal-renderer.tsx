@@ -28,45 +28,107 @@ export const ModalRenderer = () => {
     },
   };
 
+  // Early return if no modal type
+  if (!modalType) return null;
+
   // Render the appropriate modal based on the current modalType
   switch (modalType) {
     // For modals that haven't been refactored yet, we'll use the original components
     case "teamSelection":
-      return <TeamSelectionDialog {...commonProps} {...modalProps} />;
+      // Ensure required props are included or use defaults
+      return <TeamSelectionDialog 
+        {...commonProps} 
+        {...modalProps}
+        initialTeam={modalProps.initialTeam || ""}
+        onSave={modalProps.onSave || (() => {})}
+      />;
       
     case "assignTechnician":
-      return <AssignTechnicianDialog {...commonProps} {...modalProps} />;
+      return <AssignTechnicianDialog 
+        {...commonProps} 
+        {...modalProps}
+        selectedJobs={modalProps.selectedJobs || []}
+        onSuccess={modalProps.onSuccess || (() => {})}
+      />;
       
     case "deleteConfirm":
-      return <DeleteConfirmDialog {...commonProps} {...modalProps} />;
+      return <DeleteConfirmDialog 
+        {...commonProps} 
+        {...modalProps}
+        title={modalProps.title || "Confirm Delete"}
+        description={modalProps.description || "Are you sure you want to delete this item?"}
+        onConfirm={modalProps.onConfirm || (() => {})}
+      />;
       
     case "prioritySelection":
       return <PrioritySelectionDialog />;
       
     case "sourceSelection":
-      return <SourceSelectionDialog {...commonProps} {...modalProps} />;
+      return <SourceSelectionDialog 
+        {...commonProps} 
+        {...modalProps}
+        initialSource={modalProps.initialSource || ""}
+        onSave={modalProps.onSave || (() => {})}
+      />;
       
     case "jobType":
-      return <JobTypeDialog {...commonProps} {...modalProps} />;
+      return <JobTypeDialog 
+        {...commonProps} 
+        {...modalProps}
+        initialType={modalProps.initialType || ""}
+        onSave={modalProps.onSave || (() => {})}
+      />;
       
     case "refund":
-      return <RefundDialog {...commonProps} {...modalProps} />;
+      return <RefundDialog 
+        {...commonProps} 
+        {...modalProps}
+        payment={modalProps.payment || {}}
+        onRefund={modalProps.onRefund || (() => {})}
+      />;
       
     case "sendReminder":
-      return <SendReminderDialog {...commonProps} {...modalProps} />;
+      return <SendReminderDialog 
+        {...commonProps} 
+        {...modalProps}
+        selectedJobs={modalProps.selectedJobs || []}
+        onSuccess={modalProps.onSuccess || (() => {})}
+      />;
       
     case "markAsPaid":
-      return <MarkAsPaidDialog {...commonProps} {...modalProps} />;
+      return <MarkAsPaidDialog 
+        {...commonProps} 
+        {...modalProps}
+        selectedJobs={modalProps.selectedJobs || []}
+        onSuccess={modalProps.onSuccess || (() => {})}
+      />;
       
     case "invoiceCreate":
       // Convert 'open' to 'isOpen' for InvoiceModal
-      return <InvoiceModal isOpen={commonProps.open} onOpenChange={commonProps.onOpenChange} {...modalProps} />;
+      return <InvoiceModal 
+        isOpen={commonProps.open} 
+        onOpenChange={commonProps.onOpenChange} 
+        {...modalProps}
+        clientName={modalProps.clientName || ""}
+        invoiceData={modalProps.invoiceData || { description: "", amount: "" }}
+        setInvoiceData={modalProps.setInvoiceData || (() => {})}
+        onSubmit={modalProps.onSubmit || (() => {})}
+      />;
       
     case "convertToInvoice":
-      return <ConvertToInvoiceDialog {...commonProps} {...modalProps} />;
+      return <ConvertToInvoiceDialog 
+        {...commonProps} 
+        {...modalProps}
+        onConfirm={modalProps.onConfirm || (() => {})}
+      />;
       
     case "jobDetailsEdit":
-      return <JobDetailsEditDialog {...commonProps} {...modalProps} />;
+      return <JobDetailsEditDialog 
+        {...commonProps} 
+        {...modalProps}
+        initialDescription={modalProps.initialDescription || ""}
+        onSave={modalProps.onSave || (() => {})}
+      />;
 
     default:
       return null;
