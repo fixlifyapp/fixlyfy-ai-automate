@@ -6,12 +6,24 @@ import { JobActions } from "@/components/jobs/header/JobActions";
 import { useState, useEffect } from "react";
 import { useModal } from "@/components/ui/modal-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface JobDetailsHeaderProps {
   jobId: string;
 }
 
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
+  // Safely use the modal context with a fallback
+  let openModal: (type: any, props?: any) => void;
+  try {
+    const modalContext = useModal();
+    openModal = modalContext.openModal;
+  } catch (error) {
+    console.warn("Modal context not available:", error);
+    // Provide a fallback function that shows a toast instead
+    openModal = () => toast.error("Modal functionality unavailable");
+  }
+  
   const { 
     job, 
     isLoading, 
@@ -25,7 +37,6 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
     balance
   } = useJobDetailsHeader(jobId);
   
-  const { openModal } = useModal();
   const [currentStatus, setCurrentStatus] = useState<string>("scheduled");
   
   // Update status when job data changes

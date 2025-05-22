@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useModal, ModalType } from "./modal-provider";
 import { SelectionModal } from "@/components/shared/modals/SelectionModal";
@@ -16,6 +15,7 @@ import { MarkAsPaidDialog } from "@/components/jobs/dialogs/MarkAsPaidDialog";
 import { InvoiceModal } from "@/components/clients/client-form/InvoiceModal";
 import { ConvertToInvoiceDialog } from "@/components/jobs/estimates/dialogs/ConvertToInvoiceDialog";
 import { JobDetailsEditDialog } from "@/components/jobs/dialogs/JobDetailsEditDialog";
+import { CallDialog } from "@/components/jobs/dialogs/CallDialog";
 
 export const ModalRenderer = () => {
   const { modalType, modalProps, closeModal } = useModal();
@@ -58,6 +58,16 @@ export const ModalRenderer = () => {
         title={modalProps.title || "Confirm Delete"}
         description={modalProps.description || "Are you sure you want to delete this item?"}
         onConfirm={modalProps.onConfirm || (() => {})}
+      />;
+      
+    case "callClient":
+      return <CallDialog
+        {...commonProps}
+        {...modalProps}
+        client={{
+          name: modalProps.clientName || "Client",
+          phone: modalProps.phone
+        }}
       />;
       
     case "prioritySelection":
