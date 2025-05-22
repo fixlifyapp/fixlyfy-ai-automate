@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { TablesInsert, TablesRow, TablesUpdate } from "@/integrations/supabase/types";
+import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 // Generic type for configuration items
 export interface ConfigItem {
