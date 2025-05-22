@@ -1,100 +1,118 @@
 
 import { Card } from "@/components/ui/card";
-import { useJobDetailsHeader } from "@/components/jobs/header/useJobDetailsHeader";
+import { useJobDetailsHeader } from "@/hooks/useJobDetailsHeader";
 import { JobInfoSection } from "@/components/jobs/header/JobInfoSection";
 import { JobActions } from "@/components/jobs/header/JobActions";
-import { CallDialog } from "@/components/jobs/dialogs/CallDialog";
-import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
-import { InvoiceDialog } from "@/components/jobs/dialogs/InvoiceDialog";
-import { EstimateDialog } from "@/components/jobs/dialogs/EstimateDialog";
+import { useState, useEffect } from "react";
+import { useModal } from "@/components/ui/modal-provider";
 
 interface JobDetailsHeaderProps {
   jobId: string;
 }
 
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps) => {
-  const jobHeaderData = useJobDetailsHeader(jobId);
-  
+  const { jobHeaderData, isLoading } = useJobDetailsHeader(jobId);
+  const { openModal } = useModal();
+  const [status, setStatus] = useState<string>("scheduled");
+
+  // Update status when jobHeaderData changes
+  useEffect(() => {
+    if (jobHeaderData?.status) {
+      setStatus(jobHeaderData.status);
+    }
+  }, [jobHeaderData]);
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded mb-4 w-48"></div>
+          <div className="h-5 bg-gray-200 rounded w-72"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!jobHeaderData) {
+    return (
+      <div className="p-6">
+        <div className="text-red-500">Error loading job details</div>
+      </div>
+    );
+  }
+
+  const handleStatusChange = (newStatus: string) => {
+    // Implementation to change status would be here
+    setStatus(newStatus);
+  };
+
+  const handleEditClient = () => {
+    // Navigate to client page logic would be here
+  };
+
+  const handleCompleteJob = () => {
+    // Complete job logic would be here
+    setStatus("completed");
+  };
+
+  const handleCancelJob = () => {
+    // Cancel job logic would be here
+    setStatus("cancelled");
+  };
+
+  const handleReschedule = () => {
+    // Reschedule job logic would be here
+  };
+
+  const handleCallClick = () => {
+    if (jobHeaderData.client && jobHeaderData.client.phone) {
+      openModal("callClient", {
+        clientName: jobHeaderData.client.name,
+        phone: jobHeaderData.client.phone
+      });
+    }
+  };
+
+  const handleMessageClick = () => {
+    if (jobHeaderData.client && jobHeaderData.client.phone) {
+      openModal("messageClient", {
+        clientName: jobHeaderData.client.name,
+        phone: jobHeaderData.client.phone
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
         <JobInfoSection 
-          job={jobHeaderData.job}
-          invoiceAmount={jobHeaderData.invoiceAmount}
-          balance={jobHeaderData.balance}
-          status={jobHeaderData.status}
-          onStatusChange={jobHeaderData.handleStatusChange}
-          onCallClick={() => jobHeaderData.setIsCallDialogOpen(true)}
-          onMessageClick={() => jobHeaderData.setIsMessageDialogOpen(true)}
-          onEditClient={jobHeaderData.handleEditClient}
+          job={{
+            id: jobHeaderData.id,
+            title: jobHeaderData.title,
+            client: jobHeaderData.client?.name || "Unknown Client",
+            clientId: jobHeaderData.client?.id || "",
+            address: jobHeaderData.client?.address || "",
+            phone: jobHeaderData.client?.phone || "",
+            email: jobHeaderData.client?.email || ""
+          }}
+          status={status}
+          onStatusChange={handleStatusChange}
+          onCallClick={handleCallClick}
+          onMessageClick={handleMessageClick}
+          onEditClient={handleEditClient}
+          // For now, we'll pass placeholders for these values
+          invoiceAmount={0}
+          balance={0}
         />
         
         <div>
           <JobActions 
-            onCompleteJob={jobHeaderData.handleCompleteJob}
-            onCancelJob={jobHeaderData.handleCancelJob}
-            onReschedule={jobHeaderData.handleReschedule}
+            onCompleteJob={handleCompleteJob}
+            onCancelJob={handleCancelJob}
+            onReschedule={handleReschedule}
           />
         </div>
       </div>
-
-      <CallDialog 
-        open={jobHeaderData.isCallDialogOpen} 
-        onOpenChange={jobHeaderData.setIsCallDialogOpen}
-        client={{
-          name: jobHeaderData.job.client,
-          phone: jobHeaderData.job.phone
-        }}
-      />
-      
-      <MessageDialog 
-        open={jobHeaderData.isMessageDialogOpen} 
-        onOpenChange={jobHeaderData.setIsMessageDialogOpen}
-        client={{
-          name: jobHeaderData.job.client,
-          phone: jobHeaderData.job.phone
-        }}
-      />
-      
-      <InvoiceDialog 
-        open={jobHeaderData.isInvoiceDialogOpen} 
-        onOpenChange={jobHeaderData.setIsInvoiceDialogOpen}
-        onInvoiceCreated={jobHeaderData.handleInvoiceCreated}
-        clientInfo={{
-          name: jobHeaderData.job.client,
-          address: jobHeaderData.job.address,
-          phone: jobHeaderData.job.phone,
-          email: jobHeaderData.job.email
-        }}
-        companyInfo={{
-          name: jobHeaderData.job.companyName,
-          logo: jobHeaderData.job.companyLogo,
-          address: jobHeaderData.job.companyAddress,
-          phone: jobHeaderData.job.companyPhone,
-          email: jobHeaderData.job.companyEmail,
-          legalText: jobHeaderData.job.legalText
-        }}
-      />
-      
-      <EstimateDialog 
-        open={jobHeaderData.isEstimateDialogOpen} 
-        onOpenChange={jobHeaderData.setIsEstimateDialogOpen}
-        onEstimateCreated={jobHeaderData.handleEstimateCreated}
-        clientInfo={{
-          name: jobHeaderData.job.client,
-          address: jobHeaderData.job.address,
-          phone: jobHeaderData.job.phone,
-          email: jobHeaderData.job.email
-        }}
-        companyInfo={{
-          name: jobHeaderData.job.companyName,
-          logo: jobHeaderData.job.companyLogo,
-          address: jobHeaderData.job.companyAddress,
-          phone: jobHeaderData.job.companyPhone,
-          email: jobHeaderData.job.companyEmail,
-          legalText: jobHeaderData.job.legalText
-        }}
-      />
     </div>
   );
 };

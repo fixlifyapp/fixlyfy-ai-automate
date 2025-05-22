@@ -78,7 +78,7 @@ export function ConfirmationModal({
         </div>
       }
     >
-      {/* Empty children to satisfy the type requirement */}
+      {/* Empty children */}
     </SharedDialog>
   );
 }

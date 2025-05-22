@@ -14,7 +14,7 @@ import { BaseModalProps } from "./modal-provider";
 interface SharedDialogProps extends BaseModalProps {
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode; // Make children optional
   footerContent?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   hideCloseButton?: boolean;
@@ -46,7 +46,7 @@ export function SharedDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
 
-        <div className="py-4">{children}</div>
+        {children && <div className="py-4">{children}</div>}
 
         {footerContent && <DialogFooter>{footerContent}</DialogFooter>}
         {!footerContent && !hideCloseButton && (
