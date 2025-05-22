@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { User, Loader2 } from "lucide-react";
 import { fetchTeamMembers } from "@/data/team";
 import { TeamMember } from "@/types/team";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface TeamSelectionDialogProps {
   open: boolean;
@@ -44,22 +45,33 @@ export function TeamSelectionDialog({
     "bg-rose-100 text-rose-600"
   ];
   
+  // Set up realtime updates for team members
+  useRealtimeSync({
+    tables: ['profiles'],
+    onUpdate: () => {
+      loadTeamMembers();
+      toast.info("Team members list has been updated");
+    },
+    enabled: open
+  });
+  
+  // Function to load team members
+  const loadTeamMembers = async () => {
+    setIsLoading(true);
+    try {
+      const members = await fetchTeamMembers();
+      setTeamMembers(members);
+    } catch (error) {
+      console.error("Error loading team members:", error);
+      toast.error("Failed to load team members");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch team members when dialog opens
   useEffect(() => {
     if (open) {
-      const loadTeamMembers = async () => {
-        setIsLoading(true);
-        try {
-          const members = await fetchTeamMembers();
-          setTeamMembers(members);
-        } catch (error) {
-          console.error("Error loading team members:", error);
-          toast.error("Failed to load team members");
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
       loadTeamMembers();
     }
   }, [open]);
@@ -90,7 +102,7 @@ export function TeamSelectionDialog({
             >
               {teamMembers.map((member, index) => (
                 <div key={member.id} className="flex items-center space-x-2">
-                  <RadioGroupItem value={member.name} id={`team-${member.id}`} />
+                  <RadioGroupItem value={member.id} id={`team-${member.id}`} />
                   <Label htmlFor={`team-${member.id}`} className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full ${teamColors[index % teamColors.length].split(" ")[0]} flex items-center justify-center`}>
                       <User size={16} className={teamColors[index % teamColors.length].split(" ")[1]} />

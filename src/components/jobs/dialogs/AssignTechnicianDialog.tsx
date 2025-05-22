@@ -21,6 +21,7 @@ import { TeamMember } from "@/types/team";
 import { fetchTeamMembers } from "@/data/team";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface AssignTechnicianDialogProps {
   selectedJobs: string[];
@@ -38,21 +39,31 @@ export function AssignTechnicianDialog({
   const [technicians, setTechnicians] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch technicians from Supabase
+  // Set up realtime updates for team members
+  useRealtimeSync({
+    tables: ['profiles'],
+    onUpdate: () => {
+      loadTechnicians();
+    },
+    enabled: true
+  });
+  
+  // Function to load technicians
+  const loadTechnicians = async () => {
+    setIsLoading(true);
+    try {
+      const teamMembers = await fetchTeamMembers();
+      setTechnicians(teamMembers);
+    } catch (error) {
+      console.error("Error loading technicians:", error);
+      toast.error("Failed to load technicians");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch technicians when component mounts
   useEffect(() => {
-    const loadTechnicians = async () => {
-      setIsLoading(true);
-      try {
-        const teamMembers = await fetchTeamMembers();
-        setTechnicians(teamMembers);
-      } catch (error) {
-        console.error("Error loading technicians:", error);
-        toast.error("Failed to load technicians");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     loadTechnicians();
   }, []);
 
