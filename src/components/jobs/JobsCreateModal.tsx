@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,14 @@ import { Job, useJobs } from "@/hooks/useJobs";
 import { supabase } from "@/integrations/supabase/client";
 import { useClients } from "@/hooks/useClients";
 import { Client } from "@/hooks/useClients";
+
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preselectedClientId?: string;
   onSuccess?: (job: Job) => void;
 }
+
 export const JobsCreateModal = ({
   open,
   onOpenChange,
@@ -59,6 +62,7 @@ export const JobsCreateModal = ({
       setSelectedClient(preselectedClientId);
     }
   }, [open, preselectedClientId]);
+
   const handleAddItem = () => {
     setItems([...items, {
       name: "",
@@ -66,6 +70,7 @@ export const JobsCreateModal = ({
       price: 0
     }]);
   };
+
   const handleRemoveItem = (index: number) => {
     if (items.length > 1) {
       const newItems = [...items];
@@ -73,6 +78,7 @@ export const JobsCreateModal = ({
       setItems(newItems);
     }
   };
+
   const handleItemChange = (index: number, field: keyof typeof items[0], value: string | number) => {
     const newItems = [...items];
     newItems[index] = {
@@ -81,6 +87,7 @@ export const JobsCreateModal = ({
     };
     setItems(newItems);
   };
+
   const resetForm = () => {
     setDate(new Date());
     setSelectedClient(preselectedClientId || "");
@@ -96,11 +103,13 @@ export const JobsCreateModal = ({
       price: 0
     }]);
   };
+
   const handleSubmit = async () => {
     if (!selectedClient) {
       toast.error("Please select a client");
       return;
     }
+
     try {
       setIsSubmitting(true);
 
@@ -122,8 +131,7 @@ export const JobsCreateModal = ({
         service: jobType,
         technician_id: technician || undefined,
         schedule_start: scheduledDate.toISOString(),
-        schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-        // 2 hours duration by default
+        schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours duration by default
         date: scheduledDate.toISOString(),
         revenue: revenue,
         tags: serviceArea ? [serviceArea, priority] : [priority]
@@ -152,10 +160,15 @@ export const JobsCreateModal = ({
       setIsSubmitting(false);
     }
   };
-  return <Dialog open={open} onOpenChange={newOpen => {
-    if (!newOpen) resetForm();
-    onOpenChange(newOpen);
-  }}>
+
+  return (
+    <Dialog 
+      open={open} 
+      onOpenChange={newOpen => {
+        if (!newOpen) resetForm();
+        onOpenChange(newOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
@@ -173,7 +186,12 @@ export const JobsCreateModal = ({
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingClients ? <SelectItem value="loading" disabled>Loading clients...</SelectItem> : clients.map((client: Client) => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
+                  {isLoadingClients ? 
+                    <SelectItem value="loading" disabled>Loading clients...</SelectItem> : 
+                    clients.map((client: Client) => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>
@@ -259,23 +277,90 @@ export const JobsCreateModal = ({
           
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea id="description" placeholder="Describe the job details, customer requirements, etc." value={description} onChange={e => setDescription(e.target.value)} />
+            <Textarea 
+              id="description" 
+              placeholder="Describe the job details, customer requirements, etc." 
+              value={description} 
+              onChange={e => setDescription(e.target.value)} 
+            />
           </div>
           
-          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Line Items</Label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+                <Plus className="h-4 w-4 mr-1" /> Add Item
+              </Button>
+            </div>
+            
+            {items.map((item, index) => (
+              <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-6">
+                  <Input 
+                    placeholder="Item description" 
+                    value={item.name} 
+                    onChange={e => handleItemChange(index, 'name', e.target.value)} 
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input 
+                    type="number" 
+                    placeholder="Qty" 
+                    value={item.quantity} 
+                    min={1}
+                    onChange={e => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)} 
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Input 
+                    type="number" 
+                    placeholder="Price" 
+                    value={item.price} 
+                    min={0}
+                    step={0.01}
+                    onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)} 
+                  />
+                </div>
+                <div className="col-span-1 flex justify-center">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => handleRemoveItem(index)}
+                    disabled={items.length <= 1}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            
+            <div className="text-right text-sm font-medium pt-2">
+              Total: ${items.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)}
+            </div>
+          </div>
         </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? <>
+          <Button 
+            type="submit" 
+            className="bg-fixlify hover:bg-fixlify/90" 
+            onClick={handleSubmit} 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
-              </> : 'Create Job'}
+              </>
+            ) : 'Create Job'}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+  );
 };
