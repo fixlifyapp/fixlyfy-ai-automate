@@ -112,17 +112,17 @@ export const Header = () => {
   };
   
   return (
-    <header className="border-b border-fixlify-border bg-fixlify-bg-interface py-3 px-4">
+    <header className="border-b border-fixlyfy-border bg-fixlyfy-bg-interface py-3 px-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center max-w-md w-full">
           <div className="relative w-full mr-2">
             <Search 
               size={18} 
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlify-text-secondary"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-secondary"
             />
             <Input 
               placeholder="Search..." 
-              className="pl-10 border-fixlify-border" 
+              className="pl-10 border-fixlyfy-border" 
               onClick={() => setIsSearchOpen(true)}
               readOnly
             />
@@ -133,16 +133,16 @@ export const Header = () => {
           <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
-                <Bell size={20} className="text-fixlify-text-secondary" />
+                <Bell size={20} className="text-fixlyfy-text-secondary" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 rounded-full bg-fixlify text-white text-xs">
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 rounded-full bg-fixlyfy text-white text-xs">
                     {unreadCount}
                   </span>
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0">
-              <div className="flex items-center justify-between p-4 bg-fixlify-bg-interface">
+              <div className="flex items-center justify-between p-4 bg-fixlyfy-bg-interface">
                 <h3 className="font-medium">Notifications</h3>
                 {unreadCount > 0 && (
                   <Button 
@@ -163,8 +163,8 @@ export const Header = () => {
                       <div 
                         key={notification.id} 
                         className={cn(
-                          "p-4 border-b border-fixlify-border last:border-b-0 relative hover:bg-fixlify-bg-interface/50",
-                          !notification.read && "bg-fixlify-bg-interface/20"
+                          "p-4 border-b border-fixlyfy-border last:border-b-0 relative hover:bg-fixlyfy-bg-interface/50",
+                          !notification.read && "bg-fixlyfy-bg-interface/20"
                         )}
                         onClick={() => markAsRead(notification.id)}
                       >
@@ -175,9 +175,9 @@ export const Header = () => {
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
                               <h4 className="text-sm font-medium">{notification.title}</h4>
-                              <span className="text-xs text-fixlify-text-secondary">{notification.time}</span>
+                              <span className="text-xs text-fixlyfy-text-secondary">{notification.time}</span>
                             </div>
-                            <p className="text-sm text-fixlify-text-secondary mt-1">{notification.message}</p>
+                            <p className="text-sm text-fixlyfy-text-secondary mt-1">{notification.message}</p>
                           </div>
                           <Button 
                             variant="ghost" 
@@ -192,13 +192,13 @@ export const Header = () => {
                           </Button>
                         </div>
                         {!notification.read && (
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-fixlify"></div>
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-fixlyfy"></div>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center text-fixlify-text-secondary">
+                  <div className="p-8 text-center text-fixlyfy-text-secondary">
                     <Bell className="mx-auto mb-2 h-10 w-10 opacity-30" />
                     <p>No notifications</p>
                     <p className="text-sm mt-1">You're all caught up!</p>

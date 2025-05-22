@@ -22,11 +22,11 @@ const ClientDetailPage = () => {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Client Details</h1>
-          <p className="text-fixlify-text-secondary">
+          <p className="text-fixlyfy-text-secondary">
             View and manage client information.
           </p>
         </div>
-        <Button onClick={() => setIsCreateJobModalOpen(true)} className="bg-fixlify hover:bg-fixlify/90">
+        <Button onClick={() => setIsCreateJobModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
           <Plus size={18} className="mr-2" /> Create Job
         </Button>
       </div>

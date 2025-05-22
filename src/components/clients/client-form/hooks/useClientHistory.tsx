@@ -1,94 +1,112 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-// Define clear union types to prevent infinite instantiation
-type JobHistoryItem = {
-  type: 'job';
+// Define specific history item types with proper discrimination
+interface BaseHistoryItem {
   id: string;
   title: string;
-  date: string;
   status: string;
-};
+  date: string;
+  description: string;
+}
 
-type InvoiceHistoryItem = {
+// Use literal string type for better type discrimination
+interface JobHistoryItem extends BaseHistoryItem {
+  type: 'job';
+  jobId: string;
+}
+
+interface InvoiceHistoryItem extends BaseHistoryItem {
   type: 'invoice';
-  id: string;
-  number: string;
-  date: string;
   amount: number;
-  status: string;
-};
+  invoiceId: string;
+}
 
-type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
+// Use discriminated union type
+export type HistoryItem = JobHistoryItem | InvoiceHistoryItem;
 
 export const useClientHistory = (clientId?: string) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    if (!clientId) return;
-    
     const fetchHistory = async () => {
-      setIsLoading(true);
+      if (!clientId) {
+        setHistory([]);
+        setIsLoading(false);
+        return;
+      }
+      
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setIsLoading(true);
         
-        // Mock job history data
-        const jobHistory: JobHistoryItem[] = [
-          {
-            type: 'job' as const,
-            id: 'job-1',
-            title: 'HVAC Repair',
-            date: '2023-06-15',
-            status: 'completed'
-          },
-          {
-            type: 'job' as const,
-            id: 'job-2',
-            title: 'Annual Maintenance',
-            date: '2023-05-03',
-            status: 'completed'
-          }
-        ];
-        
-        // Mock invoice history data
-        const invoiceHistory: InvoiceHistoryItem[] = [
-          {
-            type: 'invoice' as const,
-            id: 'inv-1',
-            number: 'INV-001',
-            date: '2023-06-16',
-            amount: 450,
-            status: 'paid'
-          },
-          {
-            type: 'invoice' as const,
-            id: 'inv-2',
-            number: 'INV-002',
-            date: '2023-05-04',
-            amount: 250,
-            status: 'paid'
-          }
-        ];
-        
-        // Combine and sort history by date (most recent first)
-        const combinedHistory: HistoryItem[] = [...jobHistory, ...invoiceHistory]
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Get jobs for the client
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
+          .select('id, title, status, date, created_at')
+          .eq('client_id', clientId)
+          .order('date', { ascending: false });
           
-        setHistory(combinedHistory);
-      } catch (err) {
-        console.error("Error fetching client history:", err);
+        if (jobsError) throw jobsError;
+        
+        // Get invoices for the client
+        const { data: invoices, error: invoicesError } = await supabase
+          .from('invoices')
+          .select('id, invoice_number, date, total, status')
+          .eq('client_id', clientId)
+          .order('date', { ascending: false });
+          
+        if (invoicesError) throw invoicesError;
+        
+        // Map jobs to JobHistoryItem type with explicit type annotation
+        const jobEntries = (jobs || []).map(job => ({
+          id: `job-${job.id}`,
+          type: 'job' as const, // Use const assertion for literal type
+          title: job.title,
+          status: job.status,
+          date: job.date,
+          description: `Job ${job.status}`,
+          jobId: job.id
+        })) as JobHistoryItem[];
+        
+        // Map invoices to InvoiceHistoryItem type with explicit type annotation
+        const invoiceEntries = (invoices || []).map(invoice => ({
+          id: `invoice-${invoice.id}`,
+          type: 'invoice' as const, // Use const assertion for literal type
+          title: `Invoice #${invoice.invoice_number}`,
+          status: invoice.status,
+          date: invoice.date,
+          amount: invoice.total,
+          description: `${invoice.status === 'paid' ? 'Paid' : 'Created'} invoice for $${invoice.total}`,
+          invoiceId: invoice.id
+        })) as InvoiceHistoryItem[];
+        
+        // Combine entries with proper typing
+        const allHistory: HistoryItem[] = [...jobEntries, ...invoiceEntries].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        
+        setHistory(allHistory);
+      } catch (error) {
+        console.error("Error loading client history:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load client history",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchHistory();
-  }, [clientId]);
+  }, [clientId, toast]);
   
   return {
     history,
-    isLoading
+    isLoading,
   };
 };

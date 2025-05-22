@@ -128,28 +128,28 @@ export const Sidebar = () => {
   return (
     <div 
       className={cn(
-        "h-screen bg-fixlify-bg-sidebar border-r border-fixlify-border flex flex-col transition-all duration-300",
+        "h-screen bg-fixlyfy-bg-sidebar border-r border-fixlyfy-border flex flex-col transition-all duration-300",
         collapsed ? "w-[70px]" : "w-[240px]"
       )}
     >
       <div className="p-4 flex items-center justify-between">
         {!collapsed && (
           <div className="flex items-center">
-            <div className="h-8 w-8 rounded-md fixlify-gradient flex items-center justify-center text-white font-bold">
+            <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold">
               F
             </div>
-            <span className="ml-2 font-bold text-fixlify text-xl">Fixlify</span>
+            <span className="ml-2 font-bold text-fixlyfy text-xl">Fixlyfy</span>
           </div>
         )}
         {collapsed && (
-          <div className="h-8 w-8 rounded-md fixlify-gradient flex items-center justify-center text-white font-bold mx-auto">
+          <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold mx-auto">
             F
           </div>
         )}
         <Button 
           variant="ghost" 
           size="icon" 
-          className={cn("text-fixlify-text-secondary", collapsed && "mx-auto mt-4")}
+          className={cn("text-fixlyfy-text-secondary", collapsed && "mx-auto mt-4")}
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? <ChevronRight size={20} /> : <Menu size={20} />}
@@ -165,8 +165,8 @@ export const Sidebar = () => {
               className={cn(
                 "flex items-center py-2 px-3 rounded-lg group transition-colors relative",
                 location.pathname === item.path 
-                  ? "bg-fixlify text-white" 
-                  : "hover:bg-fixlify/10 text-fixlify-text-secondary"
+                  ? "bg-fixlyfy text-white" 
+                  : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
               )}
             >
               <item.icon size={20} className={cn(
@@ -176,10 +176,10 @@ export const Sidebar = () => {
                 <span className="flex-1">{item.name}</span>
               )}
               {!collapsed && item.badge && (
-                <Badge className="bg-fixlify-light text-white">{item.badge}</Badge>
+                <Badge className="bg-fixlyfy-light text-white">{item.badge}</Badge>
               )}
               {collapsed && item.badge && (
-                <Badge className="bg-fixlify-light text-white absolute top-0 right-0 translate-x-1 -translate-y-1">
+                <Badge className="bg-fixlyfy-light text-white absolute top-0 right-0 translate-x-1 -translate-y-1">
                   {item.badge}
                 </Badge>
               )}
@@ -196,8 +196,8 @@ export const Sidebar = () => {
             className={cn(
               "flex items-center py-2 px-3 rounded-lg group transition-colors",
               location.pathname === item.path 
-                ? "bg-fixlify text-white" 
-                : "hover:bg-fixlify/10 text-fixlify-text-secondary"
+                ? "bg-fixlyfy text-white" 
+                : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
             )}
           >
             <item.icon size={20} className={cn(
