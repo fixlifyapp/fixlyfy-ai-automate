@@ -28,10 +28,11 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Plus, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clients } from "@/data/clients";
 import { toast } from "sonner";
 import { Job, useJobs } from "@/hooks/useJobs";
 import { supabase } from "@/integrations/supabase/client";
+import { useClients } from "@/hooks/useClients";
+import { Client } from "@/hooks/useClients";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -47,6 +48,7 @@ export const JobsCreateModal = ({
   onSuccess 
 }: JobsCreateModalProps) => {
   const { addJob } = useJobs();
+  const { clients, isLoading: isLoadingClients } = useClients();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -87,7 +89,7 @@ export const JobsCreateModal = ({
 
   const resetForm = () => {
     setDate(new Date());
-    setSelectedClient("");
+    setSelectedClient(preselectedClientId || "");
     setJobType("");
     setServiceArea("");
     setPriority("medium");
@@ -160,7 +162,7 @@ export const JobsCreateModal = ({
       if (!newOpen) resetForm();
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
           <DialogDescription>
@@ -177,10 +179,13 @@ export const JobsCreateModal = ({
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                  ))}
-                  <SelectItem value="new">+ Create New Client</SelectItem>
+                  {isLoadingClients ? (
+                    <SelectItem value="loading" disabled>Loading clients...</SelectItem>
+                  ) : (
+                    clients.map((client: Client) => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
