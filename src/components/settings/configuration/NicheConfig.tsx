@@ -23,6 +23,11 @@ interface NicheConfigProps {
   userId?: string;
 }
 
+interface ProfileData {
+  business_niche?: string;
+  [key: string]: any;
+}
+
 export function NicheConfig({ userId }: NicheConfigProps) {
   const [currentNiche, setCurrentNiche] = useState<string>("");
   const [selectedNiche, setSelectedNiche] = useState<string>("");
@@ -39,7 +44,8 @@ export function NicheConfig({ userId }: NicheConfigProps) {
         
         if (error) throw error;
         
-        const niche = data?.business_niche || "appliance_repair";
+        const profileData = data as ProfileData;
+        const niche = profileData?.business_niche || "appliance_repair";
         setCurrentNiche(niche);
         setSelectedNiche(niche);
       } catch (error) {

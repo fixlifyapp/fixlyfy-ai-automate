@@ -10,9 +10,13 @@ import { SettingsConfiguration } from "@/components/settings/SettingsConfigurati
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
-import { Settings, UserPlus, Users, UsersRound, Tags } from "lucide-react";
+import { Settings, UserPlus, Users, UsersRound, Tags, Settings2 } from "lucide-react";
+import { NicheConfig } from "@/components/settings/configuration/NicheConfig";
+import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
+  const { user } = useAuth();
+  
   return (
     <PageLayout>
       <div className="mb-6">
@@ -22,7 +26,7 @@ const SettingsPage = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <PermissionRequired permission="users.roles.assign">
           <Link to="/admin/roles">
             <Card className="h-full hover:shadow-md transition-shadow">
@@ -38,6 +42,22 @@ const SettingsPage = () => {
             </Card>
           </Link>
         </PermissionRequired>
+        
+        <Card className="h-full hover:shadow-md transition-shadow">
+          <CardContent className="flex items-center p-6 space-x-4">
+            <div className="bg-fixlyfy/10 p-3 rounded-full">
+              <Settings2 className="h-6 w-6 text-fixlyfy" />
+            </div>
+            <div>
+              <h3 className="font-medium">Business Niche</h3>
+              <p className="text-sm text-muted-foreground">Configure your business specialization</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="mb-6">
+        <NicheConfig userId={user?.id} />
       </div>
       
       <div className="fixlyfy-card overflow-hidden">
