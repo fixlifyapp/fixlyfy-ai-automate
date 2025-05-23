@@ -39,7 +39,7 @@ const SchedulePage = () => {
           <Button variant="outline" onClick={() => setShowAIInsights(!showAIInsights)} className="gap-2">
             <Calendar size={18} /> AI Insights
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90 why new job button dont use same form for creating job we using forthe app ?\n">
+          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
             <Plus size={18} className="mr-2" /> New Job
           </Button>
         </div>
