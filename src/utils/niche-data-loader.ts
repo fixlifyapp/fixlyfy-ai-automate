@@ -1,8 +1,8 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applianceRepairProducts } from "@/data/appliance-repair-products";
 import { generateTestJobs } from "@/utils/test-data/job-generator";
+import { Profile } from "@/types/profile";
 
 // Tags for different niches
 const nicheTags = {
@@ -308,7 +308,9 @@ export const switchNiche = async (businessNiche: string, userId: string) => {
     // Update the user's niche preference in the profile
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ business_niche: businessNiche })
+      .update({ 
+        business_niche: businessNiche 
+      } as Partial<Profile>)
       .eq('id', userId);
 
     if (updateError) throw updateError;

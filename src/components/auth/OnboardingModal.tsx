@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { loadNicheData } from "@/utils/niche-data-loader";
+import { Profile } from "@/types/profile";
 
 const referralSources = [
   { id: "social_media", label: "Social Media" },
@@ -69,7 +69,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
         .update({
           referral_source: referralSource,
           business_niche: businessNiche
-        })
+        } as Partial<Profile>)
         .eq('id', user.id);
       
       if (updateError) throw updateError;

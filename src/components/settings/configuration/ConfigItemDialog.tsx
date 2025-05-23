@@ -29,6 +29,7 @@ interface ConfigItemDialogProps {
   onSubmit: (values: any) => Promise<any>;
   children?: React.ReactNode;
   initialValues?: any;
+  customFields?: React.ReactNode;
 }
 
 const baseSchema = z.object({
@@ -43,7 +44,8 @@ export function ConfigItemDialog({
   title,
   onSubmit,
   children,
-  initialValues = {}
+  initialValues = {},
+  customFields
 }: ConfigItemDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -130,6 +132,7 @@ export function ConfigItemDialog({
               )}
             />
             
+            {customFields}
             {children}
             
             <DialogFooter className="pt-4">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Loader2, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +53,7 @@ export function ConfigItemCard<T extends ConfigItem>({
   });
 
   const handleDelete = async () => {
-    if (!deleteItem) return;
+    if (!deleteItem) return false;
     
     setIsDeleting(true);
     const success = await onDelete(deleteItem.id);
@@ -63,6 +62,8 @@ export function ConfigItemCard<T extends ConfigItem>({
     if (success) {
       setDeleteItem(null);
     }
+    
+    return success;
   };
   
   return (
