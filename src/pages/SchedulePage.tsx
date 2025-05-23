@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
@@ -8,16 +7,13 @@ import { Plus, Calendar } from "lucide-react";
 import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { useSearchParams } from "react-router-dom";
-
 const SchedulePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<'day' | 'week' | 'month'>(
-    (searchParams.get('view') as 'day' | 'week' | 'month') || 'week'
-  );
+  const [view, setView] = useState<'day' | 'week' | 'month'>(searchParams.get('view') as 'day' | 'week' | 'month' || 'week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showAIInsights, setShowAIInsights] = useState(false);
-  
+
   // Update URL when view changes
   const handleViewChange = (newView: 'day' | 'week' | 'month') => {
     setView(newView);
@@ -26,14 +22,12 @@ const SchedulePage = () => {
       return params;
     });
   };
-  
+
   // Handle date change from filters
   const handleDateChange = (newDate: Date) => {
     setCurrentDate(newDate);
   };
-  
-  return (
-    <PageLayout>
+  return <PageLayout>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Schedule</h1>
@@ -42,14 +36,10 @@ const SchedulePage = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowAIInsights(!showAIInsights)}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={() => setShowAIInsights(!showAIInsights)} className="gap-2">
             <Calendar size={18} /> AI Insights
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
+          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90 why new job button dont use same form for creating job we using forthe app ?\n">
             <Plus size={18} className="mr-2" /> New Job
           </Button>
         </div>
@@ -58,28 +48,19 @@ const SchedulePage = () => {
       {/* Make the main content area full width */}
       <div className="space-y-4 w-full">
         {/* Show AI Insights panel when toggled */}
-        {showAIInsights && (
-          <div className="mb-4">
+        {showAIInsights && <div className="mb-4">
             <AIInsightsPanel />
-          </div>
-        )}
+          </div>}
         
         {/* Filters moved below AI Insights */}
         <div className="fixlyfy-card p-4">
-          <ScheduleFilters 
-            view={view} 
-            onViewChange={handleViewChange} 
-            currentDate={currentDate}
-            onDateChange={handleDateChange}
-          />
+          <ScheduleFilters view={view} onViewChange={handleViewChange} currentDate={currentDate} onDateChange={handleDateChange} />
         </div>
         
         <ScheduleCalendar view={view} currentDate={currentDate} />
       </div>
       
       <ScheduleJobModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-    </PageLayout>
-  );
+    </PageLayout>;
 };
-
 export default SchedulePage;
