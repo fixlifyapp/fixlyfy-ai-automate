@@ -1,17 +1,16 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { SettingsConfiguration } from "@/components/settings/SettingsConfiguration";
-import { Card, CardContent } from "@/components/ui/card";
+import { ConfigurationCard } from "@/components/settings/configuration/ConfigurationCard";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, UserPlus, Users, UsersRound, Tags, Settings2 } from "lucide-react";
-import { NicheConfig } from "@/components/settings/configuration/NicheConfig";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -27,42 +26,33 @@ const SettingsPage = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <PermissionRequired permission="users.roles.assign">
-          <Link to="/admin/roles">
-            <Card className="h-full hover:shadow-md transition-shadow">
-              <CardContent className="flex items-center p-6 space-x-4">
-                <div className="bg-fixlyfy/10 p-3 rounded-full">
-                  <UsersRound className="h-6 w-6 text-fixlyfy" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Role Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </PermissionRequired>
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        {/* Configuration Card */}
+        <ConfigurationCard />
         
-        <Card 
-          className="h-full hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => setActiveTab("configuration")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Settings2 className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">Configuration</h3>
-              <p className="text-sm text-muted-foreground">Manage business niche and other settings</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Role Management Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <PermissionRequired permission="users.roles.assign">
+            <Link to="/admin/roles">
+              <Card className="h-full hover:shadow-md transition-shadow">
+                <CardContent className="flex items-center p-6 space-x-4">
+                  <div className="bg-fixlyfy/10 p-3 rounded-full">
+                    <UsersRound className="h-6 w-6 text-fixlyfy" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Role Management</h3>
+                    <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </PermissionRequired>
+        </div>
       </div>
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-4 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -82,12 +72,6 @@ const SettingsPage = () => {
               Company
             </TabsTrigger>
             <TabsTrigger 
-              value="configuration" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Configuration
-            </TabsTrigger>
-            <TabsTrigger 
               value="integrations" 
               className="py-4 rounded-none data-[state=active]:bg-white"
             >
@@ -105,10 +89,6 @@ const SettingsPage = () => {
           
           <TabsContent value="company" className="p-6">
             <SettingsCompany />
-          </TabsContent>
-          
-          <TabsContent value="configuration" className="p-6">
-            <SettingsConfiguration />
           </TabsContent>
           
           <TabsContent value="integrations" className="p-6">
