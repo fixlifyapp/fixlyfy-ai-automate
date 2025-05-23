@@ -2,7 +2,6 @@
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileTab } from "./ProfileTab";
-import { AdvancedTab } from "./AdvancedTab";
 import { CommissionsTab } from "./CommissionsTab";
 import { AIInsightsTab } from "./AIInsightsTab";
 import { TeamMemberProfile } from "@/types/team-member";
@@ -31,9 +30,6 @@ export const TeamMemberTabs = ({
             <TabsTrigger value="profile" className="flex-1 sm:flex-initial">
               Profile
             </TabsTrigger>
-            <TabsTrigger value="advanced" className="flex-1 sm:flex-initial">
-              Advanced
-            </TabsTrigger>
             <TabsTrigger value="commissions" className="flex-1 sm:flex-initial">
               Commissions
             </TabsTrigger>
@@ -52,10 +48,6 @@ export const TeamMemberTabs = ({
         <div className="px-4 pb-4">
           <TabsContent value="profile" className="mt-4 space-y-4">
             <ProfileTab member={member} isEditing={isEditing} />
-          </TabsContent>
-
-          <TabsContent value="advanced" className="mt-4 space-y-4">
-            <AdvancedTab member={member} isEditing={isEditing} />
           </TabsContent>
 
           <TabsContent value="commissions" className="mt-4 space-y-4">

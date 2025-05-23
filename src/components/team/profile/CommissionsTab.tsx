@@ -61,9 +61,9 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
         p_fees: commissionFees
       };
       
-      // Call the update_team_member_commission RPC function with proper typing
+      // Call the update_team_member_commission RPC function
       const { error } = await supabase.rpc(
-        'update_team_member_commission',
+        "update_team_member_commission",
         params
       );
         
