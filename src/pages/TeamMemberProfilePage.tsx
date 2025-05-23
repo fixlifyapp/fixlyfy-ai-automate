@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useRBAC } from "@/components/auth/RBACProvider";
@@ -14,16 +14,28 @@ import { supabase } from "@/integrations/supabase/client";
 const TeamMemberProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasRole } = useRBAC();
+  const { hasRole, hasPermission } = useRBAC();
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  const { member, isLoading, error } = useTeamMemberData(id);
+  const { member, isLoading, error, refetch } = useTeamMemberData(id);
+  
+  // Check permissions
   const isAdmin = hasRole('admin');
+  const canEditProfile = hasPermission('users.edit');
+  const canViewProfile = hasPermission('users.view');
+  
+  // If not authorized to view profiles, redirect
+  useEffect(() => {
+    if (!isLoading && !canViewProfile) {
+      toast.error("You don't have permission to view team member profiles");
+      navigate("/admin/team");
+    }
+  }, [isLoading, canViewProfile, navigate]);
   
   // Only admins can edit team members
-  const canEditTeamMembers = isAdmin;
+  const canEditTeamMembers = canEditProfile;
   
   const handleGoBack = () => {
     navigate("/admin/team");
@@ -35,13 +47,21 @@ const TeamMemberProfilePage = () => {
     setIsSaving(true);
     
     try {
-      // In a real app, update member data in Supabase
       const { error } = await supabase
         .from('profiles')
         .update({
           name: member.name,
           avatar_url: member.avatar,
-          // Add other fields as needed
+          status: member.status,
+          is_public: member.isPublic,
+          available_for_jobs: member.availableForJobs,
+          phone: member.phone?.[0] || null,
+          two_factor_enabled: member.twoFactorEnabled,
+          call_masking_enabled: member.callMaskingEnabled,
+          labor_cost_per_hour: member.laborCostPerHour,
+          schedule_color: member.scheduleColor,
+          internal_notes: member.internalNotes,
+          updated_at: new Date().toISOString()
         })
         .eq('id', member.id);
         
@@ -49,6 +69,9 @@ const TeamMemberProfilePage = () => {
       
       toast.success("Team member profile updated successfully");
       setIsEditing(false);
+      
+      // Refetch to get updated data
+      refetch();
     } catch (error) {
       console.error("Error updating team member:", error);
       toast.error("Failed to update team member profile");

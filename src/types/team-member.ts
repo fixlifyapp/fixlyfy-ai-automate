@@ -32,6 +32,9 @@ export interface TeamMemberProfile {
   scheduleColor: string;
   internalNotes?: string;
   usesTwoFactor: boolean;
+  commissionRate?: number;
+  commissionRules?: CommissionRule[];
+  commissionFees?: CommissionFee[];
 }
 
 export interface CommissionRule {

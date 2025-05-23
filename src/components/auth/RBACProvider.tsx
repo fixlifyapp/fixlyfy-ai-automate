@@ -2,6 +2,7 @@
 import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { User, UserRole, DEFAULT_PERMISSIONS } from './types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RBACContextType {
   currentUser: User | null;
@@ -28,9 +29,70 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Normally would fetch the current user from an API or local storage
-    // For demo purposes, we use the default admin user
-    setLoading(false);
+    // Fetch the current authenticated user from Supabase
+    const fetchCurrentUser = async () => {
+      try {
+        setLoading(true);
+        
+        // Get the current session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Get user profile data
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.error("Error fetching user profile:", error);
+            // Fall back to default user in dev mode, otherwise null
+            setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+          } else if (profile) {
+            // Set the current user from profile data
+            setCurrentUser({
+              id: profile.id,
+              name: profile.name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email || 'unknown@example.com',
+              role: (profile.role as UserRole) || 'technician',
+              avatar: profile.avatar_url || "https://github.com/shadcn.png"
+            });
+          }
+        } else if (process.env.NODE_ENV === 'development') {
+          // In dev mode, use the default admin user if not logged in
+          setCurrentUser(defaultUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error("Error in RBAC provider:", error);
+        // Fall back to default user in dev mode
+        if (process.env.NODE_ENV === 'development') {
+          setCurrentUser(defaultUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCurrentUser();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        fetchCurrentUser();
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+      }
+    });
+    
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Enhanced permission check that properly handles wildcards
@@ -47,7 +109,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     return rolePermissions.includes(permission);
   };
 
-  // New function to check if user has a specific role or one of multiple roles
+  // Function to check if user has a specific role or one of multiple roles
   const hasRole = (role: UserRole | UserRole[]): boolean => {
     if (!currentUser) return false;
     
@@ -58,7 +120,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     return currentUser.role === role;
   };
 
-  // Use the default roles from DEFAULT_PERMISSIONS
+  // Get all available roles from DEFAULT_PERMISSIONS
   const defaultRoleKeys = Object.keys(DEFAULT_PERMISSIONS) as UserRole[] || [];
   const allRoles: UserRole[] = defaultRoleKeys;
 
@@ -118,7 +180,7 @@ export const RoleRequired = ({
   return hasAccess ? <>{children}</> : <>{fallback}</>;
 };
 
-// New component for testing pre-Supabase functionality
+// Component for testing pre-Supabase functionality
 export const TestModeIndicator = () => {
   return process.env.NODE_ENV === 'development' ? (
     <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">

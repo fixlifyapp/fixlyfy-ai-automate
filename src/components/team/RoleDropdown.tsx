@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,13 @@ export const RoleDropdown = ({
   const [isLoading, setIsLoading] = useState(false);
   const { allRoles, hasPermission } = useRBAC();
   
+  // Update local state if prop changes
+  useEffect(() => {
+    if (role !== currentRole) {
+      setCurrentRole(role);
+    }
+  }, [role]);
+  
   // Check if user has permission to change roles
   const canEditRoles = hasPermission("users.roles.assign");
   
@@ -38,6 +45,10 @@ export const RoleDropdown = ({
     if (!canEditRoles) {
       toast.error("You don't have permission to change roles");
       return;
+    }
+    
+    if (newRole === currentRole) {
+      return; // No change needed
     }
     
     setIsLoading(true);
@@ -67,6 +78,9 @@ export const RoleDropdown = ({
     } catch (error) {
       console.error("Error updating role:", error);
       toast.error("Failed to update role. Please try again.");
+      
+      // Revert to original role in UI
+      setCurrentRole(role);
     } finally {
       setIsLoading(false);
     }

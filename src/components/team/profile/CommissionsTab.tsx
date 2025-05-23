@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,51 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { CalendarDays, DollarSign, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, DollarSign, Plus, Trash2, Loader2 } from "lucide-react";
 import { TeamMemberProfile, CommissionRule, CommissionFee } from "@/types/team-member";
 import { toast } from "sonner";
-
-// Mock commission data
-const mockCommission = {
-  baseRate: 50,
-  rules: [
-    {
-      id: "1",
-      name: "Weekend Jobs",
-      type: "schedule" as const,
-      value: 60,
-      condition: { days: ["saturday", "sunday"] }
-    },
-    {
-      id: "2",
-      name: "HVAC Installation",
-      type: "job-type" as const,
-      value: 55,
-      condition: { jobType: "hvac-installation" }
-    },
-    {
-      id: "3",
-      name: "High-Value Jobs",
-      type: "amount" as const,
-      value: 65,
-      condition: { minAmount: 1000 }
-    }
-  ],
-  fees: [
-    {
-      id: "1",
-      name: "Credit Card Fee",
-      value: 3,
-      deductFromTotal: true
-    },
-    {
-      id: "2",
-      name: "Check Processing",
-      value: 1,
-      deductFromTotal: false
-    }
-  ]
-};
+import { supabase } from "@/integrations/supabase/client";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface CommissionsTabProps {
   member: TeamMemberProfile;
@@ -59,28 +19,86 @@ interface CommissionsTabProps {
 }
 
 export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
-  const [baseRate, setBaseRate] = useState(mockCommission.baseRate);
-  const [commissionRules, setCommissionRules] = useState<CommissionRule[]>(mockCommission.rules);
-  const [commissionFees, setCommissionFees] = useState<CommissionFee[]>(mockCommission.fees);
+  const [baseRate, setBaseRate] = useState(member.commissionRate || 50);
+  const [commissionRules, setCommissionRules] = useState<CommissionRule[]>(member.commissionRules || []);
+  const [commissionFees, setCommissionFees] = useState<CommissionFee[]>(member.commissionFees || []);
   const [newRuleName, setNewRuleName] = useState("");
   const [newRuleType, setNewRuleType] = useState<"schedule" | "job-type" | "amount" | "company">("job-type");
   const [newRuleValue, setNewRuleValue] = useState(50);
+  const [isSaving, setIsSaving] = useState(false);
+  const { hasPermission } = useRBAC();
+  
+  const canManageCommissions = hasPermission("users.edit");
+  
+  // Update state when member data changes
+  useEffect(() => {
+    if (member) {
+      setBaseRate(member.commissionRate || 50);
+      setCommissionRules(member.commissionRules || []);
+      setCommissionFees(member.commissionFees || []);
+    }
+  }, [member]);
   
   const handleBaseRateChange = (value: number[]) => {
-    if (!isEditing) return;
+    if (!isEditing || !canManageCommissions) return;
     setBaseRate(value[0]);
   };
   
   const handleBaseRateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isEditing) return;
+    if (!isEditing || !canManageCommissions) return;
     const value = parseInt(e.target.value);
     if (!isNaN(value) && value >= 0 && value <= 100) {
       setBaseRate(value);
     }
   };
   
+  const handleSaveCommissionChanges = async () => {
+    if (!isEditing || !canManageCommissions || !member) return;
+    
+    setIsSaving(true);
+    
+    try {
+      // Check if commission record exists
+      const { data: existingCommission } = await supabase
+        .from('team_member_commissions')
+        .select('id')
+        .eq('user_id', member.id)
+        .maybeSingle();
+      
+      if (existingCommission) {
+        // Update existing record
+        await supabase
+          .from('team_member_commissions')
+          .update({
+            base_rate: baseRate,
+            rules: commissionRules,
+            fees: commissionFees,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', member.id);
+      } else {
+        // Create new record
+        await supabase
+          .from('team_member_commissions')
+          .insert({
+            user_id: member.id,
+            base_rate: baseRate,
+            rules: commissionRules,
+            fees: commissionFees
+          });
+      }
+      
+      toast.success("Commission settings saved successfully");
+    } catch (error) {
+      console.error("Error saving commission settings:", error);
+      toast.error("Failed to save commission settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
   const handleAddRule = () => {
-    if (!isEditing || !newRuleName) return;
+    if (!isEditing || !newRuleName || !canManageCommissions) return;
     
     const newRule: CommissionRule = {
       id: Date.now().toString(),
@@ -98,7 +116,7 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
   };
   
   const handleDeleteRule = (id: string) => {
-    if (!isEditing) return;
+    if (!isEditing || !canManageCommissions) return;
     
     setCommissionRules(commissionRules.filter(rule => rule.id !== id));
     
@@ -106,19 +124,17 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
   };
   
   const handleFeeToggle = (id: string) => {
-    if (!isEditing) return;
+    if (!isEditing || !canManageCommissions) return;
     
     setCommissionFees(commissionFees.map(fee => 
       fee.id === id 
         ? { ...fee, deductFromTotal: !fee.deductFromTotal } 
         : fee
     ));
-    
-    toast.success("Fee setting updated");
   };
   
   const handleFeeValueChange = (id: string, value: number) => {
-    if (!isEditing) return;
+    if (!isEditing || !canManageCommissions) return;
     
     setCommissionFees(commissionFees.map(fee => 
       fee.id === id 
@@ -137,12 +153,45 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     }
   };
   
+  // If user doesn't have permission to edit
+  if (!canManageCommissions && !isEditing) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 border-fixlyfy-border shadow-sm">
+          <div className="flex justify-center py-8">
+            <div className="text-center">
+              <p className="text-muted-foreground">
+                You don't have permission to manage commission settings.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Column - Base Rate & Rules */}
       <div className="space-y-6">
         <Card className="p-6 border-fixlyfy-border shadow-sm">
-          <h3 className="text-lg font-medium mb-4">Base Commission Rate</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Base Commission Rate</h3>
+            {isEditing && (
+              <Button 
+                onClick={handleSaveCommissionChanges} 
+                disabled={isSaving}
+                size="sm"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : "Save Changes"}
+              </Button>
+            )}
+          </div>
           
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -185,36 +234,42 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
           <h3 className="text-lg font-medium mb-4">Commission Rules</h3>
           
           <div className="space-y-4">
-            {commissionRules.map(rule => (
-              <div key={rule.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div className="flex items-center gap-2">
-                  {getRuleTypeIcon(rule.type)}
-                  <div>
-                    <p className="font-medium">{rule.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {rule.type === "schedule" ? "Schedule Override" : 
-                       rule.type === "job-type" ? "Job Type Rule" :
-                       rule.type === "amount" ? "Amount-Based" :
-                       "Company Rate"}
-                    </p>
+            {commissionRules.length === 0 ? (
+              <div className="text-center p-4 bg-gray-50 rounded-md text-muted-foreground">
+                No commission rules defined yet.
+              </div>
+            ) : (
+              commissionRules.map(rule => (
+                <div key={rule.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                  <div className="flex items-center gap-2">
+                    {getRuleTypeIcon(rule.type)}
+                    <div>
+                      <p className="font-medium">{rule.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {rule.type === "schedule" ? "Schedule Override" : 
+                         rule.type === "job-type" ? "Job Type Rule" :
+                         rule.type === "amount" ? "Amount-Based" :
+                         "Company Rate"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{rule.value}%</span>
+                    {isEditing && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 w-7 p-0"
+                        onClick={() => handleDeleteRule(rule.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className="font-medium">{rule.value}%</span>
-                  {isEditing && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 w-7 p-0"
-                      onClick={() => handleDeleteRule(rule.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
             
             {isEditing && (
               <div className="mt-4">
@@ -284,58 +339,74 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
           <h3 className="text-lg font-medium mb-4">Commission Fees & Deductions</h3>
           
           <div className="space-y-6">
-            {commissionFees.map(fee => (
-              <div key={fee.id} className="space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <Label htmlFor={`fee-${fee.id}`}>{fee.name}</Label>
-                  <div className="flex items-center">
-                    <Input
-                      id={`fee-${fee.id}`}
-                      type="number"
-                      value={fee.value}
-                      onChange={(e) => {
-                        const value = parseFloat(e.target.value);
-                        if (!isNaN(value) && value >= 0) {
-                          handleFeeValueChange(fee.id, value);
-                        }
-                      }}
-                      disabled={!isEditing}
-                      className="w-20 text-right mr-2"
-                      min="0"
-                      step="0.1"
-                    />
-                    <span className="text-muted-foreground">%</span>
-                  </div>
-                </div>
-                
-                <Slider
-                  disabled={!isEditing}
-                  value={[fee.value]}
-                  onValueChange={(value) => handleFeeValueChange(fee.id, value[0])}
-                  max={10}
-                  step={0.1}
-                />
-                
-                <div className="flex items-center justify-between mt-2">
-                  <Label htmlFor={`deduct-${fee.id}`} className="text-sm text-muted-foreground">
-                    Deduct from commission total
-                  </Label>
-                  <Switch
-                    id={`deduct-${fee.id}`}
-                    checked={fee.deductFromTotal}
-                    onCheckedChange={() => handleFeeToggle(fee.id)}
-                    disabled={!isEditing}
-                  />
-                </div>
-                
-                <Separator className="mt-4" />
+            {commissionFees.length === 0 ? (
+              <div className="text-center p-4 bg-gray-50 rounded-md text-muted-foreground">
+                No commission fees defined yet.
               </div>
-            ))}
+            ) : (
+              commissionFees.map(fee => (
+                <div key={fee.id} className="space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor={`fee-${fee.id}`}>{fee.name}</Label>
+                    <div className="flex items-center">
+                      <Input
+                        id={`fee-${fee.id}`}
+                        type="number"
+                        value={fee.value}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (!isNaN(value) && value >= 0) {
+                            handleFeeValueChange(fee.id, value);
+                          }
+                        }}
+                        disabled={!isEditing}
+                        className="w-20 text-right mr-2"
+                        min="0"
+                        step="0.1"
+                      />
+                      <span className="text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                  
+                  <Slider
+                    disabled={!isEditing}
+                    value={[fee.value]}
+                    onValueChange={(value) => handleFeeValueChange(fee.id, value[0])}
+                    max={10}
+                    step={0.1}
+                  />
+                  
+                  <div className="flex items-center justify-between mt-2">
+                    <Label htmlFor={`deduct-${fee.id}`} className="text-sm text-muted-foreground">
+                      Deduct from commission total
+                    </Label>
+                    <Switch
+                      id={`deduct-${fee.id}`}
+                      checked={fee.deductFromTotal}
+                      onCheckedChange={() => handleFeeToggle(fee.id)}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                  
+                  <Separator className="mt-4" />
+                </div>
+              ))
+            )}
             
             {isEditing && (
               <Button 
                 variant="outline" 
                 className="w-full mt-4"
+                onClick={() => {
+                  const newFee: CommissionFee = {
+                    id: Date.now().toString(),
+                    name: "New Fee",
+                    value: 3,
+                    deductFromTotal: true
+                  };
+                  setCommissionFees([...commissionFees, newFee]);
+                  toast.success("Fee added");
+                }}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Custom Fee
@@ -350,71 +421,41 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
                 <span>Base Rate:</span>
                 <span>{baseRate}%</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Average with Rules:</span>
-                <span className="text-green-600 font-medium">58%</span>
-              </div>
+              
+              {commissionRules.length > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>Average with Rules:</span>
+                  <span className="text-green-600 font-medium">
+                    {Math.round(commissionRules.reduce((acc, rule) => acc + rule.value, 0) / 
+                      (commissionRules.length || 1))}%
+                  </span>
+                </div>
+              )}
+              
               <Separator className="my-2" />
-              <div className="flex justify-between text-sm">
-                <span>Average Fee Deduction:</span>
-                <span className="text-red-600">-3.1%</span>
-              </div>
+              
+              {commissionFees.length > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>Average Fee Deduction:</span>
+                  <span className="text-red-600">
+                    -{(commissionFees
+                      .filter(fee => fee.deductFromTotal)
+                      .reduce((acc, fee) => acc + fee.value, 0)).toFixed(1)}%
+                  </span>
+                </div>
+              )}
+              
               <div className="flex justify-between font-medium">
                 <span>Effective Commission Rate:</span>
-                <span>54.9%</span>
+                <span>{Math.max(0, baseRate - 
+                  (commissionFees
+                    .filter(fee => fee.deductFromTotal)
+                    .reduce((acc, fee) => acc + fee.value, 0))).toFixed(1)}%</span>
               </div>
             </div>
             
             <div className="mt-4 text-xs text-muted-foreground">
               This is an estimate based on historical job data and current settings.
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-6 border-fixlyfy-border shadow-sm">
-          <h3 className="text-lg font-medium mb-4">Advanced Commission Settings</h3>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="mb-1 block">Commission Cap</Label>
-                <p className="text-sm text-muted-foreground">Set maximum monthly commission</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  placeholder="No cap"
-                  disabled={!isEditing}
-                  className="w-24 text-right"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="mb-1 block">Pay Frequency</Label>
-                <p className="text-sm text-muted-foreground">How often commissions are paid</p>
-              </div>
-              <select 
-                className="border rounded-md px-3 py-1.5 bg-white"
-                disabled={!isEditing}
-              >
-                <option value="biweekly">Bi-Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="job">Per Job</option>
-              </select>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="mb-1 block">Require Invoice Payment</Label>
-                <p className="text-sm text-muted-foreground">Only pay commission on paid invoices</p>
-              </div>
-              <Switch 
-                checked={true}
-                disabled={!isEditing}
-              />
             </div>
           </div>
         </Card>

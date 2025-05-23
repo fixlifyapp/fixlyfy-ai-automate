@@ -1,10 +1,12 @@
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Edit, Save } from "lucide-react";
+import { Loader2, ArrowLeft, Edit, Save, Check } from "lucide-react";
 import { TeamMemberProfile } from "@/types/team-member";
 import { RoleDropdown } from "@/components/team/RoleDropdown";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 interface TeamMemberHeaderProps {
   member: TeamMemberProfile;
@@ -25,6 +27,18 @@ export const TeamMemberHeader = ({
   onSave,
   isSaving = false
 }: TeamMemberHeaderProps) => {
+  const { hasPermission } = useRBAC();
+  const [roleChanged, setRoleChanged] = useState(false);
+
+  const canEditRoles = hasPermission("users.roles.assign");
+  
+  const handleRoleChange = (userId: string, newRole: string) => {
+    setRoleChanged(true);
+    setTimeout(() => {
+      setRoleChanged(false);
+    }, 2000);
+  };
+  
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
@@ -44,6 +58,7 @@ export const TeamMemberHeader = ({
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
                 <h2 className="text-2xl font-bold">{member.name}</h2>
+                {roleChanged && <Check className="h-4 w-4 text-green-500 animate-pulse" />}
               </div>
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">{member.email}</span>
@@ -51,7 +66,8 @@ export const TeamMemberHeader = ({
                   <RoleDropdown 
                     userId={member.id} 
                     role={member.role}
-                    disabled={!canEdit} 
+                    disabled={!canEditRoles}
+                    onRoleChange={handleRoleChange}
                   />
                 </div>
               </div>
