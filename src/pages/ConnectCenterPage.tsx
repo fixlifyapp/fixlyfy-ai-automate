@@ -12,12 +12,18 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { MessageDialog } from "@/components/messages/MessageDialog";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
+import { supabase } from "@/integrations/supabase/client";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("messages");
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{name: string; phone?: string; id?: string} | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState({
+    messages: 0,
+    calls: 0,
+    emails: 0
+  });
   
   // Read query parameters to handle direct navigation with a specific client
   const location = useLocation();
@@ -45,6 +51,42 @@ const ConnectCenterPage = () => {
       setIsMessageDialogOpen(true);
     }
   }, [clientId, clientName, clientPhone]);
+
+  // Fetch unread counts
+  useEffect(() => {
+    const fetchUnreadCounts = async () => {
+      try {
+        // Count unread messages
+        const { data: conversations } = await supabase
+          .from('conversations')
+          .select(`
+            id,
+            messages!inner(id, read_at)
+          `);
+        
+        let unreadMessages = 0;
+        conversations?.forEach(conv => {
+          const unreadInConv = conv.messages.filter((msg: any) => !msg.read_at).length;
+          unreadMessages += unreadInConv;
+        });
+
+        // For now, using mock data for calls and emails
+        // In a real app, you would fetch from actual tables
+        const missedCalls = 3; // Mock missed calls count
+        const unreadEmails = 5; // Mock unread emails count
+
+        setUnreadCounts({
+          messages: unreadMessages,
+          calls: missedCalls,
+          emails: unreadEmails
+        });
+      } catch (error) {
+        console.error("Error fetching unread counts:", error);
+      }
+    };
+
+    fetchUnreadCounts();
+  }, []);
 
   const handleNewCommunication = () => {
     switch (activeTab) {
@@ -90,17 +132,23 @@ const ConnectCenterPage = () => {
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
             <span>Messages</span>
-            <Badge className="ml-1 bg-fixlyfy">12</Badge>
+            {unreadCounts.messages > 0 && (
+              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.messages}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="calls" className="flex items-center gap-2">
             <Phone size={16} />
             <span>Calls</span>
-            <Badge className="ml-1 bg-fixlyfy">3</Badge>
+            {unreadCounts.calls > 0 && (
+              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail size={16} />
             <span>Emails</span>
-            <Badge className="ml-1 bg-fixlyfy">5</Badge>
+            {unreadCounts.emails > 0 && (
+              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
+            )}
           </TabsTrigger>
         </TabsList>
         

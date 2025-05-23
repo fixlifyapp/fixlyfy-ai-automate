@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +18,7 @@ export const ConnectSearch = ({ onSearchResults }: ConnectSearchProps) => {
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   
   // Effect to perform search when debounced term changes
-  useState(() => {
+  useEffect(() => {
     if (!debouncedSearchTerm) {
       // If search is cleared, reset results
       onSearchResults([]);
