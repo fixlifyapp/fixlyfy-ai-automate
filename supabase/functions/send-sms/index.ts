@@ -64,6 +64,30 @@ serve(async (req) => {
       let clientId = null;
       if (supabaseClient && supabaseClient.length > 0) {
         clientId = supabaseClient[0].id;
+      } else {
+        // If no client found with the exact number, try a fuzzy match without country code
+        // This is helpful if the client phone is stored without country code
+        const phoneWithoutCode = payload.From.replace(/^\+\d+/, '');
+        const { data: clientsByFuzzyMatch } = await (await fetch(
+          Deno.env.get('SUPABASE_URL') + '/rest/v1/clients',
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'apiKey': Deno.env.get('SUPABASE_ANON_KEY') || '',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            }
+          }
+        )).json();
+        
+        if (clientsByFuzzyMatch) {
+          const matchedClient = clientsByFuzzyMatch.find((c: any) => 
+            c.phone && c.phone.replace(/\D/g, '').endsWith(phoneWithoutCode.replace(/\D/g, ''))
+          );
+          
+          if (matchedClient) {
+            clientId = matchedClient.id;
+          }
+        }
       }
 
       // Find or create a conversation
@@ -128,6 +152,22 @@ serve(async (req) => {
               recipient: payload.To,
               message_sid: payload.MessageSid,
               status: 'received'
+            })
+          }
+        );
+        
+        // Update conversation's last_message_at
+        await fetch(
+          Deno.env.get('SUPABASE_URL') + '/rest/v1/conversations?id=eq.' + conversationId,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apiKey': Deno.env.get('SUPABASE_ANON_KEY') || '',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({
+              last_message_at: new Date().toISOString()
             })
           }
         );

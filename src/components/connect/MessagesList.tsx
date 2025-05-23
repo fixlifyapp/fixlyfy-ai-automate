@@ -5,6 +5,7 @@ import { MessageDialog } from "@/components/messages/MessageDialog";
 import { useConversations } from "./hooks/useConversations";
 import { ConversationsList } from "./components/ConversationsList";
 import { ConversationThread } from "./components/ConversationThread";
+import { useRealTimeMessaging } from "./hooks/useRealTimeMessaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -23,8 +24,14 @@ export const MessagesList = ({ setOpenMessageDialog, setSelectedClient }: Messag
     isLoading,
     selectedClient: localSelectedClient,
     setSelectedClient: setLocalSelectedClient,
-    handleConversationClick
+    handleConversationClick,
+    refreshConversations
   } = useConversations();
+
+  // Use real-time messaging hook to refresh conversations on new messages
+  useRealTimeMessaging({
+    onNewMessage: refreshConversations
+  });
 
   // Fetch clients for the new message dialog
   useEffect(() => {

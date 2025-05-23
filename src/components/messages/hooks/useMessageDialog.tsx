@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UseMessageDialogProps {
@@ -38,6 +38,7 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
           const newMsg = payload.new;
           if (newMsg && !messages.some(msg => msg.id === newMsg.id)) {
             const formattedMessage = {
+              id: newMsg.id,
               text: newMsg.body,
               sender: newMsg.direction === 'outbound' ? 'You' : client.name,
               timestamp: new Date(newMsg.created_at).toLocaleString('en-US', {
@@ -142,8 +143,8 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
     setIsLoading(true);
 
     try {
-      // Add the new message to the local list
-      const newMessage = {
+      // Add the new message to the local list immediately for better UX
+      const tempMessage = {
         id: `temp-${Date.now()}`,
         text: message,
         sender: "You",
@@ -157,7 +158,7 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
         isClient: false
       };
 
-      setMessages([...messages, newMessage]);
+      setMessages(prev => [...prev, tempMessage]);
       
       let currentConversationId = conversationId;
       
@@ -181,20 +182,6 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
         setConversationId(currentConversationId);
       }
       
-      // Store the message in the database if we have a conversation
-      if (currentConversationId) {
-        await supabase
-          .from('messages')
-          .insert({
-            conversation_id: currentConversationId,
-            body: message,
-            direction: 'outbound',
-            sender: 'You',
-            recipient: client.phone,
-            status: 'pending'
-          });
-      }
-      
       // Send SMS via Twilio edge function
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
@@ -206,25 +193,32 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
       if (error) {
         console.error("Error sending SMS:", error);
         toast.error("Failed to send SMS. Please try again.");
-      } else if (data.success) {
-        // Update the message status in the database
-        if (currentConversationId) {
-          await supabase
-            .from('messages')
-            .update({ 
-              status: 'delivered',
-              message_sid: data.sid
-            })
-            .eq('conversation_id', currentConversationId)
-            .eq('body', message)
-            .eq('direction', 'outbound');
-        }
-        
-        setMessage("");
-      } else {
-        toast.error(`Failed to send SMS: ${data.error || 'Unknown error'}`);
+        return;
       }
       
+      if (!data.success) {
+        toast.error(`Failed to send SMS: ${data.error || 'Unknown error'}`);
+        return;
+      }
+      
+      // Store the message in the database
+      if (currentConversationId) {
+        await supabase
+          .from('messages')
+          .insert({
+            conversation_id: currentConversationId,
+            body: message,
+            direction: 'outbound',
+            sender: 'You',
+            recipient: client.phone,
+            status: 'delivered',
+            message_sid: data.sid
+          });
+          
+        // Clear input after successful send
+        setMessage("");
+        toast.success("Message sent successfully");
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");

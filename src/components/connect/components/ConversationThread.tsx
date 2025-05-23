@@ -135,7 +135,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
                     : "bg-fixlyfy text-white"
                 )}
               >
-                <p className="text-sm">{message.text}</p>
+                <p className="text-sm break-words">{message.text}</p>
                 <span className="text-xs block mt-1 opacity-70">
                   {message.timestamp}
                 </span>
@@ -155,7 +155,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type your message..."
-            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
             disabled={isSending}
             className="flex-1"
           />
