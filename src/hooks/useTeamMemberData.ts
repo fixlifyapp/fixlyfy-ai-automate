@@ -5,6 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TeamMemberCommission, ProfileRow } from "@/types/database";
 
+// Define proper types for the RPC function returns
+interface CommissionData {
+  id: string;
+  user_id: string;
+  base_rate: number;
+  rules: any[];
+  fees: any[];
+  created_at: string;
+  updated_at: string;
+}
+
 export const useTeamMemberData = (id: string | undefined) => {
   const [member, setMember] = useState<TeamMemberProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,21 +43,42 @@ export const useTeamMemberData = (id: string | undefined) => {
       }
       
       if (profile) {
-        // Use RPC function to get commission data
-        const { data: commissionData } = await supabase
-          .rpc('get_team_member_commission', { team_member_id: id });
+        // Use RPC function to get commission data with proper typing
+        const { data: commissionData, error: commissionError } = await supabase
+          .rpc('get_team_member_commission', { team_member_id: id }) as { 
+            data: CommissionData[] | null, 
+            error: any 
+          };
         
-        // Use RPC function to get skills
-        const { data: skillsData } = await supabase
-          .rpc('get_team_member_skills', { team_member_id: id });
+        if (commissionError) {
+          console.error("Error fetching commission data:", commissionError);
+        }
         
-        // Use RPC function to get service areas
-        const { data: serviceAreasData } = await supabase
-          .rpc('get_service_areas', { team_member_id: id });
+        // Use RPC function to get skills with proper typing
+        const { data: skillsData, error: skillsError } = await supabase
+          .rpc('get_team_member_skills', { team_member_id: id }) as { 
+            data: any, 
+            error: any 
+          };
+        
+        if (skillsError) {
+          console.error("Error fetching skills data:", skillsError);
+        }
+        
+        // Use RPC function to get service areas with proper typing
+        const { data: serviceAreasData, error: serviceAreasError } = await supabase
+          .rpc('get_service_areas', { team_member_id: id }) as { 
+            data: any, 
+            error: any 
+          };
+        
+        if (serviceAreasError) {
+          console.error("Error fetching service areas data:", serviceAreasError);
+        }
         
         // Extract data or provide defaults
-        const skills = skillsData ? skillsData : [];
-        const serviceAreas = serviceAreasData ? serviceAreasData : [];
+        const skills = skillsData || [];
+        const serviceAreas = serviceAreasData || [];
         
         // The profile data returned from Supabase
         const typedProfile = profile as ProfileRow;
@@ -71,10 +103,10 @@ export const useTeamMemberData = (id: string | undefined) => {
           scheduleColor: typedProfile.schedule_color || "#6366f1",
           internalNotes: typedProfile.internal_notes || "",
           usesTwoFactor: typedProfile.uses_two_factor || false,
-          // Add commission data if available
-          commissionRate: commissionData && commissionData.length > 0 ? commissionData[0]?.base_rate : 50,
-          commissionRules: commissionData && commissionData.length > 0 ? commissionData[0]?.rules || [] : [],
-          commissionFees: commissionData && commissionData.length > 0 ? commissionData[0]?.fees || [] : []
+          // Add commission data if available with proper null checks
+          commissionRate: commissionData && commissionData.length > 0 ? commissionData[0].base_rate : 50,
+          commissionRules: commissionData && commissionData.length > 0 ? commissionData[0].rules || [] : [],
+          commissionFees: commissionData && commissionData.length > 0 ? commissionData[0].fees || [] : []
         };
         
         setMember(memberProfile);

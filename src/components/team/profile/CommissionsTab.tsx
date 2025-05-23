@@ -17,6 +17,14 @@ interface CommissionsTabProps {
   isEditing: boolean;
 }
 
+// Define typing for the RPC function parameters
+interface UpdateTeamMemberCommissionParams {
+  p_user_id: string;
+  p_base_rate: number;
+  p_rules: CommissionRule[];
+  p_fees: CommissionFee[];
+}
+
 export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
   const [baseRate, setBaseRate] = useState(member.commissionRate || 50);
   const [commissionRules, setCommissionRules] = useState<CommissionRule[]>(member.commissionRules || []);
@@ -57,14 +65,14 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     setIsSaving(true);
     
     try {
-      // Use RPC function to save commission data
+      // Use RPC function to save commission data with proper typing
       const { error } = await supabase
-        .rpc('update_team_member_commission', { 
+        .rpc('update_team_member_commission', {
           p_user_id: member.id,
           p_base_rate: baseRate,
           p_rules: commissionRules,
           p_fees: commissionFees
-        });
+        } as UpdateTeamMemberCommissionParams);
         
       if (error) throw error;
       
