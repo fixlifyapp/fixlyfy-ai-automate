@@ -1,6 +1,7 @@
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -152,6 +153,7 @@ export const ScheduleFilters = ({ view, onViewChange }: ScheduleFiltersProps) =>
                 selected={customDate}
                 onSelect={handleCustomDateChange}
                 initialFocus
+                className="pointer-events-auto"
               />
             </PopoverContent>
           </Popover>
