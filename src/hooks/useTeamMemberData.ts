@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { TeamMemberProfile } from "@/types/team-member";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TeamMemberCommission, TeamMemberSkill, ServiceArea, ProfileRow, DatabaseFunctions } from "@/types/database";
+import { TeamMemberCommission, TeamMemberSkill, ServiceArea, ProfileRow } from "@/types/database";
 
 export const useTeamMemberData = (id: string | undefined) => {
   const [member, setMember] = useState<TeamMemberProfile | null>(null);
@@ -34,7 +34,7 @@ export const useTeamMemberData = (id: string | undefined) => {
       if (profile) {
         // Use RPC function to get commission data with proper parameter naming
         const { data: commissionData, error: commissionError } = await supabase
-          .rpc('get_team_member_commission' as DatabaseFunctions, { p_team_member_id: id });
+          .rpc('get_team_member_commission', { p_team_member_id: id });
         
         if (commissionError) {
           console.error("Error fetching commission data:", commissionError);
@@ -42,7 +42,7 @@ export const useTeamMemberData = (id: string | undefined) => {
         
         // Use RPC function to get skills with proper parameter naming
         const { data: skillsData, error: skillsError } = await supabase
-          .rpc('get_team_member_skills' as DatabaseFunctions, { p_team_member_id: id });
+          .rpc('get_team_member_skills', { p_team_member_id: id });
         
         if (skillsError) {
           console.error("Error fetching skills data:", skillsError);
@@ -50,7 +50,7 @@ export const useTeamMemberData = (id: string | undefined) => {
         
         // Use RPC function to get service areas with proper parameter naming
         const { data: serviceAreasData, error: serviceAreasError } = await supabase
-          .rpc('get_service_areas' as DatabaseFunctions, { p_team_member_id: id });
+          .rpc('get_service_areas', { p_team_member_id: id });
         
         if (serviceAreasError) {
           console.error("Error fetching service areas data:", serviceAreasError);
@@ -69,9 +69,11 @@ export const useTeamMemberData = (id: string | undefined) => {
         let commissionFees: any[] = [];
         
         if (commissionData && commissionData.length > 0) {
-          commissionRate = commissionData[0].base_rate;
-          commissionRules = Array.isArray(commissionData[0].rules) ? commissionData[0].rules : [];
-          commissionFees = Array.isArray(commissionData[0].fees) ? commissionData[0].fees : [];
+          // Explicitly type the commission data to access its properties safely
+          const commission = commissionData[0] as TeamMemberCommission;
+          commissionRate = commission.base_rate;
+          commissionRules = Array.isArray(commission.rules) ? commission.rules : [];
+          commissionFees = Array.isArray(commission.fees) ? commission.fees : [];
         }
           
         // Convert profile to TeamMemberProfile format
@@ -89,8 +91,8 @@ export const useTeamMemberData = (id: string | undefined) => {
           twoFactorEnabled: typedProfile.two_factor_enabled || false,
           callMaskingEnabled: typedProfile.call_masking_enabled || false,
           laborCostPerHour: typedProfile.labor_cost_per_hour || 50,
-          skills: skills || [],
-          serviceAreas: serviceAreas || [],
+          skills: skills as TeamMemberSkill[],
+          serviceAreas: serviceAreas as ServiceArea[],
           scheduleColor: typedProfile.schedule_color || "#6366f1",
           internalNotes: typedProfile.internal_notes || "",
           usesTwoFactor: typedProfile.uses_two_factor || false,
