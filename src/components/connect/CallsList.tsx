@@ -43,7 +43,14 @@ export const CallsList = () => {
         .limit(20);
 
       if (error) throw error;
-      setCalls(data || []);
+      
+      // Type assertion to ensure direction field matches expected type
+      const typedCalls = (data || []).map(call => ({
+        ...call,
+        direction: call.direction as "incoming" | "outgoing" | "missed"
+      }));
+      
+      setCalls(typedCalls);
     } catch (error) {
       console.error("Error fetching calls:", error);
       toast.error("Failed to load calls");

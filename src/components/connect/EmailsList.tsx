@@ -46,7 +46,14 @@ export const EmailsList = () => {
         .limit(20);
 
       if (error) throw error;
-      setEmails(data || []);
+      
+      // Type assertion to ensure direction field matches expected type
+      const typedEmails = (data || []).map(email => ({
+        ...email,
+        direction: email.direction as "incoming" | "outgoing"
+      }));
+      
+      setEmails(typedEmails);
     } catch (error) {
       console.error("Error fetching emails:", error);
       toast.error("Failed to load emails");
