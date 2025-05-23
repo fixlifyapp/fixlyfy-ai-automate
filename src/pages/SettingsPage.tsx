@@ -6,11 +6,10 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { ConfigurationCard } from "@/components/settings/configuration/ConfigurationCard";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, UserPlus, Users, UsersRound, Tags, Settings2 } from "lucide-react";
+import { UsersRound, Settings2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -26,28 +25,39 @@ const SettingsPage = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 gap-6 mb-6">
+      {/* Cards Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Configuration Card */}
-        <ConfigurationCard />
+        <Link to="/configuration">
+          <Card className="h-full hover:shadow-md transition-shadow">
+            <CardContent className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Settings2 className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Configuration</h3>
+                <p className="text-sm text-muted-foreground">Manage business niche, tags, job types, statuses, and custom fields</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         
         {/* Role Management Card */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <PermissionRequired permission="users.roles.assign">
-            <Link to="/admin/roles">
-              <Card className="h-full hover:shadow-md transition-shadow">
-                <CardContent className="flex items-center p-6 space-x-4">
-                  <div className="bg-fixlyfy/10 p-3 rounded-full">
-                    <UsersRound className="h-6 w-6 text-fixlyfy" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Role Management</h3>
-                    <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </PermissionRequired>
-        </div>
+        <PermissionRequired permission="users.roles.assign">
+          <Link to="/admin/roles">
+            <Card className="h-full hover:shadow-md transition-shadow">
+              <CardContent className="flex items-center p-6 space-x-4">
+                <div className="bg-fixlyfy/10 p-3 rounded-full">
+                  <UsersRound className="h-6 w-6 text-fixlyfy" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Role Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </PermissionRequired>
       </div>
       
       <div className="fixlyfy-card overflow-hidden">
