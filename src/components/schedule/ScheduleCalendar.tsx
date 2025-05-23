@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,60 +28,6 @@ interface JobScheduleItem {
   status: string;
   address: string;
 }
-
-// This is sample job data for the schedule
-const scheduledJobs = [
-  {
-    id: "JOB-1001",
-    client: "Michael Johnson",
-    title: "HVAC Repair",
-    date: new Date(2025, 4, 15, 13, 30),
-    duration: 120, // in minutes
-    technician: "Robert Smith",
-    status: "scheduled",
-    address: "123 Main St, Apt 45",
-  },
-  {
-    id: "JOB-1002",
-    client: "Sarah Williams",
-    title: "Plumbing",
-    date: new Date(2025, 4, 15, 14, 45),
-    duration: 90,
-    technician: "John Doe",
-    status: "in-progress",
-    address: "456 Oak Ave",
-  },
-  {
-    id: "JOB-1003",
-    client: "David Brown",
-    title: "Electrical",
-    date: new Date(2025, 4, 15, 11, 15),
-    duration: 60,
-    technician: "Emily Clark",
-    status: "completed",
-    address: "789 Pine St",
-  },
-  {
-    id: "JOB-1004",
-    client: "Jessica Miller",
-    title: "HVAC Maintenance",
-    date: new Date(2025, 4, 16, 9, 0),
-    duration: 180,
-    technician: "Robert Smith",
-    status: "scheduled",
-    address: "321 Elm St",
-  },
-  {
-    id: "JOB-1005",
-    client: "Thomas Anderson",
-    title: "Electrical Inspection",
-    date: new Date(2025, 4, 17, 15, 30),
-    duration: 120,
-    technician: "Emily Clark",
-    status: "scheduled",
-    address: "555 Maple Rd",
-  },
-];
 
 const timeSlots = Array.from({ length: 12 }, (_, index) => {
   const hour = index + 8; // Start at 8 AM
@@ -264,20 +211,7 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
         {view === 'month' && format(currentDate, 'MMMM yyyy')}
       </h2>
       
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full bg-fixlyfy"></span>
-          <span className="text-xs">Scheduled</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full bg-fixlyfy-warning"></span>
-          <span className="text-xs">In Progress</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full bg-fixlyfy-success"></span>
-          <span className="text-xs">Completed</span>
-        </div>
-      </div>
+      {/* Removed duplicate legend here */}
     </div>
   );
   
@@ -429,7 +363,7 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
     );
   }
   
-  // Month view with basic calendar grid
+  // Month view with improved handling for many jobs
   return (
     <div className="fixlyfy-card overflow-hidden">
       <div className="p-4 border-b border-fixlyfy-border">
@@ -451,21 +385,23 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
             job.date.getDate() === dayNum && job.date.getMonth() === currentDate.getMonth()
           );
           
+          const hasExcessJobs = jobsForDay.length > 3;
+          
           return (
             <div 
               key={i} 
               className={cn(
-                "h-24 p-1 border-r border-b border-fixlyfy-border",
+                "h-24 p-1 border-r border-b border-fixlyfy-border relative overflow-hidden",
                 jobsForDay.length > 0 ? "bg-fixlyfy-bg-interface/30" : ""
               )}
             >
               <div className="text-xs font-medium mb-1">{dayNum}</div>
-              {jobsForDay.slice(0, 2).map(job => (
+              {jobsForDay.slice(0, 3).map(job => (
                 <div 
                   key={job.id}
                   onClick={() => handleJobClick(job.id)}
                   className={cn(
-                    "text-xs p-1 rounded text-white mb-1 cursor-pointer hover:opacity-90 transition-opacity",
+                    "text-xs p-1 rounded text-white mb-1 cursor-pointer hover:opacity-90 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis",
                     job.status === 'scheduled' && "bg-fixlyfy",
                     job.status === 'in-progress' && "bg-fixlyfy-warning",
                     job.status === 'completed' && "bg-fixlyfy-success"
@@ -474,8 +410,19 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
                   {job.title} - {format(job.date, 'h:mm a')}
                 </div>
               ))}
-              {jobsForDay.length > 2 && (
-                <div className="text-xs text-fixlyfy">+{jobsForDay.length - 2} more</div>
+              {hasExcessJobs && (
+                <div 
+                  className="text-xs text-fixlyfy cursor-pointer hover:underline absolute bottom-1 right-1 bg-fixlyfy-bg-interface/80 px-2 py-1 rounded"
+                  onClick={() => {
+                    // Switch to day view for this date
+                    const newDate = new Date(currentDate);
+                    newDate.setDate(dayNum);
+                    setCurrentDate(newDate);
+                    navigate(`/schedule?view=day&date=${format(newDate, 'yyyy-MM-dd')}`);
+                  }}
+                >
+                  +{jobsForDay.length - 3} more
+                </div>
               )}
             </div>
           );
