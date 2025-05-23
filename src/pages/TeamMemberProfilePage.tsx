@@ -9,6 +9,7 @@ import { TeamMemberTabs } from "@/components/team/profile/TeamMemberTabs";
 import { LoadingState } from "@/components/team/profile/LoadingState";
 import { NotFoundState } from "@/components/team/profile/NotFoundState";
 import { useTeamMemberData } from "@/hooks/useTeamMemberData";
+import { supabase } from "@/integrations/supabase/client";
 
 const TeamMemberProfilePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,8 +17,9 @@ const TeamMemberProfilePage = () => {
   const { hasRole } = useRBAC();
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
-  const { member, isLoading } = useTeamMemberData(id);
+  const { member, isLoading, error } = useTeamMemberData(id);
   const isAdmin = hasRole('admin');
   
   // Only admins can edit team members
@@ -27,10 +29,32 @@ const TeamMemberProfilePage = () => {
     navigate("/admin/team");
   };
   
-  const handleSave = () => {
-    // In a real app, this would save to a database
-    toast.success("Team member profile updated successfully");
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!member) return;
+    
+    setIsSaving(true);
+    
+    try {
+      // In a real app, update member data in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: member.name,
+          avatar_url: member.avatar,
+          // Add other fields as needed
+        })
+        .eq('id', member.id);
+        
+      if (error) throw error;
+      
+      toast.success("Team member profile updated successfully");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating team member:", error);
+      toast.error("Failed to update team member profile");
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   const handleEdit = () => {
@@ -41,8 +65,8 @@ const TeamMemberProfilePage = () => {
     return <LoadingState />;
   }
   
-  if (!member) {
-    return <NotFoundState onGoBack={handleGoBack} />;
+  if (!member || error) {
+    return <NotFoundState onGoBack={handleGoBack} error={error} />;
   }
   
   return (
@@ -57,6 +81,7 @@ const TeamMemberProfilePage = () => {
             onGoBack={handleGoBack}
             onEdit={handleEdit}
             onSave={handleSave}
+            isSaving={isSaving}
           />
           
           {/* Tabs section */}

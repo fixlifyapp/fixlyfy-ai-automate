@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { UserRole } from "@/components/auth/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RoleDropdownProps {
   userId: string;
@@ -27,33 +28,47 @@ export const RoleDropdown = ({
   testMode = false
 }: RoleDropdownProps) => {
   const [currentRole, setCurrentRole] = useState<UserRole>(role);
+  const [isLoading, setIsLoading] = useState(false);
   const { allRoles, hasPermission } = useRBAC();
   
   // Check if user has permission to change roles
   const canEditRoles = hasPermission("users.roles.assign");
   
-  const handleRoleChange = (newRole: UserRole) => {
+  const handleRoleChange = async (newRole: UserRole) => {
     if (!canEditRoles) {
       toast.error("You don't have permission to change roles");
       return;
     }
     
-    // In a real app, this would call an API to update the user's role
-    console.log(`Updating role for user ${userId} from ${currentRole} to ${newRole}`);
+    setIsLoading(true);
     
-    // Update local state
-    setCurrentRole(newRole);
-    
-    // Call onRoleChange if provided
-    if (onRoleChange) {
-      onRoleChange(userId, newRole);
-    }
-    
-    // Show success toast
-    toast.success(`Role updated to ${newRole}`);
-    
-    if (testMode) {
-      toast.info("Test Mode: Role changed locally only. Will be saved to Supabase after integration.");
+    try {
+      // Update the role in the profiles table in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setCurrentRole(newRole);
+      
+      // Call onRoleChange if provided
+      if (onRoleChange) {
+        onRoleChange(userId, newRole);
+      }
+      
+      // Show success toast
+      toast.success(`Role updated to ${newRole}`);
+      
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -61,7 +76,7 @@ export const RoleDropdown = ({
     <Select
       value={currentRole}
       onValueChange={handleRoleChange}
-      disabled={disabled || !canEditRoles}
+      disabled={disabled || !canEditRoles || isLoading}
     >
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select role" />
