@@ -55,20 +55,25 @@ const SchedulePage = () => {
         </div>
       </div>
       
-      {/* Place filters directly above calendar in the main content area */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-6">
-        <div className="space-y-4">
-          <div className="fixlyfy-card p-4">
-            <ScheduleFilters 
-              view={view} 
-              onViewChange={handleViewChange} 
-              currentDate={currentDate}
-              onDateChange={handleDateChange}
-            />
-          </div>
-          <ScheduleCalendar view={view} currentDate={currentDate} />
+      {/* Make the main content area full width and put filters above the calendar */}
+      <div className="space-y-4 w-full">
+        <div className="fixlyfy-card p-4">
+          <ScheduleFilters 
+            view={view} 
+            onViewChange={handleViewChange} 
+            currentDate={currentDate}
+            onDateChange={handleDateChange}
+          />
         </div>
-        {showAIInsights && <AIInsightsPanel />}
+        
+        <ScheduleCalendar view={view} currentDate={currentDate} />
+        
+        {/* Show AI Insights panel below calendar when toggled */}
+        {showAIInsights && (
+          <div className="mt-4">
+            <AIInsightsPanel />
+          </div>
+        )}
       </div>
       
       <ScheduleJobModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
