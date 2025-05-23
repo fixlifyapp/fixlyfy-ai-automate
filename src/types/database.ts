@@ -37,6 +37,15 @@ export interface ProfileRow {
   avatar_url?: string;
   phone?: string;
   status: string;
+  updated_at?: string;
+  is_public?: boolean;
+  available_for_jobs?: boolean;
+  two_factor_enabled?: boolean;
+  call_masking_enabled?: boolean;
+  labor_cost_per_hour?: number;
+  schedule_color?: string;
+  internal_notes?: string;
+  uses_two_factor?: boolean;
 }
 
 export interface UpdateTeamMemberCommissionParams {
@@ -49,6 +58,8 @@ export interface UpdateTeamMemberCommissionParams {
 export interface AIResponse {
   message: string;
   suggestions: string[];
+  generatedText?: string;
+  businessData?: BusinessMetrics;
 }
 
 export interface BusinessMetrics {
@@ -56,4 +67,17 @@ export interface BusinessMetrics {
   totalJobs: number;
   averageJobValue: number;
   customerSatisfaction: number;
+  lastRefreshed?: string;
+  metrics?: {
+    clients?: {
+      total: number;
+    };
+    jobs?: {
+      total: number;
+      scheduled: number;
+    };
+    revenue?: {
+      total: number;
+    };
+  };
 }

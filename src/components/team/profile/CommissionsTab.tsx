@@ -6,7 +6,6 @@ import { TeamMemberProfile, CommissionRule, CommissionFee } from "@/types/team-m
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { UpdateTeamMemberCommissionParams } from "@/types/database";
 import { BaseRateSection } from "./commission/BaseRateSection";
 import { CommissionRulesSection } from "./commission/CommissionRulesSection";
 import { FeesSection } from "./commission/FeesSection";
@@ -54,11 +53,11 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     
     try {
       // Prepare the parameters for the RPC function
-      const params: UpdateTeamMemberCommissionParams = {
-        p_user_id: member.id,
-        p_base_rate: baseRate,
-        p_rules: commissionRules,
-        p_fees: commissionFees
+      const params = {
+        user_id: member.id,
+        base_rate: baseRate,
+        rules: commissionRules,
+        fees: commissionFees
       };
       
       // Call the update_team_member_commission RPC function with proper typing
