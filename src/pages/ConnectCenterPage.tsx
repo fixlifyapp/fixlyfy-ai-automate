@@ -11,11 +11,13 @@ import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { MessageDialog } from "@/components/messages/MessageDialog";
+import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("messages");
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{name: string; phone?: string; id?: string} | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   
   // Read query parameters to handle direct navigation with a specific client
   const location = useLocation();
@@ -76,6 +78,11 @@ const ConnectCenterPage = () => {
           {activeTab === "calls" && "New Call"}
           {activeTab === "emails" && "New Email"}
         </Button>
+      </div>
+      
+      {/* Global Search Component */}
+      <div className="mb-6">
+        <ConnectSearch onSearchResults={setSearchResults} />
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>

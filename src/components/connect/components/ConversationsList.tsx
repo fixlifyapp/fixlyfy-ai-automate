@@ -39,9 +39,10 @@ export const ConversationsList = ({
   
   if (conversations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-fixlyfy-text-secondary">
+      <div className="flex flex-col items-center justify-center h-full text-fixlyfy-text-secondary p-4">
         <MessageSquare className="h-12 w-12 mb-2" />
-        <p>No conversations yet</p>
+        <p className="text-center">No conversations found</p>
+        <p className="text-sm text-center mt-2">Try searching for a different client or creating a new message</p>
       </div>
     );
   }
@@ -78,6 +79,9 @@ export const ConversationsList = ({
                   <Badge className="bg-fixlyfy">{conversation.unread}</Badge>
                 )}
               </div>
+              {conversation.client.phone && (
+                <p className="text-xs text-fixlyfy-text-secondary">{conversation.client.phone}</p>
+              )}
             </div>
           </div>
         </div>
