@@ -808,7 +808,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_service_areas: {
+        Args: { p_team_member_id: string }
+        Returns: {
+          id: string
+          name: string
+          zip_code: string
+        }[]
+      }
+      get_team_member_commission: {
+        Args: { p_team_member_id: string }
+        Returns: {
+          id: string
+          user_id: string
+          base_rate: number
+          rules: Json
+          fees: Json
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_team_member_skills: {
+        Args: { p_team_member_id: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

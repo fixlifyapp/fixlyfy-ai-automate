@@ -65,14 +65,14 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     setIsSaving(true);
     
     try {
-      // Use RPC function to save commission data with proper typing
+      // Use RPC function to save commission data with proper parameter naming
       const { error } = await supabase
         .rpc('update_team_member_commission', {
           p_user_id: member.id,
           p_base_rate: baseRate,
           p_rules: commissionRules,
           p_fees: commissionFees
-        } as UpdateTeamMemberCommissionParams);
+        });
         
       if (error) throw error;
       

@@ -3,18 +3,7 @@ import { useState, useEffect } from 'react';
 import { TeamMemberProfile } from "@/types/team-member";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TeamMemberCommission, ProfileRow } from "@/types/database";
-
-// Define proper types for the RPC function returns
-interface CommissionData {
-  id: string;
-  user_id: string;
-  base_rate: number;
-  rules: any[];
-  fees: any[];
-  created_at: string;
-  updated_at: string;
-}
+import { TeamMemberCommission, TeamMemberSkill, ServiceArea, ProfileRow } from "@/types/database";
 
 export const useTeamMemberData = (id: string | undefined) => {
   const [member, setMember] = useState<TeamMemberProfile | null>(null);
@@ -43,10 +32,10 @@ export const useTeamMemberData = (id: string | undefined) => {
       }
       
       if (profile) {
-        // Use RPC function to get commission data with proper typing
+        // Use RPC function to get commission data with proper parameter naming
         const { data: commissionData, error: commissionError } = await supabase
-          .rpc('get_team_member_commission', { team_member_id: id }) as { 
-            data: CommissionData[] | null, 
+          .rpc('get_team_member_commission', { p_team_member_id: id }) as { 
+            data: TeamMemberCommission[] | null, 
             error: any 
           };
         
@@ -54,10 +43,10 @@ export const useTeamMemberData = (id: string | undefined) => {
           console.error("Error fetching commission data:", commissionError);
         }
         
-        // Use RPC function to get skills with proper typing
+        // Use RPC function to get skills with proper parameter naming
         const { data: skillsData, error: skillsError } = await supabase
-          .rpc('get_team_member_skills', { team_member_id: id }) as { 
-            data: any, 
+          .rpc('get_team_member_skills', { p_team_member_id: id }) as { 
+            data: TeamMemberSkill[] | null, 
             error: any 
           };
         
@@ -65,10 +54,10 @@ export const useTeamMemberData = (id: string | undefined) => {
           console.error("Error fetching skills data:", skillsError);
         }
         
-        // Use RPC function to get service areas with proper typing
+        // Use RPC function to get service areas with proper parameter naming
         const { data: serviceAreasData, error: serviceAreasError } = await supabase
-          .rpc('get_service_areas', { team_member_id: id }) as { 
-            data: any, 
+          .rpc('get_service_areas', { p_team_member_id: id }) as { 
+            data: ServiceArea[] | null, 
             error: any 
           };
         

@@ -15,17 +15,13 @@ export interface TeamMemberCommission {
 
 export interface TeamMemberSkill {
   id: string;
-  user_id: string;
   name: string;
-  created_at: string;
 }
 
 export interface ServiceArea {
   id: string;
-  user_id: string;
   name: string;
   zip_code?: string;
-  created_at: string;
 }
 
 export interface ProfileRow {
