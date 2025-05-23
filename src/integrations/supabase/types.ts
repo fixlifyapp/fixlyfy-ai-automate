@@ -640,34 +640,88 @@ export type Database = {
       }
       profiles: {
         Row: {
+          available_for_jobs: boolean | null
           avatar_url: string | null
           business_niche: string | null
+          call_masking_enabled: boolean | null
           created_at: string | null
           id: string
+          internal_notes: string | null
+          is_public: boolean | null
+          labor_cost_per_hour: number | null
           name: string | null
+          phone: string | null
           referral_source: string | null
           role: string | null
+          schedule_color: string | null
+          status: string | null
+          two_factor_enabled: boolean | null
           updated_at: string | null
+          uses_two_factor: boolean | null
         }
         Insert: {
+          available_for_jobs?: boolean | null
           avatar_url?: string | null
           business_niche?: string | null
+          call_masking_enabled?: boolean | null
           created_at?: string | null
           id: string
+          internal_notes?: string | null
+          is_public?: boolean | null
+          labor_cost_per_hour?: number | null
           name?: string | null
+          phone?: string | null
           referral_source?: string | null
           role?: string | null
+          schedule_color?: string | null
+          status?: string | null
+          two_factor_enabled?: boolean | null
           updated_at?: string | null
+          uses_two_factor?: boolean | null
         }
         Update: {
+          available_for_jobs?: boolean | null
           avatar_url?: string | null
           business_niche?: string | null
+          call_masking_enabled?: boolean | null
           created_at?: string | null
           id?: string
+          internal_notes?: string | null
+          is_public?: boolean | null
+          labor_cost_per_hour?: number | null
           name?: string | null
+          phone?: string | null
           referral_source?: string | null
           role?: string | null
+          schedule_color?: string | null
+          status?: string | null
+          two_factor_enabled?: boolean | null
           updated_at?: string | null
+          uses_two_factor?: boolean | null
+        }
+        Relationships: []
+      }
+      service_areas: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -695,6 +749,57 @@ export type Database = {
           created_by?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      team_member_commissions: {
+        Row: {
+          base_rate: number | null
+          created_at: string | null
+          fees: Json | null
+          id: string
+          rules: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          base_rate?: number | null
+          created_at?: string | null
+          fees?: Json | null
+          id?: string
+          rules?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          base_rate?: number | null
+          created_at?: string | null
+          fees?: Json | null
+          id?: string
+          rules?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      team_member_skills: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
         }
         Relationships: []
       }

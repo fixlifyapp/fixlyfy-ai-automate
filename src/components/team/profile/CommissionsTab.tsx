@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -58,38 +57,19 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     setIsSaving(true);
     
     try {
-      // Check if commission record exists
-      const { data: existingCommission } = await supabase
-        .from('team_member_commissions')
-        .select('id')
-        .eq('user_id', member.id)
-        .maybeSingle();
-      
-      if (existingCommission) {
-        // Update existing record
-        await supabase
-          .from('team_member_commissions')
-          .update({
-            base_rate: baseRate,
-            rules: commissionRules,
-            fees: commissionFees,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', member.id);
-      } else {
-        // Create new record
-        await supabase
-          .from('team_member_commissions')
-          .insert({
-            user_id: member.id,
-            base_rate: baseRate,
-            rules: commissionRules,
-            fees: commissionFees
-          });
-      }
+      // Use RPC function to save commission data
+      const { error } = await supabase
+        .rpc('update_team_member_commission', { 
+          p_user_id: member.id,
+          p_base_rate: baseRate,
+          p_rules: commissionRules,
+          p_fees: commissionFees
+        });
+        
+      if (error) throw error;
       
       toast.success("Commission settings saved successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving commission settings:", error);
       toast.error("Failed to save commission settings");
     } finally {
