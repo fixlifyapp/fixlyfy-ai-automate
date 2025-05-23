@@ -436,7 +436,7 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
                 <span>{Math.max(0, baseRate - 
                   (commissionFees
                     .filter(fee => fee.deductFromTotal)
-                    .reduce((acc, fee) => acc + fee.value, 0)).toFixed(1)}%</span>
+                    .reduce((acc, fee) => acc + fee.value, 0)).toFixed(1))}%</span>
               </div>
             </div>
             
