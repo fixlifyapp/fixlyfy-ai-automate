@@ -65,8 +65,8 @@ export function NicheConfig({ userId }: NicheConfigProps) {
     
     setIsSwitching(true);
     try {
-      // Fixed: Pass userId as string (no longer typed as never)
-      await switchNiche(selectedNiche, userId);
+      // Explicitly pass the userId as string to fix the TypeScript error
+      await switchNiche(selectedNiche, userId as string);
       setCurrentNiche(selectedNiche);
     } finally {
       setIsSwitching(false);
