@@ -11,13 +11,16 @@ import { useJobTypes } from "@/hooks/useConfigItems";
 export interface ScheduleFiltersProps {
   view: 'day' | 'week' | 'month';
   onViewChange: (view: 'day' | 'week' | 'month') => void;
+  currentDate?: Date;
+  onDateChange?: (date: Date) => void;
 }
 
 export const ScheduleFilters = ({
   view,
-  onViewChange
+  onViewChange,
+  currentDate = new Date(),
+  onDateChange
 }: ScheduleFiltersProps) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [selectedTechnician, setSelectedTechnician] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -49,19 +52,37 @@ export const ScheduleFilters = ({
   }, []);
 
   const handlePrevious = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(currentDate.getDate() - 7);
-    setCurrentDate(newDate);
+    if (onDateChange) {
+      const newDate = new Date(currentDate);
+      if (view === 'day') {
+        newDate.setDate(currentDate.getDate() - 1);
+      } else if (view === 'week') {
+        newDate.setDate(currentDate.getDate() - 7);
+      } else if (view === 'month') {
+        newDate.setMonth(currentDate.getMonth() - 1);
+      }
+      onDateChange(newDate);
+    }
   };
   
   const handleNext = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(currentDate.getDate() + 7);
-    setCurrentDate(newDate);
+    if (onDateChange) {
+      const newDate = new Date(currentDate);
+      if (view === 'day') {
+        newDate.setDate(currentDate.getDate() + 1);
+      } else if (view === 'week') {
+        newDate.setDate(currentDate.getDate() + 7);
+      } else if (view === 'month') {
+        newDate.setMonth(currentDate.getMonth() + 1);
+      }
+      onDateChange(newDate);
+    }
   };
   
   const handleToday = () => {
-    setCurrentDate(new Date());
+    if (onDateChange) {
+      onDateChange(new Date());
+    }
   };
   
   return <div>

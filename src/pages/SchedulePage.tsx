@@ -14,6 +14,7 @@ const SchedulePage = () => {
   const [view, setView] = useState<'day' | 'week' | 'month'>(
     (searchParams.get('view') as 'day' | 'week' | 'month') || 'week'
   );
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showAIInsights, setShowAIInsights] = useState(false);
   
@@ -24,6 +25,11 @@ const SchedulePage = () => {
       params.set('view', newView);
       return params;
     });
+  };
+  
+  // Handle date change from filters
+  const handleDateChange = (newDate: Date) => {
+    setCurrentDate(newDate);
   };
   
   return (
@@ -53,9 +59,14 @@ const SchedulePage = () => {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-6">
         <div className="space-y-4">
           <div className="fixlyfy-card p-4">
-            <ScheduleFilters view={view} onViewChange={handleViewChange} />
+            <ScheduleFilters 
+              view={view} 
+              onViewChange={handleViewChange} 
+              currentDate={currentDate}
+              onDateChange={handleDateChange}
+            />
           </div>
-          <ScheduleCalendar view={view} />
+          <ScheduleCalendar view={view} currentDate={currentDate} />
         </div>
         {showAIInsights && <AIInsightsPanel />}
       </div>

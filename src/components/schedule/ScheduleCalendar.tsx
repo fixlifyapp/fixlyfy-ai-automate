@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,9 +10,11 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useJobs } from "@/hooks/useJobs";
 import { useJobsRealtime } from "@/hooks/useJobsRealtime";
+import { useCalendarDragDrop } from "@/hooks/useCalendarDragDrop";
 
 interface ScheduleCalendarProps {
   view: 'day' | 'week' | 'month';
+  currentDate?: Date;
 }
 
 interface JobScheduleItem {
@@ -39,18 +40,26 @@ const timeSlots = Array.from({
 });
 
 export const ScheduleCalendar = ({
-  view
+  view,
+  currentDate = new Date()
 }: ScheduleCalendarProps) => {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduledJobs, setScheduledJobs] = useState<JobScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [draggedJob, setDraggedJob] = useState<JobScheduleItem | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const {
     user
   } = useAuth();
   const { refreshJobs } = useJobs();
+  
+  // Set up drag and drop functionality
+  const { 
+    draggedJob,
+    isDragging,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop
+  } = useCalendarDragDrop(() => fetchJobs());
   
   // Set up realtime subscriptions
   useJobsRealtime(() => {
@@ -158,80 +167,7 @@ export const ScheduleCalendar = ({
   
   useEffect(() => {
     fetchJobs();
-  }, [user]);
-
-  // Handle drag start
-  const handleDragStart = (job: JobScheduleItem, e: React.DragEvent) => {
-    setDraggedJob(job);
-    setIsDragging(true);
-    // Set ghost drag image if needed
-    if (e.dataTransfer) {
-      e.dataTransfer.setData('text/plain', job.id);
-      const dragElement = document.createElement('div');
-      dragElement.innerText = job.title;
-      dragElement.classList.add('opacity-50', 'bg-fixlyfy', 'p-2', 'rounded', 'text-white');
-      document.body.appendChild(dragElement);
-      e.dataTransfer.setDragImage(dragElement, 0, 0);
-      setTimeout(() => document.body.removeChild(dragElement), 0);
-    }
-  };
-
-  // Handle drag end
-  const handleDragEnd = () => {
-    setDraggedJob(null);
-    setIsDragging(false);
-  };
-
-  // Handle drag over
-  const handleDragOver = (e: React.DragEvent, time: string = '', day: Date | null = null) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  // Handle drop
-  const handleDrop = async (e: React.DragEvent, time: string = '', day: Date | null = null) => {
-    e.preventDefault();
-    if (!draggedJob || !day) return;
-
-    try {
-      // Parse time slot to get hour
-      let hour = 8; // Default to 8 AM
-      if (time) {
-        const [hourStr] = time.split(':');
-        hour = parseInt(hourStr);
-        if (time.includes('PM') && hour !== 12) {
-          hour += 12;
-        } else if (time.includes('AM') && hour === 12) {
-          hour = 0;
-        }
-      }
-
-      // Create new date from the day and hour
-      const newDate = new Date(day);
-      newDate.setHours(hour, 0, 0, 0);
-
-      // Update job in Supabase
-      const { error } = await supabase
-        .from('jobs')
-        .update({ date: newDate.toISOString() })
-        .eq('id', draggedJob.id);
-
-      if (error) throw error;
-
-      // Update UI
-      toast.success(`Job ${draggedJob.title} moved to ${format(newDate, 'MMM d, yyyy h:mm a')}`);
-      
-      // Refresh jobs data
-      fetchJobs();
-    } catch (error) {
-      console.error('Error moving job:', error);
-      toast.error('Failed to move job');
-    } finally {
-      setDraggedJob(null);
-      setIsDragging(false);
-    }
-  };
+  }, [user, currentDate]);
 
   const getJobsForTimeSlot = (time: string, day: Date) => {
     const [hourStr, minuteStr] = time.split(':');
@@ -389,7 +325,7 @@ export const ScheduleCalendar = ({
         {Array.from({
         length: 35
       }, (_, i) => {
-        const dayNum = i % 30 + 1;
+        const dayNum = i % 31 + 1;
         // Get all jobs for this day
         const jobsForDay = scheduledJobs.filter(job => job.date.getDate() === dayNum && job.date.getMonth() === currentDate.getMonth());
         const displayJobs = jobsForDay.slice(0, 3);
@@ -437,7 +373,6 @@ export const ScheduleCalendar = ({
                   // Switch to day view for this date
                   const newDate = new Date(currentDate);
                   newDate.setDate(dayNum);
-                  setCurrentDate(newDate);
                   navigate(`/schedule?view=day&date=${format(newDate, 'yyyy-MM-dd')}`);
                 }}>
                 +{hiddenCount} more jobs

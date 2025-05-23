@@ -31,7 +31,7 @@ export const useCalendarDragDrop = (onJobUpdated: () => void) => {
   };
 
   // Handle drag over
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, time: string = '', day: Date | null = null) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
