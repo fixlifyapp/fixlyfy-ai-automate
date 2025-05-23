@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applianceRepairProducts } from "@/data/appliance-repair-products";
@@ -305,11 +306,10 @@ export const switchNiche = async (businessNiche: string, userId: string) => {
   
   try {
     // Update the user's niche preference in the profile
-    const updates = {
-      business_niche: businessNiche
-    };
-    
-    const { error: updateError } = await supabase.rpc('update_profile', updates);
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ business_niche: businessNiche })
+      .eq('id', userId);
 
     if (updateError) throw updateError;
     

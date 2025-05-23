@@ -9,7 +9,8 @@ export function TagsConfig() {
     addItem,
     updateItem,
     deleteItem,
-    canManage
+    canManage,
+    refreshItems
   } = useTags();
 
   return (
@@ -22,6 +23,7 @@ export function TagsConfig() {
       onAdd={addItem}
       onUpdate={updateItem}
       onDelete={deleteItem}
+      refreshItems={refreshItems}
       renderCustomColumns={(tag) => (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">

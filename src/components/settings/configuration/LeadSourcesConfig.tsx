@@ -11,7 +11,8 @@ export function LeadSourcesConfig() {
     addItem,
     updateItem,
     deleteItem,
-    canManage
+    canManage,
+    refreshItems
   } = useLeadSources();
 
   return (
@@ -24,6 +25,7 @@ export function LeadSourcesConfig() {
       onAdd={addItem}
       onUpdate={updateItem}
       onDelete={deleteItem}
+      refreshItems={refreshItems}
       renderCustomColumns={(source) => (
         <div className="flex items-center">
           <span className={`text-sm ${source.is_active ? 'text-green-600' : 'text-red-600'}`}>

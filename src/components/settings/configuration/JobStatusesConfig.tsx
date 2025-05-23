@@ -12,7 +12,8 @@ export function JobStatusesConfig() {
     addItem,
     updateItem,
     deleteItem,
-    canManage
+    canManage,
+    refreshItems
   } = useJobStatuses();
 
   return (
@@ -25,6 +26,7 @@ export function JobStatusesConfig() {
       onAdd={addItem}
       onUpdate={updateItem}
       onDelete={deleteItem}
+      refreshItems={refreshItems}
       renderCustomColumns={(status) => (
         <div className="flex flex-col">
           <span className="text-sm">Sequence: {status.sequence || 0}</span>

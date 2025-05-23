@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
  * @param options.tables Array of tables to subscribe to
  * @param options.onUpdate Callback function to run when changes occur
  * @param options.filter Optional filter to apply to subscriptions
+ * @param options.enabled Whether the hook is enabled
  */
 export const useRealtimeSync = ({
   tables,

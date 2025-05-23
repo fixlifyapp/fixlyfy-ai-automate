@@ -8,6 +8,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { switchNiche } from "@/utils/niche-data-loader";
+import { toast } from "sonner";
 
 const businessNiches = [
   { id: "appliance_repair", label: "Appliance Repair & Installation" },
@@ -39,8 +40,12 @@ export function NicheConfig({ userId }: NicheConfigProps) {
       if (!userId) return;
       
       try {
-        // Use RPC function to get profile data including business_niche
-        const { data, error } = await supabase.rpc('get_profile_data');
+        // Fetch profile data from the profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
         
         if (error) throw error;
         
@@ -50,6 +55,7 @@ export function NicheConfig({ userId }: NicheConfigProps) {
         setSelectedNiche(niche);
       } catch (error) {
         console.error("Error fetching current niche:", error);
+        toast.error("Failed to load your business niche settings");
       } finally {
         setIsLoading(false);
       }
@@ -65,9 +71,13 @@ export function NicheConfig({ userId }: NicheConfigProps) {
     
     setIsSwitching(true);
     try {
-      // Explicitly cast userId as string to fix the TypeScript error
+      // Update the user's profile with the new niche
       await switchNiche(selectedNiche, userId);
       setCurrentNiche(selectedNiche);
+      toast.success("Business niche updated successfully");
+    } catch (error) {
+      console.error("Error switching niche:", error);
+      toast.error("Failed to update business niche");
     } finally {
       setIsSwitching(false);
     }
@@ -110,7 +120,7 @@ export function NicheConfig({ userId }: NicheConfigProps) {
               <h3 className="text-sm font-medium mb-2">Select new business niche:</h3>
               <RadioGroup 
                 value={selectedNiche} 
-                onValueChange={(value: string) => setSelectedNiche(value)} 
+                onValueChange={setSelectedNiche} 
                 className="space-y-3"
               >
                 {businessNiches.map((niche) => (

@@ -14,7 +14,8 @@ export function CustomFieldsConfig() {
     addItem,
     updateItem,
     deleteItem,
-    canManage
+    canManage,
+    refreshItems
   } = useCustomFields();
 
   return (
@@ -27,6 +28,7 @@ export function CustomFieldsConfig() {
       onAdd={addItem}
       onUpdate={updateItem}
       onDelete={deleteItem}
+      refreshItems={refreshItems}
       renderCustomColumns={(field) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">

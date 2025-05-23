@@ -1,11 +1,14 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, PlusCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfigItem } from "@/hooks/useConfigItems";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ConfigItemDialog } from "./ConfigItemDialog";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface ConfigItemCardProps<T extends ConfigItem> {
   title: string;
@@ -19,6 +22,7 @@ interface ConfigItemCardProps<T extends ConfigItem> {
   renderCustomColumns?: (item: T) => React.ReactNode;
   itemDialogFields?: React.ReactNode;
   initialValues?: Partial<T>;
+  refreshItems?: () => void;
 }
 
 export function ConfigItemCard<T extends ConfigItem>({
@@ -32,145 +36,159 @@ export function ConfigItemCard<T extends ConfigItem>({
   onDelete,
   renderCustomColumns,
   itemDialogFields,
-  initialValues = {}
+  initialValues,
+  refreshItems
 }: ConfigItemCardProps<T>) {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentItem, setCurrentItem] = useState<T | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editItem, setEditItem] = useState<T | null>(null);
+  const [deleteItem, setDeleteItem] = useState<T | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Set up real-time sync for the table
+  useRealtimeSync({
+    tables: [title.toLowerCase().replace(/\s+/g, '_')],
+    onUpdate: () => {
+      if (refreshItems) refreshItems();
+    },
+    enabled: true
+  });
 
-  const handleEdit = (item: T) => {
-    setCurrentItem(item);
-    setIsEditDialogOpen(true);
+  const handleDelete = async () => {
+    if (!deleteItem) return;
+    
+    setIsDeleting(true);
+    const success = await onDelete(deleteItem.id);
+    setIsDeleting(false);
+    
+    if (success) {
+      setDeleteItem(null);
+    }
   };
-
-  const handleDelete = (item: T) => {
-    setCurrentItem(item);
-    setIsDeleteDialogOpen(true);
-  };
-
+  
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between">
           <div>
-            <CardTitle>{title}</CardTitle>
+            <CardTitle className="text-xl">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
           {canManage && (
             <Button 
-              onClick={() => setIsAddDialogOpen(true)} 
-              size="sm"
+              onClick={() => setAddDialogOpen(true)}
+              variant="outline" 
               className="flex items-center gap-1"
             >
-              <Plus className="h-4 w-4" />
+              <PlusCircle className="h-4 w-4" />
               <span>Add</span>
             </Button>
           )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="text-center py-4">Loading...</div>
-        ) : items.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground">
-            No {title.toLowerCase()} found. Click "Add" to create one.
-          </div>
-        ) : (
-          <div className="border rounded-md">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-2 font-medium">Name</th>
-                  {renderCustomColumns && <th className="text-left p-2 font-medium">Details</th>}
-                  {canManage && <th className="text-right p-2 font-medium">Actions</th>}
-                </tr>
-              </thead>
-              <tbody>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+              <p>No {title.toLowerCase()} found</p>
+              {canManage && (
+                <Button 
+                  onClick={() => setAddDialogOpen(true)} 
+                  variant="ghost" 
+                  className="mt-2"
+                >
+                  Add your first {title.toLowerCase().slice(0, -1)}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  {renderCustomColumns && <TableHead>Details</TableHead>}
+                  {canManage && <TableHead className="text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {items.map((item) => (
-                  <tr key={item.id} className="border-b last:border-0">
-                    <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        {item.color && (
-                          <div
-                            className="h-3 w-3 rounded-full"
-                            style={{ backgroundColor: item.color }}
-                          />
-                        )}
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      {item.color ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span>{item.name}</span>
+                        </div>
+                      ) : (
                         <span>{item.name}</span>
-                      </div>
-                      {item.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {item.description}
-                        </p>
                       )}
-                    </td>
+                    </TableCell>
+                    <TableCell>{item.description || <span className="text-muted-foreground text-sm italic">No description</span>}</TableCell>
                     {renderCustomColumns && (
-                      <td className="p-2">{renderCustomColumns(item)}</td>
+                      <TableCell>
+                        {renderCustomColumns(item)}
+                      </TableCell>
                     )}
                     {canManage && (
-                      <td className="p-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(item)}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setEditItem(item)}
                           >
-                            <Edit className="h-4 w-4" />
+                            Edit
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-600 hover:text-red-600"
-                            onClick={() => handleDelete(item)}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setDeleteItem(item)}
+                            className="text-destructive"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            Delete
                           </Button>
                         </div>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-
-      {/* Add Dialog */}
-      <ConfigItemDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        title={`Add ${title.replace(/s$/, '')}`}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+      
+      <ConfigItemDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen}
+        title={`Add ${title.slice(0, -1)}`}
         onSubmit={onAdd}
-        initialValues={initialValues}
-      >
-        {itemDialogFields}
-      </ConfigItemDialog>
-
-      {/* Edit Dialog */}
-      {currentItem && (
-        <ConfigItemDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          title={`Edit ${title.replace(/s$/, '')}`}
-          onSubmit={(values) => onUpdate(currentItem.id, values)}
-          initialValues={currentItem}
-        >
-          {itemDialogFields}
-        </ConfigItemDialog>
-      )}
-
-      {/* Delete Dialog */}
-      {currentItem && (
-        <ConfirmDeleteDialog
-          open={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          title={`Delete ${title.replace(/s$/, '')}`}
-          description={`Are you sure you want to delete the ${title.toLowerCase().replace(/s$/, '')} "${currentItem.name}"? This action cannot be undone.`}
-          onConfirm={() => onDelete(currentItem.id)}
-        />
-      )}
-    </Card>
+        customFields={itemDialogFields}
+        initialValues={initialValues || {}}
+      />
+      
+      <ConfigItemDialog 
+        open={!!editItem} 
+        onOpenChange={() => setEditItem(null)}
+        title={`Edit ${title.slice(0, -1)}`}
+        onSubmit={(values) => {
+          if (!editItem) return Promise.resolve(null);
+          return onUpdate(editItem.id, values);
+        }}
+        customFields={itemDialogFields}
+        initialValues={editItem || {}}
+      />
+      
+      <ConfirmDeleteDialog
+        open={!!deleteItem}
+        onOpenChange={() => setDeleteItem(null)}
+        isLoading={isDeleting}
+        itemName={deleteItem?.name || ''}
+        itemType={title.slice(0, -1).toLowerCase()}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

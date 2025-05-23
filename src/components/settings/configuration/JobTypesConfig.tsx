@@ -11,7 +11,8 @@ export function JobTypesConfig() {
     addItem,
     updateItem,
     deleteItem,
-    canManage
+    canManage,
+    refreshItems
   } = useJobTypes();
 
   return (
@@ -24,6 +25,7 @@ export function JobTypesConfig() {
       onAdd={addItem}
       onUpdate={updateItem}
       onDelete={deleteItem}
+      refreshItems={refreshItems}
       renderCustomColumns={(type) => (
         <span className="text-sm">
           {type.is_default ? 'Default' : ''}

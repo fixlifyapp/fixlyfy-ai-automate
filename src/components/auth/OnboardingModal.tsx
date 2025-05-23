@@ -64,16 +64,16 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
     setIsLoading(true);
     try {
       // Update the user's profile with custom fields
-      const updates = {
-        referral_source: referralSource,
-        business_niche: businessNiche
-      };
-      
-      const { error: updateError } = await supabase.rpc('update_profile', updates);
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          referral_source: referralSource,
+          business_niche: businessNiche
+        })
+        .eq('id', user.id);
       
       if (updateError) throw updateError;
 
-      // Pass businessNiche directly to fix TypeScript error
       await loadNicheData(businessNiche);
       
       toast.success("Setup complete! Welcome to Fixlyfy!");
