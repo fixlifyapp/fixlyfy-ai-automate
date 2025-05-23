@@ -73,7 +73,7 @@ export interface BusinessMetrics {
       completed: number;
       inProgress: number;
       scheduled: number;
-      lastUpdated: string;
+      lastUpdated?: string; // Made optional with ? since it might not always be present
     };
     revenue: {
       total: number;

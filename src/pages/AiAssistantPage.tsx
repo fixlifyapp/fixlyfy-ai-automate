@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -95,7 +94,7 @@ const AiAssistantPage = () => {
           <CardTitle className="text-base flex items-center">
             <BarChart3 className="mr-2 h-4 w-4" />
             Current Business Metrics
-            {businessData.metrics?.lastUpdated && (
+            {businessData.lastRefreshed && (
               <span className="text-xs ml-auto text-muted-foreground">
                 Last updated: {format(new Date(businessData.lastRefreshed || new Date()), 'MMM d, yyyy')}
               </span>
