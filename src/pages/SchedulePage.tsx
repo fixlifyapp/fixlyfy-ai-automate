@@ -55,8 +55,16 @@ const SchedulePage = () => {
         </div>
       </div>
       
-      {/* Make the main content area full width and put filters above the calendar */}
+      {/* Make the main content area full width */}
       <div className="space-y-4 w-full">
+        {/* Show AI Insights panel when toggled */}
+        {showAIInsights && (
+          <div className="mb-4">
+            <AIInsightsPanel />
+          </div>
+        )}
+        
+        {/* Filters moved below AI Insights */}
         <div className="fixlyfy-card p-4">
           <ScheduleFilters 
             view={view} 
@@ -65,13 +73,6 @@ const SchedulePage = () => {
             onDateChange={handleDateChange}
           />
         </div>
-        
-        {/* Show AI Insights panel above calendar when toggled */}
-        {showAIInsights && (
-          <div className="mb-4">
-            <AIInsightsPanel />
-          </div>
-        )}
         
         <ScheduleCalendar view={view} currentDate={currentDate} />
       </div>
