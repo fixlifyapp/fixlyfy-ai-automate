@@ -63,7 +63,37 @@ export const ConnectSearch = ({ onSearchResults }: ConnectSearchProps) => {
         
         if (jobError) throw jobError;
 
-        // Search phone numbers by area code or partial number
+        // Search for available phone numbers using Twilio API
+        let twilioNumbers: any[] = [];
+        try {
+          const { data: twilioData, error: twilioError } = await supabase.functions.invoke('manage-phone-numbers', {
+            body: { 
+              action: 'search',
+              areaCode: /^\d{3}$/.test(debouncedSearchTerm) ? debouncedSearchTerm : undefined,
+              contains: /^\d+$/.test(debouncedSearchTerm) && debouncedSearchTerm.length > 3 ? debouncedSearchTerm : undefined,
+              locality: !/^\d+$/.test(debouncedSearchTerm) ? debouncedSearchTerm : undefined
+            }
+          });
+
+          if (!twilioError && twilioData?.available_phone_numbers) {
+            twilioNumbers = twilioData.available_phone_numbers.map((num: any) => ({
+              type: 'twilio_number',
+              id: num.phoneNumber,
+              name: `${num.phoneNumber} (${num.locality}, ${num.region})`,
+              phone: num.phoneNumber,
+              sourceId: num.phoneNumber,
+              locality: num.locality,
+              region: num.region,
+              price: num.price,
+              capabilities: num.capabilities
+            }));
+          }
+        } catch (twilioError) {
+          console.warn('Twilio search failed:', twilioError);
+          // Don't throw here, just continue without Twilio results
+        }
+
+        // Search phone numbers in database by area code or partial number
         const { data: phoneData, error: phoneError } = await supabase
           .from('phone_numbers')
           .select('*')
@@ -112,16 +142,16 @@ export const ConnectSearch = ({ onSearchResults }: ConnectSearchProps) => {
           status: phone.status
         }));
 
-        // Combine results, preferring clients with conversations
-        const allResults = [...clientResults, ...conversationResults, ...jobResults, ...phoneResults];
+        // Combine all results including Twilio numbers
+        const allResults = [...clientResults, ...conversationResults, ...jobResults, ...phoneResults, ...twilioNumbers];
         
         // Deduplicate by client id (except for phone numbers which have their own results)
         const uniqueResults = allResults.reduce((acc: any[], current) => {
-          if (current.type === 'phone_number') {
+          if (current.type === 'phone_number' || current.type === 'twilio_number') {
             return acc.concat([current]);
           }
           
-          const x = acc.find(item => item.id === current.id && item.type !== 'phone_number');
+          const x = acc.find(item => item.id === current.id && item.type !== 'phone_number' && item.type !== 'twilio_number');
           if (!x) {
             return acc.concat([current]);
           } else {
@@ -150,7 +180,7 @@ export const ConnectSearch = ({ onSearchResults }: ConnectSearchProps) => {
     <div className="relative flex-1 max-w-md">
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-secondary" size={18} />
       <Input 
-        placeholder="Search clients, phone numbers, jobs..."
+        placeholder="Search clients, phone numbers, or area codes..."
         className="pl-10"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}

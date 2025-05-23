@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,9 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
   useEffect(() => {
     loadOwnedNumbers();
   }, []);
+
+  // Filter search results to show only Twilio numbers
+  const twilioNumbersFromSearch = searchResults.filter(result => result.type === 'twilio_number');
 
   const loadOwnedNumbers = async () => {
     try {
@@ -68,6 +72,8 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
       
       if (data.available_phone_numbers?.length === 0) {
         toast.info('No phone numbers found for your search criteria');
+      } else {
+        toast.success(`Found ${data.available_phone_numbers?.length || 0} available numbers`);
       }
     } catch (error) {
       console.error('Error searching phone numbers:', error);
@@ -125,6 +131,9 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
     return phoneNumber;
   };
 
+  // Combine available numbers from both sources
+  const allAvailableNumbers = [...availableNumbers, ...twilioNumbersFromSearch];
+
   return (
     <div className="space-y-6">
       {/* Search Section */}
@@ -133,7 +142,7 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
         <div className="flex gap-3">
           <div className="flex-1">
             <Input
-              placeholder="Enter area code, city, or partial number..."
+              placeholder="Enter area code (e.g., 415), city (e.g., San Francisco), or partial number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && searchPhoneNumbers()}
@@ -148,14 +157,22 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
             {isSearching ? 'Searching...' : 'Search'}
           </Button>
         </div>
+        <div className="mt-2 text-sm text-gray-600">
+          <p>Try searching by:</p>
+          <ul className="list-disc list-inside ml-2">
+            <li>Area code (3 digits, e.g., "415")</li>
+            <li>City name (e.g., "San Francisco")</li>
+            <li>Partial phone number (e.g., "5551234")</li>
+          </ul>
+        </div>
       </Card>
 
       {/* Available Numbers */}
-      {availableNumbers.length > 0 && (
+      {allAvailableNumbers.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Available Numbers</h3>
+          <h3 className="text-lg font-semibold mb-4">Available Numbers ({allAvailableNumbers.length})</h3>
           <div className="grid gap-4">
-            {availableNumbers.map((number, index) => (
+            {allAvailableNumbers.map((number, index) => (
               <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
@@ -170,8 +187,12 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
                   <div className="flex items-center gap-2 mt-2 text-sm text-fixlyfy-text-secondary">
                     <MapPin size={14} />
                     <span>{number.locality}, {number.region}</span>
-                    <span>•</span>
-                    <span>{number.rateCenter}</span>
+                    {number.rateCenter && (
+                      <>
+                        <span>•</span>
+                        <span>{number.rateCenter}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -196,7 +217,7 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
 
       {/* Owned Numbers */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Your Phone Numbers</h3>
+        <h3 className="text-lg font-semibold mb-4">Your Phone Numbers ({ownedNumbers.length})</h3>
         {ownedNumbers.length === 0 ? (
           <div className="text-center py-8 text-fixlyfy-text-secondary">
             <Phone className="mx-auto h-12 w-12 mb-3" />
