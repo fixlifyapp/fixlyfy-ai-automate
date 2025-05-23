@@ -11,18 +11,11 @@ import { TeamMemberProfile, CommissionRule, CommissionFee } from "@/types/team-m
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { UpdateTeamMemberCommissionParams } from "@/types/database";
 
 interface CommissionsTabProps {
   member: TeamMemberProfile;
   isEditing: boolean;
-}
-
-// Define typing for the RPC function parameters
-interface UpdateTeamMemberCommissionParams {
-  p_user_id: string;
-  p_base_rate: number;
-  p_rules: CommissionRule[];
-  p_fees: CommissionFee[];
 }
 
 export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
@@ -65,14 +58,19 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     setIsSaving(true);
     
     try {
-      // Use RPC function to save commission data with proper parameter naming
-      const { error } = await supabase
-        .rpc('update_team_member_commission', {
-          p_user_id: member.id,
-          p_base_rate: baseRate,
-          p_rules: commissionRules,
-          p_fees: commissionFees
-        });
+      // Prepare the parameters for the RPC function
+      const params: UpdateTeamMemberCommissionParams = {
+        p_user_id: member.id,
+        p_base_rate: baseRate,
+        p_rules: commissionRules,
+        p_fees: commissionFees
+      };
+      
+      // Call the update_team_member_commission RPC function
+      const { error } = await supabase.rpc(
+        'update_team_member_commission', 
+        params
+      );
         
       if (error) throw error;
       
@@ -438,7 +436,7 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
                 <span>{Math.max(0, baseRate - 
                   (commissionFees
                     .filter(fee => fee.deductFromTotal)
-                    .reduce((acc, fee) => acc + fee.value, 0))).toFixed(1)}%</span>
+                    .reduce((acc, fee) => acc + fee.value, 0)).toFixed(1)}%</span>
               </div>
             </div>
             

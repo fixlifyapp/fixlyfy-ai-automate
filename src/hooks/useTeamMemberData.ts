@@ -34,10 +34,7 @@ export const useTeamMemberData = (id: string | undefined) => {
       if (profile) {
         // Use RPC function to get commission data with proper parameter naming
         const { data: commissionData, error: commissionError } = await supabase
-          .rpc('get_team_member_commission', { p_team_member_id: id }) as { 
-            data: TeamMemberCommission[] | null, 
-            error: any 
-          };
+          .rpc('get_team_member_commission', { p_team_member_id: id });
         
         if (commissionError) {
           console.error("Error fetching commission data:", commissionError);
@@ -45,10 +42,7 @@ export const useTeamMemberData = (id: string | undefined) => {
         
         // Use RPC function to get skills with proper parameter naming
         const { data: skillsData, error: skillsError } = await supabase
-          .rpc('get_team_member_skills', { p_team_member_id: id }) as { 
-            data: TeamMemberSkill[] | null, 
-            error: any 
-          };
+          .rpc('get_team_member_skills', { p_team_member_id: id });
         
         if (skillsError) {
           console.error("Error fetching skills data:", skillsError);
@@ -56,10 +50,7 @@ export const useTeamMemberData = (id: string | undefined) => {
         
         // Use RPC function to get service areas with proper parameter naming
         const { data: serviceAreasData, error: serviceAreasError } = await supabase
-          .rpc('get_service_areas', { p_team_member_id: id }) as { 
-            data: ServiceArea[] | null, 
-            error: any 
-          };
+          .rpc('get_service_areas', { p_team_member_id: id });
         
         if (serviceAreasError) {
           console.error("Error fetching service areas data:", serviceAreasError);

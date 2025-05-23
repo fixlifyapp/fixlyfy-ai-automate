@@ -44,3 +44,11 @@ export interface ProfileRow {
   uses_two_factor: boolean | null;
   available_for_jobs: boolean | null;
 }
+
+// This type defines what parameters are expected by the update_team_member_commission RPC function
+export interface UpdateTeamMemberCommissionParams {
+  p_user_id: string;
+  p_base_rate: number;
+  p_rules: any[];
+  p_fees: any[];
+}
