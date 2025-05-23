@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesList } from "@/components/connect/MessagesList";
@@ -9,14 +9,45 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Phone, Mail, Plus } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
+import { useLocation } from "react-router-dom";
+import { MessageDialog } from "@/components/messages/MessageDialog";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("messages");
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<{name: string; phone?: string; id?: string} | null>(null);
+  
+  // Read query parameters to handle direct navigation with a specific client
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const clientId = searchParams.get("clientId");
+  const clientName = searchParams.get("clientName");
+  const clientPhone = searchParams.get("clientPhone");
+  const tabParam = searchParams.get("tab") || "messages";
+  
+  // Set the active tab based on URL parameters
+  useEffect(() => {
+    if (tabParam && ["messages", "calls", "emails"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+  
+  // Handle opening the message dialog if client parameters are provided
+  useEffect(() => {
+    if (clientId && clientName) {
+      setSelectedClient({
+        id: clientId,
+        name: clientName,
+        phone: clientPhone || ""
+      });
+      setIsMessageDialogOpen(true);
+    }
+  }, [clientId, clientName, clientPhone]);
 
   const handleNewCommunication = () => {
     switch (activeTab) {
       case "messages":
-        toast.info("New message feature coming soon");
+        setIsMessageDialogOpen(true);
         break;
       case "calls":
         toast.info("New call feature coming soon");
@@ -47,7 +78,7 @@ const ConnectCenterPage = () => {
         </Button>
       </div>
       
-      <Tabs defaultValue="messages" className="w-full" onValueChange={setActiveTab}>
+      <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
@@ -67,7 +98,7 @@ const ConnectCenterPage = () => {
         </TabsList>
         
         <TabsContent value="messages" className="mt-0">
-          <MessagesList />
+          <MessagesList setOpenMessageDialog={setIsMessageDialogOpen} setSelectedClient={setSelectedClient} />
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">
@@ -78,6 +109,15 @@ const ConnectCenterPage = () => {
           <EmailsList />
         </TabsContent>
       </Tabs>
+      
+      {/* Message Dialog for direct conversations */}
+      {selectedClient && (
+        <MessageDialog
+          open={isMessageDialogOpen}
+          onOpenChange={setIsMessageDialogOpen}
+          client={selectedClient}
+        />
+      )}
     </PageLayout>
   );
 };

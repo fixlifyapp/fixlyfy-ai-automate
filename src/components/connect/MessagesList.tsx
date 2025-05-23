@@ -8,7 +8,12 @@ import { ConversationThread } from "./components/ConversationThread";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const MessagesList = () => {
+interface MessagesListProps {
+  setOpenMessageDialog?: (isOpen: boolean) => void;
+  setSelectedClient?: (client: any) => void;
+}
+
+export const MessagesList = ({ setOpenMessageDialog, setSelectedClient }: MessagesListProps) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   
@@ -16,8 +21,8 @@ export const MessagesList = () => {
     conversations,
     activeConversation,
     isLoading,
-    selectedClient,
-    setSelectedClient,
+    selectedClient: localSelectedClient,
+    setSelectedClient: setLocalSelectedClient,
     handleConversationClick
   } = useConversations();
 
@@ -45,15 +50,19 @@ export const MessagesList = () => {
   }, []);
 
   const handleNewMessageClick = (client: any) => {
-    setSelectedClient(client);
-    setIsMessageDialogOpen(true);
-  };
-
-  // Handle callback after a message is sent in the dialog
-  const handleMessageSent = () => {
-    // Refresh conversations list
-    // The real-time listener in useConversations will handle this
-    setIsMessageDialogOpen(false);
+    // Use the parent component's state setter if provided
+    if (setSelectedClient) {
+      setSelectedClient(client);
+    } else {
+      setLocalSelectedClient(client);
+    }
+    
+    // Use the parent component's dialog opener if provided
+    if (setOpenMessageDialog) {
+      setOpenMessageDialog(true);
+    } else {
+      setIsMessageDialogOpen(true);
+    }
   };
 
   const activeConv = conversations.find(c => c.id === activeConversation);
@@ -83,14 +92,17 @@ export const MessagesList = () => {
         </div>
       </Card>
       
-      <MessageDialog
-        open={isMessageDialogOpen}
-        onOpenChange={setIsMessageDialogOpen}
-        client={selectedClient || {
-          name: "New Client",
-          phone: ""
-        }}
-      />
+      {/* Only render internal dialog if parent doesn't control it */}
+      {!setOpenMessageDialog && (
+        <MessageDialog
+          open={isMessageDialogOpen}
+          onOpenChange={setIsMessageDialogOpen}
+          client={localSelectedClient || {
+            name: "New Client",
+            phone: ""
+          }}
+        />
+      )}
     </div>
   );
 };

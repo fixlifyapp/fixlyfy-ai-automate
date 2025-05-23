@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -103,8 +102,9 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
     toast.info(`Editing ${selectedClients.length} clients`);
   };
 
-  const handleMessageClient = (clientId: string) => {
-    navigate(`/connect/messages?client=${clientId}`);
+  const handleMessageClient = (client: Client) => {
+    // Navigate to Connect Center with query params to open the message dialog for this client
+    navigate(`/connect?tab=messages&clientId=${client.id}&clientName=${encodeURIComponent(client.name)}&clientPhone=${encodeURIComponent(client.phone || '')}`);
   };
 
   const handleExportClients = () => {
@@ -257,8 +257,9 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       className="text-indigo-500 border-indigo-200"
                       onClick={(e) => {
                         e.stopPropagation();
-                        client.id && client.phone && handleMessageClient(client.id);
+                        handleMessageClient(client);
                       }}
+                      title="Message Client"
                     >
                       <MessageSquare size={14} />
                     </Button>
@@ -352,7 +353,7 @@ export const ClientsList = ({ isGridView }: ClientsListProps) => {
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => client.id && client.phone && handleMessageClient(client.id)}
+                        onClick={() => handleMessageClient(client)}
                         title="Message Client"
                       >
                         <MessageSquare size={16} className="text-indigo-500" />
