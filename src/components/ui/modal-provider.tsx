@@ -18,10 +18,7 @@ export type ModalType =
   | "convertToInvoice"
   | "jobDetailsEdit"
   | "callClient"
-  | "messageClient"
-  | "createEstimate"  // Added new type for estimate creation
-  | "createInvoice"   // Added new type for invoice generation
-  | "collectPayment"; // Added new type for payment collection
+  | "messageClient";
 
 // Base props that all modals will have
 export interface BaseModalProps {
