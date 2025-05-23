@@ -81,3 +81,47 @@ export interface BusinessMetrics {
     };
   };
 }
+
+// Phone number related types
+export interface PhoneNumber {
+  id: string;
+  phone_number: string;
+  friendly_name?: string;
+  country_code: string;
+  region?: string;
+  locality?: string;
+  rate_center?: string;
+  latitude?: number;
+  longitude?: number;
+  capabilities: {
+    voice: boolean;
+    sms: boolean;
+    mms: boolean;
+  };
+  phone_number_type: string;
+  price_unit: string;
+  price: number;
+  monthly_price: number;
+  status: 'available' | 'purchased' | 'released';
+  twilio_sid?: string;
+  purchased_by?: string;
+  purchased_at?: string;
+  assigned_to?: string;
+  webhook_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PhoneNumberPurchase {
+  id: string;
+  phone_number_id: string;
+  user_id: string;
+  purchase_price: number;
+  monthly_cost: number;
+  purchase_date: string;
+  status: 'active' | 'cancelled' | 'released';
+  twilio_account_sid?: string;
+  twilio_phone_number_sid?: string;
+  notes?: string;
+  created_at: string;
+}

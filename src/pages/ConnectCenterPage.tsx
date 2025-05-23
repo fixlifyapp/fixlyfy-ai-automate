@@ -5,8 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesList } from "@/components/connect/MessagesList";
 import { CallsList } from "@/components/connect/CallsList";
 import { EmailsList } from "@/components/connect/EmailsList";
+import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
@@ -35,7 +36,7 @@ const ConnectCenterPage = () => {
   
   // Set the active tab based on URL parameters
   useEffect(() => {
-    if (tabParam && ["messages", "calls", "emails"].includes(tabParam)) {
+    if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -99,6 +100,9 @@ const ConnectCenterPage = () => {
       case "emails":
         toast.info("New email feature coming soon");
         break;
+      case "phone-numbers":
+        toast.info("Use the search above to find and purchase phone numbers");
+        break;
     }
   };
 
@@ -108,7 +112,7 @@ const ConnectCenterPage = () => {
         <div>
           <h1 className="text-2xl font-bold">Connect Center</h1>
           <p className="text-fixlyfy-text-secondary">
-            Manage all client communications in one place
+            Manage all client communications and phone numbers in one place
           </p>
         </div>
         <Button 
@@ -119,6 +123,7 @@ const ConnectCenterPage = () => {
           {activeTab === "messages" && "New Message"}
           {activeTab === "calls" && "New Call"}
           {activeTab === "emails" && "New Email"}
+          {activeTab === "phone-numbers" && "Search Numbers"}
         </Button>
       </div>
       
@@ -128,7 +133,7 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-6">
+        <TabsList className="grid grid-cols-4 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
             <span>Messages</span>
@@ -150,6 +155,10 @@ const ConnectCenterPage = () => {
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
+            <PhoneCall size={16} />
+            <span>Phone Numbers</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="messages" className="mt-0">
@@ -166,6 +175,10 @@ const ConnectCenterPage = () => {
         
         <TabsContent value="emails" className="mt-0">
           <EmailsList />
+        </TabsContent>
+        
+        <TabsContent value="phone-numbers" className="mt-0">
+          <PhoneNumbersList searchResults={searchResults} />
         </TabsContent>
       </Tabs>
       

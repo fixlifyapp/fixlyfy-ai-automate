@@ -590,6 +590,131 @@ export type Database = {
           },
         ]
       }
+      phone_number_purchases: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_cost: number
+          notes: string | null
+          phone_number_id: string
+          purchase_date: string
+          purchase_price: number
+          status: string | null
+          twilio_account_sid: string | null
+          twilio_phone_number_sid: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_cost: number
+          notes?: string | null
+          phone_number_id: string
+          purchase_date?: string
+          purchase_price: number
+          status?: string | null
+          twilio_account_sid?: string | null
+          twilio_phone_number_sid?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_cost?: number
+          notes?: string | null
+          phone_number_id?: string
+          purchase_date?: string
+          purchase_price?: number
+          status?: string | null
+          twilio_account_sid?: string | null
+          twilio_phone_number_sid?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_number_purchases_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_numbers: {
+        Row: {
+          assigned_to: string | null
+          capabilities: Json | null
+          country_code: string
+          created_at: string
+          friendly_name: string | null
+          id: string
+          latitude: number | null
+          locality: string | null
+          longitude: number | null
+          monthly_price: number | null
+          phone_number: string
+          phone_number_type: string | null
+          price: number | null
+          price_unit: string | null
+          purchased_at: string | null
+          purchased_by: string | null
+          rate_center: string | null
+          region: string | null
+          status: string | null
+          twilio_sid: string | null
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          capabilities?: Json | null
+          country_code?: string
+          created_at?: string
+          friendly_name?: string | null
+          id?: string
+          latitude?: number | null
+          locality?: string | null
+          longitude?: number | null
+          monthly_price?: number | null
+          phone_number: string
+          phone_number_type?: string | null
+          price?: number | null
+          price_unit?: string | null
+          purchased_at?: string | null
+          purchased_by?: string | null
+          rate_center?: string | null
+          region?: string | null
+          status?: string | null
+          twilio_sid?: string | null
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          capabilities?: Json | null
+          country_code?: string
+          created_at?: string
+          friendly_name?: string | null
+          id?: string
+          latitude?: number | null
+          locality?: string | null
+          longitude?: number | null
+          monthly_price?: number | null
+          phone_number?: string
+          phone_number_type?: string | null
+          price?: number | null
+          price_unit?: string | null
+          purchased_at?: string | null
+          purchased_by?: string | null
+          rate_center?: string | null
+          region?: string | null
+          status?: string | null
+          twilio_sid?: string | null
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string

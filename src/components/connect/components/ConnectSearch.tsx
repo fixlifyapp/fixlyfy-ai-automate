@@ -62,6 +62,15 @@ export const ConnectSearch = ({ onSearchResults }: ConnectSearchProps) => {
           .limit(10);
         
         if (jobError) throw jobError;
+
+        // Search phone numbers by area code or partial number
+        const { data: phoneData, error: phoneError } = await supabase
+          .from('phone_numbers')
+          .select('*')
+          .or(`phone_number.ilike.%${debouncedSearchTerm}%,region.ilike.%${debouncedSearchTerm}%,locality.ilike.%${debouncedSearchTerm}%`)
+          .limit(10);
+        
+        if (phoneError) throw phoneError;
         
         // Combine and deduplicate results
         const clientResults = clientData.map(client => ({
@@ -94,12 +103,25 @@ export const ConnectSearch = ({ onSearchResults }: ConnectSearchProps) => {
           jobTitle: job.title
         }));
 
+        const phoneResults = phoneData.map(phone => ({
+          type: 'phone_number',
+          id: phone.id,
+          name: `${phone.phone_number} (${phone.locality}, ${phone.region})`,
+          phone: phone.phone_number,
+          sourceId: phone.id,
+          status: phone.status
+        }));
+
         // Combine results, preferring clients with conversations
-        const allResults = [...clientResults, ...conversationResults, ...jobResults];
+        const allResults = [...clientResults, ...conversationResults, ...jobResults, ...phoneResults];
         
-        // Deduplicate by client id
+        // Deduplicate by client id (except for phone numbers which have their own results)
         const uniqueResults = allResults.reduce((acc: any[], current) => {
-          const x = acc.find(item => item.id === current.id);
+          if (current.type === 'phone_number') {
+            return acc.concat([current]);
+          }
+          
+          const x = acc.find(item => item.id === current.id && item.type !== 'phone_number');
           if (!x) {
             return acc.concat([current]);
           } else {
