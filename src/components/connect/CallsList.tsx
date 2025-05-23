@@ -29,6 +29,28 @@ interface Call {
 export const CallsList = () => {
   const [calls, setCalls] = useState<Call[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCallInitiating, setIsCallInitiating] = useState(false);
+  const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
+  
+  // Fetch available owned phone numbers
+  useEffect(() => {
+    const fetchOwnedNumbers = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
+          body: { action: 'list-owned' }
+        });
+
+        if (error) throw error;
+        if (data.phone_numbers && data.phone_numbers.length > 0) {
+          setSelectedFromNumber(data.phone_numbers[0].phone_number);
+        }
+      } catch (error) {
+        console.error('Error loading owned numbers:', error);
+      }
+    };
+
+    fetchOwnedNumbers();
+  }, []);
 
   const fetchCalls = async () => {
     try {
@@ -70,8 +92,36 @@ export const CallsList = () => {
     enabled: true
   });
 
-  const handleCall = (phoneNumber: string) => {
-    toast.info(`Initiating call to ${phoneNumber}...`);
+  const handleCall = async (phoneNumber: string) => {
+    if (!selectedFromNumber) {
+      toast.error("No phone number available to make calls. Please purchase a phone number first.");
+      return;
+    }
+
+    setIsCallInitiating(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('twilio-calls', {
+        body: {
+          action: 'initiate',
+          fromNumber: selectedFromNumber,
+          toNumber: phoneNumber
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`Call initiated to ${phoneNumber}`);
+      } else {
+        throw new Error("Failed to initiate call");
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      toast.error('Failed to initiate call');
+    } finally {
+      setIsCallInitiating(false);
+    }
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -130,8 +180,9 @@ export const CallsList = () => {
                   size="icon"
                   className="h-8 w-8 text-fixlyfy"
                   onClick={() => handleCall(call.phone_number)}
+                  disabled={isCallInitiating || !selectedFromNumber}
                 >
-                  <Phone size={16} />
+                  {isCallInitiating ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />}
                 </Button>
               </div>
             ))}
