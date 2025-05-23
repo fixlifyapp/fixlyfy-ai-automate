@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -5,7 +6,7 @@ import { TeamMemberProfile, CommissionRule, CommissionFee } from "@/types/team-m
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { UpdateTeamMemberCommissionParams, DatabaseFunctions } from "@/types/database";
+import { UpdateTeamMemberCommissionParams } from "@/types/database";
 import { BaseRateSection } from "./commission/BaseRateSection";
 import { CommissionRulesSection } from "./commission/CommissionRulesSection";
 import { FeesSection } from "./commission/FeesSection";

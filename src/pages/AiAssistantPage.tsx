@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { useAI } from "@/hooks/use-ai";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BusinessMetrics } from "@/types/database";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Message = {
   id: number;
@@ -34,6 +36,7 @@ const AiAssistantPage = () => {
     mode: "business",
     forceRefresh: false
   });
+  const isMobile = useIsMobile();
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -95,7 +98,7 @@ const AiAssistantPage = () => {
             <BarChart3 className="mr-2 h-4 w-4" />
             Current Business Metrics
             {businessData.lastRefreshed && (
-              <span className="text-xs ml-auto text-muted-foreground">
+              <span className="text-xs ml-auto text-muted-foreground truncate">
                 Last updated: {format(new Date(businessData.lastRefreshed || new Date()), 'MMM d, yyyy')}
               </span>
             )}
@@ -171,27 +174,28 @@ const AiAssistantPage = () => {
                   <div 
                     key={message.id} 
                     className={cn(
-                      "flex gap-3 max-w-3xl",
-                      message.role === "user" && "justify-end ml-auto"
+                      "flex gap-3 max-w-full",
+                      message.role === "user" ? "justify-end ml-auto" : ""
                     )}
                   >
                     {message.role === "assistant" && (
-                      <Avatar className="h-8 w-8 mt-1">
+                      <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
                         <AvatarFallback className="bg-fixlyfy text-white">AI</AvatarFallback>
                       </Avatar>
                     )}
                     <div 
                       className={cn(
-                        "px-4 py-3 rounded-lg",
+                        "px-4 py-3 rounded-lg break-words",
                         message.role === "assistant" 
                           ? "bg-fixlyfy-bg-interface text-fixlyfy-text border border-fixlyfy/10" 
-                          : "bg-fixlyfy text-white"
+                          : "bg-fixlyfy text-white",
+                        isMobile ? "max-w-[75%]" : "max-w-[85%]"
                       )}
                     >
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     </div>
                     {message.role === "user" && (
-                      <Avatar className="h-8 w-8 mt-1">
+                      <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
                         <AvatarImage src="https://github.com/shadcn.png" />
                         <AvatarFallback>TC</AvatarFallback>
                       </Avatar>
@@ -251,7 +255,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                What is my total revenue?
+                <span className="truncate">What is my total revenue?</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -261,7 +265,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                How many clients do I have?
+                <span className="truncate">How many clients do I have?</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -271,7 +275,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                What are my most profitable services?
+                <span className="truncate">What are my most profitable services?</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -281,7 +285,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                Show me the performance of my technicians
+                <span className="truncate">Show me the performance of my technicians</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -291,7 +295,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                What is my business analytics summary?
+                <span className="truncate">What is my business analytics summary?</span>
               </Button>
             </CardContent>
           </Card>
