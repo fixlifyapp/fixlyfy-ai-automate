@@ -121,7 +121,12 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
     }
   };
 
-  const formatPhoneNumber = (phoneNumber: string) => {
+  const formatPhoneNumber = (phoneNumber: string | undefined) => {
+    // Handle undefined or null phone numbers
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
+      return 'N/A';
+    }
+    
     // Format +1XXXXXXXXXX to (XXX) XXX-XXXX
     const cleaned = phoneNumber.replace(/\D/g, '');
     if (cleaned.length === 11 && cleaned.startsWith('1')) {
@@ -172,45 +177,51 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Available Numbers ({allAvailableNumbers.length})</h3>
           <div className="grid gap-4">
-            {allAvailableNumbers.map((number, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <Phone size={16} className="text-fixlyfy" />
-                    <span className="font-medium">{formatPhoneNumber(number.phoneNumber)}</span>
-                    <div className="flex gap-2">
-                      {number.capabilities?.voice && <Badge variant="outline">Voice</Badge>}
-                      {number.capabilities?.SMS && <Badge variant="outline">SMS</Badge>}
-                      {number.capabilities?.MMS && <Badge variant="outline">MMS</Badge>}
+            {allAvailableNumbers.map((number, index) => {
+              // Safely get the phone number - handle both phoneNumber and phone properties
+              const phoneNum = number.phoneNumber || number.phone;
+              const formattedPhone = formatPhoneNumber(phoneNum);
+              
+              return (
+                <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <Phone size={16} className="text-fixlyfy" />
+                      <span className="font-medium">{formattedPhone}</span>
+                      <div className="flex gap-2">
+                        {number.capabilities?.voice && <Badge variant="outline">Voice</Badge>}
+                        {number.capabilities?.SMS && <Badge variant="outline">SMS</Badge>}
+                        {number.capabilities?.MMS && <Badge variant="outline">MMS</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 text-sm text-fixlyfy-text-secondary">
+                      <MapPin size={14} />
+                      <span>{number.locality || 'Unknown'}, {number.region || 'Unknown'}</span>
+                      {number.rateCenter && (
+                        <>
+                          <span>•</span>
+                          <span>{number.rateCenter}</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-2 text-sm text-fixlyfy-text-secondary">
-                    <MapPin size={14} />
-                    <span>{number.locality}, {number.region}</span>
-                    {number.rateCenter && (
-                      <>
-                        <span>•</span>
-                        <span>{number.rateCenter}</span>
-                      </>
-                    )}
+                  <div className="text-right">
+                    <div className="text-sm text-fixlyfy-text-secondary mb-2">
+                      ${number.price || '0.00'} setup + $1.00/month
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => purchasePhoneNumber(phoneNum)}
+                      disabled={isPurchasing === phoneNum || !phoneNum}
+                      className="bg-fixlyfy hover:bg-fixlyfy/90"
+                    >
+                      <ShoppingCart size={14} className="mr-1" />
+                      {isPurchasing === phoneNum ? 'Purchasing...' : 'Purchase'}
+                    </Button>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-fixlyfy-text-secondary mb-2">
-                    ${number.price} setup + $1.00/month
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => purchasePhoneNumber(number.phoneNumber)}
-                    disabled={isPurchasing === number.phoneNumber}
-                    className="bg-fixlyfy hover:bg-fixlyfy/90"
-                  >
-                    <ShoppingCart size={14} className="mr-1" />
-                    {isPurchasing === number.phoneNumber ? 'Purchasing...' : 'Purchase'}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
@@ -241,7 +252,7 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
                   </div>
                   <div className="flex items-center gap-2 mt-2 text-sm text-fixlyfy-text-secondary">
                     <MapPin size={14} />
-                    <span>{number.locality}, {number.region}</span>
+                    <span>{number.locality || 'Unknown'}, {number.region || 'Unknown'}</span>
                     <span>•</span>
                     <span>Purchased: {new Date(number.purchased_at!).toLocaleDateString()}</span>
                   </div>
