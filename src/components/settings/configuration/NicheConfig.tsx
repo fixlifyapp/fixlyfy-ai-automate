@@ -65,7 +65,7 @@ export function NicheConfig({ userId }: NicheConfigProps) {
     
     setIsSwitching(true);
     try {
-      // TypeScript fix: Pass userId as first parameter and selectedNiche as second
+      // Fix: Pass userId as string and selectedNiche as string
       await switchNiche(selectedNiche, userId);
       setCurrentNiche(selectedNiche);
     } finally {

@@ -79,7 +79,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       
       if (updateError) throw updateError;
 
-      // Load data for the selected niche
+      // Fix: Pass businessNiche as string to loadNicheData
       await loadNicheData(businessNiche);
       
       toast.success("Setup complete! Welcome to Fixlyfy!");
