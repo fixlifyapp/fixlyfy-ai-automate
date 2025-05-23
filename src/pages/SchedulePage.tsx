@@ -49,12 +49,14 @@ const SchedulePage = () => {
         </div>
       </div>
       
-      <div className="fixlyfy-card p-4 mb-6">
-        <ScheduleFilters view={view} onViewChange={handleViewChange} />
-      </div>
-      
+      {/* Place filters directly above calendar in the main content area */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-6">
-        <ScheduleCalendar view={view} />
+        <div className="space-y-4">
+          <div className="fixlyfy-card p-4">
+            <ScheduleFilters view={view} onViewChange={handleViewChange} />
+          </div>
+          <ScheduleCalendar view={view} />
+        </div>
         {showAIInsights && <AIInsightsPanel />}
       </div>
       
