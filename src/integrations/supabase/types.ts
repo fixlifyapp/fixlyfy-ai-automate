@@ -960,6 +960,10 @@ export type Database = {
           name: string
         }[]
       }
+      update_team_member_commission: {
+        Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

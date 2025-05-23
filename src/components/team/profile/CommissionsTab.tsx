@@ -61,9 +61,10 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
         fees: commissionFees
       };
       
-      // Call the update_team_member_commission RPC function with proper typing
+      // Use a type assertion to work around the TypeScript error
+      // This is temporary until Supabase types are updated
       const { error } = await supabase.rpc(
-        "update_team_member_commission",
+        "update_team_member_commission" as any,
         params
       );
         
