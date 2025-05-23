@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("general");
   
   return (
     <PageLayout>
@@ -43,25 +44,24 @@ const SettingsPage = () => {
           </Link>
         </PermissionRequired>
         
-        <Card className="h-full hover:shadow-md transition-shadow">
+        <Card 
+          className="h-full hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => setActiveTab("configuration")}
+        >
           <CardContent className="flex items-center p-6 space-x-4">
             <div className="bg-fixlyfy/10 p-3 rounded-full">
               <Settings2 className="h-6 w-6 text-fixlyfy" />
             </div>
             <div>
-              <h3 className="font-medium">Business Niche</h3>
-              <p className="text-sm text-muted-foreground">Configure your business specialization</p>
+              <h3 className="font-medium">Configuration</h3>
+              <p className="text-sm text-muted-foreground">Manage business niche and other settings</p>
             </div>
           </CardContent>
         </Card>
       </div>
       
-      <div className="mb-6">
-        <NicheConfig userId={user?.id} />
-      </div>
-      
       <div className="fixlyfy-card overflow-hidden">
-        <Tabs defaultValue="general" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
