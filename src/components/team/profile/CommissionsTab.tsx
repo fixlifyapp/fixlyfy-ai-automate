@@ -9,6 +9,7 @@ import { useRBAC } from "@/components/auth/RBACProvider";
 import { BaseRateSection } from "./commission/BaseRateSection";
 import { CommissionRulesSection } from "./commission/CommissionRulesSection";
 import { FeesSection } from "./commission/FeesSection";
+import { UpdateTeamMemberCommissionParams } from "@/types/database";
 
 interface CommissionsTabProps {
   member: TeamMemberProfile;
@@ -53,7 +54,7 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
     
     try {
       // Prepare the parameters for the RPC function
-      const params = {
+      const params: UpdateTeamMemberCommissionParams = {
         user_id: member.id,
         base_rate: baseRate,
         rules: commissionRules,
