@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { OnboardingModal } from "@/components/auth/OnboardingModal";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -15,6 +17,8 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [authTab, setAuthTab] = useState("login");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // Set session expiry to 7 days (in seconds)
   const SESSION_EXPIRY = 60 * 60 * 24 * 7; // 7 days in seconds
@@ -24,8 +28,6 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
-      // Correctly structure the signInWithPassword call
-      // The session configuration goes at the top level, not inside options
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -84,10 +86,9 @@ export default function AuthPage() {
           });
           setAuthTab("login");
         } else {
-          toast.success("Account created successfully", {
-            description: "You are now signed in."
-          });
-          navigate('/dashboard');
+          toast.success("Account created successfully");
+          setIsNewUser(true);
+          setShowOnboarding(true);
         }
       }
     } catch (error: any) {
@@ -207,6 +208,12 @@ export default function AuthPage() {
           </p>
         </CardFooter>
       </Card>
+
+      {/* Onboarding Modal for new users */}
+      <OnboardingModal 
+        open={showOnboarding} 
+        onOpenChange={setShowOnboarding} 
+      />
     </div>
   );
 }
