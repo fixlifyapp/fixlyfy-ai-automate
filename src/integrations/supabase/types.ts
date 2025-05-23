@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      calls: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          direction: string
+          duration: string | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          phone_number: string
+          started_at: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          direction: string
+          duration?: string | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          phone_number: string
+          started_at?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          direction?: string
+          duration?: string | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          phone_number?: string
+          started_at?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -152,6 +202,59 @@ export type Database = {
           required?: boolean | null
         }
         Relationships: []
+      }
+      emails: {
+        Row: {
+          body: string | null
+          client_id: string | null
+          created_at: string
+          direction: string
+          email_address: string
+          id: string
+          is_read: boolean | null
+          is_starred: boolean | null
+          status: string | null
+          subject: string
+          thread_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          client_id?: string | null
+          created_at?: string
+          direction: string
+          email_address: string
+          id?: string
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          status?: string | null
+          subject: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          client_id?: string | null
+          created_at?: string
+          direction?: string
+          email_address?: string
+          id?: string
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          status?: string | null
+          subject?: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       estimates: {
         Row: {

@@ -2,53 +2,73 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Loader2, PhoneOutgoing, PhoneIncoming, PhoneMissed } from "lucide-react";
-import { clients } from "@/data/clients";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface Call {
   id: string;
-  clientId: string;
-  clientName: string;
-  phoneNumber: string;
-  duration: string;
-  timestamp: string;
+  client_id: string | null;
+  phone_number: string;
   direction: "incoming" | "outgoing" | "missed";
+  duration: string | null;
+  status: string | null;
+  started_at: string;
+  ended_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  clients?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export const CallsList = () => {
   const [calls, setCalls] = useState<Call[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Simulate API call delay
-    setTimeout(() => {
-      // Generate mock call data
-      const mockCalls: Call[] = [];
-      for (let i = 0; i < 10; i++) {
-        const client = clients[i % clients.length];
-        const direction = i % 3 === 0 ? "incoming" : i % 3 === 1 ? "outgoing" : "missed";
-        const duration = direction === "missed" ? "0:00" : `${Math.floor(Math.random() * 30)}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
-        
-        mockCalls.push({
-          id: `call-${i}`,
-          clientId: client.id,
-          clientName: client.name,
-          phoneNumber: client.phone || "(555) 000-0000",
-          duration: duration,
-          timestamp: new Date(Date.now() - i * 3600000 * (Math.random() * 5 + 1)).toLocaleString(),
-          direction: direction
-        });
-      }
-      setCalls(mockCalls);
+  const fetchCalls = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('calls')
+        .select(`
+          *,
+          clients:client_id(id, name)
+        `)
+        .order('started_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setCalls(data || []);
+    } catch (error) {
+      console.error("Error fetching calls:", error);
+      toast.error("Failed to load calls");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    fetchCalls();
   }, []);
+
+  // Set up real-time sync for calls
+  useRealtimeSync({
+    tables: ['calls'],
+    onUpdate: fetchCalls,
+    enabled: true
+  });
 
   const handleCall = (phoneNumber: string) => {
     toast.info(`Initiating call to ${phoneNumber}...`);
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString();
   };
 
   return (
@@ -60,6 +80,10 @@ export const CallsList = () => {
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 size={24} className="animate-spin text-fixlyfy" />
+          </div>
+        ) : calls.length === 0 ? (
+          <div className="text-center py-8 text-fixlyfy-text-secondary">
+            No calls found
           </div>
         ) : (
           <div className="divide-y divide-fixlyfy-border">
@@ -76,8 +100,10 @@ export const CallsList = () => {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-medium">{call.clientName}</h3>
-                    <p className="text-sm text-fixlyfy-text-secondary">{call.phoneNumber}</p>
+                    <h3 className="font-medium">
+                      {call.clients?.name || "Unknown Contact"}
+                    </h3>
+                    <p className="text-sm text-fixlyfy-text-secondary">{call.phone_number}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -85,16 +111,18 @@ export const CallsList = () => {
                     {call.direction === "missed" ? (
                       <Badge variant="destructive">Missed</Badge>
                     ) : (
-                      call.duration
+                      call.duration || "Unknown"
                     )}
                   </p>
-                  <p className="text-xs text-fixlyfy-text-secondary">{call.timestamp}</p>
+                  <p className="text-xs text-fixlyfy-text-secondary">
+                    {formatTimestamp(call.started_at)}
+                  </p>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="icon"
                   className="h-8 w-8 text-fixlyfy"
-                  onClick={() => handleCall(call.phoneNumber)}
+                  onClick={() => handleCall(call.phone_number)}
                 >
                   <Phone size={16} />
                 </Button>
