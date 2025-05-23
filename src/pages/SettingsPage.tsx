@@ -6,22 +6,17 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsConfiguration } from "@/components/settings/SettingsConfiguration";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
-import { UsersRound, Settings2 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { Settings, UserPlus, Users, UsersRound, Tags, Settings2 } from "lucide-react";
 import { NicheConfig } from "@/components/settings/configuration/NicheConfig";
-import { TagsConfig } from "@/components/settings/configuration/TagsConfig";
-import { JobTypesConfig } from "@/components/settings/configuration/JobTypesConfig";
-import { JobStatusesConfig } from "@/components/settings/configuration/JobStatusesConfig";
-import { CustomFieldsConfig } from "@/components/settings/configuration/CustomFieldsConfig";
-import { LeadSourcesConfig } from "@/components/settings/configuration/LeadSourcesConfig";
+import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("general");
-  const [configActiveTab, setConfigActiveTab] = useState("niche");
   
   return (
     <PageLayout>
@@ -49,54 +44,18 @@ const SettingsPage = () => {
           </Link>
         </PermissionRequired>
         
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle className="text-lg">Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Tabs value={configActiveTab} onValueChange={setConfigActiveTab}>
-              <TabsList className="w-full justify-start px-6 border-b rounded-none bg-transparent h-12">
-                <TabsTrigger value="niche" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy rounded-none h-12">
-                  Business Niche
-                </TabsTrigger>
-                <TabsTrigger value="tags" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy rounded-none h-12">
-                  Tags
-                </TabsTrigger>
-                <TabsTrigger value="job-types" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy rounded-none h-12">
-                  Job Types
-                </TabsTrigger>
-                <TabsTrigger value="job-statuses" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy rounded-none h-12">
-                  Job Statuses
-                </TabsTrigger>
-                <TabsTrigger value="custom-fields" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy rounded-none h-12">
-                  Custom Fields
-                </TabsTrigger>
-                <TabsTrigger value="lead-sources" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy rounded-none h-12">
-                  Lead Sources
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="p-6">
-                <TabsContent value="niche" className="mt-0 p-0">
-                  <NicheConfig userId={user?.id} />
-                </TabsContent>
-                <TabsContent value="tags" className="mt-0 p-0">
-                  <TagsConfig />
-                </TabsContent>
-                <TabsContent value="job-types" className="mt-0 p-0">
-                  <JobTypesConfig />
-                </TabsContent>
-                <TabsContent value="job-statuses" className="mt-0 p-0">
-                  <JobStatusesConfig />
-                </TabsContent>
-                <TabsContent value="custom-fields" className="mt-0 p-0">
-                  <CustomFieldsConfig />
-                </TabsContent>
-                <TabsContent value="lead-sources" className="mt-0 p-0">
-                  <LeadSourcesConfig />
-                </TabsContent>
-              </div>
-            </Tabs>
+        <Card 
+          className="h-full hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => setActiveTab("configuration")}
+        >
+          <CardContent className="flex items-center p-6 space-x-4">
+            <div className="bg-fixlyfy/10 p-3 rounded-full">
+              <Settings2 className="h-6 w-6 text-fixlyfy" />
+            </div>
+            <div>
+              <h3 className="font-medium">Configuration</h3>
+              <p className="text-sm text-muted-foreground">Manage business niche and other settings</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -149,9 +108,7 @@ const SettingsPage = () => {
           </TabsContent>
           
           <TabsContent value="configuration" className="p-6">
-            <div className="text-center py-4 text-muted-foreground">
-              Configuration options have been moved to the top of this page.
-            </div>
+            <SettingsConfiguration />
           </TabsContent>
           
           <TabsContent value="integrations" className="p-6">

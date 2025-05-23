@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { applianceRepairProducts } from "@/data/appliance-repair-products";
+import { generateTestJobs } from "@/utils/test-data/job-generator";
 
 // Tags for different niches
 const nicheTags = {
@@ -308,7 +309,6 @@ export const switchNiche = async (niche: string, userId: string) => {
       business_niche: niche
     };
     
-    // Fix: Updated the parameter order to match the expected types
     const { error: updateError } = await supabase.rpc('update_profile', updates);
 
     if (updateError) throw updateError;

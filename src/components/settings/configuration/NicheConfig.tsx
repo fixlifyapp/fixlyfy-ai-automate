@@ -65,7 +65,6 @@ export function NicheConfig({ userId }: NicheConfigProps) {
     
     setIsSwitching(true);
     try {
-      // Fix: Pass userId as string and selectedNiche as string
       await switchNiche(selectedNiche, userId);
       setCurrentNiche(selectedNiche);
     } finally {
@@ -74,61 +73,70 @@ export function NicheConfig({ userId }: NicheConfigProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {isLoading ? (
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Important</AlertTitle>
-            <AlertDescription>
-              Switching your business niche will reload the page and may affect your existing data.
-              You can switch back at any time.
-            </AlertDescription>
-          </Alert>
-
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium mb-2">Current business niche:</h3>
-              <div className="px-4 py-2 bg-muted rounded-md">
-                {businessNiches.find(n => n.id === currentNiche)?.label || "Not set"}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">Select new business niche:</h3>
-              <RadioGroup 
-                value={selectedNiche} 
-                onValueChange={setSelectedNiche} 
-                className="space-y-3"
-              >
-                {businessNiches.map((niche) => (
-                  <div key={niche.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={niche.id} id={`niche-${niche.id}`} />
-                    <Label htmlFor={`niche-${niche.id}`}>{niche.label}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            
-            <Button 
-              onClick={handleSwitchNiche} 
-              disabled={isSwitching || selectedNiche === currentNiche || !selectedNiche}
-              className="mt-4"
-            >
-              {isSwitching ? (
-                <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  Switching...
-                </>
-              ) : "Switch Business Niche"}
-            </Button>
+    <Card>
+      <CardHeader>
+        <CardTitle>Business Niche</CardTitle>
+        <CardDescription>
+          Select your business niche to customize the application with appropriate products, 
+          job types, and other settings specific to your industry.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        </>
-      )}
-    </div>
+        ) : (
+          <>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Important</AlertTitle>
+              <AlertDescription>
+                Switching your business niche will reload the page and may affect your existing data.
+                You can switch back at any time.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium mb-2">Current business niche:</h3>
+                <div className="px-4 py-2 bg-muted rounded-md">
+                  {businessNiches.find(n => n.id === currentNiche)?.label || "Not set"}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium mb-2">Select new business niche:</h3>
+                <RadioGroup 
+                  value={selectedNiche} 
+                  onValueChange={setSelectedNiche} 
+                  className="space-y-3"
+                >
+                  {businessNiches.map((niche) => (
+                    <div key={niche.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={niche.id} id={`niche-${niche.id}`} />
+                      <Label htmlFor={`niche-${niche.id}`}>{niche.label}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              
+              <Button 
+                onClick={handleSwitchNiche} 
+                disabled={isSwitching || selectedNiche === currentNiche || !selectedNiche}
+                className="mt-4"
+              >
+                {isSwitching ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Switching...
+                  </>
+                ) : "Switch Business Niche"}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -34,12 +34,6 @@ interface OnboardingModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface UpdateProfileParams {
-  referral_source: string;
-  business_niche: string;
-  [key: string]: string;
-}
-
 export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
   const [step, setStep] = useState(1);
   const [referralSource, setReferralSource] = useState("");
@@ -70,7 +64,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
     setIsLoading(true);
     try {
       // Update the user's profile with custom fields
-      const updates: UpdateProfileParams = {
+      const updates = {
         referral_source: referralSource,
         business_niche: businessNiche
       };
@@ -79,7 +73,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       
       if (updateError) throw updateError;
 
-      // Fix: Pass businessNiche as string to loadNicheData
+      // Load data for the selected niche
       await loadNicheData(businessNiche);
       
       toast.success("Setup complete! Welcome to Fixlyfy!");
