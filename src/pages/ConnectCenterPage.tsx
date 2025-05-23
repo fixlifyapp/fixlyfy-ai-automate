@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +13,8 @@ import { useLocation } from "react-router-dom";
 import { MessageDialog } from "@/components/messages/MessageDialog";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
+import { CallingInterface } from "@/components/connect/CallingInterface";
+import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("messages");
@@ -25,7 +26,8 @@ const ConnectCenterPage = () => {
     calls: 0,
     emails: 0
   });
-  
+  const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
+
   // Read query parameters to handle direct navigation with a specific client
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -52,6 +54,24 @@ const ConnectCenterPage = () => {
       setIsMessageDialogOpen(true);
     }
   }, [clientId, clientName, clientPhone]);
+
+  // Load owned phone numbers
+  useEffect(() => {
+    const loadOwnedNumbers = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
+          body: { action: 'list-owned' }
+        });
+
+        if (error) throw error;
+        setOwnedNumbers(data.phone_numbers || []);
+      } catch (error) {
+        console.error('Error loading owned numbers:', error);
+      }
+    };
+
+    loadOwnedNumbers();
+  }, []);
 
   // Fetch unread counts
   useEffect(() => {
@@ -108,6 +128,9 @@ const ConnectCenterPage = () => {
 
   return (
     <PageLayout>
+      {/* Incoming call handler - shows when there's an incoming call */}
+      <IncomingCallHandler />
+      
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Connect Center</h1>
@@ -170,7 +193,12 @@ const ConnectCenterPage = () => {
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">
-          <CallsList />
+          <div className="space-y-6">
+            {ownedNumbers.length > 0 && (
+              <CallingInterface ownedNumbers={ownedNumbers} />
+            )}
+            <CallsList />
+          </div>
         </TabsContent>
         
         <TabsContent value="emails" className="mt-0">
