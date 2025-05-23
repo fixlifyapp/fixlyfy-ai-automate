@@ -8,17 +8,16 @@ import { ConversationThread } from "./components/ConversationThread";
 import { useRealTimeMessaging } from "./hooks/useRealTimeMessaging";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ConnectSearch } from "./components/ConnectSearch";
 
 interface MessagesListProps {
   setOpenMessageDialog?: (isOpen: boolean) => void;
   setSelectedClient?: (client: any) => void;
+  searchResults?: any[];
 }
 
-export const MessagesList = ({ setOpenMessageDialog, setSelectedClient }: MessagesListProps) => {
+export const MessagesList = ({ setOpenMessageDialog, setSelectedClient, searchResults = [] }: MessagesListProps) => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   
   const {
     conversations,
@@ -103,9 +102,6 @@ export const MessagesList = ({ setOpenMessageDialog, setSelectedClient }: Messag
 
   return (
     <div className="space-y-4">
-      {/* Search Component */}
-      <ConnectSearch onSearchResults={setSearchResults} />
-      
       {/* Search Results Information */}
       {searchResults.length > 0 && (
         <div className="text-sm text-fixlyfy-text-secondary">

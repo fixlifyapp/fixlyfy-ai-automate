@@ -153,7 +153,11 @@ const ConnectCenterPage = () => {
         </TabsList>
         
         <TabsContent value="messages" className="mt-0">
-          <MessagesList setOpenMessageDialog={setIsMessageDialogOpen} setSelectedClient={setSelectedClient} />
+          <MessagesList 
+            setOpenMessageDialog={setIsMessageDialogOpen} 
+            setSelectedClient={setSelectedClient}
+            searchResults={searchResults}
+          />
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">
