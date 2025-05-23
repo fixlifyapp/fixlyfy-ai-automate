@@ -28,6 +28,7 @@ import FinancePage from "./pages/FinancePage";
 import AiAssistantPage from "./pages/AiAssistantPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import ConfigurationPage from "./pages/ConfigurationPage";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,7 @@ const App = () => (
                     <AiAssistantPage />
                   </ProtectedRoute>
                 } />
+                <Route path="/configuration" element={<ConfigurationPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

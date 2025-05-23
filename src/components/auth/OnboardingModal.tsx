@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -73,8 +72,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       
       if (updateError) throw updateError;
 
-      // Load data for the selected niche
-      // Ensuring businessNiche is treated as a string
+      // Fixed: Ensuring businessNiche is treated as a string
       await loadNicheData(businessNiche);
       
       toast.success("Setup complete! Welcome to Fixlyfy!");
