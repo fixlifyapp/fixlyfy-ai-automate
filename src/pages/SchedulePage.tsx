@@ -4,8 +4,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
 import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, ChevronLeft } from "lucide-react";
-import { TechnicianSidebar } from "@/components/schedule/TechnicianSidebar";
+import { Plus, Calendar } from "lucide-react";
 import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 
@@ -38,41 +37,10 @@ const SchedulePage = () => {
       </div>
       
       <div className="fixlyfy-card p-4 mb-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <ScheduleFilters view={view} onViewChange={setView} />
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-md border border-fixlyfy-border">
-              <Button
-                variant={view === 'day' ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setView('day')}
-                className="rounded-r-none border-r border-fixlyfy-border"
-              >
-                Day
-              </Button>
-              <Button
-                variant={view === 'week' ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setView('week')}
-                className="rounded-none border-r border-fixlyfy-border"
-              >
-                Week
-              </Button>
-              <Button
-                variant={view === 'month' ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setView('month')}
-                className="rounded-l-none"
-              >
-                Month
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ScheduleFilters view={view} onViewChange={setView} />
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_350px] gap-6">
-        <TechnicianSidebar />
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-6">
         <ScheduleCalendar view={view} />
         {showAIInsights && <AIInsightsPanel />}
       </div>

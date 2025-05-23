@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface ScheduleCalendarProps {
   view: 'day' | 'week' | 'month';
@@ -88,6 +88,7 @@ const timeSlots = Array.from({ length: 12 }, (_, index) => {
 });
 
 export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduledJobs, setScheduledJobs] = useState<JobScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +97,11 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  
+  // Navigate to job details when a job card is clicked
+  const handleJobClick = (jobId: string) => {
+    navigate(`/jobs/${jobId}`);
+  };
   
   // Fetch jobs from Supabase
   useEffect(() => {
@@ -311,8 +317,9 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
                   {jobsInSlot.map(job => (
                     <div 
                       key={job.id}
+                      onClick={() => handleJobClick(job.id)}
                       className={cn(
-                        "p-2 rounded mb-2 text-white shadow-sm",
+                        "p-2 rounded mb-2 text-white shadow-sm cursor-pointer hover:opacity-90 transition-opacity",
                         job.status === 'scheduled' && "bg-fixlyfy",
                         job.status === 'in-progress' && "bg-fixlyfy-warning",
                         job.status === 'completed' && "bg-fixlyfy-success"
@@ -397,8 +404,9 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
                     {jobsInSlot.map(job => (
                       <div 
                         key={job.id}
+                        onClick={() => handleJobClick(job.id)}
                         className={cn(
-                          "p-2 rounded mb-2 text-white shadow-sm text-xs",
+                          "p-2 rounded mb-2 text-white shadow-sm text-xs cursor-pointer hover:opacity-90 transition-opacity",
                           job.status === 'scheduled' && "bg-fixlyfy",
                           job.status === 'in-progress' && "bg-fixlyfy-warning",
                           job.status === 'completed' && "bg-fixlyfy-success"
@@ -438,24 +446,36 @@ export const ScheduleCalendar = ({ view }: ScheduleCalendarProps) => {
         {Array.from({ length: 35 }, (_, i) => {
           // This is a simplified month view - in a real app you would calculate the actual days
           const dayNum = (i % 30) + 1;
-          const hasJob = scheduledJobs.some(job => {
-            // Check if any job date matches this calendar day
-            return job.date.getDate() === dayNum && job.date.getMonth() === currentDate.getMonth();
-          });
+          // Get all jobs for this day
+          const jobsForDay = scheduledJobs.filter(job => 
+            job.date.getDate() === dayNum && job.date.getMonth() === currentDate.getMonth()
+          );
           
           return (
             <div 
               key={i} 
               className={cn(
                 "h-24 p-1 border-r border-b border-fixlyfy-border",
-                hasJob ? "bg-fixlyfy-bg-interface/30" : ""
+                jobsForDay.length > 0 ? "bg-fixlyfy-bg-interface/30" : ""
               )}
             >
               <div className="text-xs font-medium mb-1">{dayNum}</div>
-              {hasJob && (
-                <div className="text-xs p-1 rounded bg-fixlyfy text-white mb-1">
-                  Job scheduled
+              {jobsForDay.slice(0, 2).map(job => (
+                <div 
+                  key={job.id}
+                  onClick={() => handleJobClick(job.id)}
+                  className={cn(
+                    "text-xs p-1 rounded text-white mb-1 cursor-pointer hover:opacity-90 transition-opacity",
+                    job.status === 'scheduled' && "bg-fixlyfy",
+                    job.status === 'in-progress' && "bg-fixlyfy-warning",
+                    job.status === 'completed' && "bg-fixlyfy-success"
+                  )}
+                >
+                  {job.title} - {format(job.date, 'h:mm a')}
                 </div>
+              ))}
+              {jobsForDay.length > 2 && (
+                <div className="text-xs text-fixlyfy">+{jobsForDay.length - 2} more</div>
               )}
             </div>
           );

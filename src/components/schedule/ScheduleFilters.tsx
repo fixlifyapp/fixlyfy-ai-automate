@@ -10,7 +10,10 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useJobTypes } from "@/hooks/useConfigItems";
 
 export interface ScheduleFiltersProps {
   view: 'day' | 'week' | 'month';
@@ -19,6 +22,34 @@ export interface ScheduleFiltersProps {
 
 export const ScheduleFilters = ({ view, onViewChange }: ScheduleFiltersProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [technicians, setTechnicians] = useState<any[]>([]);
+  const [selectedTechnician, setSelectedTechnician] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const { items: jobTypes, isLoading: jobTypesLoading } = useJobTypes();
+  const [selectedJobType, setSelectedJobType] = useState("all-jobs");
+  
+  // Fetch technicians from Supabase
+  useEffect(() => {
+    async function fetchTechnicians() {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name, role')
+          .eq('role', 'technician');
+          
+        if (error) throw error;
+        setTechnicians(data || []);
+      } catch (error) {
+        console.error("Error loading technicians:", error);
+        toast.error("Failed to load technicians");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchTechnicians();
+  }, []);
   
   const handlePrevious = () => {
     const newDate = new Date(currentDate);
@@ -65,27 +96,39 @@ export const ScheduleFilters = ({ view, onViewChange }: ScheduleFiltersProps) =>
           </SelectContent>
         </Select>
         
-        <Select defaultValue="all">
+        <Select 
+          value={selectedTechnician} 
+          onValueChange={setSelectedTechnician}
+          disabled={isLoading}
+        >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="All Technicians" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Technicians</SelectItem>
-            <SelectItem value="robert-smith">Robert Smith</SelectItem>
-            <SelectItem value="john-doe">John Doe</SelectItem>
-            <SelectItem value="emily-clark">Emily Clark</SelectItem>
+            {technicians.map(tech => (
+              <SelectItem key={tech.id} value={tech.id}>
+                {tech.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         
-        <Select defaultValue="all-jobs">
+        <Select 
+          value={selectedJobType} 
+          onValueChange={setSelectedJobType}
+          disabled={jobTypesLoading}
+        >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="All Jobs" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all-jobs">All Jobs</SelectItem>
-            <SelectItem value="hvac">HVAC</SelectItem>
-            <SelectItem value="plumbing">Plumbing</SelectItem>
-            <SelectItem value="electrical">Electrical</SelectItem>
+            {jobTypes.map(type => (
+              <SelectItem key={type.id} value={type.id}>
+                {type.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
