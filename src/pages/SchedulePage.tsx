@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
@@ -5,8 +6,11 @@ import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar } from "lucide-react";
 import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
-import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { useSearchParams } from "react-router-dom";
+import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { Job } from "@/hooks/useJobs";
+import { toast } from "sonner";
+
 const SchedulePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<'day' | 'week' | 'month'>(searchParams.get('view') as 'day' | 'week' | 'month' || 'week');
@@ -27,6 +31,12 @@ const SchedulePage = () => {
   const handleDateChange = (newDate: Date) => {
     setCurrentDate(newDate);
   };
+
+  // Handle successful job creation
+  const handleJobCreated = (job: Job) => {
+    toast.success(`Job ${job.id} has been created and scheduled`);
+  };
+  
   return <PageLayout>
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -60,7 +70,12 @@ const SchedulePage = () => {
         <ScheduleCalendar view={view} currentDate={currentDate} />
       </div>
       
-      <ScheduleJobModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      {/* Replace ScheduleJobModal with JobsCreateModal */}
+      <JobsCreateModal 
+        open={isCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={handleJobCreated}
+      />
     </PageLayout>;
 };
 export default SchedulePage;
