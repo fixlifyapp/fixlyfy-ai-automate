@@ -159,6 +159,13 @@ export type Database = {
             foreignKeyName: "conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -295,6 +302,13 @@ export type Database = {
             foreignKeyName: "estimates_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -355,6 +369,13 @@ export type Database = {
             foreignKeyName: "invoices_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -402,7 +423,21 @@ export type Database = {
             foreignKeyName: "job_history_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_idx"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -929,6 +964,89 @@ export type Database = {
         }
         Relationships: []
       }
+      report_schedules: {
+        Row: {
+          created_at: string | null
+          cron_expression: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          recipients: string[] | null
+          report_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          cron_expression?: string | null
+          frequency: string
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          recipients?: string[] | null
+          report_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          cron_expression?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          recipients?: string[] | null
+          report_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_schedules_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          filters: Json | null
+          id: string
+          is_public: boolean | null
+          name: string
+          template_id: string | null
+          updated_at: string | null
+          widgets: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          filters?: Json | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          template_id?: string | null
+          updated_at?: string | null
+          widgets?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          filters?: Json | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          template_id?: string | null
+          updated_at?: string | null
+          widgets?: Json | null
+        }
+        Relationships: []
+      }
       service_areas: {
         Row: {
           created_at: string | null
@@ -1033,7 +1151,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      fact_jobs: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          date: string | null
+          date_day: string | null
+          date_month: string | null
+          date_week: string | null
+          day: number | null
+          id: string | null
+          month: number | null
+          revenue: number | null
+          status: string | null
+          technician_id: string | null
+          technician_name: string | null
+          title: string | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_service_areas: {

@@ -116,6 +116,12 @@ verify_jwt = true
 [functions.update-profiles-schema]
 verify_jwt = true
 
+[functions.reports-templates]
+verify_jwt = true
+
+[functions.reports-run]
+verify_jwt = true
+
 [analytics]
 enabled = false
 
