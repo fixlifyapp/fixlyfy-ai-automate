@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PERMISSIONS_LIST, UserRole, RolePermissions, DEFAULT_PERMISSIONS, DEFAULT_ROLES } from "@/components/auth/types";
@@ -99,8 +98,13 @@ const AdminRolesPage = () => {
     // Ensure allRoles is defined and not empty
     if (!allRoles || allRoles.length === 0) {
       return (
-        <TabsList className="grid grid-cols-1 mb-6">
-          <TabsTrigger value="admin">Admin</TabsTrigger>
+        <TabsList className="bg-transparent h-auto px-6 pt-4 justify-start flex-wrap gap-2">
+          <TabsTrigger 
+            value="admin" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-1.5"
+          >
+            Admin
+          </TabsTrigger>
         </TabsList>
       );
     }
@@ -112,12 +116,12 @@ const AdminRolesPage = () => {
     const numColumns = Math.min(safeRoles.length, 4); // Maximum 4 columns
     
     return (
-      <TabsList className={`grid grid-cols-${numColumns} mb-6`}>
+      <TabsList className="bg-transparent h-auto px-6 pt-4 justify-start flex-wrap gap-2">
         {safeRoles.map((role) => (
           <TabsTrigger 
             key={role} 
             value={role}
-            className="capitalize"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-1.5 capitalize"
           >
             {role}
           </TabsTrigger>
@@ -147,94 +151,98 @@ const AdminRolesPage = () => {
           </p>
         </div>
         
-        <Card className="shadow-sm">
+        <Card className="shadow-sm overflow-hidden">
           <CardHeader>
             <CardTitle>Roles & Permissions</CardTitle>
             <CardDescription>
               Configure which actions are allowed for each role in your organization.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)}>
-              {renderRoleTabs()}
+              <div className="border-b">
+                {renderRoleTabs()}
+              </div>
               
-              <TabsContent value={activeTab} className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-lg font-medium capitalize">
-                      {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Role
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {activeTab === 'admin' && "Full control over all settings and data."}
-                      {activeTab === 'manager' && "Can view team performance and approve estimates and invoices."}
-                      {activeTab === 'dispatcher' && "Can assign and schedule jobs for technicians."}
-                      {activeTab === 'technician' && "Can manage their own jobs and create related documents."}
-                    </p>
+              <div className="p-6">
+                <TabsContent value={activeTab} className="m-0 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-medium capitalize">
+                        {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Role
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {activeTab === 'admin' && "Full control over all settings and data."}
+                        {activeTab === 'manager' && "Can view team performance and approve estimates and invoices."}
+                        {activeTab === 'dispatcher' && "Can assign and schedule jobs for technicians."}
+                        {activeTab === 'technician' && "Can manage their own jobs and create related documents."}
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={handleReset}>
+                        Reset to Default
+                      </Button>
+                      <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSave}>
+                        Save Changes
+                      </Button>
+                    </div>
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleReset}>
-                      Reset to Default
-                    </Button>
-                    <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSave}>
-                      Save Changes
-                    </Button>
-                  </div>
-                </div>
-                
-                <ScrollArea className="h-[60vh]">
-                  <div className="space-y-6 pr-4">
-                    {Object.entries(permissionsByCategory).map(([category, permissions]) => (
-                      <div key={category} className="space-y-3">
-                        <div>
-                          <h4 className="text-md font-medium capitalize">{category}</h4>
-                          <Separator className="my-2" />
-                        </div>
-                        
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[350px]">Permission</TableHead>
-                              <TableHead>Enabled</TableHead>
-                              <TableHead>Description</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {permissions.map((permission) => (
-                              <TableRow key={permission.id}>
-                                <TableCell className="font-medium">{permission.name}</TableCell>
-                                <TableCell>
-                                  <Checkbox 
-                                    checked={
-                                      // Special case for admin role with wildcard
-                                      (activeTab === 'admin' && rolePermissions[activeTab]?.includes('*')) ||
-                                      rolePermissions[activeTab]?.includes(permission.id)
-                                    }
-                                    disabled={activeTab === 'admin' && permission.id === '*'}
-                                    onCheckedChange={() => handlePermissionToggle(activeTab, permission.id)}
-                                    id={`${activeTab}-${permission.id}`}
-                                  />
-                                </TableCell>
-                                <TableCell className="text-muted-foreground flex items-center gap-2">
-                                  {permission.description}
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <HelpCircle size={16} className="text-muted-foreground" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="w-[200px] text-sm">{permission.description}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TableCell>
+                  <ScrollArea className="h-[60vh]">
+                    <div className="space-y-6 pr-4">
+                      {Object.entries(permissionsByCategory).map(([category, permissions]) => (
+                        <div key={category} className="space-y-3">
+                          <div>
+                            <h4 className="text-md font-medium capitalize">{category}</h4>
+                            <Separator className="my-2" />
+                          </div>
+                          
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[350px]">Permission</TableHead>
+                                <TableHead>Enabled</TableHead>
+                                <TableHead>Description</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
+                            </TableHeader>
+                            <TableBody>
+                              {permissions.map((permission) => (
+                                <TableRow key={permission.id}>
+                                  <TableCell className="font-medium">{permission.name}</TableCell>
+                                  <TableCell>
+                                    <Checkbox 
+                                      checked={
+                                        // Special case for admin role with wildcard
+                                        (activeTab === 'admin' && rolePermissions[activeTab]?.includes('*')) ||
+                                        rolePermissions[activeTab]?.includes(permission.id)
+                                      }
+                                      disabled={activeTab === 'admin' && permission.id === '*'}
+                                      onCheckedChange={() => handlePermissionToggle(activeTab, permission.id)}
+                                      id={`${activeTab}-${permission.id}`}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground flex items-center gap-2">
+                                    {permission.description}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <HelpCircle size={16} className="text-muted-foreground" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="w-[200px] text-sm">{permission.description}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </div>
             </Tabs>
           </CardContent>
         </Card>

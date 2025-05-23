@@ -270,7 +270,7 @@ const createSampleData = async () => {
 };
 
 // Main function to load all niche-specific data
-export const loadNicheData = async (niche: string) => {
+export const loadNicheData = async (businessNiche: string) => {
   const loadingToast = toast.loading("Setting up your workspace...");
   
   try {
@@ -278,13 +278,13 @@ export const loadNicheData = async (niche: string) => {
     await createJobStatuses();
     
     // Create tags
-    await createNicheTags(niche);
+    await createNicheTags(businessNiche);
     
     // Create job types
-    await createNicheJobTypes(niche);
+    await createNicheJobTypes(businessNiche);
     
     // Create products
-    await createNicheProducts(niche);
+    await createNicheProducts(businessNiche);
     
     // Create sample clients and jobs
     await createSampleData();
@@ -300,13 +300,13 @@ export const loadNicheData = async (niche: string) => {
 };
 
 // Function to switch to a different niche
-export const switchNiche = async (niche: string, userId: string) => {
+export const switchNiche = async (businessNiche: string, userId: string) => {
   const loadingToast = toast.loading("Switching business niche...");
   
   try {
     // Update the user's niche preference in the profile
     const updates = {
-      business_niche: niche
+      business_niche: businessNiche
     };
     
     const { error: updateError } = await supabase.rpc('update_profile', updates);

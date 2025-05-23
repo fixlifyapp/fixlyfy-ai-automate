@@ -73,8 +73,8 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       
       if (updateError) throw updateError;
 
-      // Explicitly pass businessNiche as string to fix the TypeScript error
-      await loadNicheData(businessNiche as string);
+      // Pass businessNiche directly to fix TypeScript error
+      await loadNicheData(businessNiche);
       
       toast.success("Setup complete! Welcome to Fixlyfy!");
       onOpenChange(false);
