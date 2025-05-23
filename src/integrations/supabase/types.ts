@@ -641,25 +641,31 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          business_niche: string | null
           created_at: string | null
           id: string
           name: string | null
+          referral_source: string | null
           role: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          business_niche?: string | null
           created_at?: string | null
           id: string
           name?: string | null
+          referral_source?: string | null
           role?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          business_niche?: string | null
           created_at?: string | null
           id?: string
           name?: string | null
+          referral_source?: string | null
           role?: string | null
           updated_at?: string | null
         }
