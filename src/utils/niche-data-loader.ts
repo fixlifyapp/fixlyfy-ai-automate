@@ -260,10 +260,10 @@ const createSampleData = async () => {
       return;
     }
     
-    // Generate test data
+    // Generate test data using the correct function name
     // Import the necessary utilities from your test-data helpers
     const testData = await import('@/utils/test-data');
-    await testData.generateTestData(); // This function generates both clients and jobs
+    await testData.generateAllTestData(); // Corrected function name
   } catch (error) {
     console.error("Error creating sample data:", error);
   }
@@ -305,10 +305,11 @@ export const switchNiche = async (niche: string, userId: string) => {
   
   try {
     // Update the user's niche preference in the profile
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ business_niche: niche })
-      .eq('id', userId);
+    const updates = {
+      business_niche: niche
+    };
+    
+    const { error: updateError } = await supabase.rpc('update_profile', updates);
 
     if (updateError) throw updateError;
     

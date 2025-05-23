@@ -12,21 +12,21 @@ import { useAuth } from "@/hooks/use-auth";
 import { loadNicheData } from "@/utils/niche-data-loader";
 
 const referralSources = [
-  { id: "social_media", label: "Социальные сети" },
-  { id: "search_engine", label: "Поисковые системы" },
-  { id: "recommendation", label: "Рекомендации" },
-  { id: "advertisement", label: "Реклама" },
-  { id: "other", label: "Другое" }
+  { id: "social_media", label: "Social Media" },
+  { id: "search_engine", label: "Search Engines" },
+  { id: "recommendation", label: "Recommendations" },
+  { id: "advertisement", label: "Advertisement" },
+  { id: "other", label: "Other" }
 ];
 
 const businessNiches = [
-  { id: "appliance_repair", label: "Ремонт и установка бытовой техники" },
-  { id: "garage_door", label: "Ремонт и установка гаражных ворот" },
-  { id: "construction", label: "Строительство" },
-  { id: "hvac", label: "Ремонт и установка кондиционеров" },
-  { id: "plumbing", label: "Сантехника" },
-  { id: "electrical", label: "Электромонтаж" },
-  { id: "other", label: "Другое" }
+  { id: "appliance_repair", label: "Appliance Repair & Installation" },
+  { id: "garage_door", label: "Garage Door Repair & Installation" },
+  { id: "construction", label: "Construction" },
+  { id: "hvac", label: "AC Repair & Installation" },
+  { id: "plumbing", label: "Plumbing" },
+  { id: "electrical", label: "Electrical" },
+  { id: "other", label: "Other" }
 ];
 
 interface OnboardingModalProps {
@@ -44,7 +44,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
 
   const handleNextStep = () => {
     if (!referralSource) {
-      toast.error("Пожалуйста, выберите вариант");
+      toast.error("Please select an option");
       return;
     }
     setStep(2);
@@ -52,37 +52,36 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
 
   const handleComplete = async () => {
     if (!businessNiche) {
-      toast.error("Пожалуйста, выберите нишу бизнеса");
+      toast.error("Please select a business niche");
       return;
     }
 
     if (!user) {
-      toast.error("Пользователь не авторизован");
+      toast.error("User not authenticated");
       return;
     }
 
     setIsLoading(true);
     try {
-      // Save user preferences to profiles table
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          referral_source: referralSource,
-          business_niche: businessNiche
-        })
-        .eq('id', user.id);
-
+      // Update the user's profile with custom fields
+      const updates = {
+        referral_source: referralSource,
+        business_niche: businessNiche
+      };
+      
+      const { error: updateError } = await supabase.rpc('update_profile', updates);
+      
       if (updateError) throw updateError;
 
       // Load data for the selected niche
       await loadNicheData(businessNiche);
       
-      toast.success("Настройка завершена! Добро пожаловать в Fixlyfy!");
+      toast.success("Setup complete! Welcome to Fixlyfy!");
       onOpenChange(false);
       navigate("/dashboard");
     } catch (error) {
       console.error("Error during onboarding:", error);
-      toast.error("Что-то пошло не так. Пожалуйста, попробуйте снова.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +92,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {step === 1 ? "Как вы узнали о нас?" : "Выберите вашу сферу деятельности"}
+            {step === 1 ? "How did you hear about us?" : "Select your business niche"}
           </DialogTitle>
         </DialogHeader>
 
@@ -109,7 +108,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
             </RadioGroup>
             
             <div className="flex justify-end pt-4">
-              <Button onClick={handleNextStep}>Далее</Button>
+              <Button onClick={handleNextStep}>Next</Button>
             </div>
           </div>
         ) : (
@@ -125,16 +124,16 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
             
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setStep(1)} disabled={isLoading}>
-                Назад
+                Back
               </Button>
               <Button onClick={handleComplete} disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 size={16} className="mr-2 animate-spin" />
-                    Загрузка...
+                    Loading...
                   </>
                 ) : (
-                  "Завершить"
+                  "Complete"
                 )}
               </Button>
             </div>

@@ -10,13 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { switchNiche } from "@/utils/niche-data-loader";
 
 const businessNiches = [
-  { id: "appliance_repair", label: "Ремонт и установка бытовой техники" },
-  { id: "garage_door", label: "Ремонт и установка гаражных ворот" },
-  { id: "construction", label: "Строительство" },
-  { id: "hvac", label: "Ремонт и установка кондиционеров" },
-  { id: "plumbing", label: "Сантехника" },
-  { id: "electrical", label: "Электромонтаж" },
-  { id: "other", label: "Другое" }
+  { id: "appliance_repair", label: "Appliance Repair & Installation" },
+  { id: "garage_door", label: "Garage Door Repair & Installation" },
+  { id: "construction", label: "Construction" },
+  { id: "hvac", label: "AC Repair & Installation" },
+  { id: "plumbing", label: "Plumbing" },
+  { id: "electrical", label: "Electrical" },
+  { id: "other", label: "Other" }
 ];
 
 interface NicheConfigProps {
@@ -34,11 +34,8 @@ export function NicheConfig({ userId }: NicheConfigProps) {
       if (!userId) return;
       
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('business_niche')
-          .eq('id', userId)
-          .single();
+        // Use RPC function to get profile data including business_niche
+        const { data, error } = await supabase.rpc('get_profile_data');
         
         if (error) throw error;
         
