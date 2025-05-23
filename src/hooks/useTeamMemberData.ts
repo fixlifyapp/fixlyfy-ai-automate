@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { TeamMemberProfile } from "@/types/team-member";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TeamMemberCommission, ProfileRow } from "@/types/database";
 
 export const useTeamMemberData = (id: string | undefined) => {
   const [member, setMember] = useState<TeamMemberProfile | null>(null);
@@ -31,49 +32,49 @@ export const useTeamMemberData = (id: string | undefined) => {
       }
       
       if (profile) {
-        // Fetch commission data if available
+        // Use RPC function to get commission data
         const { data: commissionData } = await supabase
-          .rpc('get_team_member_commission', { team_member_id: id })
-          .maybeSingle();
-
-        // Fetch skills if available
-        const { data: skills } = await supabase
-          .rpc('get_team_member_skills', { team_member_id: id })
-          .single()
-          .then(res => res.data || [])
-          .catch(() => []);
-
-        // Fetch service areas if available
-        const { data: serviceAreas } = await supabase
-          .rpc('get_service_areas', { team_member_id: id })
-          .single()
-          .then(res => res.data || [])
-          .catch(() => []);
+          .rpc('get_team_member_commission', { team_member_id: id });
+        
+        // Use RPC function to get skills
+        const { data: skillsData } = await supabase
+          .rpc('get_team_member_skills', { team_member_id: id });
+        
+        // Use RPC function to get service areas
+        const { data: serviceAreasData } = await supabase
+          .rpc('get_service_areas', { team_member_id: id });
+        
+        // Extract data or provide defaults
+        const skills = skillsData ? skillsData : [];
+        const serviceAreas = serviceAreasData ? serviceAreasData : [];
+        
+        // The profile data returned from Supabase
+        const typedProfile = profile as ProfileRow;
           
         // Convert profile to TeamMemberProfile format
         const memberProfile: TeamMemberProfile = {
-          id: profile.id,
-          name: profile.name || 'Unknown',
-          email: profile.email || `${profile.name?.toLowerCase().replace(/\s+/g, '.')}@fixlyfy.com`,
-          role: (profile.role as any) || "technician",
-          status: profile.status || "active",
-          avatar: profile.avatar_url || "https://github.com/shadcn.png",
-          lastLogin: profile.updated_at,
-          isPublic: profile.is_public !== false,
-          availableForJobs: profile.available_for_jobs !== false,
-          phone: profile.phone ? [profile.phone] : [],
-          twoFactorEnabled: profile.two_factor_enabled || false,
-          callMaskingEnabled: profile.call_masking_enabled || false,
-          laborCostPerHour: profile.labor_cost_per_hour || 50,
+          id: typedProfile.id,
+          name: typedProfile.name || 'Unknown',
+          email: `${typedProfile.name?.toLowerCase().replace(/\s+/g, '.')}@fixlyfy.com`,
+          role: (typedProfile.role as any) || "technician",
+          status: (typedProfile.status as "active" | "suspended") || "active",
+          avatar: typedProfile.avatar_url || "https://github.com/shadcn.png",
+          lastLogin: typedProfile.updated_at,
+          isPublic: typedProfile.is_public !== false,
+          availableForJobs: typedProfile.available_for_jobs !== false,
+          phone: typedProfile.phone ? [typedProfile.phone] : [],
+          twoFactorEnabled: typedProfile.two_factor_enabled || false,
+          callMaskingEnabled: typedProfile.call_masking_enabled || false,
+          laborCostPerHour: typedProfile.labor_cost_per_hour || 50,
           skills: skills || [],
           serviceAreas: serviceAreas || [],
-          scheduleColor: profile.schedule_color || "#6366f1",
-          internalNotes: profile.internal_notes || "",
-          usesTwoFactor: profile.uses_two_factor || false,
+          scheduleColor: typedProfile.schedule_color || "#6366f1",
+          internalNotes: typedProfile.internal_notes || "",
+          usesTwoFactor: typedProfile.uses_two_factor || false,
           // Add commission data if available
-          commissionRate: commissionData?.base_rate || 50,
-          commissionRules: commissionData?.rules || [],
-          commissionFees: commissionData?.fees || []
+          commissionRate: commissionData && commissionData.length > 0 ? commissionData[0]?.base_rate : 50,
+          commissionRules: commissionData && commissionData.length > 0 ? commissionData[0]?.rules || [] : [],
+          commissionFees: commissionData && commissionData.length > 0 ? commissionData[0]?.fees || [] : []
         };
         
         setMember(memberProfile);
