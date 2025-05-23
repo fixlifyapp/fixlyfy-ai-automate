@@ -34,6 +34,12 @@ interface OnboardingModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface UpdateProfileParams {
+  referral_source: string;
+  business_niche: string;
+  [key: string]: string;
+}
+
 export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
   const [step, setStep] = useState(1);
   const [referralSource, setReferralSource] = useState("");
@@ -64,7 +70,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
     setIsLoading(true);
     try {
       // Update the user's profile with custom fields
-      const updates = {
+      const updates: UpdateProfileParams = {
         referral_source: referralSource,
         business_niche: businessNiche
       };
