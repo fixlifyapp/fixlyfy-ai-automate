@@ -66,14 +66,14 @@ const SchedulePage = () => {
           />
         </div>
         
-        <ScheduleCalendar view={view} currentDate={currentDate} />
-        
-        {/* Show AI Insights panel below calendar when toggled */}
+        {/* Show AI Insights panel above calendar when toggled */}
         {showAIInsights && (
-          <div className="mt-4">
+          <div className="mb-4">
             <AIInsightsPanel />
           </div>
         )}
+        
+        <ScheduleCalendar view={view} currentDate={currentDate} />
       </div>
       
       <ScheduleJobModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
