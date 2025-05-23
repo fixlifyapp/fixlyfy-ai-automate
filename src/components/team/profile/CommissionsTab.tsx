@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -61,9 +60,9 @@ export const CommissionsTab = ({ member, isEditing }: CommissionsTabProps) => {
         p_fees: commissionFees
       };
       
-      // Call the update_team_member_commission RPC function
+      // Call the update_team_member_commission RPC function with proper typing
       const { error } = await supabase.rpc(
-        "update_team_member_commission",
+        "update_team_member_commission" as DatabaseFunctions,
         params
       );
         

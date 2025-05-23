@@ -52,7 +52,7 @@ serve(async (req) => {
       maxTokens = 800,
       fetchBusinessData = false,
       userId,
-      forceRefresh = false // New parameter to force refresh regardless of cache
+      forceRefresh = false // Parameter to force refresh regardless of cache
     } = requestData;
 
     // Validate that we have either prompt or userPrompt
@@ -111,6 +111,33 @@ serve(async (req) => {
           if (clientsError) {
             console.error("Error fetching clients:", clientsError);
           }
+
+          // Fetch profiles data (team members)
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*', cacheOptions);
+            
+          if (profilesError) {
+            console.error("Error fetching profiles:", profilesError);
+          }
+
+          // Fetch invoices data
+          const { data: invoices, error: invoicesError } = await supabase
+            .from('invoices')
+            .select('*', cacheOptions);
+            
+          if (invoicesError) {
+            console.error("Error fetching invoices:", invoicesError);
+          }
+
+          // Fetch payments data
+          const { data: payments, error: paymentsError } = await supabase
+            .from('payments')
+            .select('*', cacheOptions);
+            
+          if (paymentsError) {
+            console.error("Error fetching payments:", paymentsError);
+          }
           
           // Calculate business metrics
           if (jobs && clients) {
@@ -118,24 +145,35 @@ serve(async (req) => {
             const activeClients = clients.filter(client => client.status === "active");
             const totalRevenue = completedJobs.reduce((sum, job) => sum + parseFloat(job.revenue?.toString() || '0'), 0);
             
+            // Add invoice data if available
+            const totalFromInvoices = invoices 
+              ? invoices.reduce((sum, invoice) => sum + parseFloat(invoice.total?.toString() || '0'), 0)
+              : 0;
+
+            // Add payments data if available
+            const totalPayments = payments
+              ? payments.reduce((sum, payment) => sum + parseFloat(payment.amount?.toString() || '0'), 0)
+              : 0;
+
             // Group jobs by service type
             const serviceTypes = {};
             jobs.forEach(job => {
-              if (job.tags && job.tags.length > 0) {
-                job.tags.forEach(tag => {
-                  if (!serviceTypes[tag]) {
-                    serviceTypes[tag] = 0;
-                  }
-                  serviceTypes[tag]++;
-                });
+              const serviceType = job.service || "Unspecified";
+              if (!serviceTypes[serviceType]) {
+                serviceTypes[serviceType] = {
+                  count: 0,
+                  revenue: 0,
+                };
               }
+              serviceTypes[serviceType].count++;
+              serviceTypes[serviceType].revenue += parseFloat(job.revenue?.toString() || '0');
             });
             
             // Calculate top service
-            let topService = { name: "None", count: 0 };
-            Object.entries(serviceTypes).forEach(([name, count]) => {
-              if ((count as number) > topService.count) {
-                topService = { name, count: count as number };
+            let topService = { name: "None", count: 0, revenue: 0 };
+            Object.entries(serviceTypes).forEach(([name, data]: [string, any]) => {
+              if (data.revenue > topService.revenue) {
+                topService = { name, count: data.count, revenue: data.revenue };
               }
             });
             
@@ -144,21 +182,27 @@ serve(async (req) => {
             jobs.forEach(job => {
               if (job.technician_id) {
                 if (!techPerformance[job.technician_id]) {
-                  techPerformance[job.technician_id] = { jobs: 0, completed: 0 };
+                  techPerformance[job.technician_id] = { 
+                    jobs: 0, 
+                    completed: 0,
+                    revenue: 0,
+                    name: profiles?.find(p => p.id === job.technician_id)?.name || "Unknown",
+                  };
                 }
                 techPerformance[job.technician_id].jobs++;
                 if (job.status === "completed") {
                   techPerformance[job.technician_id].completed++;
+                  techPerformance[job.technician_id].revenue += parseFloat(job.revenue?.toString() || '0');
                 }
               }
             });
             
             // Find top technician
-            let topTech = { id: "None", performance: 0 };
+            let topTech = { id: "None", performance: 0, revenue: 0, name: "None" };
             Object.entries(techPerformance).forEach(([id, perf]: [string, any]) => {
-              const performance = perf.jobs > 0 ? perf.completed / perf.jobs : 0;
-              if (performance > topTech.performance) {
-                topTech = { id, performance };
+              if (perf.revenue > topTech.revenue) {
+                const performance = perf.jobs > 0 ? perf.completed / perf.jobs : 0;
+                topTech = { id, performance, revenue: perf.revenue, name: perf.name };
               }
             });
             
@@ -168,18 +212,21 @@ serve(async (req) => {
                 clients: {
                   total: clients.length,
                   active: activeClients.length,
-                  newLastMonth: Math.floor(clients.length * 0.2)  // Approximation
+                  newLastMonth: Math.floor(clients.length * 0.2)  // Approximation for demo
                 },
                 jobs: {
                   total: jobs.length,
                   completed: completedJobs.length,
                   inProgress: jobs.filter(job => job.status === "in-progress").length,
                   scheduled: jobs.filter(job => job.status === "scheduled").length,
-                  lastUpdated: new Date().toISOString() // Add last updated timestamp
+                  lastUpdated: new Date().toISOString()
                 },
                 revenue: {
-                  total: totalRevenue,
-                  average: completedJobs.length > 0 ? totalRevenue / completedJobs.length : 0
+                  total: totalRevenue + totalFromInvoices,
+                  average: completedJobs.length > 0 ? totalRevenue / completedJobs.length : 0,
+                  fromInvoices: totalFromInvoices,
+                  fromJobs: totalRevenue,
+                  collected: totalPayments
                 },
                 services: {
                   topService: topService.name,
@@ -187,7 +234,7 @@ serve(async (req) => {
                 },
                 technicians: {
                   performance: techPerformance,
-                  topPerformer: topTech.id
+                  topPerformer: topTech.name
                 }
               },
               period: "current month",
@@ -251,7 +298,7 @@ serve(async (req) => {
 
     console.log("Successfully generated response");
 
-    // Return the AI-generated content and optionally the business data
+    // Return the AI-generated content and the business data
     return new Response(
       JSON.stringify({ 
         generatedText, 

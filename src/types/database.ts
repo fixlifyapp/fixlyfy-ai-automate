@@ -59,3 +59,45 @@ export type DatabaseFunctions =
   | "get_team_member_skills" 
   | "get_service_areas"
   | "update_team_member_commission";
+
+// This interface defines the business metrics structure that will be returned from the AI assistant API
+export interface BusinessMetrics {
+  metrics: {
+    clients: {
+      total: number;
+      active: number;
+      newLastMonth: number;
+    };
+    jobs: {
+      total: number;
+      completed: number;
+      inProgress: number;
+      scheduled: number;
+      lastUpdated: string;
+    };
+    revenue: {
+      total: number;
+      average: number;
+    };
+    services: {
+      topService: string;
+      distribution: Record<string, number>;
+    };
+    technicians: {
+      performance: Record<string, { jobs: number; completed: number }>;
+      topPerformer: string;
+    };
+  };
+  period: string;
+  refreshCycle: string;
+  lastRefreshed: string;
+}
+
+// Interface for AI response from the edge function
+export interface AIResponse {
+  generatedText: string;
+  businessData: BusinessMetrics | null;
+  model: string;
+  lastRefreshed: string;
+  refreshCycle: string;
+}

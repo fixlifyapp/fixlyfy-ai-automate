@@ -4,11 +4,13 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Send, Loader2, BarChart3, Users, Briefcase, DollarSign } from "lucide-react";
+import { Brain, Send, Loader2, BarChart3, Users, Briefcase, DollarSign, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAI } from "@/hooks/use-ai";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { BusinessMetrics } from "@/types/database";
 
 type Message = {
   id: number;
@@ -30,7 +32,8 @@ const AiAssistantPage = () => {
   const { generateBusinessInsights, businessData, isLoading } = useAI({
     systemContext: "You are an AI business analyst with access to the company's data. Provide specific, data-backed insights and recommendations based on user questions.",
     fetchBusinessData: true,
-    mode: "business"
+    mode: "business",
+    forceRefresh: false
   });
 
   const handleSendMessage = async () => {
@@ -92,6 +95,11 @@ const AiAssistantPage = () => {
           <CardTitle className="text-base flex items-center">
             <BarChart3 className="mr-2 h-4 w-4" />
             Current Business Metrics
+            {businessData.metrics?.lastUpdated && (
+              <span className="text-xs ml-auto text-muted-foreground">
+                Last updated: {format(new Date(businessData.lastRefreshed || new Date()), 'MMM d, yyyy')}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
@@ -101,7 +109,7 @@ const AiAssistantPage = () => {
             </div>
             <div>
               <p className="text-sm text-fixlyfy-text-secondary">Total Clients</p>
-              <p className="font-medium">{businessData?.clientCount || "0"}</p>
+              <p className="font-medium">{businessData.metrics?.clients?.total || "0"}</p>
             </div>
           </div>
           <div className="flex items-center">
@@ -110,7 +118,27 @@ const AiAssistantPage = () => {
             </div>
             <div>
               <p className="text-sm text-fixlyfy-text-secondary">Total Jobs</p>
-              <p className="font-medium">{businessData?.jobCount || "0"}</p>
+              <p className="font-medium">{businessData.metrics?.jobs?.total || "0"}</p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+              <DollarSign size={16} className="text-fixlyfy" />
+            </div>
+            <div>
+              <p className="text-sm text-fixlyfy-text-secondary">Total Revenue</p>
+              <p className="font-medium">
+                ${businessData.metrics?.revenue?.total?.toLocaleString() || "0"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+              <Calendar size={16} className="text-fixlyfy" />
+            </div>
+            <div>
+              <p className="text-sm text-fixlyfy-text-secondary">Scheduled Jobs</p>
+              <p className="font-medium">{businessData.metrics?.jobs?.scheduled || "0"}</p>
             </div>
           </div>
         </CardContent>
@@ -255,6 +283,16 @@ const AiAssistantPage = () => {
                 }}
               >
                 Show me the performance of my technicians
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-sm"
+                onClick={() => {
+                  setInput("What is my business analytics summary?");
+                  setTimeout(() => handleSendMessage(), 100);
+                }}
+              >
+                What is my business analytics summary?
               </Button>
             </CardContent>
           </Card>

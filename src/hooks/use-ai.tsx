@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "./use-auth";
 import { shouldRefreshAIInsights, updateLastRefreshTimestamp } from "@/utils/ai-refresh";
+import { AIResponse, BusinessMetrics } from "@/types/database";
 
 interface UseAIOptions {
   systemContext?: string;
@@ -17,7 +18,7 @@ interface UseAIOptions {
 export function useAI(options: UseAIOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [businessData, setBusinessData] = useState<any>(null);
+  const [businessData, setBusinessData] = useState<BusinessMetrics | null>(null);
   const { user } = useAuth();
   
   const generateText = async (prompt: string, customOptions?: Partial<UseAIOptions>) => {
@@ -30,7 +31,7 @@ export function useAI(options: UseAIOptions = {}) {
       // Check if we need to refresh insights based on time
       const shouldRefresh = customOptions?.forceRefresh || options.forceRefresh || await shouldRefreshAIInsights();
       
-      const { data, error } = await supabase.functions.invoke("generate-with-ai", {
+      const { data, error } = await supabase.functions.invoke<AIResponse>("generate-with-ai", {
         body: {
           prompt,
           context: customOptions?.systemContext || options.systemContext,
@@ -85,7 +86,7 @@ export function useAI(options: UseAIOptions = {}) {
     setError(null);
     
     try {
-      const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
+      const { data: response, error } = await supabase.functions.invoke<AIResponse>("generate-with-ai", {
         body: {
           prompt: `Generate business insights about ${topic}`,
           context: customOptions?.systemContext || options.systemContext || "You are a business analyst.",
@@ -116,7 +117,7 @@ export function useAI(options: UseAIOptions = {}) {
     setError(null);
     
     try {
-      const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
+      const { data: response, error } = await supabase.functions.invoke<AIResponse>("generate-with-ai", {
         body: {
           prompt: `Analyze these business metrics for ${timeframe}`,
           context: customOptions?.systemContext || options.systemContext || "You are a business analyst.",
@@ -147,7 +148,7 @@ export function useAI(options: UseAIOptions = {}) {
     setError(null);
     
     try {
-      const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
+      const { data: response, error } = await supabase.functions.invoke<AIResponse>("generate-with-ai", {
         body: {
           prompt: `Generate personalized recommendations about ${subject}`,
           context: customOptions?.systemContext || options.systemContext || "You are a business consultant.",
@@ -181,7 +182,7 @@ export function useAI(options: UseAIOptions = {}) {
       // Check if we need to refresh insights
       const shouldRefresh = customOptions?.forceRefresh || options.forceRefresh || await shouldRefreshAIInsights();
       
-      const { data: response, error } = await supabase.functions.invoke("generate-with-ai", {
+      const { data: response, error } = await supabase.functions.invoke<AIResponse>("generate-with-ai", {
         body: {
           prompt: prompt,
           context: customOptions?.systemContext || options.systemContext || "You are an AI business assistant with access to the company's business metrics and data. Provide specific, data-backed insights.",
@@ -189,7 +190,8 @@ export function useAI(options: UseAIOptions = {}) {
           temperature: customOptions?.temperature || options.temperature || 0.4,
           maxTokens: customOptions?.maxTokens || options.maxTokens || 1000,
           fetchBusinessData: true,
-          forceRefresh: shouldRefresh
+          forceRefresh: shouldRefresh,
+          userId: user?.id
         }
       });
       
@@ -199,6 +201,7 @@ export function useAI(options: UseAIOptions = {}) {
       
       if (response.businessData) {
         setBusinessData(response.businessData);
+        console.log("Business data received:", response.businessData);
       }
       
       // Update the refresh timestamp if successful
@@ -215,7 +218,7 @@ export function useAI(options: UseAIOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [options]);
+  }, [options, user]);
   
   return {
     generateText,
