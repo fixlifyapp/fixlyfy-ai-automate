@@ -52,3 +52,10 @@ export interface UpdateTeamMemberCommissionParams {
   p_rules: any[];
   p_fees: any[];
 }
+
+// Define database functions for TypeScript type safety
+export type DatabaseFunctions = 
+  | "get_team_member_commission" 
+  | "get_team_member_skills" 
+  | "get_service_areas"
+  | "update_team_member_commission";
