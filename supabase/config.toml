@@ -110,6 +110,9 @@ verify_jwt = true
 [functions.twilio-calls]
 verify_jwt = false
 
+[functions.automation-executor]
+verify_jwt = true
+
 [functions.update-profiles-schema]
 verify_jwt = true
 

@@ -1,12 +1,13 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Mail, Zap, Clock, Bell, Gift, CheckCircle, AlertTriangle, User } from "lucide-react";
+import { Calendar, Mail, Zap, Clock, Bell, Gift, CheckCircle, AlertTriangle, User, MessageSquare, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ActionTypeSelector } from "./ActionTypeSelector";
+import { TwilioActionConfig } from "./TwilioActionConfig";
 
 interface CreateAutomationDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ type Template = {
   name: string;
   description: string;
   icon: React.ElementType;
+  defaultActionType?: string;
 };
 
 const templateCategories: TemplateCategory[] = [
@@ -40,13 +42,15 @@ const templateCategories: TemplateCategory[] = [
         id: "job-reminder",
         name: "Job Reminder",
         description: "Send reminder before scheduled job",
-        icon: Calendar
+        icon: Calendar,
+        defaultActionType: "sms"
       },
       {
         id: "payment-reminder",
         name: "Payment Reminder",
         description: "Remind clients about upcoming or overdue payments",
-        icon: AlertTriangle
+        icon: AlertTriangle,
+        defaultActionType: "sms"
       }
     ]
   },
@@ -60,13 +64,15 @@ const templateCategories: TemplateCategory[] = [
         id: "seasonal-promo",
         name: "Seasonal Promotion",
         description: "Send seasonal promotions to past clients",
-        icon: Gift
+        icon: Gift,
+        defaultActionType: "email"
       },
       {
         id: "referral-request",
         name: "Referral Request",
         description: "Ask satisfied customers for referrals",
-        icon: User
+        icon: User,
+        defaultActionType: "email"
       }
     ]
   },
@@ -80,13 +86,15 @@ const templateCategories: TemplateCategory[] = [
         id: "post-service",
         name: "Post-Service Follow-up",
         description: "Check in after service completion",
-        icon: CheckCircle
+        icon: CheckCircle,
+        defaultActionType: "sms"
       },
       {
         id: "estimate-follow",
         name: "Estimate Follow-up",
         description: "Follow up on sent estimates",
-        icon: Clock
+        icon: Clock,
+        defaultActionType: "call"
       }
     ]
   },
@@ -100,13 +108,15 @@ const templateCategories: TemplateCategory[] = [
         id: "auto-invoice",
         name: "Auto-Generate Invoice",
         description: "Create invoice when job is completed",
-        icon: Zap
+        icon: Zap,
+        defaultActionType: "notification"
       },
       {
         id: "status-update",
         name: "Status Update",
         description: "Automatically update job status",
-        icon: Zap
+        icon: Zap,
+        defaultActionType: "notification"
       }
     ]
   }
@@ -117,6 +127,8 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
   const [activeTab, setActiveTab] = useState("templates");
   const [prompt, setPrompt] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [selectedActionType, setSelectedActionType] = useState<string | null>(null);
+  const [actionConfig, setActionConfig] = useState<any>({});
   
   useEffect(() => {
     // Find the template if initialTemplate is provided
@@ -147,7 +159,17 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
   
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
+    setSelectedActionType(template.defaultActionType || null);
     setActiveTab("customize");
+  };
+  
+  const handleActionTypeSelect = (actionType: string) => {
+    setSelectedActionType(actionType);
+    setActionConfig({});
+  };
+  
+  const handleActionConfigChange = (config: any) => {
+    setActionConfig(config);
   };
   
   const handleSaveTemplate = () => {
@@ -160,7 +182,7 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Create Automation</DialogTitle>
         </DialogHeader>
@@ -174,7 +196,7 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
           
           <TabsContent value="templates" className="mt-4 space-y-4">
             <p className="text-sm text-fixlyfy-text-secondary">
-              Choose a pre-built automation template or customize your own.
+              Choose a pre-built automation template with email, SMS, or call actions.
             </p>
             
             <div className="space-y-6">
@@ -205,6 +227,16 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
                             <p className="text-xs text-fixlyfy-text-secondary mt-1">
                               {template.description}
                             </p>
+                            {template.defaultActionType && (
+                              <div className="flex items-center mt-2">
+                                {template.defaultActionType === 'sms' && <MessageSquare size={12} className="mr-1 text-green-500" />}
+                                {template.defaultActionType === 'call' && <Phone size={12} className="mr-1 text-purple-500" />}
+                                {template.defaultActionType === 'email' && <Mail size={12} className="mr-1 text-blue-500" />}
+                                <span className="text-xs capitalize text-fixlyfy-text-secondary">
+                                  {template.defaultActionType}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -321,15 +353,39 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
                   </div>
                   
                   <div>
-                    <Label>Then (Action)</Label>
-                    <div className="mt-1 p-4 border border-fixlyfy-border rounded-lg">
-                      <p className="text-sm">This is a placeholder for the action configuration UI.</p>
-                      <p className="text-xs text-fixlyfy-text-secondary mt-2">
-                        In a complete implementation, this would include options to configure 
-                        messages, tasks, updates, etc.
-                      </p>
+                    <Label>Then (Action Type)</Label>
+                    <div className="mt-2">
+                      <ActionTypeSelector
+                        selectedType={selectedActionType}
+                        onTypeSelect={handleActionTypeSelect}
+                      />
                     </div>
                   </div>
+
+                  {selectedActionType && (selectedActionType === 'sms' || selectedActionType === 'call') && (
+                    <div>
+                      <Label>Configure {selectedActionType.toUpperCase()} Action</Label>
+                      <div className="mt-2 p-4 border border-fixlyfy-border rounded-lg">
+                        <TwilioActionConfig
+                          actionType={selectedActionType as "sms" | "call"}
+                          config={actionConfig}
+                          onChange={handleActionConfigChange}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedActionType && selectedActionType === 'email' && (
+                    <div>
+                      <Label>Configure Email Action</Label>
+                      <div className="mt-1 p-4 border border-fixlyfy-border rounded-lg">
+                        <p className="text-sm">Email configuration UI would go here.</p>
+                        <p className="text-xs text-fixlyfy-text-secondary mt-2">
+                          Subject line, body template, recipient configuration, etc.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="pt-4 flex justify-end">
