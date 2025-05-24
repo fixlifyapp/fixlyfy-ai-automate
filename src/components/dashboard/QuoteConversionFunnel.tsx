@@ -15,7 +15,11 @@ import { useClientAnalytics } from "@/hooks/useClientAnalytics";
 import { toast } from "sonner";
 
 export const QuoteConversionFunnel = () => {
+  console.log('QuoteConversionFunnel: Component rendering');
+  
   const { quoteConversionData, isLoading } = useClientAnalytics();
+  
+  console.log('QuoteConversionFunnel: Data state', { quoteConversionData, isLoading });
   
   const handleFollowUpSuggestion = () => {
     if (quoteConversionData?.ignored) {
@@ -170,3 +174,5 @@ export const QuoteConversionFunnel = () => {
     </Card>
   );
 };
+
+export default QuoteConversionFunnel;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,9 +31,14 @@ export const useClientAnalytics = () => {
 
   useEffect(() => {
     const fetchAnalytics = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('useClientAnalytics: No user found, skipping fetch');
+        setIsLoading(false);
+        return;
+      }
       
       try {
+        console.log('useClientAnalytics: Starting data fetch');
         setIsLoading(true);
         
         // Fetch clients with their job data
@@ -42,21 +46,36 @@ export const useClientAnalytics = () => {
           .from('clients')
           .select('*');
           
-        if (clientsError) throw clientsError;
+        if (clientsError) {
+          console.error('useClientAnalytics: Error fetching clients:', clientsError);
+          throw clientsError;
+        }
         
         // Fetch jobs data
         const { data: jobs, error: jobsError } = await supabase
           .from('jobs')
           .select('*');
           
-        if (jobsError) throw jobsError;
+        if (jobsError) {
+          console.error('useClientAnalytics: Error fetching jobs:', jobsError);
+          throw jobsError;
+        }
         
         // Fetch estimates data for conversion tracking
         const { data: estimates, error: estimatesError } = await supabase
           .from('estimates')
           .select('*');
           
-        if (estimatesError) throw estimatesError;
+        if (estimatesError) {
+          console.error('useClientAnalytics: Error fetching estimates:', estimatesError);
+          throw estimatesError;
+        }
+        
+        console.log('useClientAnalytics: Raw data fetched', { 
+          clientsCount: clients?.length || 0, 
+          jobsCount: jobs?.length || 0,
+          estimatesCount: estimates?.length || 0
+        });
         
         // Process client value data
         const clientAnalytics: ClientValueData[] = (clients || []).map(client => {
@@ -120,11 +139,26 @@ export const useClientAnalytics = () => {
           conversionRate: totalEstimates > 0 ? (approvedEstimates.length / totalEstimates) * 100 : 0
         };
         
+        console.log('useClientAnalytics: Processed data', { 
+          clientAnalyticsCount: clientAnalytics.length,
+          conversionData
+        });
+        
         setClientValueData(clientAnalytics.sort((a, b) => b.lifetimeValue - a.lifetimeValue));
         setQuoteConversionData(conversionData);
         
       } catch (error) {
-        console.error('Error fetching client analytics:', error);
+        console.error('useClientAnalytics: Error in fetchAnalytics:', error);
+        // Set empty data on error instead of keeping loading state
+        setClientValueData([]);
+        setQuoteConversionData({
+          sent: 0,
+          approved: 0,
+          ignored: 0,
+          rejected: 0,
+          approvedRevenue: 0,
+          conversionRate: 0
+        });
       } finally {
         setIsLoading(false);
       }

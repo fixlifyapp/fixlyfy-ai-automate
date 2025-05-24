@@ -15,10 +15,14 @@ import { useClientAnalytics, ClientValueData } from "@/hooks/useClientAnalytics"
 import { toast } from "sonner";
 
 export const ClientValuePanel = () => {
+  console.log('ClientValuePanel: Component rendering');
+  
   const { clientValueData, isLoading } = useClientAnalytics();
   
-  const topClients = clientValueData.slice(0, 5);
-  const atRiskClients = clientValueData.filter(client => client.churnRisk === 'high').slice(0, 3);
+  console.log('ClientValuePanel: Data state', { clientValueData, isLoading });
+  
+  const topClients = clientValueData?.slice(0, 5) || [];
+  const atRiskClients = clientValueData?.filter(client => client.churnRisk === 'high').slice(0, 3) || [];
   
   const handleReactivationSuggestion = (clientName: string) => {
     toast.success(`AI Suggestion: Send reactivation offer to ${clientName}`, {
@@ -150,3 +154,5 @@ export const ClientValuePanel = () => {
     </div>
   );
 };
+
+export default ClientValuePanel;
