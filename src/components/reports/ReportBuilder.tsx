@@ -25,7 +25,7 @@ export const ReportBuilder = () => {
   
   const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [technicianId, setTechnicianId] = useState<string>('');
+  const [technicianId, setTechnicianId] = useState<string>('all');
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [reportName, setReportName] = useState('');
@@ -90,7 +90,11 @@ export const ReportBuilder = () => {
       const { data, error } = await supabase.functions.invoke('reports-run', {
         body: {
           templateId,
-          filters: { startDate, endDate, technicianId },
+          filters: { 
+            startDate, 
+            endDate, 
+            technicianId: technicianId === 'all' ? undefined : technicianId 
+          },
           widgets: widgets.map(w => ({
             type: w.type,
             metric: w.metric,
@@ -125,7 +129,11 @@ export const ReportBuilder = () => {
         .insert({
           name: reportName,
           template_id: templateId,
-          filters: { startDate, endDate, technicianId },
+          filters: { 
+            startDate, 
+            endDate, 
+            technicianId: technicianId === 'all' ? undefined : technicianId 
+          },
           widgets: widgets.map(w => ({
             type: w.type,
             metric: w.metric,
@@ -177,7 +185,7 @@ export const ReportBuilder = () => {
                 <SelectValue placeholder="All Technicians" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Technicians</SelectItem>
+                <SelectItem value="all">All Technicians</SelectItem>
                 {technicians.map(tech => (
                   <SelectItem key={tech.id} value={tech.id}>
                     {tech.name}
