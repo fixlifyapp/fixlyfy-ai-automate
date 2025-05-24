@@ -41,6 +41,7 @@ function App() {
                     <Route path="/estimates" element={<EstimatesPage />} />
                     <Route path="/invoices" element={<InvoicesPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/connect" element={<ConnectCenterPage />} />
                     <Route path="/connect-center" element={<ConnectCenterPage />} />
                     <Route path="/messages" element={<MessagesPage />} />
                   </Routes>
