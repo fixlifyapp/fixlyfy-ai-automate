@@ -72,13 +72,13 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     handleSendMessage();
   };
 
-  // Format messages for UnifiedMessageList
+  // Format messages for UnifiedMessageList - properly map to UnifiedMessage interface
   const formattedMessages = conversation?.messages.map(msg => ({
     id: msg.id,
-    text: msg.text,
-    sender: msg.sender,
-    timestamp: msg.timestamp,
-    isClient: msg.isClient
+    body: msg.text,
+    direction: msg.isClient ? 'inbound' as const : 'outbound' as const,
+    created_at: msg.timestamp,
+    sender: msg.sender
   })) || [];
   
   if (!conversation) {
