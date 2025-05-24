@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VariableSelector } from "./VariableSelector";
 import { 
   Plus, 
   Trash2, 
@@ -48,7 +49,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
   const [actions, setActions] = useState([{
     id: Date.now().toString(),
     action_type: 'send_sms' as const,
-    action_config: {},
+    action_config: { message: '', to_number: '' },
     sequence_order: 1,
     delay_minutes: 0
   }]);
@@ -56,7 +57,6 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
   const handleSave = async () => {
     const newAutomation = await createAutomation(automation);
     if (newAutomation) {
-      // Save triggers and actions
       onSave();
     }
   };
@@ -74,10 +74,24 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
     setActions([...actions, {
       id: Date.now().toString(),
       action_type: 'send_sms',
-      action_config: {},
+      action_config: { message: '', to_number: '' },
       sequence_order: actions.length + 1,
       delay_minutes: 0
     }]);
+  };
+
+  const updateActionMessage = (actionIndex: number, message: string) => {
+    const newActions = [...actions];
+    newActions[actionIndex].action_config = {
+      ...newActions[actionIndex].action_config,
+      message
+    };
+    setActions(newActions);
+  };
+
+  const insertVariableIntoMessage = (actionIndex: number, variable: string) => {
+    const currentMessage = actions[actionIndex].action_config.message || '';
+    updateActionMessage(actionIndex, currentMessage + variable);
   };
 
   const triggerOptions = [
@@ -100,10 +114,10 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <div className="p-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg">
+            <div className="p-2 bg-gradient-to-r from-primary to-primary/80 rounded-lg">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            AI Automation Builder
+            Automation Builder
           </DialogTitle>
         </DialogHeader>
 
@@ -182,7 +196,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
               </CardHeader>
               <CardContent className="space-y-4">
                 {triggers.map((trigger, index) => (
-                  <Card key={trigger.id} className="border-l-4 border-l-blue-500">
+                  <Card key={trigger.id} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-4">
                         <Badge variant="outline">Trigger {index + 1}</Badge>
@@ -274,11 +288,21 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                         </div>
                         
                         <div>
-                          <Label>Message Template</Label>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Message Template</Label>
+                            <VariableSelector 
+                              onSelectVariable={(variable) => insertVariableIntoMessage(index, variable)}
+                            />
+                          </div>
                           <Textarea
-                            placeholder="Hi {ClientFirstName}, this is a reminder about your appointment on {JobDate} at {JobTime}..."
+                            value={action.action_config.message || ''}
+                            onChange={(e) => updateActionMessage(index, e.target.value)}
+                            placeholder="Hi {{CustomerFirstName}}, this is a reminder about your appointment on {{JobDate}} at {{JobTime}}..."
                             rows={3}
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Use variables like {{CustomerName}} to personalize messages
+                          </p>
                         </div>
                         
                         <div>
@@ -311,10 +335,13 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {variables.slice(0, 6).map((variable) => (
                         <Badge key={variable.id} variant="outline" className="justify-start">
-                          {`{${variable.variable_key}}`}
+                          {`{{${variable.variable_key}}}`}
                         </Badge>
                       ))}
                     </div>
+                    <p className="text-xs text-gray-600 mt-2">
+                      Click the Variables button next to message fields to insert these automatically
+                    </p>
                   </CardContent>
                 </Card>
               </CardContent>
@@ -360,7 +387,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
             </Button>
             <Button 
               onClick={handleSave}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
               Create Automation
             </Button>

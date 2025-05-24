@@ -81,7 +81,14 @@ export const useAutomations = () => {
         .order('created_at', { ascending: false });
         
       if (error) throw error;
-      setAutomations(data || []);
+      
+      // Type cast the data to ensure status field compatibility
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'active' | 'inactive' | 'draft'
+      })) as Automation[];
+      
+      setAutomations(typedData);
     } catch (error) {
       console.error('Error fetching automations:', error);
       toast.error('Failed to load automations');

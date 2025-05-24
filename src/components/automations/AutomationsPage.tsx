@@ -17,7 +17,8 @@ import {
   Sparkles, 
   Layers3,
   Brain,
-  Target
+  Target,
+  MessageSquare
 } from "lucide-react";
 
 export const AutomationsPage = () => {
@@ -26,32 +27,31 @@ export const AutomationsPage = () => {
 
   return (
     <PageLayout>
-      {/* 3D Header with Gradient and Effects */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-3xl p-8 mb-8 border border-purple-200/30">
-        {/* 3D Background Elements */}
+      {/* Updated Header with App Colors */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-fixlyfy/10 via-fixlyfy-light/10 to-blue-50 rounded-3xl p-8 mb-8 border border-fixlyfy/20">
+        {/* Background Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.1),transparent_70%)]"></div>
+          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-fixlyfy/20 to-fixlyfy-light/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-fixlyfy-light/20 to-blue-500/20 rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2"></div>
         </div>
         
         <div className="relative z-10 flex justify-between items-center">
           <div className="space-y-3">
             <div className="flex items-center gap-4">
-              <div className="p-4 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-xl transform rotate-3 hover:rotate-0 transition-all duration-500">
+              <div className="p-4 bg-gradient-to-br from-fixlyfy to-fixlyfy-light rounded-2xl shadow-xl transform rotate-3 hover:rotate-0 transition-all duration-500">
                 <Zap className="text-white w-8 h-8" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  AI Automations
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-fixlyfy via-fixlyfy-light to-blue-600 bg-clip-text text-transparent">
+                  Smart Automations
                 </h1>
-                <p className="text-gray-600 text-lg">Intelligent workflows powered by AI insights</p>
+                <p className="text-fixlyfy-text-secondary text-lg">Intelligent workflows powered by AI insights</p>
               </div>
             </div>
             
             {/* Feature Badges */}
             <div className="flex flex-wrap gap-2 mt-4">
-              <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200">
+              <Badge variant="outline" className="bg-fixlyfy/10 text-fixlyfy border-fixlyfy/30">
                 <Brain className="w-3 h-3 mr-1" />
                 AI-Powered
               </Badge>
@@ -59,8 +59,8 @@ export const AutomationsPage = () => {
                 <Target className="w-3 h-3 mr-1" />
                 Smart Triggers
               </Badge>
-              <Badge variant="outline" className="bg-indigo-100 text-indigo-700 border-indigo-200">
-                <Layers3 className="w-3 h-3 mr-1" />
+              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                <MessageSquare className="w-3 h-3 mr-1" />
                 Multi-Channel
               </Badge>
             </div>
@@ -68,7 +68,7 @@ export const AutomationsPage = () => {
           
           <Button 
             onClick={() => setShowBuilder(true)}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-300"
+            className="bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy/90 hover:to-fixlyfy-light/90 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-300"
           >
             <Plus className="mr-2 h-5 w-5" />
             Create Automation
@@ -78,31 +78,31 @@ export const AutomationsPage = () => {
 
       {/* Main Content */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-lg border border-gray-200/50">
+        <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-lg border border-fixlyfy-border/50">
           <TabsTrigger 
             value="automations" 
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white rounded-lg transition-all duration-300"
+            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <Zap className="w-4 h-4" />
             Automations
           </TabsTrigger>
           <TabsTrigger 
             value="templates"
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white rounded-lg transition-all duration-300"
+            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <Layers3 className="w-4 h-4" />
             Templates
           </TabsTrigger>
           <TabsTrigger 
             value="performance"
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white rounded-lg transition-all duration-300"
+            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <BarChart3 className="w-4 h-4" />
             Analytics
           </TabsTrigger>
           <TabsTrigger 
             value="settings"
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-500 data-[state=active]:text-white rounded-lg transition-all duration-300"
+            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <Settings className="w-4 h-4" />
             Settings
@@ -130,7 +130,21 @@ export const AutomationsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Global automation settings and configuration options will be available here.</p>
+              <div className="space-y-4">
+                <p className="text-fixlyfy-text-secondary">Configure global automation settings and preferences.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4">
+                    <h4 className="font-semibold mb-2">Default Variables</h4>
+                    <p className="text-sm text-fixlyfy-text-secondary">Manage available variables for message templates</p>
+                  </Card>
+                  
+                  <Card className="p-4">
+                    <h4 className="font-semibold mb-2">Integration Settings</h4>
+                    <p className="text-sm text-fixlyfy-text-secondary">Configure Twilio and other service integrations</p>
+                  </Card>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
