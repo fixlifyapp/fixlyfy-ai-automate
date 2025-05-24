@@ -38,9 +38,6 @@ export const JobDetailsTabs = ({
             <TabsTrigger value="payments" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
               Payments
             </TabsTrigger>
-            <TabsTrigger value="messages" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
-              Messages
-            </TabsTrigger>
             <TabsTrigger value="history" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
               History
             </TabsTrigger>

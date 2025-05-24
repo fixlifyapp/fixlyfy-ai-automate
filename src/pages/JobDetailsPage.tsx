@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
 import { JobDetailsQuickActions } from "@/components/jobs/JobDetailsQuickActions";
 import { TabsContent } from "@/components/ui/tabs";
-import { JobMessages } from "@/components/jobs/JobMessages";
 import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
@@ -78,9 +77,6 @@ const JobDetailsPage = () => {
                 </TabsContent>
                 <TabsContent value="payments">
                   <JobPayments jobId={id || ""} />
-                </TabsContent>
-                <TabsContent value="messages">
-                  <JobMessages jobId={id || ""} />
                 </TabsContent>
                 <TabsContent value="history">
                   <JobHistory jobId={id || ""} />
