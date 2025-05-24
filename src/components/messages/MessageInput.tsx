@@ -1,5 +1,5 @@
 
-import { Loader2, Send, Bot } from "lucide-react";
+import { Loader2, Send, Bot, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MessageInputProps {
@@ -44,10 +44,19 @@ export const MessageInput = ({
             size="sm"
             onClick={onSuggestResponse}
             disabled={isAILoading || isLoading}
-            className="gap-2 text-purple-600 border-purple-200"
+            className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
           >
-            {isAILoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
-            {isAILoading ? "Generating..." : "Suggest Response"}
+            {isAILoading ? (
+              <>
+                <Bot className="h-4 w-4 animate-pulse" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                AI Response
+              </>
+            )}
           </Button>
         </div>
       )}
@@ -67,17 +76,30 @@ export const MessageInput = ({
             }
           }}
         />
-        <Button 
-          onClick={handleSendMessage} 
-          disabled={isLoading || !message.trim() || isDisabled}
-          className="self-end"
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send size={16} />
+        <div className="flex flex-col gap-1">
+          {canSuggestResponse && (
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={onSuggestResponse}
+              disabled={isAILoading || isLoading || messages.length === 0}
+              className="gap-1 text-purple-600 border-purple-200 hover:bg-purple-50"
+            >
+              {isAILoading ? <Bot size={14} className="animate-pulse" /> : <Sparkles size={14} />}
+            </Button>
           )}
-        </Button>
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={isLoading || !message.trim() || isDisabled}
+            size="sm"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send size={14} />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

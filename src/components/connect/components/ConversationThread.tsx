@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { MessageSquare, Loader2, Send, Bot } from "lucide-react";
+import { MessageSquare, Loader2, Send, Bot, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -127,16 +128,37 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
   return (
     <>
       <div className="p-4 border-b border-fixlyfy-border">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback>{conversation.client.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-medium">{conversation.client.name}</h3>
-            <p className="text-xs text-fixlyfy-text-secondary">
-              {conversation.client.phone || "No phone number"}
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback>{conversation.client.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-medium">{conversation.client.name}</h3>
+              <p className="text-xs text-fixlyfy-text-secondary">
+                {conversation.client.phone || "No phone number"}
+              </p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSuggestResponse}
+            disabled={isAILoading || isSending || conversation.messages.length === 0}
+            className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+          >
+            {isAILoading ? (
+              <>
+                <Bot className="h-4 w-4 animate-pulse" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                AI Response
+              </>
+            )}
+          </Button>
         </div>
       </div>
       

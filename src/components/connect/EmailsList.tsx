@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Clock, Star, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Clock, Star, Loader2, ArrowRight, Bot, Sparkles } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useEmailAI } from "./hooks/useEmailAI";
 
 interface Email {
   id: string;
@@ -32,6 +32,16 @@ export const EmailsList = () => {
   const [emails, setEmails] = useState<Email[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [replyText, setReplyText] = useState("");
+
+  const handleUseSuggestion = (content: string) => {
+    setReplyText(content);
+  };
+
+  const { isAILoading, handleSuggestResponse } = useEmailAI({
+    email: selectedEmail,
+    onUseSuggestion: handleUseSuggestion
+  });
 
   const fetchEmails = async () => {
     try {
@@ -196,14 +206,35 @@ export const EmailsList = () => {
               <div className="mb-4 pb-4 border-b border-fixlyfy-border">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold">{selectedEmail.subject}</h2>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleReplyEmail(selectedEmail)}
-                    className="flex items-center gap-1"
-                  >
-                    Reply <ArrowRight size={14} />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSuggestResponse}
+                      disabled={isAILoading}
+                      className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+                    >
+                      {isAILoading ? (
+                        <>
+                          <Bot className="h-4 w-4 animate-pulse" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          AI Response
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleReplyEmail(selectedEmail)}
+                      className="flex items-center gap-1"
+                    >
+                      Reply <ArrowRight size={14} />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center mt-2 text-sm text-fixlyfy-text-secondary">
                   <span className="font-medium text-foreground mr-2">
@@ -219,6 +250,32 @@ export const EmailsList = () => {
                   {selectedEmail.body || 'No email content available.'}
                 </p>
               </div>
+              {replyText && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-md border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">AI Suggested Response:</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setReplyText("")}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    className="w-full p-2 border rounded text-sm"
+                    rows={4}
+                    placeholder="AI suggested response will appear here..."
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button size="sm" onClick={() => handleReplyEmail(selectedEmail)}>
+                      Send Reply
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-fixlyfy-text-secondary">
