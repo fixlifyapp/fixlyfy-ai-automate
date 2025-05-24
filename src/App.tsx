@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RBACProvider } from "@/components/auth/RBACProvider";
+import { AuthProvider } from "@/hooks/use-auth";
+import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
 import Dashboard from "./pages/Dashboard";
 import JobsPage from "./pages/JobsPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -22,29 +24,33 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RBACProvider>
-        <MessageProvider>
-          <div className="min-h-screen bg-background font-sans antialiased">
-            <Toaster />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<AuthPage />} />
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/jobs" element={<JobsPage />} />
-                <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                <Route path="/clients" element={<ClientsPage />} />
-                <Route path="/team" element={<TeamManagementPage />} />
-                <Route path="/estimates" element={<EstimatesPage />} />
-                <Route path="/invoices" element={<InvoicesPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/connect-center" element={<ConnectCenterPage />} />
-                <Route path="/messages" element={<MessagesPage />} />
-              </Routes>
-            </BrowserRouter>
-            <UnifiedMessageDialog />
-          </div>
-        </MessageProvider>
-      </RBACProvider>
+      <AuthProvider>
+        <GlobalRealtimeProvider>
+          <RBACProvider>
+            <MessageProvider>
+              <div className="min-h-screen bg-background font-sans antialiased">
+                <Toaster />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/login" element={<AuthPage />} />
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/jobs" element={<JobsPage />} />
+                    <Route path="/jobs/:id" element={<JobDetailsPage />} />
+                    <Route path="/clients" element={<ClientsPage />} />
+                    <Route path="/team" element={<TeamManagementPage />} />
+                    <Route path="/estimates" element={<EstimatesPage />} />
+                    <Route path="/invoices" element={<InvoicesPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/connect-center" element={<ConnectCenterPage />} />
+                    <Route path="/messages" element={<MessagesPage />} />
+                  </Routes>
+                </BrowserRouter>
+                <UnifiedMessageDialog />
+              </div>
+            </MessageProvider>
+          </RBACProvider>
+        </GlobalRealtimeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
