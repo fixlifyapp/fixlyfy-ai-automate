@@ -3,8 +3,11 @@ import { MessageSquare, Sparkles, Bot } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useMessageContext } from "@/contexts/MessageContext";
+import { MessageInputInline } from "@/components/messages/components/MessageInputInline";
+import { useInlineMessaging } from "@/components/messages/hooks/useInlineMessaging";
 import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -26,10 +29,15 @@ interface Conversation {
 
 interface ConversationThreadProps {
   conversation: Conversation | undefined;
+  onMessagesUpdate?: () => void;
 }
 
-export const ConversationThread = ({ conversation }: ConversationThreadProps) => {
-  const { openMessageDialog } = useMessageContext();
+export const ConversationThread = ({ conversation, onMessagesUpdate }: ConversationThreadProps) => {
+  const { sendMessage, isSending } = useInlineMessaging({
+    clientId: conversation?.client.id,
+    clientPhone: conversation?.client.phone,
+    onMessageSent: onMessagesUpdate
+  });
 
   // Format messages for AI
   const unifiedMessages = conversation?.messages.map(msg => ({
@@ -41,7 +49,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
   })) || [];
 
   const handleUseSuggestion = (content: string) => {
-    // This will be handled by the unified dialog
+    // This will be handled by the MessageInputInline component
   };
 
   const { isAILoading, handleSuggestResponse } = useMessageAI({
@@ -50,12 +58,6 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     jobId: '', // No job context in connect center
     onUseSuggestion: handleUseSuggestion
   });
-
-  const handleOpenMessageDialog = () => {
-    if (conversation?.client) {
-      openMessageDialog(conversation.client);
-    }
-  };
   
   if (!conversation) {
     return (
@@ -106,14 +108,6 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
                   AI Response
                 </>
               )}
-            </Button>
-            <Button
-              onClick={handleOpenMessageDialog}
-              size="sm"
-              className="gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Message
             </Button>
           </div>
         </div>
@@ -172,14 +166,24 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
       </div>
       
       <div className="p-4 border-t border-fixlyfy-border">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-2">
-            Use the unified message dialog to send messages
-          </p>
-          <Button onClick={handleOpenMessageDialog} variant="outline" size="sm">
-            Open Message Dialog
-          </Button>
-        </div>
+        {conversation.client.phone ? (
+          <MessageInputInline
+            onSendMessage={sendMessage}
+            isLoading={isSending}
+            showSuggestResponse={true}
+            onSuggestResponse={handleSuggestResponse}
+            isAILoading={isAILoading}
+            placeholder={`Message ${conversation.client.name}...`}
+            clientInfo={conversation.client}
+            messages={unifiedMessages}
+          />
+        ) : (
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              No phone number available for this client
+            </p>
+          </div>
+        )}
       </div>
     </>
   );
