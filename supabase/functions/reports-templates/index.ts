@@ -1,5 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,11 +63,29 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize Supabase client for potential future use
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization')
+    console.log('Auth header received:', authHeader ? 'Present' : 'Missing')
+
+    // For now, return templates without user verification
+    // In the future, we could filter templates based on user permissions
+    console.log('Returning report templates:', reportTemplates.length)
+
     return new Response(JSON.stringify({ templates: reportTemplates }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error in reports-templates function:', error)
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error.message 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
