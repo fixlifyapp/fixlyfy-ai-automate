@@ -345,7 +345,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {commonVariables.map((variable) => (
                         <Badge key={variable.key} variant="outline" className="justify-start">
-                          {`{{${variable.key}}}`}
+                          {{`{{${variable.key}}}`}}
                         </Badge>
                       ))}
                     </div>
