@@ -1,102 +1,70 @@
 
 import { Badge } from "@/components/ui/badge";
-import { StatusSelector } from "@/components/jobs/header/StatusSelector";
-import { ClientContactButtons } from "@/components/jobs/header/ClientContactButtons";
-import { formatCurrency } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Tag } from "lucide-react";
+import { JobStatusBadge } from "./JobStatusBadge";
+import { ClientContactButtons } from "./ClientContactButtons";
 
 interface JobInfoSectionProps {
   job: {
     id: string;
-    title: string;
+    clientId: string;
     client: string;
-    clientId?: string;
-    phone?: string;
-    email?: string;
+    service: string;
     address: string;
-    scheduledDate?: string;
-    priority?: string;
+    phone: string;
+    email: string;
+    total: number;
   };
+  invoiceAmount: number;
+  balance: number;
   status: string;
-  onStatusChange: (status: string) => void;
+  onStatusChange: (newStatus: string) => void;
   onCallClick: () => void;
   onMessageClick: () => void;
   onEditClient: () => void;
-  invoiceAmount?: number;
-  balance?: number;
 }
 
 export const JobInfoSection = ({
   job,
+  invoiceAmount,
+  balance,
   status,
   onStatusChange,
   onCallClick,
   onMessageClick,
-  onEditClient,
-  invoiceAmount,
-  balance
+  onEditClient
 }: JobInfoSectionProps) => {
   return (
-    <div className="flex-1">
-      <div className="flex items-center gap-3 mb-2">
-        <h1 className="text-xl font-semibold">{job.title}</h1>
-        <StatusSelector 
-          currentStatus={status} 
-          onStatusChange={onStatusChange} 
-        />
-      </div>
+    <div className="flex flex-col gap-1">
+      <JobStatusBadge status={status} onStatusChange={onStatusChange} />
       
-      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="font-medium">{job.client}</span>
-          <ClientContactButtons 
+          <div className="flex flex-col">
+            <h2 className="text-lg font-medium">{job.client}</h2>
+            <span className="text-sm text-muted-foreground">Job #{job.id}</span>
+          </div>
+          <ClientContactButtons
             onCallClick={onCallClick}
             onMessageClick={onMessageClick}
             onEditClient={onEditClient}
-            clientId={job.clientId}
-            clientName={job.client}
-            clientPhone={job.phone}
           />
         </div>
         
-        {job.phone && (
-          <span>{job.phone}</span>
-        )}
-        
-        {job.email && (
-          <span>{job.email}</span>
-        )}
-      </div>
-      
-      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-        <span>{job.address}</span>
-        
-        {job.scheduledDate && (
-          <span>Scheduled: {new Date(job.scheduledDate).toLocaleDateString()}</span>
-        )}
-        
-        {job.priority && (
-          <Badge variant={job.priority === 'high' ? 'destructive' : 'secondary'}>
-            {job.priority}
-          </Badge>
-        )}
-      </div>
-      
-      {(invoiceAmount !== undefined || balance !== undefined) && (
-        <div className="flex gap-4 text-sm">
-          {invoiceAmount !== undefined && (
-            <span className="text-muted-foreground">
-              Invoice: <span className="font-medium">{formatCurrency(invoiceAmount)}</span>
+        <div className="flex gap-4 text-sm mt-1 sm:mt-0 sm:ml-4">
+          <div>
+            <span className="text-muted-foreground">Total:</span>{" "}
+            <span className="font-medium">${invoiceAmount.toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Balance:</span>{" "}
+            <span className={`font-medium ${balance > 0 ? "text-orange-500" : "text-green-500"}`}>
+              ${balance.toFixed(2)}
             </span>
-          )}
-          {balance !== undefined && (
-            <span className="text-muted-foreground">
-              Balance: <span className={`font-medium ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {formatCurrency(balance)}
-              </span>
-            </span>
-          )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

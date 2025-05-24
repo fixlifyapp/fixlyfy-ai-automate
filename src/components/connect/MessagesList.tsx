@@ -28,7 +28,6 @@ export const MessagesList = ({ searchResults = [] }: MessagesListProps) => {
   });
 
   const handleNewMessageClick = (client: any) => {
-    // Only use dialog for completely new conversations with unknown clients
     openMessageDialog(client);
   };
 
@@ -88,10 +87,7 @@ export const MessagesList = ({ searchResults = [] }: MessagesListProps) => {
         {/* Message Thread */}
         <Card className="p-0 md:col-span-2">
           <div className="h-[600px] flex flex-col">
-            <ConversationThread 
-              conversation={activeConv} 
-              onMessagesUpdate={refreshConversations}
-            />
+            <ConversationThread conversation={activeConv} />
           </div>
         </Card>
       </div>

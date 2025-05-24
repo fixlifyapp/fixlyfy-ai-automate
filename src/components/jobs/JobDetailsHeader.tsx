@@ -92,25 +92,12 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
     toast.success("Job rescheduling initiated");
     // In a real app, this would open a rescheduling dialog
   };
-
-  // Create a properly typed job object for JobInfoSection
-  const jobForInfoSection = {
-    id: job.id,
-    title: job.title || job.service || "Untitled Job", // Fallback if title is missing
-    client: job.client,
-    clientId: job.clientId,
-    phone: job.phone,
-    email: job.email,
-    address: job.address,
-    scheduledDate: job.scheduledDate,
-    priority: job.priority
-  };
   
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
         <JobInfoSection 
-          job={jobForInfoSection}
+          job={job}
           status={currentStatus}
           onStatusChange={handleStatusChange}
           onCallClick={handleCallClick}

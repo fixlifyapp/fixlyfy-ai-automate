@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -70,7 +70,7 @@ const menuItems = [
   {
     name: 'Team',
     icon: UserCheck,
-    path: '/team',
+    path: '/admin/team',
     highlight: false,
     permission: 'users.view' // Users with user view permission can see team
   },
