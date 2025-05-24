@@ -1,4 +1,3 @@
-
 import { MessageSquare, Sparkles, Bot, Send } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -62,7 +61,8 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     isSending
   } = useConversationMessaging({
     conversationId: conversation?.id || "",
-    clientPhone: conversation?.client.phone
+    clientPhone: conversation?.client.phone,
+    clientId: conversation?.client.id
   });
 
   const handleOpenMessageDialog = () => {
