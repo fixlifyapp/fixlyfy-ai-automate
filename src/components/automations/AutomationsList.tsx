@@ -1,299 +1,229 @@
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useAutomations } from "@/hooks/useAutomations";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { 
-  Calendar, 
-  Mail, 
-  Clock, 
-  AlertTriangle, 
+  Zap, 
+  Play, 
+  Pause, 
+  MoreVertical, 
+  Search, 
+  Filter,
+  MessageSquare,
+  Phone,
+  Mail,
+  Calendar,
+  AlertTriangle,
   CheckCircle,
-  MoreVertical,
-  Eye,
-  Copy,
-  Trash2,
-  Plus,
-  Zap
+  Clock,
+  BarChart3
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
-type AutomationCategory = "all" | "reminders" | "marketing" | "follow-ups" | "actions";
+export const AutomationsList = () => {
+  const { automations, isLoading, updateAutomation, deleteAutomation, executeAutomation } = useAutomations();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
 
-interface AutomationsListProps {
-  category: AutomationCategory;
-  onViewDetails?: (automation: AutomationType) => void;
-}
+  const filteredAutomations = automations.filter(automation => {
+    const matchesSearch = automation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         automation.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === "all" || automation.category === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-type AutomationType = {
-  id: string;
-  name: string;
-  description: string;
-  category: AutomationCategory | string;
-  trigger: string;
-  action: string;
-  status: "active" | "disabled" | "draft";
-  lastRun: string | null;
-  nextRun: string | null;
-  icon: React.ElementType;
-  runCount: number;
-  successRate: number;
-};
-
-// Mock data for automations
-const automationsData: AutomationType[] = [
-  {
-    id: "auto-1",
-    name: "24h Job Reminder",
-    description: "Send email reminder 24 hours before scheduled job",
-    category: "reminders",
-    trigger: "24 hours before job",
-    action: "Send email",
-    status: "active",
-    lastRun: "2 hours ago",
-    nextRun: "In 3 hours",
-    icon: Calendar,
-    runCount: 128,
-    successRate: 98
-  },
-  {
-    id: "auto-2",
-    name: "Invoice Payment Reminder",
-    description: "Remind client when invoice is 3 days overdue",
-    category: "reminders",
-    trigger: "Invoice 3 days overdue",
-    action: "Send SMS",
-    status: "active",
-    lastRun: "1 day ago",
-    nextRun: "In 2 days",
-    icon: Mail,
-    runCount: 85,
-    successRate: 92
-  },
-  {
-    id: "auto-3",
-    name: "Monthly Special Offer",
-    description: "Send monthly promotion to clients who haven't booked in 60 days",
-    category: "marketing",
-    trigger: "1st of each month",
-    action: "Send marketing email",
-    status: "disabled",
-    lastRun: "30 days ago",
-    nextRun: "In 2 days",
-    icon: Mail,
-    runCount: 450,
-    successRate: 76
-  },
-  {
-    id: "auto-4",
-    name: "Post-Service Feedback",
-    description: "Request feedback 2 days after job completion",
-    category: "follow-ups",
-    trigger: "2 days after job completion",
-    action: "Send email",
-    status: "active",
-    lastRun: "12 hours ago",
-    nextRun: "In 5 hours",
-    icon: Mail,
-    runCount: 203,
-    successRate: 82
-  },
-  {
-    id: "auto-5",
-    name: "Low Inventory Alert",
-    description: "Notify manager when inventory falls below threshold",
-    category: "actions",
-    trigger: "Inventory below threshold",
-    action: "Create internal notification",
-    status: "active",
-    lastRun: "3 days ago",
-    nextRun: null,
-    icon: AlertTriangle,
-    runCount: 12,
-    successRate: 100
-  },
-  {
-    id: "auto-6",
-    name: "Seasonal HVAC Maintenance",
-    description: "Offer seasonal maintenance to past HVAC clients",
-    category: "marketing",
-    trigger: "April 1 and October 1",
-    action: "Send email sequence",
-    status: "draft",
-    lastRun: null,
-    nextRun: "In 45 days",
-    icon: Calendar,
-    runCount: 0,
-    successRate: 0
-  }
-];
-
-export const AutomationsList = ({ category, onViewDetails }: AutomationsListProps) => {
-  const [automations, setAutomations] = useState<AutomationType[]>(
-    category === "all" 
-      ? automationsData 
-      : automationsData.filter(a => a.category === category)
-  );
-  
-  const toggleStatus = (id: string) => {
-    setAutomations(automations.map(auto => {
-      if (auto.id === id) {
-        const newStatus = auto.status === "active" ? "disabled" : "active";
-        return { ...auto, status: newStatus };
-      }
-      return auto;
-    }));
-  };
-  
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case "active":
-        return <Badge className="bg-fixlyfy-success">Active</Badge>;
-      case "disabled":
-        return <Badge variant="outline" className="text-fixlyfy-text-secondary">Disabled</Badge>;
-      case "draft":
-        return <Badge variant="outline" className="border-amber-500 text-amber-500">Draft</Badge>;
-      default:
-        return null;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-700 border-green-200';
+      case 'inactive': return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'draft': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
-  
-  if (automations.length === 0) {
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'reminders': return <Clock className="w-4 h-4" />;
+      case 'marketing': return <MessageSquare className="w-4 h-4" />;
+      case 'follow-ups': return <Mail className="w-4 h-4" />;
+      case 'calls': return <Phone className="w-4 h-4" />;
+      default: return <Zap className="w-4 h-4" />;
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-fixlyfy/10 flex items-center justify-center mb-4">
-          <Zap size={24} className="text-fixlyfy" />
-        </div>
-        <h3 className="text-lg font-medium mb-2">No automations found</h3>
-        <p className="text-fixlyfy-text-secondary mb-6 max-w-md">
-          You don't have any {category !== 'all' ? category : ''} automations set up yet. 
-          Create your first automation to start saving time.
-        </p>
-        <Button className="bg-fixlyfy hover:bg-fixlyfy/90">
-          <Plus size={16} className="mr-2" /> Create Automation
-        </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
-  
+
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Trigger</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last Run</TableHead>
-            <TableHead>Next Run</TableHead>
-            <TableHead>Performance</TableHead>
-            <TableHead className="w-[80px]">Active</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {automations.map((automation) => (
-            <TableRow key={automation.id} className="cursor-pointer" onClick={() => onViewDetails && onViewDetails(automation)}>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center">
-                  <div className="bg-fixlyfy/10 p-2 rounded mr-2">
-                    <automation.icon size={14} className="text-fixlyfy" />
+    <div className="space-y-6">
+      {/* Search and Filter Bar */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search automations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 border-0 bg-gray-100/50"
+              />
+            </div>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Filter
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Automations Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredAutomations.map((automation) => (
+          <Card 
+            key={automation.id} 
+            className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50/50"
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg text-white">
+                    {getCategoryIcon(automation.category)}
                   </div>
                   <div>
-                    <p className="font-medium">{automation.name}</p>
-                    <p className="text-xs text-fixlyfy-text-secondary">{automation.description}</p>
+                    <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
+                      {automation.name}
+                    </CardTitle>
+                    <Badge className={getStatusColor(automation.status)}>
+                      {automation.status}
+                    </Badge>
                   </div>
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center">
-                  <Clock size={14} className="text-fixlyfy-text-secondary mr-1" />
-                  <span className="text-sm">{automation.trigger}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center">
-                  <Mail size={14} className="text-fixlyfy-text-secondary mr-1" />
-                  <span className="text-sm">{automation.action}</span>
-                </div>
-              </TableCell>
-              <TableCell>{getStatusBadge(automation.status)}</TableCell>
-              <TableCell>
-                {automation.lastRun ? (
-                  <span className="text-sm">{automation.lastRun}</span>
-                ) : (
-                  <span className="text-sm text-fixlyfy-text-muted">Never run</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {automation.nextRun ? (
-                  <span className="text-sm">{automation.nextRun}</span>
-                ) : (
-                  <span className="text-sm text-fixlyfy-text-muted">Not scheduled</span>
-                )}
-              </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                {automation.runCount > 0 ? (
-                  <div className="flex items-center">
-                    <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden mr-2">
-                      <div 
-                        className="h-full bg-fixlyfy-success" 
-                        style={{ width: `${automation.successRate}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs text-fixlyfy-text-secondary">
-                      {automation.successRate}% ({automation.runCount})
-                    </span>
-                  </div>
-                ) : (
-                  <span className="text-xs text-fixlyfy-text-muted">No data</span>
-                )}
-              </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <Switch 
-                  checked={automation.status === "active"} 
-                  onCheckedChange={() => toggleStatus(automation.id)}
-                  disabled={automation.status === "draft"}
-                />
-              </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
+                
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical size={16} />
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => onViewDetails && onViewDetails(automation)}>
-                      <Eye size={14} className="mr-2" /> View Details
+                    <DropdownMenuItem onClick={() => executeAutomation(automation.id)}>
+                      <Play className="w-4 h-4 mr-2" />
+                      Run Now
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer">
-                      <Copy size={14} className="mr-2" /> Duplicate
+                    <DropdownMenuItem 
+                      onClick={() => updateAutomation(automation.id, { 
+                        status: automation.status === 'active' ? 'inactive' : 'active' 
+                      })}
+                    >
+                      {automation.status === 'active' ? (
+                        <>
+                          <Pause className="w-4 h-4 mr-2" />
+                          Pause
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Activate
+                        </>
+                      )}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-red-600">
-                      <Trash2 size={14} className="mr-2" /> Delete
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => deleteAutomation(automation.id)}
+                      className="text-red-600"
+                    >
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              {automation.description && (
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {automation.description}
+                </p>
+              )}
+              
+              {/* Performance Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-2 bg-blue-50 rounded-lg">
+                  <div className="text-lg font-semibold text-blue-600">{automation.run_count}</div>
+                  <div className="text-xs text-blue-600">Runs</div>
+                </div>
+                <div className="text-center p-2 bg-green-50 rounded-lg">
+                  <div className="text-lg font-semibold text-green-600">{automation.success_count}</div>
+                  <div className="text-xs text-green-600">Success</div>
+                </div>
+                <div className="text-center p-2 bg-purple-50 rounded-lg">
+                  <div className="text-lg font-semibold text-purple-600">
+                    {automation.run_count > 0 ? Math.round((automation.success_count / automation.run_count) * 100) : 0}%
+                  </div>
+                  <div className="text-xs text-purple-600">Rate</div>
+                </div>
+              </div>
+              
+              {/* Action Indicators */}
+              <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <BarChart3 className="w-3 h-3" />
+                  {automation.actions?.length || 0} actions
+                </div>
+                {automation.last_run_at && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="w-3 h-3" />
+                    Last run: {new Date(automation.last_run_at).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredAutomations.length === 0 && (
+        <Card className="border-0 shadow-lg">
+          <CardContent className="text-center py-12">
+            <Zap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Automations Found</h3>
+            <p className="text-gray-600 mb-4">
+              {searchTerm ? "Try adjusting your search terms" : "Create your first automation to get started"}
+            </p>
+            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
+              Create Automation
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

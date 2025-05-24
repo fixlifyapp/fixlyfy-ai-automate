@@ -9,6 +9,248 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      automation_actions: {
+        Row: {
+          action_config: Json
+          action_type: string
+          automation_id: string | null
+          created_at: string
+          delay_minutes: number | null
+          id: string
+          sequence_order: number | null
+        }
+        Insert: {
+          action_config?: Json
+          action_type: string
+          automation_id?: string | null
+          created_at?: string
+          delay_minutes?: number | null
+          id?: string
+          sequence_order?: number | null
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          automation_id?: string | null
+          created_at?: string
+          delay_minutes?: number | null
+          id?: string
+          sequence_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_actions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_performance: {
+        Row: {
+          actions_executed: number | null
+          automation_id: string | null
+          created_at: string
+          date: string
+          engagement_rate: number | null
+          id: string
+          success_rate: number | null
+          triggers_fired: number | null
+        }
+        Insert: {
+          actions_executed?: number | null
+          automation_id?: string | null
+          created_at?: string
+          date?: string
+          engagement_rate?: number | null
+          id?: string
+          success_rate?: number | null
+          triggers_fired?: number | null
+        }
+        Update: {
+          actions_executed?: number | null
+          automation_id?: string | null
+          created_at?: string
+          date?: string
+          engagement_rate?: number | null
+          id?: string
+          success_rate?: number | null
+          triggers_fired?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_performance_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          actions_executed: number | null
+          automation_id: string | null
+          completed_at: string | null
+          context_data: Json | null
+          error_message: string | null
+          id: string
+          started_at: string
+          status: string
+          trigger_data: Json | null
+        }
+        Insert: {
+          actions_executed?: number | null
+          automation_id?: string | null
+          completed_at?: string | null
+          context_data?: Json | null
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger_data?: Json | null
+        }
+        Update: {
+          actions_executed?: number | null
+          automation_id?: string | null
+          completed_at?: string | null
+          context_data?: Json | null
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_triggers: {
+        Row: {
+          automation_id: string | null
+          conditions: Json | null
+          created_at: string
+          event_type: string | null
+          id: string
+          schedule_config: Json | null
+          trigger_type: string
+        }
+        Insert: {
+          automation_id?: string | null
+          conditions?: Json | null
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          schedule_config?: Json | null
+          trigger_type: string
+        }
+        Update: {
+          automation_id?: string | null
+          conditions?: Json | null
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          schedule_config?: Json | null
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_triggers_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_variables: {
+        Row: {
+          created_at: string
+          data_source: string | null
+          description: string | null
+          field_path: string | null
+          id: string
+          name: string
+          variable_key: string
+        }
+        Insert: {
+          created_at?: string
+          data_source?: string | null
+          description?: string | null
+          field_path?: string | null
+          id?: string
+          name: string
+          variable_key: string
+        }
+        Update: {
+          created_at?: string
+          data_source?: string | null
+          description?: string | null
+          field_path?: string | null
+          id?: string
+          name?: string
+          variable_key?: string
+        }
+        Relationships: []
+      }
+      automations: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          failure_count: number | null
+          id: string
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          run_count: number | null
+          status: string
+          success_count: number | null
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          failure_count?: number | null
+          id?: string
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          run_count?: number | null
+          status?: string
+          success_count?: number | null
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          failure_count?: number | null
+          id?: string
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          run_count?: number | null
+          status?: string
+          success_count?: number | null
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calls: {
         Row: {
           call_sid: string | null
