@@ -10,6 +10,9 @@ export interface JobInfo {
   total: number;
   status?: string;
   description?: string;
+  title?: string;
+  scheduledDate?: string;
+  priority?: string;
 }
 
 export interface JobDetailsContextType {
