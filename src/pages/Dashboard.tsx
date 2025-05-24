@@ -116,7 +116,7 @@ const Dashboard = () => {
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-gradient-to-br from-fixlyfy to-fixlyfy-light rounded-2xl shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                <Sparkles className="text-white" size={24} />
+                <Sparkles className="text-white w-6 h-6" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-fixlyfy to-fixlyfy-light bg-clip-text text-transparent">
@@ -127,6 +127,13 @@ const Dashboard = () => {
             </div>
           </div>
           <DashboardActions onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+        </div>
+      </div>
+
+      {/* AI Business Insights Panel - Moved to Top */}
+      <div className="mb-8">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          <AiInsightsPanel />
         </div>
       </div>
 
@@ -191,13 +198,6 @@ const Dashboard = () => {
             dateRange={dateRange}
             isRefreshing={isRefreshing}
           />
-        </div>
-      </div>
-      
-      {/* AI Insights Panel with Modern Design */}
-      <div className="mb-8">
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
-          <AiInsightsPanel />
         </div>
       </div>
       
