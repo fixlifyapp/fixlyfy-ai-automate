@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
@@ -16,6 +15,7 @@ import { ModernMetricsGrid } from "@/components/dashboard/ModernMetricsGrid";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // Define time period types for filters
 export type TimePeriod = "week" | "month" | "quarter" | "custom";
@@ -160,6 +160,25 @@ const Dashboard = () => {
       {/* Modern Metrics Grid */}
       <div className="mb-8">
         <ModernMetricsGrid isRefreshing={isRefreshing} />
+      </div>
+      
+      {/* NEW: Client Value & Churn Analysis */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            Client Analytics & Insights
+          </h2>
+          <Badge variant="outline" className="bg-blue-100 text-blue-700">
+            🆕 New Feature
+          </Badge>
+        </div>
+        <ClientValuePanel />
+      </div>
+      
+      {/* NEW: Quote Conversion & Repeat Work Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <QuoteConversionFunnel />
+        <RepeatWorkTracker />
       </div>
       
       {/* Expanded Dashboard Metrics Toggle */}
