@@ -6,15 +6,16 @@ import { AiInsightsPanel } from "@/components/dashboard/AiInsightsPanel";
 import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
 import { InvoiceStatusBreakdown } from "@/components/dashboard/InvoiceStatusBreakdown";
 import { ClientStats } from "@/components/dashboard/ClientStats";
-import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
 import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterControls";
 import { DashboardActions } from "@/components/dashboard/DashboardActions";
 import { TechScoreboard } from "@/components/dashboard/TechScoreboard";
 import { DispatchScoreboard } from "@/components/dashboard/DispatchScoreboard";
 import { ExpandedDashboardMetrics } from "@/components/dashboard/ExpandedDashboardMetrics";
+import { EnhancedKpiCards } from "@/components/dashboard/EnhancedKpiCards";
+import { ModernMetricsGrid } from "@/components/dashboard/ModernMetricsGrid";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 // Define time period types for filters
 export type TimePeriod = "week" | "month" | "quarter" | "custom";
@@ -108,79 +109,118 @@ const Dashboard = () => {
 
   return (
     <PageLayout>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-fixlyfy-text-secondary">Welcome to your business overview</p>
+      {/* Modern Header with 3D Effects */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-fixlyfy/10 via-transparent to-fixlyfy/5 rounded-3xl p-8 mb-8 border border-fixlyfy/20">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(138,77,213,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-fixlyfy to-fixlyfy-light rounded-2xl shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                <Sparkles className="text-white" size={24} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-fixlyfy to-fixlyfy-light bg-clip-text text-transparent">
+                  Dashboard
+                </h1>
+                <p className="text-fixlyfy-text-secondary">Welcome to your business command center</p>
+              </div>
+            </div>
+          </div>
+          <DashboardActions onRefresh={handleRefresh} isRefreshing={isRefreshing} />
         </div>
-        <DashboardActions onRefresh={handleRefresh} isRefreshing={isRefreshing} />
       </div>
 
-      {/* Filter Controls */}
-      <div className="mb-6">
-        <DashboardFilterControls 
-          currentPeriod={timePeriod} 
-          dateRange={dateRange} 
-          onFilterChange={handleFilterChange} 
-        />
-      </div>
-      
-      {/* Expanded Dashboard Metrics (New) */}
+      {/* Filter Controls with Enhanced Design */}
       <div className="mb-8">
-        <button 
-          onClick={handleToggleExpandedMetrics}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
-        >
-          View Detailed Metrics
-        </button>
-        
-        {showExpandedMetrics && (
-          <ExpandedDashboardMetrics onClose={handleToggleExpandedMetrics} />
-        )}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <DashboardFilterControls 
+            currentPeriod={timePeriod} 
+            dateRange={dateRange} 
+            onFilterChange={handleFilterChange} 
+          />
+        </div>
       </div>
       
-      {/* KPI Summary Cards section has been removed */}
-      
-      {/* Scoreboard Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <TechScoreboard isRefreshing={isRefreshing} />
-        <DispatchScoreboard isRefreshing={isRefreshing} />
-      </div>
-      
-      {/* Trend Charts Section */}
-      <div className="mb-6">
-        <TrendCharts 
+      {/* Enhanced KPI Cards with 3D Effects */}
+      <div className="mb-8">
+        <EnhancedKpiCards 
           timePeriod={timePeriod} 
           dateRange={dateRange}
           isRefreshing={isRefreshing}
         />
       </div>
-      
-      {/* AI Insights Panel */}
-      <div className="mb-6">
-        <AiInsightsPanel />
+
+      {/* Modern Metrics Grid */}
+      <div className="mb-8">
+        <ModernMetricsGrid isRefreshing={isRefreshing} />
       </div>
       
-      {/* Dashboard Grid - Two Columns Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Upcoming/Overdue Jobs */}
-        <div>
+      {/* Expanded Dashboard Metrics Toggle */}
+      <div className="mb-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <button 
+            onClick={handleToggleExpandedMetrics}
+            className="bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy-light hover:to-fixlyfy text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            View Detailed Metrics
+          </button>
+          
+          {showExpandedMetrics && (
+            <div className="mt-6">
+              <ExpandedDashboardMetrics onClose={handleToggleExpandedMetrics} />
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Scoreboard Section with 3D Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="transform hover:scale-105 transition-transform duration-300">
+          <TechScoreboard isRefreshing={isRefreshing} />
+        </div>
+        <div className="transform hover:scale-105 transition-transform duration-300">
+          <DispatchScoreboard isRefreshing={isRefreshing} />
+        </div>
+      </div>
+      
+      {/* Trend Charts Section with Enhanced Container */}
+      <div className="mb-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          <TrendCharts 
+            timePeriod={timePeriod} 
+            dateRange={dateRange}
+            isRefreshing={isRefreshing}
+          />
+        </div>
+      </div>
+      
+      {/* AI Insights Panel with Modern Design */}
+      <div className="mb-8">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          <AiInsightsPanel />
+        </div>
+      </div>
+      
+      {/* Dashboard Grid - Enhanced Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
           <UpcomingJobs isRefreshing={isRefreshing} />
         </div>
         
-        {/* Invoice Status Breakdown */}
-        <div>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
           <InvoiceStatusBreakdown isRefreshing={isRefreshing} />
         </div>
       </div>
       
-      {/* Client Stats */}
-      <div className="mb-6">
-        <ClientStats 
-          timePeriod={timePeriod} 
-          dateRange={dateRange}
-          isRefreshing={isRefreshing} 
-        />
+      {/* Client Stats with Enhanced Design */}
+      <div className="mb-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          <ClientStats 
+            timePeriod={timePeriod} 
+            dateRange={dateRange}
+            isRefreshing={isRefreshing} 
+          />
+        </div>
       </div>
     </PageLayout>
   );
