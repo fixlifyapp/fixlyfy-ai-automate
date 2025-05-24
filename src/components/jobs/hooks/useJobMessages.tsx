@@ -7,12 +7,15 @@ import {
 } from "./messaging/messagingUtils";
 import { useMessageAI } from "./messaging/useMessageAI";
 import { useRealTimeMessages } from "./messaging/useRealTimeMessages";
+import { toast } from "sonner";
 
 interface UseJobMessagesProps {
   jobId: string;
+  message: string;
+  setMessage: (message: string) => void;
 }
 
-export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
+export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesProps) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [client, setClient] = useState({ name: "", phone: "", id: "" });
   const [isLoading, setIsLoading] = useState(true);
@@ -35,8 +38,15 @@ export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
 
   // Handle using AI suggestion
   const handleUseSuggestion = async (content: string) => {
-    if (!client.phone) {
-      toast.error("No phone number available for this client");
+    setMessage(content);
+  };
+
+  // Handle sending message
+  const handleSendMessage = async () => {
+    if (!message.trim() || !client.phone) {
+      if (!client.phone) {
+        toast.error("No phone number available for this client");
+      }
       return;
     }
     
@@ -44,7 +54,7 @@ export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
     
     try {
       const result = await sendClientMessage({
-        content,
+        content: message,
         clientPhone: client.phone,
         jobId,
         clientId: client.id,
@@ -57,17 +67,23 @@ export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
           setConversationId(result.conversationId);
         }
         
-        // Refresh messages
+        // Clear message and refresh
+        setMessage("");
         fetchMessages();
+        toast.success("Message sent successfully");
       }
+    } catch (error) {
+      toast.error("Failed to send message");
     } finally {
       setIsSendingMessage(false);
     }
   };
 
-  // Initialize AI features
+  // Initialize AI features with enhanced context
   const { isAILoading, handleSuggestResponse } = useMessageAI({ 
     messages,
+    client,
+    jobId,
     onUseSuggestion: handleUseSuggestion
   });
 
@@ -100,9 +116,7 @@ export const useJobMessages = ({ jobId }: UseJobMessagesProps) => {
     isSendingMessage,
     isAILoading,
     handleSuggestResponse,
-    handleUseSuggestion
+    handleUseSuggestion,
+    handleSendMessage
   };
 };
-
-// Import toast for error handling
-import { toast } from "sonner";

@@ -1,9 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { Bot, Loader2, PlusCircle } from "lucide-react";
+import { Bot, Loader2 } from "lucide-react";
 
 interface JobMessageActionsProps {
-  onNewMessage: () => void;
   onSuggestResponse: () => void;
   isAILoading: boolean;
   isSendingMessage: boolean;
@@ -11,7 +10,6 @@ interface JobMessageActionsProps {
 }
 
 export const JobMessageActions = ({
-  onNewMessage,
   onSuggestResponse,
   isAILoading,
   isSendingMessage,
@@ -29,14 +27,6 @@ export const JobMessageActions = ({
         >
           {isAILoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
           {isAILoading ? "Thinking..." : "Suggest Response"}
-        </Button>
-        <Button 
-          onClick={onNewMessage} 
-          className="gap-2"
-          disabled={isSendingMessage}
-        >
-          <PlusCircle size={16} />
-          New Message
         </Button>
       </div>
     </div>

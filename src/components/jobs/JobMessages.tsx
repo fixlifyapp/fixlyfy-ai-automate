@@ -1,17 +1,17 @@
 
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageDialog } from "@/components/messages/MessageDialog";
 import { useJobMessages } from "./hooks/useJobMessages";
 import { JobMessageList } from "./components/JobMessageList";
 import { JobMessageActions } from "./components/JobMessageActions";
+import { MessageInput } from "@/components/messages/MessageInput";
+import { useState } from "react";
 
 interface JobMessagesProps {
   jobId: string;
 }
 
 export const JobMessages = ({ jobId }: JobMessagesProps) => {
-  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [message, setMessage] = useState("");
   
   const {
     messages,
@@ -20,14 +20,14 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     isSendingMessage,
     isAILoading,
     handleSuggestResponse,
-    handleUseSuggestion
-  } = useJobMessages({ jobId });
+    handleUseSuggestion,
+    handleSendMessage
+  } = useJobMessages({ jobId, message, setMessage });
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
         <JobMessageActions 
-          onNewMessage={() => setIsMessageDialogOpen(true)}
           onSuggestResponse={handleSuggestResponse}
           isAILoading={isAILoading}
           isSendingMessage={isSendingMessage}
@@ -39,10 +39,12 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           isLoading={isLoading}
         />
         
-        <MessageDialog
-          open={isMessageDialogOpen}
-          onOpenChange={setIsMessageDialogOpen}
-          client={client}
+        <MessageInput
+          message={message}
+          setMessage={setMessage}
+          handleSendMessage={handleSendMessage}
+          isLoading={isSendingMessage}
+          isDisabled={isLoading}
         />
       </CardContent>
     </Card>
