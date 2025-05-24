@@ -1,5 +1,4 @@
 
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,7 +10,7 @@ import TeamManagementPage from "./pages/TeamManagementPage";
 import SettingsPage from "./pages/SettingsPage";
 import AuthPage from "./pages/AuthPage";
 import JobDetailsPage from "./pages/JobDetailsPage";
-import EstimatesPage from "./pages/EstimatesPage.tsx";
+import EstimatesPage from "./pages/EstimatesPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import ConnectCenterPage from "./pages/ConnectCenterPage";
 import MessagesPage from "./pages/MessagesPage";
@@ -51,4 +50,3 @@ function App() {
 }
 
 export default App;
-
