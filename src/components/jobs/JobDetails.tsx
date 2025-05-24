@@ -1,9 +1,9 @@
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { JobDetailsEditDialog } from "./dialogs/JobDetailsEditDialog";
@@ -17,6 +17,8 @@ import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
 import { AttachmentUploadDialog } from "./dialogs/AttachmentUploadDialog";
 import { ApplianceTypeDialog } from "./dialogs/ApplianceTypeDialog";
 import { DryerIcon, DishwasherIcon, FridgeIcon, WasherIcon } from "@/components/icons/ApplianceIcons";
+import { useJobDetails } from "./context/JobDetailsContext";
+import { useNavigate } from "react-router-dom";
 
 interface JobDetailsProps {
   jobId: string;
@@ -41,24 +43,50 @@ const getApplianceIcon = (type: ApplianceType['type']) => {
 };
 
 export const JobDetails = ({ jobId }: JobDetailsProps) => {
-  // In a real app, we would fetch this data from an API
+  const navigate = useNavigate();
+  const { job, isLoading } = useJobDetails();
+
+  // Initialize client info from job data
   const [clientInfo, setClientInfo] = useState({
-    fullName: "Michael Johnson",
-    address: "123 Main St, Apt 45",
-    phone: "(555) 123-4567",
-    email: "michael.johnson@example.com"
+    fullName: job?.client || "Loading...",
+    address: job?.address || "Loading...",
+    phone: job?.phone || "",
+    email: job?.email || ""
   });
 
+  // Update client info when job data loads
+  React.useEffect(() => {
+    if (job) {
+      setClientInfo({
+        fullName: job.client,
+        address: job.address,
+        phone: job.phone,
+        email: job.email
+      });
+    }
+  }, [job]);
+
   const [jobDetails, setJobDetails] = useState({
-    description: "Customer reported that their HVAC unit is not cooling properly. The unit is making unusual noises and not maintaining set temperature.",
-    scheduleDate: "May 15, 2023",
-    scheduleTime: "13:30 - 15:30",
-    type: "Repair",
-    tags: ["HVAC", "Residential"],
-    team: "Robert Smith",
-    priority: "Medium",
-    source: "Phone Call"
+    description: job?.description || "Loading job description...",
+    scheduleDate: "May 15, 2023", // TODO: Use actual schedule data
+    scheduleTime: "13:30 - 15:30", // TODO: Use actual schedule data
+    type: job?.service || "Loading...",
+    tags: ["HVAC", "Residential"], // TODO: Use actual tags from job
+    team: "Robert Smith", // TODO: Use actual technician data
+    priority: "Medium", // TODO: Use actual priority
+    source: "Phone Call" // TODO: Use actual source
   });
+
+  // Update job details when job data loads
+  React.useEffect(() => {
+    if (job) {
+      setJobDetails(prev => ({
+        ...prev,
+        description: job.description || "No description provided",
+        type: job.service || "General Service"
+      }));
+    }
+  }, [job]);
 
   // Appliances state
   const [appliances, setAppliances] = useState<ApplianceType[]>([
@@ -227,6 +255,25 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     setAdditionalSources(newSources);
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded mb-4 w-48"></div>
+          <div className="h-5 bg-gray-200 rounded w-72"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="space-y-6">
+        <div className="text-red-500">Error loading job details</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Client Info & Contact Panel */}
@@ -315,7 +362,16 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
               </div>
               
               {!editingClientInfo && (
-                <Button variant="outline" size="sm" className="mt-2 w-full md:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 w-full md:w-auto"
+                  onClick={() => {
+                    if (job.clientId) {
+                      navigate(`/clients/${job.clientId}`);
+                    }
+                  }}
+                >
                   View Client Profile
                 </Button>
               )}
