@@ -35,14 +35,41 @@ export const MessageInput = ({
   const lastMessage = messages[messages.length - 1];
   const shouldShowSuggest = canSuggestResponse && lastMessage?.direction === 'inbound';
 
+  // Prevent form submission on Enter key
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isLoading && message.trim() && !isDisabled) {
+        handleSendMessage();
+      }
+    }
+  };
+
+  // Prevent button click from causing form submission
+  const handleSendClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSendMessage();
+  };
+
+  const handleSuggestClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onSuggestResponse) {
+      onSuggestResponse();
+    }
+  };
+
   return (
     <div className="space-y-2">
       {shouldShowSuggest && (
         <div className="flex justify-end">
           <Button 
+            type="button"
             variant="outline"
             size="sm"
-            onClick={onSuggestResponse}
+            onClick={handleSuggestClick}
             disabled={isAILoading || isLoading}
             className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
           >
@@ -69,19 +96,15 @@ export const MessageInput = ({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           disabled={isLoading || isDisabled}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
+          onKeyDown={handleKeyDown}
         />
         <div className="flex flex-col gap-1">
           {canSuggestResponse && (
             <Button 
+              type="button"
               variant="outline"
               size="sm"
-              onClick={onSuggestResponse}
+              onClick={handleSuggestClick}
               disabled={isAILoading || isLoading || messages.length === 0}
               className="gap-1 text-purple-600 border-purple-200 hover:bg-purple-50"
             >
@@ -89,7 +112,8 @@ export const MessageInput = ({
             </Button>
           )}
           <Button 
-            onClick={handleSendMessage} 
+            type="button"
+            onClick={handleSendClick} 
             disabled={isLoading || !message.trim() || isDisabled}
             size="sm"
           >

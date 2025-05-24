@@ -33,6 +33,8 @@ export const useMessageSending = ({
     setIsLoading(true);
 
     try {
+      console.log("Sending message:", { message, clientPhone: client.phone });
+      
       // Add the new message to the local list immediately for better UX
       const tempMessage: FormattedMessage = {
         id: `temp-${Date.now()}`,
@@ -54,6 +56,7 @@ export const useMessageSending = ({
       
       // If no conversation exists, create one
       if (!currentConversationId && client.id) {
+        console.log("Creating new conversation for client:", client.id);
         const { data: newConversation, error: convError } = await supabase
           .from('conversations')
           .insert({
@@ -65,14 +68,17 @@ export const useMessageSending = ({
           .single();
         
         if (convError) {
+          console.error("Error creating conversation:", convError);
           throw convError;
         }
         
         currentConversationId = newConversation.id;
         setConversationId(currentConversationId);
+        console.log("Created conversation:", currentConversationId);
       }
       
       // Send SMS via Twilio edge function
+      console.log("Invoking send-sms function...");
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           to: client.phone,
@@ -83,17 +89,25 @@ export const useMessageSending = ({
       if (error) {
         console.error("Error sending SMS:", error);
         toast.error("Failed to send SMS. Please try again.");
+        // Remove the temporary message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         return;
       }
       
       if (!data.success) {
+        console.error("SMS sending failed:", data);
         toast.error(`Failed to send SMS: ${data.error || 'Unknown error'}`);
+        // Remove the temporary message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         return;
       }
       
+      console.log("SMS sent successfully:", data.sid);
+      
       // Store the message in the database
       if (currentConversationId) {
-        await supabase
+        console.log("Storing message in database...");
+        const { error: msgError } = await supabase
           .from('messages')
           .insert({
             conversation_id: currentConversationId,
@@ -105,11 +119,19 @@ export const useMessageSending = ({
             message_sid: data.sid
           });
           
+        if (msgError) {
+          console.error("Error storing message:", msgError);
+        } else {
+          console.log("Message stored successfully");
+        }
+          
         toast.success("Message sent successfully");
       }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
+      // Remove the temporary message on error
+      setMessages(prev => prev.filter(msg => msg.id.startsWith('temp-')));
     } finally {
       setIsLoading(false);
     }
