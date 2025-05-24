@@ -9,6 +9,8 @@ import { RBACProvider } from "@/components/auth/RBACProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import SchedulePage from "./pages/SchedulePage";
 import JobsPage from "./pages/JobsPage";
 import JobDetailsPage from "./pages/JobDetailsPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -32,6 +34,8 @@ function App() {
                   <BrowserRouter>
                     <Routes>
                       <Route path="/" element={<Index />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/schedule" element={<SchedulePage />} />
                       <Route path="/jobs" element={<JobsPage />} />
                       <Route path="/jobs/:id" element={<JobDetailsPage />} />
                       <Route path="/clients" element={<ClientsPage />} />
