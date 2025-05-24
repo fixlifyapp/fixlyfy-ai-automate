@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'technician' | 'dispatcher' | 'manager' | string;
 
 export interface Permission {
@@ -22,34 +21,12 @@ export interface User {
   phone?: string;
 }
 
-// Default permissions per role
+// Default permissions per role - Give all roles full access temporarily
 export const DEFAULT_PERMISSIONS: Record<UserRole, string[]> = {
   admin: ['*'], // Wildcard for all permissions
-  technician: [
-    'jobs.view.own',
-    'jobs.edit.own',
-    'estimates.create.own',
-    'estimates.edit.own',
-    'invoices.create.own',
-    'invoices.edit.own',
-    'payments.log',
-  ],
-  dispatcher: [
-    'jobs.view.all',
-    'jobs.assign',
-    'jobs.schedule',
-    'jobs.reschedule',
-    'technicians.locate',
-  ],
-  manager: [
-    'jobs.view.all',
-    'jobs.edit.all',
-    'estimates.approve',
-    'invoices.approve',
-    'discounts.approve',
-    'reports.view',
-    'insights.view',
-  ],
+  technician: ['*'], // Full access
+  dispatcher: ['*'], // Full access
+  manager: ['*'], // Full access
 };
 
 export const PERMISSIONS_LIST: Permission[] = [
