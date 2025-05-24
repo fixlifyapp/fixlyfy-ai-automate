@@ -1,4 +1,5 @@
 
+
 import { Button } from "@/components/ui/button";
 import { Phone, MessageSquare, Pencil } from "lucide-react";
 import { useMessageContext } from "@/contexts/MessageContext";
@@ -15,12 +16,12 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
   const { job } = useJobDetails();
 
   const handleMessageClick = () => {
-    if (job?.clients) {
+    if (job) {
       openMessageDialog({
-        id: job.clients.id,
-        name: job.clients.name,
-        phone: job.clients.phone || "",
-        email: job.clients.email || ""
+        id: job.clientId,
+        name: job.client,
+        phone: job.phone || "",
+        email: job.email || ""
       }, job.id);
     }
     // Also call the original onMessageClick if needed
@@ -57,3 +58,4 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
     </div>
   );
 };
+
