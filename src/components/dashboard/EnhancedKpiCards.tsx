@@ -236,7 +236,7 @@ export const EnhancedKpiCards = ({ timePeriod, dateRange, isRefreshing = false }
                   
                   {/* Icon Container */}
                   <div className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
-                    <kpi.icon className="text-white" size={24} />
+                    <kpi.icon className="text-white w-6 h-6" />
                   </div>
                   
                   {/* Value Display */}
@@ -258,9 +258,9 @@ export const EnhancedKpiCards = ({ timePeriod, dateRange, isRefreshing = false }
                       )}
                     >
                       {kpi.isPositive ? (
-                        <ArrowUpIcon size={16} className="mr-1" />
+                        <ArrowUpIcon className="w-4 h-4 mr-1" />
                       ) : (
-                        <ArrowDownIcon size={16} className="mr-1" />
+                        <ArrowDownIcon className="w-4 h-4 mr-1" />
                       )}
                       {Math.abs(kpi.change)}%
                     </div>
