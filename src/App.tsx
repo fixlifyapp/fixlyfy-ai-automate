@@ -19,7 +19,6 @@ import MessagesPage from "./pages/MessagesPage";
 import SchedulePage from "./pages/SchedulePage";
 import ProductsPage from "./pages/ProductsPage";
 import FinancePage from "./pages/FinancePage";
-import AdminRolesPage from "./pages/AdminRolesPage";
 import { MessageProvider } from "@/contexts/MessageContext";
 import { UnifiedMessageDialog } from "@/components/messages/UnifiedMessageDialog";
 
@@ -44,7 +43,6 @@ function App() {
                     <Route path="/clients" element={<ClientsPage />} />
                     <Route path="/team" element={<TeamManagementPage />} />
                     <Route path="/admin/team" element={<TeamManagementPage />} />
-                    <Route path="/admin/roles" element={<AdminRolesPage />} />
                     <Route path="/estimates" element={<EstimatesPage />} />
                     <Route path="/invoices" element={<InvoicesPage />} />
                     <Route path="/schedule" element={<SchedulePage />} />
