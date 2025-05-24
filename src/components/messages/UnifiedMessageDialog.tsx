@@ -96,6 +96,15 @@ export const UnifiedMessageDialog = () => {
                   </>
                 )}
               </Button>
+              
+              <Button 
+                onClick={handleSend} 
+                disabled={isSending || !messageText.trim()}
+                size="sm"
+                className="px-4"
+              >
+                <Send size={16} />
+              </Button>
             </div>
             
             <div className="flex gap-2">
@@ -116,14 +125,6 @@ export const UnifiedMessageDialog = () => {
                   />
                 </div>
               </div>
-              <Button 
-                onClick={handleSend} 
-                disabled={isSending || !messageText.trim()}
-                size="sm"
-                className="px-4 self-end"
-              >
-                <Send size={16} />
-              </Button>
             </div>
           </div>
         </div>
