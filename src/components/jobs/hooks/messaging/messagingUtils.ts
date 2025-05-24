@@ -10,6 +10,49 @@ interface SendMessageParams {
   existingConversationId?: string | null;
 }
 
+const findOrCreateConversation = async (clientId: string, jobId?: string) => {
+  try {
+    // First, try to find existing conversation for this client
+    const { data: existingConversation } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('client_id', clientId)
+      .single();
+
+    if (existingConversation) {
+      return existingConversation.id;
+    }
+
+    // Create new conversation only if none exists
+    const conversationData: any = {
+      client_id: clientId,
+      status: 'active',
+      last_message_at: new Date().toISOString()
+    };
+
+    // Add job_id if provided
+    if (jobId) {
+      conversationData.job_id = jobId;
+    }
+
+    const { data: newConversation, error } = await supabase
+      .from('conversations')
+      .insert(conversationData)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Error creating conversation:', error);
+      return null;
+    }
+
+    return newConversation.id;
+  } catch (error) {
+    console.error('Error in findOrCreateConversation:', error);
+    return null;
+  }
+};
+
 export const sendClientMessage = async ({
   content, 
   clientPhone,
@@ -31,34 +74,11 @@ export const sendClientMessage = async ({
     }
     
     if (data.success) {
-      // Find or create conversation
+      // Find or create conversation - always check for existing first
       let conversationId = existingConversationId;
       
       if (!conversationId) {
-        const { data: existingConversation } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('job_id', jobId)
-          .eq('client_id', clientId);
-        
-        if (existingConversation && existingConversation.length > 0) {
-          conversationId = existingConversation[0].id;
-        } else {
-          const { data: newConversation } = await supabase
-            .from('conversations')
-            .insert({
-              job_id: jobId,
-              client_id: clientId,
-              status: 'active',
-              last_message_at: new Date().toISOString()
-            })
-            .select('id')
-            .single();
-          
-          if (newConversation) {
-            conversationId = newConversation.id;
-          }
-        }
+        conversationId = await findOrCreateConversation(clientId, jobId);
       }
       
       // Store the message in the database
@@ -124,14 +144,25 @@ export const fetchJobClientDetails = async (jobId: string) => {
 
 export const fetchConversationMessages = async (jobId: string) => {
   try {
-    // First find the conversation for this job
+    // First find the conversation for this job's client
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('client_id')
+      .eq('id', jobId)
+      .single();
+
+    if (!job?.client_id) {
+      return { messages: [], conversationId: null, clientInfo: null };
+    }
+
+    // Find conversation for this client (unique constraint ensures only one)
     const { data: conversation } = await supabase
       .from('conversations')
       .select(`
         *,
         clients:client_id(id, name, phone, email)
       `)
-      .eq('job_id', jobId)
+      .eq('client_id', job.client_id)
       .single();
     
     if (conversation) {

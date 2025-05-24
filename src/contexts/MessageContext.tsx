@@ -138,6 +138,45 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const findOrCreateConversation = async (clientId: string) => {
+    try {
+      // First, try to find existing conversation for this client
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          clients:client_id(id, name, phone, email)
+        `)
+        .eq('client_id', clientId)
+        .single();
+
+      if (existingConv) {
+        return existingConv.id;
+      }
+
+      // Create new conversation only if none exists
+      const { data: newConversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          client_id: clientId,
+          status: 'active',
+          last_message_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating conversation:', error);
+        return null;
+      }
+
+      return newConversation.id;
+    } catch (error) {
+      console.error('Error in findOrCreateConversation:', error);
+      return null;
+    }
+  };
+
   const openMessageDialog = async (client: { id?: string; name: string; phone?: string; email?: string }, jobId?: string) => {
     setIsLoading(true);
     
@@ -188,7 +227,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (!conversation) {
-        // Create new conversation placeholder
+        // Create new conversation placeholder - don't create in DB yet
         conversation = {
           id: '',
           client: {
@@ -243,23 +282,11 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      // Find or create conversation
+      // Find or create conversation - always check for existing first
       let conversationId = activeConversation.id;
       
       if (!conversationId && client.id) {
-        const { data: newConversation } = await supabase
-          .from('conversations')
-          .insert({
-            client_id: client.id,
-            status: 'active',
-            last_message_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (newConversation) {
-          conversationId = newConversation.id;
-        }
+        conversationId = await findOrCreateConversation(client.id);
       }
 
       // Store message in database

@@ -31,12 +31,12 @@ export const useConversations = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState<any>(null);
 
-  // Function to fetch conversations
+  // Function to fetch conversations - ensures no duplicates with unique constraint
   const fetchConversations = async () => {
     setIsLoading(true);
     
     try {
-      // Get all conversations with client data
+      // Get all conversations with client data - unique constraint ensures one per client
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
