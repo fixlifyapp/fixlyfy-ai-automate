@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -98,61 +97,129 @@ serve(async (req) => {
 async function searchPhoneNumbers(params: any, twilioAuth: string, supabaseClient: any) {
   const { areaCode, locality, region, contains } = params
   
-  let searchUrl = `https://api.twilio.com/2010-04-01/Accounts/${Deno.env.get('TWILIO_ACCOUNT_SID')}/AvailablePhoneNumbers/US/Local.json?`
+  console.log('Search params:', { areaCode, locality, region, contains })
   
-  const searchParams = new URLSearchParams()
-  if (areaCode) searchParams.append('AreaCode', areaCode)
-  if (locality) searchParams.append('InLocality', locality)
-  if (region) searchParams.append('InRegion', region)
-  if (contains) searchParams.append('Contains', contains)
+  let allNumbers: TwilioPhoneNumber[] = []
+  const numberTypes = ['Local', 'Mobile', 'TollFree']
   
-  searchUrl += searchParams.toString()
+  // Try each number type to get more results
+  for (const numberType of numberTypes) {
+    try {
+      let searchUrl = `https://api.twilio.com/2010-04-01/Accounts/${Deno.env.get('TWILIO_ACCOUNT_SID')}/AvailablePhoneNumbers/US/${numberType}.json?`
+      
+      const searchParams = new URLSearchParams()
+      
+      // Add limit to get more results
+      searchParams.append('Limit', '20')
+      
+      if (areaCode) {
+        searchParams.append('AreaCode', areaCode)
+      } else if (locality) {
+        searchParams.append('InLocality', locality)
+      } else if (region) {
+        searchParams.append('InRegion', region)
+      } else if (contains) {
+        searchParams.append('Contains', contains)
+      } else {
+        // If no specific criteria, search for popular area codes
+        const popularAreaCodes = ['415', '650', '510', '925', '408', '669', '831']
+        const randomAreaCode = popularAreaCodes[Math.floor(Math.random() * popularAreaCodes.length)]
+        searchParams.append('AreaCode', randomAreaCode)
+      }
+      
+      searchUrl += searchParams.toString()
+      console.log(`Searching ${numberType} numbers:`, searchUrl)
 
-  const response = await fetch(searchUrl, {
-    headers: {
-      'Authorization': `Basic ${twilioAuth}`,
-    },
-  })
+      const response = await fetch(searchUrl, {
+        headers: {
+          'Authorization': `Basic ${twilioAuth}`,
+        },
+      })
 
-  if (!response.ok) {
-    throw new Error(`Twilio API error: ${response.statusText}`)
+      if (!response.ok) {
+        console.error(`Twilio ${numberType} API error:`, response.statusText)
+        continue
+      }
+
+      const data = await response.json()
+      console.log(`${numberType} search results:`, data.available_phone_numbers?.length || 0)
+      
+      if (data.available_phone_numbers && data.available_phone_numbers.length > 0) {
+        allNumbers = allNumbers.concat(data.available_phone_numbers)
+      }
+      
+    } catch (error) {
+      console.error(`Error searching ${numberType} numbers:`, error)
+      continue
+    }
   }
+  
+  console.log('Total numbers found:', allNumbers.length)
+  
+  // If we still have no results, try a broader search
+  if (allNumbers.length === 0) {
+    console.log('No results found, trying broader search...')
+    try {
+      const broadSearchUrl = `https://api.twilio.com/2010-04-01/Accounts/${Deno.env.get('TWILIO_ACCOUNT_SID')}/AvailablePhoneNumbers/US/Local.json?Limit=20`
+      
+      const response = await fetch(broadSearchUrl, {
+        headers: {
+          'Authorization': `Basic ${twilioAuth}`,
+        },
+      })
 
-  const data = await response.json()
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Broad search results:', data.available_phone_numbers?.length || 0)
+        allNumbers = data.available_phone_numbers || []
+      }
+    } catch (error) {
+      console.error('Error in broad search:', error)
+    }
+  }
   
   // Store available numbers in database for caching
-  const numbersToInsert = data.available_phone_numbers.map((num: TwilioPhoneNumber) => ({
-    phone_number: num.phoneNumber,
-    friendly_name: num.friendlyName,
-    region: num.region,
-    locality: num.locality,
-    rate_center: num.rateCenter,
-    latitude: parseFloat(num.latitude) || null,
-    longitude: parseFloat(num.longitude) || null,
-    capabilities: {
-      voice: num.capabilities.voice,
-      sms: num.capabilities.SMS,
-      mms: num.capabilities.MMS
-    },
-    phone_number_type: num.phoneNumberType,
-    price_unit: num.priceUnit,
-    price: parseFloat(num.price),
-    monthly_price: 1.00, // Default monthly price
-    status: 'available'
-  }))
+  if (allNumbers.length > 0) {
+    const numbersToInsert = allNumbers.map((num: TwilioPhoneNumber) => ({
+      phone_number: num.phoneNumber,
+      friendly_name: num.friendlyName,
+      region: num.region || 'Unknown',
+      locality: num.locality || 'Unknown',
+      rate_center: num.rateCenter || 'Unknown',
+      latitude: parseFloat(num.latitude) || null,
+      longitude: parseFloat(num.longitude) || null,
+      capabilities: {
+        voice: num.capabilities.voice,
+        sms: num.capabilities.SMS,
+        mms: num.capabilities.MMS
+      },
+      phone_number_type: num.phoneNumberType || 'local',
+      price_unit: num.priceUnit || 'USD',
+      price: parseFloat(num.price) || 1.00,
+      monthly_price: 1.00,
+      status: 'available'
+    }))
 
-  // Insert or update available numbers
-  if (numbersToInsert.length > 0) {
-    await supabaseClient
-      .from('phone_numbers')
-      .upsert(numbersToInsert, { 
-        onConflict: 'phone_number',
-        ignoreDuplicates: true 
-      })
+    try {
+      await supabaseClient
+        .from('phone_numbers')
+        .upsert(numbersToInsert, { 
+          onConflict: 'phone_number',
+          ignoreDuplicates: true 
+        })
+      console.log('Cached numbers in database')
+    } catch (dbError) {
+      console.error('Error caching numbers:', dbError)
+    }
   }
 
   return new Response(JSON.stringify({ 
-    available_phone_numbers: data.available_phone_numbers 
+    available_phone_numbers: allNumbers,
+    search_info: {
+      total_found: allNumbers.length,
+      search_criteria: { areaCode, locality, region, contains },
+      number_types_searched: numberTypes
+    }
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })

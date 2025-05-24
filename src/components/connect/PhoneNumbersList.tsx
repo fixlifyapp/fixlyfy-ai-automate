@@ -1,16 +1,22 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Phone, ShoppingCart, Trash2, MapPin } from "lucide-react";
+import { Search, Phone, ShoppingCart, Trash2, MapPin, AlertCircle, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PhoneNumber } from "@/types/database";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PhoneNumbersListProps {
   searchResults?: any[];
+}
+
+interface SearchInfo {
+  total_found: number;
+  search_criteria: any;
+  number_types_searched: string[];
 }
 
 export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) => {
@@ -19,6 +25,7 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
   const [ownedNumbers, setOwnedNumbers] = useState<PhoneNumber[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
+  const [searchInfo, setSearchInfo] = useState<SearchInfo | null>(null);
 
   // Load owned numbers on component mount
   useEffect(() => {
@@ -43,12 +50,9 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
   };
 
   const searchPhoneNumbers = async () => {
-    if (!searchTerm.trim()) {
-      toast.error('Please enter a search term');
-      return;
-    }
-
     setIsSearching(true);
+    setSearchInfo(null);
+    
     try {
       const searchParams: any = {};
       
@@ -58,26 +62,32 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
       } else if (/^\d+$/.test(searchTerm)) {
         // If it's all digits, search by contains
         searchParams.contains = searchTerm;
-      } else {
+      } else if (searchTerm.trim()) {
         // Otherwise search by locality/region
         searchParams.locality = searchTerm;
       }
+
+      console.log('Searching with params:', searchParams);
 
       const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
         body: { action: 'search', ...searchParams }
       });
 
       if (error) throw error;
+      
+      console.log('Search response:', data);
+      
       setAvailableNumbers(data.available_phone_numbers || []);
+      setSearchInfo(data.search_info || null);
       
       if (data.available_phone_numbers?.length === 0) {
-        toast.info('No phone numbers found for your search criteria');
+        toast.info('No phone numbers found. Try a different area code or search term.');
       } else {
         toast.success(`Found ${data.available_phone_numbers?.length || 0} available numbers`);
       }
     } catch (error) {
       console.error('Error searching phone numbers:', error);
-      toast.error('Failed to search phone numbers');
+      toast.error('Failed to search phone numbers. Please check your Twilio credentials.');
     } finally {
       setIsSearching(false);
     }
@@ -122,18 +132,27 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
   };
 
   const formatPhoneNumber = (phoneNumber: string | undefined) => {
-    // Handle undefined or null phone numbers
     if (!phoneNumber || typeof phoneNumber !== 'string') {
       return 'N/A';
     }
     
-    // Format +1XXXXXXXXXX to (XXX) XXX-XXXX
     const cleaned = phoneNumber.replace(/\D/g, '');
     if (cleaned.length === 11 && cleaned.startsWith('1')) {
       const number = cleaned.slice(1);
       return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
     }
     return phoneNumber;
+  };
+
+  const getSuggestedSearches = () => {
+    return [
+      { label: "San Francisco Bay Area", value: "415" },
+      { label: "Los Angeles", value: "213" },
+      { label: "New York City", value: "212" },
+      { label: "Chicago", value: "312" },
+      { label: "Miami", value: "305" },
+      { label: "Seattle", value: "206" }
+    ];
   };
 
   // Combine available numbers from both sources
@@ -144,7 +163,7 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
       {/* Search Section */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Search Available Phone Numbers</h3>
-        <div className="flex gap-3">
+        <div className="flex gap-3 mb-4">
           <div className="flex-1">
             <Input
               placeholder="Enter area code (e.g., 415), city (e.g., San Francisco), or partial number..."
@@ -162,12 +181,47 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
             {isSearching ? 'Searching...' : 'Search'}
           </Button>
         </div>
-        <div className="mt-2 text-sm text-gray-600">
-          <p>Try searching by:</p>
-          <ul className="list-disc list-inside ml-2">
-            <li>Area code (3 digits, e.g., "415")</li>
-            <li>City name (e.g., "San Francisco")</li>
+
+        {/* Search Suggestions */}
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 mb-2">Popular area codes:</p>
+          <div className="flex flex-wrap gap-2">
+            {getSuggestedSearches().map((suggestion) => (
+              <Button
+                key={suggestion.value}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm(suggestion.value);
+                  // Auto-search when clicking suggestion
+                  setTimeout(() => searchPhoneNumbers(), 100);
+                }}
+                className="text-xs"
+              >
+                {suggestion.label} ({suggestion.value})
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search Info */}
+        {searchInfo && (
+          <Alert className="mb-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Found {searchInfo.total_found} numbers across {searchInfo.number_types_searched.join(', ')} number types.
+              {searchInfo.total_found === 0 && " Try a different area code or search term."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="text-sm text-gray-600">
+          <p>Search tips:</p>
+          <ul className="list-disc list-inside ml-2 space-y-1">
+            <li>Area code (3 digits, e.g., "415") - Most reliable</li>
+            <li>City name (e.g., "San Francisco") - May have limited results</li>
             <li>Partial phone number (e.g., "5551234")</li>
+            <li>Leave empty to search popular area codes</li>
           </ul>
         </div>
       </Card>
@@ -178,7 +232,6 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
           <h3 className="text-lg font-semibold mb-4">Available Numbers ({allAvailableNumbers.length})</h3>
           <div className="grid gap-4">
             {allAvailableNumbers.map((number, index) => {
-              // Safely get the phone number - handle both phoneNumber and phone properties
               const phoneNum = number.phoneNumber || number.phone;
               const formattedPhone = formatPhoneNumber(phoneNum);
               
@@ -193,6 +246,9 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
                         {number.capabilities?.SMS && <Badge variant="outline">SMS</Badge>}
                         {number.capabilities?.MMS && <Badge variant="outline">MMS</Badge>}
                       </div>
+                      {number.phoneNumberType && (
+                        <Badge variant="secondary">{number.phoneNumberType}</Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 mt-2 text-sm text-fixlyfy-text-secondary">
                       <MapPin size={14} />
@@ -207,7 +263,7 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-fixlyfy-text-secondary mb-2">
-                      ${number.price || '0.00'} setup + $1.00/month
+                      ${number.price || '1.00'} setup + $1.00/month
                     </div>
                     <Button
                       size="sm"
@@ -222,6 +278,27 @@ export const PhoneNumbersList = ({ searchResults = [] }: PhoneNumbersListProps) 
                 </div>
               );
             })}
+          </div>
+        </Card>
+      )}
+
+      {/* No Results Message */}
+      {!isSearching && searchInfo && searchInfo.total_found === 0 && (
+        <Card className="p-6">
+          <div className="text-center py-8">
+            <AlertCircle className="mx-auto h-12 w-12 mb-3 text-gray-400" />
+            <h3 className="text-lg font-medium mb-2">No Numbers Found</h3>
+            <p className="text-gray-600 mb-4">
+              No phone numbers are available for your search criteria.
+            </p>
+            <div className="text-sm text-gray-500">
+              <p>Try searching for:</p>
+              <ul className="list-disc list-inside mt-2">
+                <li>A different area code (415, 650, 510, etc.)</li>
+                <li>A major city name</li>
+                <li>Leave the search empty for random available numbers</li>
+              </ul>
+            </div>
           </div>
         </Card>
       )}
