@@ -23,6 +23,7 @@ import AiAssistantPage from "./pages/AiAssistantPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import ReportsPage from "./pages/ReportsPage";
 import AutomationsPage from "./pages/AutomationsPage";
+import ConfigurationPage from "./pages/ConfigurationPage";
 import { MessageProvider } from "@/contexts/MessageContext";
 import { UnifiedMessageDialog } from "@/components/messages/UnifiedMessageDialog";
 
@@ -57,6 +58,7 @@ function App() {
                     <Route path="/automations" element={<AutomationsPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/configuration" element={<ConfigurationPage />} />
                     <Route path="/connect" element={<ConnectCenterPage />} />
                     <Route path="/messages" element={<MessagesPage />} />
                   </Routes>
