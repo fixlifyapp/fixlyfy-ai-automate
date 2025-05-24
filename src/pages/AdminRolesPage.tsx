@@ -50,8 +50,8 @@ const AdminRolesPage = () => {
     setRolePermissions(prev => {
       const updatedPermissions = { ...prev };
       
-      // For admin role, don't allow removing wildcard permission
-      if (role === 'admin' && permissionId === '*') {
+      // For any role with wildcard permission, don't allow removing wildcard permission
+      if (permissionId === '*' && updatedPermissions[role]?.includes('*')) {
         return prev;
       }
       
@@ -215,11 +215,14 @@ const AdminRolesPage = () => {
                                     <TableCell>
                                       <Checkbox 
                                         checked={
-                                          // Special case for admin role with wildcard
-                                          (activeTab === 'admin' && rolePermissions[activeTab]?.includes('*')) ||
+                                          // Check for wildcard permission for any role, or specific permission
+                                          rolePermissions[activeTab]?.includes('*') ||
                                           rolePermissions[activeTab]?.includes(permission.id)
                                         }
-                                        disabled={activeTab === 'admin' && permission.id === '*'}
+                                        disabled={
+                                          // Disable wildcard permission checkbox for roles that have it
+                                          permission.id === '*' && rolePermissions[activeTab]?.includes('*')
+                                        }
                                         onCheckedChange={() => handlePermissionToggle(activeTab, permission.id)}
                                         id={`${activeTab}-${permission.id}`}
                                       />
