@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
 import { AiInsightsPanel } from "@/components/dashboard/AiInsightsPanel";
@@ -12,11 +12,15 @@ import { DashboardActions } from "@/components/dashboard/DashboardActions";
 import { TechScoreboard } from "@/components/dashboard/TechScoreboard";
 import { DispatchScoreboard } from "@/components/dashboard/DispatchScoreboard";
 import { ExpandedDashboardMetrics } from "@/components/dashboard/ExpandedDashboardMetrics";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 // Define time period types for filters
 export type TimePeriod = "week" | "month" | "quarter" | "custom";
 
 const Dashboard = () => {
+  const { user, loading: authLoading } = useAuth();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("month");
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -25,8 +29,25 @@ const Dashboard = () => {
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExpandedMetrics, setShowExpandedMetrics] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  console.log('Dashboard: Component mounted', { user, authLoading });
+
+  useEffect(() => {
+    console.log('Dashboard: User state changed', { user, authLoading });
+    
+    if (!authLoading && !user) {
+      console.log('Dashboard: No authenticated user found');
+      setDashboardError('Authentication required');
+      toast.error('Please sign in to view the dashboard');
+    } else if (user) {
+      console.log('Dashboard: User authenticated successfully');
+      setDashboardError(null);
+    }
+  }, [user, authLoading]);
 
   const handleFilterChange = (period: TimePeriod, range?: { from: Date | undefined; to: Date | undefined }) => {
+    console.log('Dashboard: Filter changed', { period, range });
     setTimePeriod(period);
     if (range) {
       setDateRange(range);
@@ -34,16 +55,56 @@ const Dashboard = () => {
   };
   
   const handleRefresh = async () => {
+    console.log('Dashboard: Refresh triggered');
     setIsRefreshing(true);
-    // In a real application, this would refresh data from your API
-    setTimeout(() => {
+    try {
+      // In a real application, this would refresh data from your API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Dashboard refreshed successfully');
+    } catch (error) {
+      console.error('Dashboard: Error during refresh:', error);
+      toast.error('Failed to refresh dashboard');
+    } finally {
       setIsRefreshing(false);
-    }, 1000);
+    }
   };
 
   const handleToggleExpandedMetrics = () => {
+    console.log('Dashboard: Toggling expanded metrics');
     setShowExpandedMetrics(!showExpandedMetrics);
   };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    console.log('Dashboard: Rendering auth loading state');
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
+            <p className="text-fixlyfy-text-secondary">Loading dashboard...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Show error state if there's an issue
+  if (dashboardError) {
+    console.log('Dashboard: Rendering error state', { dashboardError });
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-500 mb-2">Dashboard Error</div>
+            <div className="text-sm text-gray-600 mb-4">{dashboardError}</div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  console.log('Dashboard: Rendering main dashboard content');
 
   return (
     <PageLayout>
