@@ -69,7 +69,7 @@ export const JobsCreateModal = ({
       priority: "medium",
       date: new Date(),
       time: "09:00",
-      technician_id: ""
+      technician_id: "unassigned"
     }
   });
 
@@ -131,8 +131,8 @@ export const JobsCreateModal = ({
         status: "scheduled",
         client_id: data.client_id,
         service: data.service || "General Service",
-        // Only set technician_id if it's not empty and is a valid UUID format
-        technician_id: data.technician_id && data.technician_id !== "" ? data.technician_id : undefined,
+        // Only set technician_id if it's not "unassigned" and is a valid UUID format
+        technician_id: data.technician_id && data.technician_id !== "unassigned" ? data.technician_id : undefined,
         schedule_start: scheduledDate.toISOString(),
         schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         date: scheduledDate.toISOString(),
@@ -383,7 +383,7 @@ export const JobsCreateModal = ({
                       <SelectValue placeholder="Assign technician" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {isLoadingTechnicians ? (
                         <SelectItem value="loading" disabled>Loading technicians...</SelectItem>
                       ) : (
