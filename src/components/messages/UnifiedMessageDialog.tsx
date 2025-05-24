@@ -52,7 +52,7 @@ export const UnifiedMessageDialog = () => {
 
   return (
     <Dialog open={isMessageDialogOpen} onOpenChange={closeMessageDialog}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Message {client.name}
@@ -74,38 +74,35 @@ export const UnifiedMessageDialog = () => {
             />
           </div>
           
-          <div className="flex-shrink-0 space-y-2">
-            {shouldShowSuggest && (
-              <div className="flex justify-end">
-                <Button 
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSuggestResponse}
-                  disabled={isAILoading || isSending}
-                  className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-                >
-                  {isAILoading ? (
-                    <>
-                      <Bot className="h-4 w-4 animate-pulse" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      AI Response
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
+          <div className="flex-shrink-0 space-y-3">
+            <div className="flex justify-between items-center">
+              <Button 
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSuggestResponse}
+                disabled={isAILoading || isSending}
+                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+              >
+                {isAILoading ? (
+                  <>
+                    <Bot className="h-4 w-4 animate-pulse" />
+                    Generating Response...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    AI Response
+                  </>
+                )}
+              </Button>
+            </div>
             
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <textarea 
-                  className="w-full p-2 pr-10 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
-                  placeholder="Type your message..."
-                  rows={2}
+                  className="w-full p-3 pr-12 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-y min-h-[100px]" 
+                  placeholder="Type your message... (Press Shift+Enter for new line, Enter to send)"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   disabled={isSending}
@@ -123,7 +120,7 @@ export const UnifiedMessageDialog = () => {
                 onClick={handleSend} 
                 disabled={isSending || !messageText.trim()}
                 size="sm"
-                className="px-3"
+                className="px-4 self-end"
               >
                 <Send size={16} />
               </Button>
