@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,17 @@ interface UseMessageDialogProps {
   open: boolean;
 }
 
-export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
+interface UseMessageDialogReturn {
+  message: string;
+  setMessage: (message: string) => void;
+  messages: any[];
+  isLoading: boolean;
+  isLoadingMessages: boolean;
+  handleSendMessage: () => Promise<void>;
+  conversationId: string | null;
+}
+
+export const useMessageDialog = ({ client, open }: UseMessageDialogProps): UseMessageDialogReturn => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
