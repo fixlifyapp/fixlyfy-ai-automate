@@ -7,6 +7,7 @@ import { Phone, Loader2, PhoneOutgoing, PhoneIncoming, PhoneMissed, Clock } from
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { CallDialog } from "./CallDialog";
 
 interface Call {
   id: string;
@@ -30,28 +31,8 @@ interface Call {
 export const CallsList = () => {
   const [calls, setCalls] = useState<Call[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCallInitiating, setIsCallInitiating] = useState(false);
-  const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
-  
-  // Fetch available owned phone numbers
-  useEffect(() => {
-    const fetchOwnedNumbers = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
-          body: { action: 'list-owned' }
-        });
-
-        if (error) throw error;
-        if (data.phone_numbers && data.phone_numbers.length > 0) {
-          setSelectedFromNumber(data.phone_numbers[0].phone_number);
-        }
-      } catch (error) {
-        console.error('Error loading owned numbers:', error);
-      }
-    };
-
-    fetchOwnedNumbers();
-  }, []);
+  const [callDialogOpen, setCallDialogOpen] = useState(false);
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string>("");
 
   const fetchCalls = async () => {
     try {
@@ -93,38 +74,9 @@ export const CallsList = () => {
     enabled: true
   });
 
-  const handleCall = async (phoneNumber: string) => {
-    if (!selectedFromNumber) {
-      toast.error("No phone number available to make calls. Please purchase a phone number first.");
-      return;
-    }
-
-    setIsCallInitiating(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('twilio-calls', {
-        body: {
-          action: 'initiate',
-          fromNumber: selectedFromNumber,
-          toNumber: phoneNumber
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast.success(`Call initiated to ${phoneNumber}`);
-        // Refresh calls to show the new call
-        setTimeout(() => fetchCalls(), 1000);
-      } else {
-        throw new Error("Failed to initiate call");
-      }
-    } catch (error) {
-      console.error('Error initiating call:', error);
-      toast.error('Failed to initiate call');
-    } finally {
-      setIsCallInitiating(false);
-    }
+  const handleCallClick = (phoneNumber: string) => {
+    setSelectedPhoneNumber(phoneNumber);
+    setCallDialogOpen(true);
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -159,70 +111,77 @@ export const CallsList = () => {
   };
 
   return (
-    <Card className="border-fixlyfy-border">
-      <CardHeader>
-        <CardTitle>Recent Calls</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 size={24} className="animate-spin text-fixlyfy" />
-          </div>
-        ) : calls.length === 0 ? (
-          <div className="text-center py-8 text-fixlyfy-text-secondary">
-            No calls found
-          </div>
-        ) : (
-          <div className="divide-y divide-fixlyfy-border">
-            {calls.map((call) => (
-              <div key={call.id} className="flex items-center justify-between p-4 hover:bg-fixlyfy-bg-hover">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-muted rounded-full p-2">
-                    {call.direction === "incoming" ? (
-                      <PhoneIncoming className="h-5 w-5 text-green-500" />
-                    ) : call.direction === "outgoing" ? (
-                      <PhoneOutgoing className="h-5 w-5 text-blue-500" />
-                    ) : (
-                      <PhoneMissed className="h-5 w-5 text-red-500" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">
-                      {call.clients?.name || "Unknown Contact"}
-                    </h3>
-                    <p className="text-sm text-fixlyfy-text-secondary">{call.phone_number}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {getStatusBadge(call.status)}
-                      {call.ended_at && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <Clock size={12} />
-                          {formatDuration(call.started_at, call.ended_at)}
-                        </div>
+    <>
+      <Card className="border-fixlyfy-border">
+        <CardHeader>
+          <CardTitle>Recent Calls</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-fixlyfy" />
+            </div>
+          ) : calls.length === 0 ? (
+            <div className="text-center py-8 text-fixlyfy-text-secondary">
+              No calls found
+            </div>
+          ) : (
+            <div className="divide-y divide-fixlyfy-border">
+              {calls.map((call) => (
+                <div key={call.id} className="flex items-center justify-between p-4 hover:bg-fixlyfy-bg-hover">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-muted rounded-full p-2">
+                      {call.direction === "incoming" ? (
+                        <PhoneIncoming className="h-5 w-5 text-green-500" />
+                      ) : call.direction === "outgoing" ? (
+                        <PhoneOutgoing className="h-5 w-5 text-blue-500" />
+                      ) : (
+                        <PhoneMissed className="h-5 w-5 text-red-500" />
                       )}
                     </div>
+                    <div>
+                      <h3 className="font-medium">
+                        {call.clients?.name || "Unknown Contact"}
+                      </h3>
+                      <p className="text-sm text-fixlyfy-text-secondary">{call.phone_number}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getStatusBadge(call.status)}
+                        {call.ended_at && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock size={12} />
+                            {formatDuration(call.started_at, call.ended_at)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right flex items-center gap-2">
+                    <div>
+                      <p className="text-xs text-fixlyfy-text-secondary">
+                        {formatTimestamp(call.started_at)}
+                      </p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8 text-fixlyfy"
+                      onClick={() => handleCallClick(call.phone_number)}
+                    >
+                      <Phone size={16} />
+                    </Button>
                   </div>
                 </div>
-                <div className="text-right flex items-center gap-2">
-                  <div>
-                    <p className="text-xs text-fixlyfy-text-secondary">
-                      {formatTimestamp(call.started_at)}
-                    </p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-8 w-8 text-fixlyfy"
-                    onClick={() => handleCall(call.phone_number)}
-                    disabled={isCallInitiating || !selectedFromNumber}
-                  >
-                    {isCallInitiating ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <CallDialog
+        isOpen={callDialogOpen}
+        onClose={() => setCallDialogOpen(false)}
+        phoneNumber={selectedPhoneNumber}
+      />
+    </>
   );
 };

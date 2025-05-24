@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       calls: {
         Row: {
+          call_sid: string | null
           client_id: string | null
           created_at: string
           direction: string
@@ -24,6 +25,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          call_sid?: string | null
           client_id?: string | null
           created_at?: string
           direction: string
@@ -37,6 +39,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          call_sid?: string | null
           client_id?: string | null
           created_at?: string
           direction?: string

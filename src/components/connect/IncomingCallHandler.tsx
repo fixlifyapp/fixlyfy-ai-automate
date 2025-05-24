@@ -8,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface IncomingCall {
   id: string;
-  call_sid: string;
+  call_sid: string | null;
   phone_number: string;
   direction: "incoming";
-  status: string;
+  status: string | null;
 }
 
 export const IncomingCallHandler = () => {
@@ -78,7 +78,7 @@ export const IncomingCallHandler = () => {
     };
   }, [incomingCall]);
 
-  const answerCall = async (callSid?: string) => {
+  const answerCall = async (callSid?: string | null) => {
     const targetCallSid = callSid || incomingCall?.call_sid;
     if (!targetCallSid) return;
 
