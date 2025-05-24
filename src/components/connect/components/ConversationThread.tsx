@@ -165,32 +165,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
         )}
       </div>
       
-      <div className="p-4 border-t border-fixlyfy-border space-y-2">
-        {shouldShowSuggest && (
-          <div className="flex justify-end">
-            <Button 
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSuggestResponse}
-              disabled={isAILoading || isSending}
-              className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-            >
-              {isAILoading ? (
-                <>
-                  <Bot className="h-4 w-4 animate-pulse" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  AI Response
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-        
+      <div className="p-4 border-t border-fixlyfy-border">
         <div className="flex gap-2">
           <textarea 
             className="flex-1 p-2 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
@@ -201,14 +176,38 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
             disabled={isSending}
             onKeyDown={handleKeyDown}
           />
-          <Button 
-            onClick={handleSendMessage} 
-            disabled={isSending || !messageText.trim()}
-            size="sm"
-            className="px-3"
-          >
-            <Send size={16} />
-          </Button>
+          <div className="flex flex-col gap-2">
+            {shouldShowSuggest && (
+              <Button 
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSuggestResponse}
+                disabled={isAILoading || isSending}
+                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+              >
+                {isAILoading ? (
+                  <>
+                    <Bot className="h-4 w-4 animate-pulse" />
+                    AI
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    AI
+                  </>
+                )}
+              </Button>
+            )}
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isSending || !messageText.trim()}
+              size="sm"
+              className="px-3"
+            >
+              <Send size={16} />
+            </Button>
+          </div>
         </div>
       </div>
     </>
