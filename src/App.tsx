@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ModalProvider } from "@/components/ui/modal-provider";
 import { RBACProvider } from "@/components/auth/RBACProvider";
+import { AuthProvider } from "@/hooks/use-auth";
 import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
 import Index from "./pages/Index";
 import JobsPage from "./pages/JobsPage";
@@ -23,25 +24,27 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <TooltipProvider>
-          <RBACProvider>
-            <GlobalRealtimeProvider>
-              <ModalProvider>
-                <Toaster />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/jobs" element={<JobsPage />} />
-                    <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                    <Route path="/clients" element={<ClientsPage />} />
-                    <Route path="/clients/:id" element={<ClientDetailPage />} />
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/team" element={<TeamManagementPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                  </Routes>
-                </BrowserRouter>
-              </ModalProvider>
-            </GlobalRealtimeProvider>
-          </RBACProvider>
+          <AuthProvider>
+            <RBACProvider>
+              <GlobalRealtimeProvider>
+                <ModalProvider>
+                  <Toaster />
+                  <BrowserRouter>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/jobs" element={<JobsPage />} />
+                      <Route path="/jobs/:id" element={<JobDetailsPage />} />
+                      <Route path="/clients" element={<ClientsPage />} />
+                      <Route path="/clients/:id" element={<ClientDetailPage />} />
+                      <Route path="/reports" element={<ReportsPage />} />
+                      <Route path="/team" element={<TeamManagementPage />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                    </Routes>
+                  </BrowserRouter>
+                </ModalProvider>
+              </GlobalRealtimeProvider>
+            </RBACProvider>
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
