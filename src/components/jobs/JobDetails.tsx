@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X } from "lucide-react";
@@ -385,13 +386,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Job Description</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsDescriptionDialogOpen(true)}
-            >
-              <Edit size={16} />
-            </Button>
           </div>
           
           <div className="cursor-pointer" onClick={() => setIsDescriptionDialogOpen(true)}>
