@@ -82,6 +82,18 @@ export const MessagesList = ({ searchResults = [] }: MessagesListProps) => {
     }
   };
 
+  // Convert Message[] to UnifiedMessage[] format
+  const convertMessagesToUnified = (messages: any[]) => {
+    return messages.map(msg => ({
+      id: msg.id,
+      body: msg.text,
+      direction: msg.isClient ? 'inbound' : 'outbound',
+      created_at: msg.timestamp,
+      sender: msg.sender,
+      recipient: undefined
+    }));
+  };
+
   return (
     <div className="space-y-4">
       {/* Search Results Information */}
@@ -125,11 +137,6 @@ export const MessagesList = ({ searchResults = [] }: MessagesListProps) => {
                           </span>
                         )}
                       </h3>
-                      {activeConv.client.email && (
-                        <p className="text-sm text-muted-foreground">
-                          {activeConv.client.email}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -137,7 +144,7 @@ export const MessagesList = ({ searchResults = [] }: MessagesListProps) => {
                 {/* Messages List */}
                 <div className="flex-1 overflow-y-auto p-4">
                   <UnifiedMessageList 
-                    messages={activeConv.messages}
+                    messages={convertMessagesToUnified(activeConv.messages)}
                     isLoading={false}
                     clientName={activeConv.client.name}
                     clientInfo={activeConv.client}
