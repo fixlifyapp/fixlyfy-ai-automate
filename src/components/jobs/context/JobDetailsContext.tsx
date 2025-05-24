@@ -52,6 +52,7 @@ export const JobDetailsProvider = ({
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const refreshJob = () => {
+    console.log('Refreshing job data for jobId:', jobId);
     setRefreshTrigger(prev => prev + 1);
   };
   
@@ -64,21 +65,26 @@ export const JobDetailsProvider = ({
   
   // Load job data
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId) {
+      console.log('No jobId provided');
+      setIsLoading(false);
+      return;
+    }
     
+    console.log('Fetching job data for ID:', jobId);
     setIsLoading(true);
     
     const fetchJobData = async () => {
       try {
-        // Fetch job details from Supabase
+        // Fetch job details from Supabase with proper join
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
             *,
-            clients(id, name, email, phone, address, city, state, zip, country)
+            clients!inner(id, name, email, phone, address, city, state, zip, country)
           `)
           .eq('id', jobId)
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle cases where job might not exist
         
         if (jobError) {
           console.error("Error fetching job:", jobError);
@@ -88,11 +94,13 @@ export const JobDetailsProvider = ({
         }
         
         if (!jobData) {
-          console.error("Job not found");
+          console.error("Job not found for ID:", jobId);
           toast.error("Job not found");
           setIsLoading(false);
           return;
         }
+        
+        console.log('Fetched job data:', jobData);
         
         // Extract client information with type safety
         const client = jobData.clients || { 
@@ -130,6 +138,8 @@ export const JobDetailsProvider = ({
           description: jobData.description || ""
         };
         
+        console.log('Processed job info:', jobInfo);
+        
         setJob(jobInfo);
         setCurrentStatus(jobData.status || "scheduled");
         
@@ -146,7 +156,7 @@ export const JobDetailsProvider = ({
           ? paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0) 
           : 0;
           
-        setBalance(jobData.revenue - totalPayments);
+        setBalance((jobData.revenue || 0) - totalPayments);
         
       } catch (error) {
         console.error("Error in fetching job details:", error);
@@ -164,6 +174,8 @@ export const JobDetailsProvider = ({
     if (!jobId) return;
     
     try {
+      console.log('Updating job status:', { jobId, newStatus });
+      
       // Update job status in database
       const { error } = await supabase
         .from('jobs')

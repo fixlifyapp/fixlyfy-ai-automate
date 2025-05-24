@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -107,18 +106,24 @@ export const useJobs = (clientId?: string) => {
         throw new Error('Title and client are required');
       }
       
+      // Prepare job data with proper types
       const newJob = {
-        ...job,
-        id: jobId,
-        // Set default values if not provided
+        id: jobId, // Use string ID as per the jobs table
+        title: job.title,
+        description: job.description || '',
         status: job.status || 'scheduled',
-        date: job.date || new Date().toISOString(),
+        client_id: job.client_id,
         service: job.service || 'General Service',
+        // Only include technician_id if it's provided and not empty
+        ...(job.technician_id && job.technician_id !== '' && { technician_id: job.technician_id }),
+        schedule_start: job.schedule_start,
+        schedule_end: job.schedule_end,
+        date: job.date || new Date().toISOString(),
         revenue: job.revenue || 0,
         tags: job.tags || []
       };
       
-      console.log('Creating job with data:', newJob);
+      console.log('Creating job with cleaned data:', newJob);
       
       const { data, error } = await supabase
         .from('jobs')
@@ -156,15 +161,24 @@ export const useJobs = (clientId?: string) => {
       };
       
       // Record job creation in history
-      await recordStatusChange(
-        jobId,
-        'new',
-        'scheduled',
-        currentUser?.name,
-        currentUser?.id
-      );
+      try {
+        await recordStatusChange(
+          jobId,
+          'new',
+          'scheduled',
+          currentUser?.name,
+          currentUser?.id
+        );
+      } catch (historyError) {
+        console.warn('Failed to record job history:', historyError);
+        // Don't fail job creation if history fails
+      }
       
       toast.success(`Job ${jobId} created successfully`);
+      
+      // Refresh the jobs list
+      fetchJobs();
+      
       return jobWithClient;
     } catch (error) {
       console.error('Error adding job:', error);

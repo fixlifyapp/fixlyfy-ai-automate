@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { globalTags } from "@/data/tags";
+import { useNavigate } from "react-router-dom";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -39,6 +40,14 @@ interface JobFormData {
   technician_id: string;
 }
 
+// Define proper technician IDs that match the database
+const TECHNICIAN_OPTIONS = [
+  { id: "", name: "Unassigned" },
+  { id: "robert-smith-uuid", name: "Robert Smith" },
+  { id: "john-doe-uuid", name: "John Doe" },
+  { id: "emily-clark-uuid", name: "Emily Clark" }
+];
+
 export const JobsCreateModal = ({
   open,
   onOpenChange,
@@ -52,6 +61,7 @@ export const JobsCreateModal = ({
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeValue, setTimeValue] = useState<string>("09:00");
   const [attachments, setAttachments] = useState<File[]>([]);
+  const navigate = useNavigate();
 
   const form = useForm<JobFormData>({
     defaultValues: {
@@ -118,20 +128,23 @@ export const JobsCreateModal = ({
       scheduledDate.setHours(hours);
       scheduledDate.setMinutes(minutes);
 
-      // Create the job object
+      // Create the job object with proper data types
       const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
-        title: data.title || data.service ? `${data.service} Service` : "New Service Job",
+        title: data.title || `${data.service || 'General'} Service`,
         description: data.description,
         status: "scheduled",
         client_id: data.client_id,
-        service: data.service,
-        technician_id: data.technician_id || undefined,
+        service: data.service || "General Service",
+        // Only set technician_id if it's not empty and is a valid UUID format
+        technician_id: data.technician_id && data.technician_id !== "" ? data.technician_id : undefined,
         schedule_start: scheduledDate.toISOString(),
         schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         date: scheduledDate.toISOString(),
         revenue: 0,
         tags: selectedTags
       };
+
+      console.log('Creating job with properly formatted data:', jobData);
 
       // Add the job using the useJobs hook
       const newJob = await addJob(jobData);
@@ -143,6 +156,9 @@ export const JobsCreateModal = ({
         if (onSuccess) {
           onSuccess(newJob);
         }
+
+        // Navigate to the job details page
+        navigate(`/jobs/${newJob.id}`);
 
         // Reset form and close modal
         resetForm();
@@ -361,10 +377,11 @@ export const JobsCreateModal = ({
                       <SelectValue placeholder="Assign technician" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="robert">Robert Smith</SelectItem>
-                      <SelectItem value="john">John Doe</SelectItem>
-                      <SelectItem value="emily">Emily Clark</SelectItem>
-                      <SelectItem value="ai">AI Auto-assignment</SelectItem>
+                      {TECHNICIAN_OPTIONS.map((tech) => (
+                        <SelectItem key={tech.id} value={tech.id}>
+                          {tech.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
