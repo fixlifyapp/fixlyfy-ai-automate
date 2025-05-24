@@ -12,8 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { User, Loader2 } from "lucide-react";
-import { fetchTeamMembers } from "@/data/team";
-import { TeamMember } from "@/types/team";
+import { useTechnicians } from "@/hooks/useTechnicians";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface TeamSelectionDialogProps {
@@ -30,8 +29,7 @@ export function TeamSelectionDialog({
   onSave,
 }: TeamSelectionDialogProps) {
   const [selectedTeam, setSelectedTeam] = useState(initialTeam);
-  const [isLoading, setIsLoading] = useState(true);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const { technicians, isLoading, refetch } = useTechnicians();
   
   // Define team colors based on index
   const teamColors = [
@@ -49,35 +47,23 @@ export function TeamSelectionDialog({
   useRealtimeSync({
     tables: ['profiles'],
     onUpdate: () => {
-      loadTeamMembers();
+      refetch();
       toast.info("Team members list has been updated");
     },
     enabled: open
   });
-  
-  // Function to load team members
-  const loadTeamMembers = async () => {
-    setIsLoading(true);
-    try {
-      const members = await fetchTeamMembers();
-      setTeamMembers(members);
-    } catch (error) {
-      console.error("Error loading team members:", error);
-      toast.error("Failed to load team members");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Fetch team members when dialog opens
+  // Update selected team when initial team changes
   useEffect(() => {
-    if (open) {
-      loadTeamMembers();
-    }
-  }, [open]);
+    setSelectedTeam(initialTeam);
+  }, [initialTeam]);
 
   const handleSave = () => {
-    onSave(selectedTeam);
+    // Find the selected technician's name to save
+    const selectedTechnician = technicians.find(tech => tech.id === selectedTeam);
+    const teamName = selectedTechnician ? selectedTechnician.name : selectedTeam;
+    
+    onSave(teamName);
     onOpenChange(false);
     toast.success("Team assignment updated");
   };
@@ -100,7 +86,7 @@ export function TeamSelectionDialog({
               onValueChange={setSelectedTeam}
               className="space-y-3"
             >
-              {teamMembers.map((member, index) => (
+              {technicians.map((member, index) => (
                 <div key={member.id} className="flex items-center space-x-2">
                   <RadioGroupItem value={member.id} id={`team-${member.id}`} />
                   <Label htmlFor={`team-${member.id}`} className="flex items-center gap-2">

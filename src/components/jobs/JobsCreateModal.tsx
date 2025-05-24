@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { globalTags } from "@/data/tags";
 import { useNavigate } from "react-router-dom";
+import { useTechnicians } from "@/hooks/useTechnicians";
+import { useJobTypes } from "@/hooks/useConfigItems";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -39,14 +42,6 @@ interface JobFormData {
   technician_id: string;
 }
 
-// Define proper technician IDs that match the database - changed empty string to "unassigned"
-const TECHNICIAN_OPTIONS = [
-  { id: "unassigned", name: "Unassigned" },
-  { id: "robert-smith-uuid", name: "Robert Smith" },
-  { id: "john-doe-uuid", name: "John Doe" },
-  { id: "emily-clark-uuid", name: "Emily Clark" }
-];
-
 export const JobsCreateModal = ({
   open,
   onOpenChange,
@@ -55,6 +50,8 @@ export const JobsCreateModal = ({
 }: JobsCreateModalProps) => {
   const { addJob } = useJobs();
   const { clients, isLoading: isLoadingClients } = useClients();
+  const { technicians, isLoading: isLoadingTechnicians } = useTechnicians();
+  const { items: jobTypes, isLoading: isLoadingJobTypes } = useJobTypes();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -72,7 +69,7 @@ export const JobsCreateModal = ({
       priority: "medium",
       date: new Date(),
       time: "09:00",
-      technician_id: "unassigned"
+      technician_id: ""
     }
   });
 
@@ -134,8 +131,8 @@ export const JobsCreateModal = ({
         status: "scheduled",
         client_id: data.client_id,
         service: data.service || "General Service",
-        // Only set technician_id if it's not "unassigned" and is a valid UUID format
-        technician_id: data.technician_id && data.technician_id !== "unassigned" ? data.technician_id : undefined,
+        // Only set technician_id if it's not empty and is a valid UUID format
+        technician_id: data.technician_id && data.technician_id !== "" ? data.technician_id : undefined,
         schedule_start: scheduledDate.toISOString(),
         schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         date: scheduledDate.toISOString(),
@@ -269,11 +266,21 @@ export const JobsCreateModal = ({
                       <SelectValue placeholder="Select job type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="HVAC">HVAC Repair</SelectItem>
-                      <SelectItem value="Plumbing">Plumbing</SelectItem>
-                      <SelectItem value="Electrical">Electrical</SelectItem>
-                      <SelectItem value="Maintenance">Maintenance</SelectItem>
-                      <SelectItem value="Installation">Installation</SelectItem>
+                      {isLoadingJobTypes ? (
+                        <SelectItem value="loading" disabled>Loading job types...</SelectItem>
+                      ) : jobTypes.length > 0 ? (
+                        jobTypes.map((jobType) => (
+                          <SelectItem key={jobType.id} value={jobType.name}>{jobType.name}</SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="HVAC">HVAC Repair</SelectItem>
+                          <SelectItem value="Plumbing">Plumbing</SelectItem>
+                          <SelectItem value="Electrical">Electrical</SelectItem>
+                          <SelectItem value="Maintenance">Maintenance</SelectItem>
+                          <SelectItem value="Installation">Installation</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -376,11 +383,16 @@ export const JobsCreateModal = ({
                       <SelectValue placeholder="Assign technician" />
                     </SelectTrigger>
                     <SelectContent>
-                      {TECHNICIAN_OPTIONS.map((tech) => (
-                        <SelectItem key={tech.id} value={tech.id}>
-                          {tech.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {isLoadingTechnicians ? (
+                        <SelectItem value="loading" disabled>Loading technicians...</SelectItem>
+                      ) : (
+                        technicians.map((tech) => (
+                          <SelectItem key={tech.id} value={tech.id}>
+                            {tech.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
