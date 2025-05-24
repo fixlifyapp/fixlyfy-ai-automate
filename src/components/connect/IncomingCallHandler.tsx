@@ -8,9 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface IncomingCall {
   id: string;
+  call_sid: string;
   phone_number: string;
-  callSid: string;
   direction: "incoming";
+  status: string;
 }
 
 export const IncomingCallHandler = () => {
@@ -35,16 +36,38 @@ export const IncomingCallHandler = () => {
           if (newCall.status === 'ringing') {
             setIncomingCall({
               id: newCall.id,
+              call_sid: newCall.call_sid,
               phone_number: newCall.phone_number,
-              callSid: newCall.call_sid || '',
-              direction: 'incoming'
+              direction: 'incoming',
+              status: newCall.status
             });
             setIsRinging(true);
             
-            // Play ring sound (you could add actual audio here)
+            // Play notification sound
             toast.info(`Incoming call from ${newCall.phone_number}`, {
-              duration: 10000,
+              duration: 15000,
+              action: {
+                label: "Answer",
+                onClick: () => answerCall(newCall.call_sid)
+              }
             });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'calls'
+        },
+        (payload) => {
+          const updatedCall = payload.new as any;
+          if (incomingCall && updatedCall.call_sid === incomingCall.call_sid) {
+            if (updatedCall.status === 'completed' || updatedCall.status === 'failed') {
+              setIncomingCall(null);
+              setIsRinging(false);
+            }
           }
         }
       )
@@ -53,23 +76,28 @@ export const IncomingCallHandler = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [incomingCall]);
 
-  const answerCall = async () => {
-    if (!incomingCall) return;
+  const answerCall = async (callSid?: string) => {
+    const targetCallSid = callSid || incomingCall?.call_sid;
+    if (!targetCallSid) return;
 
     try {
-      // In a real implementation, you would connect to Twilio's client SDK here
-      // For now, we'll just update the call status
+      // In a real implementation, you would use Twilio's client SDK to actually answer
+      // For now, we'll just update the call status to indicate it was answered
       const { error } = await supabase
         .from('calls')
-        .update({ status: 'in-progress' })
-        .eq('id', incomingCall.id);
+        .update({ 
+          status: 'in-progress',
+          notes: 'Call answered from web interface'
+        })
+        .eq('call_sid', targetCallSid);
 
       if (error) throw error;
 
       setIsRinging(false);
-      toast.success("Call answered");
+      setIncomingCall(null);
+      toast.success("Call answered - this would connect to Twilio's voice client");
     } catch (error) {
       console.error('Error answering call:', error);
       toast.error('Failed to answer call');
@@ -80,16 +108,17 @@ export const IncomingCallHandler = () => {
     if (!incomingCall) return;
 
     try {
-      const { error } = await supabase
-        .from('calls')
-        .update({ 
-          status: 'completed',
-          direction: 'missed'
-        })
-        .eq('id', incomingCall.id);
+      // Hangup the call via Twilio
+      const { error: twilioError } = await supabase.functions.invoke('twilio-calls', {
+        body: {
+          action: 'hangup',
+          callSid: incomingCall.call_sid
+        }
+      });
 
-      if (error) throw error;
+      if (twilioError) throw twilioError;
 
+      // Update local state
       setIncomingCall(null);
       setIsRinging(false);
       toast.info("Call declined");
@@ -132,12 +161,16 @@ export const IncomingCallHandler = () => {
             </Button>
             
             <Button
-              onClick={answerCall}
+              onClick={() => answerCall()}
               className="bg-green-600 hover:bg-green-700 rounded-full w-16 h-16"
             >
               <Phone size={24} />
             </Button>
           </div>
+          
+          <p className="text-xs text-gray-500 mt-4">
+            Note: This is a demo interface. In production, this would connect to Twilio's voice client.
+          </p>
         </CardContent>
       </Card>
     </div>

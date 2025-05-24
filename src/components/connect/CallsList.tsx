@@ -3,13 +3,14 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Loader2, PhoneOutgoing, PhoneIncoming, PhoneMissed } from "lucide-react";
+import { Phone, Loader2, PhoneOutgoing, PhoneIncoming, PhoneMissed, Clock } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface Call {
   id: string;
+  call_sid: string | null;
   client_id: string | null;
   phone_number: string;
   direction: "incoming" | "outgoing" | "missed";
@@ -62,7 +63,7 @@ export const CallsList = () => {
           clients:client_id(id, name)
         `)
         .order('started_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
       
@@ -113,6 +114,8 @@ export const CallsList = () => {
 
       if (data.success) {
         toast.success(`Call initiated to ${phoneNumber}`);
+        // Refresh calls to show the new call
+        setTimeout(() => fetchCalls(), 1000);
       } else {
         throw new Error("Failed to initiate call");
       }
@@ -126,6 +129,33 @@ export const CallsList = () => {
 
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
+  };
+
+  const formatDuration = (started: string, ended: string | null) => {
+    if (!ended) return null;
+    const duration = Math.floor((new Date(ended).getTime() - new Date(started).getTime()) / 1000);
+    const mins = Math.floor(duration / 60);
+    const secs = duration % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    if (!status) return null;
+    
+    const statusColors: Record<string, string> = {
+      'ringing': 'bg-blue-100 text-blue-800',
+      'in-progress': 'bg-green-100 text-green-800',
+      'completed': 'bg-gray-100 text-gray-800',
+      'failed': 'bg-red-100 text-red-800',
+      'busy': 'bg-yellow-100 text-yellow-800',
+      'no-answer': 'bg-orange-100 text-orange-800'
+    };
+
+    return (
+      <Badge className={statusColors[status] || 'bg-gray-100 text-gray-800'}>
+        {status.replace('-', ' ').toUpperCase()}
+      </Badge>
+    );
   };
 
   return (
@@ -161,29 +191,33 @@ export const CallsList = () => {
                       {call.clients?.name || "Unknown Contact"}
                     </h3>
                     <p className="text-sm text-fixlyfy-text-secondary">{call.phone_number}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getStatusBadge(call.status)}
+                      {call.ended_at && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <Clock size={12} />
+                          {formatDuration(call.started_at, call.ended_at)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm">
-                    {call.direction === "missed" ? (
-                      <Badge variant="destructive">Missed</Badge>
-                    ) : (
-                      call.duration || "Unknown"
-                    )}
-                  </p>
-                  <p className="text-xs text-fixlyfy-text-secondary">
-                    {formatTimestamp(call.started_at)}
-                  </p>
+                <div className="text-right flex items-center gap-2">
+                  <div>
+                    <p className="text-xs text-fixlyfy-text-secondary">
+                      {formatTimestamp(call.started_at)}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-8 w-8 text-fixlyfy"
+                    onClick={() => handleCall(call.phone_number)}
+                    disabled={isCallInitiating || !selectedFromNumber}
+                  >
+                    {isCallInitiating ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />}
+                  </Button>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8 text-fixlyfy"
-                  onClick={() => handleCall(call.phone_number)}
-                  disabled={isCallInitiating || !selectedFromNumber}
-                >
-                  {isCallInitiating ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />}
-                </Button>
               </div>
             ))}
           </div>

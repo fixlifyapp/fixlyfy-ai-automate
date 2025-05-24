@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { CallingInterface } from "@/components/connect/CallingInterface";
+import { EnhancedCallingInterface } from "@/components/connect/EnhancedCallingInterface";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { useMessageContext } from "@/contexts/MessageContext";
 
@@ -91,15 +91,16 @@ const ConnectCenterPage = () => {
           unreadMessages += unreadInConv;
         });
 
-        // For now, using mock data for calls and emails
-        // In a real app, you would fetch from actual tables
-        const missedCalls = 3; // Mock missed calls count
-        const unreadEmails = 5; // Mock unread emails count
+        // Count missed calls
+        const { data: missedCalls } = await supabase
+          .from('calls')
+          .select('id')
+          .eq('direction', 'missed');
 
         setUnreadCounts({
           messages: unreadMessages,
-          calls: missedCalls,
-          emails: unreadEmails
+          calls: missedCalls?.length || 0,
+          emails: 0 // Mock for now
         });
       } catch (error) {
         console.error("Error fetching unread counts:", error);
@@ -112,11 +113,14 @@ const ConnectCenterPage = () => {
   const handleNewCommunication = () => {
     switch (activeTab) {
       case "messages":
-        // Open with a placeholder client - user can search/select
         openMessageDialog({ name: "New Client", phone: "" });
         break;
       case "calls":
-        toast.info("New call feature coming soon");
+        if (ownedNumbers.length === 0) {
+          toast.error("Please purchase a phone number first to make calls");
+        } else {
+          toast.info("Use the calling interface below to make calls");
+        }
         break;
       case "emails":
         toast.info("New email feature coming soon");
@@ -194,7 +198,7 @@ const ConnectCenterPage = () => {
         <TabsContent value="calls" className="mt-0">
           <div className="space-y-6">
             {ownedNumbers.length > 0 && (
-              <CallingInterface ownedNumbers={ownedNumbers} />
+              <EnhancedCallingInterface ownedNumbers={ownedNumbers} />
             )}
             <CallsList />
           </div>
