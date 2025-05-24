@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAutomations } from "@/hooks/useAutomations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -345,7 +344,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {commonVariables.map((variable) => (
                         <Badge key={variable.key} variant="outline" className="justify-start">
-                          {{`{{${variable.key}}}`}}
+                          {`{{${variable.key}}}`}
                         </Badge>
                       ))}
                     </div>
