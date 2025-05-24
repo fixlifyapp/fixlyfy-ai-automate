@@ -2,7 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UnifiedMessageList } from "@/components/messages/UnifiedMessageList";
 import { MessageInputInline } from "@/components/messages/components/MessageInputInline";
@@ -27,15 +27,8 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { sendMessage, isSending } = useInlineMessaging({
-    clientId: client.id,
-    clientPhone: client.phone,
-    jobId,
-    onMessageSent: fetchMessages
-  });
-
   // Fetch job client details and messages
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     setIsLoading(true);
     try {
       // Get job and client info
@@ -72,7 +65,17 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
             .eq('conversation_id', conversation.id)
             .order('created_at', { ascending: true });
 
-          setMessages(messagesData || []);
+          // Transform messages to match UnifiedMessage interface
+          const transformedMessages: UnifiedMessage[] = (messagesData || []).map(msg => ({
+            id: msg.id,
+            body: msg.body,
+            direction: msg.direction as 'inbound' | 'outbound',
+            created_at: msg.created_at,
+            sender: msg.sender,
+            recipient: msg.recipient
+          }));
+
+          setMessages(transformedMessages);
         }
       }
     } catch (error) {
@@ -80,13 +83,20 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [jobId]);
+
+  const { sendMessage, isSending } = useInlineMessaging({
+    clientId: client.id,
+    clientPhone: client.phone,
+    jobId,
+    onMessageSent: fetchMessages
+  });
 
   useEffect(() => {
     if (jobId) {
       fetchMessages();
     }
-  }, [jobId]);
+  }, [jobId, fetchMessages]);
 
   // Set up real-time subscription for new messages
   useEffect(() => {
@@ -110,7 +120,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [jobId]);
+  }, [jobId, fetchMessages]);
 
   const handleUseSuggestion = (content: string) => {
     // This will be handled by the MessageInputInline component
@@ -174,7 +184,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           clientInfo={client}
         />
         
-        {client.phone && (
+        {client.phone ? (
           <MessageInputInline
             onSendMessage={sendMessage}
             isLoading={isSending}
@@ -186,9 +196,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
             clientInfo={client}
             messages={messages}
           />
-        )}
-
-        {!client.phone && (
+        ) : (
           <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center">
             <p className="text-sm text-muted-foreground">
               No phone number available for this client
