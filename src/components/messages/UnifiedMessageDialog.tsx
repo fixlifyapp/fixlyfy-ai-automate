@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { UnifiedMessageList } from "./UnifiedMessageList";
 import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
+import { MessageTextEnhancer } from "@/components/connect/components/MessageTextEnhancer";
 
 export const UnifiedMessageDialog = () => {
   const {
@@ -100,15 +101,24 @@ export const UnifiedMessageDialog = () => {
             )}
             
             <div className="flex gap-2">
-              <textarea 
-                className="flex-1 p-2 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
-                placeholder="Type your message..."
-                rows={2}
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                disabled={isSending}
-                onKeyDown={handleKeyDown}
-              />
+              <div className="flex-1 relative">
+                <textarea 
+                  className="w-full p-2 pr-10 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
+                  placeholder="Type your message..."
+                  rows={2}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  disabled={isSending}
+                  onKeyDown={handleKeyDown}
+                />
+                <div className="absolute right-2 top-2">
+                  <MessageTextEnhancer 
+                    messageText={messageText}
+                    setMessageText={setMessageText}
+                    disabled={isSending}
+                  />
+                </div>
+              </div>
               <Button 
                 onClick={handleSend} 
                 disabled={isSending || !messageText.trim()}
