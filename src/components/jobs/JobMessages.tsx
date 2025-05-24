@@ -2,7 +2,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useJobMessages } from "./hooks/useJobMessages";
 import { JobMessageList } from "./components/JobMessageList";
-import { JobMessageActions } from "./components/JobMessageActions";
 import { MessageInput } from "@/components/messages/MessageInput";
 import { useState } from "react";
 
@@ -27,16 +26,20 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
-        <JobMessageActions 
-          onSuggestResponse={handleSuggestResponse}
-          isAILoading={isAILoading}
-          isSendingMessage={isSendingMessage}
-          messagesExist={messages.length > 0}
-        />
+        <div className="mb-6">
+          <h3 className="text-lg font-medium">Messages</h3>
+          {client.name && (
+            <p className="text-sm text-muted-foreground">
+              Conversation with {client.name}
+              {client.phone && ` (${client.phone})`}
+            </p>
+          )}
+        </div>
 
         <JobMessageList 
           messages={messages}
           isLoading={isLoading}
+          clientName={client.name}
         />
         
         <MessageInput
@@ -45,6 +48,11 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           handleSendMessage={handleSendMessage}
           isLoading={isSendingMessage}
           isDisabled={isLoading}
+          showSuggestResponse={true}
+          onSuggestResponse={handleSuggestResponse}
+          isAILoading={isAILoading}
+          clientInfo={client}
+          messages={messages}
         />
       </CardContent>
     </Card>

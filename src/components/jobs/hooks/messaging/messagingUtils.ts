@@ -38,7 +38,8 @@ export const sendClientMessage = async ({
         const { data: existingConversation } = await supabase
           .from('conversations')
           .select('id')
-          .eq('job_id', jobId);
+          .eq('job_id', jobId)
+          .eq('client_id', clientId);
         
         if (existingConversation && existingConversation.length > 0) {
           conversationId = existingConversation[0].id;
@@ -48,7 +49,8 @@ export const sendClientMessage = async ({
             .insert({
               job_id: jobId,
               client_id: clientId,
-              status: 'active'
+              status: 'active',
+              last_message_at: new Date().toISOString()
             })
             .select('id')
             .single();
@@ -72,6 +74,12 @@ export const sendClientMessage = async ({
             status: 'delivered',
             message_sid: data.sid
           });
+          
+        // Update conversation timestamp
+        await supabase
+          .from('conversations')
+          .update({ last_message_at: new Date().toISOString() })
+          .eq('id', conversationId);
       }
       
       return { success: true, conversationId };
@@ -90,7 +98,10 @@ export const fetchJobClientDetails = async (jobId: string) => {
   try {
     const { data: job } = await supabase
       .from('jobs')
-      .select('*, clients:client_id(*)')
+      .select(`
+        *,
+        clients:client_id(*)
+      `)
       .eq('id', jobId)
       .single();
     
@@ -98,7 +109,8 @@ export const fetchJobClientDetails = async (jobId: string) => {
       return {
         name: job.clients.name,
         phone: job.clients.phone || "",
-        id: job.clients.id
+        id: job.clients.id,
+        email: job.clients.email || ""
       };
     }
     
@@ -115,27 +127,34 @@ export const fetchConversationMessages = async (jobId: string) => {
     // First find the conversation for this job
     const { data: conversation } = await supabase
       .from('conversations')
-      .select('*')
+      .select(`
+        *,
+        clients:client_id(id, name, phone, email)
+      `)
       .eq('job_id', jobId)
       .single();
     
     if (conversation) {
-      // Fetch messages for this conversation
-      const { data } = await supabase
+      // Fetch messages for this conversation with proper ordering
+      const { data: messagesData } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversation.id)
         .order('created_at', { ascending: true });
       
-      if (data) {
-        return { messages: data, conversationId: conversation.id };
+      if (messagesData) {
+        return { 
+          messages: messagesData, 
+          conversationId: conversation.id,
+          clientInfo: conversation.clients
+        };
       }
     }
     
-    return { messages: [], conversationId: null };
+    return { messages: [], conversationId: null, clientInfo: null };
   } catch (error) {
     console.error("Error fetching messages:", error);
     // If no conversation found, it's likely there are no messages yet
-    return { messages: [], conversationId: null };
+    return { messages: [], conversationId: null, clientInfo: null };
   }
 };

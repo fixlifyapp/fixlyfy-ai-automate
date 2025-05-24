@@ -1,12 +1,12 @@
-
 import { useState } from "react";
-import { MessageSquare, Loader2, Send } from "lucide-react";
+import { MessageSquare, Loader2, Send, Bot } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
 
 interface Message {
   id: string;
@@ -33,6 +33,26 @@ interface ConversationThreadProps {
 export const ConversationThread = ({ conversation }: ConversationThreadProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  
+  // Format messages for AI
+  const unifiedMessages = conversation?.messages.map(msg => ({
+    id: msg.id,
+    body: msg.text,
+    direction: msg.isClient ? 'inbound' as const : 'outbound' as const,
+    created_at: msg.timestamp,
+    sender: msg.sender
+  })) || [];
+
+  const handleUseSuggestion = (content: string) => {
+    setNewMessage(content);
+  };
+
+  const { isAILoading, handleSuggestResponse } = useMessageAI({
+    messages: unifiedMessages,
+    client: conversation?.client || { name: "", id: "" },
+    jobId: '', // No job context in connect center
+    onUseSuggestion: handleUseSuggestion
+  });
   
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !conversation) return;
@@ -101,6 +121,9 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     );
   }
 
+  const lastMessage = conversation.messages[conversation.messages.length - 1];
+  const shouldShowSuggest = lastMessage?.isClient;
+
   return (
     <>
       <div className="p-4 border-b border-fixlyfy-border">
@@ -119,29 +142,49 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
       
       <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-4">
         {conversation.messages.length > 0 ? (
-          conversation.messages.map((message) => (
-            <div 
-              key={message.id} 
-              className={cn(
-                "flex",
-                message.isClient ? "justify-start" : "justify-end"
-              )}
-            >
+          conversation.messages.map((message) => {
+            const isFromClient = message.isClient;
+            const senderName = isFromClient ? conversation.client.name : 'You';
+            const senderInitials = isFromClient 
+              ? conversation.client.name.substring(0, 2).toUpperCase()
+              : 'ME';
+
+            return (
               <div 
+                key={message.id} 
                 className={cn(
-                  "max-w-[80%] p-3 rounded-lg",
-                  message.isClient 
-                    ? "bg-muted text-foreground" 
-                    : "bg-fixlyfy text-white"
+                  "flex gap-3",
+                  !isFromClient && "flex-row-reverse"
                 )}
               >
-                <p className="text-sm break-words">{message.text}</p>
-                <span className="text-xs block mt-1 opacity-70">
-                  {message.timestamp}
-                </span>
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className={cn(
+                    "text-xs",
+                    isFromClient ? "bg-muted" : "bg-fixlyfy text-white"
+                  )}>
+                    {senderInitials}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className={cn(
+                  "flex flex-col max-w-[80%]",
+                  !isFromClient && "items-end"
+                )}>
+                  <div className={cn(
+                    "p-3 rounded-lg",
+                    isFromClient 
+                      ? "bg-muted text-foreground" 
+                      : "bg-fixlyfy text-white"
+                  )}>
+                    <p className="text-sm break-words">{message.text}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    {senderName} • {message.timestamp}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="flex justify-center items-center h-full text-fixlyfy-text-secondary">
             <p>No messages in this conversation yet</p>
@@ -149,7 +192,22 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
         )}
       </div>
       
-      <div className="p-4 border-t border-fixlyfy-border">
+      <div className="p-4 border-t border-fixlyfy-border space-y-2">
+        {shouldShowSuggest && (
+          <div className="flex justify-end">
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleSuggestResponse}
+              disabled={isAILoading || isSending}
+              className="gap-2 text-purple-600 border-purple-200"
+            >
+              {isAILoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
+              {isAILoading ? "Generating..." : "Suggest Response"}
+            </Button>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Input
             value={newMessage}

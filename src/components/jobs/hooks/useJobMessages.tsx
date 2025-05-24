@@ -17,17 +17,31 @@ interface UseJobMessagesProps {
 
 export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesProps) => {
   const [messages, setMessages] = useState<any[]>([]);
-  const [client, setClient] = useState({ name: "", phone: "", id: "" });
+  const [client, setClient] = useState({ name: "", phone: "", id: "", email: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const fetchMessages = useCallback(async () => {
+    console.log("Fetching messages for job:", jobId);
     setIsLoading(true);
     try {
-      const { messages: fetchedMessages, conversationId: fetchedConversationId } = await fetchConversationMessages(jobId);
+      const { messages: fetchedMessages, conversationId: fetchedConversationId, clientInfo } = await fetchConversationMessages(jobId);
+      console.log("Fetched messages:", fetchedMessages);
+      console.log("Client info:", clientInfo);
+      
       setMessages(fetchedMessages);
       setConversationId(fetchedConversationId);
+      
+      // Update client info if available from conversation
+      if (clientInfo) {
+        setClient({
+          name: clientInfo.name || "",
+          phone: clientInfo.phone || "",
+          id: clientInfo.id || "",
+          email: clientInfo.email || ""
+        });
+      }
     } catch (error) {
       console.error("Error in fetchMessages:", error);
       setMessages([]);
@@ -50,6 +64,7 @@ export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesPro
       return;
     }
     
+    console.log("Sending message:", message, "to client:", client);
     setIsSendingMessage(true);
     
     try {
@@ -73,6 +88,7 @@ export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesPro
         toast.success("Message sent successfully");
       }
     } catch (error) {
+      console.error("Send message error:", error);
       toast.error("Failed to send message");
     } finally {
       setIsSendingMessage(false);
@@ -98,11 +114,18 @@ export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesPro
   useEffect(() => {
     if (jobId) {
       const initializeData = async () => {
+        console.log("Initializing data for job:", jobId);
+        
+        // Fetch client details from job
         const clientDetails = await fetchJobClientDetails(jobId);
+        console.log("Job client details:", clientDetails);
+        
         if (clientDetails) {
           setClient(clientDetails);
         }
-        fetchMessages();
+        
+        // Fetch messages
+        await fetchMessages();
       };
       
       initializeData();

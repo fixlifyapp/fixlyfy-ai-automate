@@ -3,29 +3,40 @@ import { Loader2, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-interface Message {
+interface UnifiedMessage {
   id: string;
   body: string;
-  direction: string;
+  direction: 'inbound' | 'outbound';
   created_at: string;
   sender?: string;
+  recipient?: string;
 }
 
-interface JobMessageListProps {
-  messages: Message[];
+interface UnifiedMessageListProps {
+  messages: UnifiedMessage[];
   isLoading: boolean;
-  clientName?: string;
+  clientName: string;
+  clientInfo?: {
+    name: string;
+    phone?: string;
+    id?: string;
+  };
 }
 
-export const JobMessageList = ({ messages, isLoading, clientName = "Client" }: JobMessageListProps) => {
+export const UnifiedMessageList = ({ 
+  messages, 
+  isLoading, 
+  clientName,
+  clientInfo 
+}: UnifiedMessageListProps) => {
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 size={24} className="animate-spin text-fixlyfy" />
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-fixlyfy" />
       </div>
     );
   }
-  
+
   if (messages.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -34,9 +45,9 @@ export const JobMessageList = ({ messages, isLoading, clientName = "Client" }: J
       </div>
     );
   }
-  
+
   return (
-    <div className="space-y-4 max-h-96 overflow-y-auto mb-4">
+    <div className="h-64 overflow-y-auto border rounded-md p-3 mb-4 space-y-4">
       {messages.map((message) => {
         const isFromClient = message.direction === 'inbound';
         const senderName = isFromClient ? clientName : 'You';
