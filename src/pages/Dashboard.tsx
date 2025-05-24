@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
@@ -12,6 +13,9 @@ import { DispatchScoreboard } from "@/components/dashboard/DispatchScoreboard";
 import { ExpandedDashboardMetrics } from "@/components/dashboard/ExpandedDashboardMetrics";
 import { EnhancedKpiCards } from "@/components/dashboard/EnhancedKpiCards";
 import { ModernMetricsGrid } from "@/components/dashboard/ModernMetricsGrid";
+import { ClientValuePanel } from "@/components/dashboard/ClientValuePanel";
+import { QuoteConversionFunnel } from "@/components/dashboard/QuoteConversionFunnel";
+import { RepeatWorkTracker } from "@/components/dashboard/RepeatWorkTracker";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
