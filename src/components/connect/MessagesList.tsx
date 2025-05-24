@@ -87,7 +87,7 @@ export const MessagesList = ({ searchResults = [] }: MessagesListProps) => {
     return messages.map(msg => ({
       id: msg.id,
       body: msg.text,
-      direction: msg.isClient ? 'inbound' : 'outbound',
+      direction: msg.isClient ? 'inbound' as const : 'outbound' as const,
       created_at: msg.timestamp,
       sender: msg.sender,
       recipient: undefined
