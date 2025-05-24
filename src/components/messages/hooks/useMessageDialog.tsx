@@ -109,21 +109,9 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
           
           setMessages(formattedMessages);
         }
-      } else if (client.id) {
-        // If no conversation exists yet, create a sample conversation starter
-        setMessages([{
-          id: 'welcome',
-          text: "Hello! How can I assist you today?",
-          sender: "You",
-          timestamp: new Date().toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true
-          }),
-          isClient: false
-        }]);
+      } else {
+        // No conversation exists yet
+        setMessages([]);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -233,6 +221,7 @@ export const useMessageDialog = ({ client, open }: UseMessageDialogProps) => {
     messages,
     isLoading,
     isLoadingMessages,
-    handleSendMessage
+    handleSendMessage,
+    conversationId
   };
 };
