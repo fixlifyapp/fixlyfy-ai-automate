@@ -11,7 +11,7 @@ import TeamManagementPage from "./pages/TeamManagementPage";
 import SettingsPage from "./pages/SettingsPage";
 import AuthPage from "./pages/AuthPage";
 import JobDetailsPage from "./pages/JobDetailsPage";
-import EstimatesPage from "./pages/EstimatesPage";
+import EstimatesPage from "./pages/EstimatesPage.tsx";
 import InvoicesPage from "./pages/InvoicesPage";
 import ConnectCenterPage from "./pages/ConnectCenterPage";
 import MessagesPage from "./pages/MessagesPage";
