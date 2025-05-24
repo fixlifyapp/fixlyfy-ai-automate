@@ -1,3 +1,4 @@
+
 import { MessageSquare, Sparkles, Bot, Send } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,12 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     if (conversation?.client) {
       openMessageDialog(conversation.client);
     }
+  };
+
+  // Prevent form submission and page refresh
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSendMessage();
   };
   
   if (!conversation) {
@@ -167,7 +174,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
       </div>
       
       <div className="p-4 border-t border-fixlyfy-border">
-        <div className="flex gap-2">
+        <form onSubmit={handleFormSubmit} className="flex gap-2">
           <div className="flex-1 relative">
             <textarea 
               className="w-full p-2 pr-10 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
@@ -210,7 +217,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
               </Button>
             )}
             <Button 
-              onClick={handleSendMessage} 
+              type="submit"
               disabled={isSending || !messageText.trim()}
               size="sm"
               className="px-3"
@@ -218,7 +225,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
               <Send size={16} />
             </Button>
           </div>
-        </div>
+        </form>
       </div>
     </>
   );
