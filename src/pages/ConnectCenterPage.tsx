@@ -10,16 +10,14 @@ import { MessageSquare, Phone, Mail, Plus, PhoneCall } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
-import { MessageDialog } from "@/components/messages/MessageDialog";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { CallingInterface } from "@/components/connect/CallingInterface";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
+import { useMessageContext } from "@/contexts/MessageContext";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("messages");
-  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<{name: string; phone?: string; id?: string} | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [unreadCounts, setUnreadCounts] = useState({
     messages: 0,
@@ -27,6 +25,8 @@ const ConnectCenterPage = () => {
     emails: 0
   });
   const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
+
+  const { openMessageDialog } = useMessageContext();
 
   // Read query parameters to handle direct navigation with a specific client
   const location = useLocation();
@@ -112,7 +112,8 @@ const ConnectCenterPage = () => {
   const handleNewCommunication = () => {
     switch (activeTab) {
       case "messages":
-        setIsMessageDialogOpen(true);
+        // Open with a placeholder client - user can search/select
+        openMessageDialog({ name: "New Client", phone: "" });
         break;
       case "calls":
         toast.info("New call feature coming soon");
@@ -186,8 +187,6 @@ const ConnectCenterPage = () => {
         
         <TabsContent value="messages" className="mt-0">
           <MessagesList 
-            setOpenMessageDialog={setIsMessageDialogOpen} 
-            setSelectedClient={setSelectedClient}
             searchResults={searchResults}
           />
         </TabsContent>
@@ -209,15 +208,6 @@ const ConnectCenterPage = () => {
           <PhoneNumbersList searchResults={searchResults} />
         </TabsContent>
       </Tabs>
-      
-      {/* Message Dialog for direct conversations */}
-      {selectedClient && (
-        <MessageDialog
-          open={isMessageDialogOpen}
-          onOpenChange={setIsMessageDialogOpen}
-          client={selectedClient}
-        />
-      )}
     </PageLayout>
   );
 };

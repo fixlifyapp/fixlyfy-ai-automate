@@ -1,69 +1,51 @@
-
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import { ModalProvider } from "@/components/ui/modal-provider";
+import { Toaster } from "@/components/ui/toaster"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RBACProvider } from "@/components/auth/RBACProvider";
-import { AuthProvider } from "@/hooks/use-auth";
-import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import SchedulePage from "./pages/SchedulePage";
+import DashboardPage from "./pages/DashboardPage";
 import JobsPage from "./pages/JobsPage";
-import JobDetailsPage from "./pages/JobDetailsPage";
 import ClientsPage from "./pages/ClientsPage";
-import ClientDetailPage from "./pages/ClientDetailPage";
-import ReportsPage from "./pages/ReportsPage";
-import TeamManagementPage from "./pages/TeamManagementPage";
+import TeamPage from "./pages/TeamPage";
 import SettingsPage from "./pages/SettingsPage";
-import ProductsPage from "./pages/ProductsPage";
-import FinancePage from "./pages/FinancePage";
-import AiAssistantPage from "./pages/AiAssistantPage";
+import LoginPage from "./pages/LoginPage";
+import AuthWrapper from "@/components/auth/AuthWrapper";
+import JobDetailsPage from "./pages/JobDetailsPage";
+import EstimatesPage from "./pages/EstimatesPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import ConnectCenterPage from "./pages/ConnectCenterPage";
-import AutomationsPage from "./pages/AutomationsPage";
-import AuthPage from "./pages/AuthPage";
+import MessagesPage from "./pages/MessagesPage";
+import { CallingInterface } from "@/components/connect/CallingInterface";
+import { MessageProvider } from "@/contexts/MessageContext";
+import { UnifiedMessageDialog } from "@/components/messages/UnifiedMessageDialog";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <TooltipProvider>
-          <AuthProvider>
-            <RBACProvider>
-              <GlobalRealtimeProvider>
-                <ModalProvider>
-                  <Toaster />
-                  <BrowserRouter>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/auth" element={<AuthPage />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/schedule" element={<SchedulePage />} />
-                      <Route path="/jobs" element={<JobsPage />} />
-                      <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                      <Route path="/clients" element={<ClientsPage />} />
-                      <Route path="/clients/:id" element={<ClientDetailPage />} />
-                      <Route path="/products" element={<ProductsPage />} />
-                      <Route path="/finance" element={<FinancePage />} />
-                      <Route path="/admin/team" element={<TeamManagementPage />} />
-                      <Route path="/team" element={<TeamManagementPage />} />
-                      <Route path="/ai-assistant" element={<AiAssistantPage />} />
-                      <Route path="/connect" element={<ConnectCenterPage />} />
-                      <Route path="/automations" element={<AutomationsPage />} />
-                      <Route path="/reports" element={<ReportsPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                    </Routes>
-                  </BrowserRouter>
-                </ModalProvider>
-              </GlobalRealtimeProvider>
-            </RBACProvider>
-          </AuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
+      <RBACProvider>
+        <MessageProvider>
+          <div className="min-h-screen bg-background font-sans antialiased">
+            <Toaster />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/" element={<AuthWrapper><DashboardPage /></AuthWrapper>} />
+                <Route path="/jobs" element={<AuthWrapper><JobsPage /></AuthWrapper>} />
+                <Route path="/jobs/:id" element={<AuthWrapper><JobDetailsPage /></AuthWrapper>} />
+                <Route path="/clients" element={<AuthWrapper><ClientsPage /></AuthWrapper>} />
+                <Route path="/team" element={<AuthWrapper><TeamPage /></AuthWrapper>} />
+                <Route path="/estimates" element={<AuthWrapper><EstimatesPage /></AuthWrapper>} />
+                <Route path="/invoices" element={<AuthWrapper><InvoicesPage /></AuthWrapper>} />
+                <Route path="/settings" element={<AuthWrapper><SettingsPage /></AuthWrapper>} />
+                <Route path="/connect-center" element={<AuthWrapper><ConnectCenterPage /></AuthWrapper>} />
+                <Route path="/messages" element={<AuthWrapper><MessagesPage /></AuthWrapper>} />
+              </Routes>
+            </BrowserRouter>
+            <UnifiedMessageDialog />
+          </div>
+        </MessageProvider>
+      </RBACProvider>
     </QueryClientProvider>
   );
 }

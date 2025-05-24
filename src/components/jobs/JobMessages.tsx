@@ -1,29 +1,93 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { useJobMessages } from "./hooks/useJobMessages";
-import { JobMessageList } from "./components/JobMessageList";
-import { MessageInput } from "@/components/messages/MessageInput";
 import { Button } from "@/components/ui/button";
-import { Bot, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { MessageSquare, Bot, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useMessageContext } from "@/contexts/MessageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { JobMessageList } from "./components/JobMessageList";
+import { useMessageAI } from "./hooks/messaging/useMessageAI";
 
 interface JobMessagesProps {
   jobId: string;
 }
 
 export const JobMessages = ({ jobId }: JobMessagesProps) => {
-  const [message, setMessage] = useState("");
-  
-  const {
+  const { openMessageDialog } = useMessageContext();
+  const [client, setClient] = useState({ name: "", phone: "", id: "", email: "" });
+  const [messages, setMessages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch job client details and messages
+  useEffect(() => {
+    const fetchJobData = async () => {
+      setIsLoading(true);
+      try {
+        // Get job and client info
+        const { data: job } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients:client_id(*)
+          `)
+          .eq('id', jobId)
+          .single();
+
+        if (job?.clients) {
+          const clientData = {
+            name: job.clients.name,
+            phone: job.clients.phone || "",
+            id: job.clients.id,
+            email: job.clients.email || ""
+          };
+          setClient(clientData);
+
+          // Get conversation for this job
+          const { data: conversation } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('job_id', jobId)
+            .single();
+
+          if (conversation) {
+            // Fetch messages
+            const { data: messagesData } = await supabase
+              .from('messages')
+              .select('*')
+              .eq('conversation_id', conversation.id)
+              .order('created_at', { ascending: true });
+
+            setMessages(messagesData || []);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching job data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (jobId) {
+      fetchJobData();
+    }
+  }, [jobId]);
+
+  const handleOpenMessages = () => {
+    if (client.id) {
+      openMessageDialog(client, jobId);
+    }
+  };
+
+  const handleUseSuggestion = (content: string) => {
+    // This will be handled by the unified dialog
+  };
+
+  const { isAILoading, handleSuggestResponse } = useMessageAI({
     messages,
     client,
-    isLoading,
-    isSendingMessage,
-    isAILoading,
-    handleSuggestResponse,
-    handleUseSuggestion,
-    handleSendMessage
-  } = useJobMessages({ jobId, message, setMessage });
+    jobId,
+    onUseSuggestion: handleUseSuggestion
+  });
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
@@ -39,25 +103,36 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
                 </p>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSuggestResponse}
-              disabled={isAILoading || isLoading || messages.length === 0}
-              className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-            >
-              {isAILoading ? (
-                <>
-                  <Bot className="h-4 w-4 animate-pulse" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  AI Response
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSuggestResponse}
+                disabled={isAILoading || isLoading || messages.length === 0}
+                className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+              >
+                {isAILoading ? (
+                  <>
+                    <Bot className="h-4 w-4 animate-pulse" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    AI Response
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleOpenMessages}
+                disabled={!client.id}
+                size="sm"
+                className="gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Open Messages
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -67,18 +142,14 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           clientName={client.name}
         />
         
-        <MessageInput
-          message={message}
-          setMessage={setMessage}
-          handleSendMessage={handleSendMessage}
-          isLoading={isSendingMessage}
-          isDisabled={isLoading}
-          showSuggestResponse={true}
-          onSuggestResponse={handleSuggestResponse}
-          isAILoading={isAILoading}
-          clientInfo={client}
-          messages={messages}
-        />
+        <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center">
+          <p className="text-sm text-muted-foreground mb-2">
+            Use the unified message dialog to send messages
+          </p>
+          <Button onClick={handleOpenMessages} variant="outline" size="sm">
+            Open Message Dialog
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

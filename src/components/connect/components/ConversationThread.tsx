@@ -1,12 +1,9 @@
 
-import { useState } from "react";
-import { MessageSquare, Loader2, Send, Bot, Sparkles } from "lucide-react";
+import { MessageSquare, Sparkles, Bot } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useMessageContext } from "@/contexts/MessageContext";
 import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
 
 interface Message {
@@ -32,9 +29,8 @@ interface ConversationThreadProps {
 }
 
 export const ConversationThread = ({ conversation }: ConversationThreadProps) => {
-  const [newMessage, setNewMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  
+  const { openMessageDialog } = useMessageContext();
+
   // Format messages for AI
   const unifiedMessages = conversation?.messages.map(msg => ({
     id: msg.id,
@@ -45,7 +41,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
   })) || [];
 
   const handleUseSuggestion = (content: string) => {
-    setNewMessage(content);
+    // This will be handled by the unified dialog
   };
 
   const { isAILoading, handleSuggestResponse } = useMessageAI({
@@ -54,62 +50,13 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     jobId: '', // No job context in connect center
     onUseSuggestion: handleUseSuggestion
   });
-  
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !conversation) return;
-    if (!conversation.client.phone) {
-      toast.error("No phone number available for this client");
-      return;
-    }
-    
-    setIsSending(true);
-    
-    try {
-      // Call the Twilio edge function to send SMS
-      const { data, error } = await supabase.functions.invoke('send-sms', {
-        body: {
-          to: conversation.client.phone,
-          body: newMessage
-        }
-      });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      if (data.success) {
-        // Store the message in the database (this will trigger our real-time listener)
-        await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversation.id,
-            body: newMessage,
-            direction: 'outbound',
-            sender: 'You',
-            recipient: conversation.client.phone,
-            status: 'delivered',
-            message_sid: data.sid
-          });
-          
-        // Update the last_message_at field for the conversation
-        await supabase
-          .from('conversations')
-          .update({ last_message_at: new Date().toISOString() })
-          .eq('id', conversation.id);
-          
-        setNewMessage(""); // Clear the input
-        toast.success("Message sent successfully");
-      } else {
-        toast.error(`Failed to send message: ${data.error || 'Unknown error'}`);
-      }
-    } catch (error: any) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please try again.");
-    } finally {
-      setIsSending(false);
+
+  const handleOpenMessageDialog = () => {
+    if (conversation?.client) {
+      openMessageDialog(conversation.client);
     }
   };
-
+  
   if (!conversation) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -140,25 +87,35 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSuggestResponse}
-            disabled={isAILoading || isSending || conversation.messages.length === 0}
-            className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-          >
-            {isAILoading ? (
-              <>
-                <Bot className="h-4 w-4 animate-pulse" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                AI Response
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSuggestResponse}
+              disabled={isAILoading || conversation.messages.length === 0}
+              className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+            >
+              {isAILoading ? (
+                <>
+                  <Bot className="h-4 w-4 animate-pulse" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  AI Response
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleOpenMessageDialog}
+              size="sm"
+              className="gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Message
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -214,40 +171,13 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
         )}
       </div>
       
-      <div className="p-4 border-t border-fixlyfy-border space-y-2">
-        {shouldShowSuggest && (
-          <div className="flex justify-end">
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={handleSuggestResponse}
-              disabled={isAILoading || isSending}
-              className="gap-2 text-purple-600 border-purple-200"
-            >
-              {isAILoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
-              {isAILoading ? "Generating..." : "Suggest Response"}
-            </Button>
-          </div>
-        )}
-        
-        <div className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type your message..."
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-            disabled={isSending}
-            className="flex-1"
-          />
-          <Button 
-            onClick={handleSendMessage} 
-            disabled={isSending || !newMessage.trim()}
-          >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+      <div className="p-4 border-t border-fixlyfy-border">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground mb-2">
+            Use the unified message dialog to send messages
+          </p>
+          <Button onClick={handleOpenMessageDialog} variant="outline" size="sm">
+            Open Message Dialog
           </Button>
         </div>
       </div>
