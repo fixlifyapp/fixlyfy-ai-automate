@@ -1,10 +1,11 @@
 
-import { MessageSquare, Sparkles, Bot } from "lucide-react";
+import { MessageSquare, Sparkles, Bot, Send } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
+import { useConversationMessaging } from "../hooks/useConversationMessaging";
 
 interface Message {
   id: string;
@@ -41,7 +42,9 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
   })) || [];
 
   const handleUseSuggestion = (content: string) => {
-    // This will be handled by the unified dialog
+    if (conversation?.id) {
+      setMessageText(content);
+    }
   };
 
   const { isAILoading, handleSuggestResponse } = useMessageAI({
@@ -49,6 +52,17 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
     client: conversation?.client || { name: "", id: "" },
     jobId: '', // No job context in connect center
     onUseSuggestion: handleUseSuggestion
+  });
+
+  const {
+    messageText,
+    setMessageText,
+    handleSendMessage,
+    handleKeyDown,
+    isSending
+  } = useConversationMessaging({
+    conversationId: conversation?.id || "",
+    clientPhone: conversation?.client.phone
   });
 
   const handleOpenMessageDialog = () => {
@@ -87,35 +101,15 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSuggestResponse}
-              disabled={isAILoading || conversation.messages.length === 0}
-              className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
-            >
-              {isAILoading ? (
-                <>
-                  <Bot className="h-4 w-4 animate-pulse" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  AI Response
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleOpenMessageDialog}
-              size="sm"
-              className="gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Message
-            </Button>
-          </div>
+          <Button
+            onClick={handleOpenMessageDialog}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Full Dialog
+          </Button>
         </div>
       </div>
       
@@ -171,13 +165,49 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
         )}
       </div>
       
-      <div className="p-4 border-t border-fixlyfy-border">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-2">
-            Use the unified message dialog to send messages
-          </p>
-          <Button onClick={handleOpenMessageDialog} variant="outline" size="sm">
-            Open Message Dialog
+      <div className="p-4 border-t border-fixlyfy-border space-y-2">
+        {shouldShowSuggest && (
+          <div className="flex justify-end">
+            <Button 
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSuggestResponse}
+              disabled={isAILoading || isSending}
+              className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+            >
+              {isAILoading ? (
+                <>
+                  <Bot className="h-4 w-4 animate-pulse" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  AI Response
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <textarea 
+            className="flex-1 p-2 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
+            placeholder="Type your message..."
+            rows={2}
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            disabled={isSending}
+            onKeyDown={handleKeyDown}
+          />
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={isSending || !messageText.trim()}
+            size="sm"
+            className="px-3"
+          >
+            <Send size={16} />
           </Button>
         </div>
       </div>
