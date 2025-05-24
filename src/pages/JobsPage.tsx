@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -8,8 +9,7 @@ import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { toast } from "sonner";
 import { useJobs } from "@/hooks/useJobs";
-import { generateAllTestData } from "@/utils/test-data"; // Updated import path
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { generateAllTestData } from "@/utils/test-data";
 
 const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
@@ -17,26 +17,15 @@ const JobsPage = () => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   
-  // Use the useJobs hook to fetch job data from Supabase
+  // Use the unified useJobs hook
   const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
-  
-  // Set up realtime sync for jobs, clients, and related tables
-  useRealtimeSync({
-    tables: ['jobs', 'clients', 'invoices', 'payments'],
-    onUpdate: () => {
-      console.log("Realtime update triggered - refreshing jobs data");
-      refreshJobs();
-    }
-  });
   
   // Handler for bulk status updates
   const handleUpdateJobsStatus = (jobIds: string[], newStatus: string) => {
-    // Update job data in Supabase for each selected job
     Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })))
       .then(() => {
         toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
         setSelectedJobs([]);
-        refreshJobs(); // Refresh the job list
       })
       .catch(error => {
         console.error("Failed to update jobs status:", error);
@@ -46,12 +35,10 @@ const JobsPage = () => {
   
   // Handler for bulk technician assignment
   const handleAssignTechnician = (jobIds: string[], technicianId: string, technicianName: string) => {
-    // Update job data in Supabase for each selected job
     Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })))
       .then(() => {
         toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
         setSelectedJobs([]);
-        refreshJobs(); // Refresh the job list
       })
       .catch(error => {
         console.error("Failed to assign technician:", error);
@@ -61,7 +48,6 @@ const JobsPage = () => {
   
   // Handler for bulk deletion
   const handleDeleteJobs = (jobIds: string[]) => {
-    // Delete jobs from Supabase
     Promise.all(jobIds.map(id => deleteJob(id)))
       .then(() => {
         toast.success(`Deleted ${jobIds.length} jobs`);
@@ -75,19 +61,16 @@ const JobsPage = () => {
   
   // Handler for sending reminders
   const handleSendReminders = (jobIds: string[], reminderType: string) => {
-    // In a real app, this would trigger an API call to send reminders
     toast.success(`Sent ${reminderType.toUpperCase()} reminders to ${jobIds.length} clients`);
     setSelectedJobs([]);
   };
   
   // Handler for tagging jobs
   const handleTagJobs = (jobIds: string[], tags: string[]) => {
-    // Update job tags in Supabase
     Promise.all(jobIds.map(id => {
       const job = jobs.find(j => j.id === id);
       if (!job) return Promise.resolve(null);
       
-      // Merge existing tags with new tags
       const existingTags = job.tags || [];
       const updatedTags = [...new Set([...existingTags, ...tags])];
       
@@ -96,7 +79,6 @@ const JobsPage = () => {
       .then(() => {
         toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
         setSelectedJobs([]);
-        refreshJobs(); // Refresh the job list
       })
       .catch(error => {
         console.error("Failed to tag jobs:", error);
@@ -106,7 +88,6 @@ const JobsPage = () => {
   
   // Handler for marking jobs as paid
   const handleMarkAsPaid = (jobIds: string[], paymentMethod: string) => {
-    // In a real app, this would update payment status in the database
     toast.success(`Marked ${jobIds.length} jobs as paid via ${paymentMethod}`);
     setSelectedJobs([]);
   };
@@ -230,7 +211,6 @@ const JobsPage = () => {
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
         onSuccess={(job) => {
-          refreshJobs();
           toast.success(`Job ${job.id} created successfully`);
         }}
       />

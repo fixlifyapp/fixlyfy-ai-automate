@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 
 export interface JobInfo {
   id: string;
@@ -53,6 +54,13 @@ export const JobDetailsProvider = ({
   const refreshJob = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+  
+  // Use unified realtime for all related data
+  useUnifiedRealtime({
+    tables: ['jobs', 'clients', 'payments', 'invoices'],
+    onUpdate: refreshJob,
+    enabled: !!jobId
+  });
   
   // Load job data
   useEffect(() => {

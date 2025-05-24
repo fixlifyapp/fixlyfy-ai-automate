@@ -14,7 +14,7 @@ import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
 import { JobInvoices } from "@/components/jobs/JobInvoices";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { toast } from "sonner";
 import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
 
@@ -35,15 +35,13 @@ const JobDetailsPage = () => {
     }
   }, [location]);
   
-  // Handle realtime updates for this job and related data
-  useRealtimeSync({
-    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'job_history'],
+  // Handle unified realtime updates for this job and all related data
+  useUnifiedRealtime({
+    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients'],
     onUpdate: () => {
-      console.log("Realtime update triggered for job details");
+      console.log("Unified realtime update triggered for job details");
       setRefreshTrigger(prev => prev + 1);
-      toast.info("Job data has been updated");
     },
-    filter: id ? { job_id: id } : undefined,
     enabled: !!id
   });
   

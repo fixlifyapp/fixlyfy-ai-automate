@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { recordStatusChange } from "@/services/jobHistoryService";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 
 export interface Job {
   id: string;
@@ -82,36 +84,17 @@ export const useJobs = (clientId?: string) => {
     }
   };
   
+  // Set up unified realtime sync
+  useUnifiedRealtime({
+    tables: ['jobs', 'clients'],
+    onUpdate: fetchJobs,
+    enabled: true
+  });
+  
   // Set up initial data fetch and refresh on dependency changes
   useEffect(() => {
     fetchJobs();
   }, [clientId, refreshTrigger]);
-  
-  // Set up realtime subscription to keep data in sync across the app
-  useEffect(() => {
-    // Enable realtime subscriptions for the jobs table
-    const channel = supabase
-      .channel('public:jobs')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'jobs'
-        },
-        (payload) => {
-          console.log('Jobs table changed:', payload);
-          // Refresh the jobs data when table changes
-          fetchJobs();
-        }
-      )
-      .subscribe();
-      
-    // Clean up the subscription when the component unmounts
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [clientId]); // Re-subscribe when clientId changes
   
   const addJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -119,33 +102,56 @@ export const useJobs = (clientId?: string) => {
       const jobNumber = Math.floor(10000 + Math.random() * 90000);
       const jobId = `JOB-${jobNumber}`;
       
+      // Validate required fields
+      if (!job.title || !job.client_id) {
+        throw new Error('Title and client are required');
+      }
+      
       const newJob = {
         ...job,
         id: jobId,
         // Set default values if not provided
         status: job.status || 'scheduled',
         date: job.date || new Date().toISOString(),
+        service: job.service || 'General Service',
+        revenue: job.revenue || 0,
+        tags: job.tags || []
       };
+      
+      console.log('Creating job with data:', newJob);
       
       const { data, error } = await supabase
         .from('jobs')
         .insert(newJob)
-        .select()
+        .select(`
+          id,
+          title,
+          description,
+          service,
+          status,
+          client_id,
+          technician_id,
+          schedule_start,
+          schedule_end,
+          date,
+          revenue,
+          tags,
+          created_at,
+          updated_at,
+          clients(name)
+        `)
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating job:', error);
+        throw error;
+      }
       
-      // Add client info to the returned job
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('name')
-        .eq('id', job.client_id)
-        .single();
-        
+      // Transform the returned data
       const jobWithClient = {
         ...data,
         client: {
-          name: clientData?.name || 'Unknown Client'
+          name: data.clients?.name || 'Unknown Client'
         }
       };
       
@@ -158,11 +164,11 @@ export const useJobs = (clientId?: string) => {
         currentUser?.id
       );
       
-      setJobs(prev => [jobWithClient, ...prev]);
+      toast.success(`Job ${jobId} created successfully`);
       return jobWithClient;
     } catch (error) {
       console.error('Error adding job:', error);
-      toast.error('Failed to add job');
+      toast.error('Failed to create job: ' + (error as Error).message);
       return null;
     }
   };
@@ -187,16 +193,28 @@ export const useJobs = (clientId?: string) => {
         .from('jobs')
         .update(updates)
         .eq('id', id)
-        .select()
+        .select(`
+          id,
+          title,
+          description,
+          service,
+          status,
+          client_id,
+          technician_id,
+          schedule_start,
+          schedule_end,
+          date,
+          revenue,
+          tags,
+          created_at,
+          updated_at,
+          clients(name)
+        `)
         .single();
         
       if (error) throw error;
       
-      // Update the jobs list
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { ...job, ...data, client: job.client } : job
-      ));
-      
+      toast.success('Job updated successfully');
       return data;
     } catch (error) {
       console.error('Error updating job:', error);
@@ -214,7 +232,7 @@ export const useJobs = (clientId?: string) => {
         
       if (error) throw error;
       
-      setJobs(prev => prev.filter(job => job.id !== id));
+      toast.success('Job deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting job:', error);

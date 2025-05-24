@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, ExternalLink } from "lucide-react";
@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { useJobsRealtime } from "@/hooks/useJobsRealtime";
 
 interface ClientJobsProps {
   clientId?: string;
@@ -19,20 +18,12 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const {
     jobs,
-    isLoading,
-    refreshJobs
+    isLoading
   } = useJobs(clientId);
   const navigate = useNavigate();
 
-  // Use the realtime hook to listen for job changes
-  useJobsRealtime(() => {
-    console.log("Refreshing jobs via realtime subscription");
-    refreshJobs();
-  });
-
   const handleJobCreated = (job: any) => {
     toast.success("Job created successfully!");
-    refreshJobs();
   };
 
   const handleViewJob = (jobId: string) => {
