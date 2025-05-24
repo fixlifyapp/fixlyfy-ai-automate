@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -40,9 +39,9 @@ interface JobFormData {
   technician_id: string;
 }
 
-// Define proper technician IDs that match the database
+// Define proper technician IDs that match the database - changed empty string to "unassigned"
 const TECHNICIAN_OPTIONS = [
-  { id: "", name: "Unassigned" },
+  { id: "unassigned", name: "Unassigned" },
   { id: "robert-smith-uuid", name: "Robert Smith" },
   { id: "john-doe-uuid", name: "John Doe" },
   { id: "emily-clark-uuid", name: "Emily Clark" }
@@ -73,7 +72,7 @@ export const JobsCreateModal = ({
       priority: "medium",
       date: new Date(),
       time: "09:00",
-      technician_id: ""
+      technician_id: "unassigned"
     }
   });
 
@@ -135,8 +134,8 @@ export const JobsCreateModal = ({
         status: "scheduled",
         client_id: data.client_id,
         service: data.service || "General Service",
-        // Only set technician_id if it's not empty and is a valid UUID format
-        technician_id: data.technician_id && data.technician_id !== "" ? data.technician_id : undefined,
+        // Only set technician_id if it's not "unassigned" and is a valid UUID format
+        technician_id: data.technician_id && data.technician_id !== "unassigned" ? data.technician_id : undefined,
         schedule_start: scheduledDate.toISOString(),
         schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         date: scheduledDate.toISOString(),
