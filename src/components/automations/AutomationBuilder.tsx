@@ -109,6 +109,16 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
     { value: 'create_task', label: 'Create Task', icon: <Plus className="w-4 h-4" /> }
   ];
 
+  // Common variables for quick reference
+  const commonVariables = [
+    { key: 'CustomerName', label: 'Customer Name' },
+    { key: 'CustomerFirstName', label: 'First Name' },
+    { key: 'JobDate', label: 'Job Date' },
+    { key: 'JobTime', label: 'Job Time' },
+    { key: 'InvoiceAmount', label: 'Invoice Amount' },
+    { key: 'CompanyName', label: 'Company Name' }
+  ];
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -333,9 +343,9 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {variables.slice(0, 6).map((variable) => (
-                        <Badge key={variable.id} variant="outline" className="justify-start">
-                          {`{{${variable.variable_key}}}`}
+                      {commonVariables.map((variable) => (
+                        <Badge key={variable.key} variant="outline" className="justify-start">
+                          {`{{${variable.key}}}`}
                         </Badge>
                       ))}
                     </div>
