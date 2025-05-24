@@ -8,8 +8,6 @@ import { InvoiceStatusBreakdown } from "@/components/dashboard/InvoiceStatusBrea
 import { ClientStats } from "@/components/dashboard/ClientStats";
 import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterControls";
 import { DashboardActions } from "@/components/dashboard/DashboardActions";
-import { TechScoreboard } from "@/components/dashboard/TechScoreboard";
-import { DispatchScoreboard } from "@/components/dashboard/DispatchScoreboard";
 import { ExpandedDashboardMetrics } from "@/components/dashboard/ExpandedDashboardMetrics";
 import { EnhancedKpiCards } from "@/components/dashboard/EnhancedKpiCards";
 import { ModernMetricsGrid } from "@/components/dashboard/ModernMetricsGrid";
@@ -200,16 +198,6 @@ const Dashboard = () => {
               <ExpandedDashboardMetrics onClose={handleToggleExpandedMetrics} />
             </div>
           )}
-        </div>
-      </div>
-      
-      {/* Scoreboard Section with 3D Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="transform hover:scale-105 transition-transform duration-300">
-          <TechScoreboard isRefreshing={isRefreshing} />
-        </div>
-        <div className="transform hover:scale-105 transition-transform duration-300">
-          <DispatchScoreboard isRefreshing={isRefreshing} />
         </div>
       </div>
       
