@@ -98,6 +98,16 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             const lastMessage = messages?.[messages.length - 1];
 
+            // Format messages to ensure correct types
+            const formattedMessages: Message[] = (messages || []).map(msg => ({
+              id: msg.id,
+              body: msg.body || '',
+              direction: (msg.direction === 'inbound' || msg.direction === 'outbound') ? msg.direction : 'outbound',
+              created_at: msg.created_at || new Date().toISOString(),
+              sender: msg.sender || undefined,
+              recipient: msg.recipient || undefined
+            }));
+
             return {
               id: conv.id,
               client: {
@@ -106,7 +116,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 phone: conv.clients?.phone || '',
                 email: conv.clients?.email || ''
               },
-              messages: messages || [],
+              messages: formattedMessages,
               lastMessage: lastMessage?.body || '',
               lastMessageTime: lastMessage?.created_at || conv.last_message_at
             };
@@ -154,6 +164,16 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
             .eq('conversation_id', existingConv.id)
             .order('created_at', { ascending: true });
 
+          // Format messages to ensure correct types
+          const formattedMessages: Message[] = (messages || []).map(msg => ({
+            id: msg.id,
+            body: msg.body || '',
+            direction: (msg.direction === 'inbound' || msg.direction === 'outbound') ? msg.direction : 'outbound',
+            created_at: msg.created_at || new Date().toISOString(),
+            sender: msg.sender || undefined,
+            recipient: msg.recipient || undefined
+          }));
+
           conversation = {
             id: existingConv.id,
             client: {
@@ -162,7 +182,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
               phone: existingConv.clients?.phone || client.phone || '',
               email: existingConv.clients?.email || client.email || ''
             },
-            messages: messages || []
+            messages: formattedMessages
           };
         }
       }

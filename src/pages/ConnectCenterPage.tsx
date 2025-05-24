@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,14 +47,13 @@ const ConnectCenterPage = () => {
   // Handle opening the message dialog if client parameters are provided
   useEffect(() => {
     if (clientId && clientName) {
-      setSelectedClient({
+      openMessageDialog({
         id: clientId,
         name: clientName,
         phone: clientPhone || ""
       });
-      setIsMessageDialogOpen(true);
     }
-  }, [clientId, clientName, clientPhone]);
+  }, [clientId, clientName, clientPhone, openMessageDialog]);
 
   // Load owned phone numbers
   useEffect(() => {
