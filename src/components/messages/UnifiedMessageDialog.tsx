@@ -52,7 +52,7 @@ export const UnifiedMessageDialog = () => {
 
   return (
     <Dialog open={isMessageDialogOpen} onOpenChange={closeMessageDialog}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Message {client.name}
@@ -110,14 +110,14 @@ export const UnifiedMessageDialog = () => {
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <textarea 
-                  className="w-full p-3 pr-12 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-y min-h-[100px]" 
+                  className="w-full p-4 pr-12 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none resize-y min-h-[120px] text-base" 
                   placeholder="Type your message... (Press Shift+Enter for new line, Enter to send)"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   disabled={isSending}
                   onKeyDown={handleKeyDown}
                 />
-                <div className="absolute right-2 top-2">
+                <div className="absolute right-3 top-3">
                   <MessageTextEnhancer 
                     messageText={messageText}
                     setMessageText={setMessageText}
