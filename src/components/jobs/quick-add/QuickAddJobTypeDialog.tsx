@@ -94,7 +94,7 @@ export const QuickAddJobTypeDialog = ({
             <Checkbox
               id="is_default"
               checked={isDefault}
-              onCheckedChange={setIsDefault}
+              onCheckedChange={(checked) => setIsDefault(checked === true)}
             />
             <Label htmlFor="is_default">Set as default job type</Label>
           </div>
