@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -168,16 +169,15 @@ export const EstimateSendDialog = ({
           .from('estimates')
           .select('*')
           .eq('estimate_number', estimateNumber)
-          .single();
+          .maybeSingle();
 
         if (estimateError) {
           console.error('Error fetching estimate directly:', estimateError);
-          throw estimateError;
         }
 
         // If we have a jobId, fetch client data from the job
-        if (jobId || estimate.job_id) {
-          const targetJobId = jobId || estimate.job_id;
+        if (jobId || estimate?.job_id) {
+          const targetJobId = jobId || estimate?.job_id;
           
           const { data: job, error: jobError } = await supabase
             .from('jobs')
@@ -202,25 +202,27 @@ export const EstimateSendDialog = ({
           }
         }
 
-        // Create fallback estimate details
-        const fallbackDetails: EstimateDetails = {
-          estimate_id: estimate.id,
-          estimate_number: estimate.estimate_number,
-          total: estimate.total || 0,
-          status: estimate.status || 'draft',
-          notes: estimate.notes,
-          job_id: estimate.job_id || '',
-          job_title: '',
-          job_description: '',
-          client_id: clientInfo?.id || '',
-          client_name: clientInfo?.name || 'Unknown Client',
-          client_email: clientInfo?.email,
-          client_phone: clientInfo?.phone,
-          client_company: ''
-        };
+        // Create fallback estimate details if we have an estimate
+        if (estimate) {
+          const fallbackDetails: EstimateDetails = {
+            estimate_id: estimate.id,
+            estimate_number: estimate.estimate_number,
+            total: estimate.total || 0,
+            status: estimate.status || 'draft',
+            notes: estimate.notes,
+            job_id: estimate.job_id || '',
+            job_title: '',
+            job_description: '',
+            client_id: clientInfo?.id || '',
+            client_name: clientInfo?.name || 'Unknown Client',
+            client_email: clientInfo?.email,
+            client_phone: clientInfo?.phone,
+            client_company: ''
+          };
 
-        setEstimateDetails(fallbackDetails);
-        console.log("Using fallback estimate details:", fallbackDetails);
+          setEstimateDetails(fallbackDetails);
+          console.log("Using fallback estimate details:", fallbackDetails);
+        }
       }
 
       // Fetch line items for this estimate
@@ -396,23 +398,9 @@ export const EstimateSendDialog = ({
   
   // Send the estimate to the client
   const handleSendEstimate = async () => {
-    const estimateId = getEstimateId();
-    const estimateTotal = getEstimateTotal();
-    const estimateNotes = getEstimateNotes();
+    console.log("Starting send estimate process");
 
-    console.log("Starting send estimate process with:", {
-      estimateId,
-      sendMethod,
-      sendTo,
-      estimateTotal
-    });
-
-    if (!estimateId) {
-      toast.error("Estimate details not loaded");
-      return;
-    }
-
-    // Validate recipient
+    // Validate recipient first
     const validationErrorMsg = validateRecipient(sendMethod, sendTo);
     if (validationErrorMsg) {
       setValidationError(validationErrorMsg);
@@ -420,27 +408,13 @@ export const EstimateSendDialog = ({
       return;
     }
 
-    // Format phone number if SMS
-    let finalRecipient = sendTo;
-    if (sendMethod === "sms") {
-      finalRecipient = formatPhoneForTwilio(sendTo);
-      console.log("Final formatted phone number:", finalRecipient);
-      
-      if (!isValidPhoneNumber(finalRecipient)) {
-        const error = "Invalid phone number format";
-        setValidationError(error);
-        toast.error(error);
-        return;
-      }
-    }
-
     setIsProcessing(true);
     setValidationError("");
     
     try {
-      console.log("Starting estimate send process...");
+      console.log("First saving the estimate...");
       
-      // First save the estimate
+      // First save the estimate to ensure it exists in the database
       const success = await onSave();
       
       if (!success) {
@@ -449,7 +423,47 @@ export const EstimateSendDialog = ({
         return;
       }
 
-      console.log("Estimate saved successfully, proceeding with send...");
+      console.log("Estimate saved successfully, now fetching the saved estimate...");
+      
+      // After saving, fetch the estimate again to get the proper ID
+      await fetchEstimateAndClientDetails();
+      
+      // Wait a moment for the state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const estimateId = getEstimateId();
+      const estimateTotal = getEstimateTotal();
+      const estimateNotes = getEstimateNotes();
+
+      console.log("Proceeding with send estimate process with:", {
+        estimateId,
+        sendMethod,
+        sendTo,
+        estimateTotal
+      });
+
+      if (!estimateId) {
+        toast.error("Estimate not found. Please save the estimate first and try again.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Format phone number if SMS
+      let finalRecipient = sendTo;
+      if (sendMethod === "sms") {
+        finalRecipient = formatPhoneForTwilio(sendTo);
+        console.log("Final formatted phone number:", finalRecipient);
+        
+        if (!isValidPhoneNumber(finalRecipient)) {
+          const error = "Invalid phone number format";
+          setValidationError(error);
+          toast.error(error);
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      console.log("Creating estimate communication record...");
       
       // Create estimate communication record
       const { data: commData, error: commError } = await supabase
