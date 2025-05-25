@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
 import { useToast } from "@/hooks/use-toast";
 
-export const useJobsActions = (fetchJobs: () => Promise<void>, transformDatabaseJob: (dbJob: any) => Job) => {
+type TransformFunction = (dbJob: any) => Job;
+
+export const useJobsActions = (fetchJobs: () => Promise<void>, transformDatabaseJob: TransformFunction) => {
   const { toast } = useToast();
 
   const addJob = async (jobData: Partial<Job>): Promise<Job | undefined> => {
@@ -47,7 +49,7 @@ export const useJobsActions = (fetchJobs: () => Promise<void>, transformDatabase
       if (data) {
         return transformDatabaseJob(data);
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error creating job:", error);
       toast({
         title: "Error",
@@ -58,7 +60,7 @@ export const useJobsActions = (fetchJobs: () => Promise<void>, transformDatabase
     }
   };
 
-  const updateJob = async (jobId: string, updates: Partial<Job>): Promise<unknown> => {
+  const updateJob = async (jobId: string, updates: Partial<Job>): Promise<any> => {
     try {
       const updateData = {
         ...updates,
@@ -76,7 +78,7 @@ export const useJobsActions = (fetchJobs: () => Promise<void>, transformDatabase
 
       await fetchJobs();
       return data;
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error updating job:", error);
       toast({
         title: "Error",
@@ -103,7 +105,7 @@ export const useJobsActions = (fetchJobs: () => Promise<void>, transformDatabase
 
       await fetchJobs();
       return true;
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error deleting job:", error);
       toast({
         title: "Error",

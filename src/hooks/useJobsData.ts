@@ -33,7 +33,7 @@ interface DatabaseJob {
   job_type?: string;
   lead_source?: string;
   service?: string;
-  tasks: unknown;
+  tasks: any;
   created_by?: string;
   clients?: {
     id: string;
@@ -52,7 +52,7 @@ interface DatabaseJob {
   }> | null;
 }
 
-const parseTasks = (tasks: unknown): string[] => {
+const parseTasks = (tasks: any): string[] => {
   if (!tasks) return [];
   
   if (typeof tasks === 'string') {
@@ -72,7 +72,7 @@ const parseTasks = (tasks: unknown): string[] => {
 };
 
 const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
-  return {
+  const baseJob: Job = {
     id: dbJob.id,
     title: dbJob.title,
     description: dbJob.description,
@@ -98,6 +98,8 @@ const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
     invoices: dbJob.invoices,
     custom_fields: []
   };
+  
+  return baseJob;
 };
 
 export const useJobsData = (clientId?: string) => {
@@ -163,7 +165,7 @@ export const useJobsData = (clientId?: string) => {
 
       setJobs(transformedJobs);
       setTotalJobs(count || 0);
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast({
         title: "Error",
