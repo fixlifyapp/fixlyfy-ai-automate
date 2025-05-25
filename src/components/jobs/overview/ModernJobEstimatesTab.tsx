@@ -34,10 +34,13 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
 
   // Enhanced handlers with history recording
   const handleEstimateCreated = async (amount: number) => {
+    // Generate estimate number
+    const estimateNumber = `EST-${Date.now()}`;
+    
     // Record in job history
     await recordEstimateCreated(
       jobId,
-      `EST-${Date.now()}`, // Generate estimate number
+      estimateNumber,
       amount
     );
     

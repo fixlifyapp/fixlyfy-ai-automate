@@ -13,8 +13,7 @@ interface Attachment {
   file_name: string;
   file_path: string;
   file_size: number;
-  created_at: string;
-  uploaded_at?: string; // Make this optional for backward compatibility
+  uploaded_at: string;
   mime_type?: string;
 }
 
@@ -39,17 +38,11 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
         .from('job_attachments')
         .select('*')
         .eq('job_id', jobId)
-        .order('created_at', { ascending: false });
+        .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
       
-      // Transform data to ensure created_at is available
-      const transformedData = data?.map(item => ({
-        ...item,
-        created_at: item.created_at || item.uploaded_at || new Date().toISOString()
-      })) || [];
-      
-      setAttachments(transformedData);
+      setAttachments(data || []);
     } catch (error) {
       console.error('Error fetching attachments:', error);
       toast.error('Failed to load attachments');
@@ -232,7 +225,7 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
                       {attachment.file_name}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {formatFileSize(attachment.file_size)} • {new Date(attachment.created_at).toLocaleDateString()}
+                      {formatFileSize(attachment.file_size)} • {new Date(attachment.uploaded_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
