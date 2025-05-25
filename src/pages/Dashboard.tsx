@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
 import { AiInsightsPanel } from "@/components/dashboard/AiInsightsPanel";
 import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
@@ -16,7 +17,7 @@ import { QuoteConversionFunnel } from "@/components/dashboard/QuoteConversionFun
 import { RepeatWorkTracker } from "@/components/dashboard/RepeatWorkTracker";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, BarChart3, TrendingUp, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // Define time period types for filters
@@ -111,26 +112,16 @@ const Dashboard = () => {
 
   return (
     <PageLayout>
-      {/* Modern Header with 3D Effects */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-fixlyfy/10 via-transparent to-fixlyfy/5 rounded-3xl p-8 mb-8 border border-fixlyfy/20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(138,77,213,0.1),transparent_70%)]"></div>
-        <div className="relative z-10 flex justify-between items-center">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-fixlyfy to-fixlyfy-light rounded-2xl shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                <Sparkles className="text-white w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-fixlyfy to-fixlyfy-light bg-clip-text text-transparent">
-                  Dashboard
-                </h1>
-                <p className="text-fixlyfy-text-secondary">Welcome to your business command center</p>
-              </div>
-            </div>
-          </div>
-          <DashboardActions onRefresh={handleRefresh} isRefreshing={isRefreshing} />
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Welcome to your business command center"
+        icon={BarChart3}
+        badges={[
+          { text: "Real-time Analytics", icon: TrendingUp, variant: "fixlyfy" },
+          { text: "Smart Insights", icon: Target, variant: "success" },
+          { text: "AI Powered", icon: Sparkles, variant: "info" }
+        ]}
+      />
 
       {/* AI Business Insights Panel - Moved to Top */}
       <div className="mb-8">
