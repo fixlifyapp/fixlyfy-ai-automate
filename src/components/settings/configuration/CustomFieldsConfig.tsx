@@ -47,6 +47,23 @@ export function CustomFieldsConfig() {
     return await addItem(values);
   };
 
+  const handleUpdateField = async (id: string, values: any) => {
+    // Process options for select fields
+    if (values.field_type === 'select' && values.selectOptions) {
+      const options = values.selectOptions
+        .split('\n')
+        .map((opt: string) => opt.trim())
+        .filter((opt: string) => opt.length > 0);
+      
+      values.options = { options };
+    }
+    
+    // Remove the temporary selectOptions field
+    delete values.selectOptions;
+    
+    return await updateItem(id, values);
+  };
+
   const renderItemDialogFields = ({ form, fieldType }: { form: any; fieldType?: string }) => (
     <>
       <FormField
@@ -170,6 +187,23 @@ export function CustomFieldsConfig() {
     </>
   );
 
+  const getInitialValues = (item?: any) => {
+    if (!item) {
+      return { field_type: "text", entity_type: "job", required: false };
+    }
+    
+    // Prepare selectOptions for editing
+    let selectOptions = '';
+    if (item.field_type === 'select' && item.options?.options) {
+      selectOptions = item.options.options.join('\n');
+    }
+    
+    return {
+      ...item,
+      selectOptions
+    };
+  };
+
   return (
     <ConfigItemCard
       title="Custom Fields"
@@ -178,7 +212,7 @@ export function CustomFieldsConfig() {
       isLoading={isLoading}
       canManage={canManage}
       onAdd={handleAddField}
-      onUpdate={updateItem}
+      onUpdate={handleUpdateField}
       onDelete={deleteItem}
       refreshItems={refreshItems}
       renderCustomColumns={(field) => (
@@ -198,7 +232,7 @@ export function CustomFieldsConfig() {
       )}
       schema={customFieldSchema}
       itemDialogFields={renderItemDialogFields}
-      initialValues={{ field_type: "text", entity_type: "job", required: false }}
+      getInitialValues={getInitialValues}
     />
   );
 }

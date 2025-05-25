@@ -57,13 +57,16 @@ export function ConfigItemDialog({
     },
   });
 
-  // Reset form when dialog opens with initial values
+  // Reset form when dialog opens or initialValues change
   useEffect(() => {
     if (open) {
-      form.reset({
+      // Ensure we reset with the current initialValues
+      const resetValues = {
         name: "",
         ...initialValues
-      });
+      };
+      console.log('Resetting form with values:', resetValues);
+      form.reset(resetValues);
     }
   }, [open, initialValues, form]);
 
@@ -72,7 +75,6 @@ export function ConfigItemDialog({
     try {
       await onSubmit(values);
       onOpenChange(false);
-      form.reset();
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
