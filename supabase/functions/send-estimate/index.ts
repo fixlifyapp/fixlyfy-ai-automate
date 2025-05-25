@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -20,13 +21,14 @@ interface SendEstimateRequest {
     taxRate: number;
     notes?: string;
     viewUrl?: string;
+    portalLoginLink?: string;
   };
   clientName?: string;
   communicationId?: string;
 }
 
 const generateEstimateEmailHTML = (estimateNumber: string, clientName: string, estimateData: any) => {
-  const { lineItems, total, taxRate, notes, viewUrl } = estimateData;
+  const { lineItems, total, taxRate, notes, viewUrl, portalLoginLink } = estimateData;
   const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   const taxAmount = subtotal * (taxRate / 100);
 
@@ -48,6 +50,7 @@ const generateEstimateEmailHTML = (estimateNumber: string, clientName: string, e
             .total-row { font-weight: bold; font-size: 18px; color: #007bff; }
             .view-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
             .notes { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .portal-section { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745; }
         </style>
     </head>
     <body>
@@ -87,6 +90,15 @@ const generateEstimateEmailHTML = (estimateNumber: string, clientName: string, e
         ${notes ? `<div class="notes"><strong>Notes:</strong><br>${notes}</div>` : ''}
 
         ${viewUrl ? `<a href="${viewUrl}" class="view-button">View Full Estimate Online</a>` : ''}
+
+        ${portalLoginLink ? `
+        <div class="portal-section">
+            <h3>🔐 Secure Client Portal Access</h3>
+            <p>You can view, approve, or reject this estimate securely through our client portal:</p>
+            <a href="${portalLoginLink}" class="view-button" style="background: #28a745;">Access Your Portal</a>
+            <p><small>This secure link will log you in automatically and is valid for 30 minutes.</small></p>
+        </div>
+        ` : ''}
 
         <p>If you have any questions about this estimate, please don't hesitate to contact us.</p>
         
@@ -144,7 +156,7 @@ serve(async (req) => {
           to: recipient,
           subject: subject,
           html: html,
-          text: `Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}. ${estimateData.viewUrl ? `View online: ${estimateData.viewUrl}` : ''}`
+          text: `Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}. ${estimateData.viewUrl ? `View online: ${estimateData.viewUrl}` : ''} ${estimateData.portalLoginLink ? `Secure portal access: ${estimateData.portalLoginLink}` : ''}`
         })
       });
 
@@ -181,9 +193,18 @@ serve(async (req) => {
 
       const formattedTo = recipient.startsWith('+') ? recipient : `+1${recipient.replace(/\D/g, '')}`;
       
-      // Create SMS message with viewing link
-      const viewUrl = estimateData.viewUrl || `https://yourapp.com/estimate/view/${estimateNumber}`;
-      const message = `Hi ${clientName || 'there'}! Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}. View it here: ${viewUrl}`;
+      // Create SMS message with viewing link and portal access
+      let message = `Hi ${clientName || 'there'}! Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}.`;
+      
+      // Add view URL if available
+      if (estimateData.viewUrl) {
+        message += ` View estimate: ${estimateData.viewUrl}`;
+      }
+      
+      // Add portal login link if available
+      if (estimateData.portalLoginLink) {
+        message += ` Secure portal (approve/reject): ${estimateData.portalLoginLink}`;
+      }
 
       console.log("Sending SMS to:", formattedTo);
       console.log("SMS content:", message);
