@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";

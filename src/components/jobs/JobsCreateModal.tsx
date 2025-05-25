@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import { Job, useJobs } from "@/hooks/useJobs";
 import { useClients } from "@/hooks/useClients";
 import { Client } from "@/hooks/useClients";
 import { Badge } from "@/components/ui/badge";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ import { QuickAddJobTypeDialog } from "./quick-add/QuickAddJobTypeDialog";
 import { QuickAddTagDialog } from "./quick-add/QuickAddTagDialog";
 import { useJobCustomFields } from "@/hooks/useJobCustomFields";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
+import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -33,15 +34,16 @@ interface JobsCreateModalProps {
 }
 
 interface JobFormData {
-  title: string;
   description: string;
   client_id: string;
   service: string;
   tags: string[];
-  priority: string;
-  date: Date;
-  time: string;
+  start_date: Date;
+  start_time: string;
+  end_date: Date;
+  end_time: string;
   technician_id: string;
+  tasks: string[];
 }
 
 export const JobsCreateModal = ({
@@ -51,7 +53,7 @@ export const JobsCreateModal = ({
   onSuccess
 }: JobsCreateModalProps) => {
   const { addJob } = useJobs();
-  const { clients, isLoading: isLoadingClients } = useClients();
+  const { clients, isLoading: isLoadingClients, addClient } = useClients();
   const { technicians, isLoading: isLoadingTechnicians } = useTechnicians();
   const { items: jobTypes, isLoading: isLoadingJobTypes } = useJobTypes();
   const { items: tags, isLoading: isLoadingTags } = useTags();
@@ -59,30 +61,37 @@ export const JobsCreateModal = ({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [timeValue, setTimeValue] = useState<string>("09:00");
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [startTime, setStartTime] = useState<string>("09:00");
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [endTime, setEndTime] = useState<string>("17:00");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [tasks, setTasks] = useState<string[]>([]);
+  const [newTask, setNewTask] = useState<string>("");
   
   // Quick-add dialog states
   const [showJobTypeDialog, setShowJobTypeDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
+  const [showClientDialog, setShowClientDialog] = useState(false);
   const [recentlyAddedJobType, setRecentlyAddedJobType] = useState<string | null>(null);
   const [recentlyAddedTag, setRecentlyAddedTag] = useState<string | null>(null);
+  const [recentlyAddedClient, setRecentlyAddedClient] = useState<string | null>(null);
   
   const navigate = useNavigate();
 
   const form = useForm<JobFormData>({
     defaultValues: {
-      title: "",
       description: "",
       client_id: preselectedClientId || "",
       service: "",
       tags: [],
-      priority: "medium",
-      date: new Date(),
-      time: "09:00",
-      technician_id: "unassigned"
+      start_date: new Date(),
+      start_time: "09:00",
+      end_date: new Date(),
+      end_time: "17:00",
+      technician_id: "unassigned",
+      tasks: []
     }
   });
 
@@ -93,7 +102,7 @@ export const JobsCreateModal = ({
     }
   }, [open, preselectedClientId, form]);
 
-  // Auto-select recently added job type
+  // Auto-select recently added items
   useEffect(() => {
     if (recentlyAddedJobType) {
       form.setValue("service", recentlyAddedJobType);
@@ -102,7 +111,6 @@ export const JobsCreateModal = ({
     }
   }, [recentlyAddedJobType, form]);
 
-  // Auto-select recently added tag
   useEffect(() => {
     if (recentlyAddedTag && !selectedTags.includes(recentlyAddedTag)) {
       setSelectedTags(prev => [...prev, recentlyAddedTag]);
@@ -110,6 +118,14 @@ export const JobsCreateModal = ({
       return () => clearTimeout(timer);
     }
   }, [recentlyAddedTag, selectedTags]);
+
+  useEffect(() => {
+    if (recentlyAddedClient) {
+      form.setValue("client_id", recentlyAddedClient);
+      const timer = setTimeout(() => setRecentlyAddedClient(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [recentlyAddedClient, form]);
 
   const handleAddTag = (tag: string) => {
     if (!selectedTags.includes(tag)) {
@@ -119,6 +135,17 @@ export const JobsCreateModal = ({
 
   const handleRemoveTag = (tag: string) => {
     setSelectedTags(selectedTags.filter(t => t !== tag));
+  };
+
+  const handleAddTask = () => {
+    if (newTask.trim() && !tasks.includes(newTask.trim())) {
+      setTasks([...tasks, newTask.trim()]);
+      setNewTask("");
+    }
+  };
+
+  const handleRemoveTask = (index: number) => {
+    setTasks(tasks.filter((_, i) => i !== index));
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,13 +161,18 @@ export const JobsCreateModal = ({
 
   const resetForm = () => {
     form.reset();
-    setDate(new Date());
-    setTimeValue("09:00");
+    setStartDate(new Date());
+    setStartTime("09:00");
+    setEndDate(new Date());
+    setEndTime("17:00");
     setSelectedTags([]);
     setAttachments([]);
     setCustomFieldValues({});
+    setTasks([]);
+    setNewTask("");
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
+    setRecentlyAddedClient(null);
   };
 
   const handleJobTypeAdded = (jobType: { id: string; name: string }) => {
@@ -149,6 +181,11 @@ export const JobsCreateModal = ({
 
   const handleTagAdded = (tag: { id: string; name: string }) => {
     setRecentlyAddedTag(tag.name);
+  };
+
+  const handleClientAdded = (client: Client) => {
+    setRecentlyAddedClient(client.id);
+    toast.success(`Client ${client.name} created successfully`);
   };
 
   const handleSubmit = async (data: JobFormData) => {
@@ -169,31 +206,34 @@ export const JobsCreateModal = ({
     try {
       setIsSubmitting(true);
 
-      // Format the scheduled date by combining the date and time
-      const scheduledDate = date ? new Date(date) : new Date();
-      const [hours, minutes] = timeValue.split(':').map(Number);
-      scheduledDate.setHours(hours);
-      scheduledDate.setMinutes(minutes);
+      // Format the scheduled dates
+      const scheduledStartDate = startDate ? new Date(startDate) : new Date();
+      const [startHours, startMinutes] = startTime.split(':').map(Number);
+      scheduledStartDate.setHours(startHours);
+      scheduledStartDate.setMinutes(startMinutes);
 
-      // Create the job object with proper data types
+      const scheduledEndDate = endDate ? new Date(endDate) : new Date();
+      const [endHours, endMinutes] = endTime.split(':').map(Number);
+      scheduledEndDate.setHours(endHours);
+      scheduledEndDate.setMinutes(endMinutes);
+
+      // Create the job object
       const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
-        title: data.title || `${data.service || 'General'} Service`,
+        title: `${data.service || 'General'} Service`,
         description: data.description,
         status: "scheduled",
         client_id: data.client_id,
         service: data.service || "General Service",
-        // Only set technician_id if it's not "unassigned" and is a valid UUID format
         technician_id: data.technician_id && data.technician_id !== "unassigned" ? data.technician_id : undefined,
-        schedule_start: scheduledDate.toISOString(),
-        schedule_end: new Date(scheduledDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-        date: scheduledDate.toISOString(),
+        schedule_start: scheduledStartDate.toISOString(),
+        schedule_end: scheduledEndDate.toISOString(),
+        date: scheduledStartDate.toISOString(),
         revenue: 0,
         tags: selectedTags
       };
 
-      console.log('Creating job with properly formatted data:', jobData);
+      console.log('Creating job with data:', jobData);
 
-      // Add the job using the useJobs hook
       const newJob = await addJob(jobData);
       
       if (newJob) {
@@ -204,15 +244,11 @@ export const JobsCreateModal = ({
         
         toast.success(`Job created successfully: ${newJob.id}`);
 
-        // Call onSuccess callback if provided
         if (onSuccess) {
           onSuccess(newJob);
         }
 
-        // Navigate to the job details page
         navigate(`/jobs/${newJob.id}`);
-
-        // Reset form and close modal
         resetForm();
         onOpenChange(false);
       } else {
@@ -226,8 +262,8 @@ export const JobsCreateModal = ({
     }
   };
 
-  const selectedClient = preselectedClientId ? 
-    clients.find(client => client.id === preselectedClientId) : 
+  const selectedClient = form.watch("client_id") ? 
+    clients.find(client => client.id === form.watch("client_id")) : 
     null;
 
   return (
@@ -253,14 +289,27 @@ export const JobsCreateModal = ({
               <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
                 <h3 className="text-lg font-semibold">Client Information</h3>
                 
-                {/* Client Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="client">Client</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="client">Client</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowClientDialog(true)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      New Client
+                    </Button>
+                  </div>
                   <Select 
                     value={form.watch("client_id")} 
                     onValueChange={(value) => form.setValue("client_id", value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={cn(
+                      recentlyAddedClient === form.watch("client_id") && "ring-2 ring-green-500"
+                    )}>
                       <SelectValue placeholder="Select a client" />
                     </SelectTrigger>
                     <SelectContent>
@@ -268,14 +317,24 @@ export const JobsCreateModal = ({
                         <SelectItem value="loading" disabled>Loading clients...</SelectItem>
                       ) : (
                         clients.map((client: Client) => (
-                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                          <SelectItem 
+                            key={client.id} 
+                            value={client.id}
+                            className={cn(
+                              recentlyAddedClient === client.id && "bg-green-50 border-green-200"
+                            )}
+                          >
+                            {client.name}
+                            {recentlyAddedClient === client.id && (
+                              <span className="ml-2 text-xs text-green-600">(just added)</span>
+                            )}
+                          </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Client Contact Info - Show if a client is selected */}
                 {selectedClient && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
                     {selectedClient.phone && (
@@ -313,7 +372,7 @@ export const JobsCreateModal = ({
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Job Type */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 md:col-span-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="jobType">Job Type</Label>
                       <Button
@@ -367,35 +426,6 @@ export const JobsCreateModal = ({
                     </Select>
                   </div>
                   
-                  {/* Priority */}
-                  <div className="space-y-2">
-                    <Label htmlFor="priority">Priority</Label>
-                    <Select 
-                      value={form.watch("priority")} 
-                      onValueChange={(value) => form.setValue("priority", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Job Title */}
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="title">Job Title</Label>
-                    <Input 
-                      id="title" 
-                      placeholder="Brief title for the job" 
-                      value={form.watch("title")} 
-                      onChange={(e) => form.setValue("title", e.target.value)} 
-                    />
-                  </div>
-                  
                   {/* Job Description */}
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="description">Description</Label>
@@ -415,27 +445,27 @@ export const JobsCreateModal = ({
                 <h3 className="text-lg font-semibold">Schedule</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Date */}
+                  {/* Start Date & Time */}
                   <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
+                    <Label htmlFor="startDate">Start Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
+                            !startDate && "text-muted-foreground"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? format(date, "PPP") : <span>Pick a date</span>}
+                          {startDate ? format(startDate, "PPP") : <span>Pick start date</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={date}
-                          onSelect={setDate}
+                          selected={startDate}
+                          onSelect={setStartDate}
                           initialFocus
                           className="pointer-events-auto"
                         />
@@ -443,14 +473,51 @@ export const JobsCreateModal = ({
                     </Popover>
                   </div>
                   
-                  {/* Time */}
                   <div className="space-y-2">
-                    <Label htmlFor="time">Start Time</Label>
+                    <Label htmlFor="startTime">Start Time</Label>
                     <Input
-                      id="time"
+                      id="startTime"
                       type="time"
-                      value={timeValue}
-                      onChange={(e) => setTimeValue(e.target.value)}
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* End Date & Time */}
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">End Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !endDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(endDate, "PPP") : <span>Pick end date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={setEndDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">End Time</Label>
+                    <Input
+                      id="endTime"
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
                     />
                   </div>
                   
@@ -478,6 +545,48 @@ export const JobsCreateModal = ({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+              </div>
+              
+              {/* Tasks Section */}
+              <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
+                <h3 className="text-lg font-semibold">Tasks</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a task..."
+                      value={newTask}
+                      onChange={(e) => setNewTask(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTask())}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddTask}
+                      disabled={!newTask.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {tasks.length > 0 && (
+                    <div className="space-y-2">
+                      {tasks.map((task, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                          <span className="text-sm">{task}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveTask(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -658,6 +767,12 @@ export const JobsCreateModal = ({
         open={showTagDialog}
         onOpenChange={setShowTagDialog}
         onTagAdded={handleTagAdded}
+      />
+      
+      <ClientsCreateModal
+        open={showClientDialog}
+        onOpenChange={setShowClientDialog}
+        onSuccess={handleClientAdded}
       />
     </>
   );
