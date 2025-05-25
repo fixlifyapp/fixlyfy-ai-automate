@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/useClients";
-import { Client } from "@/types/client";
 import { useProperties } from "@/hooks/useProperties";
 import { Property } from "@/types/property";
 import { useJobs } from "@/hooks/useJobs";
@@ -46,10 +45,13 @@ import { CalendarIcon } from "lucide-react";
 import { useTeam } from "@/hooks/useTeam";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUser } from "@/components/auth/hooks";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preselectedClientId?: string;
+  onSuccess?: (job: any) => void;
 }
 
 const formSchema = z.object({
@@ -76,9 +78,11 @@ const formSchema = z.object({
 export function JobsCreateModal({
   open,
   onOpenChange,
+  preselectedClientId,
+  onSuccess
 }: JobsCreateModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(preselectedClientId || null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [clientData, setClientData] = useState({
     address: "",
@@ -100,12 +104,19 @@ export function JobsCreateModal({
       description: "",
       scheduleDate: new Date(),
       scheduleTime: "09:00",
-      clientId: "",
+      clientId: preselectedClientId || "",
       propertyId: "",
       technicianId: "",
       sendClientReminder: false
     },
   });
+
+  useEffect(() => {
+    if (preselectedClientId) {
+      setSelectedClientId(preselectedClientId);
+      form.setValue("clientId", preselectedClientId);
+    }
+  }, [preselectedClientId, form]);
 
   useEffect(() => {
     if (clients && clients.length > 0 && !selectedClientId) {
@@ -193,8 +204,8 @@ export function JobsCreateModal({
       }
 
       // Create property if needed
-      let propertyId = selectedPropertyId;
-      if (!propertyId && clientData.address?.trim()) {
+      let propertyIdFinal = selectedPropertyId;
+      if (!propertyIdFinal && clientData.address?.trim()) {
         console.log('Creating new property for client:', selectedClientId);
         const { data: newProperty, error: propertyError } = await supabase
           .from('client_properties')
@@ -216,13 +227,14 @@ export function JobsCreateModal({
           throw propertyError;
         }
         
-        propertyId = newProperty.id;
-        console.log('Created property with ID:', propertyId);
+        propertyIdFinal = newProperty.id;
+        console.log('Created property with ID:', propertyIdFinal);
       }
 
       toast.success("Job created successfully!");
       onOpenChange(false);
       form.reset();
+      onSuccess?.(newJob);
     } catch (error) {
       console.error('Error creating job:', error);
       toast.error('Failed to create job');
