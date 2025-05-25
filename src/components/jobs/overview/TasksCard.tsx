@@ -16,7 +16,7 @@ export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks }: Tas
   const taskList = Array.isArray(tasks) ? tasks : [];
   
   return (
-    <Card>
+    <Card className="hover:shadow-lg transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">Tasks</CardTitle>
         {editable && onManageTasks && (
@@ -24,7 +24,7 @@ export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks }: Tas
             variant="ghost"
             size="sm"
             onClick={onManageTasks}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 text-fixlyfy hover:text-fixlyfy-dark"
           >
             <Edit3 className="h-4 w-4" />
           </Button>
@@ -46,7 +46,9 @@ export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks }: Tas
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">No tasks assigned</div>
+          <div className="text-sm text-muted-foreground">
+            {editable ? "No tasks assigned. Click the edit button to add tasks." : "No tasks assigned"}
+          </div>
         )}
       </CardContent>
     </Card>

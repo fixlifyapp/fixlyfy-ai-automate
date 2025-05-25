@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { JobSummaryCard } from "./overview/JobSummaryCard";
@@ -25,6 +24,7 @@ interface Task {
 export const JobOverview = ({ jobId }: JobOverviewProps) => {
   const { job, isLoading } = useJobDetails();
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const { updateJob } = useJobs();
 
   // Convert job tasks to dialog format
   const convertToDialogTasks = (jobTasks: string[] | undefined): Task[] => {
@@ -42,13 +42,16 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
     return dialogTasks.map(task => task.name);
   };
 
-  const handleUpdateTasks = (updatedTasks: Task[]) => {
-    // Here we would update the job with the new tasks
-    // This would require adding an updateJob function to the context
-    console.log("Updated tasks:", updatedTasks);
+  const handleUpdateTasks = async (updatedTasks: Task[]) => {
+    const taskNames = convertToJobTasks(updatedTasks);
     
-    // For now, we'll just close the dialog
-    // In a real implementation, this would call an API to update the job
+    const result = await updateJob(jobId, {
+      tasks: taskNames
+    });
+    
+    if (result) {
+      console.log("Tasks updated successfully:", taskNames);
+    }
   };
 
   if (isLoading) {
