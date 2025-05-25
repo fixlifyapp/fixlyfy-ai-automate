@@ -1,230 +1,191 @@
 
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Edit, Trash, CreditCard, FileText, DollarSign, Calendar, Eye } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { Plus, Receipt, Edit, Eye, Trash2, DollarSign } from "lucide-react";
+import { useInvoices } from "@/hooks/useInvoices";
+import { useEstimates } from "@/hooks/useEstimates";
+import { InvoiceBuilderDialog } from "../dialogs/InvoiceBuilderDialog";
 import { toast } from "sonner";
-import { InvoiceDialog } from "../dialogs/InvoiceDialog";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
 }
 
-type Invoice = {
-  id: string;
-  invoice_number: string;
-  created_at: string;
-  total: number;
-  amount_paid: number;
-  balance: number;
-  status: string;
-  notes?: string;
-};
-
 export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  
-  // Mock data for client and company info
-  const clientInfo = {
-    name: "Client Name",
-    address: "123 Client St",
-    phone: "123-456-7890",
-    email: "client@example.com"
-  };
-  
-  const companyInfo = {
-    name: "Your Company",
-    logo: "/placeholder.svg",
-    address: "123 Business Ave",
-    phone: "555-555-5555",
-    email: "company@example.com",
-    legalText: "Terms and conditions apply."
-  };
-  
-  const fetchInvoices = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("created_at", { ascending: false });
-        
-      if (error) {
-        throw error;
-      }
-      
-      setInvoices(data || []);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast.error("Failed to load invoices");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    fetchInvoices();
-  }, [jobId]);
-  
-  const handleDeleteInvoice = async (invoiceId: string) => {
-    try {
-      const { error } = await supabase
-        .from("invoices")
-        .delete()
-        .eq("id", invoiceId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      setInvoices(invoices.filter(inv => inv.id !== invoiceId));
-      toast.success("Invoice deleted successfully");
-    } catch (error) {
-      console.error("Error deleting invoice:", error);
-      toast.error("Failed to delete invoice");
-    }
-  };
-  
-  const handleEditInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setIsEditMode(true);
-    setIsInvoiceDialogOpen(true);
-  };
-  
-  const handleNewInvoice = () => {
+  const { invoices, isLoading } = useInvoices(jobId);
+  const { estimates } = useEstimates(jobId);
+  const [isInvoiceBuilderOpen, setIsInvoiceBuilderOpen] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  const handleCreateFromEstimate = (estimate: any) => {
+    setSelectedEstimate(estimate);
     setSelectedInvoice(null);
-    setIsEditMode(false);
-    setIsInvoiceDialogOpen(true);
+    setIsInvoiceBuilderOpen(true);
   };
 
-  const handleInvoiceCreated = (amount: number) => {
-    fetchInvoices();
+  const handleEditInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setSelectedEstimate(null);
+    setIsInvoiceBuilderOpen(true);
   };
 
-  const renderStatusBadge = (status: string) => {
-    const statusStyles = {
-      paid: "bg-green-50 text-green-700 border-green-200",
-      partial: "bg-yellow-50 text-yellow-700 border-yellow-200", 
-      unpaid: "bg-red-50 text-red-700 border-red-200"
-    };
-    
+  const handleCreateNew = () => {
+    setSelectedEstimate(null);
+    setSelectedInvoice(null);
+    setIsInvoiceBuilderOpen(true);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid': return 'bg-green-100 text-green-700 border-green-200';
+      case 'partial': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'sent': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'draft': return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  if (isLoading) {
     return (
-      <Badge 
-        variant="outline" 
-        className={statusStyles[status.toLowerCase() as keyof typeof statusStyles] || "bg-gray-50 text-gray-700 border-gray-200"}
-      >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-  
-  return (
-    <div className="space-y-6">
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <ModernCardTitle icon={FileText}>
-              Invoices ({invoices.length})
-            </ModernCardTitle>
-            <Button 
-              className="gap-2 bg-fixlyfy hover:bg-fixlyfy-dark" 
-              onClick={handleNewInvoice}
-            >
-              <PlusCircle size={16} />
-              New Invoice
-            </Button>
+      <ModernCard>
+        <ModernCardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
           </div>
-        </ModernCardHeader>
-        <ModernCardContent className="space-y-4">
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="w-full h-20" />
-              ))}
-            </div>
-          ) : invoices.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No invoices found</p>
-              <p className="text-sm">Create your first invoice or convert an estimate to invoice</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {invoices.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-3">
-                        <h4 className="font-medium">{invoice.invoice_number}</h4>
-                        {renderStatusBadge(invoice.status)}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {format(new Date(invoice.created_at), 'MMM dd, yyyy')}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
-                          ${invoice.total.toFixed(2)}
-                        </div>
-                        {invoice.amount_paid > 0 && (
-                          <div className="text-green-600">
-                            Paid: ${invoice.amount_paid.toFixed(2)}
-                          </div>
-                        )}
-                        {invoice.balance > 0 && (
-                          <div className="text-red-600">
-                            Balance: ${invoice.balance.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditInvoice(invoice)}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteInvoice(invoice.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </ModernCardContent>
       </ModernCard>
-      
-      <InvoiceDialog 
-        open={isInvoiceDialogOpen}
-        onOpenChange={setIsInvoiceDialogOpen}
-        onInvoiceCreated={handleInvoiceCreated}
-        clientInfo={clientInfo}
-        companyInfo={companyInfo}
-        editInvoice={isEditMode ? selectedInvoice : undefined}
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-6">
+        {/* Quick Actions */}
+        <ModernCard>
+          <ModernCardHeader>
+            <ModernCardTitle icon={Plus}>Quick Actions</ModernCardTitle>
+          </ModernCardHeader>
+          <ModernCardContent>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleCreateNew} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create New Invoice
+              </Button>
+              
+              {estimates.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">From Estimate:</span>
+                  {estimates.map((estimate) => (
+                    <Button
+                      key={estimate.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCreateFromEstimate(estimate)}
+                      className="gap-2"
+                    >
+                      <Receipt className="h-3 w-3" />
+                      {estimate.estimate_number}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ModernCardContent>
+        </ModernCard>
+
+        {/* Invoices List */}
+        <ModernCard>
+          <ModernCardHeader>
+            <ModernCardTitle icon={Receipt}>
+              Invoices ({invoices.length})
+            </ModernCardTitle>
+          </ModernCardHeader>
+          <ModernCardContent>
+            {invoices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No invoices created yet</p>
+                <p className="text-sm">Create your first invoice to get started</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {invoices.map((invoice) => (
+                  <div key={invoice.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <div className="font-medium">
+                            Invoice #{invoice.number || invoice.invoice_number}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Created: {new Date(invoice.created_at || invoice.date).toLocaleDateString()}
+                          </div>
+                        </div>
+                        
+                        <Badge className={getStatusColor(invoice.status)}>
+                          {invoice.status}
+                        </Badge>
+                        
+                        <div className="text-right">
+                          <div className="font-semibold text-lg">
+                            ${(invoice.total || invoice.amount || 0).toFixed(2)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Due: {new Date(invoice.due_date || invoice.date).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toast.info("View functionality coming soon")}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditInvoice(invoice)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toast.info("Delete functionality coming soon")}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ModernCardContent>
+        </ModernCard>
+      </div>
+
+      <InvoiceBuilderDialog
+        open={isInvoiceBuilderOpen}
+        onOpenChange={setIsInvoiceBuilderOpen}
+        jobId={jobId}
+        estimate={selectedEstimate}
+        invoice={selectedInvoice}
+        onInvoiceCreated={(invoice) => {
+          toast.success("Invoice operation completed successfully");
+          // Refresh will happen automatically via real-time updates
+        }}
       />
-    </div>
+    </>
   );
 };
