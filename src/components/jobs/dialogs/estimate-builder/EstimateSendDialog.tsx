@@ -115,7 +115,7 @@ export const EstimateSendDialog = ({
         .from('estimate_details_view')
         .select('*')
         .eq('estimate_number', estimateNumber)
-        .maybeSingle(); // Use maybeSingle instead of single to handle 0 rows
+        .maybeSingle();
 
       if (detailsError && detailsError.code !== 'PGRST116') {
         console.error('Error fetching estimate details:', detailsError);
@@ -141,7 +141,7 @@ export const EstimateSendDialog = ({
           return;
         }
 
-        // Create fallback estimate details using clientInfo
+        // Create fallback estimate details using clientInfo and estimate data
         const fallbackDetails: EstimateDetails = {
           estimate_id: estimate.id,
           estimate_number: estimate.estimate_number,
@@ -166,17 +166,20 @@ export const EstimateSendDialog = ({
       }
 
       // Fetch line items for this estimate
-      const { data: items, error: itemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', estimateDetails?.estimate_id || details?.estimate_id);
+      const estimateId = details?.estimate_id || estimateDetails?.estimate_id;
+      if (estimateId) {
+        const { data: items, error: itemsError } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_type', 'estimate')
+          .eq('parent_id', estimateId);
 
-      if (itemsError) {
-        console.error('Error fetching line items:', itemsError);
-      } else if (items) {
-        console.log("Line items loaded:", items.length, "items");
-        setLineItems(items);
+        if (itemsError) {
+          console.error('Error fetching line items:', itemsError);
+        } else if (items) {
+          console.log("Line items loaded:", items.length, "items");
+          setLineItems(items);
+        }
       }
 
       // Set default send method based on available contact info
@@ -200,15 +203,31 @@ export const EstimateSendDialog = ({
     }
   };
 
-  // Use fallback data if estimateDetails is not available
-  const displayDetails = estimateDetails || {
-    client_name: clientInfo?.name || 'Unknown Client',
-    client_email: clientInfo?.email,
-    client_phone: clientInfo?.phone
+  // Helper function to check if we have full estimate details
+  const hasFullEstimateDetails = (details: EstimateDetails | null): details is EstimateDetails => {
+    return details !== null && 'estimate_id' in details;
   };
 
-  const hasEmail = !!(displayDetails.client_email);
-  const hasPhone = !!(displayDetails.client_phone);
+  // Get client contact info with proper fallbacks
+  const getClientContactInfo = () => {
+    if (estimateDetails) {
+      return {
+        name: estimateDetails.client_name,
+        email: estimateDetails.client_email,
+        phone: estimateDetails.client_phone
+      };
+    }
+    
+    return {
+      name: clientInfo?.name || 'Unknown Client',
+      email: clientInfo?.email,
+      phone: clientInfo?.phone
+    };
+  };
+
+  const contactInfo = getClientContactInfo();
+  const hasEmail = !!contactInfo.email;
+  const hasPhone = !!contactInfo.phone;
   
   // Reset the dialog state when opened
   const handleOpenChange = (newOpen: boolean) => {
@@ -255,9 +274,7 @@ export const EstimateSendDialog = ({
   
   // Send the estimate to the client
   const handleSendEstimate = async () => {
-    const currentEstimateDetails = estimateDetails || displayDetails;
-    
-    if (!currentEstimateDetails) {
+    if (!hasFullEstimateDetails(estimateDetails)) {
       toast.error("Estimate details not loaded");
       return;
     }
@@ -294,18 +311,18 @@ export const EstimateSendDialog = ({
       const { data: commData, error: commError } = await supabase
         .from('estimate_communications')
         .insert({
-          estimate_id: currentEstimateDetails.estimate_id,
+          estimate_id: estimateDetails.estimate_id,
           communication_type: sendMethod,
           recipient: sendTo,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
-            ? `Hi ${currentEstimateDetails.client_name}! Your estimate ${estimateNumber} is ready. Total: $${(currentEstimateDetails.total || 0).toFixed(2)}. Please review and let us know if you have any questions.`
-            : `Please find your estimate ${estimateNumber} attached. Total: $${(currentEstimateDetails.total || 0).toFixed(2)}`,
+            ? `Hi ${estimateDetails.client_name}! Your estimate ${estimateNumber} is ready. Total: $${estimateDetails.total.toFixed(2)}. Please review and let us know if you have any questions.`
+            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateDetails.total.toFixed(2)}`,
           status: 'pending',
           estimate_number: estimateNumber,
-          client_name: currentEstimateDetails.client_name,
-          client_email: currentEstimateDetails.client_email,
-          client_phone: currentEstimateDetails.client_phone
+          client_name: estimateDetails.client_name,
+          client_email: estimateDetails.client_email,
+          client_phone: estimateDetails.client_phone
         })
         .select()
         .single();
@@ -328,9 +345,9 @@ export const EstimateSendDialog = ({
           taxable: item.taxable,
           total: item.quantity * Number(item.unit_price)
         })),
-        total: currentEstimateDetails.total || 0,
+        total: estimateDetails.total,
         taxRate: 13, // Default tax rate - could be made configurable
-        notes: customNote || currentEstimateDetails.notes
+        notes: customNote || estimateDetails.notes
       };
 
       console.log("Calling send-estimate edge function with data:", {
@@ -338,7 +355,7 @@ export const EstimateSendDialog = ({
         recipient: sendTo,
         estimateNumber: estimateNumber,
         estimateData: estimateData,
-        clientName: currentEstimateDetails.client_name,
+        clientName: estimateDetails.client_name,
         communicationId: commData.id
       });
 
@@ -349,7 +366,7 @@ export const EstimateSendDialog = ({
           recipient: sendTo,
           estimateNumber: estimateNumber,
           estimateData: estimateData,
-          clientName: currentEstimateDetails.client_name,
+          clientName: estimateDetails.client_name,
           communicationId: commData.id
         }
       });
@@ -447,7 +464,7 @@ export const EstimateSendDialog = ({
           {currentStep === "send-method" && (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground mb-4">
-                Send estimate {estimateNumber} to {displayDetails.client_name}:
+                Send estimate {estimateNumber} to {contactInfo.name}:
               </div>
               
               {/* Show warning if no line items */}
@@ -470,7 +487,7 @@ export const EstimateSendDialog = ({
                       Send via Email
                     </Label>
                     {hasEmail ? (
-                      <p className="text-sm text-muted-foreground mt-1">{displayDetails.client_email}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{contactInfo.email}</p>
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No email available for this client</p>
                     )}
@@ -487,7 +504,7 @@ export const EstimateSendDialog = ({
                       Send via Text Message
                     </Label>
                     {hasPhone ? (
-                      <p className="text-sm text-muted-foreground mt-1">{displayDetails.client_phone}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{contactInfo.phone}</p>
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No phone number available for this client</p>
                     )}
