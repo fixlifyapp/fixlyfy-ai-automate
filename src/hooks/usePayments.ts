@@ -10,7 +10,6 @@ export interface Payment {
   date: string;
   notes?: string;
   reference?: string;
-  status?: string;
   client_id?: string;
   job_id?: string;
   technician_id?: string;
@@ -23,7 +22,6 @@ export interface PaymentInput {
   method: string;
   date: string;
   notes?: string;
-  status?: string;
 }
 
 export const usePayments = (jobId: string) => {
@@ -76,21 +74,6 @@ export const usePayments = (jobId: string) => {
     }
   };
 
-  const refundPayment = async (paymentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({ status: 'refunded' })
-        .eq('id', paymentId);
-
-      if (error) throw error;
-      await fetchPayments();
-    } catch (err) {
-      console.error('Error refunding payment:', err);
-      throw err;
-    }
-  };
-
   const deletePayment = async (paymentId: string) => {
     try {
       const { error } = await supabase
@@ -112,10 +95,7 @@ export const usePayments = (jobId: string) => {
 
   // Calculate totals
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalRefunded = payments
-    .filter(p => p.status === 'refunded')
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  const netAmount = totalPaid - totalRefunded;
+  const netAmount = totalPaid;
 
   useEffect(() => {
     fetchPayments();
@@ -126,10 +106,8 @@ export const usePayments = (jobId: string) => {
     isLoading,
     error,
     totalPaid,
-    totalRefunded,
     netAmount,
     addPayment,
-    refundPayment,
     deletePayment,
     refreshPayments,
     fetchPayments

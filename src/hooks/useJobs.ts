@@ -18,6 +18,15 @@ export interface Job {
     email?: string;
     address?: string;
   };
+  property_id?: string;
+  property?: {
+    id: string;
+    property_name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  };
   technician_id?: string;
   schedule_start?: string;
   schedule_end?: string;
@@ -32,7 +41,6 @@ export interface Job {
     value: string;
     field_type: string;
   }>;
-  // Keep only the remaining fields
   job_type?: string;
   lead_source?: string;
   tasks?: string[];
@@ -48,7 +56,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
-      // Prepare base query with remaining fields only
+      // Prepare base query with property information
       let query = supabase
         .from('jobs')
         .select(`
@@ -58,6 +66,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           service,
           status,
           client_id,
+          property_id,
           technician_id,
           schedule_start,
           schedule_end,
@@ -69,7 +78,8 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           job_type,
           lead_source,
           tasks,
-          clients(name, phone, email, address, city, state, zip)
+          clients(name, phone, email, address, city, state, zip),
+          client_properties(id, property_name, address, city, state, zip)
         `);
         
       // Filter by client if provided
@@ -111,7 +121,15 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
               job.clients?.state,
               job.clients?.zip
             ].filter(Boolean).join(', ')
-          }
+          },
+          property: job.client_properties ? {
+            id: job.client_properties.id,
+            property_name: job.client_properties.property_name,
+            address: job.client_properties.address,
+            city: job.client_properties.city,
+            state: job.client_properties.state,
+            zip: job.client_properties.zip
+          } : undefined
         };
       }) || [];
 
@@ -166,7 +184,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
   
   // Set up unified realtime sync
   useUnifiedRealtime({
-    tables: ['jobs', 'clients', 'job_custom_field_values'],
+    tables: ['jobs', 'clients', 'client_properties', 'job_custom_field_values'],
     onUpdate: fetchJobs,
     enabled: true
   });
@@ -187,13 +205,14 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw new Error('Title and client are required');
       }
       
-      // Prepare job data with remaining fields only - default status to "scheduled"
+      // Prepare job data with property_id
       const newJob = {
         id: jobId,
         title: job.title,
         description: job.description || '',
-        status: job.status || 'scheduled', // Default to scheduled status
+        status: job.status || 'scheduled',
         client_id: job.client_id,
+        property_id: job.property_id, // Include property_id
         service: job.service || 'General Service',
         job_type: job.job_type || job.service || 'General Service',
         lead_source: job.lead_source,
@@ -218,6 +237,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           service,
           status,
           client_id,
+          property_id,
           technician_id,
           schedule_start,
           schedule_end,
@@ -229,7 +249,8 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           tasks,
           created_at,
           updated_at,
-          clients(name, phone, email, address, city, state, zip)
+          clients(name, phone, email, address, city, state, zip),
+          client_properties(id, property_name, address, city, state, zip)
         `)
         .single();
         
@@ -267,7 +288,15 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
             data.clients?.state,
             data.clients?.zip
           ].filter(Boolean).join(', ')
-        }
+        },
+        property: data.client_properties ? {
+          id: data.client_properties.id,
+          property_name: data.client_properties.property_name,
+          address: data.client_properties.address,
+          city: data.client_properties.city,
+          state: data.client_properties.state,
+          zip: data.client_properties.zip
+        } : undefined
       };
       
       // Record job creation in history
@@ -323,6 +352,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           service,
           status,
           client_id,
+          property_id,
           technician_id,
           schedule_start,
           schedule_end,
