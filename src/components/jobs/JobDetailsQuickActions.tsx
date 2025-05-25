@@ -29,7 +29,7 @@ interface JobDetailsQuickActionsProps {
 export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) => {
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const { jobs, isLoading } = useJobs();
+  const { jobs, isLoading } = useJobs(jobId);
   const { addHistoryItem } = useJobHistory(jobId);
   
   const job = jobs.find(j => j.id === jobId);
@@ -62,11 +62,11 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       type: 'communication',
       title: 'Call Initiated',
       description: 'User initiated a call to the client',
-      meta: { action: 'call_initiated', client_phone: job?.clients?.phone }
+      meta: { action: 'call_initiated', client_phone: job?.client?.phone }
     });
     
-    if (job?.clients?.phone) {
-      window.open(`tel:${job.clients.phone}`, '_self');
+    if (job?.client?.phone) {
+      window.open(`tel:${job.client.phone}`, '_self');
     }
   };
 
@@ -76,7 +76,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       type: 'communication',
       title: 'Message Started',
       description: 'User started composing a message to the client',
-      meta: { action: 'message_initiated', client_phone: job?.clients?.phone }
+      meta: { action: 'message_initiated', client_phone: job?.client?.phone }
     });
   };
 
@@ -153,13 +153,13 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
               onClick={handleCallClient}
               variant="outline" 
               className="w-full justify-start h-10"
-              disabled={!job?.clients?.phone}
+              disabled={!job?.client?.phone}
             >
               <Phone className="h-4 w-4 mr-3" />
               <span>Call Client</span>
-              {job?.clients?.phone && (
+              {job?.client?.phone && (
                 <Badge variant="secondary" className="ml-auto text-xs">
-                  {job.clients.phone}
+                  {job.client.phone}
                 </Badge>
               )}
             </Button>
@@ -168,7 +168,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
               onClick={handleMessageClient}
               variant="outline" 
               className="w-full justify-start h-10"
-              disabled={!job?.clients?.phone}
+              disabled={!job?.client?.phone}
             >
               <MessageSquare className="h-4 w-4 mr-3" />
               <span>Send Message</span>
@@ -237,7 +237,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
         open={isEstimateDialogOpen}
         onOpenChange={setIsEstimateDialogOpen}
         jobId={jobId}
-        clientInfo={job?.clients}
+        clientInfo={job?.client}
       />
 
       <InvoiceBuilderDialog

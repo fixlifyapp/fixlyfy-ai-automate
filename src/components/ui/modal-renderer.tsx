@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useModal, ModalType } from "./modal-provider";
 import { SelectionModal } from "@/components/shared/modals/SelectionModal";
@@ -7,6 +6,7 @@ import { User } from "lucide-react";
 import { TeamSelectionDialog } from "@/components/jobs/dialogs/TeamSelectionDialog";
 import { AssignTechnicianDialog } from "@/components/jobs/dialogs/AssignTechnicianDialog";
 import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
+import { PrioritySelectionDialog } from "@/components/jobs/dialogs/refactored/PrioritySelectionDialog";
 import { SourceSelectionDialog } from "@/components/jobs/dialogs/SourceSelectionDialog";
 import { JobTypeDialog } from "@/components/jobs/dialogs/JobTypeDialog";
 import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
@@ -87,6 +87,9 @@ export const ModalRenderer = () => {
       >
         {/* Empty children to satisfy type requirements */}
       </ConfirmationModal>;
+      
+    case "prioritySelection":
+      return <PrioritySelectionDialog />;
       
     case "sourceSelection":
       return <SourceSelectionDialog 

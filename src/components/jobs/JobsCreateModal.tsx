@@ -10,8 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Paperclip, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Job } from "@/types/job";
-import { useJobs } from "@/hooks/useJobs";
+import { Job, useJobs } from "@/hooks/useJobs";
 import { useClients } from "@/hooks/useClients";
 import { Client } from "@/hooks/useClients";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +26,6 @@ import { useJobCustomFields } from "@/hooks/useJobCustomFields";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
 import { useJobAttachments } from "@/hooks/useJobAttachments";
-import { PropertySelector } from "./PropertySelector";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -47,7 +45,6 @@ interface JobFormData {
   end_time: string;
   technician_id: string;
   tasks: string[];
-  property_id: string;
 }
 
 export const JobsCreateModal = ({
@@ -75,7 +72,6 @@ export const JobsCreateModal = ({
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [tasks, setTasks] = useState<string[]>([]);
   const [newTask, setNewTask] = useState<string>("");
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   
   // Additional fields
   const [leadSource, setLeadSource] = useState<string>("");
@@ -103,8 +99,7 @@ export const JobsCreateModal = ({
       end_date: new Date(),
       end_time: "17:00",
       technician_id: "unassigned",
-      tasks: [],
-      property_id: ""
+      tasks: []
     }
   });
 
@@ -114,14 +109,6 @@ export const JobsCreateModal = ({
       form.setValue("client_id", preselectedClientId);
     }
   }, [open, preselectedClientId, form]);
-
-  // Reset property selection when client changes
-  useEffect(() => {
-    const clientId = form.watch("client_id");
-    if (clientId !== preselectedClientId) {
-      setSelectedPropertyId("");
-    }
-  }, [form.watch("client_id"), preselectedClientId]);
 
   // Auto-select recently added items
   useEffect(() => {
@@ -203,7 +190,6 @@ export const JobsCreateModal = ({
     setTasks([]);
     setNewTask("");
     setLeadSource("");
-    setSelectedPropertyId("");
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
     setRecentlyAddedClient(null);
@@ -259,16 +245,14 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object with proper types - ensure tasks is an array for frontend
-      const jobDataForDatabase = {
-        id: `JOB-${Date.now()}`,
+      // Create the job object with ALL fields
+      const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
         title: `${data.service || 'General'} Service`,
         description: data.description,
         status: "scheduled",
         client_id: data.client_id,
         service: data.service || "General Service",
         technician_id: data.technician_id && data.technician_id !== "unassigned" ? data.technician_id : undefined,
-        property_id: selectedPropertyId || undefined,
         schedule_start: scheduledStartDate.toISOString(),
         schedule_end: scheduledEndDate.toISOString(),
         date: scheduledStartDate.toISOString(),
@@ -276,12 +260,12 @@ export const JobsCreateModal = ({
         tags: selectedTags,
         job_type: data.service || "General Service",
         lead_source: leadSource || undefined,
-        tasks: tasks // Pass tasks as array for frontend, will be stringified in the hook
+        tasks: tasks
       };
 
-      console.log('Creating job with database-compatible data:', jobDataForDatabase);
+      console.log('Creating job with complete data:', jobData);
 
-      const newJob = await addJob(jobDataForDatabase);
+      const newJob = await addJob(jobData);
       
       if (newJob) {
         // Save custom field values if any
@@ -323,8 +307,6 @@ export const JobsCreateModal = ({
   const selectedClient = form.watch("client_id") ? 
     clients.find(client => client.id === form.watch("client_id")) : 
     null;
-
-  const selectedClientId = form.watch("client_id");
 
   return (
     <>
@@ -374,39 +356,26 @@ export const JobsCreateModal = ({
                     </SelectTrigger>
                     <SelectContent>
                       {isLoadingClients ? (
-                        <SelectItem value="loading-clients" disabled>Loading clients...</SelectItem>
-                      ) : clients.length > 0 ? (
-                        clients
-                          .filter(client => client.id && client.id.trim() !== '' && client.name && client.name.trim() !== '')
-                          .map((client: Client) => (
-                            <SelectItem 
-                              key={client.id} 
-                              value={client.id}
-                              className={cn(
-                                recentlyAddedClient === client.id && "bg-green-50 border-green-200"
-                              )}
-                            >
-                              {client.name}
-                              {recentlyAddedClient === client.id && (
-                                <span className="ml-2 text-xs text-green-600">(just added)</span>
-                              )}
-                            </SelectItem>
-                          ))
+                        <SelectItem value="loading" disabled>Loading clients...</SelectItem>
                       ) : (
-                        <SelectItem value="no-clients" disabled>No clients available</SelectItem>
+                        clients.map((client: Client) => (
+                          <SelectItem 
+                            key={client.id} 
+                            value={client.id}
+                            className={cn(
+                              recentlyAddedClient === client.id && "bg-green-50 border-green-200"
+                            )}
+                          >
+                            {client.name}
+                            {recentlyAddedClient === client.id && (
+                              <span className="ml-2 text-xs text-green-600">(just added)</span>
+                            )}
+                          </SelectItem>
+                        ))
                       )}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Property Selection */}
-                {selectedClientId && (
-                  <PropertySelector
-                    clientId={selectedClientId}
-                    selectedPropertyId={selectedPropertyId}
-                    onPropertySelect={setSelectedPropertyId}
-                  />
-                )}
 
                 {selectedClient && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
@@ -470,24 +439,22 @@ export const JobsCreateModal = ({
                       </SelectTrigger>
                       <SelectContent>
                         {isLoadingJobTypes ? (
-                          <SelectItem value="loading-job-types" disabled>Loading job types...</SelectItem>
+                          <SelectItem value="loading" disabled>Loading job types...</SelectItem>
                         ) : jobTypes.length > 0 ? (
-                          jobTypes
-                            .filter(jobType => jobType.name && jobType.name.trim() !== '')
-                            .map((jobType) => (
-                              <SelectItem 
-                                key={jobType.id} 
-                                value={jobType.name}
-                                className={cn(
-                                  recentlyAddedJobType === jobType.name && "bg-green-50 border-green-200"
-                                )}
-                              >
-                                {jobType.name}
-                                {recentlyAddedJobType === jobType.name && (
-                                  <span className="ml-2 text-xs text-green-600">(just added)</span>
-                                )}
-                              </SelectItem>
-                            ))
+                          jobTypes.map((jobType) => (
+                            <SelectItem 
+                              key={jobType.id} 
+                              value={jobType.name}
+                              className={cn(
+                                recentlyAddedJobType === jobType.name && "bg-green-50 border-green-200"
+                              )}
+                            >
+                              {jobType.name}
+                              {recentlyAddedJobType === jobType.name && (
+                                <span className="ml-2 text-xs text-green-600">(just added)</span>
+                              )}
+                            </SelectItem>
+                          ))
                         ) : (
                           <>
                             <SelectItem value="HVAC">HVAC Repair</SelectItem>
@@ -527,10 +494,10 @@ export const JobsCreateModal = ({
                       </SelectTrigger>
                       <SelectContent>
                         {isLoadingLeadSources ? (
-                          <SelectItem value="loading-lead-sources" disabled>Loading lead sources...</SelectItem>
+                          <SelectItem value="loading" disabled>Loading lead sources...</SelectItem>
                         ) : leadSources.length > 0 ? (
                           leadSources
-                            .filter(source => source.is_active && source.name && source.name.trim() !== '')
+                            .filter(source => source.is_active)
                             .map((source) => (
                               <SelectItem 
                                 key={source.id} 
@@ -666,17 +633,13 @@ export const JobsCreateModal = ({
                       <SelectContent>
                         <SelectItem value="unassigned">Unassigned</SelectItem>
                         {isLoadingTechnicians ? (
-                          <SelectItem value="loading-technicians" disabled>Loading technicians...</SelectItem>
-                        ) : technicians.length > 0 ? (
-                          technicians
-                            .filter(tech => tech.id && tech.id.trim() !== '' && tech.name && tech.name.trim() !== '')
-                            .map((tech) => (
-                              <SelectItem key={tech.id} value={tech.id}>
-                                {tech.name}
-                              </SelectItem>
-                            ))
+                          <SelectItem value="loading" disabled>Loading technicians...</SelectItem>
                         ) : (
-                          <SelectItem value="no-technicians" disabled>No technicians available</SelectItem>
+                          technicians.map((tech) => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.name}
+                            </SelectItem>
+                          ))
                         )}
                       </SelectContent>
                     </Select>
@@ -797,22 +760,20 @@ export const JobsCreateModal = ({
                       </SelectTrigger>
                       <SelectContent>
                         {isLoadingTags ? (
-                          <SelectItem value="loading-tags" disabled>Loading tags...</SelectItem>
+                          <SelectItem value="loading" disabled>Loading tags...</SelectItem>
                         ) : tags.length > 0 ? (
-                          tags
-                            .filter(tag => tag.name && tag.name.trim() !== '')
-                            .map(tag => (
-                              <SelectItem 
-                                key={tag.id} 
-                                value={tag.name}
-                                disabled={selectedTags.includes(tag.name || '')}
-                              >
-                                {tag.name}
-                                {tag.category && tag.category !== 'General' && (
-                                  <span className="ml-2 text-xs text-muted-foreground">({tag.category})</span>
-                                )}
-                              </SelectItem>
-                            ))
+                          tags.map(tag => (
+                            <SelectItem 
+                              key={tag.id} 
+                              value={tag.name}
+                              disabled={selectedTags.includes(tag.name)}
+                            >
+                              {tag.name}
+                              {tag.category && tag.category !== 'General' && (
+                                <span className="ml-2 text-xs text-muted-foreground">({tag.category})</span>
+                              )}
+                            </SelectItem>
+                          ))
                         ) : (
                           <>
                             <SelectItem value="Urgent">Urgent</SelectItem>

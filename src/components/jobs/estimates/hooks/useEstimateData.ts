@@ -9,17 +9,15 @@ export interface Estimate {
   job_id: string;
   date: string;
   estimate_number: string;
-  number: string; // Alias for estimate_number for compatibility
   status: string;
   total: number;
-  amount: number; // Alias for total for compatibility
   notes?: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string; // Ensure this is required to match with useEstimates.ts
   items?: LineItem[];
-  viewed?: boolean;
-  recommendedProduct?: any;
-  techniciansNote?: string;
+  viewed?: boolean; // For UI tracking
+  recommendedProduct?: any; // Added for upsell functionality
+  techniciansNote?: string; // Added for technician notes
 }
 
 export const useEstimateData = (jobId: string) => {
@@ -55,8 +53,6 @@ export const useEstimateData = (jobId: string) => {
                 console.error('Error fetching line items:', itemsError);
                 return {
                   ...estimate,
-                  number: estimate.estimate_number,
-                  amount: estimate.total,
                   items: []
                 };
               }
@@ -73,12 +69,10 @@ export const useEstimateData = (jobId: string) => {
               
               return {
                 ...estimate,
-                number: estimate.estimate_number,
-                amount: estimate.total,
                 items,
-                viewed: false,
-                recommendedProduct: null,
-                techniciansNote: ""
+                viewed: false, // Default to not viewed for UI tracking
+                recommendedProduct: null, // Default to no recommended product
+                techniciansNote: "" // Default to no technician's note
               };
             })
           );

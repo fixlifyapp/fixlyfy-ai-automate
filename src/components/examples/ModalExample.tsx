@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 export function ModalExample() {
   const { openModal } = useModal();
 
+  const handleOpenPriorityModal = () => {
+    openModal("prioritySelection", {
+      initialPriority: "Medium",
+      onSave: (priority: string) => {
+        console.log("Selected priority:", priority);
+      }
+    });
+  };
+
   const handleOpenDeleteConfirmation = () => {
     openModal("deleteConfirm", {
       title: "Delete Item",
@@ -15,21 +24,12 @@ export function ModalExample() {
     });
   };
 
-  const handleOpenTeamSelection = () => {
-    openModal("teamSelection", {
-      initialTeam: "Robert Smith",
-      onSave: (team: string) => {
-        console.log("Selected team:", team);
-      }
-    });
-  };
-
   return (
     <div className="space-y-4 p-4">
       <h2 className="text-xl font-semibold">Modal System Examples</h2>
       <div className="space-x-4">
-        <Button onClick={handleOpenTeamSelection}>
-          Change Team
+        <Button onClick={handleOpenPriorityModal}>
+          Change Priority
         </Button>
         <Button variant="destructive" onClick={handleOpenDeleteConfirmation}>
           Delete Item

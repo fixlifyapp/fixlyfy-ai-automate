@@ -18,7 +18,7 @@ export const JobsFilters = () => {
         <Input placeholder="Search jobs..." className="pl-10" />
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Select defaultValue="all">
           <SelectTrigger>
             <SelectValue placeholder="Status" />
@@ -44,6 +44,20 @@ export const JobsFilters = () => {
               <SelectItem value="robert">Robert Smith</SelectItem>
               <SelectItem value="john">John Doe</SelectItem>
               <SelectItem value="emily">Emily Clark</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        
+        <Select defaultValue="all">
+          <SelectTrigger>
+            <SelectValue placeholder="Priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

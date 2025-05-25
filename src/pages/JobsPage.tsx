@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -207,7 +208,6 @@ const JobsPage = () => {
         ) : (
           <JobsList 
             jobs={jobs}
-            isLoading={isLoading}
             isGridView={isGridView} 
             selectedJobs={selectedJobs}
             onSelectJob={handleSelectJob}

@@ -13,8 +13,6 @@ export interface Payment {
   status?: string;
   client_id?: string;
   job_id?: string;
-  job_title?: string;
-  invoice_number?: string;
   technician_id?: string;
   technician_name?: string;
   created_at: string;
@@ -25,6 +23,7 @@ export interface PaymentInput {
   method: string;
   date: string;
   notes?: string;
+  status?: string;
 }
 
 export const usePayments = (jobId: string) => {
@@ -77,6 +76,21 @@ export const usePayments = (jobId: string) => {
     }
   };
 
+  const refundPayment = async (paymentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ status: 'refunded' })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+      await fetchPayments();
+    } catch (err) {
+      console.error('Error refunding payment:', err);
+      throw err;
+    }
+  };
+
   const deletePayment = async (paymentId: string) => {
     try {
       const { error } = await supabase
@@ -92,30 +106,6 @@ export const usePayments = (jobId: string) => {
     }
   };
 
-  const refundPayment = async (paymentId: string) => {
-    try {
-      // First check if the payments table has a status column
-      const { data: tableInfo, error: schemaError } = await supabase
-        .from('payments')
-        .select('*')
-        .limit(1);
-
-      // For now, just add a note about refund since status column might not exist
-      const { error } = await supabase
-        .from('payments')
-        .update({ 
-          notes: 'REFUNDED - Payment has been refunded'
-        })
-        .eq('id', paymentId);
-
-      if (error) throw error;
-      await fetchPayments();
-    } catch (err) {
-      console.error('Error refunding payment:', err);
-      throw err;
-    }
-  };
-
   const refreshPayments = () => {
     fetchPayments();
   };
@@ -123,7 +113,7 @@ export const usePayments = (jobId: string) => {
   // Calculate totals
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalRefunded = payments
-    .filter(payment => payment.notes?.includes('REFUNDED'))
+    .filter(p => p.status === 'refunded')
     .reduce((sum, payment) => sum + payment.amount, 0);
   const netAmount = totalPaid - totalRefunded;
 
@@ -139,8 +129,8 @@ export const usePayments = (jobId: string) => {
     totalRefunded,
     netAmount,
     addPayment,
-    deletePayment,
     refundPayment,
+    deletePayment,
     refreshPayments,
     fetchPayments
   };
