@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -396,7 +395,7 @@ export const EstimateSendDialog = ({
     return null;
   };
   
-  // Send the estimate to the client
+  // Send the estimate to the client with portal login link
   const handleSendEstimate = async () => {
     console.log("Starting send estimate process");
 
@@ -494,6 +493,23 @@ export const EstimateSendDialog = ({
 
       console.log("Communication record created:", commData);
 
+      // Generate client portal login token
+      let portalLoginLink = '';
+      if (contactInfo.email) {
+        try {
+          const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
+            p_email: contactInfo.email
+          });
+
+          if (!tokenError && tokenData) {
+            portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
+          }
+        } catch (error) {
+          console.error('Error generating portal login token:', error);
+          // Continue without portal link if there's an issue
+        }
+      }
+
       // Prepare estimate data for the edge function
       const estimateData = {
         lineItems: lineItems.map(item => ({
@@ -506,7 +522,8 @@ export const EstimateSendDialog = ({
         total: estimateTotal,
         taxRate: 13, // Default tax rate - could be made configurable
         notes: customNote || estimateNotes,
-        viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`
+        viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`,
+        portalLoginLink: portalLoginLink
       };
 
       console.log("Calling send-estimate edge function with data:", {
@@ -540,6 +557,23 @@ export const EstimateSendDialog = ({
       if (data?.success) {
         const method = sendMethod === "email" ? "email" : "text message";
         toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
+        
+        // Create notification for the client
+        if (estimateDetails?.client_id) {
+          await supabase
+            .from('client_notifications')
+            .insert({
+              client_id: estimateDetails.client_id,
+              type: 'estimate_sent',
+              title: 'New Estimate Available',
+              message: `Estimate ${estimateNumber} has been sent to you. Total: $${estimateTotal.toFixed(2)}`,
+              data: { 
+                estimate_id: estimateId, 
+                estimate_number: estimateNumber,
+                portal_link: portalLoginLink 
+              }
+            });
+        }
         
         // Move to confirmation step
         setCurrentStep("confirmation");
@@ -641,6 +675,7 @@ export const EstimateSendDialog = ({
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No valid email available for this client</p>
                     )}
+                    <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
                   </div>
                 </div>
                 
@@ -709,6 +744,9 @@ export const EstimateSendDialog = ({
               <h3 className="text-lg font-semibold mb-2">Estimate Sent Successfully</h3>
               <p className="text-muted-foreground mb-6">
                 The estimate has been sent to the client via {sendMethod === "email" ? "email" : "text message"}.
+                {sendMethod === "email" && (
+                  <span className="block mt-2">The client can access their portal to view, approve, or reject the estimate.</span>
+                )}
                 {customNote && <span className="block mt-2">Your warranty recommendation was included.</span>}
               </p>
               <Button onClick={handleCloseAfterSend}>

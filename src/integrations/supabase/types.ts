@@ -311,6 +311,146 @@ export type Database = {
           },
         ]
       }
+      client_notifications: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          read_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_portal_sessions: {
+        Row: {
+          client_portal_user_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          session_token: string
+        }
+        Insert: {
+          client_portal_user_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          session_token: string
+        }
+        Update: {
+          client_portal_user_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          session_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_sessions_client_portal_user_id_fkey"
+            columns: ["client_portal_user_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_users: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          last_login_at: string | null
+          login_token: string | null
+          phone: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          login_token?: string | null
+          phone?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          login_token?: string | null
+          phone?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -1807,6 +1947,10 @@ export type Database = {
       }
     }
     Functions: {
+      generate_client_login_token: {
+        Args: { p_email: string }
+        Returns: string
+      }
       get_service_areas: {
         Args: { p_team_member_id: string }
         Returns: {
@@ -1837,6 +1981,24 @@ export type Database = {
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
+      }
+      validate_client_session: {
+        Args: { p_session_token: string }
+        Returns: {
+          client_id: string
+          user_id: string
+          client_name: string
+          client_email: string
+        }[]
+      }
+      verify_client_login_token: {
+        Args: { p_token: string }
+        Returns: {
+          session_token: string
+          client_id: string
+          user_id: string
+          expires_at: string
+        }[]
       }
     }
     Enums: {
