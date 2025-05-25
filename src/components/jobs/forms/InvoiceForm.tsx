@@ -1,211 +1,114 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Edit3 } from "lucide-react";
-import { LineItem } from "../builder/types";
-import { formatCurrency } from "@/lib/utils";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { WarrantySelectionDialog } from "../dialogs/WarrantySelectionDialog";
+import { Product } from "../builder/types";
+import { invoiceFormSchema, InvoiceFormValues, InvoiceFormProps } from "./invoice/schema";
+import { InvoiceFormHeader } from "./invoice/InvoiceFormHeader";
 import { InvoicePreview } from "./invoice/InvoicePreview";
-
-interface InvoiceFormProps {
-  invoiceNumber: string;
-  lineItems: LineItem[];
-  onRemoveLineItem: (id: string) => void;
-  onUpdateLineItem: (id: string, field: string, value: any) => void;
-  onEditLineItem?: (id: string) => boolean;
-  onAddEmptyLineItem: () => void;
-  onAddCustomLine: () => void;
-  taxRate: number;
-  setTaxRate: (rate: number) => void;
-  calculateSubtotal: () => number;
-  calculateTotalTax: () => number;
-  calculateGrandTotal: () => number;
-  calculateTotalMargin?: () => number;
-  calculateMarginPercentage?: () => number;
-  showMargin?: boolean;
-}
+import { InvoiceFormDetails } from "./invoice/InvoiceFormDetails";
 
 export const InvoiceForm = ({
-  invoiceNumber,
-  lineItems,
-  onRemoveLineItem,
-  onUpdateLineItem,
-  onEditLineItem,
-  onAddEmptyLineItem,
-  onAddCustomLine,
-  taxRate,
-  setTaxRate,
-  calculateSubtotal,
-  calculateTotalTax,
-  calculateGrandTotal,
-  calculateTotalMargin,
-  calculateMarginPercentage,
-  showMargin = false
+  type,
+  onSubmit,
+  onCancel,
+  defaultInvoiceNumber,
+  companyInfo,
+  clientInfo,
+  showWarrantyUpsell = false,
+  previousItems = []
 }: InvoiceFormProps) => {
-  const subtotal = calculateSubtotal();
-  const tax = calculateTotalTax();
-  const total = calculateGrandTotal();
-  const margin = calculateTotalMargin ? calculateTotalMargin() : 0;
-  const marginPercentage = calculateMarginPercentage ? calculateMarginPercentage() : 0;
+  const [previewMode, setPreviewMode] = useState(false);
+  const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
+  
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceFormSchema),
+    defaultValues: {
+      invoiceNumber: defaultInvoiceNumber,
+      issueDate: new Date().toISOString().slice(0, 10),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      items: previousItems.length > 0 
+        ? previousItems 
+        : [{ description: "", quantity: 1, unitPrice: 0, ourPrice: 0, taxable: true }],
+      notes: "",
+    },
+  });
+
+  const calculateTotal = () => {
+    return form.watch("items").reduce(
+      (total, item) => {
+        if (item.taxable) {
+          // Add 5% tax for taxable items - this could be configurable in a real app
+          return total + (item.quantity || 0) * (item.unitPrice || 0) * 1.05;
+        }
+        return total + (item.quantity || 0) * (item.unitPrice || 0);
+      },
+      0
+    );
+  };
+
+  const handleSubmit = (data: InvoiceFormValues) => {
+    onSubmit(data);
+  };
+
+  const handleAddWarranty = () => {
+    setIsWarrantyDialogOpen(true);
+  };
+  
+  const handleWarrantySelection = (selectedWarranty: Product | null, customNote: string) => {
+    if (selectedWarranty) {
+      // Add warranty to the items
+      form.setValue("items", [
+        ...form.getValues("items"),
+        {
+          description: `${selectedWarranty.name}: ${selectedWarranty.description}`,
+          quantity: 1,
+          unitPrice: selectedWarranty.price,
+          ourPrice: selectedWarranty.ourPrice || 0,
+          taxable: false
+        }
+      ]);
+    }
+    setIsWarrantyDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Invoice Header */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium mb-2">Invoice {invoiceNumber}</h3>
-      </div>
+      <InvoiceFormHeader
+        type={type}
+        previewMode={previewMode}
+        setPreviewMode={setPreviewMode}
+        showWarrantyUpsell={showWarrantyUpsell}
+        onAddWarranty={handleAddWarranty}
+      />
 
-      {/* Line Items */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h4 className="text-md font-medium">Line Items</h4>
-          <div className="flex gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={onAddEmptyLineItem}
-              className="gap-1"
-            >
-              <Plus size={16} />
-              Add Product
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={onAddCustomLine}
-              className="gap-1"
-            >
-              <Plus size={16} />
-              Custom Line
-            </Button>
-          </div>
-        </div>
-
-        {lineItems.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-            <p>No items added yet. Add products or custom line items to get started.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {lineItems.map((item) => (
-              <div key={item.id} className="border rounded-lg p-4 bg-white">
-                <div className="grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-5">
-                    <Label className="text-xs text-gray-500">Description</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={item.description || item.name || ""}
-                        onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
-                        placeholder="Item description"
-                        className="text-sm"
-                      />
-                      {onEditLineItem && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onEditLineItem(item.id)}
-                          className="p-1 h-8 w-8"
-                        >
-                          <Edit3 size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <Label className="text-xs text-gray-500">Quantity</Label>
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => onUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
-                      min="1"
-                      className="text-sm"
-                    />
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <Label className="text-xs text-gray-500">Unit Price</Label>
-                    <Input
-                      type="number"
-                      value={item.unitPrice}
-                      onChange={(e) => onUpdateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
-                      min="0"
-                      step="0.01"
-                      className="text-sm"
-                    />
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <Label className="text-xs text-gray-500">Total</Label>
-                    <div className="text-sm font-medium py-2">
-                      {formatCurrency(item.quantity * item.unitPrice)}
-                    </div>
-                  </div>
-                  
-                  <div className="col-span-1 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRemoveLineItem(item.id)}
-                      className="text-red-500 hover:text-red-700 p-1 h-8 w-8"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Tax and Totals */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Label htmlFor="tax-rate" className="text-sm font-medium">Tax Rate (%)</Label>
-            <Input
-              id="tax-rate"
-              type="number"
-              value={taxRate}
-              onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-              min="0"
-              max="100"
-              step="0.01"
-              className="w-24"
-            />
-          </div>
-          
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tax ({taxRate}%):</span>
-              <span>{formatCurrency(tax)}</span>
-            </div>
-            {showMargin && (
-              <>
-                <div className="flex justify-between">
-                  <span>Margin:</span>
-                  <span>{formatCurrency(margin)} ({marginPercentage.toFixed(1)}%)</span>
-                </div>
-              </>
-            )}
-            <div className="flex justify-between font-semibold text-lg border-t pt-2">
-              <span>Total:</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {previewMode ? (
+        <InvoicePreview
+          formData={form.getValues()}
+          type={type}
+          onCancel={() => setPreviewMode(false)}
+          onSubmit={form.handleSubmit(handleSubmit)}
+          companyInfo={companyInfo}
+          clientInfo={clientInfo}
+          calculateTotal={calculateTotal}
+        />
+      ) : (
+        <InvoiceFormDetails
+          form={form}
+          type={type}
+          onCancel={onCancel}
+          previousItems={previousItems}
+          calculateTotal={calculateTotal}
+        />
+      )}
+      
+      {/* Warranty Selection Dialog */}
+      <WarrantySelectionDialog
+        open={isWarrantyDialogOpen}
+        onOpenChange={setIsWarrantyDialogOpen}
+        onConfirm={handleWarrantySelection}
+      />
     </div>
   );
 };

@@ -6,12 +6,51 @@ import { useEstimateCreation } from "./hooks/useEstimateCreation";
 import { useEstimateWarranty } from "./hooks/useEstimateWarranty";
 import { useEstimateUpsell } from "./hooks/useEstimateUpsell";
 import { useEstimateInfo } from "./hooks/useEstimateInfo";
+import { Estimate as EstimateHookType } from "@/hooks/useEstimates";
+
+// Type conversion function to handle the type differences
+const convertEstimateType = (estimate: EstimateDataType): EstimateHookType => {
+  return {
+    ...estimate,
+    number: estimate.estimate_number,
+    amount: estimate.total,
+    // Ensure both created_at and updated_at are always present
+    created_at: estimate.created_at,
+    updated_at: estimate.updated_at
+  };
+};
+
+// Type conversion for the other direction
+const convertEstimateHookType = (estimate: EstimateHookType): EstimateDataType => {
+  return {
+    ...estimate,
+    id: estimate.id,
+    job_id: estimate.job_id,
+    estimate_number: estimate.estimate_number || estimate.number || '',
+    total: estimate.total || estimate.amount || 0,
+    created_at: estimate.created_at,
+    updated_at: estimate.updated_at,
+    // Add required fields
+    date: estimate.date,
+    status: estimate.status
+  };
+};
+
+// Helper function to convert arrays of estimates
+const convertEstimatesArray = (estimates: EstimateDataType[]): EstimateHookType[] => {
+  return estimates.map(convertEstimateType);
+};
+
+// Helper function to convert back to EstimateDataType[]
+const convertBackEstimatesArray = (estimates: EstimateHookType[]): EstimateDataType[] => {
+  return estimates.map(convertEstimateHookType);
+};
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
   // Get estimates data
   const { estimates: estimatesData, setEstimates: setEstimatesData, isLoading } = useEstimateData(jobId);
   
-  // Dialog state management
+  // Dialog state management - removed isEstimateDialogOpen
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
   const [isConvertToInvoiceDialogOpen, setIsConvertToInvoiceDialogOpen] = useState(false);

@@ -1,291 +1,375 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Job } from "@/types/job";
-import { useToast } from "@/hooks/use-toast";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { toast } from "sonner";
+import { recordStatusChange } from "@/services/jobHistoryService";
+import { useRBAC } from "@/components/auth/RBACProvider";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 
-interface JobsFilter {
-  status?: string;
-  priority?: string;
-  query?: string;
-  clientId?: string;
-  propertyId?: string;
-  startDate?: Date | null;
-  endDate?: Date | null;
-}
-
-// Define explicit database job type to avoid complex inference
-interface DatabaseJob {
+export interface Job {
   id: string;
   title: string;
   description?: string;
-  status: string;
-  client_id?: string;
-  technician_id?: string;
-  property_id?: string;
-  date?: string;
-  schedule_start?: string;
-  schedule_end?: string;
-  created_at?: string;
-  updated_at?: string;
-  revenue?: number;
-  tags?: string[];
-  notes?: string;
-  job_type?: string;
-  lead_source?: string;
   service?: string;
-  tasks: any; // This will be transformed
-  created_by?: string;
-  clients?: {
-    id: string;
+  status: string;
+  client_id: string;
+  client?: {
     name: string;
-    email?: string;
     phone?: string;
+    email?: string;
     address?: string;
   };
-  estimates?: Array<{
+  technician_id?: string;
+  schedule_start?: string;
+  schedule_end?: string;
+  date: string;
+  revenue?: number;
+  tags?: string[];
+  created_at?: string;
+  updated_at?: string;
+  custom_fields?: Array<{
     id: string;
-    total: number;
+    name: string;
+    value: string;
+    field_type: string;
   }>;
-  invoices?: Array<{
-    id: string;
-    total: number;
-  }>;
+  // Keep only the remaining fields
+  job_type?: string;
+  lead_source?: string;
+  tasks?: string[];
 }
 
-export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
-  const { toast } = useToast();
+export const useJobs = (clientId?: string, includeCustomFields: boolean = false) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [totalJobs, setTotalJobs] = useState(0);
-  const [filters, setFilters] = useState<JobsFilter>({});
-
-  const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
-    let tasks: string[] = [];
-    
-    // Handle tasks transformation from various possible types
-    if (dbJob.tasks) {
-      if (typeof dbJob.tasks === 'string') {
-        try {
-          tasks = JSON.parse(dbJob.tasks);
-        } catch {
-          tasks = [];
-        }
-      } else if (Array.isArray(dbJob.tasks)) {
-        tasks = dbJob.tasks;
-      } else if (typeof dbJob.tasks === 'object') {
-        // Handle case where tasks might be a JSON object
-        tasks = Array.isArray(dbJob.tasks) ? dbJob.tasks : [];
-      }
-    }
-
-    return {
-      ...dbJob,
-      tasks,
-      custom_fields: []
-    };
-  };
-
-  const fetchJobs = async (): Promise<void> => {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { currentUser } = useRBAC();
+  
+  // Function to fetch jobs from Supabase
+  const fetchJobs = async () => {
     setIsLoading(true);
     try {
+      // Prepare base query with remaining fields only
       let query = supabase
         .from('jobs')
-        .select(`*, 
-          clients ( name, id, email, phone, address ), 
-          estimates ( id, total ), 
-          invoices ( id, total )
-        `, { count: 'exact' });
-
-      // Apply client filter if provided
+        .select(`
+          id,
+          title,
+          description,
+          service,
+          status,
+          client_id,
+          technician_id,
+          schedule_start,
+          schedule_end,
+          date,
+          revenue,
+          tags,
+          created_at,
+          updated_at,
+          job_type,
+          lead_source,
+          tasks,
+          clients(name, phone, email, address, city, state, zip)
+        `);
+        
+      // Filter by client if provided
       if (clientId) {
         query = query.eq('client_id', clientId);
       }
+      
+      // Execute query
+      const { data: jobsData, error: jobsError } = await query.order('date', { ascending: false });
+      
+      if (jobsError) throw jobsError;
+      
+      let transformedJobs = jobsData?.map(job => {
+        // Safely convert tasks from JSONB to string array
+        let tasksArray: string[] = [];
+        if (job.tasks) {
+          if (Array.isArray(job.tasks)) {
+            tasksArray = job.tasks.map(task => String(task));
+          } else if (typeof job.tasks === 'string') {
+            try {
+              const parsed = JSON.parse(job.tasks);
+              tasksArray = Array.isArray(parsed) ? parsed.map(task => String(task)) : [];
+            } catch {
+              tasksArray = [];
+            }
+          }
+        }
 
-      if (filters.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters.priority) {
-        query = query.eq('priority', filters.priority);
-      }
-      if (filters.propertyId) {
-        query = query.eq('property_id', filters.propertyId);
-      }
+        return {
+          ...job,
+          tasks: tasksArray,
+          client: {
+            name: job.clients?.name || 'Unknown Client',
+            phone: job.clients?.phone,
+            email: job.clients?.email,
+            address: [
+              job.clients?.address,
+              job.clients?.city,
+              job.clients?.state,
+              job.clients?.zip
+            ].filter(Boolean).join(', ')
+          }
+        };
+      }) || [];
 
-      if (filters.startDate && filters.endDate) {
-        query = query.gte('date', filters.startDate.toISOString());
-        query = query.lte('date', filters.endDate.toISOString());
-      } else if (filters.startDate) {
-        query = query.gte('date', filters.startDate.toISOString());
-      } else if (filters.endDate) {
-        query = query.lte('date', filters.endDate.toISOString());
+      // Fetch custom fields if requested
+      if (includeCustomFields && transformedJobs.length > 0) {
+        const jobIds = transformedJobs.map(job => job.id);
+        
+        const { data: customFieldData, error: customFieldError } = await supabase
+          .from('job_custom_field_values')
+          .select(`
+            job_id,
+            value,
+            custom_fields!inner(
+              id,
+              name,
+              field_type
+            )
+          `)
+          .in('job_id', jobIds);
+
+        if (!customFieldError && customFieldData) {
+          // Group custom fields by job_id
+          const customFieldsByJob = customFieldData.reduce((acc, field) => {
+            if (!acc[field.job_id]) {
+              acc[field.job_id] = [];
+            }
+            acc[field.job_id].push({
+              id: field.custom_fields.id,
+              name: field.custom_fields.name,
+              value: field.value || '',
+              field_type: field.custom_fields.field_type
+            });
+            return acc;
+          }, {} as Record<string, any[]>);
+
+          // Add custom fields to jobs
+          transformedJobs = transformedJobs.map(job => ({
+            ...job,
+            custom_fields: customFieldsByJob[job.id] || []
+          }));
+        }
       }
-
-      if (filters.query) {
-        const searchQuery = `%${filters.query}%`;
-        query = query.ilike('title', searchQuery);
-      }
-
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      const transformedJobs = (data || []).map((dbJob: any) => transformDatabaseJob(dbJob as DatabaseJob));
+      
       setJobs(transformedJobs);
-      setTotalJobs(count || 0);
-    } catch (error: any) {
-      console.error("Error fetching jobs:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch jobs",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      toast.error('Failed to load jobs');
     } finally {
       setIsLoading(false);
     }
   };
-
-  const addJob = async (jobData: Partial<Job>): Promise<Job | undefined> => {
+  
+  // Set up unified realtime sync
+  useUnifiedRealtime({
+    tables: ['jobs', 'clients', 'job_custom_field_values'],
+    onUpdate: fetchJobs,
+    enabled: true
+  });
+  
+  // Set up initial data fetch and refresh on dependency changes
+  useEffect(() => {
+    fetchJobs();
+  }, [clientId, refreshTrigger, includeCustomFields]);
+  
+  const addJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const jobToInsert = {
-        id: jobData.id || `JOB-${Date.now()}`,
-        title: jobData.title || 'New Job',
-        description: jobData.description,
-        status: jobData.status || 'scheduled',
-        client_id: jobData.client_id,
-        technician_id: jobData.technician_id,
-        property_id: jobData.property_id,
-        date: jobData.date,
-        schedule_start: jobData.schedule_start,
-        schedule_end: jobData.schedule_end,
-        revenue: jobData.revenue || 0,
-        tags: jobData.tags || [],
-        notes: jobData.notes,
-        job_type: jobData.job_type,
-        lead_source: jobData.lead_source,
-        service: jobData.service,
-        tasks: JSON.stringify(jobData.tasks || []),
-        created_by: jobData.created_by
-      };
-
-      const { data, error } = await supabase
-        .from('jobs')
-        .insert(jobToInsert)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Job created successfully"
-      });
-
-      await fetchJobs();
+      // Generate a job ID in the format JOB-XXXXX
+      const jobNumber = Math.floor(10000 + Math.random() * 90000);
+      const jobId = `JOB-${jobNumber}`;
       
-      if (data) {
-        return transformDatabaseJob(data as DatabaseJob);
+      // Validate required fields
+      if (!job.title || !job.client_id) {
+        throw new Error('Title and client are required');
       }
-    } catch (error: any) {
-      console.error("Error creating job:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create job",
-        variant: "destructive"
-      });
-      throw error;
-    }
-  };
-
-  const updateJob = async (jobId: string, updates: Partial<Job>): Promise<any> => {
-    try {
-      const updateData = {
-        ...updates,
-        tasks: updates.tasks ? JSON.stringify(updates.tasks) : undefined
+      
+      // Prepare job data with remaining fields only - default status to "scheduled"
+      const newJob = {
+        id: jobId,
+        title: job.title,
+        description: job.description || '',
+        status: job.status || 'scheduled', // Default to scheduled status
+        client_id: job.client_id,
+        service: job.service || 'General Service',
+        job_type: job.job_type || job.service || 'General Service',
+        lead_source: job.lead_source,
+        tasks: job.tasks || [],
+        ...(job.technician_id && job.technician_id !== '' && { technician_id: job.technician_id }),
+        schedule_start: job.schedule_start,
+        schedule_end: job.schedule_end,
+        date: job.date || new Date().toISOString(),
+        revenue: job.revenue || 0,
+        tags: job.tags || []
       };
-
+      
+      console.log('Creating job with data:', newJob);
+      
       const { data, error } = await supabase
         .from('jobs')
-        .update(updateData)
-        .eq('id', jobId)
-        .select()
+        .insert(newJob)
+        .select(`
+          id,
+          title,
+          description,
+          service,
+          status,
+          client_id,
+          technician_id,
+          schedule_start,
+          schedule_end,
+          date,
+          revenue,
+          tags,
+          job_type,
+          lead_source,
+          tasks,
+          created_at,
+          updated_at,
+          clients(name, phone, email, address, city, state, zip)
+        `)
         .single();
-
-      if (error) throw error;
-
-      await fetchJobs();
-      return data;
-    } catch (error: any) {
-      console.error("Error updating job:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update job",
-        variant: "destructive"
-      });
-      throw error;
+        
+      if (error) {
+        console.error('Error creating job:', error);
+        throw error;
+      }
+      
+      // Safely convert tasks from JSONB to string array
+      let tasksArray: string[] = [];
+      if (data.tasks) {
+        if (Array.isArray(data.tasks)) {
+          tasksArray = data.tasks.map(task => String(task));
+        } else if (typeof data.tasks === 'string') {
+          try {
+            const parsed = JSON.parse(data.tasks);
+            tasksArray = Array.isArray(parsed) ? parsed.map(task => String(task)) : [];
+          } catch {
+            tasksArray = [];
+          }
+        }
+      }
+      
+      // Transform the returned data
+      const jobWithClient = {
+        ...data,
+        tasks: tasksArray,
+        client: {
+          name: data.clients?.name || 'Unknown Client',
+          phone: data.clients?.phone,
+          email: data.clients?.email,
+          address: [
+            data.clients?.address,
+            data.clients?.city,
+            data.clients?.state,
+            data.clients?.zip
+          ].filter(Boolean).join(', ')
+        }
+      };
+      
+      // Record job creation in history
+      try {
+        await recordStatusChange(
+          jobId,
+          'new',
+          'scheduled',
+          currentUser?.name,
+          currentUser?.id
+        );
+      } catch (historyError) {
+        console.warn('Failed to record job history:', historyError);
+      }
+      
+      toast.success(`Job ${jobId} created successfully`);
+      
+      // Refresh the jobs list
+      fetchJobs();
+      
+      return jobWithClient;
+    } catch (error) {
+      console.error('Error adding job:', error);
+      toast.error('Failed to create job: ' + (error as Error).message);
+      return null;
     }
   };
 
-  const deleteJob = async (jobId: string): Promise<boolean> => {
+  const updateJob = async (id: string, updates: Partial<Job>) => {
+    try {
+      // If status is being updated, record it in history
+      if (updates.status) {
+        const job = jobs.find(j => j.id === id);
+        if (job && job.status !== updates.status) {
+          await recordStatusChange(
+            id,
+            job.status,
+            updates.status,
+            currentUser?.name,
+            currentUser?.id
+          );
+        }
+      }
+      
+      const { data, error } = await supabase
+        .from('jobs')
+        .update(updates)
+        .eq('id', id)
+        .select(`
+          id,
+          title,
+          description,
+          service,
+          status,
+          client_id,
+          technician_id,
+          schedule_start,
+          schedule_end,
+          date,
+          revenue,
+          tags,
+          created_at,
+          updated_at,
+          clients(name)
+        `)
+        .single();
+        
+      if (error) throw error;
+      
+      toast.success('Job updated successfully');
+      return data;
+    } catch (error) {
+      console.error('Error updating job:', error);
+      toast.error('Failed to update job');
+      return null;
+    }
+  };
+
+  const deleteJob = async (id: string) => {
     try {
       const { error } = await supabase
         .from('jobs')
         .delete()
-        .eq('id', jobId);
-
+        .eq('id', id);
+        
       if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Job deleted successfully"
-      });
-
-      await fetchJobs();
+      
+      toast.success('Job deleted successfully');
       return true;
-    } catch (error: any) {
-      console.error("Error deleting job:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete job",
-        variant: "destructive"
-      });
-      throw error;
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      toast.error('Failed to delete job');
+      return false;
     }
-  };
-
-  useEffect(() => {
-    fetchJobs();
-  }, [filters, clientId]);
-
-  // Set up real-time updates with explicit void return
-  useRealtimeSync({
-    tables: ['jobs', 'clients', 'estimates', 'invoices', 'client_properties'],
-    onUpdate: () => {
-      void fetchJobs();
-    },
-    enabled: true
-  });
-
-  const updateFilters = (newFilters: JobsFilter): void => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      ...newFilters
-    }));
   };
 
   return {
     jobs,
     isLoading,
-    totalJobs,
-    filters,
-    updateFilters,
     addJob,
     updateJob,
     deleteJob,
-    refreshJobs: fetchJobs
+    refreshJobs: () => setRefreshTrigger(prev => prev + 1)
   };
 };

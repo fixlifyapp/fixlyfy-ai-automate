@@ -5,13 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Estimate {
   id: string;
   job_id: string;
-  estimate_number: string;
-  number: string; // Alias for compatibility
+  number: string;
   date: string;
   status: string;
   total: number;
-  amount: number; // Alias for compatibility
-  notes?: string;
   items?: any[];
   created_at: string;
   updated_at: string;
@@ -32,16 +29,7 @@ export const useEstimates = (jobId: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Transform data to include alias properties for compatibility
-      const transformedData = data?.map(estimate => ({
-        ...estimate,
-        number: estimate.estimate_number,
-        amount: estimate.total,
-        notes: estimate.notes || ''
-      })) || [];
-      
-      setEstimates(transformedData);
+      setEstimates(data || []);
     } catch (error) {
       console.error('Error fetching estimates:', error);
     } finally {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { PaymentDialog } from "./dialogs/PaymentDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, DollarSign, FileText, Trash2 } from "lucide-react";
+import { PaymentMethod } from "@/types/payment";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { Dialog } from "@/components/ui/dialog";
@@ -52,7 +52,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     }
   }, [jobId, fetchPayments]);
 
-  const getMethodIcon = (method: string) => {
+  const getMethodIcon = (method: PaymentMethod) => {
     switch (method) {
       case "credit-card":
         return <CreditCard size={16} className="text-blue-500" />;
@@ -79,12 +79,12 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         variant="outline" 
         className={statusStyles[status as keyof typeof statusStyles] || ""}
       >
-        {status?.charAt(0).toUpperCase() + status?.slice(1) || 'Unknown'}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
 
-  const handlePaymentProcessed = async (amount: number, method: string, reference?: string, notes?: string) => {
+  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
     try {
       // Get the invoice information
       const { data: invoices } = await supabase
@@ -153,11 +153,13 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       await recordPayment(
         jobId,
         amount,
-        method as any,
+        method,
         currentUser?.name,
         currentUser?.id,
         reference
       );
+      
+      // No toast notifications will be shown due to our updated implementation
       
       // Refresh payments list by fetching the latest data
       fetchPayments();
@@ -166,6 +168,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       setIsPaymentDialogOpen(false);
     } catch (error) {
       console.error("Error processing payment:", error);
+      // No toast notifications will be shown
     }
   };
 
@@ -204,18 +207,16 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     return {
       id: payment.id,
       date: payment.date,
-      client_id: payment.client_id || '',
-      clientName: payment.technician_name || 'Client',
-      job_id: payment.job_id || jobId,
+      clientId: payment.client_id || '',
+      clientName: payment.technician_name || 'Client', // Use technician_name if available, or default
+      jobId: payment.job_id || jobId,
       amount: payment.amount,
-      method: payment.method as any,
-      status: (payment.status as "paid" | "refunded" | "disputed") || "paid",
+      method: payment.method,
+      status: payment.status as "paid" | "refunded" | "disputed",
       reference: payment.reference,
       notes: payment.notes,
-      technician_id: payment.technician_id,
-      technician_name: payment.technician_name,
-      invoice_id: payment.invoice_id,
-      created_at: payment.created_at
+      technicianId: payment.technician_id,
+      technicianName: payment.technician_name
     };
   };
 
@@ -284,10 +285,10 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
                     ${payment.amount.toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(payment.status || 'paid')}
+                    {getStatusBadge(payment.status)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {payment.status !== 'refunded' && (
+                    {payment.status === 'paid' && (
                       <Button
                         onClick={() => handleRefundPayment(payment)}
                         size="sm"
@@ -321,7 +322,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       <PaymentDialog 
         open={isPaymentDialogOpen} 
         onOpenChange={setIsPaymentDialogOpen}
-        balance={100}
+        balance={100} // This would come from actual invoice data in a real app
         onPaymentProcessed={handlePaymentProcessed}
       />
 
