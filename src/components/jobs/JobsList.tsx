@@ -57,41 +57,17 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
 
   const isJobSelected = (jobId: string) => selectedJobs && selectedJobs.includes(jobId);
 
-  const formatJobForDisplay = (job: Job) => {
-    return {
-      id: job.id,
-      client: job.client?.name || "Unknown Client",
-      address: job.client?.address || "No address available",
-      service: job.service || job.title || "Service Call",
-      status: job.status || "scheduled",
-      date: job.date ? new Date(job.date).toLocaleDateString() : "No date",
-      time: job.schedule_start ? new Date(job.schedule_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
-      technician: {
-        name: "Unassigned",
-        avatar: "",
-        initials: "UA",
-        id: job.technician_id || ""
-      },
-      priority: "medium" as "low" | "medium" | "high",
-      revenue: job.revenue || 0,
-      tags: job.tags || [],
-      custom_fields: job.custom_fields || []
-    };
-  };
-
-  const displayJobs = jobs.map(formatJobForDisplay);
-
   return (
     <>
       {isGridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {displayJobs.length === 0 ? (
+          {jobs.length === 0 ? (
             <div className="col-span-full text-center py-8 text-fixlyfy-text-secondary">
               <p>No jobs found.</p>
               <p className="text-sm mt-2">Try creating a new job or adjusting your filters.</p>
             </div>
           ) : (
-            displayJobs.map((job) => (
+            jobs.map((job) => (
               <div 
                 key={job.id} 
                 className={cn(
@@ -110,8 +86,8 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                       <Badge variant="outline" className="mb-2">
                         {job.id}
                       </Badge>
-                      <h3 className="font-medium">{job.client}</h3>
-                      <p className="text-xs text-fixlyfy-text-secondary">{job.address}</p>
+                      <h3 className="font-medium">{job.client?.name || "Unknown Client"}</h3>
+                      <p className="text-xs text-fixlyfy-text-secondary">{job.client?.address || "No address"}</p>
                     </div>
                     <Badge className={cn(
                       job.status === "scheduled" && "bg-fixlyfy-info/10 text-fixlyfy-info",
@@ -173,28 +149,17 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                     <div className="flex items-center">
                       <Calendar size={14} className="text-fixlyfy-text-secondary mr-1" />
                       <span className="text-xs text-fixlyfy-text-secondary">
-                        {job.date} {job.time}
+                        {job.date ? new Date(job.date).toLocaleDateString() : "No date"} 
+                        {job.schedule_start ? new Date(job.schedule_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                       </span>
                     </div>
-                    <Badge className={cn(
-                      "bg-fixlyfy-bg-interface border",
-                      job.priority === "high" && "text-fixlyfy-error border-fixlyfy-error/20",
-                      job.priority === "medium" && "text-fixlyfy border-fixlyfy/20",
-                      job.priority === "low" && "text-fixlyfy-text-secondary border-fixlyfy-text-secondary/20"
-                    )}>
-                      {job.priority}
-                    </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
-                      <Avatar className="h-6 w-6 mr-2">
-                        <AvatarImage src={job.technician.avatar} />
-                        <AvatarFallback>{job.technician.initials}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs">{job.technician.name}</span>
+                      <span className="text-xs">{job.technician_id ? "Assigned" : "Unassigned"}</span>
                     </div>
                     <div className="text-sm font-medium">
-                      ${job.revenue.toFixed(2)}
+                      ${(job.revenue || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -220,21 +185,20 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                 <TableHead>Custom Info</TableHead>
                 <TableHead>Scheduled</TableHead>
                 <TableHead>Technician</TableHead>
-                <TableHead>Priority</TableHead>
                 <TableHead>Revenue</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayJobs.length === 0 ? (
+              {jobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-fixlyfy-text-secondary">
+                  <TableCell colSpan={10} className="text-center py-8 text-fixlyfy-text-secondary">
                     <p>No jobs found.</p>
                     <p className="text-sm mt-2">Try creating a new job or adjusting your filters.</p>
                   </TableCell>
                 </TableRow>
               ) : (
-                displayJobs.map((job, idx) => (
+                jobs.map((job, idx) => (
                   <TableRow 
                     key={job.id}
                     className={cn(
@@ -254,8 +218,8 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                       <span className="font-medium">{job.id}</span>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{job.client}</div>
-                      <div className="text-xs text-fixlyfy-text-secondary">{job.service}</div>
+                      <div className="font-medium">{job.client?.name || "Unknown Client"}</div>
+                      <div className="text-xs text-fixlyfy-text-secondary">{job.service || job.title || "No service specified"}</div>
                     </TableCell>
                     <TableCell>
                       <Badge className={cn(
@@ -318,30 +282,18 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                       )}
                     </TableCell>
                     <TableCell>
-                      {job.date} 
-                      <div className="text-xs text-fixlyfy-text-secondary">{job.time}</div>
+                      {job.date ? new Date(job.date).toLocaleDateString() : "No date"}
+                      {job.schedule_start && (
+                        <div className="text-xs text-fixlyfy-text-secondary">
+                          {new Date(job.schedule_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center">
-                        <Avatar className="h-7 w-7 mr-2">
-                          <AvatarImage src={job.technician.avatar} />
-                          <AvatarFallback>{job.technician.initials}</AvatarFallback>
-                        </Avatar>
-                        <span>{job.technician.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn(
-                        "bg-fixlyfy-bg-interface border",
-                        job.priority === "high" && "text-fixlyfy-error border-fixlyfy-error/20",
-                        job.priority === "medium" && "text-fixlyfy border-fixlyfy/20",
-                        job.priority === "low" && "text-fixlyfy-text-secondary border-fixlyfy-text-secondary/20"
-                      )}>
-                        {job.priority}
-                      </Badge>
+                      <span>{job.technician_id ? "Assigned" : "Unassigned"}</span>
                     </TableCell>
                     <TableCell className="font-medium">
-                      ${job.revenue.toFixed(2)}
+                      ${(job.revenue || 0).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
