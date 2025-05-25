@@ -3,59 +3,52 @@ import React, { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Save, X, Calendar } from "lucide-react";
+import { Edit, Save, X, FileText } from "lucide-react";
 import { JobInfo } from "../context/types";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
-interface ScheduleInfoCardProps {
+interface EditableJobSummaryCardProps {
   job: JobInfo;
-  jobId?: string;
-  editable?: boolean;
+  jobId: string;
 }
 
-export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoCardProps) => {
+export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
-    schedule_start: job.schedule_start || "",
-    schedule_end: job.schedule_end || ""
+    service: job.service || job.job_type || "General Service",
+    lead_source: job.lead_source || ""
   });
   const { updateJob } = useJobs();
 
   const handleSave = async () => {
-    if (!jobId) return;
-    
     const result = await updateJob(jobId, {
-      schedule_start: editValues.schedule_start,
-      schedule_end: editValues.schedule_end
+      service: editValues.service,
+      job_type: editValues.service,
+      lead_source: editValues.lead_source
     });
     if (result) {
       setIsEditing(false);
-      toast.success("Schedule updated successfully");
+      toast.success("Job summary updated successfully");
     }
   };
 
   const handleCancel = () => {
     setEditValues({
-      schedule_start: job.schedule_start || "",
-      schedule_end: job.schedule_end || ""
+      service: job.service || job.job_type || "General Service",
+      lead_source: job.lead_source || ""
     });
     setIsEditing(false);
-  };
-
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return "Not scheduled";
-    return new Date(dateString).toLocaleString();
   };
 
   return (
     <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
       <ModernCardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <ModernCardTitle icon={Calendar}>
-            Schedule
+          <ModernCardTitle icon={FileText}>
+            Job Summary
           </ModernCardTitle>
-          {editable && !isEditing ? (
+          {!isEditing ? (
             <Button
               variant="ghost"
               size="sm"
@@ -64,7 +57,7 @@ export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoC
             >
               <Edit className="h-4 w-4" />
             </Button>
-          ) : editable && isEditing ? (
+          ) : (
             <div className="flex gap-2">
               <Button
                 variant="ghost"
@@ -83,33 +76,33 @@ export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoC
                 <X className="h-4 w-4" />
               </Button>
             </div>
-          ) : null}
+          )}
         </div>
       </ModernCardHeader>
       <ModernCardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-muted-foreground mb-2">Start Date & Time</p>
+            <p className="text-sm text-muted-foreground mb-2">Job Type</p>
             {isEditing ? (
               <Input
-                type="datetime-local"
-                value={editValues.schedule_start ? new Date(editValues.schedule_start).toISOString().slice(0, 16) : ""}
-                onChange={(e) => setEditValues(prev => ({ ...prev, schedule_start: e.target.value }))}
+                value={editValues.service}
+                onChange={(e) => setEditValues(prev => ({ ...prev, service: e.target.value }))}
+                placeholder="Enter job type..."
               />
             ) : (
-              <p className="font-medium">{formatDateTime(job.schedule_start || "")}</p>
+              <p className="font-medium">{job.service || job.job_type || "General Service"}</p>
             )}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground mb-2">End Date & Time</p>
+            <p className="text-sm text-muted-foreground mb-2">Lead Source</p>
             {isEditing ? (
               <Input
-                type="datetime-local"
-                value={editValues.schedule_end ? new Date(editValues.schedule_end).toISOString().slice(0, 16) : ""}
-                onChange={(e) => setEditValues(prev => ({ ...prev, schedule_end: e.target.value }))}
+                value={editValues.lead_source}
+                onChange={(e) => setEditValues(prev => ({ ...prev, lead_source: e.target.value }))}
+                placeholder="Enter lead source..."
               />
             ) : (
-              <p className="font-medium">{formatDateTime(job.schedule_end || "")}</p>
+              <p className="font-medium">{job.lead_source || "Not specified"}</p>
             )}
           </div>
         </div>

@@ -39,15 +39,29 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
 
   return (
     <div className="space-y-6">
-      <JobSummaryCard job={job} />
-      <ScheduleInfoCard job={job} />
-      <TechnicianCard job={job} />
-      <AttachmentsCard jobId={jobId} />
-      <JobDescriptionCard description={job.description || ""} />
-      <JobCustomFieldsDisplay jobId={jobId} />
-      <TasksCard tasks={job.tasks || []} />
-      <JobTagsCard tags={job.tags || []} />
-      <AdditionalInfoCard job={job} />
+      {/* Primary Information Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <JobDescriptionCard description={job.description || ""} jobId={jobId} editable />
+          <JobSummaryCard job={job} jobId={jobId} editable />
+          <TechnicianCard job={job} jobId={jobId} editable />
+        </div>
+        
+        <div className="space-y-6">
+          <AdditionalInfoCard job={job} jobId={jobId} />
+          <ScheduleInfoCard job={job} jobId={jobId} editable />
+          <AttachmentsCard jobId={jobId} editable />
+        </div>
+      </div>
+
+      {/* Secondary Information Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <JobCustomFieldsDisplay jobId={jobId} />
+        <div className="space-y-6">
+          <TasksCard tasks={job.tasks || []} jobId={jobId} editable />
+          <JobTagsCard tags={job.tags || []} jobId={jobId} editable />
+        </div>
+      </div>
     </div>
   );
 };

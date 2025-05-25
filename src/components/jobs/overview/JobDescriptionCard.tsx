@@ -1,26 +1,25 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { EditableJobDescriptionCard } from "./EditableJobDescriptionCard";
 
 interface JobDescriptionCardProps {
   description: string;
+  jobId?: string;
+  editable?: boolean;
 }
 
-export const JobDescriptionCard = ({ description }: JobDescriptionCardProps) => {
+export const JobDescriptionCard = ({ description, jobId, editable = false }: JobDescriptionCardProps) => {
+  if (editable && jobId) {
+    return <EditableJobDescriptionCard description={description} jobId={jobId} />;
+  }
+
+  // Fallback to simple display if not editable
   if (!description) return null;
 
   return (
-    <Card className="border-fixlyfy-border shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          Job Description
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p>{description}</p>
-      </CardContent>
-    </Card>
+    <div className="bg-white rounded-lg border p-6">
+      <h3 className="text-lg font-semibold mb-4">Job Description</h3>
+      <p>{description}</p>
+    </div>
   );
 };
