@@ -11,6 +11,12 @@ interface GlobalRealtimeContextType {
   refreshPayments: () => void;
   refreshEstimates: () => void;
   refreshJobHistory: () => void;
+  refreshJobStatuses: () => void;
+  refreshJobTypes: () => void;
+  refreshCustomFields: () => void;
+  refreshTags: () => void;
+  refreshLeadSources: () => void;
+  refreshJobCustomFieldValues: () => void;
   isConnected: boolean;
 }
 
@@ -37,6 +43,12 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
     payments: new Set<() => void>(),
     estimates: new Set<() => void>(),
     jobHistory: new Set<() => void>(),
+    jobStatuses: new Set<() => void>(),
+    jobTypes: new Set<() => void>(),
+    customFields: new Set<() => void>(),
+    tags: new Set<() => void>(),
+    leadSources: new Set<() => void>(),
+    jobCustomFieldValues: new Set<() => void>(),
   });
   const [isConnected, setIsConnected] = useState(false);
 
@@ -55,12 +67,6 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
           (payload) => {
             console.log('Jobs table changed:', payload);
             refreshCallbacks.jobs.forEach(callback => callback());
-            
-            if (payload.eventType === 'INSERT') {
-              toast.success('New job created');
-            } else if (payload.eventType === 'UPDATE') {
-              toast.info('Job updated');
-            }
           }
         )
         .on(
@@ -73,10 +79,6 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
           (payload) => {
             console.log('Clients table changed:', payload);
             refreshCallbacks.clients.forEach(callback => callback());
-            
-            if (payload.eventType === 'INSERT') {
-              toast.success('New client added');
-            }
           }
         )
         .on(
@@ -139,14 +141,86 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
             refreshCallbacks.jobHistory.forEach(callback => callback());
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'job_statuses'
+          },
+          (payload) => {
+            console.log('Job statuses table changed:', payload);
+            refreshCallbacks.jobStatuses.forEach(callback => callback());
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'job_types'
+          },
+          (payload) => {
+            console.log('Job types table changed:', payload);
+            refreshCallbacks.jobTypes.forEach(callback => callback());
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'custom_fields'
+          },
+          (payload) => {
+            console.log('Custom fields table changed:', payload);
+            refreshCallbacks.customFields.forEach(callback => callback());
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tags'
+          },
+          (payload) => {
+            console.log('Tags table changed:', payload);
+            refreshCallbacks.tags.forEach(callback => callback());
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'lead_sources'
+          },
+          (payload) => {
+            console.log('Lead sources table changed:', payload);
+            refreshCallbacks.leadSources.forEach(callback => callback());
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'job_custom_field_values'
+          },
+          (payload) => {
+            console.log('Job custom field values table changed:', payload);
+            refreshCallbacks.jobCustomFieldValues.forEach(callback => callback());
+          }
+        )
         .subscribe((status) => {
           console.log('Global realtime channel status:', status);
           setIsConnected(status === 'SUBSCRIBED');
           
           if (status === 'SUBSCRIBED') {
-            toast.success('Real-time sync connected');
+            console.log('Real-time sync connected');
           } else if (status === 'CHANNEL_ERROR') {
-            toast.error('Real-time sync error');
+            console.error('Real-time sync error');
           }
         });
 
@@ -186,6 +260,12 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
     refreshPayments: () => refreshCallbacks.payments.forEach(callback => callback()),
     refreshEstimates: () => refreshCallbacks.estimates.forEach(callback => callback()),
     refreshJobHistory: () => refreshCallbacks.jobHistory.forEach(callback => callback()),
+    refreshJobStatuses: () => refreshCallbacks.jobStatuses.forEach(callback => callback()),
+    refreshJobTypes: () => refreshCallbacks.jobTypes.forEach(callback => callback()),
+    refreshCustomFields: () => refreshCallbacks.customFields.forEach(callback => callback()),
+    refreshTags: () => refreshCallbacks.tags.forEach(callback => callback()),
+    refreshLeadSources: () => refreshCallbacks.leadSources.forEach(callback => callback()),
+    refreshJobCustomFieldValues: () => refreshCallbacks.jobCustomFieldValues.forEach(callback => callback()),
     isConnected
   };
 
@@ -197,7 +277,7 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
 };
 
 // Hook for components to register for specific table updates
-export const useTableSync = (table: 'jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'jobHistory', callback: () => void) => {
+export const useTableSync = (table: 'jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'jobHistory' | 'jobStatuses' | 'jobTypes' | 'customFields' | 'tags' | 'leadSources' | 'jobCustomFieldValues', callback: () => void) => {
   const context = useContext(GlobalRealtimeContext);
   
   useEffect(() => {

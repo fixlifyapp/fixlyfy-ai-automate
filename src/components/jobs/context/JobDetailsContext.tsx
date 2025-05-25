@@ -29,9 +29,9 @@ export const JobDetailsProvider = ({
     setRefreshTrigger(prev => prev + 1);
   };
   
-  // Use unified realtime for all related data
+  // Use unified realtime for all related data with automatic refresh
   useUnifiedRealtime({
-    tables: ['jobs', 'clients', 'payments', 'invoices'],
+    tables: ['jobs', 'clients', 'payments', 'invoices', 'job_custom_field_values', 'tags', 'job_types', 'job_statuses', 'custom_fields', 'lead_sources'],
     onUpdate: refreshJob,
     enabled: !!jobId
   });
@@ -50,8 +50,17 @@ export const JobDetailsProvider = ({
   const { updateJobStatus: handleUpdateJobStatus } = useJobStatusUpdate(jobId, refreshJob);
   
   const updateJobStatus = async (newStatus: string) => {
-    await handleUpdateJobStatus(newStatus);
+    // Optimistic update - update UI immediately
     setCurrentStatus(newStatus);
+    
+    try {
+      await handleUpdateJobStatus(newStatus);
+      // Real-time will handle the refresh automatically
+    } catch (error) {
+      // Revert optimistic update on error
+      setCurrentStatus(currentStatus);
+      throw error;
+    }
   };
   
   return (

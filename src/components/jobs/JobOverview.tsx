@@ -12,6 +12,7 @@ import { AdditionalInfoCard } from "./overview/AdditionalInfoCard";
 import { AttachmentsCard } from "./overview/AttachmentsCard";
 import { ConditionalCustomFieldsCard } from "./overview/ConditionalCustomFieldsCard";
 import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
+import { toast } from "sonner";
 
 interface JobOverviewProps {
   jobId: string;
@@ -24,8 +25,9 @@ interface Task {
 }
 
 export const JobOverview = ({ jobId }: JobOverviewProps) => {
-  const { job, isLoading, refreshJob } = useJobDetails();
+  const { job, isLoading } = useJobDetails();
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { updateJob } = useJobs();
 
   // Convert job tasks to dialog format
@@ -45,16 +47,24 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
   };
 
   const handleUpdateTasks = async (updatedTasks: Task[]) => {
+    setIsUpdating(true);
     const taskNames = convertToJobTasks(updatedTasks);
     
-    const result = await updateJob(jobId, {
-      tasks: taskNames
-    });
-    
-    if (result) {
-      console.log("Tasks updated successfully:", taskNames);
-      // Trigger real-time refresh
-      refreshJob();
+    try {
+      const result = await updateJob(jobId, {
+        tasks: taskNames
+      });
+      
+      if (result) {
+        console.log("Tasks updated successfully:", taskNames);
+        toast.success("Tasks updated successfully");
+        // Real-time will handle the refresh automatically
+      }
+    } catch (error) {
+      console.error("Error updating tasks:", error);
+      toast.error("Failed to update tasks");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -86,7 +96,6 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             description={job.description || ""} 
             jobId={jobId} 
             editable 
-            onUpdate={refreshJob}
           />
           <JobSummaryCard 
             job={job} 
@@ -97,7 +106,6 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             job={job} 
             jobId={jobId} 
             editable 
-            onUpdate={refreshJob}
           />
         </div>
         
@@ -107,12 +115,10 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             job={job} 
             jobId={jobId} 
             editable 
-            onUpdate={refreshJob}
           />
           <AttachmentsCard 
             jobId={jobId} 
             editable 
-            onUpdate={refreshJob}
           />
         </div>
       </div>
@@ -125,13 +131,11 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             jobId={jobId} 
             editable 
             onManageTasks={() => setIsTaskDialogOpen(true)}
-            onUpdate={refreshJob}
           />
           <JobTagsCard 
             tags={job.tags || []} 
             jobId={jobId} 
             editable 
-            onUpdate={refreshJob}
           />
         </div>
         <ConditionalCustomFieldsCard jobId={jobId} />
@@ -143,6 +147,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
         onOpenChange={setIsTaskDialogOpen}
         initialTasks={convertToDialogTasks(job.tasks)}
         onSave={handleUpdateTasks}
+        disabled={isUpdating}
       />
     </div>
   );

@@ -13,9 +13,10 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
   
   const handleUpdate = useCallback(() => {
     if (enabled) {
+      console.log('Real-time update triggered for tables:', tables);
       onUpdate();
     }
-  }, [onUpdate, enabled]);
+  }, [onUpdate, enabled, tables]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -24,14 +25,45 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
     const unsubscribeFunctions: (() => void)[] = [];
 
     tables.forEach(table => {
-      // Add callback to the global realtime system
-      const refreshCallbacks = (globalRealtime as any).refreshCallbacks;
-      if (refreshCallbacks && refreshCallbacks[table]) {
-        refreshCallbacks[table].add(handleUpdate);
+      // Map table names to correct callback names
+      const tableCallbackMap: Record<string, keyof typeof globalRealtime> = {
+        'jobs': 'refreshJobs',
+        'clients': 'refreshClients', 
+        'messages': 'refreshMessages',
+        'invoices': 'refreshInvoices',
+        'payments': 'refreshPayments',
+        'estimates': 'refreshEstimates',
+        'jobHistory': 'refreshJobHistory',
+        'job_custom_field_values': 'refreshJobCustomFieldValues',
+        'tags': 'refreshTags',
+        'job_types': 'refreshJobTypes',
+        'job_statuses': 'refreshJobStatuses',
+        'custom_fields': 'refreshCustomFields',
+        'lead_sources': 'refreshLeadSources'
+      };
+
+      const callbackName = tableCallbackMap[table];
+      if (callbackName) {
+        // Add callback to the global realtime system
+        const refreshCallbacks = (globalRealtime as any).refreshCallbacks;
+        const tableKey = callbackName.replace('refresh', '').toLowerCase();
         
-        unsubscribeFunctions.push(() => {
-          refreshCallbacks[table].delete(handleUpdate);
-        });
+        // Handle special cases for naming
+        let finalTableKey = tableKey;
+        if (table === 'job_custom_field_values') finalTableKey = 'jobcustomfieldvalues';
+        if (table === 'job_types') finalTableKey = 'jobtypes';
+        if (table === 'job_statuses') finalTableKey = 'jobstatuses';
+        if (table === 'custom_fields') finalTableKey = 'customfields';
+        if (table === 'lead_sources') finalTableKey = 'leadsources';
+        if (table === 'jobHistory') finalTableKey = 'jobhistory';
+
+        if (refreshCallbacks && refreshCallbacks[finalTableKey]) {
+          refreshCallbacks[finalTableKey].add(handleUpdate);
+          
+          unsubscribeFunctions.push(() => {
+            refreshCallbacks[finalTableKey].delete(handleUpdate);
+          });
+        }
       }
     });
 

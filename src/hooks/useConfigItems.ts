@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 // Generic type for configuration items
@@ -41,6 +41,7 @@ export interface LeadSource extends ConfigItem {
 export function useConfigItems<T extends ConfigItem>(tableName: string) {
   const [items, setItems] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { hasPermission } = useRBAC();
   
   const fetchItems = async () => {
@@ -66,32 +67,19 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
     }
   };
   
+  // Set up real-time updates for the specific table
+  useUnifiedRealtime({
+    tables: [tableName as any],
+    onUpdate: () => {
+      console.log(`Real-time update for ${tableName}`);
+      setRefreshTrigger(prev => prev + 1);
+    },
+    enabled: true
+  });
+  
   useEffect(() => {
     fetchItems();
-    
-    // Set up realtime subscription with proper error handling
-    const channel = supabase
-      .channel(`public:${tableName}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: tableName },
-        (payload) => {
-          console.log(`Real-time update for ${tableName}:`, payload);
-          fetchItems();
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Subscribed to real-time updates for ${tableName}`);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`Error subscribing to ${tableName} real-time updates`);
-        }
-      });
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tableName]);
+  }, [tableName, refreshTrigger]);
   
   const addItem = async (item: Omit<T, 'id' | 'created_at'>) => {
     try {
@@ -104,6 +92,7 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
       if (error) throw error;
       
       toast.success(`${tableName.replace('_', ' ')} added successfully`);
+      // Real-time will handle the refresh automatically
       return data as unknown as T;
     } catch (error) {
       console.error(`Error adding ${tableName}:`, error);
@@ -124,6 +113,7 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
       if (error) throw error;
       
       toast.success(`${tableName.replace('_', ' ')} updated successfully`);
+      // Real-time will handle the refresh automatically
       return data as unknown as T;
     } catch (error) {
       console.error(`Error updating ${tableName}:`, error);
@@ -142,6 +132,7 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
       if (error) throw error;
       
       toast.success(`${tableName.replace('_', ' ')} deleted successfully`);
+      // Real-time will handle the refresh automatically
       return true;
     } catch (error) {
       console.error(`Error deleting ${tableName}:`, error);
