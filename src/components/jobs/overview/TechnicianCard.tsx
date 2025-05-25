@@ -18,7 +18,7 @@ interface TechnicianCardProps {
 
 export const TechnicianCard = ({ job, jobId, editable = false }: TechnicianCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(job.technician_id || "");
+  const [editValue, setEditValue] = useState(job.technician_id || "unassigned");
   const { updateJob } = useJobs();
   const { technicians } = useTechnicians();
 
@@ -26,7 +26,7 @@ export const TechnicianCard = ({ job, jobId, editable = false }: TechnicianCardP
     if (!jobId) return;
     
     const result = await updateJob(jobId, {
-      technician_id: editValue || null
+      technician_id: editValue === "unassigned" ? null : editValue
     });
     if (result) {
       setIsEditing(false);
@@ -35,7 +35,7 @@ export const TechnicianCard = ({ job, jobId, editable = false }: TechnicianCardP
   };
 
   const handleCancel = () => {
-    setEditValue(job.technician_id || "");
+    setEditValue(job.technician_id || "unassigned");
     setIsEditing(false);
   };
 
@@ -91,7 +91,7 @@ export const TechnicianCard = ({ job, jobId, editable = false }: TechnicianCardP
                 <SelectValue placeholder="Select technician..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {technicians.map((tech) => (
                   <SelectItem key={tech.id} value={tech.id}>
                     {tech.name}
