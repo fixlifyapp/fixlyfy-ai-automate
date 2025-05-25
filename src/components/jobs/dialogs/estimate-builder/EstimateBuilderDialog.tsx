@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -156,7 +157,7 @@ export const EstimateBuilderDialog = ({
             setTechniciansNote(note);
           }
         }}
-        clientInfo={info.clientInfo}
+        clientInfo={clientInfo}
         estimateNumber={estimateNumber}
         estimateId={estimateId}
         estimateTotal={calculateGrandTotal()}
