@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -14,7 +15,7 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
-// Simplified database job type
+// Explicit database job interface
 interface DatabaseJob {
   id: string;
   title: string;
@@ -34,7 +35,7 @@ interface DatabaseJob {
   job_type?: string;
   lead_source?: string;
   service?: string;
-  tasks: any;
+  tasks: unknown;
   created_by?: string;
   clients?: {
     id: string;
@@ -53,23 +54,29 @@ interface DatabaseJob {
   }> | null;
 }
 
-// Simplified transform function
-const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
-  let tasks: string[] = [];
+// Simple task parsing function
+const parseTasks = (tasks: unknown): string[] => {
+  if (!tasks) return [];
   
-  if (dbJob.tasks) {
-    if (typeof dbJob.tasks === 'string') {
-      try {
-        tasks = JSON.parse(dbJob.tasks);
-      } catch {
-        tasks = [];
-      }
-    } else if (Array.isArray(dbJob.tasks)) {
-      tasks = dbJob.tasks;
+  if (typeof tasks === 'string') {
+    try {
+      const parsed = JSON.parse(tasks);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
   }
+  
+  if (Array.isArray(tasks)) {
+    return tasks;
+  }
+  
+  return [];
+};
 
-  return {
+// Simplified transform function with explicit typing
+const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
+  const job: Job = {
     id: dbJob.id,
     title: dbJob.title,
     description: dbJob.description,
@@ -88,13 +95,15 @@ const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
     job_type: dbJob.job_type,
     lead_source: dbJob.lead_source,
     service: dbJob.service,
-    tasks,
+    tasks: parseTasks(dbJob.tasks),
     created_by: dbJob.created_by,
     clients: dbJob.clients,
     estimates: dbJob.estimates,
     invoices: dbJob.invoices,
     custom_fields: []
   };
+
+  return job;
 };
 
 export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
@@ -150,10 +159,17 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         throw error;
       }
 
-      const transformedJobs = (data || []).map((dbJob: any) => transformDatabaseJob(dbJob as DatabaseJob));
+      const transformedJobs: Job[] = [];
+      if (data) {
+        for (const dbJob of data) {
+          const transformedJob = transformDatabaseJob(dbJob as DatabaseJob);
+          transformedJobs.push(transformedJob);
+        }
+      }
+
       setJobs(transformedJobs);
       setTotalJobs(count || 0);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching jobs:", error);
       toast({
         title: "Error",
@@ -206,7 +222,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       if (data) {
         return transformDatabaseJob(data as DatabaseJob);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating job:", error);
       toast({
         title: "Error",
@@ -217,7 +233,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
   };
 
-  const updateJob = async (jobId: string, updates: Partial<Job>): Promise<any> => {
+  const updateJob = async (jobId: string, updates: Partial<Job>): Promise<unknown> => {
     try {
       const updateData = {
         ...updates,
@@ -235,7 +251,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
       await fetchJobs();
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating job:", error);
       toast({
         title: "Error",
@@ -262,7 +278,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
       await fetchJobs();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting job:", error);
       toast({
         title: "Error",
