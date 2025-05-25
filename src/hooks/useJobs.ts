@@ -108,8 +108,22 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       const jobToInsert = {
         id: jobData.id || `JOB-${Date.now()}`,
         title: jobData.title || 'New Job',
-        ...jobData,
-        tasks: typeof jobData.tasks === 'string' ? jobData.tasks : JSON.stringify(jobData.tasks || [])
+        description: jobData.description,
+        status: jobData.status || 'scheduled',
+        client_id: jobData.client_id,
+        technician_id: jobData.technician_id,
+        property_id: jobData.property_id,
+        date: jobData.date,
+        schedule_start: jobData.schedule_start,
+        schedule_end: jobData.schedule_end,
+        revenue: jobData.revenue || 0,
+        tags: jobData.tags || [],
+        notes: jobData.notes,
+        job_type: jobData.job_type,
+        lead_source: jobData.lead_source,
+        service: jobData.service,
+        tasks: typeof jobData.tasks === 'string' ? jobData.tasks : JSON.stringify(jobData.tasks || []),
+        created_by: jobData.created_by
       };
 
       const { data, error } = await supabase
@@ -244,3 +258,5 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     refreshJobs: fetchJobs
   };
 };
+
+export type { Job };

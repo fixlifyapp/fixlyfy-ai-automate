@@ -8,18 +8,22 @@ export interface Job {
   technician_id?: string;
   property_id?: string;
   date?: string;
-  created_at?: string;
-  updated_at?: string;
   schedule_start?: string;
   schedule_end?: string;
-  service?: string;
+  created_at?: string;
+  updated_at?: string;
+  revenue?: number;
+  tags?: string[];
+  notes?: string;
   job_type?: string;
   lead_source?: string;
-  notes?: string;
-  tags?: string[];
-  tasks?: any[];
-  revenue?: number;
-  created_by?: string;
+  service?: string;
+  tasks: string[] | string;
+  custom_fields?: Array<{
+    id: string;
+    name: string;
+    value?: string;
+  }>;
   clients?: {
     id: string;
     name: string;
@@ -29,15 +33,11 @@ export interface Job {
   };
   estimates?: Array<{
     id: string;
-    total_amount?: number;
+    total: number;
   }>;
   invoices?: Array<{
     id: string;
-    total_amount?: number;
+    total: number;
   }>;
-  custom_fields?: Array<{
-    id: string;
-    name: string;
-    value?: string;
-  }>;
+  created_by?: string;
 }
