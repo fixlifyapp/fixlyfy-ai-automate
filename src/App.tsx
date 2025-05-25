@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -82,8 +83,10 @@ function App() {
                     {/* Settings Routes */}
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/settings/configuration" element={<ConfigurationPage />} />
+                    <Route path="/configuration" element={<ConfigurationPage />} />
                     <Route path="/admin/settings" element={<SettingsPage />} />
                     <Route path="/admin/settings/configuration" element={<ConfigurationPage />} />
+                    <Route path="/admin/configuration" element={<ConfigurationPage />} />
                     
                     {/* Admin Routes */}
                     <Route path="/admin/roles" element={<AdminRolesPage />} />
