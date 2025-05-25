@@ -168,13 +168,39 @@ export const InvoiceBuilderDialog = ({
     invoiceBuilder.handleUpdateLineItem(id, updates);
   };
 
-  // Wrapper function to match the expected signature for InvoiceSendDialog
+  // Wrapper function to save invoice and add warranty
   const handleSaveInvoiceWrapper = async (): Promise<boolean> => {
     const result = await invoiceBuilder.saveInvoiceChanges();
     if (result && onInvoiceCreated) {
       onInvoiceCreated(result);
     }
     return result !== null;
+  };
+
+  const handleAddWarranty = (warranty: Product | null, note: string) => {
+    if (warranty) {
+      // Add warranty to the line items
+      const warrantyLineItem: LineItem = {
+        id: `warranty-${Date.now()}`,
+        description: `${warranty.name}: ${warranty.description}`,
+        name: warranty.name,
+        quantity: 1,
+        unitPrice: warranty.price,
+        price: warranty.price,
+        ourPrice: warranty.ourPrice || 0,
+        taxable: false,
+        discount: 0,
+        total: warranty.price
+      };
+      
+      const updatedLineItems = [...invoiceBuilder.lineItems, warrantyLineItem];
+      invoiceBuilder.setLineItems(updatedLineItems);
+      
+      // Update notes with warranty recommendation
+      const currentNotes = invoiceBuilder.notes || "";
+      const warrantyNote = note ? `\n\nWarranty Recommendation: ${note}` : "";
+      invoiceBuilder.setNotes(currentNotes + warrantyNote);
+    }
   };
   
   return (
@@ -305,19 +331,15 @@ export const InvoiceBuilderDialog = ({
       />
       
       {/* Invoice Send Dialog */}
-      {invoiceBuilder.formData.invoiceId && (
-        <InvoiceSendDialog
-          open={isSendDialogOpen}
-          onOpenChange={setIsSendDialogOpen}
-          invoiceId={invoiceBuilder.formData.invoiceId}
-          invoiceNumber={invoiceBuilder.invoiceNumber}
-          clientEmail={jobData?.client?.email}
-          clientPhone={jobData?.client?.phone}
-          onSend={async (recipient, method, message) => {
-            return await invoiceBuilder.sendInvoice(invoiceBuilder.formData.invoiceId!, recipient, method, message);
-          }}
-        />
-      )}
+      <InvoiceSendDialog
+        open={isSendDialogOpen}
+        onOpenChange={setIsSendDialogOpen}
+        onSave={handleSaveInvoiceWrapper}
+        onAddWarranty={handleAddWarranty}
+        clientInfo={jobData?.client}
+        invoiceNumber={invoiceBuilder.invoiceNumber}
+        jobId={jobId}
+      />
     </Dialog>
   );
 };
