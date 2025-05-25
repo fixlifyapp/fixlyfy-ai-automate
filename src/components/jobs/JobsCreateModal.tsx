@@ -16,21 +16,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { useClients } from "@/hooks/useClients";
 import { useJobs } from "@/hooks/useJobs";
-import { CalendarIcon, Check, PlusCircle, Trash2 } from "lucide-react";
+import { CalendarIcon, CaretSortIcon, Check, PlusCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useJobTypes, useLeadSources, useTags } from "@/hooks/useConfigItems";
+import { useJobTypes } from "@/hooks/useJobTypes";
+import { useLeadSources } from "@/hooks/useLeadSources";
+import { useTags } from "@/hooks/useTags";
 
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onJobCreated?: (job: any) => void;
-  preselectedClientId?: string;
-  onSuccess?: (job: any) => void;
 }
 
-export const JobsCreateModal = ({ open, onOpenChange, onJobCreated, preselectedClientId, onSuccess }: JobsCreateModalProps) => {
+export const JobsCreateModal = ({ open, onOpenChange, onJobCreated }: JobsCreateModalProps) => {
   const { clients, isLoading: isClientsLoading } = useClients();
   const { addJob } = useJobs();
   const { jobTypes, isLoading: isJobTypesLoading } = useJobTypes();
@@ -41,7 +41,7 @@ export const JobsCreateModal = ({ open, onOpenChange, onJobCreated, preselectedC
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    clientId: preselectedClientId || '',
+    clientId: '',
     jobType: '',
     leadSource: '',
     tasks: [] as string[],
@@ -57,7 +57,7 @@ export const JobsCreateModal = ({ open, onOpenChange, onJobCreated, preselectedC
     setFormData({
       title: '',
       description: '',
-      clientId: preselectedClientId || '',
+      clientId: '',
       jobType: '',
       leadSource: '',
       tasks: [] as string[],
@@ -69,13 +69,6 @@ export const JobsCreateModal = ({ open, onOpenChange, onJobCreated, preselectedC
     });
     setNewTask('');
   };
-
-  // Set preselected client when modal opens
-  useEffect(() => {
-    if (open && preselectedClientId) {
-      setFormData(prev => ({ ...prev, clientId: preselectedClientId }));
-    }
-  }, [open, preselectedClientId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -153,9 +146,6 @@ export const JobsCreateModal = ({ open, onOpenChange, onJobCreated, preselectedC
         
         if (onJobCreated) {
           onJobCreated(newJob);
-        }
-        if (onSuccess) {
-          onSuccess(newJob);
         }
       }
     } catch (error) {

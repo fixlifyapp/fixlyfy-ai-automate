@@ -20,6 +20,10 @@ const FinancePage = () => {
     enabled: true
   });
 
+  const canRefund = (payment: any) => {
+    return payment.status === 'completed' && payment.amount > 0;
+  };
+
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -41,7 +45,7 @@ const FinancePage = () => {
               key={refreshTrigger} 
               payments={[]} 
               onRefund={() => {}} 
-              canRefund={(payment: any) => payment.status === 'completed' && payment.amount > 0}
+              canRefund={canRefund} 
             />
           </TabsContent>
 

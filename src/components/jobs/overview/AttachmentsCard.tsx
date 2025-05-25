@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -57,16 +58,14 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
     }
   };
 
-  const handleUploadSuccess = async (files: File[]): Promise<boolean> => {
+  const handleUploadSuccess = async (files: File[]) => {
     const success = await uploadAttachments(files);
     if (success) {
       setIsUploadDialogOpen(false);
       if (onUpdate) {
         onUpdate();
       }
-      return true;
     }
-    return false;
   };
 
   if (isLoading) {
