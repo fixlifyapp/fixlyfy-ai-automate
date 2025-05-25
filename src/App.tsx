@@ -1,39 +1,38 @@
 
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { RBACProvider } from "@/components/auth/RBACProvider";
-import { AuthProvider } from "@/hooks/use-auth";
-import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
-import { MessageProvider } from "@/contexts/MessageContext";
+import { AppProviders } from "@/components/ui/AppProviders";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
-import JobsPage from "./pages/JobsPage";
-import JobDetailsPage from "./pages/JobDetailsPage";
 import ClientsPage from "./pages/ClientsPage";
-import ClientDetailPage from "./pages/ClientDetailPage";
+import JobsPage from "./pages/JobsPage";
 import SchedulePage from "./pages/SchedulePage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
+import AuthPage from "./pages/AuthPage";
+import ClientDetailPage from "./pages/ClientDetailPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
 import TeamMemberProfilePage from "./pages/TeamMemberProfilePage";
-import ReportsPage from "./pages/ReportsPage";
-import ReportBuilderPage from "./pages/ReportBuilderPage";
-import SettingsPage from "./pages/SettingsPage";
-import ConfigurationPage from "./pages/ConfigurationPage";
-import AdminRolesPage from "./pages/AdminRolesPage";
-import ConnectCenterPage from "./pages/ConnectCenterPage";
-import MessagesPage from "./pages/MessagesPage";
-import FinancePage from "./pages/FinancePage";
-import EstimatesPage from "./pages/EstimatesPage";
+import JobDetailsPage from "./pages/JobDetailsPage";
 import InvoicesPage from "./pages/InvoicesPage";
-import ProductsPage from "./pages/ProductsPage";
-import InventoryPage from "./pages/InventoryPage";
-import DocumentsPage from "./pages/DocumentsPage";
+import EstimatesPage from "./pages/EstimatesPage";
+import FinancePage from "./pages/FinancePage";
+import MessagesPage from "./pages/MessagesPage";
+import ConnectCenterPage from "./pages/ConnectCenterPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
-import AuthPage from "./pages/AuthPage";
-import PreviewPage from "./pages/PreviewPage";
+import ReportBuilderPage from "./pages/ReportBuilderPage";
+import ConfigurationPage from "./pages/ConfigurationPage";
+import AdminRolesPage from "./pages/AdminRolesPage";
+import DocumentsPage from "./pages/DocumentsPage";
+import InventoryPage from "./pages/InventoryPage";
+import ProductsPage from "./pages/ProductsPage";
 import NotFound from "./pages/NotFound";
+import PreviewPage from "./pages/PreviewPage";
+import EstimateViewPage from "./pages/EstimateViewPage";
 
 const queryClient = new QueryClient();
 
@@ -41,96 +40,42 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <RBACProvider>
-            <GlobalRealtimeProvider>
-              <MessageProvider>
-                <Toaster />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    
-                    {/* Jobs Routes */}
-                    <Route path="/jobs" element={<JobsPage />} />
-                    <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                    <Route path="/admin/jobs" element={<JobsPage />} />
-                    <Route path="/admin/jobs/:id" element={<JobDetailsPage />} />
-                    
-                    {/* Clients Routes */}
-                    <Route path="/clients" element={<ClientsPage />} />
-                    <Route path="/clients/:id" element={<ClientDetailPage />} />
-                    <Route path="/admin/clients" element={<ClientsPage />} />
-                    <Route path="/admin/clients/:id" element={<ClientDetailPage />} />
-                    
-                    {/* Schedule Routes */}
-                    <Route path="/schedule" element={<SchedulePage />} />
-                    <Route path="/admin/schedule" element={<SchedulePage />} />
-                    
-                    {/* Team Routes */}
-                    <Route path="/team" element={<TeamManagementPage />} />
-                    <Route path="/team/:id" element={<TeamMemberProfilePage />} />
-                    <Route path="/admin/team" element={<TeamManagementPage />} />
-                    <Route path="/admin/team/:id" element={<TeamMemberProfilePage />} />
-                    
-                    {/* Reports Routes */}
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/reports/builder" element={<ReportBuilderPage />} />
-                    <Route path="/admin/reports" element={<ReportsPage />} />
-                    <Route path="/admin/reports/builder" element={<ReportBuilderPage />} />
-                    
-                    {/* Settings Routes */}
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/settings/configuration" element={<ConfigurationPage />} />
-                    <Route path="/configuration" element={<ConfigurationPage />} />
-                    <Route path="/admin/settings" element={<SettingsPage />} />
-                    <Route path="/admin/settings/configuration" element={<ConfigurationPage />} />
-                    <Route path="/admin/configuration" element={<ConfigurationPage />} />
-                    
-                    {/* Admin Routes */}
-                    <Route path="/admin/roles" element={<AdminRolesPage />} />
-                    <Route path="/roles" element={<AdminRolesPage />} />
-                    
-                    {/* Communication Routes */}
-                    <Route path="/connect" element={<ConnectCenterPage />} />
-                    <Route path="/admin/connect" element={<ConnectCenterPage />} />
-                    <Route path="/messages" element={<MessagesPage />} />
-                    <Route path="/admin/messages" element={<MessagesPage />} />
-                    
-                    {/* Finance Routes */}
-                    <Route path="/finance" element={<FinancePage />} />
-                    <Route path="/admin/finance" element={<FinancePage />} />
-                    <Route path="/estimates" element={<EstimatesPage />} />
-                    <Route path="/admin/estimates" element={<EstimatesPage />} />
-                    <Route path="/invoices" element={<InvoicesPage />} />
-                    <Route path="/admin/invoices" element={<InvoicesPage />} />
-                    
-                    {/* Inventory Routes */}
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/admin/products" element={<ProductsPage />} />
-                    <Route path="/inventory" element={<InventoryPage />} />
-                    <Route path="/admin/inventory" element={<InventoryPage />} />
-                    
-                    {/* Other Routes */}
-                    <Route path="/documents" element={<DocumentsPage />} />
-                    <Route path="/admin/documents" element={<DocumentsPage />} />
-                    <Route path="/automations" element={<AutomationsPage />} />
-                    <Route path="/admin/automations" element={<AutomationsPage />} />
-                    <Route path="/ai-assistant" element={<AiAssistantPage />} />
-                    <Route path="/admin/ai-assistant" element={<AiAssistantPage />} />
-                    
-                    {/* Preview Route */}
-                    <Route path="/preview/:type" element={<PreviewPage />} />
-                    
-                    {/* Catch-all 404 Route */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </MessageProvider>
-            </GlobalRealtimeProvider>
-          </RBACProvider>
-        </AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppProviders>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/clients/:id" element={<ClientDetailPage />} />
+              <Route path="/jobs" element={<JobsPage />} />
+              <Route path="/jobs/:id" element={<JobDetailsPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/team" element={<TeamManagementPage />} />
+              <Route path="/team/:id" element={<TeamMemberProfilePage />} />
+              <Route path="/invoices" element={<InvoicesPage />} />
+              <Route path="/estimates" element={<EstimatesPage />} />
+              <Route path="/estimate/view/:estimateNumber" element={<EstimateViewPage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/connect" element={<ConnectCenterPage />} />
+              <Route path="/automations" element={<AutomationsPage />} />
+              <Route path="/ai-assistant" element={<AiAssistantPage />} />
+              <Route path="/report-builder" element={<ReportBuilderPage />} />
+              <Route path="/configuration" element={<ConfigurationPage />} />
+              <Route path="/admin/roles" element={<AdminRolesPage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/preview" element={<PreviewPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppProviders>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

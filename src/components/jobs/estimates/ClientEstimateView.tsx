@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ClientWarrantyViewDialog } from "../dialogs/ClientWarrantyViewDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { LineItem } from "../builder/types";
+import { CheckCircle, MessageSquare, FileText } from "lucide-react";
 
 interface ClientEstimateViewProps {
   estimateId: string;
@@ -20,12 +21,15 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
   const [isLoading, setIsLoading] = useState(true);
   const [warrantyItem, setWarrantyItem] = useState<LineItem | null>(null);
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
   
   // Fetch estimate and line items
   useEffect(() => {
     const fetchEstimate = async () => {
       setIsLoading(true);
       try {
+        console.log("Fetching estimate for client view:", estimateId);
+        
         // Fetch the estimate
         const { data: estimateData, error: estimateError } = await supabase
           .from('estimates')
@@ -33,7 +37,12 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
           .eq('id', estimateId)
           .single();
           
-        if (estimateError) throw estimateError;
+        if (estimateError) {
+          console.error("Error fetching estimate:", estimateError);
+          throw estimateError;
+        }
+        
+        console.log("Estimate data loaded:", estimateData);
         
         // Fetch line items
         const { data: itemsData, error: itemsError } = await supabase
@@ -42,13 +51,21 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
           .eq('parent_id', estimateId)
           .eq('parent_type', 'estimate');
           
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error("Error fetching line items:", itemsError);
+          throw itemsError;
+        }
         
-        // Update estimate status to viewed
-        await supabase
-          .from('estimates')
-          .update({ status: 'viewed' })
-          .eq('id', estimateId);
+        console.log("Line items loaded:", itemsData);
+        
+        // Update estimate status to viewed if it's still draft
+        if (estimateData.status === 'draft') {
+          await supabase
+            .from('estimates')
+            .update({ status: 'viewed' })
+            .eq('id', estimateId);
+          estimateData.status = 'viewed';
+        }
         
         // Set the data
         setEstimate(estimateData);
@@ -123,11 +140,37 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
     return calculateSubtotal() + calculateTax();
   };
   
+  // Handle estimate acceptance
+  const handleAcceptEstimate = async () => {
+    setIsAccepting(true);
+    try {
+      // Update estimate status to accepted
+      const { error } = await supabase
+        .from('estimates')
+        .update({ 
+          status: 'accepted',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', estimateId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setEstimate(prev => ({ ...prev, status: 'accepted' }));
+      
+      toast.success("Estimate accepted successfully! We'll be in touch soon.");
+    } catch (error) {
+      console.error("Error accepting estimate:", error);
+      toast.error("Failed to accept estimate. Please try again.");
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+  
   // Handle warranty acceptance
   const handleAcceptWarranty = async () => {
-    // In a real implementation, we would update the database
-    // For now, just show a success message
     toast.success("Warranty has been added to your order");
+    setIsWarrantyDialogOpen(false);
   };
   
   // Handle warranty decline
@@ -156,6 +199,7 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
         .eq('id', estimateId);
         
       toast.success("Warranty has been removed from your estimate");
+      setIsWarrantyDialogOpen(false);
     } catch (error) {
       console.error("Error declining warranty:", error);
       toast.error("Failed to decline warranty");
@@ -178,6 +222,8 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
     );
   }
   
+  const isAccepted = estimate.status === 'accepted';
+  
   return (
     <div className="container max-w-4xl mx-auto p-4">
       <Card className="p-6">
@@ -188,9 +234,10 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
               Created: {new Date(estimate.created_at).toLocaleDateString()}
             </p>
           </div>
-          <div className="mt-4 md:mt-0">
-            <Badge className="mb-2">
+          <div className="mt-4 md:mt-0 text-right">
+            <Badge className={`mb-2 ${isAccepted ? 'bg-green-100 text-green-800' : ''}`}>
               {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
+              {isAccepted && <CheckCircle className="ml-1 h-3 w-3" />}
             </Badge>
             <p className="text-xl font-semibold">${calculateTotal().toFixed(2)}</p>
           </div>
@@ -231,6 +278,18 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
           </div>
         )}
         
+        {isAccepted && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+              <span className="text-green-800 font-medium">Estimate Accepted</span>
+            </div>
+            <p className="text-green-700 text-sm mt-1">
+              Thank you for accepting this estimate! We'll be in touch soon to schedule the work.
+            </p>
+          </div>
+        )}
+        
         <div className="flex flex-col sm:flex-row gap-3 justify-end">
           {warrantyItem && (
             <Button 
@@ -238,11 +297,27 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
               onClick={() => setIsWarrantyDialogOpen(true)}
               className="sm:mr-auto"
             >
+              <FileText className="mr-2 h-4 w-4" />
               View Recommended Warranty
             </Button>
           )}
-          <Button>Accept Estimate</Button>
-          <Button variant="outline">Request Changes</Button>
+          
+          {!isAccepted && (
+            <>
+              <Button 
+                onClick={handleAcceptEstimate}
+                disabled={isAccepting}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isAccepting ? "Accepting..." : "Accept Estimate"}
+                <CheckCircle className="ml-2 h-4 w-4" />
+              </Button>
+              <Button variant="outline">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Request Changes
+              </Button>
+            </>
+          )}
         </div>
       </Card>
       

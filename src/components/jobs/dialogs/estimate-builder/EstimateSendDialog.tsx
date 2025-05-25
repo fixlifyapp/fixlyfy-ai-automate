@@ -83,15 +83,15 @@ const formatPhoneForTwilio = (phoneNumber: string): string => {
   return phoneNumber; // Return original if we can't format it
 };
 
-// Utility function to validate phone number
+// Simplified validation functions
 const isValidPhoneNumber = (phoneNumber: string): boolean => {
-  const formatted = formatPhoneForTwilio(phoneNumber);
-  // Check if it starts with + and has at least 10 digits after country code
-  return /^\+\d{10,15}$/.test(formatted);
+  if (!phoneNumber) return false;
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  return cleaned.length >= 10; // At least 10 digits
 };
 
-// Utility function to validate email
 const isValidEmail = (email: string): boolean => {
+  if (!email) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
@@ -121,34 +121,6 @@ export const EstimateSendDialog = ({
       fetchEstimateDetails();
     }
   }, [open, estimateNumber]);
-
-  // Update sendTo when sendMethod changes and validate
-  useEffect(() => {
-    setValidationError(""); // Clear previous validation errors
-    
-    if (estimateDetails) {
-      if (sendMethod === "email" && estimateDetails.client_email) {
-        setSendTo(estimateDetails.client_email);
-      } else if (sendMethod === "sms" && estimateDetails.client_phone) {
-        const formattedPhone = formatPhoneForTwilio(estimateDetails.client_phone);
-        setSendTo(formattedPhone);
-        console.log("Formatted phone for SMS:", formattedPhone);
-      } else {
-        setSendTo("");
-      }
-    } else if (clientInfo) {
-      // Fallback to clientInfo if estimateDetails not available
-      if (sendMethod === "email" && clientInfo.email) {
-        setSendTo(clientInfo.email);
-      } else if (sendMethod === "sms" && clientInfo.phone) {
-        const formattedPhone = formatPhoneForTwilio(clientInfo.phone);
-        setSendTo(formattedPhone);
-        console.log("Formatted phone for SMS (fallback):", formattedPhone);
-      } else {
-        setSendTo("");
-      }
-    }
-  }, [sendMethod, estimateDetails, clientInfo]);
 
   const fetchEstimateDetails = async () => {
     setIsLoading(true);
@@ -227,24 +199,6 @@ export const EstimateSendDialog = ({
         }
       }
 
-      // Set default send method based on available contact info
-      const finalDetails = details || estimateDetails;
-      const hasEmail = !!(finalDetails?.client_email || clientInfo?.email);
-      const hasPhone = !!(finalDetails?.client_phone || clientInfo?.phone);
-      
-      console.log("Contact info available - Email:", hasEmail, "Phone:", hasPhone);
-      
-      if (hasEmail) {
-        setSendMethod("email");
-        setSendTo(finalDetails?.client_email || clientInfo?.email || "");
-      } else if (hasPhone) {
-        setSendMethod("sms");
-        const phoneToFormat = finalDetails?.client_phone || clientInfo?.phone || "";
-        const formattedPhone = formatPhoneForTwilio(phoneToFormat);
-        setSendTo(formattedPhone);
-        console.log("Auto-selected SMS with formatted phone:", formattedPhone);
-      }
-
     } catch (error: any) {
       console.error('Error in fetchEstimateDetails:', error);
       toast.error('Failed to load estimate data');
@@ -252,6 +206,52 @@ export const EstimateSendDialog = ({
       setIsLoading(false);
     }
   };
+
+  // Get client contact info with improved data flow
+  const getClientContactInfo = () => {
+    // First try estimateDetails, then fallback to clientInfo
+    const contactData = {
+      name: estimateDetails?.client_name || clientInfo?.name || 'Unknown Client',
+      email: estimateDetails?.client_email || clientInfo?.email || '',
+      phone: estimateDetails?.client_phone || clientInfo?.phone || ''
+    };
+    
+    console.log("Final contact data:", contactData);
+    return contactData;
+  };
+
+  const contactInfo = getClientContactInfo();
+  
+  // Simplified contact info validation
+  const hasValidEmail = isValidEmail(contactInfo.email);
+  const hasValidPhone = isValidPhoneNumber(contactInfo.phone);
+  
+  console.log("Contact validation - Email valid:", hasValidEmail, "Phone valid:", hasValidPhone);
+  console.log("Contact info:", contactInfo);
+
+  // Set default send method and recipient when contact info is available
+  useEffect(() => {
+    if (contactInfo.name !== 'Unknown Client') {
+      setValidationError(""); // Clear previous validation errors
+      
+      if (hasValidEmail && sendMethod === "email") {
+        setSendTo(contactInfo.email);
+      } else if (hasValidPhone && sendMethod === "sms") {
+        const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+        setSendTo(formattedPhone);
+        console.log("Auto-filled phone number:", formattedPhone);
+      } else if (hasValidEmail && !hasValidPhone) {
+        // Default to email if only email is available
+        setSendMethod("email");
+        setSendTo(contactInfo.email);
+      } else if (hasValidPhone && !hasValidEmail) {
+        // Default to SMS if only phone is available
+        setSendMethod("sms");
+        const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+        setSendTo(formattedPhone);
+      }
+    }
+  }, [contactInfo, sendMethod, hasValidEmail, hasValidPhone]);
 
   // Type guard functions
   const hasFullEstimateDetails = (details: EstimateDetails | null): details is EstimateDetails => {
@@ -279,27 +279,6 @@ export const EstimateSendDialog = ({
     return undefined;
   };
 
-  // Get client contact info with proper fallbacks
-  const getClientContactInfo = () => {
-    if (estimateDetails) {
-      return {
-        name: estimateDetails.client_name,
-        email: estimateDetails.client_email,
-        phone: estimateDetails.client_phone
-      };
-    }
-    
-    return {
-      name: clientInfo?.name || 'Unknown Client',
-      email: clientInfo?.email,
-      phone: clientInfo?.phone
-    };
-  };
-
-  const contactInfo = getClientContactInfo();
-  const hasEmail = !!contactInfo.email && isValidEmail(contactInfo.email);
-  const hasPhone = !!contactInfo.phone && isValidPhoneNumber(contactInfo.phone);
-  
   // Reset the dialog state when opened
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
@@ -344,7 +323,16 @@ export const EstimateSendDialog = ({
     console.log("Send method changed to:", value);
     setSendMethod(value);
     setValidationError("");
-    // The useEffect above will handle updating sendTo
+    
+    // Update sendTo based on new method
+    if (value === "email" && hasValidEmail) {
+      setSendTo(contactInfo.email);
+    } else if (value === "sms" && hasValidPhone) {
+      const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+      setSendTo(formattedPhone);
+    } else {
+      setSendTo("");
+    }
   };
 
   // Validate recipient input
@@ -359,7 +347,7 @@ export const EstimateSendDialog = ({
       }
     } else if (method === "sms") {
       if (!isValidPhoneNumber(recipient)) {
-        return "Please enter a valid phone number (e.g., +1234567890 or 555-123-4567)";
+        return "Please enter a valid phone number";
       }
     }
 
@@ -385,10 +373,10 @@ export const EstimateSendDialog = ({
     }
 
     // Validate recipient
-    const validationError = validateRecipient(sendMethod, sendTo);
-    if (validationError) {
-      setValidationError(validationError);
-      toast.error(validationError);
+    const validationErrorMsg = validateRecipient(sendMethod, sendTo);
+    if (validationErrorMsg) {
+      setValidationError(validationErrorMsg);
+      toast.error(validationErrorMsg);
       return;
     }
 
@@ -399,7 +387,7 @@ export const EstimateSendDialog = ({
       console.log("Final formatted phone number:", finalRecipient);
       
       if (!isValidPhoneNumber(finalRecipient)) {
-        const error = "Invalid phone number format. Please use format like +1234567890";
+        const error = "Invalid phone number format";
         setValidationError(error);
         toast.error(error);
         return;
@@ -432,8 +420,8 @@ export const EstimateSendDialog = ({
           recipient: finalRecipient,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. Please review and let us know if you have any questions.`
-            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateTotal.toFixed(2)}`,
+            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. View it here: ${window.location.origin}/estimate/view/${estimateNumber}`
+            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateTotal.toFixed(2)}. View online: ${window.location.origin}/estimate/view/${estimateNumber}`,
           status: 'pending',
           estimate_number: estimateNumber,
           client_name: contactInfo.name,
@@ -463,7 +451,8 @@ export const EstimateSendDialog = ({
         })),
         total: estimateTotal,
         taxRate: 13, // Default tax rate - could be made configurable
-        notes: customNote || estimateNotes
+        notes: customNote || estimateNotes,
+        viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`
       };
 
       console.log("Calling send-estimate edge function with data:", {
@@ -587,13 +576,13 @@ export const EstimateSendDialog = ({
                 <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
                   sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
                 }`}>
-                  <RadioGroupItem value="email" id="email" className="mt-1" disabled={!hasEmail} />
+                  <RadioGroupItem value="email" id="email" className="mt-1" disabled={!hasValidEmail} />
                   <div className="flex-1">
                     <Label htmlFor="email" className="flex items-center gap-2 font-medium cursor-pointer">
                       <Mail size={16} />
                       Send via Email
                     </Label>
-                    {hasEmail ? (
+                    {hasValidEmail ? (
                       <p className="text-sm text-muted-foreground mt-1">{contactInfo.email}</p>
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No valid email available for this client</p>
@@ -604,13 +593,13 @@ export const EstimateSendDialog = ({
                 <div className={`flex items-start space-x-3 border rounded-md p-3 hover:bg-muted/50 cursor-pointer ${
                   sendMethod === "sms" ? "border-primary bg-primary/5" : "border-input"
                 }`}>
-                  <RadioGroupItem value="sms" id="sms" className="mt-1" disabled={!hasPhone} />
+                  <RadioGroupItem value="sms" id="sms" className="mt-1" disabled={!hasValidPhone} />
                   <div className="flex-1">
                     <Label htmlFor="sms" className="flex items-center gap-2 font-medium cursor-pointer">
                       <MessageSquare size={16} />
                       Send via Text Message
                     </Label>
-                    {hasPhone ? (
+                    {hasValidPhone ? (
                       <p className="text-sm text-muted-foreground mt-1">{contactInfo.phone}</p>
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No valid phone number available for this client</p>
