@@ -114,7 +114,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
       const { data, error } = await supabase
         .from('jobs')
-        .insert([jobToInsert])
+        .insert(jobToInsert)
         .select()
         .single();
 
@@ -244,5 +244,3 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     refreshJobs: fetchJobs
   };
 };
-
-export type { Job };
