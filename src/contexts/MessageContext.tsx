@@ -57,14 +57,21 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Use refs to prevent duplicate subscriptions
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
+  const lastRefreshRef = useRef<number>(0);
 
   // Debounced refresh to prevent excessive calls
   const refreshTimeoutRef = useRef<NodeJS.Timeout>();
   const debouncedRefresh = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRefreshRef.current < 1000) {
+      return; // Prevent rapid successive calls
+    }
+    
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
     refreshTimeoutRef.current = setTimeout(() => {
+      lastRefreshRef.current = Date.now();
       refreshConversations();
     }, 500);
   }, []);
@@ -81,7 +88,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     const messagesChannel = supabase
-      .channel('unified-messages-v2')
+      .channel('unified-messages-v3')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
@@ -118,7 +125,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       isSubscribedRef.current = false;
     };
-  }, [debouncedRefresh]);
+  }, []); // Remove debouncedRefresh from dependencies to prevent re-subscriptions
 
   const refreshConversations = useCallback(async () => {
     try {
@@ -154,7 +161,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             const lastMessage = messages?.[messages.length - 1];
 
-            // Format messages with proper error handling
             const formattedMessages: Message[] = (messages || []).map(msg => ({
               id: msg.id || '',
               body: msg.body || '',
@@ -179,7 +185,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
           })
         );
 
-        // Filter out null results from failed conversation fetches
         const validConversations = formattedConversations.filter(conv => conv !== null) as Conversation[];
         setConversations(validConversations);
 
@@ -199,7 +204,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const findOrCreateConversation = useCallback(async (clientId: string) => {
     try {
-      // First, try to find existing conversation for this client
       const { data: existingConv, error: findError } = await supabase
         .from('conversations')
         .select('id')
@@ -215,7 +219,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return existingConv.id;
       }
 
-      // Create new conversation only if none exists
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
@@ -243,11 +246,9 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsLoading(true);
     
     try {
-      // Find existing conversation for this client
       let conversation = conversations.find(c => c.client.id === client.id);
       
       if (!conversation && client.id) {
-        // Try to find conversation in database
         const { data: existingConv } = await supabase
           .from('conversations')
           .select(`
@@ -258,14 +259,12 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
           .single();
 
         if (existingConv) {
-          // Fetch messages for this conversation
           const { data: messages } = await supabase
             .from('messages')
             .select('*')
             .eq('conversation_id', existingConv.id)
             .order('created_at', { ascending: true });
 
-          // Format messages to ensure correct types
           const formattedMessages: Message[] = (messages || []).map(msg => ({
             id: msg.id,
             body: msg.body || '',
@@ -289,7 +288,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (!conversation) {
-        // Create new conversation placeholder - don't create in DB yet
         conversation = {
           id: '',
           client: {
@@ -331,7 +329,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       console.log('Sending message via Twilio:', { content, phone: client.phone });
       
-      // Send SMS via Twilio with better error handling
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           to: client.phone,
@@ -351,7 +348,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       console.log('SMS sent successfully:', data.sid);
 
-      // Find or create conversation - always check for existing first
       let conversationId = activeConversation.id;
       
       if (!conversationId && client.id) {
@@ -361,7 +357,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // Store message in database
       if (conversationId) {
         const { error: messageError } = await supabase
           .from('messages')
@@ -380,7 +375,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
           throw new Error('Failed to save message to database');
         }
 
-        // Update conversation timestamp
         const { error: updateError } = await supabase
           .from('conversations')
           .update({ last_message_at: new Date().toISOString() })
@@ -392,7 +386,6 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         toast.success("Message sent successfully");
         
-        // Refresh conversations to show the new message
         setTimeout(() => refreshConversations(), 100);
       }
     } catch (error: any) {

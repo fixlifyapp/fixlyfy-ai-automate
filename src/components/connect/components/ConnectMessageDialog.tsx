@@ -15,22 +15,25 @@ interface ConnectMessageDialogProps {
 }
 
 export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectMessageDialogProps) => {
-  const { sendMessage, isSending } = useMessageContext();
+  const { activeConversation, sendMessage, isSending } = useMessageContext();
   const [messageText, setMessageText] = useState("");
+
+  // Use activeConversation from context if available, otherwise fall back to prop
+  const currentConversation = activeConversation || conversation;
 
   const handleUseSuggestion = (content: string) => {
     setMessageText(content);
   };
 
   const { isAILoading, handleSuggestResponse } = useMessageAI({
-    messages: conversation?.messages || [],
-    client: conversation?.client || { name: "", id: "" },
-    jobId: '', // No job context in connect center
+    messages: currentConversation?.messages || [],
+    client: currentConversation?.client || { name: "", id: "" },
+    jobId: '',
     onUseSuggestion: handleUseSuggestion
   });
 
   const handleSend = async () => {
-    if (!messageText.trim() || isSending || !conversation) return;
+    if (!messageText.trim() || isSending || !currentConversation) return;
     
     await sendMessage(messageText);
     setMessageText("");
@@ -43,29 +46,39 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
     }
   };
 
-  // Convert Message[] to UnifiedMessage[] format
+  // Convert messages to the format expected by UnifiedMessageList
   const convertMessagesToUnified = (messages: any[]) => {
+    if (!messages) return [];
+    
+    // Check if messages are already in the correct format (from MessageContext)
+    if (messages.length > 0 && messages[0].body !== undefined) {
+      return messages;
+    }
+    
+    // Convert from connect center format to unified format
     return messages.map(msg => ({
       id: msg.id,
-      body: msg.text,
+      body: msg.text || msg.body,
       direction: msg.isClient ? 'inbound' as const : 'outbound' as const,
-      created_at: msg.timestamp,
+      created_at: msg.timestamp || msg.created_at,
       sender: msg.sender,
       recipient: undefined
     }));
   };
 
-  if (!conversation) return null;
+  if (!currentConversation) return null;
+
+  const unifiedMessages = convertMessagesToUnified(currentConversation.messages || []);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Message {conversation.client.name}
-            {conversation.client.phone && (
+            Message {currentConversation.client.name}
+            {currentConversation.client.phone && (
               <span className="text-sm font-normal text-muted-foreground ml-2">
-                ({conversation.client.phone})
+                ({currentConversation.client.phone})
               </span>
             )}
           </DialogTitle>
@@ -74,10 +87,10 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
           <div className="flex-1 overflow-y-auto">
             <UnifiedMessageList 
-              messages={convertMessagesToUnified(conversation.messages)}
+              messages={unifiedMessages}
               isLoading={false}
-              clientName={conversation.client.name}
-              clientInfo={conversation.client}
+              clientName={currentConversation.client.name}
+              clientInfo={currentConversation.client}
             />
           </div>
           
