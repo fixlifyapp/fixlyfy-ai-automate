@@ -37,10 +37,20 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
         .from('job_attachments')
         .select('*')
         .eq('job_id', jobId)
-        .order('created_at', { ascending: false });
+        .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
-      setAttachments(data || []);
+      
+      // Map uploaded_at to created_at for the interface
+      const mappedData = (data || []).map(item => ({
+        id: item.id,
+        file_name: item.file_name,
+        file_path: item.file_path,
+        file_size: item.file_size,
+        created_at: item.uploaded_at
+      }));
+      
+      setAttachments(mappedData);
     } catch (error) {
       console.error('Error fetching attachments:', error);
       toast.error('Failed to load attachments');

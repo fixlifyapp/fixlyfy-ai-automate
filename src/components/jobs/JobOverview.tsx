@@ -48,7 +48,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
         </div>
         
         <div className="space-y-6">
-          <AdditionalInfoCard job={job} jobId={jobId} />
+          <AdditionalInfoCard job={job} />
           <ScheduleInfoCard job={job} jobId={jobId} editable />
           <AttachmentsCard jobId={jobId} editable />
         </div>
