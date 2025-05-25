@@ -72,7 +72,7 @@ const parseTasks = (tasks: any): string[] => {
 };
 
 const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
-  const baseJob: Job = {
+  return {
     id: dbJob.id,
     title: dbJob.title,
     description: dbJob.description,
@@ -98,11 +98,19 @@ const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
     invoices: dbJob.invoices,
     custom_fields: []
   };
-  
-  return baseJob;
 };
 
-export const useJobsData = (clientId?: string) => {
+interface UseJobsDataReturn {
+  jobs: Job[];
+  isLoading: boolean;
+  totalJobs: number;
+  filters: JobsFilter;
+  updateFilters: (newFilters: JobsFilter) => void;
+  fetchJobs: () => Promise<void>;
+  transformDatabaseJob: (dbJob: DatabaseJob) => Job;
+}
+
+export const useJobsData = (clientId?: string): UseJobsDataReturn => {
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
