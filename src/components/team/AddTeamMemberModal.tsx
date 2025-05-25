@@ -19,11 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
 import { UserRole } from "@/components/auth/types";
+import { useTeamInvitations } from "@/hooks/useTeamInvitations";
 
 interface AddTeamMemberModalProps {
   open: boolean;
@@ -36,63 +34,41 @@ export const AddTeamMemberModal = ({
 }: AddTeamMemberModalProps) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<UserRole>("technician");
   const [serviceArea, setServiceArea] = useState("");
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { allRoles } = useRBAC();
+  const { sendInvitation, isSubmitting } = useTeamInvitations();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     
-    try {
-      // Generate a unique ID for the new team member
-      const id = uuidv4();
-      
-      // Insert the new team member into the profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          id,
-          name,
-          role,
-          avatar_url: "https://github.com/shadcn.png",
-          // Note: We don't include email in the Supabase profiles table
-          // since that table doesn't have an email field
-        });
-      
-      if (error) throw error;
-      
-      // In a real app, this would also send an invitation email
-      if (sendWelcomeEmail) {
-        console.log(`[Simulation] Sending welcome email to ${email}`);
-        // This would integrate with an email service in a real app
-      }
-      
-      toast.success(`Invitation sent to ${email}`);
-      
-      // Reset form and close modal
+    const result = await sendInvitation({
+      name,
+      email,
+      phone: phone || undefined,
+      role,
+      serviceArea: serviceArea || undefined,
+      sendWelcomeEmail
+    });
+    
+    if (result.success) {
       resetForm();
       onOpenChange(false);
       
-      // Refresh the page after a short delay to show the new team member
+      // Refresh the page after a short delay to show updates
       setTimeout(() => {
         window.location.reload();
       }, 500);
-      
-    } catch (error) {
-      console.error("Error creating team member:", error);
-      toast.error("Failed to create team member");
-    } finally {
-      setIsSubmitting(false);
     }
   };
   
   const resetForm = () => {
     setName("");
     setEmail("");
+    setPhone("");
     setRole("technician");
     setServiceArea("");
     setSendWelcomeEmail(true);
@@ -105,7 +81,7 @@ export const AddTeamMemberModal = ({
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
             <DialogDescription>
-              Send an invitation to join your team. They'll receive an email with setup instructions.
+              Send an invitation to join your team. They'll receive an SMS and/or email with setup instructions.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-4">
@@ -134,6 +110,19 @@ export const AddTeamMemberModal = ({
                 className="col-span-3"
                 required
                 placeholder="john.smith@example.com"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="col-span-3"
+                placeholder="+1234567890 (for SMS notifications)"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -176,7 +165,7 @@ export const AddTeamMemberModal = ({
                   onCheckedChange={(checked) => setSendWelcomeEmail(checked === true)}
                 />
                 <Label htmlFor="sendEmail" className="cursor-pointer">
-                  Send welcome email with setup instructions
+                  Send welcome message with setup instructions
                 </Label>
               </div>
             </div>

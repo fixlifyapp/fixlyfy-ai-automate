@@ -1492,6 +1492,51 @@ export type Database = {
         }
         Relationships: []
       }
+      team_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          name: string
+          phone: string | null
+          role: string
+          service_area: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          name: string
+          phone?: string | null
+          role?: string
+          service_area?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          name?: string
+          phone?: string | null
+          role?: string
+          service_area?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_member_commissions: {
         Row: {
           base_rate: number | null

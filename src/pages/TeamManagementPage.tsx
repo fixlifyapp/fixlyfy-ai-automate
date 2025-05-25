@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -24,6 +23,7 @@ import { TeamMemberProfile } from "@/types/team-member";
 import { toast } from "sonner";
 import { generateTestTeamMembers } from "@/utils/test-data";
 import { supabase } from "@/integrations/supabase/client";
+import { TeamInvitations } from "@/components/team/TeamInvitations";
 
 // Helper function to convert TeamMember to TeamMemberProfile
 const convertToTeamMemberProfile = (member: TeamMember): TeamMemberProfile => {
@@ -201,6 +201,14 @@ const TeamManagementPage = () => {
             >
               {isImporting ? "Importing..." : "Import Test Data"}
             </GradientButton>
+          </div>
+        </AnimatedContainer>
+      )}
+
+      {isAdmin && (
+        <AnimatedContainer animation="fade-in" delay={150}>
+          <div className="mb-6">
+            <TeamInvitations />
           </div>
         </AnimatedContainer>
       )}
