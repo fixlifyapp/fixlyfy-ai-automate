@@ -32,11 +32,7 @@ export const useClientProperties = (clientId?: string) => {
         setProperties(data || []);
       } catch (error) {
         console.error("Error loading client properties:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load properties",
-          variant: "destructive"
-        });
+        toast.error("Failed to load properties");
       } finally {
         setIsLoading(false);
       }
@@ -63,20 +59,13 @@ export const useClientProperties = (clientId?: string) => {
         
       if (error) throw error;
       
-      toast({
-        title: "Success",
-        description: "Property added successfully"
-      });
+      toast.success("Property added successfully");
       
       setRefreshTrigger(prev => prev + 1);
       return data;
     } catch (error) {
       console.error('Error adding property:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add property",
-        variant: "destructive"
-      });
+      toast.error("Failed to add property");
       throw error;
     }
   };
@@ -104,20 +93,13 @@ export const useClientProperties = (clientId?: string) => {
         
       if (error) throw error;
       
-      toast({
-        title: "Success",
-        description: "Property updated successfully"
-      });
+      toast.success("Property updated successfully");
       
       setRefreshTrigger(prev => prev + 1);
       return data;
     } catch (error) {
       console.error('Error updating property:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update property",
-        variant: "destructive"
-      });
+      toast.error("Failed to update property");
       throw error;
     }
   };
@@ -134,11 +116,7 @@ export const useClientProperties = (clientId?: string) => {
       if (jobsError) throw jobsError;
 
       if (jobs && jobs.length > 0) {
-        toast({
-          title: "Cannot Delete",
-          description: "This property has jobs associated with it. Please reassign or delete those jobs first.",
-          variant: "destructive"
-        });
+        toast.error("This property has jobs associated with it. Please reassign or delete those jobs first.");
         return false;
       }
 
@@ -149,20 +127,13 @@ export const useClientProperties = (clientId?: string) => {
         
       if (error) throw error;
       
-      toast({
-        title: "Success",
-        description: "Property deleted successfully"
-      });
+      toast.success("Property deleted successfully");
       
       setRefreshTrigger(prev => prev + 1);
       return true;
     } catch (error) {
       console.error('Error deleting property:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete property",
-        variant: "destructive"
-      });
+      toast.error("Failed to delete property");
       return false;
     }
   };

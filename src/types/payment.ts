@@ -1,18 +1,27 @@
 
-export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
-export type PaymentStatus = "paid" | "refunded" | "disputed";
-
 export interface Payment {
   id: string;
-  date: string;
-  clientId: string;
-  clientName: string;
-  jobId: string;
+  invoice_id: string;
   amount: number;
-  method: PaymentMethod;
-  status: PaymentStatus;
-  reference?: string;
+  method: string;
+  date: string;
   notes?: string;
-  technicianId?: string;
-  technicianName?: string;
+  reference?: string;
+  status?: string;
+  client_id?: string;
+  job_id?: string;
+  job_title?: string;
+  invoice_number?: string;
+  technician_id?: string;
+  technician_name?: string;
+  created_at: string;
 }
+
+export interface PaymentInput {
+  amount: number;
+  method: string;
+  date: string;
+  notes?: string;
+}
+
+export type PaymentMethod = 'credit-card' | 'cash' | 'cheque' | 'e-transfer';
