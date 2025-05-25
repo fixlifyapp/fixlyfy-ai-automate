@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -56,6 +57,44 @@ interface LineItem {
 
 type SendStep = "warranty" | "send-method" | "confirmation";
 
+// Utility function to format phone number for Twilio
+const formatPhoneForTwilio = (phoneNumber: string): string => {
+  if (!phoneNumber) return "";
+  
+  // Remove all non-numeric characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // If it's already in international format with country code, return as is
+  if (cleaned.startsWith('1') && cleaned.length === 11) {
+    return `+${cleaned}`;
+  }
+  
+  // If it's a 10-digit US number, add +1
+  if (cleaned.length === 10) {
+    return `+1${cleaned}`;
+  }
+  
+  // If it already has a country code but no +, add it
+  if (cleaned.length > 10) {
+    return `+${cleaned}`;
+  }
+  
+  console.warn("Invalid phone number format:", phoneNumber);
+  return phoneNumber; // Return original if we can't format it
+};
+
+// Utility function to validate phone number
+const isValidPhoneNumber = (phoneNumber: string): boolean => {
+  const formatted = formatPhoneForTwilio(phoneNumber);
+  // Check if it starts with + and has at least 10 digits after country code
+  return /^\+\d{10,15}$/.test(formatted);
+};
+
+// Utility function to validate email
+const isValidEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 export const EstimateSendDialog = ({
   open,
   onOpenChange,
@@ -73,6 +112,7 @@ export const EstimateSendDialog = ({
   const [estimateDetails, setEstimateDetails] = useState<EstimateDetails | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string>("");
   
   // Fetch estimate and client details when dialog opens
   useEffect(() => {
@@ -82,13 +122,17 @@ export const EstimateSendDialog = ({
     }
   }, [open, estimateNumber]);
 
-  // Update sendTo when sendMethod changes
+  // Update sendTo when sendMethod changes and validate
   useEffect(() => {
+    setValidationError(""); // Clear previous validation errors
+    
     if (estimateDetails) {
       if (sendMethod === "email" && estimateDetails.client_email) {
         setSendTo(estimateDetails.client_email);
       } else if (sendMethod === "sms" && estimateDetails.client_phone) {
-        setSendTo(estimateDetails.client_phone);
+        const formattedPhone = formatPhoneForTwilio(estimateDetails.client_phone);
+        setSendTo(formattedPhone);
+        console.log("Formatted phone for SMS:", formattedPhone);
       } else {
         setSendTo("");
       }
@@ -97,7 +141,9 @@ export const EstimateSendDialog = ({
       if (sendMethod === "email" && clientInfo.email) {
         setSendTo(clientInfo.email);
       } else if (sendMethod === "sms" && clientInfo.phone) {
-        setSendTo(clientInfo.phone);
+        const formattedPhone = formatPhoneForTwilio(clientInfo.phone);
+        setSendTo(formattedPhone);
+        console.log("Formatted phone for SMS (fallback):", formattedPhone);
       } else {
         setSendTo("");
       }
@@ -186,12 +232,17 @@ export const EstimateSendDialog = ({
       const hasEmail = !!(finalDetails?.client_email || clientInfo?.email);
       const hasPhone = !!(finalDetails?.client_phone || clientInfo?.phone);
       
+      console.log("Contact info available - Email:", hasEmail, "Phone:", hasPhone);
+      
       if (hasEmail) {
         setSendMethod("email");
         setSendTo(finalDetails?.client_email || clientInfo?.email || "");
       } else if (hasPhone) {
         setSendMethod("sms");
-        setSendTo(finalDetails?.client_phone || clientInfo?.phone || "");
+        const phoneToFormat = finalDetails?.client_phone || clientInfo?.phone || "";
+        const formattedPhone = formatPhoneForTwilio(phoneToFormat);
+        setSendTo(formattedPhone);
+        console.log("Auto-selected SMS with formatted phone:", formattedPhone);
       }
 
     } catch (error: any) {
@@ -246,8 +297,8 @@ export const EstimateSendDialog = ({
   };
 
   const contactInfo = getClientContactInfo();
-  const hasEmail = !!contactInfo.email;
-  const hasPhone = !!contactInfo.phone;
+  const hasEmail = !!contactInfo.email && isValidEmail(contactInfo.email);
+  const hasPhone = !!contactInfo.phone && isValidPhoneNumber(contactInfo.phone);
   
   // Reset the dialog state when opened
   const handleOpenChange = (newOpen: boolean) => {
@@ -256,12 +307,14 @@ export const EstimateSendDialog = ({
       setCurrentStep("warranty");
       setIsProcessing(false);
       setCustomNote("");
+      setValidationError("");
     } else {
       // Clear data when closing
       console.log("Dialog closing, clearing data");
       setEstimateDetails(null);
       setLineItems([]);
       setSendTo("");
+      setValidationError("");
     }
     onOpenChange(newOpen);
   };
@@ -286,10 +339,31 @@ export const EstimateSendDialog = ({
     setCurrentStep("send-method");
   };
 
-  // Handle send method change
+  // Handle send method change with validation
   const handleSendMethodChange = (value: "email" | "sms") => {
+    console.log("Send method changed to:", value);
     setSendMethod(value);
+    setValidationError("");
     // The useEffect above will handle updating sendTo
+  };
+
+  // Validate recipient input
+  const validateRecipient = (method: "email" | "sms", recipient: string): string | null => {
+    if (!recipient.trim()) {
+      return `Please enter a ${method === "email" ? "email address" : "phone number"}`;
+    }
+
+    if (method === "email") {
+      if (!isValidEmail(recipient)) {
+        return "Please enter a valid email address";
+      }
+    } else if (method === "sms") {
+      if (!isValidPhoneNumber(recipient)) {
+        return "Please enter a valid phone number (e.g., +1234567890 or 555-123-4567)";
+      }
+    }
+
+    return null;
   };
   
   // Send the estimate to the client
@@ -298,18 +372,42 @@ export const EstimateSendDialog = ({
     const estimateTotal = getEstimateTotal();
     const estimateNotes = getEstimateNotes();
 
+    console.log("Starting send estimate process with:", {
+      estimateId,
+      sendMethod,
+      sendTo,
+      estimateTotal
+    });
+
     if (!estimateId) {
       toast.error("Estimate details not loaded");
       return;
     }
 
-    // Validate send recipient
-    if (!sendTo) {
-      toast.error(`Please enter a ${sendMethod === "email" ? "email address" : "phone number"}`);
+    // Validate recipient
+    const validationError = validateRecipient(sendMethod, sendTo);
+    if (validationError) {
+      setValidationError(validationError);
+      toast.error(validationError);
       return;
     }
 
+    // Format phone number if SMS
+    let finalRecipient = sendTo;
+    if (sendMethod === "sms") {
+      finalRecipient = formatPhoneForTwilio(sendTo);
+      console.log("Final formatted phone number:", finalRecipient);
+      
+      if (!isValidPhoneNumber(finalRecipient)) {
+        const error = "Invalid phone number format. Please use format like +1234567890";
+        setValidationError(error);
+        toast.error(error);
+        return;
+      }
+    }
+
     setIsProcessing(true);
+    setValidationError("");
     
     try {
       console.log("Starting estimate send process...");
@@ -331,7 +429,7 @@ export const EstimateSendDialog = ({
         .insert({
           estimate_id: estimateId,
           communication_type: sendMethod,
-          recipient: sendTo,
+          recipient: finalRecipient,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
             ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. Please review and let us know if you have any questions.`
@@ -370,7 +468,7 @@ export const EstimateSendDialog = ({
 
       console.log("Calling send-estimate edge function with data:", {
         method: sendMethod,
-        recipient: sendTo,
+        recipient: finalRecipient,
         estimateNumber: estimateNumber,
         estimateData: estimateData,
         clientName: contactInfo.name,
@@ -381,7 +479,7 @@ export const EstimateSendDialog = ({
       const { data, error } = await supabase.functions.invoke('send-estimate', {
         body: {
           method: sendMethod,
-          recipient: sendTo,
+          recipient: finalRecipient,
           estimateNumber: estimateNumber,
           estimateData: estimateData,
           clientName: contactInfo.name,
@@ -498,7 +596,7 @@ export const EstimateSendDialog = ({
                     {hasEmail ? (
                       <p className="text-sm text-muted-foreground mt-1">{contactInfo.email}</p>
                     ) : (
-                      <p className="text-sm text-amber-600 mt-1">No email available for this client</p>
+                      <p className="text-sm text-amber-600 mt-1">No valid email available for this client</p>
                     )}
                   </div>
                 </div>
@@ -515,7 +613,7 @@ export const EstimateSendDialog = ({
                     {hasPhone ? (
                       <p className="text-sm text-muted-foreground mt-1">{contactInfo.phone}</p>
                     ) : (
-                      <p className="text-sm text-amber-600 mt-1">No phone number available for this client</p>
+                      <p className="text-sm text-amber-600 mt-1">No valid phone number available for this client</p>
                     )}
                   </div>
                 </div>
@@ -528,9 +626,21 @@ export const EstimateSendDialog = ({
                 <Input
                   id="send-to"
                   value={sendTo}
-                  onChange={(e) => setSendTo(e.target.value)}
-                  placeholder={sendMethod === "email" ? "client@example.com" : "(555) 123-4567"}
+                  onChange={(e) => {
+                    setSendTo(e.target.value);
+                    setValidationError("");
+                  }}
+                  placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
+                  className={validationError ? "border-red-500" : ""}
                 />
+                {validationError && (
+                  <p className="text-sm text-red-600 mt-1">{validationError}</p>
+                )}
+                {sendMethod === "sms" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Phone numbers will be automatically formatted for SMS delivery
+                  </p>
+                )}
               </div>
               
               <div className="pt-4 flex justify-end gap-2">
@@ -539,7 +649,7 @@ export const EstimateSendDialog = ({
                 </Button>
                 <Button 
                   onClick={handleSendEstimate} 
-                  disabled={!sendTo || isProcessing}
+                  disabled={!sendTo || isProcessing || !!validationError}
                 >
                   {isProcessing ? "Sending..." : "Send Estimate"}
                 </Button>
