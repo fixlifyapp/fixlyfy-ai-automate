@@ -18,9 +18,10 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useTechnicians } from "@/hooks/useTechnicians";
-import { useJobTypes, useTags } from "@/hooks/useConfigItems";
+import { useJobTypes, useTags, useLeadSources } from "@/hooks/useConfigItems";
 import { QuickAddJobTypeDialog } from "./quick-add/QuickAddJobTypeDialog";
 import { QuickAddTagDialog } from "./quick-add/QuickAddTagDialog";
+import { QuickAddLeadSourceDialog } from "./quick-add/QuickAddLeadSourceDialog";
 import { useJobCustomFields } from "@/hooks/useJobCustomFields";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
@@ -57,6 +58,7 @@ export const JobsCreateModal = ({
   const { technicians, isLoading: isLoadingTechnicians } = useTechnicians();
   const { items: jobTypes, isLoading: isLoadingJobTypes } = useJobTypes();
   const { items: tags, isLoading: isLoadingTags } = useTags();
+  const { items: leadSources, isLoading: isLoadingLeadSources } = useLeadSources();
   const { availableFields, saveCustomFieldValues } = useJobCustomFields();
   const { uploadAttachments, isUploading } = useJobAttachments();
   
@@ -71,15 +73,17 @@ export const JobsCreateModal = ({
   const [tasks, setTasks] = useState<string[]>([]);
   const [newTask, setNewTask] = useState<string>("");
   
-  // Additional fields
+  // Lead source selection
   const [leadSource, setLeadSource] = useState<string>("");
   
   // Quick-add dialog states
   const [showJobTypeDialog, setShowJobTypeDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
+  const [showLeadSourceDialog, setShowLeadSourceDialog] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [recentlyAddedJobType, setRecentlyAddedJobType] = useState<string | null>(null);
   const [recentlyAddedTag, setRecentlyAddedTag] = useState<string | null>(null);
+  const [recentlyAddedLeadSource, setRecentlyAddedLeadSource] = useState<string | null>(null);
   const [recentlyAddedClient, setRecentlyAddedClient] = useState<string | null>(null);
   
   const navigate = useNavigate();
@@ -122,6 +126,23 @@ export const JobsCreateModal = ({
       return () => clearTimeout(timer);
     }
   }, [recentlyAddedTag, selectedTags]);
+
+  useEffect(() => {
+    if (recentlyAddedClient) {
+      form.setValue("client_id", recentlyAddedClient);
+      const timer = setTimeout(() => setRecentlyAddedClient(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [recentlyAddedClient, form]);
+
+  // Auto-select recently added lead source
+  useEffect(() => {
+    if (recentlyAddedLeadSource) {
+      setLeadSource(recentlyAddedLeadSource);
+      const timer = setTimeout(() => setRecentlyAddedLeadSource(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [recentlyAddedLeadSource]);
 
   useEffect(() => {
     if (recentlyAddedClient) {
@@ -188,6 +209,7 @@ export const JobsCreateModal = ({
     setLeadSource("");
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
+    setRecentlyAddedLeadSource(null);
     setRecentlyAddedClient(null);
   };
 
@@ -197,6 +219,10 @@ export const JobsCreateModal = ({
 
   const handleTagAdded = (tag: { id: string; name: string }) => {
     setRecentlyAddedTag(tag.name);
+  };
+
+  const handleLeadSourceAdded = (leadSourceItem: { id: string; name: string }) => {
+    setRecentlyAddedLeadSource(leadSourceItem.name);
   };
 
   const handleClientAdded = (client: Client) => {
@@ -461,13 +487,56 @@ export const JobsCreateModal = ({
                   
                   {/* Lead Source */}
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="leadSource">Lead Source</Label>
-                    <Input
-                      id="leadSource"
-                      placeholder="e.g., Phone call, Website, Referral"
-                      value={leadSource}
-                      onChange={(e) => setLeadSource(e.target.value)}
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="leadSource">Lead Source</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowLeadSourceDialog(true)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                    <Select 
+                      value={leadSource} 
+                      onValueChange={setLeadSource}
+                    >
+                      <SelectTrigger className={cn(
+                        recentlyAddedLeadSource === leadSource && "ring-2 ring-green-500"
+                      )}>
+                        <SelectValue placeholder="Select lead source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingLeadSources ? (
+                          <SelectItem value="loading" disabled>Loading lead sources...</SelectItem>
+                        ) : leadSources.length > 0 ? (
+                          leadSources.filter(source => source.is_active !== false).map((source) => (
+                            <SelectItem 
+                              key={source.id} 
+                              value={source.name}
+                              className={cn(
+                                recentlyAddedLeadSource === source.name && "bg-green-50 border-green-200"
+                              )}
+                            >
+                              {source.name}
+                              {recentlyAddedLeadSource === source.name && (
+                                <span className="ml-2 text-xs text-green-600">(just added)</span>
+                              )}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <>
+                            <SelectItem value="Phone Call">Phone Call</SelectItem>
+                            <SelectItem value="Website">Website</SelectItem>
+                            <SelectItem value="Referral">Referral</SelectItem>
+                            <SelectItem value="Social Media">Social Media</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   {/* Job Description */}
@@ -712,10 +781,16 @@ export const JobsCreateModal = ({
                               key={tag.id} 
                               value={tag.name}
                               disabled={selectedTags.includes(tag.name)}
+                              className={cn(
+                                recentlyAddedTag === tag.name && "bg-green-50 border-green-200"
+                              )}
                             >
                               {tag.name}
                               {tag.category && tag.category !== 'General' && (
                                 <span className="ml-2 text-xs text-muted-foreground">({tag.category})</span>
+                              )}
+                              {recentlyAddedTag === tag.name && (
+                                <span className="ml-2 text-xs text-green-600">(just added)</span>
                               )}
                             </SelectItem>
                           ))
@@ -811,6 +886,12 @@ export const JobsCreateModal = ({
         open={showTagDialog}
         onOpenChange={setShowTagDialog}
         onTagAdded={handleTagAdded}
+      />
+      
+      <QuickAddLeadSourceDialog
+        open={showLeadSourceDialog}
+        onOpenChange={setShowLeadSourceDialog}
+        onLeadSourceAdded={handleLeadSourceAdded}
       />
       
       <ClientsCreateModal

@@ -25,8 +25,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { getTagColor } from "@/data/tags";
 import { Job } from "@/hooks/useJobs";
+import { useTags } from "@/hooks/useConfigItems";
 
 interface JobsListProps {
   jobs: Job[];
@@ -38,6 +38,7 @@ interface JobsListProps {
 
 export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob, onSelectAllJobs }: JobsListProps) => {
   const navigate = useNavigate();
+  const { items: tagsConfig } = useTags();
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
@@ -56,6 +57,26 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
   };
 
   const isJobSelected = (jobId: string) => selectedJobs && selectedJobs.includes(jobId);
+
+  // Get tag color from database configuration
+  const getTagColor = (tagName: string) => {
+    const tagConfig = tagsConfig?.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+    if (tagConfig?.color) {
+      return { backgroundColor: `${tagConfig.color}20`, borderColor: tagConfig.color, color: tagConfig.color };
+    }
+    
+    // Fallback colors
+    const colorMap: Record<string, string> = {
+      'urgent': 'bg-red-100 text-red-800 border-red-200',
+      'emergency': 'bg-red-100 text-red-800 border-red-200',
+      'warranty': 'bg-blue-100 text-blue-800 border-blue-200',
+      'follow-up': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'maintenance': 'bg-green-100 text-green-800 border-green-200',
+      'installation': 'bg-purple-100 text-purple-800 border-purple-200'
+    };
+    
+    return colorMap[tagName.toLowerCase()] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
 
   return (
     <>
@@ -88,6 +109,11 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                       </Badge>
                       <h3 className="font-medium">{job.client?.name || "Unknown Client"}</h3>
                       <p className="text-xs text-fixlyfy-text-secondary">{job.client?.address || "No address"}</p>
+                      {job.lead_source && (
+                        <p className="text-xs text-fixlyfy-text-secondary mt-1">
+                          Lead: {job.lead_source}
+                        </p>
+                      )}
                     </div>
                     <Badge className={cn(
                       job.status === "scheduled" && "bg-fixlyfy-info/10 text-fixlyfy-info",
@@ -106,15 +132,21 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                   {/* Tags section for grid view */}
                   {job.tags && job.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {job.tags.slice(0, 2).map((tag, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className={`text-xs ${getTagColor(tag)}`}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
+                      {job.tags.slice(0, 2).map((tag, index) => {
+                        const tagStyle = getTagColor(tag);
+                        const isStyleObject = typeof tagStyle === 'object';
+                        
+                        return (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className={isStyleObject ? "" : `text-xs ${tagStyle}`}
+                            style={isStyleObject ? tagStyle : undefined}
+                          >
+                            {tag}
+                          </Badge>
+                        );
+                      })}
                       {job.tags.length > 2 && (
                         <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-600">
                           +{job.tags.length - 2}
@@ -182,6 +214,7 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                 <TableHead>Client</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Tags</TableHead>
+                <TableHead>Lead Source</TableHead>
                 <TableHead>Custom Info</TableHead>
                 <TableHead>Scheduled</TableHead>
                 <TableHead>Technician</TableHead>
@@ -192,7 +225,7 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
             <TableBody>
               {jobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-fixlyfy-text-secondary">
+                  <TableCell colSpan={11} className="text-center py-8 text-fixlyfy-text-secondary">
                     <p>No jobs found.</p>
                     <p className="text-sm mt-2">Try creating a new job or adjusting your filters.</p>
                   </TableCell>
@@ -237,15 +270,21 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                     <TableCell>
                       {job.tags && job.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {job.tags.slice(0, 2).map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className={`text-xs ${getTagColor(tag)}`}
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
+                          {job.tags.slice(0, 2).map((tag, index) => {
+                            const tagStyle = getTagColor(tag);
+                            const isStyleObject = typeof tagStyle === 'object';
+                            
+                            return (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className={isStyleObject ? "text-xs" : `text-xs ${tagStyle}`}
+                                style={isStyleObject ? tagStyle : undefined}
+                              >
+                                {tag}
+                              </Badge>
+                            );
+                          })}
                           {job.tags.length > 2 && (
                             <Badge 
                               variant="outline" 
@@ -258,6 +297,13 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">No tags</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {job.lead_source ? (
+                        <span className="text-sm">{job.lead_source}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">No lead source</span>
                       )}
                     </TableCell>
                     <TableCell>
