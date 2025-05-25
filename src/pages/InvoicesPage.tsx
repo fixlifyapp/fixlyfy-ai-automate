@@ -1,27 +1,23 @@
 
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Plus, Receipt, DollarSign, Target, TrendingUp } from "lucide-react";
+import { Plus } from "lucide-react";
 
 const InvoicesPage = () => {
   return (
     <PageLayout>
-      <PageHeader
-        title="Invoices"
-        subtitle="Manage your invoices and payment tracking"
-        icon={Receipt}
-        badges={[
-          { text: "Payment Tracking", icon: DollarSign, variant: "fixlyfy" },
-          { text: "Auto Reminders", icon: Target, variant: "success" },
-          { text: "Cash Flow", icon: TrendingUp, variant: "info" }
-        ]}
-        actionButton={{
-          text: "Create Invoice",
-          icon: Plus,
-          onClick: () => {}
-        }}
-      />
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Invoices</h1>
+          <p className="text-fixlyfy-text-secondary">
+            Manage your invoices and payment tracking.
+          </p>
+        </div>
+        <Button className="bg-fixlyfy hover:bg-fixlyfy/90">
+          <Plus size={18} className="mr-2" /> Create Invoice
+        </Button>
+      </div>
       
       <div className="fixlyfy-card p-6 flex flex-col items-center justify-center min-h-[400px]">
         <h2 className="text-xl font-semibold mb-2">Invoice Management</h2>

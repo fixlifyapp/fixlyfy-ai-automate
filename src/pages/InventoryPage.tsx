@@ -1,27 +1,23 @@
 
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Plus, Package, AlertTriangle, BarChart3, Zap } from "lucide-react";
+import { Plus } from "lucide-react";
 
 const InventoryPage = () => {
   return (
     <PageLayout>
-      <PageHeader
-        title="Inventory"
-        subtitle="Manage your parts, equipment, and stock levels"
-        icon={Package}
-        badges={[
-          { text: "Stock Tracking", icon: BarChart3, variant: "fixlyfy" },
-          { text: "Low Stock Alerts", icon: AlertTriangle, variant: "warning" },
-          { text: "Auto Ordering", icon: Zap, variant: "info" }
-        ]}
-        actionButton={{
-          text: "Add Item",
-          icon: Plus,
-          onClick: () => {}
-        }}
-      />
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Inventory</h1>
+          <p className="text-fixlyfy-text-secondary">
+            Manage your parts, equipment, and stock levels.
+          </p>
+        </div>
+        <Button className="bg-fixlyfy hover:bg-fixlyfy/90">
+          <Plus size={18} className="mr-2" /> Add Item
+        </Button>
+      </div>
       
       <div className="fixlyfy-card p-6 flex flex-col items-center justify-center min-h-[400px]">
         <h2 className="text-xl font-semibold mb-2">Inventory Management</h2>
