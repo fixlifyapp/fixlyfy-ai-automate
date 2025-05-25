@@ -41,7 +41,7 @@ const FinancePage = () => {
               key={refreshTrigger} 
               payments={[]} 
               onRefund={() => {}} 
-              canRefund={true}
+              canRefund={(payment: any) => payment.status === 'completed' && payment.amount > 0}
             />
           </TabsContent>
 

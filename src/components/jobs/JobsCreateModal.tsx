@@ -33,9 +33,9 @@ interface JobsCreateModalProps {
 export const JobsCreateModal = ({ open, onOpenChange, onJobCreated, preselectedClientId, onSuccess }: JobsCreateModalProps) => {
   const { clients, isLoading: isClientsLoading } = useClients();
   const { addJob } = useJobs();
-  const { items: jobTypes, isLoading: isJobTypesLoading } = useJobTypes();
-  const { items: leadSources, isLoading: isLeadSourcesLoading } = useLeadSources();
-  const { items: availableTags, isLoading: isTagsLoading } = useTags();
+  const { jobTypes, isLoading: isJobTypesLoading } = useJobTypes();
+  const { leadSources, isLoading: isLeadSourcesLoading } = useLeadSources();
+  const { tags: availableTags, isLoading: isTagsLoading } = useTags();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
