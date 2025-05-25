@@ -178,6 +178,8 @@ export function ConfigItemCard({
         onOpenChange={(open) => !open && setDeletingItem(null)}
         title={`Delete ${deletingItem?.name}`}
         description="Are you sure you want to delete this item? This action cannot be undone."
+        itemName={deletingItem?.name || ""}
+        itemType={title.slice(0, -1).toLowerCase()}
         onConfirm={handleDelete}
       />
     </>
