@@ -1,144 +1,130 @@
 
-import { Button } from "@/components/ui/button";
-import { InvoiceFormValues } from "./schema";
+import { LineItem } from "@/components/jobs/builder/types";
 
 interface InvoicePreviewProps {
-  data: InvoiceFormValues;
-  type: "invoice" | "estimate";
-  onCancel: () => void;
-  onSubmit: () => void;
-  companyInfo: {
-    name: string;
-    logo: string;
-    address: string;
-    phone: string;
-    email: string;
-    legalText: string;
-  };
-  clientInfo: {
-    name: string;
-    address: string;
-    phone: string;
-    email: string;
-  };
-  calculateTotal: () => number;
+  invoiceNumber: string;
+  lineItems: LineItem[];
+  notes: string;
+  taxRate: number;
+  calculateSubtotal: () => number;
+  calculateTotalTax: () => number;
+  calculateGrandTotal: () => number;
+  clientInfo?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  } | null;
+  issueDate: string;
+  dueDate: string;
 }
 
 export const InvoicePreview = ({
-  data,
-  type,
-  onCancel,
-  onSubmit,
-  companyInfo,
+  invoiceNumber,
+  lineItems,
+  notes,
+  taxRate,
+  calculateSubtotal,
+  calculateTotalTax,
+  calculateGrandTotal,
   clientInfo,
-  calculateTotal,
+  issueDate,
+  dueDate,
 }: InvoicePreviewProps) => {
-  const total = calculateTotal();
   
+  // Helper function to calculate the total for a line item
+  const calculateLineTotal = (item: LineItem): number => {
+    const subtotal = item.quantity * item.unitPrice;
+    const discountAmount = subtotal * ((item.discount || 0) / 100);
+    return subtotal - discountAmount;
+  };
+
   return (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="w-full bg-white p-8 rounded-lg border shadow-sm">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <h2 className="text-2xl font-bold">{type === "invoice" ? "INVOICE" : "ESTIMATE"}</h2>
-            <p className="text-fixlyfy-text-secondary">#{data.invoiceNumber}</p>
-          </div>
-          <div className="text-right">
-            <img src={companyInfo.logo} alt={companyInfo.name} className="h-12 mb-2" />
-            <h3 className="font-bold">{companyInfo.name}</h3>
-            <p className="text-sm text-fixlyfy-text-secondary whitespace-pre-line">
-              {companyInfo.address}<br />
-              {companyInfo.phone}<br />
-              {companyInfo.email}
-            </p>
-          </div>
+    <div className="border rounded-md p-6 bg-white">
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">INVOICE</h2>
+          <p className="text-lg font-medium">{invoiceNumber}</p>
         </div>
-        
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          <div>
-            <h4 className="font-semibold mb-2 text-fixlyfy-text-secondary">Bill To:</h4>
-            <p className="font-medium">{clientInfo.name}</p>
-            <p className="text-sm text-fixlyfy-text-secondary whitespace-pre-line">
-              {clientInfo.address}<br />
-              {clientInfo.phone}<br />
-              {clientInfo.email}
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span className="font-medium text-fixlyfy-text-secondary">Date Issued:</span>
-                <span>{data.issueDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-fixlyfy-text-secondary">Due Date:</span>
-                <span>{data.dueDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-fixlyfy-text-secondary">{type === "invoice" ? "Invoice" : "Estimate"} #:</span>
-                <span>{data.invoiceNumber}</span>
-              </div>
+        <div className="text-right">
+          <img src="/placeholder.svg" alt="Company Logo" className="h-12 mb-2" />
+          <p className="font-medium">Fixlyfy Services</p>
+          <p className="text-sm text-muted-foreground">456 Business Ave, Suite 789</p>
+          <p className="text-sm text-muted-foreground">(555) 987-6543</p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        <div>
+          <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Bill To:</h3>
+          <p className="font-medium">{clientInfo?.name || "Client Name"}</p>
+          <p className="text-sm text-muted-foreground">123 Main St, Apt 45</p>
+          <p className="text-sm text-muted-foreground">{clientInfo?.phone || "(555) 123-4567"}</p>
+          <p className="text-sm text-muted-foreground">{clientInfo?.email || "client@example.com"}</p>
+        </div>
+        <div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Invoice Date:</h3>
+              <p>{new Date(issueDate).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Due Date:</h3>
+              <p>{new Date(dueDate).toLocaleDateString()}</p>
             </div>
           </div>
         </div>
-        
-        <table className="w-full mb-8">
-          <thead>
-            <tr className="border-b border-fixlyfy-border">
-              <th className="py-3 text-left">Description</th>
-              <th className="py-3 text-right">Qty</th>
-              <th className="py-3 text-right">Unit Price</th>
-              <th className="py-3 text-right">Amount</th>
-              {data.items.some(item => item.taxable) && (
-                <th className="py-3 text-center">Tax</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((item, index) => (
-              <tr key={index} className="border-b border-fixlyfy-border">
-                <td className="py-3">{item.description}</td>
-                <td className="py-3 text-right">{item.quantity}</td>
-                <td className="py-3 text-right">${item.unitPrice.toFixed(2)}</td>
-                <td className="py-3 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</td>
-                {data.items.some(item => item.taxable) && (
-                  <td className="py-3 text-center">{item.taxable ? "✓" : ""}</td>
-                )}
-              </tr>
-            ))}
-            <tr>
-              <td colSpan={data.items.some(item => item.taxable) ? 4 : 3} className="py-4 text-right font-semibold">Total:</td>
-              <td className="py-4 text-right font-bold">${total.toFixed(2)}</td>
-            </tr>
-          </tbody>
-        </table>
-        
-        {data.notes && (
-          <div className="mb-8">
-            <h4 className="font-semibold mb-2">Notes</h4>
-            <p className="text-sm text-fixlyfy-text-secondary">{data.notes}</p>
-          </div>
-        )}
-        
-        <div className="mt-12 pt-8 border-t border-fixlyfy-border text-sm text-fixlyfy-text-secondary">
-          <p>{companyInfo.legalText}</p>
-        </div>
       </div>
-      <div className="mt-6 flex justify-end space-x-3">
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button variant="outline" onClick={() => {
-          window.open(
-            `/preview/${type}/${data.invoiceNumber}`, 
-            '_blank'
-          );
-        }}>
-          Check {type === "invoice" ? "Invoice" : "Estimate"}
-        </Button>
-        <Button onClick={onSubmit}>
-          Send {type === "invoice" ? "Invoice" : "Estimate"}
-        </Button>
+      
+      <table className="w-full mb-8">
+        <thead className="border-b">
+          <tr>
+            <th className="text-left py-2">Description</th>
+            <th className="text-right py-2">Qty</th>
+            <th className="text-right py-2">Unit Price</th>
+            <th className="text-right py-2">Discount</th>
+            <th className="text-right py-2">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lineItems.map((item) => (
+            <tr key={item.id} className="border-b">
+              <td className="py-2">{item.description}</td>
+              <td className="text-right py-2">{item.quantity}</td>
+              <td className="text-right py-2">${item.unitPrice.toFixed(2)}</td>
+              <td className="text-right py-2">{(item.discount || 0) > 0 ? `${item.discount}%` : '-'}</td>
+              <td className="text-right py-2">${calculateLineTotal(item).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={3}></td>
+            <td className="text-right py-2 font-medium">Subtotal:</td>
+            <td className="text-right py-2">${calculateSubtotal().toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td colSpan={3}></td>
+            <td className="text-right py-2 font-medium">Tax ({taxRate}%):</td>
+            <td className="text-right py-2">${calculateTotalTax().toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td colSpan={3}></td>
+            <td className="text-right py-2 font-medium">Total:</td>
+            <td className="text-right py-2 font-bold">${calculateGrandTotal().toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      
+      {notes && (
+        <div className="mb-8">
+          <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Notes:</h3>
+          <p className="text-sm whitespace-pre-line">{notes}</p>
+        </div>
+      )}
+      
+      <div className="text-sm text-muted-foreground border-t pt-4">
+        <p>Payment is due within 30 days. Thank you for your business!</p>
       </div>
     </div>
   );

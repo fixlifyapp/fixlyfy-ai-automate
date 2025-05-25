@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
+import { Product, LineItem } from "@/components/jobs/builder/types";
 
 interface InvoiceFormData {
   invoiceId?: string;
@@ -32,6 +33,9 @@ export const useInvoiceBuilder = (jobId: string) => {
     total: 0
   });
   
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [taxRate, setTaxRate] = useState<number>(13);
+  const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -43,13 +47,68 @@ export const useInvoiceBuilder = (jobId: string) => {
       if (updates.items) {
         updated.total = updates.items.reduce((sum, item) => {
           const itemTotal = item.quantity * item.unitPrice;
-          return sum + (item.taxable ? itemTotal * 1.13 : itemTotal); // 13% tax
+          return sum + (item.taxable ? itemTotal * (1 + taxRate / 100) : itemTotal);
         }, 0);
       }
       
       return updated;
     });
+  }, [taxRate]);
+
+  const handleAddProduct = useCallback((product: Product) => {
+    const newLineItem: LineItem = {
+      id: `item-${Date.now()}`,
+      description: product.description || product.name,
+      quantity: product.quantity || 1,
+      unitPrice: product.price,
+      taxable: product.taxable,
+      discount: 0,
+      ourPrice: product.ourPrice || 0,
+      name: product.name,
+      price: product.price,
+      total: (product.quantity || 1) * product.price
+    };
+    
+    setLineItems(prev => [...prev, newLineItem]);
   }, []);
+
+  const handleRemoveLineItem = useCallback((id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  }, []);
+
+  const handleUpdateLineItem = useCallback((id: string, updates: Partial<LineItem>) => {
+    setLineItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
+        : item
+    ));
+  }, []);
+
+  const calculateSubtotal = useCallback(() => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  }, [lineItems]);
+
+  const calculateTotalTax = useCallback(() => {
+    const subtotal = calculateSubtotal();
+    return subtotal * (taxRate / 100);
+  }, [calculateSubtotal, taxRate]);
+
+  const calculateGrandTotal = useCallback(() => {
+    return calculateSubtotal() + calculateTotalTax();
+  }, [calculateSubtotal, calculateTotalTax]);
+
+  const calculateTotalMargin = useCallback(() => {
+    return lineItems.reduce((sum, item) => {
+      const itemMargin = (item.unitPrice - (item.ourPrice || 0)) * item.quantity;
+      return sum + itemMargin;
+    }, 0);
+  }, [lineItems]);
+
+  const calculateMarginPercentage = useCallback(() => {
+    const totalRevenue = calculateSubtotal();
+    const totalMargin = calculateTotalMargin();
+    return totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
+  }, [calculateSubtotal, calculateTotalMargin]);
 
   const initializeFromEstimate = useCallback((estimate: Estimate) => {
     const invoiceNumber = `INV-${Date.now()}`;
@@ -57,7 +116,7 @@ export const useInvoiceBuilder = (jobId: string) => {
     // Get estimate line items
     const getEstimateItems = async () => {
       try {
-        const { data: lineItems, error } = await supabase
+        const { data: lineItemsData, error } = await supabase
           .from('line_items')
           .select('*')
           .eq('parent_id', estimate.id)
@@ -65,16 +124,29 @@ export const useInvoiceBuilder = (jobId: string) => {
           
         if (error) throw error;
         
-        const items = lineItems?.map(item => ({
+        const items = lineItemsData?.map((item, index) => ({
+          id: item.id || `item-${index}`,
           description: item.description || "",
           quantity: item.quantity || 1,
           unitPrice: item.unit_price || 0,
-          taxable: item.taxable || true
+          taxable: item.taxable || true,
+          discount: 0,
+          ourPrice: 0,
+          name: item.description || "",
+          price: item.unit_price || 0,
+          total: (item.quantity || 1) * (item.unit_price || 0)
         })) || [];
         
+        setLineItems(items);
+        setNotes(estimate.notes || "");
         updateFormData({
           invoiceNumber,
-          items,
+          items: lineItemsData?.map(item => ({
+            description: item.description || "",
+            quantity: item.quantity || 1,
+            unitPrice: item.unit_price || 0,
+            taxable: item.taxable || true
+          })) || [],
           notes: estimate.notes || "",
           total: estimate.total || 0
         });
@@ -90,7 +162,7 @@ export const useInvoiceBuilder = (jobId: string) => {
   const initializeFromInvoice = useCallback((invoice: Invoice) => {
     const getInvoiceItems = async () => {
       try {
-        const { data: lineItems, error } = await supabase
+        const { data: lineItemsData, error } = await supabase
           .from('line_items')
           .select('*')
           .eq('parent_id', invoice.id)
@@ -98,18 +170,31 @@ export const useInvoiceBuilder = (jobId: string) => {
           
         if (error) throw error;
         
-        const items = lineItems?.map(item => ({
+        const items = lineItemsData?.map((item, index) => ({
+          id: item.id || `item-${index}`,
           description: item.description || "",
           quantity: item.quantity || 1,
           unitPrice: item.unit_price || 0,
-          taxable: item.taxable || true
+          taxable: item.taxable || true,
+          discount: 0,
+          ourPrice: 0,
+          name: item.description || "",
+          price: item.unit_price || 0,
+          total: (item.quantity || 1) * (item.unit_price || 0)
         })) || [];
         
+        setLineItems(items);
+        setNotes(invoice.notes || "");
         updateFormData({
           invoiceId: invoice.id,
           invoiceNumber: invoice.number,
           issueDate: new Date(invoice.date).toISOString().split('T')[0],
-          items,
+          items: lineItemsData?.map(item => ({
+            description: item.description || "",
+            quantity: item.quantity || 1,
+            unitPrice: item.unit_price || 0,
+            taxable: item.taxable || true
+          })) || [],
           notes: invoice.notes || "",
           status: invoice.status,
           total: invoice.total || 0
@@ -133,10 +218,12 @@ export const useInvoiceBuilder = (jobId: string) => {
       status: "draft",
       total: 0
     });
+    setLineItems([]);
+    setNotes("");
   }, []);
 
   const createInvoice = useCallback(async (): Promise<Invoice | null> => {
-    if (isSubmitting) return null; // Prevent duplicate submissions
+    if (isSubmitting) return null;
     
     setIsSubmitting(true);
     
@@ -147,11 +234,11 @@ export const useInvoiceBuilder = (jobId: string) => {
         .insert({
           job_id: jobId,
           invoice_number: formData.invoiceNumber,
-          total: formData.total,
-          balance: formData.total,
+          total: calculateGrandTotal(),
+          balance: calculateGrandTotal(),
           amount_paid: 0,
           status: formData.status,
-          notes: formData.notes,
+          notes: notes,
           date: formData.issueDate
         })
         .select()
@@ -159,9 +246,9 @@ export const useInvoiceBuilder = (jobId: string) => {
         
       if (invoiceError) throw invoiceError;
       
-      // Create line items
-      if (formData.items.length > 0) {
-        const lineItems = formData.items.map(item => ({
+      // Create line items from lineItems state
+      if (lineItems.length > 0) {
+        const lineItemsData = lineItems.map(item => ({
           parent_id: invoice.id,
           parent_type: 'invoice',
           description: item.description,
@@ -172,7 +259,7 @@ export const useInvoiceBuilder = (jobId: string) => {
         
         const { error: lineItemsError } = await supabase
           .from('line_items')
-          .insert(lineItems);
+          .insert(lineItemsData);
           
         if (lineItemsError) throw lineItemsError;
       }
@@ -186,9 +273,10 @@ export const useInvoiceBuilder = (jobId: string) => {
         number: invoice.invoice_number,
         job_id: invoice.job_id,
         date: invoice.date,
-        due_date: invoice.date, // Using same date for now
+        due_date: formData.dueDate,
         total: invoice.total,
-        status: invoice.status
+        status: invoice.status,
+        notes: invoice.notes
       };
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -197,7 +285,7 @@ export const useInvoiceBuilder = (jobId: string) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [jobId, formData, updateFormData, isSubmitting]);
+  }, [jobId, formData, lineItems, notes, calculateGrandTotal, updateFormData, isSubmitting]);
 
   const updateInvoice = useCallback(async (invoiceId: string): Promise<Invoice | null> => {
     if (isSubmitting) return null;
@@ -210,10 +298,10 @@ export const useInvoiceBuilder = (jobId: string) => {
         .from('invoices')
         .update({
           invoice_number: formData.invoiceNumber,
-          total: formData.total,
-          balance: formData.total,
+          total: calculateGrandTotal(),
+          balance: calculateGrandTotal(),
           status: formData.status,
-          notes: formData.notes,
+          notes: notes,
           date: formData.issueDate
         })
         .eq('id', invoiceId)
@@ -232,8 +320,8 @@ export const useInvoiceBuilder = (jobId: string) => {
       if (deleteError) throw deleteError;
       
       // Create new line items
-      if (formData.items.length > 0) {
-        const lineItems = formData.items.map(item => ({
+      if (lineItems.length > 0) {
+        const lineItemsData = lineItems.map(item => ({
           parent_id: invoiceId,
           parent_type: 'invoice',
           description: item.description,
@@ -244,7 +332,7 @@ export const useInvoiceBuilder = (jobId: string) => {
         
         const { error: lineItemsError } = await supabase
           .from('line_items')
-          .insert(lineItems);
+          .insert(lineItemsData);
           
         if (lineItemsError) throw lineItemsError;
       }
@@ -255,9 +343,10 @@ export const useInvoiceBuilder = (jobId: string) => {
         number: invoice.invoice_number,
         job_id: invoice.job_id,
         date: invoice.date,
-        due_date: invoice.date,
+        due_date: formData.dueDate,
         total: invoice.total,
-        status: invoice.status
+        status: invoice.status,
+        notes: invoice.notes
       };
     } catch (error) {
       console.error("Error updating invoice:", error);
@@ -266,7 +355,7 @@ export const useInvoiceBuilder = (jobId: string) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, isSubmitting]);
+  }, [formData, lineItems, notes, calculateGrandTotal, isSubmitting]);
 
   const sendInvoice = useCallback(async (
     invoiceId: string,
@@ -281,7 +370,6 @@ export const useInvoiceBuilder = (jobId: string) => {
     
     setIsSending(true);
     
-    // Immediately show sending feedback
     toast.info(`Sending invoice via ${method}...`, {
       duration: 2000
     });
@@ -316,7 +404,6 @@ export const useInvoiceBuilder = (jobId: string) => {
         
       if (commError) throw commError;
       
-      // Immediate success feedback
       toast.success(`Invoice sent successfully via ${method}!`);
       return true;
     } catch (error) {
@@ -354,9 +441,9 @@ export const useInvoiceBuilder = (jobId: string) => {
       const { error: updateError } = await supabase
         .from('invoices')
         .update({
-          amount_paid: formData.total >= amount ? amount : formData.total,
-          balance: Math.max(0, formData.total - amount),
-          status: formData.total <= amount ? 'paid' : 'partial'
+          amount_paid: calculateGrandTotal() >= amount ? amount : calculateGrandTotal(),
+          balance: Math.max(0, calculateGrandTotal() - amount),
+          status: calculateGrandTotal() <= amount ? 'paid' : 'partial'
         })
         .eq('id', invoiceId);
         
@@ -368,17 +455,43 @@ export const useInvoiceBuilder = (jobId: string) => {
       toast.error("Failed to record payment");
       throw error;
     }
-  }, [formData.total]);
+  }, [calculateGrandTotal]);
+
+  const saveInvoiceChanges = useCallback(async () => {
+    if (formData.invoiceId) {
+      return await updateInvoice(formData.invoiceId);
+    } else {
+      return await createInvoice();
+    }
+  }, [formData.invoiceId, updateInvoice, createInvoice]);
 
   return {
     formData,
+    lineItems,
+    taxRate,
+    notes,
+    invoiceNumber: formData.invoiceNumber,
+    issueDate: formData.issueDate,
+    dueDate: formData.dueDate,
     isSubmitting,
     isSending,
+    setLineItems,
+    setTaxRate,
+    setNotes,
     updateFormData,
+    handleAddProduct,
+    handleRemoveLineItem,
+    handleUpdateLineItem,
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage,
     createInvoice,
     updateInvoice,
     sendInvoice,
     recordPayment,
+    saveInvoiceChanges,
     resetForm,
     initializeFromEstimate,
     initializeFromInvoice

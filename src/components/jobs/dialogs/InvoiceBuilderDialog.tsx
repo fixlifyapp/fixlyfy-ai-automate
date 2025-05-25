@@ -1,17 +1,20 @@
 
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Send, DollarSign } from "lucide-react";
-import { InvoiceFormStep } from "../forms/invoice/InvoiceFormStep";
-import { InvoicePreviewStep } from "../forms/invoice/InvoicePreviewStep";
-import { InvoicePaymentStep } from "../forms/invoice/InvoicePaymentStep";
+import { useState, useEffect } from "react";
 import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
+import { InvoiceForm } from "../forms/invoice/InvoiceForm";
+import { InvoicePreview } from "../forms/invoice/InvoicePreview";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
+import { CustomLineItemDialog } from "./estimate-builder/CustomLineItemDialog";
+import { Product, LineItem } from "@/components/jobs/builder/types";
+import { ProductEditInEstimateDialog } from "./ProductEditInEstimateDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
+import { InvoiceSendDialog } from "./InvoiceSendDialog";
+import { useJobs } from "@/hooks/useJobs";
+import { toast } from "sonner";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 
@@ -32,198 +35,289 @@ export const InvoiceBuilderDialog = ({
   invoice,
   onInvoiceCreated
 }: InvoiceBuilderDialogProps) => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const {
-    formData,
-    isSubmitting,
-    updateFormData,
-    createInvoice,
-    updateInvoice,
-    recordPayment,
-    resetForm,
-    initializeFromEstimate,
-    initializeFromInvoice
-  } = useInvoiceBuilder(jobId);
-
+  const [activeTab, setActiveTab] = useState("form");
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+  const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
+  
+  // Fetch job data
+  const { jobs, isLoading } = useJobs(jobId);
+  const [jobData, setJobData] = useState<any>(null);
+  
+  // Get the job data when jobs are loaded
+  useEffect(() => {
+    if (!isLoading && jobs.length > 0) {
+      const foundJob = jobs.find(job => job.id === jobId);
+      if (foundJob) {
+        setJobData(foundJob);
+      }
+    }
+  }, [jobs, isLoading, jobId]);
+  
+  const invoiceBuilder = useInvoiceBuilder(jobId);
+  
+  // Initialize from estimate or invoice when dialog opens
   useEffect(() => {
     if (open) {
       if (estimate) {
-        initializeFromEstimate(estimate);
+        invoiceBuilder.initializeFromEstimate(estimate);
       } else if (invoice) {
-        initializeFromInvoice(invoice);
+        invoiceBuilder.initializeFromInvoice(invoice);
       } else {
-        resetForm();
+        invoiceBuilder.resetForm();
       }
-      setCurrentStep(1);
+      setActiveTab("form");
     }
-  }, [open, estimate, invoice, initializeFromEstimate, initializeFromInvoice, resetForm]);
-
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
+  }, [open, estimate, invoice]);
+  
+  const handleProductSelect = (product: Product) => {
+    invoiceBuilder.handleAddProduct(product);
+    setIsProductSearchOpen(false);
   };
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleCreateInvoice = async () => {
-    try {
-      const newInvoice = await createInvoice();
-      if (newInvoice) {
-        onInvoiceCreated?.(newInvoice);
-        handleNext();
-      }
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-    }
-  };
-
-  const handleUpdateInvoice = async () => {
-    if (!invoice) return;
+  
+  const handleCustomLineItemSave = (item: Partial<LineItem>) => {
+    const newLineItem: LineItem = {
+      id: `item-${Date.now()}`,
+      description: item.description || item.name || "Custom Item",
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || 0,
+      taxable: item.taxable !== undefined ? item.taxable : true,
+      discount: item.discount || 0,
+      ourPrice: item.ourPrice || 0,
+      name: item.name || "Custom Item",
+      price: item.unitPrice || 0,
+      total: (item.quantity || 1) * (item.unitPrice || 0)
+    };
     
-    try {
-      const updatedInvoice = await updateInvoice(invoice.id);
-      if (updatedInvoice) {
-        onInvoiceCreated?.(updatedInvoice);
-        handleNext();
+    const updatedLineItems = [...invoiceBuilder.lineItems, newLineItem];
+    invoiceBuilder.setLineItems(updatedLineItems);
+    setIsCustomLineItemDialogOpen(false);
+  };
+
+  const handleEditLineItem = (id: string) => {
+    const lineItem = invoiceBuilder.lineItems.find(item => item.id === id);
+    if (lineItem) {
+      const productToEdit: Product = {
+        id: lineItem.id,
+        name: lineItem.name || lineItem.description,
+        description: lineItem.description,
+        category: "",
+        price: lineItem.unitPrice,
+        ourPrice: lineItem.ourPrice || 0,
+        cost: lineItem.ourPrice || 0,
+        taxable: lineItem.taxable,
+        tags: [],
+        quantity: lineItem.quantity
+      };
+      setSelectedProduct(productToEdit);
+      setIsProductEditDialogOpen(true);
+      return true;
+    }
+    return false;
+  };
+
+  const handleProductUpdate = (updatedProduct: Product) => {
+    const updatedLineItems = invoiceBuilder.lineItems.map(item => {
+      if (item.id === updatedProduct.id) {
+        return {
+          ...item,
+          name: updatedProduct.name,
+          description: updatedProduct.description || updatedProduct.name,
+          unitPrice: updatedProduct.price,
+          price: updatedProduct.price,
+          ourPrice: updatedProduct.ourPrice || 0,
+          taxable: updatedProduct.taxable,
+          quantity: updatedProduct.quantity || item.quantity,
+          total: (updatedProduct.quantity || item.quantity) * updatedProduct.price
+        };
       }
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-    }
-  };
-
-  const handlePayment = async (amount: number, method: string, reference?: string, notes?: string) => {
-    if (!formData.invoiceId) return;
+      return item;
+    });
     
-    try {
-      await recordPayment(formData.invoiceId, amount, method, reference, notes);
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error recording payment:", error);
+    invoiceBuilder.setLineItems(updatedLineItems);
+    setIsProductEditDialogOpen(false);
+  };
+  
+  // Check if invoice has any line items
+  const hasLineItems = invoiceBuilder.lineItems && invoiceBuilder.lineItems.length > 0;
+  
+  // Handle send invoice with validation
+  const handleSendInvoice = async () => {
+    if (!hasLineItems) {
+      toast.error("Please add at least one item to the invoice before sending it to the client");
+      return;
     }
+    
+    // Save invoice first if it's new
+    if (!invoiceBuilder.formData.invoiceId) {
+      const newInvoice = await invoiceBuilder.saveInvoiceChanges();
+      if (newInvoice && onInvoiceCreated) {
+        onInvoiceCreated(newInvoice);
+      }
+    }
+    
+    setIsSendDialogOpen(true);
   };
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 1: return `${invoice ? 'Edit' : 'Create'} Invoice`;
-      case 2: return "Review Invoice";
-      case 3: return "Payment & Send";
-      default: return "Create Invoice";
-    }
+  // Wrapper function to match the expected signature for InvoiceForm
+  const handleUpdateLineItemWrapper = (id: string, field: string, value: any) => {
+    const updates: Partial<LineItem> = { [field]: value };
+    invoiceBuilder.handleUpdateLineItem(id, updates);
   };
 
-  const canProceed = () => {
-    if (currentStep === 1) {
-      return formData.items.length > 0 && formData.items.every(item => 
-        item.description && item.quantity > 0 && item.unitPrice > 0
-      );
+  // Wrapper function to match the expected signature for InvoiceSendDialog
+  const handleSaveInvoiceWrapper = async (): Promise<boolean> => {
+    const result = await invoiceBuilder.saveInvoiceChanges();
+    if (result && onInvoiceCreated) {
+      onInvoiceCreated(result);
     }
-    return true;
+    return result !== null;
   };
-
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            {getStepTitle()}
-            <span className="text-sm text-muted-foreground ml-auto">
-              Step {currentStep} of 3
-            </span>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Step Indicator */}
-          <div className="flex items-center justify-center space-x-4">
-            {[1, 2, 3].map((step) => (
-              <div
-                key={step}
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  step === currentStep
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : step < currentStep
-                    ? "border-green-500 bg-green-500 text-white"
-                    : "border-muted-foreground text-muted-foreground"
-                }`}
+      <DialogContent className="max-w-5xl p-0 h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="p-6 border-b bg-muted/20">
+          <div className="flex items-center gap-2">
+            {isMobile && activeTab !== "form" && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setActiveTab("form")} 
+                className="mr-1"
               >
-                {step}
-              </div>
-            ))}
-          </div>
-
-          {/* Step Content */}
-          {currentStep === 1 && (
-            <InvoiceFormStep
-              formData={formData}
-              onUpdateFormData={updateFormData}
-              isFromEstimate={!!estimate}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <InvoicePreviewStep
-              formData={formData}
-              jobId={jobId}
-            />
-          )}
-
-          {currentStep === 3 && (
-            <InvoicePaymentStep
-              invoice={formData}
-              onPayment={handlePayment}
-              onSendInvoice={() => onOpenChange(false)}
-            />
-          )}
-
-          {/* Navigation */}
-          <div className="flex justify-between pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={currentStep === 1 ? () => onOpenChange(false) : handlePrevious}
-              disabled={isSubmitting}
-            >
-              {currentStep === 1 ? (
-                "Cancel"
-              ) : (
-                <>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </>
-              )}
-            </Button>
-
-            {currentStep < 3 ? (
-              <Button
-                onClick={currentStep === 1 ? (invoice ? handleUpdateInvoice : handleCreateInvoice) : handleNext}
-                disabled={!canProceed() || isSubmitting}
-              >
-                {currentStep === 1 ? (
-                  isSubmitting ? "Saving..." : (invoice ? "Update Invoice" : "Create Invoice")
-                ) : (
-                  <>
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button
-                onClick={() => onOpenChange(false)}
-                variant="outline"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Complete
+                <ArrowLeft size={18} />
               </Button>
             )}
+            <DialogTitle className="text-xl">
+              {invoice ? `Edit Invoice ${invoiceBuilder.invoiceNumber}` : 'Create New Invoice'}
+            </DialogTitle>
+          </div>
+        </DialogHeader>
+        
+        <div className="flex flex-grow overflow-hidden">
+          {!isMobile && (
+            <div className="w-20 bg-muted/10 border-r flex flex-col items-center pt-8 gap-8">
+              <button 
+                onClick={() => setActiveTab("form")}
+                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "form" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
+              >
+                <ListPlus size={20} />
+                <span>Form</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab("preview")}
+                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "preview" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
+              >
+                <FileText size={20} />
+                <span>Preview</span>
+              </button>
+            </div>
+          )}
+          
+          <div className="flex-grow overflow-hidden flex flex-col">
+            {isMobile && (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="border-b">
+                <TabsList className="w-full bg-background">
+                  <TabsTrigger value="form" className="flex-1">Form</TabsTrigger>
+                  <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+            
+            <div className="flex-grow overflow-auto p-6">
+              {activeTab === "form" && (
+                <InvoiceForm
+                  invoiceNumber={invoiceBuilder.invoiceNumber}
+                  lineItems={invoiceBuilder.lineItems || []}
+                  onRemoveLineItem={invoiceBuilder.handleRemoveLineItem}
+                  onUpdateLineItem={handleUpdateLineItemWrapper}
+                  onEditLineItem={handleEditLineItem}
+                  onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
+                  onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
+                  taxRate={invoiceBuilder.taxRate}
+                  setTaxRate={invoiceBuilder.setTaxRate}
+                  calculateSubtotal={invoiceBuilder.calculateSubtotal}
+                  calculateTotalTax={invoiceBuilder.calculateTotalTax}
+                  calculateGrandTotal={invoiceBuilder.calculateGrandTotal}
+                  calculateTotalMargin={invoiceBuilder.calculateTotalMargin}
+                  calculateMarginPercentage={invoiceBuilder.calculateMarginPercentage}
+                  showMargin={false}
+                />
+              )}
+              
+              {activeTab === "preview" && (
+                <InvoicePreview 
+                  invoiceNumber={invoiceBuilder.invoiceNumber}
+                  lineItems={invoiceBuilder.lineItems || []}
+                  taxRate={invoiceBuilder.taxRate}
+                  calculateSubtotal={invoiceBuilder.calculateSubtotal}
+                  calculateTotalTax={invoiceBuilder.calculateTotalTax}
+                  calculateGrandTotal={invoiceBuilder.calculateGrandTotal}
+                  notes={invoiceBuilder.notes || ""}
+                  clientInfo={jobData?.client}
+                  issueDate={invoiceBuilder.issueDate}
+                  dueDate={invoiceBuilder.dueDate}
+                />
+              )}
+            </div>
+            
+            <div className="p-4 border-t bg-muted/20 flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSendInvoice}
+                className="flex items-center gap-1"
+              >
+                <Send size={16} />
+                Send to Client
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
+      
+      {/* Product Search Dialog */}
+      <ProductSearch
+        open={isProductSearchOpen}
+        onOpenChange={setIsProductSearchOpen}
+        onProductSelect={handleProductSelect}
+      />
+      
+      {/* Custom Line Item Dialog */}
+      <CustomLineItemDialog
+        open={isCustomLineItemDialogOpen}
+        onOpenChange={setIsCustomLineItemDialogOpen}
+        onSave={handleCustomLineItemSave}
+      />
+
+      {/* Product Edit Dialog */}
+      <ProductEditInEstimateDialog
+        open={isProductEditDialogOpen}
+        onOpenChange={setIsProductEditDialogOpen}
+        product={selectedProduct}
+        onSave={handleProductUpdate}
+      />
+      
+      {/* Invoice Send Dialog */}
+      {invoiceBuilder.formData.invoiceId && (
+        <InvoiceSendDialog
+          open={isSendDialogOpen}
+          onOpenChange={setIsSendDialogOpen}
+          invoiceId={invoiceBuilder.formData.invoiceId}
+          invoiceNumber={invoiceBuilder.invoiceNumber}
+          clientEmail={jobData?.client?.email}
+          clientPhone={jobData?.client?.phone}
+          onSend={async (recipient, method, message) => {
+            return await invoiceBuilder.sendInvoice(invoiceBuilder.formData.invoiceId!, recipient, method, message);
+          }}
+        />
+      )}
     </Dialog>
   );
 };
