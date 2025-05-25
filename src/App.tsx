@@ -48,29 +48,77 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  
+                  {/* Jobs Routes */}
+                  <Route path="/jobs" element={<JobsPage />} />
+                  <Route path="/jobs/:id" element={<JobDetailsPage />} />
                   <Route path="/admin/jobs" element={<JobsPage />} />
                   <Route path="/admin/jobs/:id" element={<JobDetailsPage />} />
+                  
+                  {/* Clients Routes */}
+                  <Route path="/clients" element={<ClientsPage />} />
+                  <Route path="/clients/:id" element={<ClientDetailPage />} />
                   <Route path="/admin/clients" element={<ClientsPage />} />
                   <Route path="/admin/clients/:id" element={<ClientDetailPage />} />
+                  
+                  {/* Schedule Routes */}
+                  <Route path="/schedule" element={<SchedulePage />} />
                   <Route path="/admin/schedule" element={<SchedulePage />} />
+                  
+                  {/* Team Routes */}
+                  <Route path="/team" element={<TeamManagementPage />} />
+                  <Route path="/team/:id" element={<TeamMemberProfilePage />} />
                   <Route path="/admin/team" element={<TeamManagementPage />} />
                   <Route path="/admin/team/:id" element={<TeamMemberProfilePage />} />
+                  
+                  {/* Reports Routes */}
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/reports/builder" element={<ReportBuilderPage />} />
                   <Route path="/admin/reports" element={<ReportsPage />} />
                   <Route path="/admin/reports/builder" element={<ReportBuilderPage />} />
+                  
+                  {/* Settings Routes */}
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/settings/configuration" element={<ConfigurationPage />} />
                   <Route path="/admin/settings" element={<SettingsPage />} />
                   <Route path="/admin/settings/configuration" element={<ConfigurationPage />} />
+                  
+                  {/* Admin Routes */}
                   <Route path="/admin/roles" element={<AdminRolesPage />} />
+                  <Route path="/roles" element={<AdminRolesPage />} />
+                  
+                  {/* Communication Routes */}
+                  <Route path="/connect" element={<ConnectCenterPage />} />
                   <Route path="/admin/connect" element={<ConnectCenterPage />} />
+                  <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/admin/messages" element={<MessagesPage />} />
+                  
+                  {/* Finance Routes */}
+                  <Route path="/finance" element={<FinancePage />} />
                   <Route path="/admin/finance" element={<FinancePage />} />
+                  <Route path="/estimates" element={<EstimatesPage />} />
                   <Route path="/admin/estimates" element={<EstimatesPage />} />
+                  <Route path="/invoices" element={<InvoicesPage />} />
                   <Route path="/admin/invoices" element={<InvoicesPage />} />
+                  
+                  {/* Inventory Routes */}
+                  <Route path="/products" element={<ProductsPage />} />
                   <Route path="/admin/products" element={<ProductsPage />} />
+                  <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/admin/inventory" element={<InventoryPage />} />
+                  
+                  {/* Other Routes */}
+                  <Route path="/documents" element={<DocumentsPage />} />
                   <Route path="/admin/documents" element={<DocumentsPage />} />
+                  <Route path="/automations" element={<AutomationsPage />} />
                   <Route path="/admin/automations" element={<AutomationsPage />} />
+                  <Route path="/ai-assistant" element={<AiAssistantPage />} />
                   <Route path="/admin/ai-assistant" element={<AiAssistantPage />} />
+                  
+                  {/* Preview Route */}
                   <Route path="/preview/:type" element={<PreviewPage />} />
+                  
+                  {/* Catch-all 404 Route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
