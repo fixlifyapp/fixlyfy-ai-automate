@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, ExternalLink, Edit, Trash2, CheckSquare } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Edit, Trash2 } from "lucide-react";
 import { JobsCreateModal } from "../jobs/JobsCreateModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { DeleteJobsDialog } from "../jobs/dialogs/DeleteJobsDialog";
 import { BulkActionsBar } from "../jobs/BulkActionsBar";
+import { useConfigItems } from "@/hooks/useConfigItems";
 
 interface ClientJobsProps {
   clientId?: string;
@@ -21,12 +22,18 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
   const {
     jobs,
     isLoading,
     updateJob,
     deleteJob
   } = useJobs(clientId);
+  
+  // Get dynamic configuration data from database
+  const { jobStatuses } = useConfigItems('job_statuses');
+  const { jobTypes } = useConfigItems('job_types');
+  
   const navigate = useNavigate();
 
   const handleJobCreated = (job: any) => {
@@ -136,6 +143,37 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     setSelectedJobs([]);
   };
 
+  // Get status configuration from database
+  const getStatusBadgeStyle = (status: string) => {
+    const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
+    if (statusConfig?.color) {
+      return { backgroundColor: `${statusConfig.color}20`, color: statusConfig.color };
+    }
+    
+    // Fallback styles if no database config found
+    const statusStyles: Record<string, string> = {
+      "completed": "bg-green-100 text-green-800",
+      "in-progress": "bg-blue-100 text-blue-800", 
+      "scheduled": "bg-yellow-100 text-yellow-800",
+      "cancelled": "bg-red-100 text-red-800",
+      "canceled": "bg-red-100 text-red-800"
+    };
+    
+    return statusStyles[status.toLowerCase()] || "bg-gray-100 text-gray-800";
+  };
+
+  // Get service/job type from database
+  const getJobTypeDisplay = (job: any) => {
+    if (job.job_type) {
+      const jobTypeConfig = jobTypes?.find(jt => jt.name === job.job_type);
+      return jobTypeConfig?.name || job.job_type;
+    }
+    if (job.service) {
+      return job.service;
+    }
+    return "Service Job"; // Dynamic fallback instead of hardcoded "General"
+  };
+
   const areAllJobsSelected = jobs.length > 0 && selectedJobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
 
   if (isLoading) {
@@ -226,67 +264,68 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map(job => (
-                <TableRow key={job.id}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedJobs.includes(job.id)}
-                      onCheckedChange={(checked) => handleSelectJob(job.id, !!checked)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{job.id}</TableCell>
-                  <TableCell>{job.title}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={`${
-                        job.status === "completed" ? "bg-green-100 text-green-800" :
-                        job.status === "in-progress" ? "bg-blue-100 text-blue-800" :
-                        job.status === "scheduled" ? "bg-yellow-100 text-yellow-800" :
-                        "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {job.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {job.date ? format(new Date(job.date), "MMM dd, yyyy") : "N/A"}
-                  </TableCell>
-                  <TableCell>{job.service || "General"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditJob(job.id)}
-                        title="Edit Job"
+              {jobs.map(job => {
+                const statusStyle = getStatusBadgeStyle(job.status);
+                const isStyleObject = typeof statusStyle === 'object';
+                
+                return (
+                  <TableRow key={job.id}>
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedJobs.includes(job.id)}
+                        onCheckedChange={(checked) => handleSelectJob(job.id, !!checked)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{job.id}</TableCell>
+                    <TableCell>{job.title}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={isStyleObject ? "" : statusStyle}
+                        style={isStyleObject ? statusStyle : undefined}
                       >
-                        <Edit size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleViewJob(job.id)}
-                        title="View Job"
-                      >
-                        <ExternalLink size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedJobs([job.id]);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete Job"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {job.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {job.date ? format(new Date(job.date), "MMM dd, yyyy") : "N/A"}
+                    </TableCell>
+                    <TableCell>{getJobTypeDisplay(job)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditJob(job.id)}
+                          title="Edit Job"
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleViewJob(job.id)}
+                          title="View Job"
+                        >
+                          <ExternalLink size={16} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedJobs([job.id]);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete Job"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
