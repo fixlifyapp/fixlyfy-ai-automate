@@ -8,6 +8,7 @@ import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 import { LeadSourceSelectionDialog } from "../dialogs/LeadSourceSelectionDialog";
 import { JobTypeSelectionDialog } from "../dialogs/JobTypeSelectionDialog";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 
 interface EditableJobSummaryCardProps {
   job: JobInfo;
@@ -18,11 +19,22 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
   const [isEditing, setIsEditing] = useState(false);
   const [isLeadSourceDialogOpen, setIsLeadSourceDialogOpen] = useState(false);
   const [isJobTypeDialogOpen, setIsJobTypeDialogOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editValues, setEditValues] = useState({
     service: job.service || job.job_type || "General Service",
     lead_source: job.lead_source || ""
   });
   const { updateJob } = useJobs();
+
+  // Set up real-time updates for job types and lead sources
+  useUnifiedRealtime({
+    tables: ['job_types', 'lead_sources'],
+    onUpdate: () => {
+      console.log('Real-time update for job types/lead sources');
+      setRefreshTrigger(prev => prev + 1);
+    },
+    enabled: true
+  });
 
   const handleSave = async () => {
     const result = await updateJob(jobId, {
@@ -100,6 +112,7 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => setIsJobTypeDialogOpen(true)}
+                  key={`job-type-${refreshTrigger}`}
                 >
                   {editValues.service || "Select job type..."}
                 </Button>
@@ -114,6 +127,7 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => setIsLeadSourceDialogOpen(true)}
+                  key={`lead-source-${refreshTrigger}`}
                 >
                   {editValues.lead_source || "Select lead source..."}
                 </Button>
@@ -126,6 +140,7 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
       </ModernCard>
 
       <LeadSourceSelectionDialog
+        key={`lead-source-dialog-${refreshTrigger}`}
         open={isLeadSourceDialogOpen}
         onOpenChange={setIsLeadSourceDialogOpen}
         initialSource={editValues.lead_source}
@@ -133,6 +148,7 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
       />
 
       <JobTypeSelectionDialog
+        key={`job-type-dialog-${refreshTrigger}`}
         open={isJobTypeDialogOpen}
         onOpenChange={setIsJobTypeDialogOpen}
         initialType={editValues.service}
