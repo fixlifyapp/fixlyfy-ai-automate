@@ -69,8 +69,8 @@ export function ConfigItemCard({
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingItem) return;
+  const handleDelete = async (): Promise<boolean> => {
+    if (!deletingItem) return false;
     
     try {
       const success = await onDelete(deletingItem.id);
@@ -78,10 +78,13 @@ export function ConfigItemCard({
         setDeletingItem(null);
         refreshItems();
         toast.success(`${title.slice(0, -1)} deleted successfully`);
+        return true;
       }
+      return false;
     } catch (error) {
       console.error(`Error deleting ${title.toLowerCase()}:`, error);
       toast.error(`Failed to delete ${title.toLowerCase()}`);
+      return false;
     }
   };
 
@@ -199,6 +202,8 @@ export function ConfigItemCard({
         onConfirm={handleDelete}
         title={`Delete ${title.slice(0, -1)}`}
         description={`Are you sure you want to delete "${deletingItem?.name}"? This action cannot be undone.`}
+        itemName={deletingItem?.name || ""}
+        itemType={title.slice(0, -1).toLowerCase()}
       />
     </>
   );

@@ -37,6 +37,13 @@ export function LeadSourcesConfig() {
     />
   );
 
+  const getInitialValues = (item?: any) => {
+    if (!item) {
+      return { is_active: true };
+    }
+    return item;
+  };
+
   return (
     <ConfigItemCard
       title="Lead Sources"
@@ -56,7 +63,7 @@ export function LeadSourcesConfig() {
         </div>
       )}
       itemDialogFields={renderItemDialogFields}
-      initialValues={{ is_active: true }}
+      getInitialValues={getInitialValues}
     />
   );
 }

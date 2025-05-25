@@ -88,6 +88,13 @@ export function TagsConfig() {
     </>
   );
 
+  const getInitialValues = (item?: any) => {
+    if (!item) {
+      return { category: 'General' };
+    }
+    return item;
+  };
+
   return (
     <ConfigItemCard
       title="Tags"
@@ -106,9 +113,9 @@ export function TagsConfig() {
           </span>
         </div>
       )}
-      initialValues={{ category: 'General' }}
       schema={tagSchema}
       itemDialogFields={renderItemDialogFields}
+      getInitialValues={getInitialValues}
     />
   );
 }

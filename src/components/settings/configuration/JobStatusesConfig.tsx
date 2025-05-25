@@ -105,6 +105,13 @@ export function JobStatusesConfig() {
     </>
   );
 
+  const getInitialValues = (item?: any) => {
+    if (!item) {
+      return { sequence: 1 };
+    }
+    return item;
+  };
+
   return (
     <ConfigItemCard
       title="Job Statuses"
@@ -122,9 +129,9 @@ export function JobStatusesConfig() {
           {status.is_default && <span className="text-sm text-green-600">Default</span>}
         </div>
       )}
-      initialValues={{ sequence: 1 }}
       schema={jobStatusSchema}
       itemDialogFields={renderItemDialogFields}
+      getInitialValues={getInitialValues}
     />
   );
 }
