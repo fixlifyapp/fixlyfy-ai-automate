@@ -191,91 +191,122 @@ export const EstimateSendDialog = ({
       return;
     }
 
+    // Check if estimate has line items
+    if (!lineItems || lineItems.length === 0) {
+      toast.error("Cannot send estimate: Please add at least one item to the estimate first");
+      return;
+    }
+
+    // Validate send recipient
+    if (!sendTo) {
+      toast.error(`Please enter a ${sendMethod === "email" ? "email address" : "phone number"}`);
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
+      console.log("Starting estimate send process...");
+      
       // First save the estimate
       const success = await onSave();
       
-      if (success) {
-        // Create estimate communication record
-        const { data: commData, error: commError } = await supabase
-          .from('estimate_communications')
-          .insert({
-            estimate_id: estimateDetails.estimate_id,
-            communication_type: sendMethod,
-            recipient: sendTo,
-            subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
-            content: sendMethod === 'sms' 
-              ? `Hi ${estimateDetails.client_name}! Your estimate ${estimateNumber} is ready. Total: $${estimateDetails.total.toFixed(2)}. Please review and let us know if you have any questions.`
-              : `Please find your estimate ${estimateNumber} attached. Total: $${estimateDetails.total.toFixed(2)}`,
-            status: 'pending',
-            estimate_number: estimateNumber,
-            client_name: estimateDetails.client_name,
-            client_email: estimateDetails.client_email,
-            client_phone: estimateDetails.client_phone
-          })
-          .select()
-          .single();
-
-        if (commError) {
-          console.error('Error creating communication record:', commError);
-          toast.error('Failed to create communication record');
-          setIsProcessing(false);
-          return;
-        }
-
-        // Prepare estimate data for the edge function
-        const estimateData = {
-          lineItems: lineItems.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            taxable: item.taxable,
-            total: item.quantity * Number(item.unit_price)
-          })),
-          total: estimateDetails.total,
-          taxRate: 13, // Default tax rate - could be made configurable
-          notes: customNote || estimateDetails.notes
-        };
-
-        // Call the edge function to send the estimate
-        const { data, error } = await supabase.functions.invoke('send-estimate', {
-          body: {
-            method: sendMethod,
-            recipient: sendTo,
-            estimateNumber: estimateNumber,
-            estimateData: estimateData,
-            clientName: estimateDetails.client_name,
-            communicationId: commData.id
-          }
-        });
-        
-        if (error) {
-          throw new Error(error.message);
-        }
-        
-        if (data?.success) {
-          const method = sendMethod === "email" ? "email" : "text message";
-          toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
-          
-          // Move to confirmation step
-          setCurrentStep("confirmation");
-        } else {
-          // Update communication record as failed
-          await supabase
-            .from('estimate_communications')
-            .update({
-              status: 'failed',
-              error_message: data?.error || 'Unknown error'
-            })
-            .eq('id', commData.id);
-          
-          toast.error(`Failed to send estimate: ${data?.error || 'Unknown error'}`);
-          setIsProcessing(false);
-        }
-      } else {
+      if (!success) {
         toast.error("Failed to save estimate. Please try again.");
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log("Estimate saved successfully, proceeding with send...");
+      
+      // Create estimate communication record
+      const { data: commData, error: commError } = await supabase
+        .from('estimate_communications')
+        .insert({
+          estimate_id: estimateDetails.estimate_id,
+          communication_type: sendMethod,
+          recipient: sendTo,
+          subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
+          content: sendMethod === 'sms' 
+            ? `Hi ${estimateDetails.client_name}! Your estimate ${estimateNumber} is ready. Total: $${estimateDetails.total.toFixed(2)}. Please review and let us know if you have any questions.`
+            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateDetails.total.toFixed(2)}`,
+          status: 'pending',
+          estimate_number: estimateNumber,
+          client_name: estimateDetails.client_name,
+          client_email: estimateDetails.client_email,
+          client_phone: estimateDetails.client_phone
+        })
+        .select()
+        .single();
+
+      if (commError) {
+        console.error('Error creating communication record:', commError);
+        toast.error('Failed to create communication record');
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log("Communication record created:", commData);
+
+      // Prepare estimate data for the edge function
+      const estimateData = {
+        lineItems: lineItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: Number(item.unit_price),
+          taxable: item.taxable,
+          total: item.quantity * Number(item.unit_price)
+        })),
+        total: estimateDetails.total,
+        taxRate: 13, // Default tax rate - could be made configurable
+        notes: customNote || estimateDetails.notes
+      };
+
+      console.log("Calling send-estimate edge function with data:", {
+        method: sendMethod,
+        recipient: sendTo,
+        estimateNumber: estimateNumber,
+        estimateData: estimateData,
+        clientName: estimateDetails.client_name,
+        communicationId: commData.id
+      });
+
+      // Call the edge function to send the estimate
+      const { data, error } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          method: sendMethod,
+          recipient: sendTo,
+          estimateNumber: estimateNumber,
+          estimateData: estimateData,
+          clientName: estimateDetails.client_name,
+          communicationId: commData.id
+        }
+      });
+      
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message);
+      }
+      
+      console.log("Edge function response:", data);
+      
+      if (data?.success) {
+        const method = sendMethod === "email" ? "email" : "text message";
+        toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
+        
+        // Move to confirmation step
+        setCurrentStep("confirmation");
+      } else {
+        // Update communication record as failed
+        await supabase
+          .from('estimate_communications')
+          .update({
+            status: 'failed',
+            error_message: data?.error || 'Unknown error'
+          })
+          .eq('id', commData.id);
+        
+        toast.error(`Failed to send estimate: ${data?.error || 'Unknown error'}`);
         setIsProcessing(false);
       }
     } catch (error: any) {
@@ -348,6 +379,15 @@ export const EstimateSendDialog = ({
                 Send estimate {estimateNumber} to {estimateDetails.client_name}:
               </div>
               
+              {/* Show warning if no line items */}
+              {(!lineItems || lineItems.length === 0) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+                  <p className="text-sm text-amber-700">
+                    ⚠️ This estimate has no items. Please add items to the estimate before sending.
+                  </p>
+                </div>
+              )}
+              
               <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
                 <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
                   sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
@@ -402,7 +442,7 @@ export const EstimateSendDialog = ({
                 </Button>
                 <Button 
                   onClick={handleSendEstimate} 
-                  disabled={!sendTo || isProcessing || (!hasEmail && !hasPhone)}
+                  disabled={!sendTo || isProcessing || (!lineItems || lineItems.length === 0)}
                 >
                   {isProcessing ? "Sending..." : "Send Estimate"}
                 </Button>
