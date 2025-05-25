@@ -1,13 +1,14 @@
 
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesList } from "@/components/connect/MessagesList";
 import { CallsList } from "@/components/connect/CallsList";
 import { EmailsList } from "@/components/connect/EmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall, Zap, Users, Target } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
@@ -136,24 +137,23 @@ const ConnectCenterPage = () => {
       {/* Incoming call handler - shows when there's an incoming call */}
       <IncomingCallHandler />
       
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Connect Center</h1>
-          <p className="text-fixlyfy-text-secondary">
-            Manage all client communications and phone numbers in one place
-          </p>
-        </div>
-        <Button 
-          className="bg-fixlyfy hover:bg-fixlyfy/90"
-          onClick={handleNewCommunication}
-        >
-          <Plus size={18} className="mr-2" /> 
-          {activeTab === "messages" && "New Message"}
-          {activeTab === "calls" && "New Call"}
-          {activeTab === "emails" && "New Email"}
-          {activeTab === "phone-numbers" && "Search Numbers"}
-        </Button>
-      </div>
+      <PageHeader
+        title="Connect Center"
+        subtitle="Manage all client communications and phone numbers in one place"
+        icon={MessageSquare}
+        badges={[
+          { text: "Unified Communications", icon: Zap, variant: "fixlyfy" },
+          { text: "Multi-Channel", icon: Users, variant: "success" },
+          { text: "Real-time Sync", icon: Target, variant: "info" }
+        ]}
+        actionButton={{
+          text: activeTab === "messages" ? "New Message" : 
+                activeTab === "calls" ? "New Call" : 
+                activeTab === "emails" ? "New Email" : "Search Numbers",
+          icon: Plus,
+          onClick: handleNewCommunication
+        }}
+      />
       
       {/* Global Search Component */}
       <div className="mb-6">
@@ -164,28 +164,28 @@ const ConnectCenterPage = () => {
         <TabsList className="grid grid-cols-4 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
-            <span>Messages</span>
+            <span className="hidden sm:inline">Messages</span>
             {unreadCounts.messages > 0 && (
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.messages}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="calls" className="flex items-center gap-2">
             <Phone size={16} />
-            <span>Calls</span>
+            <span className="hidden sm:inline">Calls</span>
             {unreadCounts.calls > 0 && (
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail size={16} />
-            <span>Emails</span>
+            <span className="hidden sm:inline">Emails</span>
             {unreadCounts.emails > 0 && (
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
             <PhoneCall size={16} />
-            <span>Phone Numbers</span>
+            <span className="hidden sm:inline">Phone Numbers</span>
           </TabsTrigger>
         </TabsList>
         
