@@ -302,6 +302,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       clients: {
@@ -437,6 +444,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
@@ -542,16 +556,27 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       estimate_communications: {
         Row: {
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
           communication_type: string
           content: string
           created_at: string
           delivered_at: string | null
           error_message: string | null
           estimate_id: string | null
+          estimate_number: string | null
           id: string
           provider_message_id: string | null
           recipient: string
@@ -561,12 +586,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           communication_type: string
           content: string
           created_at?: string
           delivered_at?: string | null
           error_message?: string | null
           estimate_id?: string | null
+          estimate_number?: string | null
           id?: string
           provider_message_id?: string | null
           recipient: string
@@ -576,12 +605,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           communication_type?: string
           content?: string
           created_at?: string
           delivered_at?: string | null
           error_message?: string | null
           estimate_id?: string | null
+          estimate_number?: string | null
           id?: string
           provider_message_id?: string | null
           recipient?: string
@@ -591,6 +624,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "estimate_communications_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["estimate_id"]
+          },
           {
             foreignKeyName: "estimate_communications_estimate_id_fkey"
             columns: ["estimate_id"]
@@ -695,6 +735,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["estimate_id"]
+          },
           {
             foreignKeyName: "invoices_estimate_id_fkey"
             columns: ["estimate_id"]
@@ -1060,6 +1107,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -1682,6 +1736,40 @@ export type Database = {
       }
     }
     Views: {
+      estimate_details_view: {
+        Row: {
+          client_company: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          estimate_id: string | null
+          estimate_number: string | null
+          job_description: string | null
+          job_id: string | null
+          job_title: string | null
+          notes: string | null
+          status: string | null
+          total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fact_jobs: {
         Row: {
           client_id: string | null
@@ -1707,6 +1795,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
