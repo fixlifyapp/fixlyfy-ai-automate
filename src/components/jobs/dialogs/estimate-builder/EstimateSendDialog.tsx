@@ -15,18 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CheckCircle, Mail, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 
 interface EstimateSendDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: () => Promise<boolean>;
   onAddWarranty: (warranty: Product | null, note: string) => void;
-  clientInfo?: { email?: string; phone?: string; name?: string } | null;
+  clientInfo?: { email?: string; phone?: string } | null;
   estimateNumber: string;
-  estimateId?: string;
-  estimateTotal?: number;
 }
 
 type SendStep = "warranty" | "send-method" | "confirmation";
@@ -37,9 +33,7 @@ export const EstimateSendDialog = ({
   onSave,
   onAddWarranty,
   clientInfo,
-  estimateNumber,
-  estimateId,
-  estimateTotal = 0
+  estimateNumber
 }: EstimateSendDialogProps) => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<SendStep>("warranty");
@@ -80,72 +74,29 @@ export const EstimateSendDialog = ({
   
   // Send the estimate to the client
   const handleSendEstimate = async () => {
-    if (!estimateId) {
-      toast.error("No estimate ID provided");
-      return;
-    }
-
     setIsProcessing(true);
     
     try {
       // First save the estimate
       const success = await onSave();
       
-      if (!success) {
-        toast.error("Failed to save estimate. Please try again.");
-        setIsProcessing(false);
-        return;
-      }
-
-      const estimateData = {
-        estimateId,
-        recipient: sendTo,
-        estimateNumber,
-        clientName: clientInfo?.name || "Customer",
-        estimateTotal,
-        estimateDate: format(new Date(), 'MMM dd, yyyy'),
-        companyName: "Your Company" // You might want to get this from settings
-      };
-
-      let result;
-      
-      if (sendMethod === "email") {
-        // Send via email
-        const { data, error } = await supabase.functions.invoke('send-estimate-email', {
-          body: estimateData
-        });
+      if (success) {
+        // In a real implementation, we would send the estimate via email or SMS here
+        // For now, we'll just show a success message
         
-        if (error) {
-          throw new Error(error.message);
-        }
-        
-        result = data;
-      } else {
-        // Send via SMS
-        const { data, error } = await supabase.functions.invoke('send-estimate-sms', {
-          body: estimateData
-        });
-        
-        if (error) {
-          throw new Error(error.message);
-        }
-        
-        result = data;
-      }
-
-      if (result.success) {
         const method = sendMethod === "email" ? "email" : "text message";
-        toast.success(`Estimate ${estimateNumber} sent successfully via ${method}`);
+        
+        toast.success(`Estimate ${estimateNumber} will be sent to client via ${method}`);
         
         // Move to confirmation step
         setCurrentStep("confirmation");
       } else {
-        toast.error(`Failed to send estimate: ${result.error || 'Unknown error'}`);
+        toast.error("Failed to save estimate. Please try again.");
         setIsProcessing(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error sending estimate:", error);
-      toast.error(`An error occurred while sending the estimate: ${error.message}`);
+      toast.error("An error occurred while sending the estimate");
       setIsProcessing(false);
     }
   };
@@ -266,7 +217,7 @@ export const EstimateSendDialog = ({
               </div>
               <h3 className="text-lg font-semibold mb-2">Estimate Sent Successfully</h3>
               <p className="text-muted-foreground mb-6">
-                The estimate has been sent to the client via {sendMethod}.
+                The estimate has been sent to the client.
                 {customNote && <span className="block mt-2">Your warranty recommendation was included.</span>}
               </p>
               <Button onClick={handleCloseAfterSend}>
