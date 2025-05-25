@@ -15,7 +15,6 @@ export interface JobInfo {
   schedule_start?: string;
   schedule_end?: string;
   job_type?: string;
-  priority?: string;
   lead_source?: string;
   estimated_duration?: number;
   special_instructions?: string;

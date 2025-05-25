@@ -71,7 +71,22 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           client.country || ''
         ].filter(Boolean).join(', ');
         
-        // Create job info object with all fields including the new ones
+        // Safely convert tasks from JSONB to string array
+        let tasksArray: string[] = [];
+        if (jobData.tasks) {
+          if (Array.isArray(jobData.tasks)) {
+            tasksArray = jobData.tasks.map(task => String(task));
+          } else if (typeof jobData.tasks === 'string') {
+            try {
+              const parsed = JSON.parse(jobData.tasks);
+              tasksArray = Array.isArray(parsed) ? parsed.map(task => String(task)) : [];
+            } catch {
+              tasksArray = [];
+            }
+          }
+        }
+        
+        // Create job info object with all fields
         const jobInfo: JobInfo = {
           id: jobData.id,
           clientId: client.id || "",
@@ -88,7 +103,6 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           schedule_start: jobData.schedule_start,
           schedule_end: jobData.schedule_end,
           job_type: jobData.job_type || jobData.service,
-          priority: jobData.priority || "medium",
           lead_source: jobData.lead_source,
           estimated_duration: jobData.estimated_duration,
           special_instructions: jobData.special_instructions,
@@ -97,7 +111,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           preferred_time: jobData.preferred_time,
           equipment_needed: jobData.equipment_needed || [],
           safety_notes: jobData.safety_notes,
-          tasks: jobData.tasks || []
+          tasks: tasksArray
         };
         
         console.log('Processed job info:', jobInfo);

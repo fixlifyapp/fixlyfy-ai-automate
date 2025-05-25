@@ -13,7 +13,6 @@ export interface JobOverview {
   warranty_info?: any;
   emergency_contact?: any;
   billing_contact?: any;
-  priority?: string;
   lead_source?: string;
   estimated_duration?: number;
   special_instructions?: string;
@@ -40,13 +39,12 @@ export const useJobOverview = (jobId: string) => {
       try {
         setIsLoading(true);
         
-        // First, get the job data with additional fields
+        // First, get the job data with additional fields (removed priority)
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
             id,
             job_type,
-            priority,
             lead_source,
             estimated_duration,
             special_instructions,
@@ -78,11 +76,10 @@ export const useJobOverview = (jobId: string) => {
           return;
         }
 
-        // Combine the data
+        // Combine the data (removed priority)
         const combinedOverview: JobOverview = {
           id: overviewData?.id || '',
           job_id: jobId,
-          priority: jobData?.priority || 'medium',
           lead_source: jobData?.lead_source,
           estimated_duration: jobData?.estimated_duration,
           special_instructions: jobData?.special_instructions,
@@ -116,10 +113,9 @@ export const useJobOverview = (jobId: string) => {
 
   const saveOverview = async (data: Partial<JobOverview>) => {
     try {
-      // Separate job table fields from job_overview table fields
+      // Separate job table fields from job_overview table fields (removed priority)
       const jobFields = {
-        job_type: data.priority,
-        priority: data.priority,
+        job_type: data.lead_source,
         lead_source: data.lead_source,
         estimated_duration: data.estimated_duration,
         special_instructions: data.special_instructions,

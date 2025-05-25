@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,9 +32,8 @@ export interface Job {
     value: string;
     field_type: string;
   }>;
-  // All the additional fields
+  // All the additional fields (removed priority)
   job_type?: string;
-  priority?: string;
   lead_source?: string;
   estimated_duration?: number;
   special_instructions?: string;
@@ -57,7 +55,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
-      // Prepare base query with ALL fields
+      // Prepare base query with ALL fields (removed priority)
       let query = supabase
         .from('jobs')
         .select(`
@@ -76,7 +74,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           created_at,
           updated_at,
           job_type,
-          priority,
           lead_source,
           estimated_duration,
           special_instructions,
@@ -99,20 +96,38 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
       
       if (jobsError) throw jobsError;
       
-      let transformedJobs = jobsData?.map(job => ({
-        ...job,
-        client: {
-          name: job.clients?.name || 'Unknown Client',
-          phone: job.clients?.phone,
-          email: job.clients?.email,
-          address: [
-            job.clients?.address,
-            job.clients?.city,
-            job.clients?.state,
-            job.clients?.zip
-          ].filter(Boolean).join(', ')
+      let transformedJobs = jobsData?.map(job => {
+        // Safely convert tasks from JSONB to string array
+        let tasksArray: string[] = [];
+        if (job.tasks) {
+          if (Array.isArray(job.tasks)) {
+            tasksArray = job.tasks.map(task => String(task));
+          } else if (typeof job.tasks === 'string') {
+            try {
+              const parsed = JSON.parse(job.tasks);
+              tasksArray = Array.isArray(parsed) ? parsed.map(task => String(task)) : [];
+            } catch {
+              tasksArray = [];
+            }
+          }
         }
-      })) || [];
+
+        return {
+          ...job,
+          tasks: tasksArray,
+          client: {
+            name: job.clients?.name || 'Unknown Client',
+            phone: job.clients?.phone,
+            email: job.clients?.email,
+            address: [
+              job.clients?.address,
+              job.clients?.city,
+              job.clients?.state,
+              job.clients?.zip
+            ].filter(Boolean).join(', ')
+          }
+        };
+      }) || [];
 
       // Fetch custom fields if requested
       if (includeCustomFields && transformedJobs.length > 0) {
@@ -186,7 +201,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw new Error('Title and client are required');
       }
       
-      // Prepare job data with ALL fields
+      // Prepare job data with ALL fields (removed priority)
       const newJob = {
         id: jobId,
         title: job.title,
@@ -195,7 +210,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         client_id: job.client_id,
         service: job.service || 'General Service',
         job_type: job.job_type || job.service || 'General Service',
-        priority: job.priority || 'medium',
         lead_source: job.lead_source,
         estimated_duration: job.estimated_duration,
         special_instructions: job.special_instructions,
@@ -232,7 +246,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           revenue,
           tags,
           job_type,
-          priority,
           lead_source,
           estimated_duration,
           special_instructions,
@@ -253,9 +266,25 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw error;
       }
       
+      // Safely convert tasks from JSONB to string array
+      let tasksArray: string[] = [];
+      if (data.tasks) {
+        if (Array.isArray(data.tasks)) {
+          tasksArray = data.tasks.map(task => String(task));
+        } else if (typeof data.tasks === 'string') {
+          try {
+            const parsed = JSON.parse(data.tasks);
+            tasksArray = Array.isArray(parsed) ? parsed.map(task => String(task)) : [];
+          } catch {
+            tasksArray = [];
+          }
+        }
+      }
+      
       // Transform the returned data
       const jobWithClient = {
         ...data,
+        tasks: tasksArray,
         client: {
           name: data.clients?.name || 'Unknown Client',
           phone: data.clients?.phone,

@@ -35,19 +35,6 @@ export const JobSummaryCard = ({ job }: JobSummaryCardProps) => {
             </Badge>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Priority</p>
-            <Badge 
-              variant="outline" 
-              className={
-                job.priority === 'high' ? "bg-red-50 border-red-200 text-red-600" :
-                job.priority === 'medium' ? "bg-yellow-50 border-yellow-200 text-yellow-600" :
-                "bg-green-50 border-green-200 text-green-600"
-              }
-            >
-              {job.priority || "Medium"}
-            </Badge>
-          </div>
-          <div>
             <p className="text-sm text-muted-foreground">Revenue</p>
             <p className="font-medium">${job.total?.toFixed(2) || "0.00"}</p>
           </div>
