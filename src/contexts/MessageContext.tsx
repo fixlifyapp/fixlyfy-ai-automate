@@ -54,29 +54,43 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // Real-time subscription for messages
+  // Centralized real-time subscription for all messages and conversations
   useEffect(() => {
-    const channel = supabase
-      .channel('global-messages')
+    console.log('Setting up centralized real-time messaging...');
+    
+    const messagesChannel = supabase
+      .channel('unified-messages')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
-        () => refreshConversations()
+        (payload) => {
+          console.log('Message change detected:', payload);
+          // Refresh conversations when any message changes
+          refreshConversations();
+        }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations' },
-        () => refreshConversations()
+        (payload) => {
+          console.log('Conversation change detected:', payload);
+          // Refresh conversations when conversation data changes
+          refreshConversations();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('Cleaning up real-time subscriptions...');
+      supabase.removeChannel(messagesChannel);
     };
   }, []);
 
   const refreshConversations = async () => {
     try {
+      console.log('Refreshing conversations...');
       const { data: conversationsData } = await supabase
         .from('conversations')
         .select(`
@@ -143,10 +157,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // First, try to find existing conversation for this client
       const { data: existingConv } = await supabase
         .from('conversations')
-        .select(`
-          id,
-          clients:client_id(id, name, phone, email)
-        `)
+        .select('id')
         .eq('client_id', clientId)
         .single();
 
@@ -178,6 +189,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const openMessageDialog = async (client: { id?: string; name: string; phone?: string; email?: string }, jobId?: string) => {
+    console.log('Opening message dialog for client:', client);
     setIsLoading(true);
     
     try {
@@ -267,6 +279,8 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsSending(true);
 
     try {
+      console.log('Sending message:', content, 'to client:', client);
+      
       // Send SMS via Twilio
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
@@ -291,7 +305,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // Store message in database
       if (conversationId) {
-        await supabase
+        const { error: messageError } = await supabase
           .from('messages')
           .insert({
             conversation_id: conversationId,
@@ -303,6 +317,10 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
             message_sid: data.sid
           });
 
+        if (messageError) {
+          console.error('Error saving message:', messageError);
+        }
+
         // Update conversation timestamp
         await supabase
           .from('conversations')
@@ -310,7 +328,9 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
           .eq('id', conversationId);
 
         toast.success("Message sent successfully");
-        refreshConversations();
+        
+        // Refresh conversations to show the new message
+        await refreshConversations();
       }
     } catch (error) {
       console.error('Error sending message:', error);

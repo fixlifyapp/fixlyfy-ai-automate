@@ -1,13 +1,6 @@
-
-import { useState, useEffect, useCallback } from "react";
-import { 
-  fetchJobClientDetails, 
-  fetchConversationMessages, 
-  sendClientMessage 
-} from "./messaging/messagingUtils";
-import { useMessageAI } from "./messaging/useMessageAI";
-import { useRealTimeMessages } from "./messaging/useRealTimeMessages";
-import { toast } from "sonner";
+import { useMessageContext } from "@/contexts/MessageContext";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseJobMessagesProps {
   jobId: string;
@@ -16,130 +9,62 @@ interface UseJobMessagesProps {
 }
 
 export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesProps) => {
-  const [messages, setMessages] = useState<any[]>([]);
+  const { conversations, openMessageDialog } = useMessageContext();
   const [client, setClient] = useState({ name: "", phone: "", id: "", email: "" });
   const [isLoading, setIsLoading] = useState(true);
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
 
-  const fetchMessages = useCallback(async () => {
-    console.log("Fetching messages for job:", jobId);
-    setIsLoading(true);
-    try {
-      const { messages: fetchedMessages, conversationId: fetchedConversationId, clientInfo } = await fetchConversationMessages(jobId);
-      console.log("Fetched messages:", fetchedMessages);
-      console.log("Client info:", clientInfo);
+  // Fetch client details from job
+  useEffect(() => {
+    const fetchClientDetails = async () => {
+      if (!jobId) return;
       
-      setMessages(fetchedMessages);
-      setConversationId(fetchedConversationId);
-      
-      // Update client info if available from conversation
-      if (clientInfo) {
-        setClient({
-          name: clientInfo.name || "",
-          phone: clientInfo.phone || "",
-          id: clientInfo.id || "",
-          email: clientInfo.email || ""
-        });
+      setIsLoading(true);
+      try {
+        const { data: job } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients:client_id(*)
+          `)
+          .eq('id', jobId)
+          .single();
+
+        if (job?.clients) {
+          setClient({
+            name: job.clients.name,
+            phone: job.clients.phone || "",
+            id: job.clients.id,
+            email: job.clients.email || ""
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching client details:", error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error in fetchMessages:", error);
-      setMessages([]);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    fetchClientDetails();
   }, [jobId]);
 
-  // Handle using AI suggestion
-  const handleUseSuggestion = async (content: string) => {
-    setMessage(content);
-  };
+  // Find messages for this client from centralized conversations
+  const clientConversation = conversations.find(conv => conv.client.id === client.id);
+  const messages = clientConversation?.messages || [];
 
-  // Handle sending message
-  const handleSendMessage = async () => {
-    if (!message.trim() || !client.phone) {
-      if (!client.phone) {
-        toast.error("No phone number available for this client");
-      }
-      return;
-    }
-    
-    console.log("Sending message:", message, "to client:", client);
-    setIsSendingMessage(true);
-    
-    try {
-      const result = await sendClientMessage({
-        content: message,
-        clientPhone: client.phone,
-        jobId,
-        clientId: client.id,
-        existingConversationId: conversationId
-      });
-      
-      if (result.success) {
-        // Update conversation ID if it's new
-        if (result.conversationId && !conversationId) {
-          setConversationId(result.conversationId);
-        }
-        
-        // Clear message and refresh
-        setMessage("");
-        fetchMessages();
-        toast.success("Message sent successfully");
-      }
-    } catch (error) {
-      console.error("Send message error:", error);
-      toast.error("Failed to send message");
-    } finally {
-      setIsSendingMessage(false);
+  const handleOpenMessageDialog = () => {
+    if (client.id) {
+      openMessageDialog(client, jobId);
     }
   };
-
-  // Initialize AI features with enhanced context
-  const { isAILoading, handleSuggestResponse } = useMessageAI({ 
-    messages,
-    client,
-    jobId,
-    onUseSuggestion: handleUseSuggestion
-  });
-
-  // Set up real-time subscription
-  useRealTimeMessages({
-    jobId,
-    conversationId,
-    onNewMessage: fetchMessages
-  });
-
-  // Initialize client details and messages
-  useEffect(() => {
-    if (jobId) {
-      const initializeData = async () => {
-        console.log("Initializing data for job:", jobId);
-        
-        // Fetch client details from job
-        const clientDetails = await fetchJobClientDetails(jobId);
-        console.log("Job client details:", clientDetails);
-        
-        if (clientDetails) {
-          setClient(clientDetails);
-        }
-        
-        // Fetch messages
-        await fetchMessages();
-      };
-      
-      initializeData();
-    }
-  }, [jobId, fetchMessages]);
 
   return {
     messages,
     client,
     isLoading,
-    isSendingMessage,
-    isAILoading,
-    handleSuggestResponse,
-    handleUseSuggestion,
-    handleSendMessage
+    isSendingMessage: false, // Handled by MessageContext
+    isAILoading: false, // This would be handled by AI hooks
+    handleSuggestResponse: () => {}, // Placeholder
+    handleUseSuggestion: (content: string) => setMessage(content),
+    handleSendMessage: handleOpenMessageDialog // Open dialog instead of direct send
   };
 };

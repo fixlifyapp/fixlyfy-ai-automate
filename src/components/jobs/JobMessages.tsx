@@ -13,12 +13,12 @@ interface JobMessagesProps {
 }
 
 export const JobMessages = ({ jobId }: JobMessagesProps) => {
-  const { openMessageDialog } = useMessageContext();
+  const { openMessageDialog, conversations } = useMessageContext();
   const [client, setClient] = useState({ name: "", phone: "", id: "", email: "" });
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch job client details and messages
+  // Fetch job client details and find existing conversation
   useEffect(() => {
     const fetchJobData = async () => {
       setIsLoading(true);
@@ -42,22 +42,13 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           };
           setClient(clientData);
 
-          // Get conversation for this job
-          const { data: conversation } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('job_id', jobId)
-            .single();
-
-          if (conversation) {
-            // Fetch messages
-            const { data: messagesData } = await supabase
-              .from('messages')
-              .select('*')
-              .eq('conversation_id', conversation.id)
-              .order('created_at', { ascending: true });
-
-            setMessages(messagesData || []);
+          // Find conversation for this client from the centralized conversations
+          const clientConversation = conversations.find(conv => conv.client.id === clientData.id);
+          if (clientConversation) {
+            setMessages(clientConversation.messages);
+          } else {
+            // No existing conversation
+            setMessages([]);
           }
         }
       } catch (error) {
@@ -70,7 +61,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     if (jobId) {
       fetchJobData();
     }
-  }, [jobId]);
+  }, [jobId, conversations]); // Re-run when conversations update
 
   const handleOpenMessages = () => {
     if (client.id) {

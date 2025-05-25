@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMessageContext } from "@/contexts/MessageContext";
 
 interface UseRealTimeMessagingProps {
   onNewMessage?: () => void;
@@ -12,52 +12,27 @@ export const useRealTimeMessaging = ({
   enabled = true
 }: UseRealTimeMessagingProps = {}) => {
   
-  // Set up real-time subscription for incoming messages
+  const { refreshConversations } = useMessageContext();
+  
+  // Use the centralized real-time system from MessageContext
   useEffect(() => {
     if (!enabled) return;
 
-    // Create a channel listening for changes on the messages table
-    const messagesChannel = supabase
-      .channel('public:messages')
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages' 
-        },
-        (payload) => {
-          console.log('New message received:', payload);
-          if (onNewMessage) {
-            onNewMessage();
-          }
-        }
-      )
-      .subscribe();
+    // Call the refresh function from MessageContext which already has real-time setup
+    if (onNewMessage) {
+      // Since MessageContext already handles real-time updates,
+      // we just need to call the callback when needed
+      const handleUpdate = () => {
+        refreshConversations();
+        onNewMessage();
+      };
 
-    // Also listen for conversation updates
-    const conversationsChannel = supabase
-      .channel('public:conversations')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', // Listen for all events
-          schema: 'public', 
-          table: 'conversations' 
-        },
-        (payload) => {
-          console.log('Conversation updated:', payload);
-          if (onNewMessage) {
-            onNewMessage();
-          }
-        }
-      )
-      .subscribe();
-
-    // Cleanup function
-    return () => {
-      supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(conversationsChannel);
-    };
-  }, [onNewMessage, enabled]);
+      // Listen for custom events if needed
+      window.addEventListener('messageContextUpdate', handleUpdate);
+      
+      return () => {
+        window.removeEventListener('messageContextUpdate', handleUpdate);
+      };
+    }
+  }, [onNewMessage, enabled, refreshConversations]);
 };
