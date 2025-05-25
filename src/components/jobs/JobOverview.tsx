@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { useJobs } from "@/hooks/useJobs";
@@ -146,6 +147,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
         onOpenChange={setIsTaskDialogOpen}
         initialTasks={convertToDialogTasks(job.tasks)}
         onSave={handleUpdateTasks}
+        disabled={isUpdating}
       />
     </div>
   );

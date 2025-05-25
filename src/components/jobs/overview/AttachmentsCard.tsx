@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Upload, File, Download, Trash2, Eye, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AttachmentUploadDialog } from "../dialogs/AttachmentUploadDialog";
-import { useJobAttachments } from "@/hooks/useJobAttachments";
 import { toast } from "sonner";
 
 interface AttachmentsCardProps {
@@ -16,74 +15,40 @@ interface AttachmentsCardProps {
 
 export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: AttachmentsCardProps) => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const { 
-    attachments, 
-    isLoading, 
-    isUploading, 
-    uploadAttachments, 
-    deleteAttachment 
-  } = useJobAttachments(jobId);
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFileType = (mimeType?: string, fileName?: string) => {
-    if (mimeType?.includes('image')) return 'Image';
-    if (mimeType?.includes('pdf')) return 'PDF';
-    if (mimeType?.includes('document') || mimeType?.includes('word')) return 'Document';
-    if (fileName?.toLowerCase().endsWith('.pdf')) return 'PDF';
-    if (fileName?.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp|webp)$/)) return 'Image';
-    return 'File';
-  };
+  
+  // Mock attachments data - replace with real data later
+  const [attachments, setAttachments] = useState([
+    { id: 1, name: "job_estimate.pdf", size: "245 KB", type: "PDF" },
+    { id: 2, name: "before_photo.jpg", size: "1.2 MB", type: "Image" },
+  ]);
 
   const handleView = (attachment: any) => {
-    toast.info(`Viewing ${attachment.file_name}`);
-    // TODO: Implement view functionality when storage is configured
+    toast.info(`Viewing ${attachment.name}`);
+    // Implement view functionality
   };
 
   const handleDownload = (attachment: any) => {
-    toast.info(`Downloading ${attachment.file_name}`);
-    // TODO: Implement download functionality when storage is configured
+    toast.success(`Downloading ${attachment.name}`);
+    // Implement download functionality
   };
 
-  const handleDelete = async (attachmentId: string) => {
-    const success = await deleteAttachment(attachmentId);
-    if (success && onUpdate) {
+  const handleDelete = (attachmentId: number) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+    toast.success("Attachment deleted successfully");
+    // Trigger real-time refresh
+    if (onUpdate) {
       onUpdate();
     }
   };
 
-  const handleUploadSuccess = async (files: File[]) => {
-    const success = await uploadAttachments(files);
-    if (success) {
-      setIsUploadDialogOpen(false);
-      if (onUpdate) {
-        onUpdate();
-      }
+  const handleUploadSuccess = (newAttachments: any[]) => {
+    setAttachments(newAttachments);
+    toast.success("Attachments updated successfully");
+    // Trigger real-time refresh
+    if (onUpdate) {
+      onUpdate();
     }
   };
-
-  if (isLoading) {
-    return (
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <ModernCardTitle icon={Paperclip}>
-            Attachments
-          </ModernCardTitle>
-        </ModernCardHeader>
-        <ModernCardContent>
-          <div className="text-sm text-muted-foreground text-center py-4">
-            Loading attachments...
-          </div>
-        </ModernCardContent>
-      </ModernCard>
-    );
-  }
 
   return (
     <>
@@ -91,7 +56,7 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
         <ModernCardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <ModernCardTitle icon={Paperclip}>
-              Attachments ({attachments.length})
+              Attachments
             </ModernCardTitle>
             {editable && (
               <Button
@@ -99,7 +64,6 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
                 size="sm"
                 onClick={() => setIsUploadDialogOpen(true)}
                 className="text-fixlyfy hover:text-fixlyfy-dark"
-                disabled={isUploading}
               >
                 <Upload className="h-4 w-4" />
               </Button>
@@ -114,16 +78,13 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                      <p className="text-sm font-medium truncate">{attachment.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">
-                          {getFileType(attachment.mime_type, attachment.file_name)}
+                          {attachment.type}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          {formatFileSize(attachment.file_size)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(attachment.uploaded_at).toLocaleDateString()}
+                          {attachment.size}
                         </span>
                       </div>
                     </div>
@@ -170,8 +131,8 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
       <AttachmentUploadDialog
         open={isUploadDialogOpen}
         onOpenChange={setIsUploadDialogOpen}
-        onUpload={handleUploadSuccess}
-        isUploading={isUploading}
+        initialAttachments={attachments}
+        onSave={handleUploadSuccess}
       />
     </>
   );
