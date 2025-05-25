@@ -106,12 +106,12 @@ export const useInvoiceBuilder = (jobId: string) => {
         
         updateFormData({
           invoiceId: invoice.id,
-          invoiceNumber: invoice.number || invoice.invoice_number,
+          invoiceNumber: invoice.number,
           issueDate: new Date(invoice.date).toISOString().split('T')[0],
           items,
           notes: invoice.notes || "",
           status: invoice.status,
-          total: invoice.total || invoice.amount || 0
+          total: invoice.total || 0
         });
       } catch (error) {
         console.error("Error loading invoice items:", error);

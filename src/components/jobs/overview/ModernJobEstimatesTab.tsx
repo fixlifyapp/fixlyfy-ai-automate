@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { recordEstimateCreated } from "@/services/jobHistoryService";
 import { useJobDetails } from "../context/JobDetailsContext";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -33,6 +34,16 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     handlers,
     info
   } = useEstimates(jobId, onEstimateConverted);
+
+  // Real-time updates for estimates and line_items
+  useUnifiedRealtime({
+    tables: ['estimates', 'line_items'],
+    onUpdate: () => {
+      console.log("Real-time update for estimates");
+      // The useEstimates hook will automatically refresh via its internal real-time logic
+    },
+    enabled: true
+  });
 
   // Enhanced handlers with history recording
   const handleEstimateCreated = async (amount: number) => {

@@ -7,6 +7,7 @@ import { Plus, Receipt, Edit, Eye, Trash2, DollarSign } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { InvoiceBuilderDialog } from "../dialogs/InvoiceBuilderDialog";
+import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { toast } from "sonner";
 
 interface ModernJobInvoicesTabProps {
@@ -14,11 +15,23 @@ interface ModernJobInvoicesTabProps {
 }
 
 export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
-  const { invoices, isLoading } = useInvoices(jobId);
+  const { invoices, isLoading, refreshInvoices } = useInvoices(jobId);
   const { estimates } = useEstimates(jobId);
   const [isInvoiceBuilderOpen, setIsInvoiceBuilderOpen] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  // Real-time updates for invoices and payments
+  useUnifiedRealtime({
+    tables: ['invoices', 'payments', 'line_items'],
+    onUpdate: () => {
+      console.log("Real-time update for invoices/payments");
+      if (refreshInvoices) {
+        refreshInvoices();
+      }
+    },
+    enabled: true
+  });
 
   const handleCreateFromEstimate = (estimate: any) => {
     setSelectedEstimate(estimate);
@@ -119,10 +132,10 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                       <div className="flex items-center gap-4">
                         <div>
                           <div className="font-medium">
-                            Invoice #{invoice.number || invoice.invoice_number}
+                            Invoice #{invoice.number}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Created: {new Date(invoice.created_at || invoice.date).toLocaleDateString()}
+                            Created: {new Date(invoice.date).toLocaleDateString()}
                           </div>
                         </div>
                         
@@ -132,10 +145,10 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                         
                         <div className="text-right">
                           <div className="font-semibold text-lg">
-                            ${(invoice.total || invoice.amount || 0).toFixed(2)}
+                            ${invoice.total.toFixed(2)}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Due: {new Date(invoice.due_date || invoice.date).toLocaleDateString()}
+                            Due: {new Date(invoice.due_date).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
@@ -183,7 +196,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         invoice={selectedInvoice}
         onInvoiceCreated={(invoice) => {
           toast.success("Invoice operation completed successfully");
-          // Refresh will happen automatically via real-time updates
+          // Real-time updates will handle the refresh automatically
         }}
       />
     </>
