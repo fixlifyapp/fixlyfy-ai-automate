@@ -9,6 +9,12 @@ interface EstimatePreviewProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
+  clientInfo?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  } | null;
 }
 
 export const EstimatePreview = ({
@@ -19,6 +25,7 @@ export const EstimatePreview = ({
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
+  clientInfo,
 }: EstimatePreviewProps) => {
   
   // Helper function to calculate the total for a line item
@@ -46,10 +53,10 @@ export const EstimatePreview = ({
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
           <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Bill To:</h3>
-          <p className="font-medium">Michael Johnson</p>
+          <p className="font-medium">{clientInfo?.name || "Client Name"}</p>
           <p className="text-sm text-muted-foreground">123 Main St, Apt 45</p>
-          <p className="text-sm text-muted-foreground">(555) 123-4567</p>
-          <p className="text-sm text-muted-foreground">michael.johnson@example.com</p>
+          <p className="text-sm text-muted-foreground">{clientInfo?.phone || "(555) 123-4567"}</p>
+          <p className="text-sm text-muted-foreground">{clientInfo?.email || "client@example.com"}</p>
         </div>
         <div>
           <div className="grid grid-cols-2 gap-4">

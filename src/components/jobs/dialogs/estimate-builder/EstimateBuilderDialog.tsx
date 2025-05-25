@@ -257,6 +257,7 @@ export const EstimateBuilderDialog = ({
                   calculateTotalTax={estimateBuilder.calculateTotalTax}
                   calculateGrandTotal={estimateBuilder.calculateGrandTotal}
                   notes={estimateBuilder.notes || ""}
+                  clientInfo={clientInfo || jobData?.client}
                 />
               )}
             </div>
