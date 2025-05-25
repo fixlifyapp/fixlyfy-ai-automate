@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -203,9 +202,30 @@ export const EstimateSendDialog = ({
     }
   };
 
-  // Helper function to check if we have full estimate details
+  // Type guard functions
   const hasFullEstimateDetails = (details: EstimateDetails | null): details is EstimateDetails => {
     return details !== null && 'estimate_id' in details;
+  };
+
+  const getEstimateId = (): string | null => {
+    if (hasFullEstimateDetails(estimateDetails)) {
+      return estimateDetails.estimate_id;
+    }
+    return null;
+  };
+
+  const getEstimateTotal = (): number => {
+    if (hasFullEstimateDetails(estimateDetails)) {
+      return estimateDetails.total;
+    }
+    return 0;
+  };
+
+  const getEstimateNotes = (): string | undefined => {
+    if (hasFullEstimateDetails(estimateDetails)) {
+      return estimateDetails.notes;
+    }
+    return undefined;
   };
 
   // Get client contact info with proper fallbacks
@@ -274,14 +294,12 @@ export const EstimateSendDialog = ({
   
   // Send the estimate to the client
   const handleSendEstimate = async () => {
-    if (!hasFullEstimateDetails(estimateDetails)) {
-      toast.error("Estimate details not loaded");
-      return;
-    }
+    const estimateId = getEstimateId();
+    const estimateTotal = getEstimateTotal();
+    const estimateNotes = getEstimateNotes();
 
-    // Check if estimate has line items
-    if (!lineItems || lineItems.length === 0) {
-      toast.error("Please add items to the estimate first before sending it to the client");
+    if (!estimateId) {
+      toast.error("Estimate details not loaded");
       return;
     }
 
@@ -311,18 +329,18 @@ export const EstimateSendDialog = ({
       const { data: commData, error: commError } = await supabase
         .from('estimate_communications')
         .insert({
-          estimate_id: estimateDetails.estimate_id,
+          estimate_id: estimateId,
           communication_type: sendMethod,
           recipient: sendTo,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
-            ? `Hi ${estimateDetails.client_name}! Your estimate ${estimateNumber} is ready. Total: $${estimateDetails.total.toFixed(2)}. Please review and let us know if you have any questions.`
-            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateDetails.total.toFixed(2)}`,
+            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. Please review and let us know if you have any questions.`
+            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateTotal.toFixed(2)}`,
           status: 'pending',
           estimate_number: estimateNumber,
-          client_name: estimateDetails.client_name,
-          client_email: estimateDetails.client_email,
-          client_phone: estimateDetails.client_phone
+          client_name: contactInfo.name,
+          client_email: contactInfo.email,
+          client_phone: contactInfo.phone
         })
         .select()
         .single();
@@ -345,9 +363,9 @@ export const EstimateSendDialog = ({
           taxable: item.taxable,
           total: item.quantity * Number(item.unit_price)
         })),
-        total: estimateDetails.total,
+        total: estimateTotal,
         taxRate: 13, // Default tax rate - could be made configurable
-        notes: customNote || estimateDetails.notes
+        notes: customNote || estimateNotes
       };
 
       console.log("Calling send-estimate edge function with data:", {
@@ -355,7 +373,7 @@ export const EstimateSendDialog = ({
         recipient: sendTo,
         estimateNumber: estimateNumber,
         estimateData: estimateData,
-        clientName: estimateDetails.client_name,
+        clientName: contactInfo.name,
         communicationId: commData.id
       });
 
@@ -366,7 +384,7 @@ export const EstimateSendDialog = ({
           recipient: sendTo,
           estimateNumber: estimateNumber,
           estimateData: estimateData,
-          clientName: estimateDetails.client_name,
+          clientName: contactInfo.name,
           communicationId: commData.id
         }
       });
@@ -467,15 +485,6 @@ export const EstimateSendDialog = ({
                 Send estimate {estimateNumber} to {contactInfo.name}:
               </div>
               
-              {/* Show warning if no line items */}
-              {(!lineItems || lineItems.length === 0) && (
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
-                  <p className="text-sm text-amber-700">
-                    ⚠️ This estimate has no items. Please add items to the estimate before sending.
-                  </p>
-                </div>
-              )}
-              
               <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
                 <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
                   sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
@@ -530,7 +539,7 @@ export const EstimateSendDialog = ({
                 </Button>
                 <Button 
                   onClick={handleSendEstimate} 
-                  disabled={!sendTo || isProcessing || (!lineItems || lineItems.length === 0)}
+                  disabled={!sendTo || isProcessing}
                 >
                   {isProcessing ? "Sending..." : "Send Estimate"}
                 </Button>
