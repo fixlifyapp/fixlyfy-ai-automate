@@ -10,7 +10,7 @@ import { JobTypesConfig } from "@/components/settings/configuration/JobTypesConf
 import { JobStatusesConfig } from "@/components/settings/configuration/JobStatusesConfig";
 import { CustomFieldsConfig } from "@/components/settings/configuration/CustomFieldsConfig";
 import { LeadSourcesConfig } from "@/components/settings/configuration/LeadSourcesConfig";
-import { Settings2, Tags, ListTodo, ClipboardList, FormInput, MessageCircle, Cogs, Target, Zap } from "lucide-react";
+import { Settings2, Tags, ListTodo, ClipboardList, FormInput, MessageCircle, Cog, Target, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const ConfigurationPage = () => {
@@ -22,7 +22,7 @@ const ConfigurationPage = () => {
       <PageHeader
         title="Configuration"
         subtitle="Manage configurable elements of the application like business niche, tags, job types, statuses, and custom fields"
-        icon={Cogs}
+        icon={Cog}
         badges={[
           { text: "Business Setup", icon: Target, variant: "fixlyfy" },
           { text: "Custom Fields", icon: FormInput, variant: "success" },
