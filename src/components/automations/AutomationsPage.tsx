@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { AutomationsList } from "./AutomationsList";
 import { AutomationBuilder } from "./AutomationBuilder";
 import { AutomationPerformanceDashboard } from "./AutomationPerformanceDashboard";
@@ -27,54 +28,21 @@ export const AutomationsPage = () => {
 
   return (
     <PageLayout>
-      {/* Updated Header with App Colors */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-fixlyfy/10 via-fixlyfy-light/10 to-blue-50 rounded-3xl p-8 mb-8 border border-fixlyfy/20">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-fixlyfy/20 to-fixlyfy-light/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-fixlyfy-light/20 to-blue-500/20 rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2"></div>
-        </div>
-        
-        <div className="relative z-10 flex justify-between items-center">
-          <div className="space-y-3">
-            <div className="flex items-center gap-4">
-              <div className="p-4 bg-gradient-to-br from-fixlyfy to-fixlyfy-light rounded-2xl shadow-xl transform rotate-3 hover:rotate-0 transition-all duration-500">
-                <Zap className="text-white w-8 h-8" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-fixlyfy via-fixlyfy-light to-blue-600 bg-clip-text text-transparent">
-                  Smart Automations
-                </h1>
-                <p className="text-fixlyfy-text-secondary text-lg">Intelligent workflows powered by AI insights</p>
-              </div>
-            </div>
-            
-            {/* Feature Badges */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Badge variant="outline" className="bg-fixlyfy/10 text-fixlyfy border-fixlyfy/30">
-                <Brain className="w-3 h-3 mr-1" />
-                AI-Powered
-              </Badge>
-              <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
-                <Target className="w-3 h-3 mr-1" />
-                Smart Triggers
-              </Badge>
-              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                <MessageSquare className="w-3 h-3 mr-1" />
-                Multi-Channel
-              </Badge>
-            </div>
-          </div>
-          
-          <Button 
-            onClick={() => setShowBuilder(true)}
-            className="bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy/90 hover:to-fixlyfy-light/90 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-300"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create Automation
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Smart Automations"
+        subtitle="Intelligent workflows powered by AI insights"
+        icon={Zap}
+        badges={[
+          { text: "AI-Powered", icon: Brain, variant: "fixlyfy" },
+          { text: "Smart Triggers", icon: Target, variant: "success" },
+          { text: "Multi-Channel", icon: MessageSquare, variant: "info" }
+        ]}
+        actionButton={{
+          text: "Create Automation",
+          icon: Plus,
+          onClick: () => setShowBuilder(true)
+        }}
+      />
 
       {/* Main Content */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
@@ -84,28 +52,28 @@ export const AutomationsPage = () => {
             className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <Zap className="w-4 h-4" />
-            Automations
+            <span className="hidden sm:inline">Automations</span>
           </TabsTrigger>
           <TabsTrigger 
             value="templates"
             className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <Layers3 className="w-4 h-4" />
-            Templates
+            <span className="hidden sm:inline">Templates</span>
           </TabsTrigger>
           <TabsTrigger 
             value="performance"
             className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <BarChart3 className="w-4 h-4" />
-            Analytics
+            <span className="hidden sm:inline">Analytics</span>
           </TabsTrigger>
           <TabsTrigger 
             value="settings"
             className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlyfy data-[state=active]:to-fixlyfy-light data-[state=active]:text-white rounded-lg transition-all duration-300"
           >
             <Settings className="w-4 h-4" />
-            Settings
+            <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>
         </TabsList>
 

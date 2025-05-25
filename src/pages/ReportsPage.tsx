@@ -1,17 +1,22 @@
 
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
+import { BarChart3, TrendingUp, Users, DollarSign, Target, Shield } from "lucide-react";
 
 const ReportsPage = () => {
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Reports & Analytics</h1>
-        <p className="text-fixlyfy-text-secondary">
-          View comprehensive reports and analytics for your business.
-        </p>
-      </div>
+      <PageHeader
+        title="Reports & Analytics"
+        subtitle="View comprehensive reports and analytics for your business performance"
+        icon={BarChart3}
+        badges={[
+          { text: "Real-time Data", icon: TrendingUp, variant: "fixlyfy" },
+          { text: "Custom Reports", icon: Target, variant: "success" },
+          { text: "Business Intelligence", icon: Shield, variant: "info" }
+        ]}
+      />
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>

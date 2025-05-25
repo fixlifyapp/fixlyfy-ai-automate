@@ -1,259 +1,177 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { PERMISSIONS_LIST, UserRole, RolePermissions, DEFAULT_PERMISSIONS, DEFAULT_ROLES } from "@/components/auth/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useRBAC, PermissionRequired } from "@/components/auth/RBACProvider";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpCircle } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Shield, Plus, Users, Settings, Target } from "lucide-react";
+import { useRBAC } from "@/components/auth/RBACProvider";
 
 const AdminRolesPage = () => {
-  const { hasPermission, allRoles } = useRBAC();
-  // Ensure we initialize with a default tab that's guaranteed to exist
-  const [activeTab, setActiveTab] = useState<UserRole>("admin");
-  
-  // Initialize the rolePermissions state with a copy of DEFAULT_PERMISSIONS
-  const [rolePermissions, setRolePermissions] = useState<Record<UserRole, string[]>>({
-    ...DEFAULT_PERMISSIONS
-  });
+  const { hasPermission } = useRBAC();
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
-  // Update rolePermissions when allRoles changes
-  useEffect(() => {
-    // Make sure all roles have an entry in rolePermissions
-    const updatedPermissions = { ...rolePermissions };
-    
-    // Ensure all roles in allRoles exist in updatedPermissions
-    if (allRoles && allRoles.length > 0) {
-      allRoles.forEach(role => {
-        if (!updatedPermissions[role]) {
-          updatedPermissions[role] = DEFAULT_PERMISSIONS[role] || [];
-        }
-      });
-      
-      setRolePermissions(updatedPermissions);
-      
-      // Make sure activeTab is in allRoles
-      if (!allRoles.includes(activeTab) && allRoles.length > 0) {
-        setActiveTab(allRoles[0]);
-      }
-    }
-  }, [allRoles]);
-  
-  const handlePermissionToggle = (role: UserRole, permissionId: string) => {
-    setRolePermissions(prev => {
-      const updatedPermissions = { ...prev };
-      
-      // For any role with wildcard permission, don't allow removing wildcard permission
-      if (permissionId === '*' && updatedPermissions[role]?.includes('*')) {
-        return prev;
-      }
-      
-      // Make sure the role exists in updatedPermissions
-      if (!updatedPermissions[role]) {
-        updatedPermissions[role] = [];
-      }
-      
-      // If permission exists, remove it, otherwise add it
-      if (updatedPermissions[role].includes(permissionId)) {
-        updatedPermissions[role] = updatedPermissions[role].filter(id => id !== permissionId);
-      } else {
-        updatedPermissions[role] = [...updatedPermissions[role], permissionId];
-      }
-      
-      return updatedPermissions;
-    });
-  };
-  
-  const handleSave = () => {
-    // In a real app, this would make an API call to save the permissions
-    toast.success("Role permissions updated successfully");
-    console.log("Updated permissions:", rolePermissions);
-  };
-  
-  const handleReset = () => {
-    setRolePermissions({ ...DEFAULT_PERMISSIONS });
-    toast("Permissions reset to defaults");
-  };
-  
-  // Group permissions by category
-  const permissionsByCategory = PERMISSIONS_LIST.reduce<Record<string, typeof PERMISSIONS_LIST>>(
-    (acc, permission) => {
-      if (!acc[permission.category]) {
-        acc[permission.category] = [];
-      }
-      acc[permission.category].push(permission);
-      return acc;
+  // Sample roles data
+  const roles = [
+    {
+      id: 'admin',
+      name: 'Administrator',
+      description: 'Full access to all features and settings',
+      userCount: 2,
+      permissions: ['users.create', 'users.delete', 'system.manage']
     },
-    {}
-  );
-  
-  // Generate TabsTrigger components dynamically from available roles
-  const renderRoleTabs = () => {
-    // Ensure allRoles is defined and not empty
-    if (!allRoles || allRoles.length === 0) {
-      return (
-        <TabsList className="bg-transparent h-auto px-6 pt-4 justify-start flex-wrap gap-2">
-          <TabsTrigger 
-            value="admin" 
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-1.5"
-          >
-            Admin
-          </TabsTrigger>
-        </TabsList>
-      );
+    {
+      id: 'manager',
+      name: 'Manager', 
+      description: 'Manage jobs, clients, and team members',
+      userCount: 5,
+      permissions: ['jobs.manage', 'clients.manage', 'users.view']
+    },
+    {
+      id: 'technician',
+      name: 'Technician',
+      description: 'View and update assigned jobs',
+      userCount: 12,
+      permissions: ['jobs.view', 'jobs.update']
     }
-    
-    // Filter out any undefined or empty roles
-    const safeRoles = allRoles.filter(Boolean);
-    
-    // Determine number of columns based on number of roles
-    const numColumns = Math.min(safeRoles.length, 4); // Maximum 4 columns
-    
+  ];
+
+  if (!hasPermission('users.roles.manage')) {
     return (
-      <TabsList className="bg-transparent h-auto px-6 pt-4 justify-start flex-wrap gap-2">
-        {safeRoles.map((role) => (
-          <TabsTrigger 
-            key={role} 
-            value={role}
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-1.5 capitalize"
-          >
-            {role}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <PageLayout>
+        <PageHeader
+          title="Role Management"
+          subtitle="Manage user roles and permissions across your organization"
+          icon={Shield}
+          badges={[
+            { text: "Access Control", icon: Shield, variant: "fixlyfy" },
+            { text: "User Management", icon: Users, variant: "success" },
+            { text: "Security", icon: Target, variant: "info" }
+          ]}
+        />
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              You don't have permission to manage roles.
+            </p>
+          </CardContent>
+        </Card>
+      </PageLayout>
     );
-  };
-  
-  // UI to render for users without access
-  const unauthorizedContent = (
-    <div className="flex flex-col items-center justify-center h-[50vh]">
-      <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-      <p className="text-muted-foreground mb-6 text-center max-w-md">
-        You don't have permission to view this page. Please contact your administrator for access.
-      </p>
-      <Button onClick={() => window.history.back()}>Go Back</Button>
-    </div>
-  );
+  }
 
   return (
-    <TooltipProvider>
-      <PageLayout>
-        <PermissionRequired permission="users.roles.assign" fallback={unauthorizedContent}>
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Role-Based Access Control</h1>
-            <p className="text-fixlyfy-text-secondary">
-              Manage permissions and access rights for different user roles.
-            </p>
-          </div>
-          
-          <Card className="shadow-sm overflow-hidden">
+    <PageLayout>
+      <PageHeader
+        title="Role Management"
+        subtitle="Manage user roles and permissions across your organization"
+        icon={Shield}
+        badges={[
+          { text: "Access Control", icon: Shield, variant: "fixlyfy" },
+          { text: "User Management", icon: Users, variant: "success" },
+          { text: "Security", icon: Target, variant: "info" }
+        ]}
+        actionButton={{
+          text: "Create Role",
+          icon: Plus,
+          onClick: () => {}
+        }}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
             <CardHeader>
-              <CardTitle>Roles & Permissions</CardTitle>
+              <CardTitle>Roles Overview</CardTitle>
               <CardDescription>
-                Configure which actions are allowed for each role in your organization.
+                Manage roles and their associated permissions
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)}>
-                <div className="border-b">
-                  {renderRoleTabs()}
-                </div>
-                
-                <div className="p-6">
-                  <TabsContent value={activeTab} className="m-0 space-y-6">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-medium capitalize">
-                          {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Role
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {activeTab === 'admin' && "Full control over all settings and data."}
-                          {activeTab === 'manager' && "Can view team performance and approve estimates and invoices."}
-                          {activeTab === 'dispatcher' && "Can assign and schedule jobs for technicians."}
-                          {activeTab === 'technician' && "Can manage their own jobs and create related documents."}
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleReset}>
-                          Reset to Default
-                        </Button>
-                        <Button className="bg-fixlyfy hover:bg-fixlyfy/90" onClick={handleSave}>
-                          Save Changes
-                        </Button>
-                      </div>
+            <CardContent>
+              <div className="space-y-4">
+                {roles.map((role) => (
+                  <div 
+                    key={role.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedRole === role.id 
+                        ? 'border-fixlyfy bg-fixlyfy/5' 
+                        : 'border-border hover:border-fixlyfy/50'
+                    }`}
+                    onClick={() => setSelectedRole(role.id)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold">{role.name}</h3>
+                      <Badge variant="outline">
+                        {role.userCount} users
+                      </Badge>
                     </div>
-                    
-                    <ScrollArea className="h-[60vh]">
-                      <div className="space-y-6 pr-4">
-                        {Object.entries(permissionsByCategory).map(([category, permissions]) => (
-                          <div key={category} className="space-y-3">
-                            <div>
-                              <h4 className="text-md font-medium capitalize">{category}</h4>
-                              <Separator className="my-2" />
-                            </div>
-                            
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="w-[350px]">Permission</TableHead>
-                                  <TableHead>Enabled</TableHead>
-                                  <TableHead>Description</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {permissions.map((permission) => (
-                                  <TableRow key={permission.id}>
-                                    <TableCell className="font-medium">{permission.name}</TableCell>
-                                    <TableCell>
-                                      <Checkbox 
-                                        checked={
-                                          // Check for wildcard permission for any role, or specific permission
-                                          rolePermissions[activeTab]?.includes('*') ||
-                                          rolePermissions[activeTab]?.includes(permission.id)
-                                        }
-                                        disabled={
-                                          // Disable wildcard permission checkbox for roles that have it
-                                          permission.id === '*' && rolePermissions[activeTab]?.includes('*')
-                                        }
-                                        onCheckedChange={() => handlePermissionToggle(activeTab, permission.id)}
-                                        id={`${activeTab}-${permission.id}`}
-                                      />
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground flex items-center gap-2">
-                                      {permission.description}
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <HelpCircle size={16} className="text-muted-foreground" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="w-[200px] text-sm">{permission.description}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </TabsContent>
-                </div>
-              </Tabs>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {role.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {role.permissions.slice(0, 3).map((permission) => (
+                        <Badge key={permission} variant="outline" className="text-xs">
+                          {permission}
+                        </Badge>
+                      ))}
+                      {role.permissions.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{role.permissions.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
-        </PermissionRequired>
-      </PageLayout>
-    </TooltipProvider>
+        </div>
+
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Role Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedRole ? (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Configure permissions and settings for the selected role.
+                  </p>
+                  <Button className="w-full" variant="outline">
+                    Edit Permissions
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Select a role to view and edit its details.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full">
+                <Users className="mr-2 h-4 w-4" />
+                Assign Users
+              </Button>
+              <Button variant="outline" className="w-full">
+                <Shield className="mr-2 h-4 w-4" />
+                Audit Permissions
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </PageLayout>
   );
 };
 

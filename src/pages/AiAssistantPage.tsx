@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Send, Loader2, BarChart3, Users, Briefcase, DollarSign, Calendar } from "lucide-react";
+import { Brain, Send, Loader2, BarChart3, Users, Briefcase, DollarSign, Calendar, Target, Zap } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAI } from "@/hooks/use-ai";
@@ -94,40 +95,40 @@ const AiAssistantPage = () => {
     return (
       <Card className="mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center">
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Current Business Metrics
+          <CardTitle className="text-base flex items-center flex-wrap gap-2">
+            <BarChart3 className="h-4 w-4 flex-shrink-0" />
+            <span>Current Business Metrics</span>
             {businessData.lastRefreshed && (
-              <span className="text-xs ml-auto text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground">
                 Last updated: {format(new Date(businessData.lastRefreshed || new Date()), 'MMM d, yyyy')}
               </span>
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3 flex-shrink-0">
               <Users size={16} className="text-fixlyfy" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-fixlyfy-text-secondary">Total Clients</p>
               <p className="font-medium">{businessData.metrics?.clients?.total || "0"}</p>
             </div>
           </div>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3 flex-shrink-0">
               <Briefcase size={16} className="text-fixlyfy" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-fixlyfy-text-secondary">Total Jobs</p>
               <p className="font-medium">{businessData.metrics?.jobs?.total || "0"}</p>
             </div>
           </div>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3 flex-shrink-0">
               <DollarSign size={16} className="text-fixlyfy" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-fixlyfy-text-secondary">Total Revenue</p>
               <p className="font-medium">
                 ${businessData.metrics?.revenue?.total?.toLocaleString() || "0"}
@@ -135,10 +136,10 @@ const AiAssistantPage = () => {
             </div>
           </div>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3">
+            <div className="w-8 h-8 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-3 flex-shrink-0">
               <Calendar size={16} className="text-fixlyfy" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-fixlyfy-text-secondary">Scheduled Jobs</p>
               <p className="font-medium">{businessData.metrics?.jobs?.scheduled || "0"}</p>
             </div>
@@ -150,22 +151,26 @@ const AiAssistantPage = () => {
 
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">AI Business Assistant</h1>
-        <p className="text-fixlyfy-text-secondary">
-          Ask questions about your business and get AI-powered insights based on your actual business data.
-        </p>
-      </div>
+      <PageHeader
+        title="AI Business Assistant"
+        subtitle="Ask questions about your business and get AI-powered insights based on your actual business data"
+        icon={Brain}
+        badges={[
+          { text: "Business Intelligence", icon: Brain, variant: "fixlyfy" },
+          { text: "Real-time Insights", icon: Target, variant: "success" },
+          { text: "Data Analytics", icon: Zap, variant: "info" }
+        ]}
+      />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card className="h-[calc(100vh-200px)]">
+          <Card className="h-[calc(100vh-300px)] sm:h-[calc(100vh-200px)]">
             <CardHeader className="pb-4 border-b">
               <div className="flex items-center gap-3">
                 <div className="fixlyfy-gradient rounded-full p-2">
                   <Brain className="h-5 w-5 text-white" />
                 </div>
-                <CardTitle>Business Insights Assistant</CardTitle>
+                <CardTitle className="truncate">Business Insights Assistant</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-0 flex flex-col h-[calc(100%-70px)]">
@@ -189,7 +194,7 @@ const AiAssistantPage = () => {
                         message.role === "assistant" 
                           ? "bg-fixlyfy-bg-interface text-fixlyfy-text border border-fixlyfy/10" 
                           : "bg-fixlyfy text-white",
-                        isMobile ? "max-w-[75%]" : "max-w-[85%]"
+                        isMobile ? "max-w-[85%]" : "max-w-[90%]"
                       )}
                     >
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -224,12 +229,12 @@ const AiAssistantPage = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                  className="flex-1"
+                  className="flex-1 min-w-0"
                   disabled={isLoading}
                 />
                 <Button 
                   onClick={handleSendMessage} 
-                  className="bg-fixlyfy hover:bg-fixlyfy/90"
+                  className="bg-fixlyfy hover:bg-fixlyfy/90 flex-shrink-0"
                   disabled={isLoading}
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
@@ -239,10 +244,10 @@ const AiAssistantPage = () => {
           </Card>
         </div>
         
-        <div>
+        <div className="space-y-4">
           {renderBusinessMetrics()}
           
-          <Card className="mb-6">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Sample Questions</CardTitle>
             </CardHeader>
@@ -285,7 +290,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                <span className="truncate">Show me the performance of my technicians</span>
+                <span className="truncate">Show me technician performance</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -295,7 +300,7 @@ const AiAssistantPage = () => {
                   setTimeout(() => handleSendMessage(), 100);
                 }}
               >
-                <span className="truncate">What is my business analytics summary?</span>
+                <span className="truncate">Business analytics summary</span>
               </Button>
             </CardContent>
           </Card>
