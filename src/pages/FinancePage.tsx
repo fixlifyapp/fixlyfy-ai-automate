@@ -1,217 +1,147 @@
 
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentsTable } from "@/components/finance/PaymentsTable";
 import { PaymentsFilters } from "@/components/finance/PaymentsFilters";
-import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
-import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
-import { useRBAC } from "@/components/auth/RBACProvider";
-import { Payment, PaymentMethod } from "@/types/payment";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { usePayments } from "@/hooks/usePayments";
 import { FinanceAiInsights } from "@/components/finance/FinanceAiInsights";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
-import { mapPaymentFromHook } from "@/utils/payment-mapper";
+import { DollarSign, TrendingUp, Calculator, CreditCard, BarChart3, Target } from "lucide-react";
 
-export default function FinancePage() {
-  // Get all payments from the usePayments hook
-  const { payments: allPaymentsFromHook, isLoading, fetchPayments, refundPayment, deletePayment } = usePayments();
-  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
-  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showAiInsights, setShowAiInsights] = useState(() => {
-    const savedPreference = localStorage.getItem("finance_show_ai_insights");
-    return savedPreference !== null ? savedPreference === "true" : true;
-  });
-  const { hasPermission } = useRBAC();
+type FilterState = {
+  dateRange: string;
+  status: string;
+  method: string;
+  search: string;
+};
 
-  // Set up realtime sync for payments
-  useRealtimeSync({
-    tables: ["payments"],
-    onUpdate: fetchPayments,
-    enabled: true
+const FinancePage = () => {
+  const [filters, setFilters] = useState<FilterState>({
+    dateRange: "30",
+    status: "all",
+    method: "all",
+    search: ""
   });
 
-  useEffect(() => {
-    // Fetch payments when component mounts
-    fetchPayments();
-  }, [fetchPayments]);
-
-  useEffect(() => {
-    // Map the payments from the hook to our expected Payment type
-    const mappedPayments: Payment[] = allPaymentsFromHook.map(payment => {
-      const mappedPayment = mapPaymentFromHook(payment);
-      
-      // If we have additional data from the mock payments, use it
-      if (payment.technician_name) {
-        mappedPayment.technicianName = payment.technician_name;
-      }
-      
-      return mappedPayment;
-    });
-    
-    // Update filtered payments with the mapped payments
-    setFilteredPayments(mappedPayments);
-  }, [allPaymentsFromHook]);
-
-  const handleRefund = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsRefundDialogOpen(true);
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
-
-  const handleDelete = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const processRefund = async (paymentId: string, notes?: string) => {
-    try {
-      const success = await refundPayment(paymentId);
-      if (success) {
-        toast.success("Payment successfully refunded");
-      }
-    } catch (error) {
-      console.error("Failed to refund payment:", error);
-      toast.error("Failed to refund payment");
-    } finally {
-      setIsRefundDialogOpen(false);
-    }
-  };
-
-  const processDelete = async () => {
-    if (!selectedPayment) return;
-    
-    setIsDeleting(true);
-    
-    try {
-      await deletePayment(selectedPayment.id);
-      toast.success("Payment successfully deleted");
-    } catch (error) {
-      console.error("Failed to delete payment:", error);
-      toast.error("Failed to delete payment");
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
-    }
-  };
-
-  const handleExportCSV = () => {
-    // In a real app, this would generate and download a CSV file
-    toast.success("Exporting payments data to CSV");
-    console.log("Exporting payments:", filteredPayments);
-  };
-
-  const applyFilters = (
-    startDate: Date | undefined,
-    endDate: Date | undefined,
-    method: PaymentMethod | "all",
-    technician: string | "all",
-    client: string | "all"
-  ) => {
-    let filtered = [...filteredPayments];
-
-    if (startDate) {
-      // Fix: Use setHours to set the time to the start of the day
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(payment => new Date(payment.date) >= start);
-    }
-
-    if (endDate) {
-      // Fix: Use setHours to set the time to the end of the day
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(payment => new Date(payment.date) <= end);
-    }
-
-    if (method !== "all") {
-      filtered = filtered.filter(payment => payment.method === method);
-    }
-
-    if (technician !== "all") {
-      filtered = filtered.filter(payment => payment.technicianId === technician);
-    }
-
-    if (client !== "all") {
-      filtered = filtered.filter(payment => payment.clientId === client);
-    }
-
-    setFilteredPayments(filtered);
-  };
-
-  const toggleAiInsights = () => {
-    const newValue = !showAiInsights;
-    setShowAiInsights(newValue);
-    localStorage.setItem("finance_show_ai_insights", newValue.toString());
-  };
-
-  const canRefund = hasPermission("payments.refund");
-  const canDelete = hasPermission("payments.delete");
 
   return (
     <PageLayout>
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Finance</h1>
-          <div className="flex gap-2">
-            <Button
-              onClick={toggleAiInsights}
-              variant="outline"
-              size="sm"
-            >
-              {showAiInsights ? "Hide Insights" : "Show Insights"}
-            </Button>
-            <Button
-              onClick={handleExportCSV}
-              variant="outline"
-            >
-              Export CSV
-            </Button>
+      <PageHeader
+        title="Financial Management"
+        subtitle="Track payments, revenue, and financial performance"
+        icon={DollarSign}
+        badges={[
+          { text: "Payment Tracking", icon: CreditCard, variant: "fixlyfy" },
+          { text: "Revenue Analytics", icon: BarChart3, variant: "success" },
+          { text: "Smart Insights", icon: Target, variant: "info" }
+        ]}
+      />
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="insights">AI Insights</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Financial Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">$45,231.89</div>
+                <p className="text-xs text-muted-foreground">
+                  +20.1% from last month
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
+                <Calculator className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">$12,234</div>
+                <p className="text-xs text-muted-foreground">
+                  -5% from last month
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">+12.5%</div>
+                <p className="text-xs text-muted-foreground">
+                  +2.1% from last month
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Collections</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">$8,234</div>
+                <p className="text-xs text-muted-foreground">
+                  +15.2% from last month
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-        <p className="text-muted-foreground">Manage payments, refunds and financial transactions</p>
-      </div>
+        </TabsContent>
 
-      {showAiInsights && (
-        <FinanceAiInsights onClose={toggleAiInsights} />
-      )}
+        <TabsContent value="payments" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment History</CardTitle>
+              <CardDescription>View and manage all payment transactions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <PaymentsFilters 
+                filters={filters}
+                onFilterChange={handleFilterChange}
+              />
+              <PaymentsTable filters={filters} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <PaymentsFilters onFilterChange={applyFilters} />
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Financial Reports</CardTitle>
+              <CardDescription>Generate detailed financial reports and analytics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Financial reporting dashboard coming soon...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <div className="mt-6">
-        <PaymentsTable 
-          payments={filteredPayments} 
-          onRefund={handleRefund}
-          onDelete={handleDelete}
-          canRefund={canRefund}
-          canDelete={canDelete}
-          isLoading={isLoading}
-        />
-      </div>
-
-      {selectedPayment && (
-        <RefundDialog
-          open={isRefundDialogOpen}
-          onOpenChange={setIsRefundDialogOpen}
-          payment={selectedPayment}
-          onRefund={processRefund}
-        />
-      )}
-
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DeleteConfirmDialog
-          title="Delete Payment"
-          description={`Are you sure you want to delete this payment of ${selectedPayment ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedPayment.amount) : '$0.00'} for ${selectedPayment?.clientName || 'customer'}? This action cannot be undone.`}
-          onOpenChange={setIsDeleteDialogOpen}
-          onConfirm={processDelete}
-          isDeleting={isDeleting}
-        />
-      </Dialog>
+        <TabsContent value="insights" className="space-y-6">
+          <FinanceAiInsights />
+        </TabsContent>
+      </Tabs>
     </PageLayout>
   );
-}
+};
+
+export default FinancePage;

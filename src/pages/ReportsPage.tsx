@@ -1,18 +1,31 @@
 
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
+import { ReportsList } from "@/components/reports/ReportsList";
+import { Button } from "@/components/ui/button";
+import { BarChart3, TrendingUp, Users, DollarSign, FileText, Target, Zap, Plus } from "lucide-react";
 
 const ReportsPage = () => {
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Reports & Analytics</h1>
-        <p className="text-fixlyfy-text-secondary">
-          View comprehensive reports and analytics for your business.
-        </p>
-      </div>
+      <PageHeader
+        title="Reports & Analytics"
+        subtitle="Comprehensive business insights and performance analytics"
+        icon={BarChart3}
+        badges={[
+          { text: "Real-time Data", icon: Zap, variant: "fixlyfy" },
+          { text: "Custom Reports", icon: FileText, variant: "success" },
+          { text: "Smart Insights", icon: Target, variant: "info" }
+        ]}
+        actionButton={{
+          text: "Create Report",
+          icon: Plus,
+          onClick: () => {}
+        }}
+      />
       
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -67,16 +80,8 @@ const ReportsPage = () => {
         </Card>
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Reports Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Detailed reports and analytics will be displayed here.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Reports List */}
+      <ReportsList />
     </PageLayout>
   );
 };

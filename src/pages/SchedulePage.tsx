@@ -1,142 +1,66 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
 import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
-import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Loader2 } from "lucide-react";
+import { TechnicianSidebar } from "@/components/schedule/TechnicianSidebar";
 import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
-import { useSearchParams } from "react-router-dom";
-import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
-import { Job } from "@/hooks/useJobs";
-import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Plus, Calendar, Clock, Users, Brain } from "lucide-react";
 
 const SchedulePage = () => {
-  const { user, loading: authLoading } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<'day' | 'week' | 'month'>(searchParams.get('view') as 'day' | 'week' | 'month' || 'week');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showAIInsights, setShowAIInsights] = useState(false);
-  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [view, setView] = useState<'week' | 'day'>('week');
+  const [showTechnicianSidebar, setShowTechnicianSidebar] = useState(true);
 
-  console.log('SchedulePage: Component mounted', { user, authLoading, view });
-
-  useEffect(() => {
-    console.log('SchedulePage: User state changed', { user, authLoading });
-    
-    if (!authLoading && !user) {
-      console.log('SchedulePage: No authenticated user found');
-      setScheduleError('Authentication required');
-      toast.error('Please sign in to view the schedule');
-    } else if (user) {
-      console.log('SchedulePage: User authenticated successfully');
-      setScheduleError(null);
-    }
-  }, [user, authLoading]);
-
-  // Update URL when view changes
-  const handleViewChange = (newView: 'day' | 'week' | 'month') => {
-    console.log('SchedulePage: View changed', { newView });
-    setView(newView);
-    setSearchParams(params => {
-      params.set('view', newView);
-      return params;
-    });
-  };
-
-  // Handle date change from filters
-  const handleDateChange = (newDate: Date) => {
-    console.log('SchedulePage: Date changed', { newDate });
-    setCurrentDate(newDate);
-  };
-
-  // Handle successful job creation
-  const handleJobCreated = (job: Job) => {
-    console.log('SchedulePage: Job created successfully', { jobId: job.id });
-    toast.success(`Job ${job.id} has been created and scheduled`);
-  };
-
-  // Show loading state while checking authentication
-  if (authLoading) {
-    console.log('SchedulePage: Rendering auth loading state');
-    return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
-            <p className="text-fixlyfy-text-secondary">Loading schedule...</p>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  // Show error state if there's an issue
-  if (scheduleError) {
-    console.log('SchedulePage: Rendering error state', { scheduleError });
-    return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-red-500 mb-2">Schedule Error</div>
-            <div className="text-sm text-gray-600 mb-4">{scheduleError}</div>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  console.log('SchedulePage: Rendering main schedule content');
-  
   return (
     <PageLayout>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Schedule</h1>
-          <p className="text-fixlyfy-text-secondary">
-            Manage your team's schedule and appointments.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowAIInsights(!showAIInsights)} className="gap-2">
-            <Calendar size={18} /> AI Insights
-          </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
-            <Plus size={18} className="mr-2" /> New Job
-          </Button>
-        </div>
-      </div>
-      
-      {/* Make the main content area full width */}
-      <div className="space-y-4 w-full">
-        {/* Show AI Insights panel when toggled */}
-        {showAIInsights && (
-          <div className="mb-4">
-            <AIInsightsPanel />
-          </div>
-        )}
+      <PageHeader
+        title="Schedule Management"
+        subtitle="Optimize job scheduling with AI-powered insights"
+        icon={Calendar}
+        badges={[
+          { text: "Smart Scheduling", icon: Brain, variant: "fixlyfy" },
+          { text: "Real-time Updates", icon: Clock, variant: "success" },
+          { text: "Team Coordination", icon: Users, variant: "info" }
+        ]}
+        actionButton={{
+          text: "New Appointment",
+          icon: Plus,
+          onClick: () => {}
+        }}
+      />
+
+      {/* Filters and Controls */}
+      <div className="mb-6 space-y-4">
+        <ScheduleFilters 
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          view={view}
+          onViewChange={setView}
+        />
         
-        {/* Filters moved below AI Insights */}
-        <div className="fixlyfy-card p-4">
-          <ScheduleFilters 
-            view={view} 
-            onViewChange={handleViewChange} 
-            currentDate={currentDate} 
-            onDateChange={handleDateChange} 
+        <AIInsightsPanel />
+      </div>
+
+      {/* Main Schedule Interface */}
+      <div className="flex gap-6">
+        {/* Calendar */}
+        <div className="flex-1">
+          <ScheduleCalendar 
+            selectedDate={selectedDate}
+            view={view}
           />
         </div>
         
-        <ScheduleCalendar view={view} currentDate={currentDate} />
+        {/* Technician Sidebar */}
+        {showTechnicianSidebar && (
+          <div className="w-80">
+            <TechnicianSidebar />
+          </div>
+        )}
       </div>
-      
-      {/* Replace ScheduleJobModal with JobsCreateModal */}
-      <JobsCreateModal 
-        open={isCreateModalOpen} 
-        onOpenChange={setIsCreateModalOpen}
-        onSuccess={handleJobCreated}
-      />
     </PageLayout>
   );
 };
