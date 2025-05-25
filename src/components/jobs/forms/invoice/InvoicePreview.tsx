@@ -1,130 +1,128 @@
 
-import { LineItem } from "@/components/jobs/builder/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { InvoiceFormValues } from "./schema";
 
 interface InvoicePreviewProps {
-  invoiceNumber: string;
-  lineItems: LineItem[];
-  notes: string;
-  taxRate: number;
-  calculateSubtotal: () => number;
-  calculateTotalTax: () => number;
-  calculateGrandTotal: () => number;
-  clientInfo?: {
-    id?: string;
-    name?: string;
-    email?: string;
-    phone?: string;
-  } | null;
-  issueDate: string;
-  dueDate: string;
+  formData: InvoiceFormValues;
+  type: "invoice" | "estimate";
+  onCancel: () => void;
+  onSubmit: () => void;
+  companyInfo?: any;
+  clientInfo?: any;
+  calculateTotal: () => number;
 }
 
 export const InvoicePreview = ({
-  invoiceNumber,
-  lineItems,
-  notes,
-  taxRate,
-  calculateSubtotal,
-  calculateTotalTax,
-  calculateGrandTotal,
+  formData,
+  type,
+  onCancel,
+  onSubmit,
+  companyInfo,
   clientInfo,
-  issueDate,
-  dueDate,
+  calculateTotal
 }: InvoicePreviewProps) => {
-  
-  // Helper function to calculate the total for a line item
-  const calculateLineTotal = (item: LineItem): number => {
-    const subtotal = item.quantity * item.unitPrice;
-    const discountAmount = subtotal * ((item.discount || 0) / 100);
-    return subtotal - discountAmount;
-  };
-
   return (
-    <div className="border rounded-md p-6 bg-white">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-1">INVOICE</h2>
-          <p className="text-lg font-medium">{invoiceNumber}</p>
-        </div>
-        <div className="text-right">
-          <img src="/placeholder.svg" alt="Company Logo" className="h-12 mb-2" />
-          <p className="font-medium">Fixlyfy Services</p>
-          <p className="text-sm text-muted-foreground">456 Business Ave, Suite 789</p>
-          <p className="text-sm text-muted-foreground">(555) 987-6543</p>
-        </div>
+    <div className="space-y-6">
+      {/* Preview Header */}
+      <div className="text-center py-8 border-b">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {type === "invoice" ? "INVOICE" : "ESTIMATE"}
+        </h1>
+        <p className="text-lg text-gray-600">#{formData.invoiceNumber}</p>
       </div>
-      
-      <div className="grid grid-cols-2 gap-8 mb-8">
+
+      {/* Company and Client Info */}
+      <div className="grid grid-cols-2 gap-8">
         <div>
-          <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Bill To:</h3>
-          <p className="font-medium">{clientInfo?.name || "Client Name"}</p>
-          <p className="text-sm text-muted-foreground">123 Main St, Apt 45</p>
-          <p className="text-sm text-muted-foreground">{clientInfo?.phone || "(555) 123-4567"}</p>
-          <p className="text-sm text-muted-foreground">{clientInfo?.email || "client@example.com"}</p>
+          <h3 className="font-semibold text-gray-900 mb-2">From:</h3>
+          <div className="text-gray-600">
+            <p className="font-medium">{companyInfo?.name || "Your Company"}</p>
+            <p>{companyInfo?.address || "123 Business St"}</p>
+            <p>{companyInfo?.city || "City"}, {companyInfo?.state || "State"} {companyInfo?.zip || "12345"}</p>
+            <p>{companyInfo?.phone || "(555) 123-4567"}</p>
+          </div>
         </div>
         <div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Invoice Date:</h3>
-              <p>{new Date(issueDate).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Due Date:</h3>
-              <p>{new Date(dueDate).toLocaleDateString()}</p>
-            </div>
+          <h3 className="font-semibold text-gray-900 mb-2">To:</h3>
+          <div className="text-gray-600">
+            <p className="font-medium">{clientInfo?.name || "Client Name"}</p>
+            <p>{clientInfo?.address || "456 Client Ave"}</p>
+            <p>{clientInfo?.city || "City"}, {clientInfo?.state || "State"} {clientInfo?.zip || "12345"}</p>
+            <p>{clientInfo?.phone || "(555) 987-6543"}</p>
           </div>
         </div>
       </div>
-      
-      <table className="w-full mb-8">
-        <thead className="border-b">
-          <tr>
-            <th className="text-left py-2">Description</th>
-            <th className="text-right py-2">Qty</th>
-            <th className="text-right py-2">Unit Price</th>
-            <th className="text-right py-2">Discount</th>
-            <th className="text-right py-2">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lineItems.map((item) => (
-            <tr key={item.id} className="border-b">
-              <td className="py-2">{item.description}</td>
-              <td className="text-right py-2">{item.quantity}</td>
-              <td className="text-right py-2">${item.unitPrice.toFixed(2)}</td>
-              <td className="text-right py-2">{(item.discount || 0) > 0 ? `${item.discount}%` : '-'}</td>
-              <td className="text-right py-2">${calculateLineTotal(item).toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={3}></td>
-            <td className="text-right py-2 font-medium">Subtotal:</td>
-            <td className="text-right py-2">${calculateSubtotal().toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colSpan={3}></td>
-            <td className="text-right py-2 font-medium">Tax ({taxRate}%):</td>
-            <td className="text-right py-2">${calculateTotalTax().toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colSpan={3}></td>
-            <td className="text-right py-2 font-medium">Total:</td>
-            <td className="text-right py-2 font-bold">${calculateGrandTotal().toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      
-      {notes && (
-        <div className="mb-8">
-          <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Notes:</h3>
-          <p className="text-sm whitespace-pre-line">{notes}</p>
+
+      {/* Invoice Details */}
+      <div className="grid grid-cols-2 gap-8">
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">{type === "invoice" ? "Invoice" : "Estimate"} Details:</h3>
+          <div className="text-gray-600 space-y-1">
+            <p><span className="font-medium">Issue Date:</span> {new Date(formData.issueDate).toLocaleDateString()}</p>
+            <p><span className="font-medium">Due Date:</span> {new Date(formData.dueDate).toLocaleDateString()}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Line Items */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-gray-900">Items:</h3>
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Description</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Qty</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Price</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {formData.items.map((item, index) => (
+                <tr key={index}>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {item.description}
+                    {item.taxable && <Badge variant="secondary" className="ml-2 text-xs">Taxable</Badge>}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.quantity}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 text-right">${item.unitPrice?.toFixed(2) || '0.00'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                    ${((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Total */}
+      <div className="flex justify-end">
+        <div className="w-64 space-y-2">
+          <div className="flex justify-between py-2 border-t border-gray-200">
+            <span className="font-semibold text-lg">Total:</span>
+            <span className="font-semibold text-lg">${calculateTotal().toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Notes */}
+      {formData.notes && (
+        <div className="space-y-2">
+          <h3 className="font-semibold text-gray-900">Notes:</h3>
+          <p className="text-gray-600 text-sm whitespace-pre-wrap">{formData.notes}</p>
         </div>
       )}
-      
-      <div className="text-sm text-muted-foreground border-t pt-4">
-        <p>Payment is due within 30 days. Thank you for your business!</p>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-6 border-t">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Back to Edit
+        </Button>
+        <Button type="button" onClick={onSubmit}>
+          Create {type === "invoice" ? "Invoice" : "Estimate"}
+        </Button>
       </div>
     </div>
   );

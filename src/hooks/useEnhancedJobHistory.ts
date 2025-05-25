@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useJobHistory } from './useJobHistory';
+import { HistoryItemInput } from '@/types/job-history';
 
 export const useEnhancedJobHistory = (jobId: string) => {
   const {
@@ -162,6 +163,11 @@ export const useEnhancedJobHistory = (jobId: string) => {
     });
   };
 
+  const canViewItem = (item: any) => {
+    // Basic permission check - can be expanded based on user roles
+    return true;
+  };
+
   return {
     historyItems,
     isLoading,
@@ -170,6 +176,7 @@ export const useEnhancedJobHistory = (jobId: string) => {
     logUserAction,
     logNavigation,
     logFormInteraction,
+    canViewItem,
     ...historyProps
   };
 };

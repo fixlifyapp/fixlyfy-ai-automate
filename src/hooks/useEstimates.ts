@@ -1,74 +1,50 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-// Define a more compatible Estimate interface that merges properties from both interfaces
 export interface Estimate {
   id: string;
   job_id: string;
-  number?: string;
-  estimate_number: string;
+  number: string;
   date: string;
-  amount?: number;
-  total: number;
   status: string;
-  viewed?: boolean;
+  total: number;
   items?: any[];
-  recommendedProduct?: any;
-  techniciansNote?: string;
   created_at: string;
-  updated_at: string; // Changed from optional to required to match useEstimateData.ts
-  notes?: string;
+  updated_at: string;
 }
 
-// Simplified placeholder version of useEstimates
-export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
-  const [estimates] = useState<Estimate[]>([]);
-  const [isLoading] = useState(false);
-  
+export const useEstimates = (jobId: string) => {
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchEstimates = async () => {
+    if (!jobId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('job_id', jobId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setEstimates(data || []);
+    } catch (error) {
+      console.error('Error fetching estimates:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEstimates();
+  }, [jobId]);
+
   return {
     estimates,
+    setEstimates,
     isLoading,
-    error: false,
-    dialogs: {
-      isUpsellDialogOpen: false,
-      setIsUpsellDialogOpen: () => {},
-      isEstimateBuilderOpen: false,
-      setIsEstimateBuilderOpen: () => {},
-      isEstimateDialogOpen: false,
-      setIsEstimateDialogOpen: () => {},
-      isConvertToInvoiceDialogOpen: false,
-      setIsConvertToInvoiceDialogOpen: () => {},
-      isDeleteConfirmOpen: false, 
-      setIsDeleteConfirmOpen: () => {},
-      isWarrantyDialogOpen: false,
-      setIsWarrantyDialogOpen: () => {}
-    },
-    state: {
-      selectedEstimateId: null,
-      recommendedProduct: null,
-      techniciansNote: "",
-      selectedEstimate: null,
-      isDeleting: false,
-    },
-    handlers: {
-      handleCreateEstimate: () => {},
-      handleEditEstimate: (id: string) => {},
-      handleViewEstimate: (estimate: any) => {},
-      handleSendEstimate: (id: string) => {},
-      handleUpsellAccept: (product: any) => {},
-      handleConvertToInvoice: (estimate: any) => {},
-      confirmConvertToInvoice: async () => {},
-      handleDeleteEstimate: (id: string) => {},
-      confirmDeleteEstimate: async () => {},
-      handleSyncToInvoice: () => {},
-      handleAddWarranty: (estimate: any) => {},
-      handleWarrantySelection: (warranty: any, note: string) => {},
-      handleEstimateCreated: (amount: number) => {}
-    },
-    info: {
-      clientInfo: {},
-      companyInfo: {},
-      jobInfo: {}
-    }
+    refreshEstimates: fetchEstimates
   };
 };

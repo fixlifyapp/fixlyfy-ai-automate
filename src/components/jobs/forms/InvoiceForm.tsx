@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -84,9 +85,9 @@ export const InvoiceForm = ({
 
       {previewMode ? (
         <InvoicePreview
-          data={form.getValues()}
+          formData={form.getValues()}
           type={type}
-          onCancel={onCancel}
+          onCancel={() => setPreviewMode(false)}
           onSubmit={form.handleSubmit(handleSubmit)}
           companyInfo={companyInfo}
           clientInfo={clientInfo}

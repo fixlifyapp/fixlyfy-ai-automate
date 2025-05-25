@@ -5,7 +5,6 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
 import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
-import { JobDetailsQuickActions } from "@/components/jobs/JobDetailsQuickActions";
 import { TabsContent } from "@/components/ui/tabs";
 import { useRBAC } from "@/components/auth/RBACProvider";
 import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
@@ -54,32 +53,27 @@ const JobDetailsPage = () => {
             </Card>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <JobDetailsTabs 
-                activeTab={activeTab} 
-                onTabChange={setActiveTab}
-              >
-                <TabsContent value="overview">
-                  <JobOverview jobId={id || ""} />
-                </TabsContent>
-                <TabsContent value="estimates">
-                  <ModernJobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
-                </TabsContent>
-                <TabsContent value="invoices">
-                  <ModernJobInvoicesTab jobId={id || ""} />
-                </TabsContent>
-                <TabsContent value="payments">
-                  <ModernJobPaymentsTab jobId={id || ""} />
-                </TabsContent>
-                <TabsContent value="history">
-                  <ModernJobHistoryTab jobId={id || ""} />
-                </TabsContent>
-              </JobDetailsTabs>
-            </div>
-            <div className="lg:col-span-1 space-y-6">
-              <JobDetailsQuickActions jobId={id || ""} />
-            </div>
+          <div className="w-full">
+            <JobDetailsTabs 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab}
+            >
+              <TabsContent value="overview">
+                <JobOverview jobId={id || ""} />
+              </TabsContent>
+              <TabsContent value="estimates">
+                <ModernJobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+              </TabsContent>
+              <TabsContent value="invoices">
+                <ModernJobInvoicesTab jobId={id || ""} />
+              </TabsContent>
+              <TabsContent value="payments">
+                <ModernJobPaymentsTab jobId={id || ""} />
+              </TabsContent>
+              <TabsContent value="history">
+                <ModernJobHistoryTab jobId={id || ""} />
+              </TabsContent>
+            </JobDetailsTabs>
           </div>
         </div>
       </JobDetailsProvider>

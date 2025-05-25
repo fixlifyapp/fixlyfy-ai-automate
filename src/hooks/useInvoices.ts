@@ -1,29 +1,28 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-// Define a simple Invoice interface
 export interface Invoice {
   id: string;
-  number: string;
   job_id: string;
+  number: string;
   date: string;
-  due_date: string;
-  total: number;
   status: string;
-  notes?: string;
+  total: number;
+  amount_paid?: number;
+  balance?: number;
+  items?: any[];
+  created_at: string;
+  updated_at: string;
 }
 
-// Hook for managing invoices with real-time updates
-export const useInvoices = (jobId?: string) => {
+export const useInvoices = (jobId: string) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchInvoices = async () => {
     if (!jobId) return;
     
-    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('invoices')
@@ -31,45 +30,19 @@ export const useInvoices = (jobId?: string) => {
         .eq('job_id', jobId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching invoices:", error);
-        toast.error("Failed to load invoices");
-        return;
-      }
-
-      const transformedInvoices: Invoice[] = data?.map(invoice => ({
-        id: invoice.id,
-        number: invoice.invoice_number,
-        job_id: invoice.job_id,
-        date: invoice.date,
-        due_date: invoice.date, // Using same date as fallback
-        total: invoice.total || 0,
-        status: invoice.status,
-        notes: invoice.notes
+      if (error) throw error;
+      
+      // Calculate balance for each invoice
+      const invoicesWithBalance = data?.map(invoice => ({
+        ...invoice,
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0)
       })) || [];
-
-      setInvoices(transformedInvoices);
+      
+      setInvoices(invoicesWithBalance);
     } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast.error("Failed to load invoices");
+      console.error('Error fetching invoices:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [jobId]);
-
-  const createInvoiceFromEstimate = async (estimateId: string) => {
-    try {
-      console.log("Creating invoice from estimate", estimateId);
-      toast.success("Invoice will be created from estimate");
-      return { id: `inv-${Date.now()}` };
-    } catch (error) {
-      console.error("Error creating invoice from estimate:", error);
-      toast.error("Failed to create invoice from estimate");
-      return null;
     }
   };
 
@@ -77,14 +50,13 @@ export const useInvoices = (jobId?: string) => {
     fetchInvoices();
   };
 
+  useEffect(() => {
+    fetchInvoices();
+  }, [jobId]);
+
   return {
     invoices,
     isLoading,
-    createInvoiceFromEstimate,
-    refreshInvoices,
-    updateInvoiceStatus: async () => {
-      console.log("Invoice functionality is being rebuilt");
-      return false;
-    }
+    refreshInvoices
   };
 };
