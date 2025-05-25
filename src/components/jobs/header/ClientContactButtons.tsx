@@ -16,7 +16,7 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
 
   const handleMessageClick = () => {
     if (job) {
-      // Directly open the message dialog for this client
+      // Open the message dialog for this client
       openMessageDialog({
         id: job.clientId,
         name: job.client,
@@ -24,9 +24,6 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
         email: "" // Could be added if available from job data
       });
     }
-    
-    // Also call the original onMessageClick if needed
-    onMessageClick();
   };
 
   return (
