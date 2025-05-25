@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Invoice {
   id: string;
   job_id: string;
-  number: string;
+  invoice_number: string;
   date: string;
   status: string;
   total: number;
   amount_paid?: number;
   balance?: number;
+  notes?: string;
   items?: any[];
   created_at: string;
   updated_at: string;

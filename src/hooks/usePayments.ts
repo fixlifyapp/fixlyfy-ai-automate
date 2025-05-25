@@ -9,6 +9,12 @@ export interface Payment {
   method: string;
   date: string;
   notes?: string;
+  reference?: string;
+  status?: string;
+  client_id?: string;
+  job_id?: string;
+  technician_id?: string;
+  technician_name?: string;
   created_at: string;
 }
 
@@ -103,7 +109,7 @@ export const usePayments = (jobId: string) => {
   // Calculate totals
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalRefunded = payments
-    .filter(p => (p as any).status === 'refunded')
+    .filter(p => p.status === 'refunded')
     .reduce((sum, payment) => sum + payment.amount, 0);
   const netAmount = totalPaid - totalRefunded;
 

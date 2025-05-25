@@ -5,10 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Estimate {
   id: string;
   job_id: string;
-  number: string;
+  estimate_number: string;
   date: string;
   status: string;
   total: number;
+  notes?: string;
   items?: any[];
   created_at: string;
   updated_at: string;
