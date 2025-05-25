@@ -13,6 +13,7 @@ export interface HistoryItem {
   meta?: any;
   old_value?: any;
   new_value?: any;
+  visibility?: string;
 }
 
 export interface HistoryItemInput extends Omit<HistoryItem, "id" | "created_at"> {}

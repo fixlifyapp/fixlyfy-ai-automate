@@ -6,9 +6,11 @@ export interface Estimate {
   id: string;
   job_id: string;
   estimate_number: string;
+  number: string; // Alias for compatibility
   date: string;
   status: string;
   total: number;
+  amount: number; // Alias for compatibility
   notes?: string;
   items?: any[];
   created_at: string;
@@ -30,7 +32,15 @@ export const useEstimates = (jobId: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEstimates(data || []);
+      
+      // Transform data to include alias properties for compatibility
+      const transformedData = data?.map(estimate => ({
+        ...estimate,
+        number: estimate.estimate_number,
+        amount: estimate.total
+      })) || [];
+      
+      setEstimates(transformedData);
     } catch (error) {
       console.error('Error fetching estimates:', error);
     } finally {

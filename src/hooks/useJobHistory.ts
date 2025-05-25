@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { HistoryItem, HistoryItemInput } from '@/types/job-history';
 import { useRBAC } from '@/components/auth/RBACProvider';
 
-export { HistoryItem, HistoryItemInput } from '@/types/job-history';
+export type { HistoryItem, HistoryItemInput } from '@/types/job-history';
 
 export const useJobHistory = (jobId: string) => {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
@@ -71,10 +71,10 @@ export const useJobHistory = (jobId: string) => {
     
     // Admin/Manager/Dispatcher can see all items if showRestrictedItems is true
     if (hasPermission('admin') || hasPermission('manager') || hasPermission('jobs.view.all')) {
-      return showRestrictedItems || item.visibility !== 'restricted';
+      return showRestrictedItems || (item.visibility !== 'restricted');
     }
     
-    return item.visibility !== 'restricted';
+    return (item.visibility !== 'restricted');
   };
 
   const deleteHistoryItem = async (id: string) => {

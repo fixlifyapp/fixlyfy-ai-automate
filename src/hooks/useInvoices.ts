@@ -6,6 +6,7 @@ export interface Invoice {
   id: string;
   job_id: string;
   invoice_number: string;
+  number: string; // Alias for compatibility
   date: string;
   status: string;
   total: number;
@@ -33,9 +34,10 @@ export const useInvoices = (jobId: string) => {
 
       if (error) throw error;
       
-      // Calculate balance for each invoice
+      // Calculate balance for each invoice and add alias properties
       const invoicesWithBalance = data?.map(invoice => ({
         ...invoice,
+        number: invoice.invoice_number, // Alias for compatibility
         balance: (invoice.total || 0) - (invoice.amount_paid || 0)
       })) || [];
       

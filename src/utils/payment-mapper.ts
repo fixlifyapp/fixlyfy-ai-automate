@@ -1,5 +1,5 @@
 
-import { Payment as PaymentType } from "@/types/payment";
+import { Payment as PaymentType, PaymentMethod } from "@/types/payment";
 import { Payment as PaymentHookType } from "@/hooks/usePayments";
 
 /**
@@ -13,8 +13,8 @@ export function mapPaymentFromHook(payment: PaymentHookType): PaymentType {
     clientName: "", // Will be filled in if available
     jobId: payment.job_id || "",
     amount: payment.amount,
-    method: payment.method,
-    status: payment.status as any,
+    method: payment.method as PaymentMethod,
+    status: (payment.status as any) || "paid",
     reference: payment.reference,
     notes: payment.notes,
     technicianId: payment.technician_id,

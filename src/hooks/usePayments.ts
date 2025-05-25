@@ -59,7 +59,10 @@ export const usePayments = (jobId: string) => {
     try {
       const { data, error } = await supabase
         .from('payments')
-        .insert([{ ...paymentData, invoice_id: invoiceId }])
+        .insert([{ 
+          ...paymentData, 
+          invoice_id: invoiceId
+        }])
         .select()
         .single();
 
