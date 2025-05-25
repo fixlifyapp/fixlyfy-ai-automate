@@ -408,4 +408,3 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
     </Dialog>
   );
 };
-
