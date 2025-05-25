@@ -25,6 +25,7 @@ interface TaskManagementDialogProps {
   onOpenChange: (open: boolean) => void;
   initialTasks: Task[];
   onSave: (tasks: Task[]) => void;
+  disabled?: boolean;
 }
 
 export function TaskManagementDialog({
@@ -32,12 +33,13 @@ export function TaskManagementDialog({
   onOpenChange,
   initialTasks,
   onSave,
+  disabled = false,
 }: TaskManagementDialogProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [newTaskName, setNewTaskName] = useState("");
 
   const handleAddTask = () => {
-    if (newTaskName.trim()) {
+    if (newTaskName.trim() && !disabled) {
       setTasks(prev => [
         ...prev, 
         { id: Math.max(...prev.map(t => t.id), 0) + 1, name: newTaskName.trim(), completed: false }
@@ -48,21 +50,27 @@ export function TaskManagementDialog({
   };
 
   const handleRemoveTask = (id: number) => {
-    setTasks(prev => prev.filter(task => task.id !== id));
+    if (!disabled) {
+      setTasks(prev => prev.filter(task => task.id !== id));
+    }
   };
 
   const handleToggleTask = (id: number) => {
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+    if (!disabled) {
+      setTasks(prev => 
+        prev.map(task => 
+          task.id === id ? { ...task, completed: !task.completed } : task
+        )
+      );
+    }
   };
 
   const handleSave = () => {
-    onSave(tasks);
-    onOpenChange(false);
-    toast.success("Tasks updated");
+    if (!disabled) {
+      onSave(tasks);
+      onOpenChange(false);
+      toast.success("Tasks updated");
+    }
   };
 
   return (
@@ -78,15 +86,16 @@ export function TaskManagementDialog({
               value={newTaskName}
               onChange={(e) => setNewTaskName(e.target.value)}
               placeholder="Add new task..."
+              disabled={disabled}
               onKeyPress={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !disabled) {
                   handleAddTask();
                 }
               }}
             />
             <Button 
               onClick={handleAddTask}
-              disabled={!newTaskName.trim()}
+              disabled={disabled || !newTaskName.trim()}
             >
               <Plus size={16} />
             </Button>
@@ -102,6 +111,7 @@ export function TaskManagementDialog({
                   <Checkbox 
                     id={`task-${task.id}`} 
                     checked={task.completed}
+                    disabled={disabled}
                     onCheckedChange={() => handleToggleTask(task.id)}
                   />
                   <Label 
@@ -114,6 +124,7 @@ export function TaskManagementDialog({
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={disabled}
                   onClick={() => handleRemoveTask(task.id)}
                 >
                   <X size={16} />
@@ -131,7 +142,9 @@ export function TaskManagementDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={disabled}>
+            Save Changes
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
