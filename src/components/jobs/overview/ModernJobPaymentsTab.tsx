@@ -1,208 +1,167 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, CreditCard, FileText, Trash2, Calendar, RefreshCw } from "lucide-react";
-import { PaymentDialog } from "../dialogs/PaymentDialog";
-import { PaymentMethod } from "@/types/payment";
-import { formatDistanceToNow } from "date-fns";
-import { DeleteConfirmDialog } from "../dialogs/DeleteConfirmDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { usePayments, Payment } from "@/hooks/usePayments";
+import { useInvoices } from "@/hooks/useInvoices";
+import { useJobHistory } from "@/hooks/useJobHistory";
+import { 
+  DollarSign, 
+  Plus,
+  CreditCard,
+  Banknote,
+  Eye,
+  Edit,
+  Trash2
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { RefundDialog } from "../../finance/dialogs/RefundDialog";
-import { Payment as RefundDialogPayment } from "@/types/payment";
-import { recordPayment } from "@/services/jobHistoryService";
-import { useRBAC } from "../../auth/RBACProvider";
 
 interface ModernJobPaymentsTabProps {
   jobId: string;
 }
 
 export const ModernJobPaymentsTab = ({ jobId }: ModernJobPaymentsTabProps) => {
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { currentUser } = useRBAC();
-  
-  const { 
-    payments, 
-    isLoading,
-    totalPaid,
-    totalRefunded,
-    netAmount,
-    addPayment,
-    refundPayment,
-    deletePayment,
-    fetchPayments
-  } = usePayments(jobId);
-  
-  useEffect(() => {
-    if (jobId) {
-      fetchPayments();
-    }
-  }, [jobId, fetchPayments]);
+  const [formData, setFormData] = useState({
+    invoice_id: '',
+    amount: '',
+    method: 'credit-card',
+    reference: '',
+    notes: ''
+  });
 
-  const getMethodIcon = (method: PaymentMethod) => {
-    switch (method) {
-      case "credit-card":
-        return <CreditCard size={16} className="text-blue-500" />;
-      case "cash":
-        return <DollarSign size={16} className="text-green-500" />;
-      case "e-transfer":
-        return <FileText size={16} className="text-purple-500" />; 
-      case "cheque":
-        return <FileText size={16} className="text-orange-500" />;
-      default:
-        return <CreditCard size={16} />;
-    }
-  };
+  const { payments, isLoading, refreshPayments } = usePayments(jobId);
+  const { invoices } = useInvoices(jobId);
+  const { addHistoryItem } = useJobHistory(jobId);
 
-  const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      paid: "bg-green-50 text-green-700 border-green-200",
-      refunded: "bg-amber-50 text-amber-700 border-amber-200",
-      disputed: "bg-red-50 text-red-700 border-red-200"
-    };
-    
-    return (
-      <Badge 
-        variant="outline" 
-        className={statusStyles[status as keyof typeof statusStyles] || ""}
-      >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
+  const handleCreatePayment = async () => {
     try {
-      const { data: invoices } = await supabase
-        .from('invoices')
-        .select('id')
-        .eq('job_id', jobId)
-        .limit(1);
-        
-      if (!invoices || invoices.length === 0) {
-        toast.error('No invoice found for this job');
-        return;
-      }
-      
-      const invoiceId = invoices[0].id;
-      
-      const { data: payment, error } = await supabase
+      const { data, error } = await supabase
         .from('payments')
         .insert({
-          invoice_id: invoiceId,
-          amount,
-          method,
-          reference: reference || "",
-          notes: notes || "",
+          invoice_id: formData.invoice_id,
+          amount: parseFloat(formData.amount),
+          method: formData.method,
+          reference: formData.reference,
+          notes: formData.notes,
           date: new Date().toISOString()
         })
         .select()
         .single();
-        
-      if (error) {
-        console.error('Error recording payment:', error);
-        throw error;
-      }
-      
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .select('balance, amount_paid, total')
-        .eq('id', invoiceId)
-        .single();
-        
-      if (invoiceError) {
-        console.error('Error fetching invoice:', invoiceError);
-        throw invoiceError;
-      }
-      
-      const newAmountPaid = (invoice.amount_paid || 0) + amount;
-      const newBalance = Math.max(0, invoice.total - newAmountPaid);
-      const newStatus = newBalance === 0 ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
-      
-      const { error: updateError } = await supabase
-        .from('invoices')
-        .update({
-          amount_paid: newAmountPaid,
-          balance: newBalance,
-          status: newStatus
-        })
-        .eq('id', invoiceId);
-        
-      if (updateError) {
-        console.error('Error updating invoice:', updateError);
-        throw updateError;
-      }
-      
-      await recordPayment(
-        jobId,
-        amount,
-        method,
-        currentUser?.name,
-        currentUser?.id,
-        reference
-      );
-      
-      fetchPayments();
-      setIsPaymentDialogOpen(false);
+
+      if (error) throw error;
+
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: data.id,
+        entity_type: 'payment',
+        type: 'payment',
+        title: 'Payment Recorded',
+        description: `Payment of $${formData.amount} recorded via ${formData.method}`,
+        meta: { 
+          action: 'create', 
+          amount: formData.amount,
+          method: formData.method,
+          invoice_id: formData.invoice_id
+        }
+      });
+
+      toast.success("Payment recorded successfully");
+      refreshPayments();
+      setIsCreateDialogOpen(false);
+      setFormData({
+        invoice_id: '',
+        amount: '',
+        method: 'credit-card',
+        reference: '',
+        notes: ''
+      });
     } catch (error) {
-      console.error("Error processing payment:", error);
+      console.error("Failed to create payment:", error);
+      toast.error("Failed to record payment");
     }
   };
 
-  const handleRefundPayment = (payment: Payment) => {
+  const handleDeleteClick = (payment: Payment) => {
     setSelectedPayment(payment);
-    setIsRefundDialogOpen(true);
+    setShowDeleteDialog(true);
   };
 
-  const confirmRefund = (paymentId: string) => {
-    refundPayment(paymentId);
-  };
-
-  const handleDeletePayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  const confirmDeletePayment = async () => {
+  const confirmDelete = async () => {
     if (!selectedPayment) return;
     
     setIsDeleting(true);
     
     try {
-      await deletePayment(selectedPayment.id);
-      setIsDeleteConfirmOpen(false);
+      const { error } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', selectedPayment.id);
+        
+      if (error) throw error;
+      
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: selectedPayment.id,
+        entity_type: 'payment',
+        type: 'payment',
+        title: 'Payment Deleted',
+        description: `Payment of $${selectedPayment.amount} was deleted`,
+        meta: { action: 'delete', amount: selectedPayment.amount }
+      });
+      
+      toast.success("Payment deleted successfully");
+      refreshPayments();
     } catch (error) {
       console.error("Failed to delete payment:", error);
       toast.error("Failed to delete payment");
     } finally {
       setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setSelectedPayment(null);
     }
   };
 
-  const convertToRefundDialogPayment = (payment: Payment): RefundDialogPayment => {
-    return {
-      id: payment.id,
-      date: payment.date,
-      clientId: payment.client_id || '',
-      clientName: payment.technician_name || 'Client',
-      jobId: payment.job_id || jobId,
-      amount: payment.amount,
-      method: payment.method,
-      status: payment.status as "paid" | "refunded" | "disputed",
-      reference: payment.reference,
-      notes: payment.notes,
-      technicianId: payment.technician_id,
-      technicianName: payment.technician_name
-    };
+  const getMethodIcon = (method: string) => {
+    switch (method) {
+      case 'credit-card':
+      case 'debit-card':
+        return <CreditCard className="h-4 w-4" />;
+      case 'cash':
+        return <Banknote className="h-4 w-4" />;
+      default:
+        return <DollarSign className="h-4 w-4" />;
+    }
   };
+
+  const getMethodColor = (method: string) => {
+    switch (method) {
+      case 'credit-card':
+      case 'debit-card':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'cash':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'check':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -212,96 +171,188 @@ export const ModernJobPaymentsTab = ({ jobId }: ModernJobPaymentsTabProps) => {
             <ModernCardTitle icon={DollarSign}>
               Payments ({payments.length})
             </ModernCardTitle>
-            <Button 
-              onClick={() => setIsPaymentDialogOpen(true)} 
-              className="gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <DollarSign size={16} />
-              Add Payment
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Total Received</p>
+                <p className="text-lg font-semibold text-green-600">
+                  ${totalPaid.toFixed(2)}
+                </p>
+              </div>
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Record Payment
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Record New Payment</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="invoice">Invoice</Label>
+                      <Select 
+                        value={formData.invoice_id} 
+                        onValueChange={(value) => setFormData({...formData, invoice_id: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select invoice" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {invoices.map((invoice) => (
+                            <SelectItem key={invoice.id} value={invoice.id}>
+                              {invoice.number} - ${invoice.total?.toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="amount">Amount</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={formData.amount}
+                        onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="method">Payment Method</Label>
+                      <Select 
+                        value={formData.method} 
+                        onValueChange={(value) => setFormData({...formData, method: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="credit-card">Credit Card</SelectItem>
+                          <SelectItem value="debit-card">Debit Card</SelectItem>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="check">Check</SelectItem>
+                          <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="reference">Reference</Label>
+                      <Input
+                        id="reference"
+                        value={formData.reference}
+                        onChange={(e) => setFormData({...formData, reference: e.target.value})}
+                        placeholder="Transaction ID, check number, etc."
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                        placeholder="Additional notes..."
+                      />
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsCreateDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleCreatePayment}
+                        disabled={!formData.invoice_id || !formData.amount}
+                      >
+                        Record Payment
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </ModernCardHeader>
         <ModernCardContent className="space-y-4">
-          {/* Payment Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Total Paid</p>
-              <p className="text-lg font-semibold text-green-600">${totalPaid.toFixed(2)}</p>
-            </div>
-            {totalRefunded > 0 && (
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Total Refunded</p>
-                <p className="text-lg font-semibold text-orange-600">${totalRefunded.toFixed(2)}</p>
-              </div>
-            )}
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Net Amount</p>
-              <p className="text-lg font-semibold text-blue-600">${netAmount.toFixed(2)}</p>
-            </div>
-          </div>
-
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="w-full h-16" />
+                <Skeleton key={i} className="w-full h-20" />
               ))}
             </div>
           ) : payments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <DollarSign className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No payments recorded yet</p>
-              <p className="text-sm">Add your first payment to get started</p>
+              <p className="text-lg font-medium">No payments recorded</p>
+              <p className="text-sm">Record your first payment to get started</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {payments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                >
+                <div key={payment.id} className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          {getMethodIcon(payment.method)}
-                          <span className="capitalize font-medium">{payment.method.replace('-', ' ')}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center text-lg font-semibold text-green-600">
+                          <DollarSign className="h-5 w-5 mr-1" />
+                          {payment.amount.toFixed(2)}
                         </div>
-                        {getStatusBadge(payment.status)}
-                        <span className="font-semibold">${payment.amount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(payment.date).toLocaleDateString()}
-                        </div>
-                        {payment.reference && (
-                          <div className="font-mono text-xs">
-                            Ref: {payment.reference}
+                        <Badge className={getMethodColor(payment.method)}>
+                          <div className="flex items-center gap-1">
+                            {getMethodIcon(payment.method)}
+                            {payment.method.replace('-', ' ')}
                           </div>
+                        </Badge>
+                        {payment.reference && (
+                          <span className="text-sm text-muted-foreground">
+                            Ref: {payment.reference}
+                          </span>
                         )}
-                        <div>
-                          {formatDistanceToNow(new Date(payment.date), { addSuffix: true })}
-                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {payment.status === 'paid' && (
-                        <Button
-                          onClick={() => handleRefundPayment(payment)}
-                          size="sm"
-                          variant="outline"
-                          className="text-amber-600 border-amber-200 hover:bg-amber-50"
-                        >
-                          <RefreshCw size={16} />
-                        </Button>
+                      <p className="text-sm text-muted-foreground">
+                        Received {formatDistanceToNow(new Date(payment.date), { addSuffix: true })}
+                      </p>
+                      {payment.notes && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {payment.notes}
+                        </p>
                       )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
                       <Button
-                        onClick={() => handleDeletePayment(payment)}
+                        variant="outline"
                         size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="flex items-center gap-1"
                       >
-                        <Trash2 size={16} />
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(payment)}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
                       </Button>
                     </div>
                   </div>
@@ -311,31 +362,29 @@ export const ModernJobPaymentsTab = ({ jobId }: ModernJobPaymentsTabProps) => {
           )}
         </ModernCardContent>
       </ModernCard>
-      
-      <PaymentDialog 
-        open={isPaymentDialogOpen} 
-        onOpenChange={setIsPaymentDialogOpen}
-        balance={100}
-        onPaymentProcessed={handlePaymentProcessed}
-      />
 
-      <DeleteConfirmDialog 
-        title="Delete Payment"
-        description={`Are you sure you want to delete this payment of $${selectedPayment?.amount.toFixed(2)}? This action cannot be undone.`}
-        onOpenChange={setIsDeleteConfirmOpen}
-        onConfirm={confirmDeletePayment}
-        isDeleting={isDeleting}
-        open={isDeleteConfirmOpen}
-      />
-
-      {selectedPayment && (
-        <RefundDialog
-          open={isRefundDialogOpen}
-          onOpenChange={setIsRefundDialogOpen}
-          payment={convertToRefundDialogPayment(selectedPayment)}
-          onRefund={confirmRefund}
-        />
-      )}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this payment of ${selectedPayment?.amount?.toFixed(2)}? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

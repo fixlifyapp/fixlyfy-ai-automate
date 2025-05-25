@@ -1067,11 +1067,17 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string
+          entity_id: string | null
+          entity_type: string | null
           id: string
+          ip_address: string | null
           job_id: string
           meta: Json | null
+          new_value: Json | null
+          old_value: Json | null
           title: string
           type: string
+          user_agent: string | null
           user_id: string | null
           user_name: string | null
           visibility: string | null
@@ -1079,11 +1085,17 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
+          ip_address?: string | null
           job_id: string
           meta?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
           title: string
           type: string
+          user_agent?: string | null
           user_id?: string | null
           user_name?: string | null
           visibility?: string | null
@@ -1091,11 +1103,17 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
+          ip_address?: string | null
           job_id?: string
           meta?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
           title?: string
           type?: string
+          user_agent?: string | null
           user_id?: string | null
           user_name?: string | null
           visibility?: string | null
