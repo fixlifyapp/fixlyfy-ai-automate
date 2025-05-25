@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
@@ -9,7 +10,7 @@ import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersRound, Settings2 } from "lucide-react";
+import { UsersRound, Settings2, Shield, Sliders, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -18,12 +19,16 @@ const SettingsPage = () => {
   
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-fixlyfy-text-secondary">
-          Manage your account and application preferences.
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your account and application preferences"
+        icon={Settings2}
+        badges={[
+          { text: "Security", icon: Shield, variant: "fixlyfy" },
+          { text: "Customization", icon: Sliders, variant: "success" },
+          { text: "Profile Management", icon: User, variant: "info" }
+        ]}
+      />
       
       {/* Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

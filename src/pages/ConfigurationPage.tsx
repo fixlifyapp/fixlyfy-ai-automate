@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NicheConfig } from "@/components/settings/configuration/NicheConfig";
@@ -9,7 +10,7 @@ import { JobTypesConfig } from "@/components/settings/configuration/JobTypesConf
 import { JobStatusesConfig } from "@/components/settings/configuration/JobStatusesConfig";
 import { CustomFieldsConfig } from "@/components/settings/configuration/CustomFieldsConfig";
 import { LeadSourcesConfig } from "@/components/settings/configuration/LeadSourcesConfig";
-import { Settings2, Tags, ListTodo, ClipboardList, FormInput, MessageCircle } from "lucide-react";
+import { Settings2, Tags, ListTodo, ClipboardList, FormInput, MessageCircle, Cogs, Target, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const ConfigurationPage = () => {
@@ -18,12 +19,16 @@ const ConfigurationPage = () => {
   
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Configuration</h1>
-        <p className="text-fixlyfy-text-secondary">
-          Manage configurable elements of the application like business niche, tags, job types, statuses, and custom fields
-        </p>
-      </div>
+      <PageHeader
+        title="Configuration"
+        subtitle="Manage configurable elements of the application like business niche, tags, job types, statuses, and custom fields"
+        icon={Cogs}
+        badges={[
+          { text: "Business Setup", icon: Target, variant: "fixlyfy" },
+          { text: "Custom Fields", icon: FormInput, variant: "success" },
+          { text: "Workflow Optimization", icon: Zap, variant: "info" }
+        ]}
+      />
       
       <Card className="overflow-hidden">
         <CardContent className="p-0">

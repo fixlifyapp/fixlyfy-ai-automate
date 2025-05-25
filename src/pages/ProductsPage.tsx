@@ -1,10 +1,11 @@
 
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { JobProducts } from "@/components/jobs/JobProducts";
 import { Button } from "@/components/ui/button";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, Package, BarChart3, Target, Zap } from "lucide-react";
 import { applianceRepairProducts } from "@/data/appliance-repair-products";
 import { useProducts } from "@/hooks/useProducts";
 import { toast } from "sonner";
@@ -69,32 +70,40 @@ const ProductsPage = () => {
 
   return (
     <PageLayout>
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Products</h1>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleImportApplianceProducts}
-              disabled={isImporting}
-              className="gap-2"
-            >
-              <Download size={18} />
-              {isImporting ? "Importing..." : "Import Appliance Products"}
-            </Button>
-            <Button className="gap-2">
-              <Plus size={18} />
-              New Product
-            </Button>
-          </div>
-        </div>
-        <Card className="border-fixlyfy-border shadow-sm">
-          <JobProducts 
-            jobId="" 
-            onDeleteProduct={handleDeleteProduct}
-          />
-        </Card>
+      <PageHeader
+        title="Products"
+        subtitle="Manage your product catalog and inventory"
+        icon={Package}
+        badges={[
+          { text: "Inventory Tracking", icon: BarChart3, variant: "fixlyfy" },
+          { text: "Smart Pricing", icon: Target, variant: "success" },
+          { text: "Quick Import", icon: Zap, variant: "info" }
+        ]}
+        actionButton={{
+          text: "New Product",
+          icon: Plus,
+          onClick: () => {}
+        }}
+      />
+
+      <div className="flex justify-end mb-6">
+        <Button 
+          variant="outline" 
+          onClick={handleImportApplianceProducts}
+          disabled={isImporting}
+          className="gap-2"
+        >
+          <Download size={18} />
+          {isImporting ? "Importing..." : "Import Appliance Products"}
+        </Button>
       </div>
+
+      <Card className="border-fixlyfy-border shadow-sm">
+        <JobProducts 
+          jobId="" 
+          onDeleteProduct={handleDeleteProduct}
+        />
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>

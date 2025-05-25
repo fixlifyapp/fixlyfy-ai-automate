@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
 import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Loader2 } from "lucide-react";
+import { Plus, Calendar, Loader2, Clock, Users, CheckCircle } from "lucide-react";
 import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
 import { useSearchParams } from "react-router-dom";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
@@ -92,44 +93,40 @@ const SchedulePage = () => {
   
   return (
     <PageLayout>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Schedule</h1>
-          <p className="text-fixlyfy-text-secondary">
-            Manage your team's schedule and appointments.
-          </p>
+      <PageHeader
+        title="Schedule"
+        subtitle="Manage your team's schedule and appointments efficiently"
+        icon={Calendar}
+        badges={[
+          { text: "Smart Scheduling", icon: Clock, variant: "fixlyfy" },
+          { text: "Team Coordination", icon: Users, variant: "success" },
+          { text: "AI Optimization", icon: CheckCircle, variant: "info" }
+        ]}
+        actionButton={{
+          text: "New Job",
+          icon: Plus,
+          onClick: () => setIsCreateModalOpen(true)
+        }}
+      />
+      
+      {/* Show AI Insights panel when toggled */}
+      {showAIInsights && (
+        <div className="mb-6">
+          <AIInsightsPanel />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowAIInsights(!showAIInsights)} className="gap-2">
-            <Calendar size={18} /> AI Insights
-          </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-fixlyfy hover:bg-fixlyfy/90">
-            <Plus size={18} className="mr-2" /> New Job
-          </Button>
-        </div>
+      )}
+      
+      {/* Filters */}
+      <div className="fixlyfy-card p-4 mb-6">
+        <ScheduleFilters 
+          view={view} 
+          onViewChange={handleViewChange} 
+          currentDate={currentDate} 
+          onDateChange={handleDateChange} 
+        />
       </div>
       
-      {/* Make the main content area full width */}
-      <div className="space-y-4 w-full">
-        {/* Show AI Insights panel when toggled */}
-        {showAIInsights && (
-          <div className="mb-4">
-            <AIInsightsPanel />
-          </div>
-        )}
-        
-        {/* Filters moved below AI Insights */}
-        <div className="fixlyfy-card p-4">
-          <ScheduleFilters 
-            view={view} 
-            onViewChange={handleViewChange} 
-            currentDate={currentDate} 
-            onDateChange={handleDateChange} 
-          />
-        </div>
-        
-        <ScheduleCalendar view={view} currentDate={currentDate} />
-      </div>
+      <ScheduleCalendar view={view} currentDate={currentDate} />
       
       {/* Replace ScheduleJobModal with JobsCreateModal */}
       <JobsCreateModal 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
 import { PaymentsTable } from "@/components/finance/PaymentsTable";
 import { PaymentsFilters } from "@/components/finance/PaymentsFilters";
 import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
@@ -15,6 +16,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { FinanceAiInsights } from "@/components/finance/FinanceAiInsights";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { mapPaymentFromHook } from "@/utils/payment-mapper";
+import { DollarSign, TrendingUp, Shield, CreditCard, Target, BarChart3 } from "lucide-react";
 
 export default function FinancePage() {
   // Get all payments from the usePayments hook
@@ -155,27 +157,21 @@ export default function FinancePage() {
 
   return (
     <PageLayout>
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Finance</h1>
-          <div className="flex gap-2">
-            <Button
-              onClick={toggleAiInsights}
-              variant="outline"
-              size="sm"
-            >
-              {showAiInsights ? "Hide Insights" : "Show Insights"}
-            </Button>
-            <Button
-              onClick={handleExportCSV}
-              variant="outline"
-            >
-              Export CSV
-            </Button>
-          </div>
-        </div>
-        <p className="text-muted-foreground">Manage payments, refunds and financial transactions</p>
-      </div>
+      <PageHeader
+        title="Finance"
+        subtitle="Manage payments, refunds and financial transactions"
+        icon={DollarSign}
+        badges={[
+          { text: "Payment Tracking", icon: CreditCard, variant: "fixlyfy" },
+          { text: "Financial Analytics", icon: BarChart3, variant: "success" },
+          { text: "Secure Processing", icon: Shield, variant: "info" }
+        ]}
+        actionButton={{
+          text: "Export CSV",
+          icon: TrendingUp,
+          onClick: handleExportCSV
+        }}
+      />
 
       {showAiInsights && (
         <FinanceAiInsights onClose={toggleAiInsights} />
