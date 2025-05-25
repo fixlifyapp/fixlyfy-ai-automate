@@ -61,8 +61,11 @@ function App() {
                     <Route path="/schedule" element={<SchedulePage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    {/* Team management routes - supporting both /team and /admin/team */}
                     <Route path="/team" element={<TeamManagementPage />} />
+                    <Route path="/admin/team" element={<TeamManagementPage />} />
                     <Route path="/team/:id" element={<TeamMemberProfilePage />} />
+                    <Route path="/admin/team/:id" element={<TeamMemberProfilePage />} />
                     <Route path="/invoices" element={<InvoicesPage />} />
                     <Route path="/estimates" element={<EstimatesPage />} />
                     <Route path="/estimate/view/:estimateNumber" element={<EstimateViewPage />} />
