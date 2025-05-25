@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,12 +47,12 @@ export const JobsList = ({
   onAdd 
 }: JobsListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const navigate = useNavigate();
 
   const filteredJobs = jobs.filter(job => {
     const searchMatch = job.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const statusMatch = statusFilter ? job.status === statusFilter : true;
+    const statusMatch = statusFilter === "all" ? true : job.status === statusFilter;
     return searchMatch && statusMatch;
   });
 
@@ -78,7 +77,7 @@ export const JobsList = ({
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="scheduled">Scheduled</SelectItem>
               <SelectItem value="in progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
