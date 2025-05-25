@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CheckCircle, Mail, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EstimateSendDialogProps {
   open: boolean;
@@ -81,22 +82,46 @@ export const EstimateSendDialog = ({
       const success = await onSave();
       
       if (success) {
-        // In a real implementation, we would send the estimate via email or SMS here
-        // For now, we'll just show a success message
+        // Get estimate data from the saved estimate (you'll need to pass this data)
+        const estimateData = {
+          lineItems: [], // This should come from the estimate builder
+          total: 0, // This should come from the estimate builder
+          taxRate: 13, // This should come from the estimate builder
+          notes: customNote
+        };
+
+        // Call the edge function to send the estimate
+        const { data, error } = await supabase.functions.invoke('send-estimate', {
+          body: {
+            method: sendMethod,
+            recipient: sendTo,
+            estimateNumber: estimateNumber,
+            estimateData: estimateData,
+            clientName: clientInfo?.name || ""
+          }
+        });
         
-        const method = sendMethod === "email" ? "email" : "text message";
+        if (error) {
+          throw new Error(error.message);
+        }
         
-        toast.success(`Estimate ${estimateNumber} will be sent to client via ${method}`);
-        
-        // Move to confirmation step
-        setCurrentStep("confirmation");
+        if (data.success) {
+          const method = sendMethod === "email" ? "email" : "text message";
+          toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
+          
+          // Move to confirmation step
+          setCurrentStep("confirmation");
+        } else {
+          toast.error(`Failed to send estimate: ${data.error || 'Unknown error'}`);
+          setIsProcessing(false);
+        }
       } else {
         toast.error("Failed to save estimate. Please try again.");
         setIsProcessing(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending estimate:", error);
-      toast.error("An error occurred while sending the estimate");
+      toast.error(`An error occurred while sending the estimate: ${error.message}`);
       setIsProcessing(false);
     }
   };
