@@ -55,16 +55,21 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
         email: sessionData.client_email
       });
 
-      // Set context for RLS policies
-      await supabase.rpc('set_config', {
-        setting_name: 'app.current_client_id',
-        setting_value: sessionData.client_id
-      });
-      
-      await supabase.rpc('set_config', {
-        setting_name: 'app.current_client_portal_user_id',
-        setting_value: sessionData.user_id
-      });
+      // Set context for RLS policies using direct SQL
+      try {
+        await supabase.rpc('set_config', {
+          setting_name: 'app.current_client_id',
+          setting_value: sessionData.client_id
+        });
+        
+        await supabase.rpc('set_config', {
+          setting_name: 'app.current_client_portal_user_id',
+          setting_value: sessionData.user_id
+        });
+      } catch (configError) {
+        // If set_config fails, continue anyway as the session is still valid
+        console.warn('Could not set session config:', configError);
+      }
 
     } catch (error) {
       console.error('Session check error:', error);

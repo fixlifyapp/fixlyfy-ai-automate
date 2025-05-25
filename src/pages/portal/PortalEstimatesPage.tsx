@@ -21,19 +21,20 @@ interface Estimate {
   job_id: string;
 }
 
-interface LineItem {
+interface PortalLineItem {
   id: string;
   description: string;
   quantity: number;
   unitPrice: number;
   discount: number;
+  taxable: boolean;
 }
 
 export default function PortalEstimatesPage() {
   const { user } = useClientPortalAuth();
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [lineItems, setLineItems] = useState<PortalLineItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -97,7 +98,8 @@ export default function PortalEstimatesPage() {
         description: item.description || '',
         quantity: item.quantity || 1,
         unitPrice: Number(item.unit_price) || 0,
-        discount: 0 // Default discount since it's not in the schema
+        discount: 0, // Default discount since it's not in the schema
+        taxable: item.taxable || true // Ensure taxable property is always present
       }));
 
       setLineItems(items);
