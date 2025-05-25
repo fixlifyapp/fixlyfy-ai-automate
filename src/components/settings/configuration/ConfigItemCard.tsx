@@ -1,33 +1,39 @@
 
 import { useState } from "react";
-import { Loader2, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ConfigItem } from "@/hooks/useConfigItems";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal, Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConfigItemDialog } from "./ConfigItemDialog";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import * as z from "zod";
 
-interface ConfigItemCardProps<T extends ConfigItem> {
+interface ConfigItemCardProps<T = any> {
   title: string;
   description: string;
   items: T[];
   isLoading: boolean;
   canManage: boolean;
-  onAdd: (item: Omit<T, 'id' | 'created_at'>) => Promise<T | null>;
-  onUpdate: (id: string, item: Partial<T>) => Promise<T | null>;
+  onAdd: (item: any) => Promise<any>;
+  onUpdate: (id: string, item: any) => Promise<any>;
   onDelete: (id: string) => Promise<boolean>;
+  refreshItems: () => void;
   renderCustomColumns?: (item: T) => React.ReactNode;
-  itemDialogFields?: React.ReactNode;
-  initialValues?: Partial<T>;
-  refreshItems?: () => void;
   schema?: z.ZodSchema;
+  itemDialogFields?: (props: { form: any; fieldType?: string }) => React.ReactNode;
+  initialValues?: any;
 }
 
-export function ConfigItemCard<T extends ConfigItem>({
+export function ConfigItemCard<T extends { id: string; name: string; created_at?: string }>({
   title,
   description,
   items,
@@ -36,165 +42,141 @@ export function ConfigItemCard<T extends ConfigItem>({
   onAdd,
   onUpdate,
   onDelete,
-  renderCustomColumns,
-  itemDialogFields,
-  initialValues,
   refreshItems,
-  schema
+  renderCustomColumns,
+  schema,
+  itemDialogFields,
+  initialValues = {}
 }: ConfigItemCardProps<T>) {
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editItem, setEditItem] = useState<T | null>(null);
-  const [deleteItem, setDeleteItem] = useState<T | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  // Set up real-time sync for the table
-  useRealtimeSync({
-    tables: [title.toLowerCase().replace(/\s+/g, '_')],
-    onUpdate: () => {
-      if (refreshItems) refreshItems();
-    },
-    enabled: true
-  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<T | null>(null);
+  const [deletingItem, setDeletingItem] = useState<T | null>(null);
+
+  const handleAdd = async (values: any) => {
+    try {
+      await onAdd(values);
+      setIsDialogOpen(false);
+      refreshItems();
+    } catch (error) {
+      console.error("Error adding item:", error);
+      toast.error("Failed to add item");
+    }
+  };
+
+  const handleUpdate = async (values: any) => {
+    if (!editingItem) return;
+    
+    try {
+      await onUpdate(editingItem.id, values);
+      setEditingItem(null);
+      refreshItems();
+    } catch (error) {
+      console.error("Error updating item:", error);
+      toast.error("Failed to update item");
+    }
+  };
 
   const handleDelete = async () => {
-    if (!deleteItem) return false;
+    if (!deletingItem) return;
     
-    setIsDeleting(true);
-    const success = await onDelete(deleteItem.id);
-    setIsDeleting(false);
-    
-    if (success) {
-      setDeleteItem(null);
+    try {
+      const success = await onDelete(deletingItem.id);
+      if (success) {
+        setDeletingItem(null);
+        refreshItems();
+      }
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast.error("Failed to delete item");
     }
-    
-    return success;
   };
-  
+
+  const columns: ColumnDef<T>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+    },
+    ...(renderCustomColumns ? [{
+      id: "custom",
+      header: "Details",
+      cell: ({ row }: { row: { original: T } }) => renderCustomColumns(row.original),
+    }] : []),
+    {
+      id: "actions",
+      cell: ({ row }: { row: { original: T } }) => {
+        const item = row.original;
+
+        return canManage ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingItem(item)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setDeletingItem(item)}
+                className="text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null;
+      },
+    },
+  ];
+
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between">
-          <div>
-            <CardTitle className="text-xl">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </div>
+            {canManage && (
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add {title.slice(0, -1)}
+              </Button>
+            )}
           </div>
-          {canManage && (
-            <Button 
-              onClick={() => setAddDialogOpen(true)}
-              variant="outline" 
-              className="flex items-center gap-1"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>Add</span>
-            </Button>
-          )}
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-              <p>No {title.toLowerCase()} found</p>
-              {canManage && (
-                <Button 
-                  onClick={() => setAddDialogOpen(true)} 
-                  variant="ghost" 
-                  className="mt-2"
-                >
-                  Add your first {title.toLowerCase().slice(0, -1)}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  {renderCustomColumns && <TableHead>Details</TableHead>}
-                  {canManage && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      {item.color ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span>{item.name}</span>
-                        </div>
-                      ) : (
-                        <span>{item.name}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{item.description || <span className="text-muted-foreground text-sm italic">No description</span>}</TableCell>
-                    {renderCustomColumns && (
-                      <TableCell>
-                        {renderCustomColumns(item)}
-                      </TableCell>
-                    )}
-                    {canManage && (
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setEditItem(item)}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setDeleteItem(item)}
-                            className="text-destructive"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable
+            columns={columns}
+            data={items}
+            isLoading={isLoading}
+          />
         </CardContent>
       </Card>
-      
-      <ConfigItemDialog 
-        open={addDialogOpen} 
-        onOpenChange={setAddDialogOpen}
-        title={`Add ${title.slice(0, -1)}`}
-        onSubmit={onAdd}
-        customFields={itemDialogFields}
-        initialValues={initialValues || {}}
-        schema={schema}
-      />
-      
-      <ConfigItemDialog 
-        open={!!editItem} 
-        onOpenChange={() => setEditItem(null)}
-        title={`Edit ${title.slice(0, -1)}`}
-        onSubmit={(values) => {
-          if (!editItem) return Promise.resolve(null);
-          return onUpdate(editItem.id, values);
+
+      <ConfigItemDialog
+        open={isDialogOpen || !!editingItem}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setEditingItem(null);
         }}
+        title={editingItem ? `Edit ${title.slice(0, -1)}` : `Add ${title.slice(0, -1)}`}
+        onSubmit={editingItem ? handleUpdate : handleAdd}
+        initialValues={editingItem || initialValues}
         customFields={itemDialogFields}
-        initialValues={editItem || {}}
         schema={schema}
       />
-      
+
       <ConfirmDeleteDialog
-        open={!!deleteItem}
-        onOpenChange={() => setDeleteItem(null)}
-        isLoading={isDeleting}
-        itemName={deleteItem?.name || ''}
-        itemType={title.slice(0, -1).toLowerCase()}
+        open={!!deletingItem}
+        onOpenChange={(open) => !open && setDeletingItem(null)}
         onConfirm={handleDelete}
+        title={`Delete ${deletingItem?.name}`}
+        description={`Are you sure you want to delete "${deletingItem?.name}"? This action cannot be undone.`}
       />
     </>
   );

@@ -28,7 +28,7 @@ interface ConfigItemDialogProps {
   onSubmit: (values: any) => Promise<any>;
   children?: React.ReactNode;
   initialValues?: any;
-  customFields?: React.ReactNode;
+  customFields?: React.ReactNode | ((props: { form: any; fieldType?: string }) => React.ReactNode);
   schema?: z.ZodSchema;
 }
 

@@ -47,6 +47,129 @@ export function CustomFieldsConfig() {
     return await addItem(values);
   };
 
+  const renderItemDialogFields = ({ form, fieldType }: { form: any; fieldType?: string }) => (
+    <>
+      <FormField
+        control={form.control}
+        name="field_type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Field Type</FormLabel>
+            <Select 
+              onValueChange={field.onChange} 
+              value={field.value}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select field type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="textarea">Textarea</SelectItem>
+                <SelectItem value="number">Number</SelectItem>
+                <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="select">Select (Dropdown)</SelectItem>
+                <SelectItem value="checkbox">Checkbox</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="entity_type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Apply To</FormLabel>
+            <Select 
+              onValueChange={field.onChange} 
+              value={field.value}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select entity type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="job">Job</SelectItem>
+                <SelectItem value="client">Client</SelectItem>
+                <SelectItem value="invoice">Invoice</SelectItem>
+                <SelectItem value="estimate">Estimate</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="placeholder"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Placeholder Text</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="Enter placeholder text" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="default_value"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Default Value</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="Enter default value" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      {fieldType === 'select' && (
+        <FormField
+          control={form.control}
+          name="selectOptions"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Options (one per line)</FormLabel>
+              <FormControl>
+                <Textarea 
+                  {...field} 
+                  placeholder="Option 1&#10;Option 2&#10;Option 3"
+                  rows={4}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+      <FormField
+        control={form.control}
+        name="required"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <div className="space-y-1 leading-none">
+              <FormLabel>
+                Field is required
+              </FormLabel>
+            </div>
+          </FormItem>
+        )}
+      />
+    </>
+  );
+
   return (
     <ConfigItemCard
       title="Custom Fields"
@@ -74,128 +197,7 @@ export function CustomFieldsConfig() {
         </div>
       )}
       schema={customFieldSchema}
-      itemDialogFields={({ form, fieldType }: any) => (
-        <>
-          <FormField
-            control={form.control}
-            name="field_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Field Type</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select field type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="textarea">Textarea</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="select">Select (Dropdown)</SelectItem>
-                    <SelectItem value="checkbox">Checkbox</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="entity_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Apply To</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select entity type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="job">Job</SelectItem>
-                    <SelectItem value="client">Client</SelectItem>
-                    <SelectItem value="invoice">Invoice</SelectItem>
-                    <SelectItem value="estimate">Estimate</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="placeholder"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Placeholder Text</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter placeholder text" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="default_value"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Default Value</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter default value" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {fieldType === 'select' && (
-            <FormField
-              control={form.control}
-              name="selectOptions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Options (one per line)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      {...field} 
-                      placeholder="Option 1&#10;Option 2&#10;Option 3"
-                      rows={4}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-          <FormField
-            control={form.control}
-            name="required"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Field is required
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-        </>
-      )}
+      itemDialogFields={renderItemDialogFields}
       initialValues={{ field_type: "text", entity_type: "job", required: false }}
     />
   );
