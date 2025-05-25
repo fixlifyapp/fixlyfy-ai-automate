@@ -451,6 +451,69 @@ export type Database = {
           },
         ]
       }
+      client_properties: {
+        Row: {
+          address: string | null
+          city: string | null
+          client_id: string
+          country: string | null
+          created_at: string
+          id: string
+          is_primary: boolean | null
+          notes: string | null
+          property_name: string
+          property_type: string | null
+          state: string | null
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          client_id: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          notes?: string | null
+          property_name: string
+          property_type?: string | null
+          state?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          client_id?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          notes?: string | null
+          property_name?: string
+          property_type?: string | null
+          state?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -912,6 +975,7 @@ export type Database = {
           balance: number | null
           created_at: string | null
           date: string | null
+          due_date: string | null
           estimate_id: string | null
           id: string
           invoice_number: string
@@ -926,6 +990,7 @@ export type Database = {
           balance?: number | null
           created_at?: string | null
           date?: string | null
+          due_date?: string | null
           estimate_id?: string | null
           id?: string
           invoice_number: string
@@ -940,6 +1005,7 @@ export type Database = {
           balance?: number | null
           created_at?: string | null
           date?: string | null
+          due_date?: string | null
           estimate_id?: string | null
           id?: string
           invoice_number?: string
@@ -1280,6 +1346,7 @@ export type Database = {
           job_type: string | null
           lead_source: string | null
           notes: string | null
+          property_id: string | null
           revenue: number | null
           schedule_end: string | null
           schedule_start: string | null
@@ -1301,6 +1368,7 @@ export type Database = {
           job_type?: string | null
           lead_source?: string | null
           notes?: string | null
+          property_id?: string | null
           revenue?: number | null
           schedule_end?: string | null
           schedule_start?: string | null
@@ -1322,6 +1390,7 @@ export type Database = {
           job_type?: string | null
           lead_source?: string | null
           notes?: string | null
+          property_id?: string | null
           revenue?: number | null
           schedule_end?: string | null
           schedule_start?: string | null
@@ -1347,6 +1416,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "estimate_details_view"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "client_properties"
+            referencedColumns: ["id"]
           },
         ]
       }
