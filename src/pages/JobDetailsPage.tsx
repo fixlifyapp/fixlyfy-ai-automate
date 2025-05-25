@@ -32,7 +32,7 @@ const JobDetailsPage = () => {
   }, [location]);
   
   useUnifiedRealtime({
-    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients', 'job_custom_field_values', 'job_attachments'],
+    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'job_history', 'clients', 'job_custom_field_values', 'job_attachments'],
     onUpdate: () => {
       console.log("Unified realtime update triggered for job details");
       setRefreshTrigger(prev => prev + 1);

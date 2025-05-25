@@ -3,66 +3,39 @@ import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { History, Calendar, User, MessageSquare, Clock, Activity } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { History, Calendar, User, MessageSquare, Clock, Activity, FileText, DollarSign, Wrench, Phone, Mail } from "lucide-react";
+import { useJobHistory } from "@/hooks/useJobHistory";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
 
 interface ModernJobHistoryTabProps {
   jobId: string;
 }
 
-interface HistoryItem {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  user_name?: string;
-  created_at: string;
-  meta?: any;
-  visibility: string;
-}
-
 export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { historyItems, isLoading, canViewItem } = useJobHistory(jobId);
 
-  const fetchHistory = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("job_history")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      setHistory(data || []);
-    } catch (error) {
-      console.error("Error fetching job history:", error);
-      toast.error("Failed to load job history");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory();
-  }, [jobId]);
+  // Filter items that the current user can view
+  const visibleItems = historyItems.filter(canViewItem);
 
   const getHistoryIcon = (type: string) => {
     switch (type) {
+      case 'status-change':
       case 'status_change':
         return <Activity className="h-4 w-4 text-blue-500" />;
       case 'payment':
-        return <MessageSquare className="h-4 w-4 text-green-500" />;
+        return <DollarSign className="h-4 w-4 text-green-500" />;
       case 'note':
         return <MessageSquare className="h-4 w-4 text-gray-500" />;
-      case 'appointment':
-        return <Calendar className="h-4 w-4 text-purple-500" />;
+      case 'estimate':
+        return <FileText className="h-4 w-4 text-purple-500" />;
+      case 'invoice':
+        return <FileText className="h-4 w-4 text-orange-500" />;
+      case 'technician':
+        return <Wrench className="h-4 w-4 text-blue-600" />;
+      case 'communication':
+        return <Phone className="h-4 w-4 text-indigo-500" />;
+      case 'attachment':
+        return <FileText className="h-4 w-4 text-gray-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-400" />;
     }
@@ -70,17 +43,30 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
 
   const getHistoryTypeColor = (type: string) => {
     switch (type) {
+      case 'status-change':
       case 'status_change':
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'payment':
         return 'bg-green-50 text-green-700 border-green-200';
       case 'note':
         return 'bg-gray-50 text-gray-700 border-gray-200';
-      case 'appointment':
+      case 'estimate':
         return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'invoice':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'technician':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'communication':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'attachment':
+        return 'bg-gray-50 text-gray-700 border-gray-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
+  };
+
+  const formatType = (type: string) => {
+    return type.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (
@@ -88,7 +74,7 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
       <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
         <ModernCardHeader className="pb-4">
           <ModernCardTitle icon={History}>
-            Job History ({history.length})
+            Job History ({visibleItems.length})
           </ModernCardTitle>
         </ModernCardHeader>
         <ModernCardContent className="space-y-4">
@@ -98,7 +84,7 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
                 <Skeleton key={i} className="w-full h-16" />
               ))}
             </div>
-          ) : history.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <History className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <p className="text-lg font-medium">No history available</p>
@@ -106,10 +92,10 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {history.map((item, index) => (
+              {visibleItems.map((item, index) => (
                 <div key={item.id} className="relative">
                   {/* Timeline line */}
-                  {index < history.length - 1 && (
+                  {index < visibleItems.length - 1 && (
                     <div className="absolute left-6 top-8 bottom-0 w-px bg-gray-200" />
                   )}
                   
@@ -130,7 +116,7 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
                                 variant="outline" 
                                 className={getHistoryTypeColor(item.type)}
                               >
-                                {item.type.replace('_', ' ')}
+                                {formatType(item.type)}
                               </Badge>
                             </div>
                             <p className="text-gray-700 mb-2">{item.description}</p>

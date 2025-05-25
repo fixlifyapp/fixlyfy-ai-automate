@@ -14,6 +14,7 @@ import { EstimateBuilderDialog } from "../dialogs/estimate-builder/EstimateBuild
 import { WarrantySelectionDialog } from "../dialogs/WarrantySelectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { recordEstimateCreated } from "@/services/jobHistoryService";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -30,6 +31,19 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     handlers,
     info
   } = useEstimates(jobId, onEstimateConverted);
+
+  // Enhanced handlers with history recording
+  const handleEstimateCreated = async (amount: number) => {
+    // Record in job history
+    await recordEstimateCreated(
+      jobId,
+      `EST-${Date.now()}`, // Generate estimate number
+      amount
+    );
+    
+    // Call original handler
+    handlers.handleEstimateCreated(amount);
+  };
 
   if (error) {
     return (
@@ -110,7 +124,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlers.handleEditEstimate(estimate)}
+                        onClick={() => handlers.handleEditEstimate(estimate.id)}
                         className="text-blue-600 hover:text-blue-700"
                       >
                         <Eye className="h-4 w-4" />
@@ -118,7 +132,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlers.handleConvertToInvoice(estimate)}
+                        onClick={() => handlers.handleConvertToInvoice(estimate.id)}
                         className="text-green-600 hover:text-green-700"
                       >
                         <Edit className="h-4 w-4" />
@@ -126,7 +140,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlers.handleDeleteEstimate(estimate)}
+                        onClick={() => handlers.handleDeleteEstimate(estimate.id)}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -144,7 +158,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
       <EstimateDialog
         open={dialogs.isEstimateDialogOpen}
         onOpenChange={dialogs.setIsEstimateDialogOpen}
-        onEstimateCreated={handlers.handleEstimateCreated}
+        onEstimateCreated={handleEstimateCreated}
         clientInfo={info.clientInfo}
         companyInfo={info.companyInfo}
       />

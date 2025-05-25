@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ interface Attachment {
   file_path: string;
   file_size: number;
   created_at: string;
+  uploaded_at?: string; // Make this optional for backward compatibility
   mime_type?: string;
 }
 
@@ -43,7 +43,13 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
 
       if (error) throw error;
       
-      setAttachments(data || []);
+      // Transform data to ensure created_at is available
+      const transformedData = data?.map(item => ({
+        ...item,
+        created_at: item.created_at || item.uploaded_at || new Date().toISOString()
+      })) || [];
+      
+      setAttachments(transformedData);
     } catch (error) {
       console.error('Error fetching attachments:', error);
       toast.error('Failed to load attachments');
