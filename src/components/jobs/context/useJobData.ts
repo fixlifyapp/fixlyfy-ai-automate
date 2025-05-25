@@ -82,7 +82,8 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           email: client.email || "",
           total: jobData.revenue || 0,
           status: jobData.status || "scheduled",
-          description: jobData.description || ""
+          description: jobData.description || "",
+          tags: jobData.tags || []
         };
         
         console.log('Processed job info:', jobInfo);
