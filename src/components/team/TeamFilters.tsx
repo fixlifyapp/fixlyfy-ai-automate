@@ -41,7 +41,6 @@ export const TeamFilters = ({
     onSearch("");
   };
 
-  // Helper function to handle empty values
   const getNullableValue = (value: string | null) => {
     return value === null ? "all" : value;
   };

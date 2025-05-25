@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,14 +49,12 @@ export const JobsList = ({
 }: JobsListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
   const navigate = useNavigate();
 
   const filteredJobs = jobs.filter(job => {
     const searchMatch = job.title.toLowerCase().includes(searchQuery.toLowerCase());
     const statusMatch = statusFilter ? job.status === statusFilter : true;
-    const priorityMatch = priorityFilter ? job.tags?.includes(priorityFilter) : true;
-    return searchMatch && statusMatch && priorityMatch;
+    return searchMatch && statusMatch;
   });
 
   return (
@@ -67,7 +66,7 @@ export const JobsList = ({
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           <Input
             type="search"
             placeholder="Search jobs..."
@@ -84,18 +83,6 @@ export const JobsList = ({
               <SelectItem value="in progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Priorities</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -155,13 +142,13 @@ export const JobsList = ({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onView(job.id)}>
+                          <DropdownMenuItem onClick={() => onView && onView(job.id)}>
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onEdit(job.id)}>
+                          <DropdownMenuItem onClick={() => onEdit && onEdit(job.id)}>
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onDelete(job.id)}>
+                          <DropdownMenuItem onClick={() => onDelete && onDelete(job.id)}>
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>

@@ -6,7 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface JobsFilter {
   status?: string;
-  priority?: string;
   query?: string;
   clientId?: string;
   propertyId?: string;
@@ -134,9 +133,6 @@ export const useJobsData = (clientId?: string): UseJobsDataReturn => {
 
       if (filters.status) {
         query = query.eq('status', filters.status);
-      }
-      if (filters.priority) {
-        query = query.eq('priority', filters.priority);
       }
       if (filters.propertyId) {
         query = query.eq('property_id', filters.propertyId);
