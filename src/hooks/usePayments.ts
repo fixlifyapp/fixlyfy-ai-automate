@@ -23,6 +23,7 @@ export interface PaymentInput {
   method: string;
   date: string;
   notes?: string;
+  status?: string;
 }
 
 export const usePayments = (jobId: string) => {

@@ -37,7 +37,8 @@ export const useEstimates = (jobId: string) => {
       const transformedData = data?.map(estimate => ({
         ...estimate,
         number: estimate.estimate_number,
-        amount: estimate.total
+        amount: estimate.total,
+        notes: estimate.notes || ''
       })) || [];
       
       setEstimates(transformedData);

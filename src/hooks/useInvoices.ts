@@ -16,6 +16,7 @@ export interface Invoice {
   items?: any[];
   created_at: string;
   updated_at: string;
+  due_date?: string;
 }
 
 export const useInvoices = (jobId: string) => {
@@ -38,7 +39,8 @@ export const useInvoices = (jobId: string) => {
       const invoicesWithBalance = data?.map(invoice => ({
         ...invoice,
         number: invoice.invoice_number, // Alias for compatibility
-        balance: (invoice.total || 0) - (invoice.amount_paid || 0)
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
+        notes: invoice.notes || ''
       })) || [];
       
       setInvoices(invoicesWithBalance);

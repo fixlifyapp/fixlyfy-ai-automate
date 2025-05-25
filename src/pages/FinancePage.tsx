@@ -42,6 +42,10 @@ export default function FinancePage() {
     setIsPaymentDialogOpen(false);
   };
 
+  const handleRefund = (payment: any) => {
+    console.log('Refund payment:', payment);
+  };
+
   return (
     <div className="space-y-6">
       <FinanceHeader />
@@ -61,7 +65,11 @@ export default function FinancePage() {
         </TabsList>
         
         <TabsContent value="payments" className="space-y-4">
-          <PaymentsTable payments={mockPayments} />
+          <PaymentsTable 
+            payments={mockPayments} 
+            onRefund={handleRefund}
+            canRefund={true}
+          />
         </TabsContent>
         
         <TabsContent value="invoices" className="space-y-4">
