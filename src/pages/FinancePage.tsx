@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,24 +8,73 @@ import { PaymentsTable } from "@/components/finance/PaymentsTable";
 import { PaymentsFilters } from "@/components/finance/PaymentsFilters";
 import { FinanceAiInsights } from "@/components/finance/FinanceAiInsights";
 import { DollarSign, TrendingUp, Calculator, CreditCard, BarChart3, Target } from "lucide-react";
-
-type FilterState = {
-  dateRange: string;
-  status: string;
-  method: string;
-  search: string;
-};
+import { Payment, PaymentMethod } from "@/types/payment";
 
 const FinancePage = () => {
-  const [filters, setFilters] = useState<FilterState>({
-    dateRange: "30",
-    status: "all",
-    method: "all",
-    search: ""
-  });
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
+  const [showAiInsights, setShowAiInsights] = useState(true);
 
-  const handleFilterChange = (key: keyof FilterState, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  // Sample payments data - in real app this would come from API
+  useEffect(() => {
+    const samplePayments: Payment[] = [
+      {
+        id: "1",
+        clientId: "c1",
+        clientName: "John Anderson",
+        jobId: "j1",
+        amount: 350.00,
+        method: "credit-card",
+        status: "paid",
+        date: "2024-01-15",
+        description: "HVAC Repair Service"
+      },
+      {
+        id: "2", 
+        clientId: "c2",
+        clientName: "Sarah Williams",
+        jobId: "j2",
+        amount: 225.50,
+        method: "cash",
+        status: "paid",
+        date: "2024-01-14",
+        description: "Appliance Maintenance"
+      }
+    ];
+    setPayments(samplePayments);
+    setFilteredPayments(samplePayments);
+  }, []);
+
+  const handleFilterChange = (
+    startDate: Date | undefined,
+    endDate: Date | undefined,
+    method: PaymentMethod | "all",
+    technician: string | "all",
+    client: string | "all"
+  ) => {
+    let filtered = [...payments];
+    
+    if (method !== "all") {
+      filtered = filtered.filter(p => p.method === method);
+    }
+    
+    if (startDate) {
+      filtered = filtered.filter(p => new Date(p.date) >= startDate);
+    }
+    
+    if (endDate) {
+      filtered = filtered.filter(p => new Date(p.date) <= endDate);
+    }
+    
+    setFilteredPayments(filtered);
+  };
+
+  const handleRefund = (payment: Payment) => {
+    console.log("Refunding payment:", payment);
+  };
+
+  const handleDelete = (payment: Payment) => {
+    console.log("Deleting payment:", payment);
   };
 
   return (
@@ -113,11 +162,14 @@ const FinancePage = () => {
               <CardDescription>View and manage all payment transactions</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <PaymentsFilters 
-                filters={filters}
-                onFilterChange={handleFilterChange}
+              <PaymentsFilters onFilterChange={handleFilterChange} />
+              <PaymentsTable 
+                payments={filteredPayments}
+                onRefund={handleRefund}
+                onDelete={handleDelete}
+                canRefund={true}
+                canDelete={true}
               />
-              <PaymentsTable filters={filters} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -137,7 +189,9 @@ const FinancePage = () => {
         </TabsContent>
 
         <TabsContent value="insights" className="space-y-6">
-          <FinanceAiInsights />
+          {showAiInsights && (
+            <FinanceAiInsights onClose={() => setShowAiInsights(false)} />
+          )}
         </TabsContent>
       </Tabs>
     </PageLayout>

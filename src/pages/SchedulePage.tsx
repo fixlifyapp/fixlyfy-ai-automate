@@ -11,8 +11,12 @@ import { Plus, Calendar, Clock, Users, Brain } from "lucide-react";
 
 const SchedulePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [view, setView] = useState<'week' | 'day'>('week');
+  const [view, setView] = useState<'week' | 'day' | 'month'>('week');
   const [showTechnicianSidebar, setShowTechnicianSidebar] = useState(true);
+
+  const handleViewChange = (newView: 'day' | 'week' | 'month') => {
+    setView(newView);
+  };
 
   return (
     <PageLayout>
@@ -35,10 +39,10 @@ const SchedulePage = () => {
       {/* Filters and Controls */}
       <div className="mb-6 space-y-4">
         <ScheduleFilters 
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
           view={view}
-          onViewChange={setView}
+          onViewChange={handleViewChange}
+          currentDate={selectedDate}
+          onDateChange={setSelectedDate}
         />
         
         <AIInsightsPanel />
@@ -48,10 +52,7 @@ const SchedulePage = () => {
       <div className="flex gap-6">
         {/* Calendar */}
         <div className="flex-1">
-          <ScheduleCalendar 
-            selectedDate={selectedDate}
-            view={view}
-          />
+          <ScheduleCalendar view={view} />
         </div>
         
         {/* Technician Sidebar */}

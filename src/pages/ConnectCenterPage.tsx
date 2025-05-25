@@ -8,14 +8,19 @@ import { MessagesList } from "@/components/connect/MessagesList";
 import { EmailsList } from "@/components/connect/EmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { EnhancedCallingInterface } from "@/components/connect/EnhancedCallingInterface";
-import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, MessageSquare, Mail, Settings, Plus, Users, Zap, Target } from "lucide-react";
+import { Phone, MessageSquare, Mail, Settings, Plus, Users, Zap, Target, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("calls");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+
+  const handleSearchResults = (results: any[]) => {
+    setSearchResults(results);
+  };
 
   return (
     <PageLayout>
@@ -41,11 +46,15 @@ const ConnectCenterPage = () => {
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="flex-1 max-w-md">
-                <ConnectSearch 
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  placeholder="Search conversations, contacts, or phone numbers..."
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+                  <Input 
+                    placeholder="Search conversations, contacts, or phone numbers..."
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
@@ -92,15 +101,15 @@ const ConnectCenterPage = () => {
         </TabsList>
 
         <TabsContent value="calls" className="space-y-6">
-          <CallsList searchQuery={searchQuery} />
+          <CallsList />
         </TabsContent>
 
         <TabsContent value="messages" className="space-y-6">
-          <MessagesList searchQuery={searchQuery} />
+          <MessagesList searchResults={searchResults} />
         </TabsContent>
 
         <TabsContent value="emails" className="space-y-6">
-          <EmailsList searchQuery={searchQuery} />
+          <EmailsList />
         </TabsContent>
 
         <TabsContent value="dialer" className="space-y-6">
@@ -109,7 +118,7 @@ const ConnectCenterPage = () => {
               <CardTitle>Phone Dialer</CardTitle>
             </CardHeader>
             <CardContent>
-              <EnhancedCallingInterface />
+              <EnhancedCallingInterface ownedNumbers={[]} />
             </CardContent>
           </Card>
         </TabsContent>
