@@ -24,6 +24,7 @@ import { QuickAddTagDialog } from "./quick-add/QuickAddTagDialog";
 import { useJobCustomFields } from "@/hooks/useJobCustomFields";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
+import { useJobAttachments } from "@/hooks/useJobAttachments";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -57,6 +58,7 @@ export const JobsCreateModal = ({
   const { items: jobTypes, isLoading: isLoadingJobTypes } = useJobTypes();
   const { items: tags, isLoading: isLoadingTags } = useTags();
   const { availableFields, saveCustomFieldValues } = useJobCustomFields();
+  const { uploadAttachments, isUploading } = useJobAttachments();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -303,6 +305,11 @@ export const JobsCreateModal = ({
           if (Object.keys(nonEmptyValues).length > 0) {
             await saveCustomFieldValues(newJob.id, nonEmptyValues);
           }
+        }
+
+        // Upload attachments if any
+        if (attachments.length > 0) {
+          await uploadAttachments(newJob.id, attachments);
         }
         
         toast.success(`Job created successfully: ${newJob.id}`);
@@ -940,12 +947,12 @@ export const JobsCreateModal = ({
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
               >
-                {isSubmitting ? (
+                {isSubmitting || isUploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {isUploading ? 'Uploading...' : 'Creating...'}
                   </>
                 ) : (
                   'Create Job'

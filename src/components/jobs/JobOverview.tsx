@@ -2,13 +2,13 @@
 import React from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { JobSummaryCard } from "./overview/JobSummaryCard";
-import { ClientInfoCard } from "./overview/ClientInfoCard";
 import { ScheduleInfoCard } from "./overview/ScheduleInfoCard";
 import { JobDescriptionCard } from "./overview/JobDescriptionCard";
 import { JobTagsCard } from "./overview/JobTagsCard";
 import { TasksCard } from "./overview/TasksCard";
 import { TechnicianCard } from "./overview/TechnicianCard";
 import { AdditionalInfoCard } from "./overview/AdditionalInfoCard";
+import { AttachmentsCard } from "./overview/AttachmentsCard";
 
 interface JobOverviewProps {
   jobId: string;
@@ -39,9 +39,9 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
   return (
     <div className="space-y-6">
       <JobSummaryCard job={job} />
-      <ClientInfoCard job={job} />
       <ScheduleInfoCard job={job} />
       <TechnicianCard job={job} />
+      <AttachmentsCard jobId={jobId} />
       <JobDescriptionCard description={job.description || ""} />
       <TasksCard tasks={job.tasks || []} />
       <JobTagsCard tags={job.tags || []} />

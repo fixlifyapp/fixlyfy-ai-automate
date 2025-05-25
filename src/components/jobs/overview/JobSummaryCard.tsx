@@ -1,7 +1,6 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import { JobInfo } from "../context/types";
 
@@ -27,16 +26,6 @@ export const JobSummaryCard = ({ job }: JobSummaryCardProps) => {
           <div>
             <p className="text-sm text-muted-foreground">Lead Source</p>
             <p className="font-medium">{job.lead_source || "Not specified"}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Status</p>
-            <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-600">
-              {job.status}
-            </Badge>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Revenue</p>
-            <p className="font-medium">${job.total?.toFixed(2) || "0.00"}</p>
           </div>
           {job.estimated_duration && (
             <div>
