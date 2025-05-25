@@ -40,9 +40,6 @@ export function PaymentsTable({
   canDelete = false,
   isLoading = false
 }: PaymentsTableProps) {
-  // In a real application, we would implement pagination here
-  // For now, we'll just show all payments
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
@@ -104,20 +101,28 @@ export function PaymentsTable({
               <TableRow key={payment.id}>
                 <TableCell>{format(new Date(payment.date), 'MMM d, yyyy')}</TableCell>
                 <TableCell>
-                  <Link to={`/clients/${payment.clientId}`} className="text-blue-600 hover:underline">
-                    {payment.clientName}
-                  </Link>
+                  {(payment.client_id || payment.clientId) ? (
+                    <Link to={`/clients/${payment.client_id || payment.clientId}`} className="text-blue-600 hover:underline">
+                      {payment.clientName || 'N/A'}
+                    </Link>
+                  ) : (
+                    <span>{payment.clientName || 'N/A'}</span>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <Link to={`/jobs/${payment.jobId}`} className="text-blue-600 hover:underline">
-                    #{payment.jobId}
-                  </Link>
+                  {(payment.job_id || payment.jobId) ? (
+                    <Link to={`/jobs/${payment.job_id || payment.jobId}`} className="text-blue-600 hover:underline">
+                      #{payment.job_id || payment.jobId}
+                    </Link>
+                  ) : (
+                    <span>N/A</span>
+                  )}
                 </TableCell>
                 <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
                 <TableCell className="capitalize">{payment.method.replace("-", " ")}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={`${getStatusBadgeColor(payment.status)} capitalize`}>
-                    {payment.status}
+                    {payment.status || 'paid'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right space-x-2">

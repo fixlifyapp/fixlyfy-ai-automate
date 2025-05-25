@@ -1,314 +1,357 @@
-import { useState, useCallback } from "react";
+
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Invoice } from "@/hooks/useInvoices";
-import { LineItem } from "@/components/jobs/builder/types";
+import { LineItem, Product } from "@/components/jobs/builder/types";
 
-interface InvoiceFormData {
-  invoiceId?: string;
-  jobId: string;
-  invoiceNumber: string;
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    taxable: boolean;
-  }>;
-  notes: string;
-  status: string;
+export interface Invoice {
+  id: string;
+  invoice_number: string;
+  number: string; // Add this alias for compatibility
+  job_id: string;
+  date: string;
+  due_date?: string;
   total: number;
-  dueDate: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  amount_paid?: number;
+  balance?: number;
 }
 
-interface UseInvoiceBuilderProps {
-  invoiceId: string | null;
-  open: boolean;
-}
-
-export const useInvoiceBuilder = ({ invoiceId, open }: UseInvoiceBuilderProps) => {
-  const [formData, setFormData] = useState<InvoiceFormData>({
-    jobId: '',
-    invoiceNumber: `INV-${Date.now()}`,
-    items: [],
-    notes: "",
-    status: "draft",
-    total: 0,
-    dueDate: new Date().toISOString().split('T')[0],
-  });
-  
+export const useInvoiceBuilder = (
+  jobId: string,
+  invoiceId?: string | null,
+  onClose?: () => void
+) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [taxRate, setTaxRate] = useState<number>(13);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>();
+  const [issueDate, setIssueDate] = useState<Date>(new Date());
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [taxRate, setTaxRate] = useState(0);
 
-  const updateFormData = useCallback((updates: Partial<InvoiceFormData>) => {
-    setFormData(prev => {
-      const updated = { ...prev, ...updates };
+  // Generate unique invoice number
+  const generateInvoiceNumber = () => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000);
+    return `INV-${timestamp}-${random}`;
+  };
+
+  // Initialize invoice number on mount
+  useEffect(() => {
+    if (!invoiceId && !invoiceNumber) {
+      setInvoiceNumber(generateInvoiceNumber());
+    }
+  }, [invoiceId, invoiceNumber]);
+
+  // Load existing invoice if editing
+  useEffect(() => {
+    if (invoiceId) {
+      loadInvoice(invoiceId);
+    }
+  }, [invoiceId]);
+
+  const loadInvoice = async (id: string) => {
+    try {
+      setIsLoading(true);
       
-      // Recalculate total when items change
-      if (updates.items) {
-        updated.total = updates.items.reduce((sum, item) => {
-          const itemTotal = item.quantity * item.unitPrice;
-          return sum + (item.taxable ? itemTotal * 1.13 : itemTotal); // 13% tax
-        }, 0);
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (invoiceError) throw invoiceError;
+      
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('line_items')
+        .select('*')
+        .eq('parent_id', id)
+        .eq('parent_type', 'invoice');
+        
+      if (itemsError) throw itemsError;
+      
+      // Add the number alias for compatibility
+      const invoiceWithAlias = {
+        ...invoiceData,
+        number: invoiceData.invoice_number
+      };
+      
+      setInvoice(invoiceWithAlias);
+      setInvoiceNumber(invoiceData.invoice_number);
+      setNotes(invoiceData.notes || "");
+      if (invoiceData.due_date) {
+        setDueDate(new Date(invoiceData.due_date));
+      }
+      if (invoiceData.date) {
+        setIssueDate(new Date(invoiceData.date));
       }
       
-      return updated;
-    });
-  }, []);
+      const transformedItems: LineItem[] = itemsData?.map(item => ({
+        id: item.id,
+        description: item.description || '',
+        name: item.description || '',
+        quantity: item.quantity || 1,
+        unitPrice: Number(item.unit_price || 0),
+        price: Number(item.unit_price || 0),
+        taxable: item.taxable !== false,
+        total: (item.quantity || 1) * Number(item.unit_price || 0),
+        ourPrice: 0,
+        discount: 0
+      })) || [];
+      
+      setLineItems(transformedItems);
+    } catch (error) {
+      console.error('Error loading invoice:', error);
+      toast.error('Failed to load invoice');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleAddProduct = useCallback((product: any) => {
+  const saveInvoice = async () => {
+    try {
+      setIsLoading(true);
+      
+      const total = calculateGrandTotal();
+      
+      let savedInvoice: Invoice;
+      
+      if (invoiceId) {
+        // Update existing invoice
+        const { data, error } = await supabase
+          .from('invoices')
+          .update({
+            total,
+            balance: total - (invoice?.amount_paid || 0),
+            notes,
+            due_date: dueDate?.toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', invoiceId)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        savedInvoice = { ...data, number: data.invoice_number };
+      } else {
+        // Create new invoice
+        const { data, error } = await supabase
+          .from('invoices')
+          .insert({
+            job_id: jobId,
+            invoice_number: invoiceNumber,
+            total,
+            balance: total,
+            status: 'unpaid',
+            notes,
+            due_date: dueDate?.toISOString(),
+            date: issueDate.toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        savedInvoice = { ...data, number: data.invoice_number };
+      }
+      
+      // Save line items
+      if (lineItems.length > 0) {
+        if (invoiceId) {
+          await supabase
+            .from('line_items')
+            .delete()
+            .eq('parent_id', invoiceId)
+            .eq('parent_type', 'invoice');
+        }
+        
+        const lineItemsToInsert = lineItems.map(item => ({
+          parent_id: savedInvoice.id,
+          parent_type: 'invoice',
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }));
+        
+        await supabase
+          .from('line_items')
+          .insert(lineItemsToInsert);
+      }
+      
+      toast.success(`Invoice ${invoiceNumber} saved successfully`);
+      
+      if (onClose) onClose();
+      
+      return savedInvoice;
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      toast.error('Failed to save invoice');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Additional methods expected by InvoiceBuilderDialog
+  const initializeFromEstimate = (estimate: any) => {
+    if (estimate.items) {
+      setLineItems(estimate.items);
+    }
+    if (estimate.notes) {
+      setNotes(estimate.notes);
+    }
+    setInvoiceNumber(generateInvoiceNumber());
+  };
+
+  const initializeFromInvoice = (existingInvoice: Invoice) => {
+    setInvoice(existingInvoice);
+    setInvoiceNumber(existingInvoice.invoice_number);
+    setNotes(existingInvoice.notes || "");
+    if (existingInvoice.due_date) {
+      setDueDate(new Date(existingInvoice.due_date));
+    }
+    if (existingInvoice.date) {
+      setIssueDate(new Date(existingInvoice.date));
+    }
+  };
+
+  const resetForm = () => {
+    setLineItems([]);
+    setNotes("");
+    setDueDate(undefined);
+    setIssueDate(new Date());
+    setInvoiceNumber(generateInvoiceNumber());
+    setTaxRate(0);
+    setInvoice(null);
+  };
+
+  const handleAddProduct = (product: Product) => {
     const newLineItem: LineItem = {
-      id: `item-${Date.now()}`,
+      id: `temp-${Date.now()}`,
       description: product.description || product.name,
+      name: product.name,
       quantity: product.quantity || 1,
       unitPrice: product.price,
-      taxable: product.taxable,
-      discount: 0,
-      ourPrice: product.ourPrice || 0,
-      name: product.name,
       price: product.price,
-      total: (product.quantity || 1) * product.price
+      taxable: product.taxable !== false,
+      total: (product.quantity || 1) * product.price,
+      ourPrice: product.ourPrice || 0,
+      discount: 0
     };
-    
     setLineItems(prev => [...prev, newLineItem]);
-  }, []);
+  };
 
-  const handleRemoveLineItem = useCallback((id: string) => {
-    setLineItems(prev => prev.filter(item => item.id !== id));
-  }, []);
-
-  const handleUpdateLineItem = useCallback((id: string, updates: Partial<LineItem>) => {
+  const handleUpdateLineItem = (id: string, updates: Partial<LineItem>) => {
     setLineItems(prev => prev.map(item => 
       item.id === id 
         ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
         : item
     ));
-  }, []);
+  };
 
-  const calculateSubtotal = useCallback(() => {
+  const handleRemoveLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const addLineItem = (item: LineItem) => {
+    setLineItems(prev => [...prev, { ...item, id: `temp-${Date.now()}` }]);
+  };
+
+  const removeLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const updateLineItem = (id: string, updates: Partial<LineItem>) => {
+    setLineItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
+        : item
+    ));
+  };
+
+  const calculateSubtotal = () => {
     return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  }, [lineItems]);
+  };
 
-  const calculateTotalTax = useCallback(() => {
+  const calculateTotalTax = () => {
     const subtotal = calculateSubtotal();
     return subtotal * (taxRate / 100);
-  }, [calculateSubtotal, taxRate]);
+  };
 
-  const calculateGrandTotal = useCallback(() => {
+  const calculateGrandTotal = () => {
     return calculateSubtotal() + calculateTotalTax();
-  }, [calculateSubtotal, calculateTotalTax]);
+  };
 
-  const initializeFromInvoice = useCallback((invoice: Invoice) => {
-    const getInvoiceItems = async () => {
-      try {
-        const { data: lineItemsData, error } = await supabase
-          .from('line_items')
-          .select('*')
-          .eq('parent_id', invoice.id)
-          .eq('parent_type', 'invoice');
-          
-        if (error) throw error;
-        
-        const items = lineItemsData?.map((item, index) => ({
-          id: item.id || `item-${index}`,
-          description: item.description || "",
-          quantity: item.quantity || 1,
-          unitPrice: item.unit_price || 0,
-          taxable: item.taxable || true,
-          discount: 0,
-          ourPrice: 0,
-          name: item.description || "",
-          price: item.unit_price || 0,
-          total: (item.quantity || 1) * (item.unit_price || 0)
-        })) || [];
-        
-        setLineItems(items);
-        updateFormData({
-          invoiceId: invoice.id,
-          jobId: invoice.job_id,
-          invoiceNumber: invoice.invoice_number,
-          items: lineItemsData?.map(item => ({
-            description: item.description || "",
-            quantity: item.quantity || 1,
-            unitPrice: item.unit_price || 0,
-            taxable: item.taxable || true
-          })) || [],
-          notes: invoice.notes || "",
-          status: invoice.status,
-          total: invoice.total || 0,
-          dueDate: invoice.due_date || new Date().toISOString().split('T')[0]
-        });
-      } catch (error) {
-        console.error("Error loading invoice items:", error);
-        toast.error("Failed to load invoice items");
-      }
-    };
-    
-    getInvoiceItems();
-  }, [updateFormData]);
+  const calculateTotalMargin = () => {
+    return lineItems.reduce((sum, item) => {
+      const cost = item.ourPrice || 0;
+      const margin = (item.unitPrice - cost) * item.quantity;
+      return sum + margin;
+    }, 0);
+  };
 
-  const resetForm = useCallback(() => {
-    setFormData({
-      jobId: '',
-      invoiceNumber: `INV-${Date.now()}`,
-      items: [],
-      notes: "",
-      status: "draft",
-      total: 0,
-      dueDate: new Date().toISOString().split('T')[0],
-    });
-    setLineItems([]);
-  }, []);
+  const calculateMarginPercentage = () => {
+    const total = calculateSubtotal();
+    const margin = calculateTotalMargin();
+    return total > 0 ? (margin / total) * 100 : 0;
+  };
 
-  const createInvoice = useCallback(async (): Promise<Invoice | null> => {
-    if (isSubmitting) return null;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          job_id: formData.jobId,
-          invoice_number: formData.invoiceNumber,
-          total: calculateGrandTotal(),
-          status: formData.status,
-          notes: formData.notes,
-          due_date: formData.dueDate
-        })
-        .select()
-        .single();
-        
-      if (invoiceError) throw invoiceError;
-      
-      if (lineItems.length > 0) {
-        const lineItemsData = lineItems.map(item => ({
-          parent_id: invoice.id,
-          parent_type: 'invoice',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-        
-        const { error: lineItemsError } = await supabase
-          .from('line_items')
-          .insert(lineItemsData);
-          
-        if (lineItemsError) throw lineItemsError;
-      }
-      
-      updateFormData({ invoiceId: invoice.id });
-      
-      toast.success("Invoice created successfully");
-      return {
-        id: invoice.id,
-        number: invoice.invoice_number,
-        invoice_number: invoice.invoice_number,
-        job_id: invoice.job_id,
-        date: invoice.date || invoice.created_at,
-        due_date: invoice.due_date || '',
-        total: invoice.total,
-        status: invoice.status,
-        notes: invoice.notes || '',
-        created_at: invoice.created_at,
-        updated_at: invoice.updated_at
-      };
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-      toast.error("Failed to create invoice");
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [formData, lineItems, calculateGrandTotal, updateFormData, isSubmitting]);
+  const calculateTotal = () => {
+    return calculateGrandTotal();
+  };
 
-  const updateInvoice = useCallback(async (invoiceId: string): Promise<Invoice | null> => {
-    if (isSubmitting) return null;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .update({
-          invoice_number: formData.invoiceNumber,
-          total: calculateGrandTotal(),
-          status: formData.status,
-          notes: formData.notes,
-          due_date: formData.dueDate
-        })
-        .eq('id', invoiceId)
-        .select()
-        .single();
-        
-      if (invoiceError) throw invoiceError;
-      
-      const { error: deleteError } = await supabase
-        .from('line_items')
-        .delete()
-        .eq('parent_id', invoiceId)
-        .eq('parent_type', 'invoice');
-        
-      if (deleteError) throw deleteError;
-      
-      if (lineItems.length > 0) {
-        const lineItemsData = lineItems.map(item => ({
-          parent_id: invoiceId,
-          parent_type: 'invoice',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-        
-        const { error: lineItemsError } = await supabase
-          .from('line_items')
-          .insert(lineItemsData);
-          
-        if (lineItemsError) throw lineItemsError;
-      }
-      
-      toast.success("Invoice updated successfully");
-      return {
-        id: invoice.id,
-        number: invoice.invoice_number,
-        invoice_number: invoice.invoice_number,
-        job_id: invoice.job_id,
-        date: invoice.date || invoice.created_at,
-        due_date: invoice.due_date || '',
-        total: invoice.total,
-        status: invoice.status,
-        notes: invoice.notes || '',
-        created_at: invoice.created_at,
-        updated_at: invoice.updated_at
-      };
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-      toast.error("Failed to update invoice");
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [formData, lineItems, calculateGrandTotal, isSubmitting]);
+  const saveInvoiceChanges = async () => {
+    return await saveInvoice();
+  };
+
+  // Form data object for compatibility
+  const formData = {
+    invoiceId: invoice?.id || null,
+    invoiceNumber,
+    notes,
+    dueDate,
+    issueDate,
+    lineItems,
+    taxRate
+  };
 
   return {
-    formData,
+    isLoading,
+    invoice,
     lineItems,
+    notes,
+    dueDate,
+    issueDate,
+    invoiceNumber,
     taxRate,
-    isSubmitting,
+    formData,
+    setNotes,
+    setDueDate,
     setLineItems,
     setTaxRate,
-    updateFormData,
-    handleAddProduct,
-    handleRemoveLineItem,
-    handleUpdateLineItem,
+    addLineItem,
+    removeLineItem,
+    updateLineItem,
+    saveInvoice,
+    saveInvoiceChanges,
+    calculateTotal,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
-    createInvoice,
-    updateInvoice,
+    calculateTotalMargin,
+    calculateMarginPercentage,
+    initializeFromEstimate,
     initializeFromInvoice,
-    resetForm
+    resetForm,
+    handleAddProduct,
+    handleUpdateLineItem,
+    handleRemoveLineItem
   };
 };

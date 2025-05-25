@@ -204,16 +204,18 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     return {
       id: payment.id,
       date: payment.date,
-      clientId: payment.client_id || '',
+      client_id: payment.client_id || '',
       clientName: payment.technician_name || 'Client',
-      jobId: payment.job_id || jobId,
+      job_id: payment.job_id || jobId,
       amount: payment.amount,
       method: payment.method as any,
       status: (payment.status as "paid" | "refunded" | "disputed") || "paid",
       reference: payment.reference,
       notes: payment.notes,
-      technicianId: payment.technician_id,
-      technicianName: payment.technician_name
+      technician_id: payment.technician_id,
+      technician_name: payment.technician_name,
+      invoice_id: payment.invoice_id,
+      created_at: payment.created_at
     };
   };
 

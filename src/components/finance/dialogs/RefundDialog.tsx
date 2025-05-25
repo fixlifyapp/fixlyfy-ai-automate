@@ -49,10 +49,10 @@ export function RefundDialog({
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-2">
             <div className="text-sm">Client:</div>
-            <div className="text-sm font-medium">{payment.clientName}</div>
+            <div className="text-sm font-medium">{payment.clientName || 'N/A'}</div>
             
             <div className="text-sm">Job #:</div>
-            <div className="text-sm font-medium">#{payment.jobId}</div>
+            <div className="text-sm font-medium">#{payment.job_id || payment.jobId || 'N/A'}</div>
             
             <div className="text-sm">Amount:</div>
             <div className="text-sm font-medium">{formatCurrency(payment.amount)}</div>

@@ -1,140 +1,119 @@
 
-import { useState, useEffect } from "react";
-import { PageLayout } from "@/components/layout/PageLayout";
-import { PageHeader } from "@/components/ui/page-header";
-import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
-import { ScheduleFilters } from "@/components/schedule/ScheduleFilters";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Loader2, Clock, Users, CheckCircle } from "lucide-react";
-import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
-import { useSearchParams } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, momentLocalizer, View } from "react-big-calendar";
+import moment from "moment";
+import { format } from "date-fns";
+import { Job } from "@/types/job";
+import { useJobs } from "@/hooks/useJobs";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
-import { Job } from "@/hooks/useJobs";
-import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { Plus } from "lucide-react";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+
+const localizer = momentLocalizer(moment);
 
 const SchedulePage = () => {
-  const { user, loading: authLoading } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<'day' | 'week' | 'month'>(searchParams.get('view') as 'day' | 'week' | 'month' || 'week');
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedView, setSelectedView] = useState<View>("month");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showAIInsights, setShowAIInsights] = useState(false);
-  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const { jobs, isLoading } = useJobs();
 
-  console.log('SchedulePage: Component mounted', { user, authLoading, view });
+  const events = jobs.map((job) => ({
+    id: job.id,
+    title: job.title,
+    start: new Date(job.schedule_start || job.date || ""),
+    end: new Date(job.schedule_end || job.date || ""),
+    allDay: false,
+    resource: job,
+  }));
 
-  useEffect(() => {
-    console.log('SchedulePage: User state changed', { user, authLoading });
-    
-    if (!authLoading && !user) {
-      console.log('SchedulePage: No authenticated user found');
-      setScheduleError('Authentication required');
-      toast.error('Please sign in to view the schedule');
-    } else if (user) {
-      console.log('SchedulePage: User authenticated successfully');
-      setScheduleError(null);
+  const handleSelectSlot = (slotInfo: any) => {
+    console.log("Selected slot:", slotInfo);
+  };
+
+  const handleSelectEvent = (event: any) => {
+    console.log("Selected event:", event);
+  };
+
+  const eventStyleGetter = (event: any, start: Date, end: Date, isSelected: boolean) => {
+    const job = event.resource as Job;
+    let backgroundColor = '#3182CE'; // Default color
+
+    switch (job.status) {
+      case 'scheduled':
+        backgroundColor = '#3182CE';
+        break;
+      case 'in progress':
+        backgroundColor = '#DD6B20';
+        break;
+      case 'completed':
+        backgroundColor = '#38A169';
+        break;
+      case 'cancelled':
+        backgroundColor = '#E53E3E';
+        break;
+      default:
+        backgroundColor = '#718096';
     }
-  }, [user, authLoading]);
 
-  // Update URL when view changes
-  const handleViewChange = (newView: 'day' | 'week' | 'month') => {
-    console.log('SchedulePage: View changed', { newView });
-    setView(newView);
-    setSearchParams(params => {
-      params.set('view', newView);
-      return params;
-    });
+    return {
+      style: {
+        backgroundColor: backgroundColor,
+        borderRadius: '5px',
+        opacity: 0.8,
+        color: 'white',
+        border: '0px',
+        display: 'block',
+        textAlign: 'left' as const,
+        padding: '2px 5px',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap' as const,
+        textOverflow: 'ellipsis'
+      }
+    };
   };
 
-  // Handle date change from filters
-  const handleDateChange = (newDate: Date) => {
-    console.log('SchedulePage: Date changed', { newDate });
-    setCurrentDate(newDate);
-  };
-
-  // Handle successful job creation
-  const handleJobCreated = (job: Job) => {
-    console.log('SchedulePage: Job created successfully', { jobId: job.id });
-    toast.success(`Job ${job.id} has been created and scheduled`);
-  };
-
-  // Show loading state while checking authentication
-  if (authLoading) {
-    console.log('SchedulePage: Rendering auth loading state');
-    return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
-            <p className="text-fixlyfy-text-secondary">Loading schedule...</p>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  // Show error state if there's an issue
-  if (scheduleError) {
-    console.log('SchedulePage: Rendering error state', { scheduleError });
-    return (
-      <PageLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-red-500 mb-2">Schedule Error</div>
-            <div className="text-sm text-gray-600 mb-4">{scheduleError}</div>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  console.log('SchedulePage: Rendering main schedule content');
-  
   return (
-    <PageLayout>
-      <PageHeader
-        title="Schedule"
-        subtitle="Manage your team's schedule and appointments efficiently"
-        icon={Calendar}
-        badges={[
-          { text: "Smart Scheduling", icon: Clock, variant: "fixlyfy" },
-          { text: "Team Coordination", icon: Users, variant: "success" },
-          { text: "AI Optimization", icon: CheckCircle, variant: "info" }
-        ]}
-        actionButton={{
-          text: "New Job",
-          icon: Plus,
-          onClick: () => setIsCreateModalOpen(true)
-        }}
-      />
-      
-      {/* Show AI Insights panel when toggled */}
-      {showAIInsights && (
-        <div className="mb-6">
-          <AIInsightsPanel />
-        </div>
-      )}
-      
-      {/* Filters */}
-      <div className="fixlyfy-card p-4 mb-6">
-        <ScheduleFilters 
-          view={view} 
-          onViewChange={handleViewChange} 
-          currentDate={currentDate} 
-          onDateChange={handleDateChange} 
-        />
-      </div>
-      
-      <ScheduleCalendar view={view} currentDate={currentDate} />
-      
-      {/* Replace ScheduleJobModal with JobsCreateModal */}
-      <JobsCreateModal 
-        open={isCreateModalOpen} 
-        onOpenChange={setIsCreateModalOpen}
-        onSuccess={handleJobCreated}
-      />
-    </PageLayout>
+    <div className="container mx-auto p-4">
+      <Card className="shadow-md">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg font-semibold">Schedule</CardTitle>
+            <div className="space-x-2">
+              <Button variant="outline" size="sm" onClick={() => setSelectedView("month")}>Month</Button>
+              <Button variant="outline" size="sm" onClick={() => setSelectedView("week")}>Week</Button>
+              <Button variant="outline" size="sm" onClick={() => setSelectedView("day")}>Day</Button>
+              <Button onClick={() => setIsCreateModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Add Job</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="relative">
+          {isLoading ? (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              Loading...
+            </div>
+          ) : (
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: 700 }}
+              selectable={true}
+              onSelectSlot={handleSelectSlot}
+              onSelectEvent={handleSelectEvent}
+              eventPropGetter={eventStyleGetter}
+              views={['month', 'week', 'day']}
+              view={selectedView}
+              onView={(newView) => setSelectedView(newView as View)}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <JobsCreateModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+    </div>
   );
 };
 

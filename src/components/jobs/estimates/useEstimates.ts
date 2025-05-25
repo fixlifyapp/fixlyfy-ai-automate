@@ -1,25 +1,16 @@
 
 import { useState, useEffect } from "react";
-import { useEstimateData } from "./hooks/useEstimateData";
+import { useEstimateData, Estimate as EstimateDataType } from "./hooks/useEstimateData";
 import { useEstimateActions } from "./hooks/useEstimateActions";
 import { useEstimateCreation } from "./hooks/useEstimateCreation";
 import { useEstimateWarranty } from "./hooks/useEstimateWarranty";
 import { useEstimateUpsell } from "./hooks/useEstimateUpsell";
 import { useEstimateInfo } from "./hooks/useEstimateInfo";
-import { Estimate } from "@/hooks/useEstimates";
 
 export const useEstimates = (jobId: string, onEstimateConverted?: () => void) => {
   // Get estimates data
   const { estimates: estimatesData, setEstimates: setEstimatesData, isLoading } = useEstimateData(jobId);
   
-  // Convert estimates to the expected format
-  const estimates: Estimate[] = estimatesData.map(estimate => ({
-    ...estimate,
-    number: estimate.estimate_number,
-    amount: estimate.total,
-    notes: estimate.notes || ''
-  }));
-
   // Dialog state management
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
@@ -29,20 +20,14 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   const [error, setError] = useState<boolean>(false);
 
   // Create a wrapper for setEstimatesData to handle type conversion
-  const setEstimatesWrapper = (newEstimates: Estimate[]) => {
-    // Convert back to the internal format
-    const convertedEstimates = newEstimates.map(estimate => ({
-      ...estimate,
-      estimate_number: estimate.number || estimate.estimate_number,
-      total: estimate.amount || estimate.total
-    }));
-    setEstimatesData(convertedEstimates);
+  const setEstimatesWrapper = (newEstimates: EstimateDataType[]) => {
+    setEstimatesData(newEstimates);
   };
 
   // Get hooks for different functionalities
-  const estimateActions = useEstimateActions(jobId, estimates, setEstimatesWrapper, onEstimateConverted);
-  const estimateCreation = useEstimateCreation(jobId, estimates, setEstimatesWrapper);
-  const estimateUpsell = useEstimateUpsell(estimates, setEstimatesWrapper);
+  const estimateActions = useEstimateActions(jobId, estimatesData, setEstimatesWrapper, onEstimateConverted);
+  const estimateCreation = useEstimateCreation(jobId, estimatesData, setEstimatesWrapper);
+  const estimateUpsell = useEstimateUpsell(estimatesData, setEstimatesWrapper);
   
   // Get client and company info
   const estimateInfo = useEstimateInfo(jobId);
@@ -58,13 +43,13 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   
   // Get warranty functionality (depends on selectedEstimate from actions)
   const estimateWarranty = useEstimateWarranty(
-    estimates, 
+    estimatesData, 
     setEstimatesWrapper, 
     estimateActions.state.selectedEstimate
   );
 
   // Combined view estimate handler
-  const handleViewEstimate = (estimate: Estimate) => {
+  const handleViewEstimate = (estimate: EstimateDataType) => {
     const shouldShowUpsell = estimateUpsell.actions.handleViewEstimate(estimate);
     
     if (shouldShowUpsell) {
@@ -88,13 +73,13 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   };
 
   // Handle add warranty with dialog opening
-  const handleAddWarranty = (estimate: Estimate) => {
+  const handleAddWarranty = (estimate: EstimateDataType) => {
     estimateActions.actions.setSelectedEstimate(estimate);
     setIsWarrantyDialogOpen(true);
   };
 
   // Handle convert to invoice with dialog opening
-  const handleConvertToInvoice = (estimate: Estimate) => {
+  const handleConvertToInvoice = (estimate: EstimateDataType) => {
     estimateActions.actions.setSelectedEstimate(estimate);
     setIsConvertToInvoiceDialogOpen(true);
   };
@@ -116,7 +101,7 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   };
 
   return {
-    estimates,
+    estimates: estimatesData,
     isLoading,
     error,
     dialogs: {

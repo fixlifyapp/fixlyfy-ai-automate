@@ -619,11 +619,8 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
       <AttachmentUploadDialog
         open={isAttachmentsDialogOpen}
         onOpenChange={setIsAttachmentsDialogOpen}
-        jobId={jobId}
-        onUploadSuccess={() => {
-          // Refresh attachments when upload is successful
-          setIsAttachmentsDialogOpen(false);
-        }}
+        initialAttachments={attachments}
+        onSave={handleUpdateAttachments}
       />
       
       <ApplianceTypeDialog

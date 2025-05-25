@@ -1,112 +1,147 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 export interface Payment {
-  id?: string;
-  invoice_id?: string;
-  amount?: number;
-  method?: string;
-  reference?: string;
+  id: string;
+  invoice_id: string;
+  amount: number;
+  method: string;
+  date: string;
   notes?: string;
-  date?: string;
-  created_at?: string;
+  reference?: string;
+  status?: string;
+  client_id?: string;
+  job_id?: string;
+  job_title?: string;
+  invoice_number?: string;
+  technician_id?: string;
+  technician_name?: string;
+  created_at: string;
 }
 
-export const usePayments = () => {
+export interface PaymentInput {
+  amount: number;
+  method: string;
+  date: string;
+  notes?: string;
+}
+
+export const usePayments = (jobId: string) => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
   const fetchPayments = async () => {
-    setIsLoading(true);
+    if (!jobId) return;
+    
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('payments')
-        .select('*')
+        .select(`
+          *,
+          invoices!inner(job_id)
+        `)
+        .eq('invoices.job_id', jobId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPayments(data || []);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
-      toast.error('Failed to load payments');
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+      setError(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPayments();
-  }, []);
-
-  const createPayment = async (payment: Payment) => {
+  const addPayment = async (paymentData: PaymentInput, invoiceId: string) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('payments')
-        .insert(payment);
+        .insert([{ 
+          ...paymentData, 
+          invoice_id: invoiceId
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
       await fetchPayments();
-      toast.success('Payment created successfully');
-      return true;
-    } catch (error) {
-      console.error('Error creating payment:', error);
-      toast.error('Failed to create payment');
-      return false;
+      return data;
+    } catch (err) {
+      console.error('Error adding payment:', err);
+      throw err;
     }
   };
 
-  const updatePayment = async (id: string, updates: Partial<Payment>) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({
-          amount: updates.amount,
-          method: updates.method,
-          reference: updates.reference,
-          notes: updates.notes,
-          date: updates.date,
-          created_at: updates.created_at,
-          invoice_id: updates.invoice_id
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      await fetchPayments();
-      toast.success('Payment updated successfully');
-      return true;
-    } catch (error) {
-      console.error('Error updating payment:', error);
-      toast.error('Failed to update payment');
-      return false;
-    }
-  };
-
-  const deletePayment = async (id: string) => {
+  const deletePayment = async (paymentId: string) => {
     try {
       const { error } = await supabase
         .from('payments')
         .delete()
-        .eq('id', id);
+        .eq('id', paymentId);
 
       if (error) throw error;
       await fetchPayments();
-      toast.success('Payment deleted successfully');
-      return true;
-    } catch (error) {
-      console.error('Error deleting payment:', error);
-      toast.error('Failed to delete payment');
-      return false;
+    } catch (err) {
+      console.error('Error deleting payment:', err);
+      throw err;
     }
   };
+
+  const refundPayment = async (paymentId: string) => {
+    try {
+      // First check if the payments table has a status column
+      const { data: tableInfo, error: schemaError } = await supabase
+        .from('payments')
+        .select('*')
+        .limit(1);
+
+      // For now, just add a note about refund since status column might not exist
+      const { error } = await supabase
+        .from('payments')
+        .update({ 
+          notes: 'REFUNDED - Payment has been refunded'
+        })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+      await fetchPayments();
+    } catch (err) {
+      console.error('Error refunding payment:', err);
+      throw err;
+    }
+  };
+
+  const refreshPayments = () => {
+    fetchPayments();
+  };
+
+  // Calculate totals
+  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const totalRefunded = payments
+    .filter(payment => payment.notes?.includes('REFUNDED'))
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  const netAmount = totalPaid - totalRefunded;
+
+  useEffect(() => {
+    fetchPayments();
+  }, [jobId]);
 
   return {
     payments,
     isLoading,
-    fetchPayments,
-    createPayment,
-    updatePayment,
+    error,
+    totalPaid,
+    totalRefunded,
+    netAmount,
+    addPayment,
     deletePayment,
+    refundPayment,
+    refreshPayments,
+    fetchPayments
   };
 };

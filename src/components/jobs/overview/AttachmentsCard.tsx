@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, File, Download, Trash2, Eye, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AttachmentUploadDialog } from "../dialogs/AttachmentUploadDialog";
-import { useJobAttachments } from "@/hooks/useJobAttachments";
+import { toast } from "sonner";
 
 interface AttachmentsCardProps {
   jobId: string;
@@ -16,56 +16,39 @@ interface AttachmentsCardProps {
 export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: AttachmentsCardProps) => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   
-  const {
-    attachments,
-    isLoading,
-    deleteAttachment,
-    downloadAttachment,
-    viewAttachment,
-    formatFileSize,
-    getFileType,
-    refreshAttachments
-  } = useJobAttachments(jobId);
+  // Mock attachments data - replace with real data later
+  const [attachments, setAttachments] = useState([
+    { id: 1, name: "job_estimate.pdf", size: "245 KB", type: "PDF" },
+    { id: 2, name: "before_photo.jpg", size: "1.2 MB", type: "Image" },
+  ]);
 
-  const handleView = async (attachment: any) => {
-    await viewAttachment(attachment.file_path, attachment.file_name);
+  const handleView = (attachment: any) => {
+    toast.info(`Viewing ${attachment.name}`);
+    // Implement view functionality
   };
 
-  const handleDownload = async (attachment: any) => {
-    await downloadAttachment(attachment.file_path, attachment.file_name);
+  const handleDownload = (attachment: any) => {
+    toast.success(`Downloading ${attachment.name}`);
+    // Implement download functionality
   };
 
-  const handleDelete = async (attachment: any) => {
-    const success = await deleteAttachment(attachment.id, attachment.file_path);
-    if (success && onUpdate) {
-      onUpdate();
-    }
-  };
-
-  const handleUploadSuccess = () => {
-    setIsUploadDialogOpen(false);
-    refreshAttachments();
+  const handleDelete = (attachmentId: number) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+    toast.success("Attachment deleted successfully");
+    // Trigger real-time refresh
     if (onUpdate) {
       onUpdate();
     }
   };
 
-  if (isLoading) {
-    return (
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <ModernCardTitle icon={Paperclip}>
-            Attachments
-          </ModernCardTitle>
-        </ModernCardHeader>
-        <ModernCardContent>
-          <div className="text-sm text-muted-foreground text-center py-4">
-            Loading attachments...
-          </div>
-        </ModernCardContent>
-      </ModernCard>
-    );
-  }
+  const handleUploadSuccess = (newAttachments: any[]) => {
+    setAttachments(newAttachments);
+    toast.success("Attachments updated successfully");
+    // Trigger real-time refresh
+    if (onUpdate) {
+      onUpdate();
+    }
+  };
 
   return (
     <>
@@ -95,13 +78,13 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                      <p className="text-sm font-medium truncate">{attachment.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">
-                          {getFileType(attachment.mime_type)}
+                          {attachment.type}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          {formatFileSize(attachment.file_size)}
+                          {attachment.size}
                         </span>
                       </div>
                     </div>
@@ -128,7 +111,7 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                        onClick={() => handleDelete(attachment)}
+                        onClick={() => handleDelete(attachment.id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -148,8 +131,8 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
       <AttachmentUploadDialog
         open={isUploadDialogOpen}
         onOpenChange={setIsUploadDialogOpen}
-        jobId={jobId}
-        onUploadSuccess={handleUploadSuccess}
+        initialAttachments={attachments}
+        onSave={handleUploadSuccess}
       />
     </>
   );

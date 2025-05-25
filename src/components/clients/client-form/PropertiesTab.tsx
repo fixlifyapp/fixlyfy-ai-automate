@@ -1,16 +1,20 @@
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useClientProperties } from "./hooks/useClientProperties";
 import { EmptyTabContent } from "./EmptyTabContent";
-import { Loader, Home, MapPin, CalendarDays } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PropertyCard } from "@/components/properties/PropertyCard";
+import { PropertyManagementDialog } from "@/components/properties/PropertyManagementDialog";
+import { Loader, Plus } from "lucide-react";
 
 interface PropertiesTabProps {
   clientId?: string;
 }
 
 export const PropertiesTab = ({ clientId }: PropertiesTabProps) => {
-  const { properties, isLoading } = useClientProperties(clientId);
+  const [showManagementDialog, setShowManagementDialog] = useState(false);
+  const { properties, isLoading, deleteProperty, setPrimaryProperty } = useClientProperties(clientId);
 
   if (isLoading) {
     return (
@@ -26,40 +30,50 @@ export const PropertiesTab = ({ clientId }: PropertiesTabProps) => {
       <EmptyTabContent 
         message="No properties found for this client."
         actionLabel="Add Property"
-        onAction={() => {}}
+        onAction={() => setShowManagementDialog(true)}
       />
     );
   }
 
+  const handleEdit = () => {
+    setShowManagementDialog(true);
+  };
+
+  const handleDelete = async (propertyId: string) => {
+    if (window.confirm("Are you sure you want to delete this property?")) {
+      await deleteProperty(propertyId);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {properties.map(property => (
-        <Card key={property.id} className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <div className="h-10 w-10 rounded-md bg-fixlyfy/10 flex items-center justify-center mr-3">
-                <Home size={20} className="text-fixlyfy" />
-              </div>
-              <div>
-                <h3 className="font-medium">{property.type || 'Property'}</h3>
-                <p className="text-fixlyfy-text-secondary text-sm">{property.address}</p>
-                <p className="text-fixlyfy-text-secondary text-sm">
-                  {property.city}, {property.state} {property.zip}
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="h-8">
-              <MapPin size={14} className="mr-1" />
-              View
-            </Button>
-          </div>
-          
-          <div className="mt-4 pt-4 border-t flex items-center text-sm text-fixlyfy-text-secondary">
-            <CalendarDays size={14} className="mr-2" />
-            Last service: {property.lastService || 'Not available'}
-          </div>
-        </Card>
-      ))}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Properties</h3>
+        <Button onClick={() => setShowManagementDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Manage Properties
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {properties.map(property => (
+          <PropertyCard
+            key={property.id}
+            property={property}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onSetPrimary={setPrimaryProperty}
+          />
+        ))}
+      </div>
+
+      {clientId && (
+        <PropertyManagementDialog
+          open={showManagementDialog}
+          onOpenChange={setShowManagementDialog}
+          clientId={clientId}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -78,7 +77,6 @@ export const EstimateBuilderDialog = ({
   };
   
   const handleCustomLineItemSave = (item: Partial<LineItem>) => {
-    // ... keep existing code (creating a new line item and adding it to the estimate)
     const newLineItem: LineItem = {
       id: `item-${Date.now()}`,
       description: item.description || item.name || "Custom Item",
@@ -92,17 +90,14 @@ export const EstimateBuilderDialog = ({
       total: (item.quantity || 1) * (item.unitPrice || 0)
     };
     
-    // Update lineItems by using the state update function from useEstimateBuilder
     const updatedLineItems = [...estimateBuilder.lineItems, newLineItem];
     estimateBuilder.setLineItems(updatedLineItems);
     setIsCustomLineItemDialogOpen(false);
   };
 
   const handleEditLineItem = (id: string) => {
-    // ... keep existing code (finding and editing a line item)
     const lineItem = estimateBuilder.lineItems.find(item => item.id === id);
     if (lineItem) {
-      // Create a product object from the line item to edit
       const productToEdit: Product = {
         id: lineItem.id,
         name: lineItem.name || lineItem.description,
@@ -123,7 +118,6 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleProductUpdate = (updatedProduct: Product) => {
-    // ... keep existing code (updating a product in line items)
     const updatedLineItems = estimateBuilder.lineItems.map(item => {
       if (item.id === updatedProduct.id) {
         return {
