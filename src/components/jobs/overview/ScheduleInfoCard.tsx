@@ -2,11 +2,11 @@
 import React, { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Edit, Save, X, Calendar } from "lucide-react";
+import { Edit, Calendar } from "lucide-react";
 import { JobInfo } from "../context/types";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
+import { ScheduleEditDialog } from "../dialogs/ScheduleEditDialog";
 
 interface ScheduleInfoCardProps {
   job: JobInfo;
@@ -15,32 +15,19 @@ interface ScheduleInfoCardProps {
 }
 
 export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoCardProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValues, setEditValues] = useState({
-    schedule_start: job.schedule_start || "",
-    schedule_end: job.schedule_end || ""
-  });
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const { updateJob } = useJobs();
 
-  const handleSave = async () => {
+  const handleScheduleSave = async (startDate: string, endDate: string) => {
     if (!jobId) return;
     
     const result = await updateJob(jobId, {
-      schedule_start: editValues.schedule_start,
-      schedule_end: editValues.schedule_end
+      schedule_start: startDate,
+      schedule_end: endDate
     });
     if (result) {
-      setIsEditing(false);
       toast.success("Schedule updated successfully");
     }
-  };
-
-  const handleCancel = () => {
-    setEditValues({
-      schedule_start: job.schedule_start || "",
-      schedule_end: job.schedule_end || ""
-    });
-    setIsEditing(false);
   };
 
   const formatDateTime = (dateString: string) => {
@@ -49,71 +36,46 @@ export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoC
   };
 
   return (
-    <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-      <ModernCardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <ModernCardTitle icon={Calendar}>
-            Schedule
-          </ModernCardTitle>
-          {editable && !isEditing ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsEditing(true)}
-              className="text-fixlyfy hover:text-fixlyfy-dark"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          ) : editable && isEditing ? (
-            <div className="flex gap-2">
+    <>
+      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+        <ModernCardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <ModernCardTitle icon={Calendar}>
+              Schedule
+            </ModernCardTitle>
+            {editable && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleSave}
-                className="text-green-600 hover:text-green-700"
+                onClick={() => setIsScheduleDialogOpen(true)}
+                className="text-fixlyfy hover:text-fixlyfy-dark"
               >
-                <Save className="h-4 w-4" />
+                <Edit className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCancel}
-                className="text-gray-500 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </ModernCardHeader>
-      <ModernCardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Start Date & Time</p>
-            {isEditing ? (
-              <Input
-                type="datetime-local"
-                value={editValues.schedule_start ? new Date(editValues.schedule_start).toISOString().slice(0, 16) : ""}
-                onChange={(e) => setEditValues(prev => ({ ...prev, schedule_start: e.target.value }))}
-              />
-            ) : (
+            )}
+          </div>
+        </ModernCardHeader>
+        <ModernCardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Start Date & Time</p>
               <p className="font-medium">{formatDateTime(job.schedule_start || "")}</p>
-            )}
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">End Date & Time</p>
-            {isEditing ? (
-              <Input
-                type="datetime-local"
-                value={editValues.schedule_end ? new Date(editValues.schedule_end).toISOString().slice(0, 16) : ""}
-                onChange={(e) => setEditValues(prev => ({ ...prev, schedule_end: e.target.value }))}
-              />
-            ) : (
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">End Date & Time</p>
               <p className="font-medium">{formatDateTime(job.schedule_end || "")}</p>
-            )}
+            </div>
           </div>
-        </div>
-      </ModernCardContent>
-    </ModernCard>
+        </ModernCardContent>
+      </ModernCard>
+
+      <ScheduleEditDialog
+        open={isScheduleDialogOpen}
+        onOpenChange={setIsScheduleDialogOpen}
+        initialStartDate={job.schedule_start}
+        initialEndDate={job.schedule_end}
+        onSave={handleScheduleSave}
+      />
+    </>
   );
 };

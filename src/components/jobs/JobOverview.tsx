@@ -10,7 +10,7 @@ import { TasksCard } from "./overview/TasksCard";
 import { TechnicianCard } from "./overview/TechnicianCard";
 import { AdditionalInfoCard } from "./overview/AdditionalInfoCard";
 import { AttachmentsCard } from "./overview/AttachmentsCard";
-import { JobCustomFieldsDisplay } from "./JobCustomFieldsDisplay";
+import { ConditionalCustomFieldsCard } from "./overview/ConditionalCustomFieldsCard";
 import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
 
 interface JobOverviewProps {
@@ -94,7 +94,6 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
 
       {/* Secondary Information Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <JobCustomFieldsDisplay jobId={jobId} />
         <div className="space-y-6">
           <TasksCard 
             tasks={job.tasks || []} 
@@ -104,6 +103,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
           />
           <JobTagsCard tags={job.tags || []} jobId={jobId} editable />
         </div>
+        <ConditionalCustomFieldsCard jobId={jobId} />
       </div>
 
       {/* Task Management Dialog */}

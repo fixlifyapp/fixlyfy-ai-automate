@@ -1,8 +1,8 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, Edit3 } from "lucide-react";
+import { CheckCircle, Circle, Edit3, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface TasksCardProps {
@@ -16,41 +16,47 @@ export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks }: Tas
   const taskList = Array.isArray(tasks) ? tasks : [];
   
   return (
-    <Card className="hover:shadow-lg transition-all duration-300">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Tasks</CardTitle>
-        {editable && onManageTasks && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onManageTasks}
-            className="h-8 w-8 p-0 text-fixlyfy hover:text-fixlyfy-dark"
-          >
-            <Edit3 className="h-4 w-4" />
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
+    <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+      <ModernCardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <ModernCardTitle icon={ClipboardList}>
+            Tasks
+          </ModernCardTitle>
+          {editable && onManageTasks && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onManageTasks}
+              className="text-fixlyfy hover:text-fixlyfy-dark"
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </ModernCardHeader>
+      <ModernCardContent>
         {taskList.length > 0 ? (
-          <div className="space-y-2">
-            {taskList.map((task, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <Circle className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{task}</span>
-              </div>
-            ))}
-            <div className="mt-3 pt-3 border-t">
-              <Badge variant="outline">
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {taskList.map((task, index) => (
+                <div key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                  <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm flex-1">{task}</span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-3 border-t">
+              <Badge variant="outline" className="text-xs">
                 {taskList.length} task{taskList.length !== 1 ? 's' : ''} total
               </Badge>
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground text-center py-4">
             {editable ? "No tasks assigned. Click the edit button to add tasks." : "No tasks assigned"}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </ModernCardContent>
+    </ModernCard>
   );
 };
