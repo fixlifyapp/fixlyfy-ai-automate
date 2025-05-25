@@ -24,13 +24,28 @@ import { useNavigate } from "react-router-dom";
 interface JobsListProps {
   jobs: Job[];
   isLoading: boolean;
-  onEdit: (jobId: string) => void;
-  onDelete: (jobId: string) => void;
-  onView: (jobId: string) => void;
-  onAdd: () => void;
+  isGridView?: boolean;
+  selectedJobs?: string[];
+  onSelectJob?: (jobId: string, isSelected: boolean) => void;
+  onSelectAllJobs?: (isSelected: boolean) => void;
+  onEdit?: (jobId: string) => void;
+  onDelete?: (jobId: string) => void;
+  onView?: (jobId: string) => void;
+  onAdd?: () => void;
 }
 
-export const JobsList = ({ jobs, isLoading, onEdit, onDelete, onView, onAdd }: JobsListProps) => {
+export const JobsList = ({ 
+  jobs, 
+  isLoading, 
+  isGridView = false,
+  selectedJobs = [],
+  onSelectJob,
+  onSelectAllJobs,
+  onEdit, 
+  onDelete, 
+  onView, 
+  onAdd 
+}: JobsListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");

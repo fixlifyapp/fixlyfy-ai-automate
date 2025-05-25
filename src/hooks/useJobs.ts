@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -258,5 +257,3 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     refreshJobs: fetchJobs
   };
 };
-
-export type { Job };
