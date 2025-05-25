@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +7,7 @@ import { AppProviders } from "@/components/ui/AppProviders";
 import { RBACProvider } from "@/components/auth/RBACProvider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
+import { MessageProvider } from "@/contexts/MessageContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import ClientsPage from "./pages/ClientsPage";
@@ -49,41 +49,43 @@ function App() {
           <AuthProvider>
             <RBACProvider>
               <GlobalRealtimeProvider>
-                <AppProviders>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/clients" element={<ClientsPage />} />
-                    <Route path="/clients/:id" element={<ClientDetailPage />} />
-                    <Route path="/jobs" element={<JobsPage />} />
-                    <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                    <Route path="/schedule" element={<SchedulePage />} />
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    {/* Team management routes - supporting both /team and /admin/team */}
-                    <Route path="/team" element={<TeamManagementPage />} />
-                    <Route path="/admin/team" element={<TeamManagementPage />} />
-                    <Route path="/team/:id" element={<TeamMemberProfilePage />} />
-                    <Route path="/admin/team/:id" element={<TeamMemberProfilePage />} />
-                    <Route path="/invoices" element={<InvoicesPage />} />
-                    <Route path="/estimates" element={<EstimatesPage />} />
-                    <Route path="/estimate/view/:estimateNumber" element={<EstimateViewPage />} />
-                    <Route path="/finance" element={<FinancePage />} />
-                    <Route path="/messages" element={<MessagesPage />} />
-                    <Route path="/connect" element={<ConnectCenterPage />} />
-                    <Route path="/automations" element={<AutomationsPage />} />
-                    <Route path="/ai-assistant" element={<AiAssistantPage />} />
-                    <Route path="/report-builder" element={<ReportBuilderPage />} />
-                    <Route path="/configuration" element={<ConfigurationPage />} />
-                    <Route path="/admin/roles" element={<AdminRolesPage />} />
-                    <Route path="/documents" element={<DocumentsPage />} />
-                    <Route path="/inventory" element={<InventoryPage />} />
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/preview" element={<PreviewPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AppProviders>
+                <MessageProvider>
+                  <AppProviders>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/clients" element={<ClientsPage />} />
+                      <Route path="/clients/:id" element={<ClientDetailPage />} />
+                      <Route path="/jobs" element={<JobsPage />} />
+                      <Route path="/jobs/:id" element={<JobDetailsPage />} />
+                      <Route path="/schedule" element={<SchedulePage />} />
+                      <Route path="/reports" element={<ReportsPage />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      {/* Team management routes - supporting both /team and /admin/team */}
+                      <Route path="/team" element={<TeamManagementPage />} />
+                      <Route path="/admin/team" element={<TeamManagementPage />} />
+                      <Route path="/team/:id" element={<TeamMemberProfilePage />} />
+                      <Route path="/admin/team/:id" element={<TeamMemberProfilePage />} />
+                      <Route path="/invoices" element={<InvoicesPage />} />
+                      <Route path="/estimates" element={<EstimatesPage />} />
+                      <Route path="/estimate/view/:estimateNumber" element={<EstimateViewPage />} />
+                      <Route path="/finance" element={<FinancePage />} />
+                      <Route path="/messages" element={<MessagesPage />} />
+                      <Route path="/connect" element={<ConnectCenterPage />} />
+                      <Route path="/automations" element={<AutomationsPage />} />
+                      <Route path="/ai-assistant" element={<AiAssistantPage />} />
+                      <Route path="/report-builder" element={<ReportBuilderPage />} />
+                      <Route path="/configuration" element={<ConfigurationPage />} />
+                      <Route path="/admin/roles" element={<AdminRolesPage />} />
+                      <Route path="/documents" element={<DocumentsPage />} />
+                      <Route path="/inventory" element={<InventoryPage />} />
+                      <Route path="/products" element={<ProductsPage />} />
+                      <Route path="/preview" element={<PreviewPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AppProviders>
+                </MessageProvider>
               </GlobalRealtimeProvider>
             </RBACProvider>
           </AuthProvider>
