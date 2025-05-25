@@ -109,16 +109,6 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
     { value: 'create_task', label: 'Create Task', icon: <Plus className="w-4 h-4" /> }
   ];
 
-  // Common variables for quick reference
-  const commonVariables = [
-    { key: 'CustomerName', label: 'Customer Name' },
-    { key: 'CustomerFirstName', label: 'First Name' },
-    { key: 'JobDate', label: 'Job Date' },
-    { key: 'JobTime', label: 'Job Time' },
-    { key: 'InvoiceAmount', label: 'Invoice Amount' },
-    { key: 'CompanyName', label: 'Company Name' }
-  ];
-
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -311,7 +301,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                             rows={3}
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Use variables like {{CustomerName}} to personalize messages
+                            Use variables like {`{{CustomerName}}`} to personalize messages
                           </p>
                         </div>
                         
@@ -333,7 +323,7 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                   </Card>
                 ))}
                 
-                {/* Variable Helper */}
+                {/* Variable Helper - Now using database variables */}
                 <Card className="bg-blue-50 border-blue-200">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-sm">
@@ -343,9 +333,9 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {commonVariables.map((variable) => (
-                        <Badge key={variable.key} variant="outline" className="justify-start">
-                          {`{{${variable.key}}}`}
+                      {variables.map((variable) => (
+                        <Badge key={variable.id} variant="outline" className="justify-start">
+                          {`{{${variable.variable_key}}}`}
                         </Badge>
                       ))}
                     </div>

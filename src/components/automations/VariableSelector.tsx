@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Variable, Search, Info } from "lucide-react";
+import { useAutomations } from "@/hooks/useAutomations";
 
 interface VariableSelectorProps {
   onSelectVariable: (variable: string) => void;
@@ -13,95 +14,25 @@ interface VariableSelectorProps {
 
 export const VariableSelector = ({ onSelectVariable }: VariableSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
-
-  const variables = [
-    {
-      key: "CustomerName",
-      description: "Customer's full name",
-      example: "John Smith",
-      category: "Customer"
-    },
-    {
-      key: "CustomerFirstName", 
-      description: "Customer's first name only",
-      example: "John",
-      category: "Customer"
-    },
-    {
-      key: "CustomerPhone",
-      description: "Customer's phone number",
-      example: "(555) 123-4567",
-      category: "Customer"
-    },
-    {
-      key: "CustomerEmail",
-      description: "Customer's email address", 
-      example: "john@example.com",
-      category: "Customer"
-    },
-    {
-      key: "JobTitle",
-      description: "Title/description of the job",
-      example: "AC Repair",
-      category: "Job"
-    },
-    {
-      key: "JobDate",
-      description: "Scheduled job date",
-      example: "March 15, 2024",
-      category: "Job"
-    },
-    {
-      key: "JobTime",
-      description: "Scheduled job time",
-      example: "2:00 PM",
-      category: "Job"
-    },
-    {
-      key: "TechnicianName",
-      description: "Assigned technician's name",
-      example: "Mike Johnson",
-      category: "Job"
-    },
-    {
-      key: "EstimateAmount",
-      description: "Estimate total amount",
-      example: "$350.00",
-      category: "Billing"
-    },
-    {
-      key: "InvoiceAmount",
-      description: "Invoice total amount",
-      example: "$425.00", 
-      category: "Billing"
-    },
-    {
-      key: "InvoiceNumber",
-      description: "Invoice reference number",
-      example: "INV-001234",
-      category: "Billing"
-    },
-    {
-      key: "CompanyName",
-      description: "Your company name",
-      example: "ABC Services",
-      category: "Company"
-    },
-    {
-      key: "CompanyPhone",
-      description: "Your company phone number", 
-      example: "(555) 987-6543",
-      category: "Company"
-    }
-  ];
+  const { variables } = useAutomations();
 
   const filteredVariables = variables.filter(variable =>
-    variable.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    variable.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    variable.category.toLowerCase().includes(searchTerm.toLowerCase())
+    variable.variable_key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    variable.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    variable.data_source?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const categories = Array.from(new Set(variables.map(v => v.category)));
+  // Group variables by data source
+  const groupedVariables = filteredVariables.reduce((acc, variable) => {
+    const source = variable.data_source || 'Other';
+    if (!acc[source]) {
+      acc[source] = [];
+    }
+    acc[source].push(variable);
+    return acc;
+  }, {} as Record<string, typeof variables>);
+
+  const categories = Object.keys(groupedVariables);
 
   return (
     <Popover>
@@ -128,7 +59,7 @@ export const VariableSelector = ({ onSelectVariable }: VariableSelectorProps) =>
         <ScrollArea className="h-64">
           <div className="p-2">
             {categories.map(category => {
-              const categoryVariables = filteredVariables.filter(v => v.category === category);
+              const categoryVariables = groupedVariables[category];
               if (categoryVariables.length === 0) return null;
               
               return (
@@ -139,23 +70,29 @@ export const VariableSelector = ({ onSelectVariable }: VariableSelectorProps) =>
                   <div className="space-y-1">
                     {categoryVariables.map(variable => (
                       <button
-                        key={variable.key}
-                        onClick={() => onSelectVariable(`{{${variable.key}}}`)}
+                        key={variable.id}
+                        onClick={() => onSelectVariable(`{{${variable.variable_key}}}`)}
                         className="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center justify-between mb-1">
                           <Badge variant="outline" className="text-xs">
-                            {`{{${variable.key}}}`}
+                            {`{{${variable.variable_key}}}`}
                           </Badge>
                         </div>
                         <p className="text-xs text-gray-600 mb-1">{variable.description}</p>
-                        <p className="text-xs text-gray-400">Example: {variable.example}</p>
+                        <p className="text-xs text-gray-400">Source: {variable.data_source}</p>
                       </button>
                     ))}
                   </div>
                 </div>
               );
             })}
+            
+            {filteredVariables.length === 0 && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                No variables found matching your search.
+              </div>
+            )}
           </div>
         </ScrollArea>
         
