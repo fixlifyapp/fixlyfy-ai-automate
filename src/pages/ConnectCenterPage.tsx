@@ -1,161 +1,215 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CallsList } from "@/components/connect/CallsList";
 import { MessagesList } from "@/components/connect/MessagesList";
+import { CallsList } from "@/components/connect/CallsList";
 import { EmailsList } from "@/components/connect/EmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
-import { EnhancedCallingInterface } from "@/components/connect/EnhancedCallingInterface";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, MessageSquare, Mail, Settings, Plus, Users, Zap, Target, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
+import { Badge } from "@/components/ui/badge";
+import { useLocation } from "react-router-dom";
+import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
+import { supabase } from "@/integrations/supabase/client";
+import { EnhancedCallingInterface } from "@/components/connect/EnhancedCallingInterface";
+import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
+import { useMessageContext } from "@/contexts/MessageContext";
 
 const ConnectCenterPage = () => {
-  const [activeTab, setActiveTab] = useState("calls");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("messages");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState({
+    messages: 0,
+    calls: 0,
+    emails: 0
+  });
+  const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
 
-  const handleSearchResults = (results: any[]) => {
-    setSearchResults(results);
+  const { openMessageDialog } = useMessageContext();
+
+  // Read query parameters to handle direct navigation with a specific client
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const clientId = searchParams.get("clientId");
+  const clientName = searchParams.get("clientName");
+  const clientPhone = searchParams.get("clientPhone");
+  const tabParam = searchParams.get("tab") || "messages";
+  
+  // Set the active tab based on URL parameters
+  useEffect(() => {
+    if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+  
+  // Handle opening the message dialog if client parameters are provided
+  useEffect(() => {
+    if (clientId && clientName) {
+      openMessageDialog({
+        id: clientId,
+        name: clientName,
+        phone: clientPhone || ""
+      });
+    }
+  }, [clientId, clientName, clientPhone, openMessageDialog]);
+
+  // Load owned phone numbers
+  useEffect(() => {
+    const loadOwnedNumbers = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
+          body: { action: 'list-owned' }
+        });
+
+        if (error) throw error;
+        setOwnedNumbers(data.phone_numbers || []);
+      } catch (error) {
+        console.error('Error loading owned numbers:', error);
+      }
+    };
+
+    loadOwnedNumbers();
+  }, []);
+
+  // Fetch unread counts
+  useEffect(() => {
+    const fetchUnreadCounts = async () => {
+      try {
+        // Count unread messages
+        const { data: conversations } = await supabase
+          .from('conversations')
+          .select(`
+            id,
+            messages!inner(id, read_at)
+          `);
+        
+        let unreadMessages = 0;
+        conversations?.forEach(conv => {
+          const unreadInConv = conv.messages.filter((msg: any) => !msg.read_at).length;
+          unreadMessages += unreadInConv;
+        });
+
+        // Count missed calls
+        const { data: missedCalls } = await supabase
+          .from('calls')
+          .select('id')
+          .eq('direction', 'missed');
+
+        setUnreadCounts({
+          messages: unreadMessages,
+          calls: missedCalls?.length || 0,
+          emails: 0 // Mock for now
+        });
+      } catch (error) {
+        console.error("Error fetching unread counts:", error);
+      }
+    };
+
+    fetchUnreadCounts();
+  }, []);
+
+  const handleNewCommunication = () => {
+    switch (activeTab) {
+      case "messages":
+        openMessageDialog({ name: "New Client", phone: "" });
+        break;
+      case "calls":
+        if (ownedNumbers.length === 0) {
+          toast.error("Please purchase a phone number first to make calls");
+        } else {
+          toast.info("Use the calling interface below to make calls");
+        }
+        break;
+      case "emails":
+        toast.info("New email feature coming soon");
+        break;
+      case "phone-numbers":
+        toast.info("Use the search above to find and purchase phone numbers");
+        break;
+    }
   };
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Connect Center"
-        subtitle="Unified communication hub for calls, messages, and emails"
-        icon={Phone}
-        badges={[
-          { text: "Multi-Channel", icon: Users, variant: "fixlyfy" },
-          { text: "Real-time Sync", icon: Zap, variant: "success" },
-          { text: "Smart Routing", icon: Target, variant: "info" }
-        ]}
-        actionButton={{
-          text: "New Contact",
-          icon: Plus,
-          onClick: () => {}
-        }}
-      />
-
-      {/* Search and Quick Actions */}
-      <div className="mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-                  <Input 
-                    placeholder="Search conversations, contacts, or phone numbers..."
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Phone className="w-4 h-4 mr-2" />
-                  Make Call
-                </Button>
-                <Button variant="outline" size="sm">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Send SMS
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Email
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Incoming call handler - shows when there's an incoming call */}
+      <IncomingCallHandler />
+      
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Connect Center</h1>
+          <p className="text-fixlyfy-text-secondary">
+            Manage all client communications and phone numbers in one place
+          </p>
+        </div>
+        <Button 
+          className="bg-fixlyfy hover:bg-fixlyfy/90"
+          onClick={handleNewCommunication}
+        >
+          <Plus size={18} className="mr-2" /> 
+          {activeTab === "messages" && "New Message"}
+          {activeTab === "calls" && "New Call"}
+          {activeTab === "emails" && "New Email"}
+          {activeTab === "phone-numbers" && "Search Numbers"}
+        </Button>
       </div>
-
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="calls" className="flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            Calls
-          </TabsTrigger>
+      
+      {/* Global Search Component */}
+      <div className="mb-6">
+        <ConnectSearch onSearchResults={setSearchResults} />
+      </div>
+      
+      <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Messages
+            <MessageSquare size={16} />
+            <span>Messages</span>
+            {unreadCounts.messages > 0 && (
+              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.messages}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="calls" className="flex items-center gap-2">
+            <Phone size={16} />
+            <span>Calls</span>
+            {unreadCounts.calls > 0 && (
+              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="emails" className="flex items-center gap-2">
-            <Mail className="w-4 h-4" />
-            Emails
+            <Mail size={16} />
+            <span>Emails</span>
+            {unreadCounts.emails > 0 && (
+              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="dialer" className="flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            Dialer
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Settings
+          <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
+            <PhoneCall size={16} />
+            <span>Phone Numbers</span>
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="calls" className="space-y-6">
-          <CallsList />
+        
+        <TabsContent value="messages" className="mt-0">
+          <MessagesList 
+            searchResults={searchResults}
+          />
         </TabsContent>
-
-        <TabsContent value="messages" className="space-y-6">
-          <MessagesList searchResults={searchResults} />
+        
+        <TabsContent value="calls" className="mt-0">
+          <div className="space-y-6">
+            {ownedNumbers.length > 0 && (
+              <EnhancedCallingInterface ownedNumbers={ownedNumbers} />
+            )}
+            <CallsList />
+          </div>
         </TabsContent>
-
-        <TabsContent value="emails" className="space-y-6">
+        
+        <TabsContent value="emails" className="mt-0">
           <EmailsList />
         </TabsContent>
-
-        <TabsContent value="dialer" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Phone Dialer</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EnhancedCallingInterface ownedNumbers={[]} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Phone Numbers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PhoneNumbersList />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Communication Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Call Settings</h4>
-                    <p className="text-sm text-muted-foreground">Configure call routing and voicemail</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Message Templates</h4>
-                    <p className="text-sm text-muted-foreground">Manage SMS and email templates</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Integration Settings</h4>
-                    <p className="text-sm text-muted-foreground">Configure Twilio and email providers</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        
+        <TabsContent value="phone-numbers" className="mt-0">
+          <PhoneNumbersList searchResults={searchResults} />
         </TabsContent>
       </Tabs>
     </PageLayout>
