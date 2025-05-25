@@ -1,5 +1,7 @@
+
 import React, { useState } from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
+import { useJobs } from "@/hooks/useJobs";
 import { JobSummaryCard } from "./overview/JobSummaryCard";
 import { ScheduleInfoCard } from "./overview/ScheduleInfoCard";
 import { JobDescriptionCard } from "./overview/JobDescriptionCard";
