@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,8 @@ import { useTechnicians } from "@/hooks/useTechnicians";
 import { useJobTypes, useTags } from "@/hooks/useConfigItems";
 import { QuickAddJobTypeDialog } from "./quick-add/QuickAddJobTypeDialog";
 import { QuickAddTagDialog } from "./quick-add/QuickAddTagDialog";
+import { useJobCustomFields } from "@/hooks/useJobCustomFields";
+import { CustomFieldRenderer } from "./CustomFieldRenderer";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -54,12 +55,14 @@ export const JobsCreateModal = ({
   const { technicians, isLoading: isLoadingTechnicians } = useTechnicians();
   const { items: jobTypes, isLoading: isLoadingJobTypes } = useJobTypes();
   const { items: tags, isLoading: isLoadingTags } = useTags();
+  const { availableFields, saveCustomFieldValues } = useJobCustomFields();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeValue, setTimeValue] = useState<string>("09:00");
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   
   // Quick-add dialog states
   const [showJobTypeDialog, setShowJobTypeDialog] = useState(false);
@@ -135,6 +138,7 @@ export const JobsCreateModal = ({
     setTimeValue("09:00");
     setSelectedTags([]);
     setAttachments([]);
+    setCustomFieldValues({});
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
   };
@@ -150,6 +154,15 @@ export const JobsCreateModal = ({
   const handleSubmit = async (data: JobFormData) => {
     if (!data.client_id) {
       toast.error("Please select a client");
+      return;
+    }
+
+    // Validate required custom fields
+    const requiredFields = availableFields.filter(field => field.required);
+    const missingFields = requiredFields.filter(field => !customFieldValues[field.id]);
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in required fields: ${missingFields.map(f => f.name).join(', ')}`);
       return;
     }
 
@@ -184,6 +197,11 @@ export const JobsCreateModal = ({
       const newJob = await addJob(jobData);
       
       if (newJob) {
+        // Save custom field values if any
+        if (Object.keys(customFieldValues).length > 0) {
+          await saveCustomFieldValues(newJob.id, customFieldValues);
+        }
+        
         toast.success(`Job created successfully: ${newJob.id}`);
 
         // Call onSuccess callback if provided
@@ -463,7 +481,30 @@ export const JobsCreateModal = ({
                 </div>
               </div>
               
-              {/* Tags Section */}
+              {/* Custom Fields Section */}
+              {availableFields.length > 0 && (
+                <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
+                  <h3 className="text-lg font-semibold">Additional Information</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {availableFields.map((field) => (
+                      <CustomFieldRenderer
+                        key={field.id}
+                        field={field}
+                        value={customFieldValues[field.id] || ''}
+                        onChange={(value) => 
+                          setCustomFieldValues(prev => ({
+                            ...prev,
+                            [field.id]: value
+                          }))
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Tags & Attachments Section */}
               <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
                 <h3 className="text-lg font-semibold">Tags & Attachments</h3>
                 

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -21,7 +20,8 @@ const JobsPage = () => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   
-  const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
+  // Use jobs hook with custom fields enabled
+  const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs(undefined, true);
   
   // Handler for bulk status updates
   const handleUpdateJobsStatus = (jobIds: string[], newStatus: string) => {
@@ -130,12 +130,12 @@ const JobsPage = () => {
       <AnimatedContainer animation="fade-in">
         <PageHeader
           title="Service Jobs"
-          subtitle="Manage and track all your service jobs in one place"
+          subtitle="Manage and track all your service jobs with custom fields and real-time sync"
           icon={Briefcase}
           badges={[
             { text: "Smart Tracking", icon: Target, variant: "fixlyfy" },
             { text: "Real-time Updates", icon: Zap, variant: "success" },
-            { text: "Auto-scheduling", icon: Clock, variant: "info" }
+            { text: "Custom Fields", icon: Clock, variant: "info" }
           ]}
           actionButton={{
             text: "Create Job",

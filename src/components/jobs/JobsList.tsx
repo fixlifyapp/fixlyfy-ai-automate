@@ -43,10 +43,8 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
     navigate(`/jobs/${jobId}`);
   };
 
-  // Add null/undefined check to prevent the error
   const areAllJobsSelected = jobs.length > 0 && selectedJobs && jobs.every(job => selectedJobs.includes(job.id));
 
-  // Modified to handle selection without propagation
   const handleCheckboxClick = (e: React.MouseEvent, jobId: string) => {
     e.stopPropagation();
     onSelectJob(jobId, !(selectedJobs && selectedJobs.includes(jobId)));
@@ -57,15 +55,13 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
     onSelectAllJobs(!areAllJobsSelected);
   };
 
-  // Add safety checks for selectedJobs
   const isJobSelected = (jobId: string) => selectedJobs && selectedJobs.includes(jobId);
 
-  // Format a job for display
   const formatJobForDisplay = (job: Job) => {
     return {
       id: job.id,
       client: job.client?.name || "Unknown Client",
-      address: "No address available", // Address not available in Job type
+      address: job.client?.address || "No address available",
       service: job.service || job.title || "Service Call",
       status: job.status || "scheduled",
       date: job.date ? new Date(job.date).toLocaleDateString() : "No date",
@@ -76,13 +72,13 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
         initials: "UA",
         id: job.technician_id || ""
       },
-      priority: "medium" as "low" | "medium" | "high", // Default priority
+      priority: "medium" as "low" | "medium" | "high",
       revenue: job.revenue || 0,
-      tags: job.tags || []
+      tags: job.tags || [],
+      custom_fields: job.custom_fields || []
     };
   };
 
-  // Map the jobs to the display format
   const displayJobs = jobs.map(formatJobForDisplay);
 
   return (
@@ -104,14 +100,13 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                 )} 
                 onClick={() => handleJobClick(job.id)}
               >
-                {/* Add checkbox for selection */}
                 <div className="absolute top-3 left-3 z-10" onClick={(e) => handleCheckboxClick(e, job.id)}>
                   <Checkbox checked={isJobSelected(job.id)} />
                 </div>
 
                 <div className="p-4 border-b border-fixlyfy-border">
                   <div className="flex justify-between items-start">
-                    <div className="pl-7"> {/* Add padding to make room for checkbox */}
+                    <div className="pl-7">
                       <Badge variant="outline" className="mb-2">
                         {job.id}
                       </Badge>
@@ -149,6 +144,28 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                           +{job.tags.length - 2}
                         </Badge>
                       )}
+                    </div>
+                  )}
+
+                  {/* Custom fields preview */}
+                  {job.custom_fields && job.custom_fields.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs text-muted-foreground mb-1">Custom Info:</div>
+                      <div className="space-y-1">
+                        {job.custom_fields.slice(0, 2).map((field) => (
+                          <div key={field.id} className="text-xs">
+                            <span className="font-medium">{field.name}:</span>{' '}
+                            <span className="text-muted-foreground">
+                              {field.value || 'Not set'}
+                            </span>
+                          </div>
+                        ))}
+                        {job.custom_fields.length > 2 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{job.custom_fields.length - 2} more fields
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 
@@ -200,6 +217,7 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                 <TableHead>Client</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Tags</TableHead>
+                <TableHead>Custom Info</TableHead>
                 <TableHead>Scheduled</TableHead>
                 <TableHead>Technician</TableHead>
                 <TableHead>Priority</TableHead>
@@ -210,7 +228,7 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
             <TableBody>
               {displayJobs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-fixlyfy-text-secondary">
+                  <TableCell colSpan={11} className="text-center py-8 text-fixlyfy-text-secondary">
                     <p>No jobs found.</p>
                     <p className="text-sm mt-2">Try creating a new job or adjusting your filters.</p>
                   </TableCell>
@@ -276,6 +294,27 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">No tags</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {job.custom_fields && job.custom_fields.length > 0 ? (
+                        <div className="space-y-1">
+                          {job.custom_fields.slice(0, 1).map((field) => (
+                            <div key={field.id} className="text-xs">
+                              <span className="font-medium">{field.name}:</span>{' '}
+                              <span className="text-muted-foreground">
+                                {field.value || 'Not set'}
+                              </span>
+                            </div>
+                          ))}
+                          {job.custom_fields.length > 1 && (
+                            <div className="text-xs text-muted-foreground">
+                              +{job.custom_fields.length - 1} more
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">No custom fields</span>
                       )}
                     </TableCell>
                     <TableCell>

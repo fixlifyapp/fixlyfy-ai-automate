@@ -16,6 +16,7 @@ import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { toast } from "sonner";
 import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
+import { JobCustomFieldsDisplay } from "@/components/jobs/JobCustomFieldsDisplay";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +37,7 @@ const JobDetailsPage = () => {
   
   // Handle unified realtime updates for this job and all related data
   useUnifiedRealtime({
-    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients'],
+    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients', 'job_custom_field_values'],
     onUpdate: () => {
       console.log("Unified realtime update triggered for job details");
       setRefreshTrigger(prev => prev + 1);
@@ -67,7 +68,10 @@ const JobDetailsPage = () => {
                 onTabChange={setActiveTab}
               >
                 <TabsContent value="details">
-                  <JobDetails jobId={id || ""} />
+                  <div className="space-y-6">
+                    <JobDetails jobId={id || ""} />
+                    <JobCustomFieldsDisplay jobId={id || ""} />
+                  </div>
                 </TabsContent>
                 <TabsContent value="estimates">
                   <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />

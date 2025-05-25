@@ -626,6 +626,41 @@ export type Database = {
           },
         ]
       }
+      job_custom_field_values: {
+        Row: {
+          created_at: string | null
+          custom_field_id: string
+          id: string
+          job_id: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_field_id: string
+          id?: string
+          job_id: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_field_id?: string
+          id?: string
+          job_id?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_custom_field_values_custom_field_id_fkey"
+            columns: ["custom_field_id"]
+            isOneToOne: false
+            referencedRelation: "custom_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_history: {
         Row: {
           created_at: string | null

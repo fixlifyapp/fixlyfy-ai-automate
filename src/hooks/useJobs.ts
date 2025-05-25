@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +15,9 @@ export interface Job {
   client_id: string;
   client?: {
     name: string;
+    phone?: string;
+    email?: string;
+    address?: string;
   };
   technician_id?: string;
   schedule_start?: string;
@@ -23,9 +27,15 @@ export interface Job {
   tags?: string[];
   created_at?: string;
   updated_at?: string;
+  custom_fields?: Array<{
+    id: string;
+    name: string;
+    value: string;
+    field_type: string;
+  }>;
 }
 
-export const useJobs = (clientId?: string) => {
+export const useJobs = (clientId?: string, includeCustomFields: boolean = false) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -35,7 +45,7 @@ export const useJobs = (clientId?: string) => {
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
-      // Prepare query
+      // Prepare base query
       let query = supabase
         .from('jobs')
         .select(`
@@ -53,7 +63,7 @@ export const useJobs = (clientId?: string) => {
           tags,
           created_at,
           updated_at,
-          clients(name)
+          clients(name, phone, email, address, city, state, zip)
         `);
         
       // Filter by client if provided
@@ -62,17 +72,64 @@ export const useJobs = (clientId?: string) => {
       }
       
       // Execute query
-      const { data, error } = await query.order('date', { ascending: false });
+      const { data: jobsData, error: jobsError } = await query.order('date', { ascending: false });
       
-      if (error) throw error;
+      if (jobsError) throw jobsError;
       
-      // Transform data to include client name
-      const transformedJobs = data.map(job => ({
+      let transformedJobs = jobsData?.map(job => ({
         ...job,
         client: {
-          name: job.clients?.name || 'Unknown Client'
+          name: job.clients?.name || 'Unknown Client',
+          phone: job.clients?.phone,
+          email: job.clients?.email,
+          address: [
+            job.clients?.address,
+            job.clients?.city,
+            job.clients?.state,
+            job.clients?.zip
+          ].filter(Boolean).join(', ')
         }
-      }));
+      })) || [];
+
+      // Fetch custom fields if requested
+      if (includeCustomFields && transformedJobs.length > 0) {
+        const jobIds = transformedJobs.map(job => job.id);
+        
+        const { data: customFieldData, error: customFieldError } = await supabase
+          .from('job_custom_field_values')
+          .select(`
+            job_id,
+            value,
+            custom_fields!inner(
+              id,
+              name,
+              field_type
+            )
+          `)
+          .in('job_id', jobIds);
+
+        if (!customFieldError && customFieldData) {
+          // Group custom fields by job_id
+          const customFieldsByJob = customFieldData.reduce((acc, field) => {
+            if (!acc[field.job_id]) {
+              acc[field.job_id] = [];
+            }
+            acc[field.job_id].push({
+              id: field.custom_fields.id,
+              name: field.custom_fields.name,
+              value: field.value || '',
+              field_type: field.custom_fields.field_type
+            });
+            return acc;
+          }, {} as Record<string, any[]>);
+
+          // Add custom fields to jobs
+          transformedJobs = transformedJobs.map(job => ({
+            ...job,
+            custom_fields: customFieldsByJob[job.id] || []
+          }));
+        }
+      }
       
       setJobs(transformedJobs);
     } catch (error) {
@@ -85,7 +142,7 @@ export const useJobs = (clientId?: string) => {
   
   // Set up unified realtime sync
   useUnifiedRealtime({
-    tables: ['jobs', 'clients'],
+    tables: ['jobs', 'clients', 'job_custom_field_values'],
     onUpdate: fetchJobs,
     enabled: true
   });
@@ -93,7 +150,7 @@ export const useJobs = (clientId?: string) => {
   // Set up initial data fetch and refresh on dependency changes
   useEffect(() => {
     fetchJobs();
-  }, [clientId, refreshTrigger]);
+  }, [clientId, refreshTrigger, includeCustomFields]);
   
   const addJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -108,13 +165,12 @@ export const useJobs = (clientId?: string) => {
       
       // Prepare job data with proper types
       const newJob = {
-        id: jobId, // Use string ID as per the jobs table
+        id: jobId,
         title: job.title,
         description: job.description || '',
         status: job.status || 'scheduled',
         client_id: job.client_id,
         service: job.service || 'General Service',
-        // Only include technician_id if it's provided and not empty
         ...(job.technician_id && job.technician_id !== '' && { technician_id: job.technician_id }),
         schedule_start: job.schedule_start,
         schedule_end: job.schedule_end,
@@ -143,7 +199,7 @@ export const useJobs = (clientId?: string) => {
           tags,
           created_at,
           updated_at,
-          clients(name)
+          clients(name, phone, email, address, city, state, zip)
         `)
         .single();
         
@@ -156,7 +212,15 @@ export const useJobs = (clientId?: string) => {
       const jobWithClient = {
         ...data,
         client: {
-          name: data.clients?.name || 'Unknown Client'
+          name: data.clients?.name || 'Unknown Client',
+          phone: data.clients?.phone,
+          email: data.clients?.email,
+          address: [
+            data.clients?.address,
+            data.clients?.city,
+            data.clients?.state,
+            data.clients?.zip
+          ].filter(Boolean).join(', ')
         }
       };
       
@@ -171,7 +235,6 @@ export const useJobs = (clientId?: string) => {
         );
       } catch (historyError) {
         console.warn('Failed to record job history:', historyError);
-        // Don't fail job creation if history fails
       }
       
       toast.success(`Job ${jobId} created successfully`);
