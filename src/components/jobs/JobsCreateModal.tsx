@@ -245,7 +245,7 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object with proper types - this now matches the database schema
+      // Create the job object with proper types - ensure tasks is an array
       const jobDataForDatabase = {
         title: `${data.service || 'General'} Service`,
         description: data.description,
@@ -260,7 +260,7 @@ export const JobsCreateModal = ({
         tags: selectedTags,
         job_type: data.service || "General Service",
         lead_source: leadSource || undefined,
-        tasks: JSON.stringify(tasks) // Convert to JSON string for database
+        tasks: tasks // Pass tasks as array, not string
       };
 
       console.log('Creating job with database-compatible data:', jobDataForDatabase);

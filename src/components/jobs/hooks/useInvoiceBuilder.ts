@@ -7,6 +7,7 @@ import { LineItem, Product } from "@/components/jobs/builder/types";
 export interface Invoice {
   id: string;
   invoice_number: string;
+  number: string; // Add this alias for compatibility
   job_id: string;
   date: string;
   due_date?: string;
@@ -74,7 +75,13 @@ export const useInvoiceBuilder = (
         
       if (itemsError) throw itemsError;
       
-      setInvoice(invoiceData);
+      // Add the number alias for compatibility
+      const invoiceWithAlias = {
+        ...invoiceData,
+        number: invoiceData.invoice_number
+      };
+      
+      setInvoice(invoiceWithAlias);
       setInvoiceNumber(invoiceData.invoice_number);
       setNotes(invoiceData.notes || "");
       if (invoiceData.due_date) {
@@ -130,7 +137,7 @@ export const useInvoiceBuilder = (
           .single();
           
         if (error) throw error;
-        savedInvoice = data;
+        savedInvoice = { ...data, number: data.invoice_number };
       } else {
         // Create new invoice
         const { data, error } = await supabase
@@ -151,7 +158,7 @@ export const useInvoiceBuilder = (
           .single();
           
         if (error) throw error;
-        savedInvoice = data;
+        savedInvoice = { ...data, number: data.invoice_number };
       }
       
       // Save line items

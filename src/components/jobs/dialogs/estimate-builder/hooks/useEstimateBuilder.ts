@@ -1,18 +1,37 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Product, LineItem } from "@/components/jobs/builder/types";
-import { Estimate } from "@/components/jobs/estimates/hooks/useEstimateData";
+import { LineItem, Product } from "@/components/jobs/builder/types";
 
-export const useEstimateBuilder = (
-  jobId: string,
-  estimateId?: string | null,
-  onClose?: () => void
-) => {
+export interface Estimate {
+  id: string;
+  estimate_number: string;
+  job_id: string;
+  date: string;
+  status: string;
+  total: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UseEstimateBuilderParams {
+  estimateId: string | null;
+  open: boolean;
+  onSyncToInvoice?: () => void;
+  jobId: string;
+}
+
+export const useEstimateBuilder = (params: UseEstimateBuilderParams) => {
+  const { estimateId, open, onSyncToInvoice, jobId } = params;
+  
   const [isLoading, setIsLoading] = useState(false);
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [notes, setNotes] = useState("");
+  const [estimateNumber, setEstimateNumber] = useState("");
+  const [taxRate, setTaxRate] = useState(0);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Generate unique estimate number
@@ -21,6 +40,13 @@ export const useEstimateBuilder = (
     const random = Math.floor(Math.random() * 1000);
     return `EST-${timestamp}-${random}`;
   };
+
+  // Initialize estimate number on mount
+  useEffect(() => {
+    if (!estimateId && !estimateNumber) {
+      setEstimateNumber(generateEstimateNumber());
+    }
+  }, [estimateId, estimateNumber]);
 
   // Load existing estimate if editing
   useEffect(() => {
@@ -33,7 +59,6 @@ export const useEstimateBuilder = (
     try {
       setIsLoading(true);
       
-      // Fetch estimate data
       const { data: estimateData, error: estimateError } = await supabase
         .from('estimates')
         .select('*')
@@ -42,7 +67,6 @@ export const useEstimateBuilder = (
         
       if (estimateError) throw estimateError;
       
-      // Fetch line items
       const { data: itemsData, error: itemsError } = await supabase
         .from('line_items')
         .select('*')
@@ -51,23 +75,21 @@ export const useEstimateBuilder = (
         
       if (itemsError) throw itemsError;
       
-      // Transform and set data
-      const transformedEstimate: Estimate = {
-        ...estimateData,
-        number: estimateData.estimate_number,
-        amount: estimateData.total
-      };
-      
-      setEstimate(transformedEstimate);
+      setEstimate(estimateData);
+      setEstimateNumber(estimateData.estimate_number);
       setNotes(estimateData.notes || "");
       
       const transformedItems: LineItem[] = itemsData?.map(item => ({
         id: item.id,
         description: item.description || '',
+        name: item.description || '',
         quantity: item.quantity || 1,
         unitPrice: Number(item.unit_price || 0),
+        price: Number(item.unit_price || 0),
         taxable: item.taxable !== false,
-        total: (item.quantity || 1) * Number(item.unit_price || 0)
+        total: (item.quantity || 1) * Number(item.unit_price || 0),
+        ourPrice: 0,
+        discount: 0
       })) || [];
       
       setLineItems(transformedItems);
@@ -79,12 +101,11 @@ export const useEstimateBuilder = (
     }
   };
 
-  const saveEstimate = async (syncToInvoice: boolean = false) => {
+  const saveEstimate = async () => {
     try {
       setIsLoading(true);
       
-      const total = lineItems.reduce((sum, item) => sum + item.total, 0);
-      const estimateNumber = estimate?.estimate_number || generateEstimateNumber();
+      const total = calculateGrandTotal();
       
       let savedEstimate: Estimate;
       
@@ -102,12 +123,7 @@ export const useEstimateBuilder = (
           .single();
           
         if (error) throw error;
-        
-        savedEstimate = {
-          ...data,
-          number: data.estimate_number,
-          amount: data.total
-        };
+        savedEstimate = data;
       } else {
         // Create new estimate
         const { data, error } = await supabase
@@ -118,23 +134,19 @@ export const useEstimateBuilder = (
             total,
             status: 'draft',
             notes,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           })
           .select()
           .single();
           
         if (error) throw error;
-        
-        savedEstimate = {
-          ...data,
-          number: data.estimate_number,
-          amount: data.total
-        };
+        savedEstimate = data;
       }
       
       // Save line items
       if (lineItems.length > 0) {
-        // Delete existing line items if updating
         if (estimateId) {
           await supabase
             .from('line_items')
@@ -143,7 +155,6 @@ export const useEstimateBuilder = (
             .eq('parent_type', 'estimate');
         }
         
-        // Insert new line items
         const lineItemsToInsert = lineItems.map(item => ({
           parent_id: savedEstimate.id,
           parent_type: 'estimate',
@@ -160,12 +171,7 @@ export const useEstimateBuilder = (
       
       toast.success(`Estimate ${estimateNumber} saved successfully`);
       
-      if (syncToInvoice) {
-        // Handle sync to invoice logic here
-        toast.success('Estimate synced to invoice');
-      }
-      
-      if (onClose) onClose();
+      if (onSyncToInvoice) onSyncToInvoice();
       
       return savedEstimate;
     } catch (error) {
@@ -175,6 +181,34 @@ export const useEstimateBuilder = (
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAddProduct = (product: Product) => {
+    const newLineItem: LineItem = {
+      id: `temp-${Date.now()}`,
+      description: product.description || product.name,
+      name: product.name,
+      quantity: product.quantity || 1,
+      unitPrice: product.price,
+      price: product.price,
+      taxable: product.taxable !== false,
+      total: (product.quantity || 1) * product.price,
+      ourPrice: product.ourPrice || 0,
+      discount: 0
+    };
+    setLineItems(prev => [...prev, newLineItem]);
+  };
+
+  const handleUpdateLineItem = (id: string, updates: Partial<LineItem>) => {
+    setLineItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
+        : item
+    ));
+  };
+
+  const handleRemoveLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
   };
 
   const addLineItem = (item: LineItem) => {
@@ -193,8 +227,39 @@ export const useEstimateBuilder = (
     ));
   };
 
+  const calculateSubtotal = () => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  };
+
+  const calculateTotalTax = () => {
+    const subtotal = calculateSubtotal();
+    return subtotal * (taxRate / 100);
+  };
+
+  const calculateGrandTotal = () => {
+    return calculateSubtotal() + calculateTotalTax();
+  };
+
+  const calculateTotalMargin = () => {
+    return lineItems.reduce((sum, item) => {
+      const cost = item.ourPrice || 0;
+      const margin = (item.unitPrice - cost) * item.quantity;
+      return sum + margin;
+    }, 0);
+  };
+
+  const calculateMarginPercentage = () => {
+    const total = calculateSubtotal();
+    const margin = calculateTotalMargin();
+    return total > 0 ? (margin / total) * 100 : 0;
+  };
+
   const calculateTotal = () => {
-    return lineItems.reduce((sum, item) => sum + item.total, 0);
+    return calculateGrandTotal();
+  };
+
+  const saveEstimateChanges = async () => {
+    return await saveEstimate();
   };
 
   return {
@@ -202,13 +267,26 @@ export const useEstimateBuilder = (
     estimate,
     lineItems,
     notes,
+    estimateNumber,
+    taxRate,
     isPreviewMode,
     setNotes,
+    setLineItems,
+    setTaxRate,
     setIsPreviewMode,
     addLineItem,
     removeLineItem,
     updateLineItem,
     saveEstimate,
-    calculateTotal
+    saveEstimateChanges,
+    calculateTotal,
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage,
+    handleAddProduct,
+    handleUpdateLineItem,
+    handleRemoveLineItem
   };
 };

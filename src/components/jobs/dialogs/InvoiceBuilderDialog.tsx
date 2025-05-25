@@ -286,8 +286,8 @@ export const InvoiceBuilderDialog = ({
                   calculateGrandTotal={invoiceBuilder.calculateGrandTotal}
                   notes={invoiceBuilder.notes || ""}
                   clientInfo={jobData?.client}
-                  issueDate={invoiceBuilder.issueDate}
-                  dueDate={invoiceBuilder.dueDate}
+                  issueDate={invoiceBuilder.issueDate?.toISOString()}
+                  dueDate={invoiceBuilder.dueDate?.toISOString()}
                 />
               )}
             </div>
