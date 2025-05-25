@@ -72,7 +72,8 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       // Transform the data to match our Job interface
       const transformedJobs = data?.map(job => ({
         ...job,
-        tasks: Array.isArray(job.tasks) ? job.tasks : [],
+        tasks: Array.isArray(job.tasks) ? job.tasks : 
+               (typeof job.tasks === 'string' ? JSON.parse(job.tasks) : []),
         custom_fields: [] // Will be populated if enableCustomFields is true
       })) || [];
 
@@ -94,7 +95,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     try {
       const jobToInsert = {
         ...jobData,
-        tasks: jobData.tasks || []
+        tasks: JSON.stringify(jobData.tasks || [])
       };
 
       const { data, error } = await supabase
@@ -125,9 +126,14 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   const updateJob = async (jobId: string, updates: Partial<Job>) => {
     try {
+      const updateData = {
+        ...updates,
+        tasks: updates.tasks ? JSON.stringify(updates.tasks) : undefined
+      };
+
       const { data, error } = await supabase
         .from('jobs')
-        .update(updates)
+        .update(updateData)
         .eq('id', jobId)
         .select()
         .single();
