@@ -11,7 +11,6 @@ import { useJobs } from "@/hooks/useJobs";
 import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
 import { Plus } from "lucide-react";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import "./SchedulePage.css";
 
 const localizer = momentLocalizer(moment);
 
