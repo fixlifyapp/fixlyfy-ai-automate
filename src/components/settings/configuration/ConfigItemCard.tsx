@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfigItemDialog } from "./ConfigItemDialog";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import * as z from "zod";
 
 interface ConfigItemCardProps<T extends ConfigItem> {
   title: string;
@@ -23,6 +24,7 @@ interface ConfigItemCardProps<T extends ConfigItem> {
   itemDialogFields?: React.ReactNode;
   initialValues?: Partial<T>;
   refreshItems?: () => void;
+  schema?: z.ZodSchema;
 }
 
 export function ConfigItemCard<T extends ConfigItem>({
@@ -37,7 +39,8 @@ export function ConfigItemCard<T extends ConfigItem>({
   renderCustomColumns,
   itemDialogFields,
   initialValues,
-  refreshItems
+  refreshItems,
+  schema
 }: ConfigItemCardProps<T>) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<T | null>(null);
@@ -169,6 +172,7 @@ export function ConfigItemCard<T extends ConfigItem>({
         onSubmit={onAdd}
         customFields={itemDialogFields}
         initialValues={initialValues || {}}
+        schema={schema}
       />
       
       <ConfigItemDialog 
@@ -181,6 +185,7 @@ export function ConfigItemCard<T extends ConfigItem>({
         }}
         customFields={itemDialogFields}
         initialValues={editItem || {}}
+        schema={schema}
       />
       
       <ConfirmDeleteDialog

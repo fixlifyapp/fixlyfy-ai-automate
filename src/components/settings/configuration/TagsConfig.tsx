@@ -1,6 +1,26 @@
 
 import { ConfigItemCard } from "./ConfigItemCard";
 import { useTags } from "@/hooks/useConfigItems";
+import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import * as z from "zod";
+
+const TAG_CATEGORIES = [
+  "General",
+  "Priority", 
+  "Service Type",
+  "Equipment",
+  "Location",
+  "Status",
+  "Customer Type"
+];
+
+const tagSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  category: z.string().min(1, "Category is required"),
+  color: z.string().optional(),
+});
 
 export function TagsConfig() {
   const {
@@ -32,6 +52,59 @@ export function TagsConfig() {
         </div>
       )}
       initialValues={{ category: 'General' }}
+      schema={tagSchema}
+      itemDialogFields={(
+        <>
+          <FormField
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {TAG_CATEGORIES.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="color"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Color</FormLabel>
+                <div className="flex gap-4 items-center">
+                  <FormControl>
+                    <Input
+                      type="color"
+                      {...field}
+                      className="w-12 h-8 p-1"
+                      value={field.value || "#3b82f6"}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value || "#3b82f6"}
+                      placeholder="#HEX"
+                      className="w-full"
+                    />
+                  </FormControl>
+                </div>
+              </FormItem>
+            )}
+          />
+        </>
+      )}
     />
   );
 }

@@ -4,6 +4,15 @@ import { useJobStatuses } from "@/hooks/useConfigItems";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import * as z from "zod";
+
+const jobStatusSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  color: z.string().optional(),
+  sequence: z.number().min(1, "Sequence must be at least 1"),
+  is_default: z.boolean().optional(),
+});
 
 export function JobStatusesConfig() {
   const {
@@ -33,8 +42,47 @@ export function JobStatusesConfig() {
           {status.is_default && <span className="text-sm text-green-600">Default</span>}
         </div>
       )}
+      initialValues={{ sequence: 1 }}
+      schema={jobStatusSchema}
       itemDialogFields={(
         <>
+          <FormField
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description (optional)</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Enter description" />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="color"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Color</FormLabel>
+                <div className="flex gap-4 items-center">
+                  <FormControl>
+                    <Input
+                      type="color"
+                      {...field}
+                      className="w-12 h-8 p-1"
+                      value={field.value || "#3b82f6"}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value || "#3b82f6"}
+                      placeholder="#HEX"
+                      className="w-full"
+                    />
+                  </FormControl>
+                </div>
+              </FormItem>
+            )}
+          />
           <FormField
             name="sequence"
             render={({ field }) => (
@@ -71,7 +119,6 @@ export function JobStatusesConfig() {
           />
         </>
       )}
-      initialValues={{ sequence: 1 }}
     />
   );
 }

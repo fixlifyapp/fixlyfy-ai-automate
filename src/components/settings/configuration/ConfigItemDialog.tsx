@@ -17,7 +17,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ConfigItem } from "@/hooks/useConfigItems";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,12 +29,12 @@ interface ConfigItemDialogProps {
   children?: React.ReactNode;
   initialValues?: any;
   customFields?: React.ReactNode;
+  schema?: z.ZodSchema;
 }
 
+// Base schema with only name (required for all types)
 const baseSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  color: z.string().optional(),
 });
 
 export function ConfigItemDialog({
@@ -45,16 +44,15 @@ export function ConfigItemDialog({
   onSubmit,
   children,
   initialValues = {},
-  customFields
+  customFields,
+  schema = baseSchema
 }: ConfigItemDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
-    resolver: zodResolver(baseSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: "",
-      description: "",
-      color: "",
       ...initialValues
     },
   });
@@ -64,6 +62,7 @@ export function ConfigItemDialog({
     try {
       await onSubmit(values);
       onOpenChange(false);
+      form.reset();
     } finally {
       setIsSubmitting(false);
     }
@@ -86,47 +85,6 @@ export function ConfigItemDialog({
                   <FormControl>
                     <Input {...field} placeholder="Enter name" />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter description" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Color</FormLabel>
-                  <div className="flex gap-4 items-center">
-                    <FormControl>
-                      <Input
-                        type="color"
-                        {...field}
-                        className="w-12 h-8 p-1"
-                        value={field.value || "#3b82f6"}
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value || "#3b82f6"}
-                        placeholder="#HEX"
-                        className="w-full"
-                      />
-                    </FormControl>
-                  </div>
                   <FormMessage />
                 </FormItem>
               )}
