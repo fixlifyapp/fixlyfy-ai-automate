@@ -21,6 +21,12 @@ interface EstimateBuilderDialogProps {
   onOpenChange: (open: boolean) => void;
   estimateId?: string;
   jobId: string;
+  clientInfo?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  } | null;
   onSyncToInvoice?: () => void;
 }
 
@@ -29,6 +35,7 @@ export const EstimateBuilderDialog = ({
   onOpenChange,
   estimateId,
   jobId,
+  clientInfo,
   onSyncToInvoice
 }: EstimateBuilderDialogProps) => {
   const [activeTab, setActiveTab] = useState("form");
@@ -298,8 +305,9 @@ export const EstimateBuilderDialog = ({
         onOpenChange={setIsSendDialogOpen}
         onSave={estimateBuilder.saveEstimateChanges}
         onAddWarranty={handleAddWarranty}
-        clientInfo={jobData?.client}
+        clientInfo={clientInfo || jobData?.client}
         estimateNumber={estimateBuilder.estimateNumber}
+        jobId={jobId}
       />
     </Dialog>
   );
