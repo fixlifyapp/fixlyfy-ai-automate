@@ -1,137 +1,112 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface Payment {
-  id: string;
-  invoice_id: string;
-  amount: number;
-  method: string;
-  date: string;
-  notes?: string;
+  id?: string;
+  invoice_id?: string;
+  amount?: number;
+  method?: string;
   reference?: string;
-  status?: string;
-  client_id?: string;
-  job_id?: string;
-  technician_id?: string;
-  technician_name?: string;
-  created_at: string;
-}
-
-export interface PaymentInput {
-  amount: number;
-  method: string;
-  date: string;
   notes?: string;
-  status?: string;
+  date?: string;
+  created_at?: string;
 }
 
-export const usePayments = (jobId: string) => {
+export const usePayments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
 
   const fetchPayments = async () => {
-    if (!jobId) return;
-    
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const { data, error } = await supabase
         .from('payments')
-        .select(`
-          *,
-          invoices!inner(job_id)
-        `)
-        .eq('invoices.job_id', jobId)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPayments(data || []);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching payments:', err);
-      setError(err);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast.error('Failed to load payments');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addPayment = async (paymentData: PaymentInput, invoiceId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('payments')
-        .insert([{ 
-          ...paymentData, 
-          invoice_id: invoiceId
-        }])
-        .select()
-        .single();
+  useEffect(() => {
+    fetchPayments();
+  }, []);
 
-      if (error) throw error;
-      await fetchPayments();
-      return data;
-    } catch (err) {
-      console.error('Error adding payment:', err);
-      throw err;
-    }
-  };
-
-  const refundPayment = async (paymentId: string) => {
+  const createPayment = async (payment: Payment) => {
     try {
       const { error } = await supabase
         .from('payments')
-        .update({ status: 'refunded' })
-        .eq('id', paymentId);
+        .insert(payment);
 
       if (error) throw error;
       await fetchPayments();
-    } catch (err) {
-      console.error('Error refunding payment:', err);
-      throw err;
+      toast.success('Payment created successfully');
+      return true;
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      toast.error('Failed to create payment');
+      return false;
     }
   };
 
-  const deletePayment = async (paymentId: string) => {
+  const updatePayment = async (id: string, updates: Partial<Payment>) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          amount: updates.amount,
+          method: updates.method,
+          reference: updates.reference,
+          notes: updates.notes,
+          date: updates.date,
+          created_at: updates.created_at,
+          invoice_id: updates.invoice_id
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      await fetchPayments();
+      toast.success('Payment updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast.error('Failed to update payment');
+      return false;
+    }
+  };
+
+  const deletePayment = async (id: string) => {
     try {
       const { error } = await supabase
         .from('payments')
         .delete()
-        .eq('id', paymentId);
+        .eq('id', id);
 
       if (error) throw error;
       await fetchPayments();
-    } catch (err) {
-      console.error('Error deleting payment:', err);
-      throw err;
+      toast.success('Payment deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      toast.error('Failed to delete payment');
+      return false;
     }
   };
-
-  const refreshPayments = () => {
-    fetchPayments();
-  };
-
-  // Calculate totals
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalRefunded = payments
-    .filter(p => p.status === 'refunded')
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  const netAmount = totalPaid - totalRefunded;
-
-  useEffect(() => {
-    fetchPayments();
-  }, [jobId]);
 
   return {
     payments,
     isLoading,
-    error,
-    totalPaid,
-    totalRefunded,
-    netAmount,
-    addPayment,
-    refundPayment,
+    fetchPayments,
+    createPayment,
+    updatePayment,
     deletePayment,
-    refreshPayments,
-    fetchPayments
   };
 };

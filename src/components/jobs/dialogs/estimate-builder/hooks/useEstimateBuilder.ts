@@ -219,9 +219,12 @@ export const useEstimateBuilder = ({ estimateId, open, onSyncToInvoice, jobId }:
         id: estimate.id,
         job_id: estimate.job_id,
         estimate_number: estimate.estimate_number,
+        number: estimate.estimate_number, // Add alias for compatibility
         date: estimate.date || estimate.created_at,
         total: estimate.total,
+        amount: estimate.total, // Add alias for compatibility
         status: estimate.status,
+        notes: estimate.notes || '',
         created_at: estimate.created_at,
         updated_at: estimate.updated_at
       };
@@ -287,9 +290,12 @@ export const useEstimateBuilder = ({ estimateId, open, onSyncToInvoice, jobId }:
         id: estimate.id,
         job_id: estimate.job_id,
         estimate_number: estimate.estimate_number,
+        number: estimate.estimate_number, // Add alias for compatibility
         date: estimate.date || estimate.created_at,
         total: estimate.total,
+        amount: estimate.total, // Add alias for compatibility
         status: estimate.status,
+        notes: estimate.notes || '',
         created_at: estimate.created_at,
         updated_at: estimate.updated_at
       };
