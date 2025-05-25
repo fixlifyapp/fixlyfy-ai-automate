@@ -1,7 +1,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Phone, MessageSquare, Pencil } from "lucide-react";
-import { useMessageContext } from "@/contexts/MessageContext";
 import { useJobDetails } from "../context/JobDetailsContext";
 import { useNavigate } from "react-router-dom";
 
@@ -12,13 +11,12 @@ interface ClientContactButtonsProps {
 }
 
 export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient }: ClientContactButtonsProps) => {
-  const { openMessageDialog } = useMessageContext();
   const { job } = useJobDetails();
   const navigate = useNavigate();
 
   const handleMessageClick = () => {
     if (job) {
-      // Navigate to Connect Center and open message dialog
+      // Navigate to Connect Center with client information - the page will handle opening the dialog
       const searchParams = new URLSearchParams({
         tab: 'messages',
         clientId: job.clientId,
@@ -27,15 +25,6 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
       });
       
       navigate(`/connect?${searchParams.toString()}`);
-      
-      // Also open the message dialog directly
-      setTimeout(() => {
-        openMessageDialog({
-          id: job.clientId,
-          name: job.client,
-          phone: job.phone || ""
-        });
-      }, 100);
     }
     
     // Also call the original onMessageClick if needed
