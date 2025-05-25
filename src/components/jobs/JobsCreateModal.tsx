@@ -359,12 +359,12 @@ export const JobsCreateModal = ({
                     </SelectTrigger>
                     <SelectContent>
                       {isLoadingClients ? (
-                        <SelectItem value="loading" disabled>Loading clients...</SelectItem>
-                      ) : (
+                        <SelectItem value="loading-clients" disabled>Loading clients...</SelectItem>
+                      ) : clients.length > 0 ? (
                         clients.map((client: Client) => (
                           <SelectItem 
                             key={client.id} 
-                            value={client.id}
+                            value={client.id || `client-${Math.random()}`}
                             className={cn(
                               recentlyAddedClient === client.id && "bg-green-50 border-green-200"
                             )}
@@ -375,6 +375,8 @@ export const JobsCreateModal = ({
                             )}
                           </SelectItem>
                         ))
+                      ) : (
+                        <SelectItem value="no-clients" disabled>No clients available</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -442,12 +444,12 @@ export const JobsCreateModal = ({
                       </SelectTrigger>
                       <SelectContent>
                         {isLoadingJobTypes ? (
-                          <SelectItem value="loading" disabled>Loading job types...</SelectItem>
+                          <SelectItem value="loading-job-types" disabled>Loading job types...</SelectItem>
                         ) : jobTypes.length > 0 ? (
                           jobTypes.map((jobType) => (
                             <SelectItem 
                               key={jobType.id} 
-                              value={jobType.name}
+                              value={jobType.name || `jobtype-${jobType.id}`}
                               className={cn(
                                 recentlyAddedJobType === jobType.name && "bg-green-50 border-green-200"
                               )}
@@ -497,14 +499,14 @@ export const JobsCreateModal = ({
                       </SelectTrigger>
                       <SelectContent>
                         {isLoadingLeadSources ? (
-                          <SelectItem value="loading" disabled>Loading lead sources...</SelectItem>
+                          <SelectItem value="loading-lead-sources" disabled>Loading lead sources...</SelectItem>
                         ) : leadSources.length > 0 ? (
                           leadSources
                             .filter(source => source.is_active)
                             .map((source) => (
                               <SelectItem 
                                 key={source.id} 
-                                value={source.name}
+                                value={source.name || `leadsource-${source.id}`}
                                 className={cn(
                                   recentlyAddedLeadSource === source.name && "bg-green-50 border-green-200"
                                 )}
@@ -636,13 +638,15 @@ export const JobsCreateModal = ({
                       <SelectContent>
                         <SelectItem value="unassigned">Unassigned</SelectItem>
                         {isLoadingTechnicians ? (
-                          <SelectItem value="loading" disabled>Loading technicians...</SelectItem>
-                        ) : (
+                          <SelectItem value="loading-technicians" disabled>Loading technicians...</SelectItem>
+                        ) : technicians.length > 0 ? (
                           technicians.map((tech) => (
-                            <SelectItem key={tech.id} value={tech.id}>
+                            <SelectItem key={tech.id} value={tech.id || `tech-${Math.random()}`}>
                               {tech.name}
                             </SelectItem>
                           ))
+                        ) : (
+                          <SelectItem value="no-technicians" disabled>No technicians available</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -763,13 +767,13 @@ export const JobsCreateModal = ({
                       </SelectTrigger>
                       <SelectContent>
                         {isLoadingTags ? (
-                          <SelectItem value="loading" disabled>Loading tags...</SelectItem>
+                          <SelectItem value="loading-tags" disabled>Loading tags...</SelectItem>
                         ) : tags.length > 0 ? (
                           tags.map(tag => (
                             <SelectItem 
                               key={tag.id} 
-                              value={tag.name}
-                              disabled={selectedTags.includes(tag.name)}
+                              value={tag.name || `tag-${tag.id}`}
+                              disabled={selectedTags.includes(tag.name || '')}
                             >
                               {tag.name}
                               {tag.category && tag.category !== 'General' && (
