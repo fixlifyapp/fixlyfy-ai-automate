@@ -2,6 +2,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
+import { ModernCard, ModernCardContent } from "@/components/ui/modern-card";
+import { AnimatedContainer } from "@/components/ui/animated-container";
+import { GradientButton } from "@/components/ui/gradient-button";
 import { 
   Table, 
   TableHeader, 
@@ -9,9 +13,8 @@ import {
   TableHead, 
   TableBody
 } from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Shield, Upload, Loader2, UserPlus } from "lucide-react";
+import { Plus, Shield, Upload, Loader2, UserPlus, Users, Target, Zap, TrendingUp } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
 import { PermissionRequired, useRBAC } from "@/components/auth/RBACProvider";
@@ -67,11 +70,9 @@ const TeamManagementPage = () => {
         }
         
         if (data) {
-          // Convert profiles to TeamMember format
           const members: TeamMember[] = data.map(profile => ({
             id: profile.id,
             name: profile.name || 'Unknown',
-            // Since email is not in profiles table, generate one based on name or id
             email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
             role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
             status: "active",
@@ -93,11 +94,9 @@ const TeamManagementPage = () => {
     fetchTeamMembers();
   }, []);
 
-  // Apply filters whenever filters or team members change
   useEffect(() => {
     let result = teamMembers;
     
-    // Apply search filter
     if (searchTerm) {
       const lowercaseTerm = searchTerm.toLowerCase();
       result = result.filter(
@@ -107,12 +106,10 @@ const TeamManagementPage = () => {
       );
     }
     
-    // Apply role filter
     if (roleFilter) {
       result = result.filter(member => member.role === roleFilter);
     }
     
-    // Apply status filter
     if (statusFilter) {
       result = result.filter(member => member.status === statusFilter);
     }
@@ -142,14 +139,12 @@ const TeamManagementPage = () => {
     navigate(`/admin/team/${id}`);
   };
   
-  // Handle importing test data
   const handleImportTestData = async () => {
     setIsImporting(true);
     try {
       toast.info("Importing test team data...");
       const newMembers = await generateTestTeamMembers(6);
       if (newMembers.length > 0) {
-        // Update the local state with the new members
         setTeamMembers(prevMembers => [...prevMembers, ...newMembers]);
         toast.success(`Successfully imported ${newMembers.length} team members!`);
       } else {
@@ -165,46 +160,52 @@ const TeamManagementPage = () => {
   
   return (
     <PageLayout>
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Team Management</h1>
-          <div className="flex gap-2">
-            {isAdmin && (
-              <Button 
-                onClick={handleImportTestData} 
-                variant="outline"
-                disabled={isImporting}
-              >
-                {isImporting ? (
-                  <>
-                    <Loader2 size={18} className="mr-2 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={18} className="mr-2" />
-                    Import Test Data
-                  </>
-                )}
-              </Button>
-            )}
-            {isAdmin ? (
-              <Button 
-                onClick={handleAddNewMember} 
-                className="gap-2"
-              >
-                <UserPlus size={18} />
-                Invite Team Member
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Shield size={16} />
-                <span>Admin access required for team management</span>
-              </div>
-            )}
+      <AnimatedContainer animation="fade-in">
+        <PageHeader
+          title="Team Management"
+          subtitle="Manage your team members and track performance"
+          icon={Users}
+          badges={[
+            { text: "Performance Tracking", icon: Target, variant: "fixlyfy" },
+            { text: "Real-time Collaboration", icon: Zap, variant: "success" },
+            { text: "Growth Analytics", icon: TrendingUp, variant: "info" }
+          ]}
+          actionButton={isAdmin ? {
+            text: "Invite Team Member",
+            icon: UserPlus,
+            onClick: handleAddNewMember
+          } : undefined}
+        />
+      </AnimatedContainer>
+
+      {!isAdmin && (
+        <AnimatedContainer animation="fade-in" delay={100}>
+          <ModernCard variant="glass" className="p-4 mb-6">
+            <div className="flex items-center gap-2 text-fixlyfy-text-secondary text-sm justify-center">
+              <Shield size={16} />
+              <span>Admin access required for team management</span>
+            </div>
+          </ModernCard>
+        </AnimatedContainer>
+      )}
+
+      {isAdmin && (
+        <AnimatedContainer animation="fade-in" delay={100}>
+          <div className="flex justify-end mb-4">
+            <GradientButton 
+              onClick={handleImportTestData} 
+              variant="info"
+              disabled={isImporting}
+              icon={isImporting ? Loader2 : Upload}
+              gradient={false}
+            >
+              {isImporting ? "Importing..." : "Import Test Data"}
+            </GradientButton>
           </div>
-        </div>
+        </AnimatedContainer>
+      )}
         
+      <AnimatedContainer animation="fade-in" delay={200}>
         <TeamFilters
           onSearch={handleSearch}
           onFilterRole={handleFilterRole}
@@ -213,54 +214,58 @@ const TeamManagementPage = () => {
           roleFilter={roleFilter}
           statusFilter={statusFilter}
         />
+      </AnimatedContainer>
         
-        <Card className="border-fixlyfy-border shadow-sm">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
+      <AnimatedContainer animation="fade-in" delay={300}>
+        <ModernCard variant="elevated">
+          <ModernCardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <td colSpan={6} className="py-10 text-center">
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <Loader2 size={24} className="animate-spin text-primary" />
-                        <span>Loading team members...</span>
-                      </div>
-                    </td>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Login</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : filteredMembers.length === 0 ? (
-                  <TableRow>
-                    <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <UserPlus size={24} className="text-muted-foreground/50" />
-                        {searchTerm || roleFilter || statusFilter ? 
-                          "No team members match your filters" : 
-                          "No team members yet. Click 'Import Test Data' to add some sample data."}
-                      </div>
-                    </td>
-                  </TableRow>
-                ) : (
-                  filteredMembers.map((member) => (
-                    <UserCardRow 
-                      key={member.id}
-                      user={convertToTeamMemberProfile(member)}
-                    />
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
-      </div>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <td colSpan={6} className="py-10 text-center">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <Loader2 size={24} className="animate-spin text-primary" />
+                          <span>Loading team members...</span>
+                        </div>
+                      </td>
+                    </TableRow>
+                  ) : filteredMembers.length === 0 ? (
+                    <TableRow>
+                      <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <UserPlus size={24} className="text-muted-foreground/50" />
+                          {searchTerm || roleFilter || statusFilter ? 
+                            "No team members match your filters" : 
+                            "No team members yet. Click 'Import Test Data' to add some sample data."}
+                        </div>
+                      </td>
+                    </TableRow>
+                  ) : (
+                    filteredMembers.map((member) => (
+                      <UserCardRow 
+                        key={member.id}
+                        user={convertToTeamMemberProfile(member)}
+                      />
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ModernCardContent>
+        </ModernCard>
+      </AnimatedContainer>
       
       <AddTeamMemberModal 
         open={isModalOpen} 

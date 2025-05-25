@@ -99,3 +99,54 @@
     @apply bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 }
+
+/* Enhanced animations for 3D effects */
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+/* Performance optimized hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  will-change: transform, box-shadow;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(138, 77, 213, 0.15);
+}
+
+/* Optimized gradient backgrounds */
+.fixlyfy-gradient-bg {
+  background: linear-gradient(135deg, #8A4DD5 0%, #B084F9 100%);
+}
+
+.fixlyfy-gradient-subtle {
+  background: linear-gradient(135deg, rgba(138, 77, 213, 0.1) 0%, rgba(176, 132, 249, 0.1) 100%);
+}
