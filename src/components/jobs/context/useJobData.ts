@@ -23,7 +23,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     
     const fetchJobData = async () => {
       try {
-        // Fetch job details from Supabase with proper join and all fields
+        // Fetch job details from Supabase with all fields including the new ones
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
@@ -71,7 +71,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           client.country || ''
         ].filter(Boolean).join(', ');
         
-        // Create job info object with all fields
+        // Create job info object with all fields including the new ones
         const jobInfo: JobInfo = {
           id: jobData.id,
           clientId: client.id || "",
@@ -96,7 +96,8 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           access_instructions: jobData.access_instructions,
           preferred_time: jobData.preferred_time,
           equipment_needed: jobData.equipment_needed || [],
-          safety_notes: jobData.safety_notes
+          safety_notes: jobData.safety_notes,
+          tasks: jobData.tasks || []
         };
         
         console.log('Processed job info:', jobInfo);
@@ -128,6 +129,28 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     };
     
     fetchJobData();
+
+    // Set up real-time subscription for job updates
+    const channel = supabase
+      .channel('job-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs',
+          filter: `id=eq.${jobId}`
+        },
+        () => {
+          console.log('Real-time job update detected, refetching...');
+          fetchJobData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [jobId, refreshTrigger]);
 
   return {

@@ -33,7 +33,7 @@ export interface Job {
     value: string;
     field_type: string;
   }>;
-  // New overview fields
+  // All the additional fields
   job_type?: string;
   priority?: string;
   lead_source?: string;
@@ -44,6 +44,7 @@ export interface Job {
   preferred_time?: string;
   equipment_needed?: string[];
   safety_notes?: string;
+  tasks?: string[];
 }
 
 export const useJobs = (clientId?: string, includeCustomFields: boolean = false) => {
@@ -56,7 +57,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
-      // Prepare base query
+      // Prepare base query with ALL fields
       let query = supabase
         .from('jobs')
         .select(`
@@ -84,6 +85,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           preferred_time,
           equipment_needed,
           safety_notes,
+          tasks,
           clients(name, phone, email, address, city, state, zip)
         `);
         
@@ -184,7 +186,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw new Error('Title and client are required');
       }
       
-      // Prepare job data with proper types and include all the overview fields
+      // Prepare job data with ALL fields
       const newJob = {
         id: jobId,
         title: job.title,
@@ -202,6 +204,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         preferred_time: job.preferred_time,
         equipment_needed: job.equipment_needed || [],
         safety_notes: job.safety_notes,
+        tasks: job.tasks || [],
         ...(job.technician_id && job.technician_id !== '' && { technician_id: job.technician_id }),
         schedule_start: job.schedule_start,
         schedule_end: job.schedule_end,
@@ -210,7 +213,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         tags: job.tags || []
       };
       
-      console.log('Creating job with cleaned data:', newJob);
+      console.log('Creating job with ALL data:', newJob);
       
       const { data, error } = await supabase
         .from('jobs')
@@ -238,6 +241,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           preferred_time,
           equipment_needed,
           safety_notes,
+          tasks,
           created_at,
           updated_at,
           clients(name, phone, email, address, city, state, zip)

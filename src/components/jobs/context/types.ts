@@ -24,6 +24,7 @@ export interface JobInfo {
   preferred_time?: string;
   equipment_needed?: string[];
   safety_notes?: string;
+  tasks?: string[];
 }
 
 export interface JobDetailsContextType {

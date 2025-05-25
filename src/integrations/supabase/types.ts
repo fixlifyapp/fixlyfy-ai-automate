@@ -874,6 +874,7 @@ export type Database = {
           special_instructions: string | null
           status: string | null
           tags: string[] | null
+          tasks: Json | null
           technician_id: string | null
           title: string
           updated_at: string | null
@@ -902,6 +903,7 @@ export type Database = {
           special_instructions?: string | null
           status?: string | null
           tags?: string[] | null
+          tasks?: Json | null
           technician_id?: string | null
           title: string
           updated_at?: string | null
@@ -930,6 +932,7 @@ export type Database = {
           special_instructions?: string | null
           status?: string | null
           tags?: string[] | null
+          tasks?: Json | null
           technician_id?: string | null
           title?: string
           updated_at?: string | null

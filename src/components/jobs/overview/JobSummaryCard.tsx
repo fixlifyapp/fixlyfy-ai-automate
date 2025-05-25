@@ -7,10 +7,9 @@ import { JobInfo } from "../context/types";
 
 interface JobSummaryCardProps {
   job: JobInfo;
-  leadSource: string;
 }
 
-export const JobSummaryCard = ({ job, leadSource }: JobSummaryCardProps) => {
+export const JobSummaryCard = ({ job }: JobSummaryCardProps) => {
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardHeader>
@@ -23,11 +22,11 @@ export const JobSummaryCard = ({ job, leadSource }: JobSummaryCardProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Job Type</p>
-            <p className="font-medium">{job.service || "General Service"}</p>
+            <p className="font-medium">{job.service || job.job_type || "General Service"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Lead Source</p>
-            <p className="font-medium">{leadSource}</p>
+            <p className="font-medium">{job.lead_source || "Not specified"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Status</p>
@@ -36,15 +35,28 @@ export const JobSummaryCard = ({ job, leadSource }: JobSummaryCardProps) => {
             </Badge>
           </div>
           <div>
+            <p className="text-sm text-muted-foreground">Priority</p>
+            <Badge 
+              variant="outline" 
+              className={
+                job.priority === 'high' ? "bg-red-50 border-red-200 text-red-600" :
+                job.priority === 'medium' ? "bg-yellow-50 border-yellow-200 text-yellow-600" :
+                "bg-green-50 border-green-200 text-green-600"
+              }
+            >
+              {job.priority || "Medium"}
+            </Badge>
+          </div>
+          <div>
             <p className="text-sm text-muted-foreground">Revenue</p>
             <p className="font-medium">${job.total?.toFixed(2) || "0.00"}</p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Technician</p>
-            <p className="font-medium">
-              {job.technician_id ? "Assigned" : "Unassigned"}
-            </p>
-          </div>
+          {job.estimated_duration && (
+            <div>
+              <p className="text-sm text-muted-foreground">Estimated Duration</p>
+              <p className="font-medium">{job.estimated_duration} minutes</p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

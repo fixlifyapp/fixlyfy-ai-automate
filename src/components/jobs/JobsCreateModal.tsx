@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -70,8 +69,17 @@ export const JobsCreateModal = ({
   const [tasks, setTasks] = useState<string[]>([]);
   const [newTask, setNewTask] = useState<string>("");
   
-  // Lead source field
+  // Additional fields
   const [leadSource, setLeadSource] = useState<string>("");
+  const [priority, setPriority] = useState<string>("medium");
+  const [estimatedDuration, setEstimatedDuration] = useState<string>("");
+  const [specialInstructions, setSpecialInstructions] = useState<string>("");
+  const [clientRequirements, setClientRequirements] = useState<string>("");
+  const [accessInstructions, setAccessInstructions] = useState<string>("");
+  const [preferredTime, setPreferredTime] = useState<string>("");
+  const [equipmentNeeded, setEquipmentNeeded] = useState<string[]>([]);
+  const [safetyNotes, setSafetyNotes] = useState<string>("");
+  const [newEquipment, setNewEquipment] = useState<string>("");
   
   // Quick-add dialog states
   const [showJobTypeDialog, setShowJobTypeDialog] = useState(false);
@@ -162,6 +170,17 @@ export const JobsCreateModal = ({
     setTasks(tasks.filter((_, i) => i !== index));
   };
 
+  const handleAddEquipment = () => {
+    if (newEquipment.trim() && !equipmentNeeded.includes(newEquipment.trim())) {
+      setEquipmentNeeded([...equipmentNeeded, newEquipment.trim()]);
+      setNewEquipment("");
+    }
+  };
+
+  const handleRemoveEquipment = (index: number) => {
+    setEquipmentNeeded(equipmentNeeded.filter((_, i) => i !== index));
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
@@ -185,6 +204,15 @@ export const JobsCreateModal = ({
     setTasks([]);
     setNewTask("");
     setLeadSource("");
+    setPriority("medium");
+    setEstimatedDuration("");
+    setSpecialInstructions("");
+    setClientRequirements("");
+    setAccessInstructions("");
+    setPreferredTime("");
+    setEquipmentNeeded([]);
+    setSafetyNotes("");
+    setNewEquipment("");
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
     setRecentlyAddedClient(null);
@@ -235,7 +263,7 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object with all the fields needed for overview
+      // Create the job object with ALL fields
       const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
         title: `${data.service || 'General'} Service`,
         description: data.description,
@@ -250,10 +278,18 @@ export const JobsCreateModal = ({
         tags: selectedTags,
         job_type: data.service || "General Service",
         lead_source: leadSource || undefined,
-        priority: "medium" // Default priority
+        priority: priority,
+        estimated_duration: estimatedDuration ? parseInt(estimatedDuration) : undefined,
+        special_instructions: specialInstructions || undefined,
+        client_requirements: clientRequirements || undefined,
+        access_instructions: accessInstructions || undefined,
+        preferred_time: preferredTime || undefined,
+        equipment_needed: equipmentNeeded,
+        safety_notes: safetyNotes || undefined,
+        tasks: tasks
       };
 
-      console.log('Creating job with data:', jobData);
+      console.log('Creating job with complete data:', jobData);
 
       const newJob = await addJob(jobData);
       
@@ -475,6 +511,33 @@ export const JobsCreateModal = ({
                       rows={4}
                     />
                   </div>
+                  
+                  {/* Priority */}
+                  <div className="space-y-2">
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select value={priority} onValueChange={setPriority}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Estimated Duration */}
+                  <div className="space-y-2">
+                    <Label htmlFor="estimatedDuration">Estimated Duration (minutes)</Label>
+                    <Input
+                      id="estimatedDuration"
+                      type="number"
+                      placeholder="e.g., 120"
+                      value={estimatedDuration}
+                      onChange={(e) => setEstimatedDuration(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
               
@@ -622,6 +685,105 @@ export const JobsCreateModal = ({
                             <X className="h-3 w-3" />
                           </Button>
                         </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Additional Instructions Section */}
+              <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
+                <h3 className="text-lg font-semibold">Additional Instructions</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="specialInstructions">Special Instructions</Label>
+                    <Textarea
+                      id="specialInstructions"
+                      placeholder="Any special instructions for the technician..."
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="clientRequirements">Client Requirements</Label>
+                    <Textarea
+                      id="clientRequirements"
+                      placeholder="Specific client requirements..."
+                      value={clientRequirements}
+                      onChange={(e) => setClientRequirements(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="accessInstructions">Access Instructions</Label>
+                    <Textarea
+                      id="accessInstructions"
+                      placeholder="How to access the property..."
+                      value={accessInstructions}
+                      onChange={(e) => setAccessInstructions(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="preferredTime">Preferred Time</Label>
+                    <Input
+                      id="preferredTime"
+                      placeholder="e.g., Morning, Afternoon, After 2 PM"
+                      value={preferredTime}
+                      onChange={(e) => setPreferredTime(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="safetyNotes">Safety Notes</Label>
+                    <Textarea
+                      id="safetyNotes"
+                      placeholder="Important safety considerations..."
+                      value={safetyNotes}
+                      onChange={(e) => setSafetyNotes(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Equipment Section */}
+              <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
+                <h3 className="text-lg font-semibold">Equipment Needed</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add equipment..."
+                      value={newEquipment}
+                      onChange={(e) => setNewEquipment(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEquipment())}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddEquipment}
+                      disabled={!newEquipment.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {equipmentNeeded.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {equipmentNeeded.map((equipment, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="outline"
+                          className="flex items-center gap-1 px-2 py-1"
+                        >
+                          {equipment}
+                          <X 
+                            size={14} 
+                            className="cursor-pointer" 
+                            onClick={() => handleRemoveEquipment(index)}
+                          />
+                        </Badge>
                       ))}
                     </div>
                   )}

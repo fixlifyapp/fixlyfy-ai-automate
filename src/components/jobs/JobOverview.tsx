@@ -1,23 +1,23 @@
 
 import React from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
-import { useJobOverview } from "@/hooks/useJobOverview";
 import { JobSummaryCard } from "./overview/JobSummaryCard";
 import { ClientInfoCard } from "./overview/ClientInfoCard";
 import { ScheduleInfoCard } from "./overview/ScheduleInfoCard";
 import { JobDescriptionCard } from "./overview/JobDescriptionCard";
 import { JobTagsCard } from "./overview/JobTagsCard";
-import { PropertyInfoCard } from "./overview/PropertyInfoCard";
+import { TasksCard } from "./overview/TasksCard";
+import { TechnicianCard } from "./overview/TechnicianCard";
+import { AdditionalInfoCard } from "./overview/AdditionalInfoCard";
 
 interface JobOverviewProps {
   jobId: string;
 }
 
 export const JobOverview = ({ jobId }: JobOverviewProps) => {
-  const { job, isLoading: jobLoading } = useJobDetails();
-  const { overview, isLoading: overviewLoading } = useJobOverview(jobId);
+  const { job, isLoading } = useJobDetails();
 
-  if (jobLoading || overviewLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -36,17 +36,16 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
     );
   }
 
-  // Get data from job or overview
-  const leadSource = overview?.lead_source || "Not specified";
-
   return (
     <div className="space-y-6">
-      <JobSummaryCard job={job} leadSource={leadSource} />
+      <JobSummaryCard job={job} />
       <ClientInfoCard job={job} />
       <ScheduleInfoCard job={job} />
+      <TechnicianCard job={job} />
       <JobDescriptionCard description={job.description || ""} />
+      <TasksCard tasks={job.tasks || []} />
       <JobTagsCard tags={job.tags || []} />
-      {overview && <PropertyInfoCard overview={overview} />}
+      <AdditionalInfoCard job={job} />
     </div>
   );
 };
