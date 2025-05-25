@@ -205,9 +205,8 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   };
 
   // Handle updating attachments
-  const handleUpdateAttachments = async (files: File[]) => {
-    // This will be handled by the AttachmentsCard component
-    return true;
+  const handleUpdateAttachments = (updatedAttachments: typeof attachments) => {
+    setAttachments(updatedAttachments);
   };
 
   // Get team color
@@ -615,6 +614,13 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         onOpenChange={setIsTasksDialogOpen}
         initialTasks={tasks}
         onSave={handleUpdateTasks}
+      />
+      
+      <AttachmentUploadDialog
+        open={isAttachmentsDialogOpen}
+        onOpenChange={setIsAttachmentsDialogOpen}
+        initialAttachments={attachments}
+        onSave={handleUpdateAttachments}
       />
       
       <ApplianceTypeDialog

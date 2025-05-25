@@ -19,11 +19,6 @@ const EstimatesPage = () => {
     enabled: true
   });
 
-  const handleDelete = () => {
-    // Handle estimate deletion
-    console.log('Delete estimate');
-  };
-
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -45,7 +40,6 @@ const EstimatesPage = () => {
           onConvert={() => {}}
           onAddWarranty={() => {}}
           onSend={() => {}}
-          onDelete={handleDelete}
         />
       </div>
     </PageLayout>

@@ -17,7 +17,6 @@ interface GlobalRealtimeContextType {
   refreshTags: () => void;
   refreshLeadSources: () => void;
   refreshJobCustomFieldValues: () => void;
-  refreshJobAttachments: () => void;
   isConnected: boolean;
 }
 
@@ -50,7 +49,6 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
     tags: new Set<() => void>(),
     leadSources: new Set<() => void>(),
     jobCustomFieldValues: new Set<() => void>(),
-    jobAttachments: new Set<() => void>(),
   });
   const [isConnected, setIsConnected] = useState(false);
 
@@ -215,18 +213,6 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
             refreshCallbacks.jobCustomFieldValues.forEach(callback => callback());
           }
         )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'job_attachments'
-          },
-          (payload) => {
-            console.log('Job attachments table changed:', payload);
-            refreshCallbacks.jobAttachments.forEach(callback => callback());
-          }
-        )
         .subscribe((status) => {
           console.log('Global realtime channel status:', status);
           setIsConnected(status === 'SUBSCRIBED');
@@ -280,7 +266,6 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
     refreshTags: () => refreshCallbacks.tags.forEach(callback => callback()),
     refreshLeadSources: () => refreshCallbacks.leadSources.forEach(callback => callback()),
     refreshJobCustomFieldValues: () => refreshCallbacks.jobCustomFieldValues.forEach(callback => callback()),
-    refreshJobAttachments: () => refreshCallbacks.jobAttachments.forEach(callback => callback()),
     isConnected
   };
 
@@ -292,7 +277,7 @@ export const GlobalRealtimeProvider = ({ children }: GlobalRealtimeProviderProps
 };
 
 // Hook for components to register for specific table updates
-export const useTableSync = (table: 'jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'jobHistory' | 'jobStatuses' | 'jobTypes' | 'customFields' | 'tags' | 'leadSources' | 'jobCustomFieldValues' | 'jobAttachments', callback: () => void) => {
+export const useTableSync = (table: 'jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'jobHistory' | 'jobStatuses' | 'jobTypes' | 'customFields' | 'tags' | 'leadSources' | 'jobCustomFieldValues', callback: () => void) => {
   const context = useContext(GlobalRealtimeContext);
   
   useEffect(() => {

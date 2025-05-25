@@ -15,7 +15,7 @@ import { FileText, X, Upload } from "lucide-react";
 interface AttachmentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (files: File[]) => Promise<boolean>;
+  onUpload: (files: File[]) => Promise<void>;
   isUploading?: boolean;
 }
 
@@ -46,11 +46,8 @@ export function AttachmentUploadDialog({
     }
 
     try {
-      const success = await onUpload(selectedFiles);
-      if (success) {
-        setSelectedFiles([]);
-        onOpenChange(false);
-      }
+      await onUpload(selectedFiles);
+      setSelectedFiles([]);
     } catch (error) {
       toast.error("Failed to upload files");
     }
