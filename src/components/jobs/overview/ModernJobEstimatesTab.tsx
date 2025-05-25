@@ -135,7 +135,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlers.handleConvertToInvoice(estimate.id)}
+                        onClick={() => handlers.handleConvertToInvoice(estimate)}
                         className="text-green-600 hover:text-green-700"
                       >
                         <Edit className="h-4 w-4" />
