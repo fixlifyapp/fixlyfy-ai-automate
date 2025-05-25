@@ -2,10 +2,22 @@
 import { ConfigItemCard } from "./ConfigItemCard";
 import { useCustomFields } from "@/hooks/useConfigItems";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import * as z from "zod";
+
+const customFieldSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  field_type: z.string().min(1, "Field type is required"),
+  entity_type: z.string().min(1, "Entity type is required"),
+  placeholder: z.string().optional(),
+  default_value: z.string().optional(),
+  required: z.boolean().optional(),
+  selectOptions: z.string().optional()
+});
 
 export function CustomFieldsConfig() {
   const {
@@ -18,6 +30,23 @@ export function CustomFieldsConfig() {
     refreshItems
   } = useCustomFields();
 
+  const handleAddField = async (values: any) => {
+    // Process options for select fields
+    if (values.field_type === 'select' && values.selectOptions) {
+      const options = values.selectOptions
+        .split('\n')
+        .map((opt: string) => opt.trim())
+        .filter((opt: string) => opt.length > 0);
+      
+      values.options = { options };
+    }
+    
+    // Remove the temporary selectOptions field
+    delete values.selectOptions;
+    
+    return await addItem(values);
+  };
+
   return (
     <ConfigItemCard
       title="Custom Fields"
@@ -25,7 +54,7 @@ export function CustomFieldsConfig() {
       items={customFields}
       isLoading={isLoading}
       canManage={canManage}
-      onAdd={addItem}
+      onAdd={handleAddField}
       onUpdate={updateItem}
       onDelete={deleteItem}
       refreshItems={refreshItems}
@@ -44,16 +73,18 @@ export function CustomFieldsConfig() {
           )}
         </div>
       )}
-      itemDialogFields={(
+      schema={customFieldSchema}
+      itemDialogFields={({ form, fieldType }: any) => (
         <>
           <FormField
+            control={form.control}
             name="field_type"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Field Type</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
-                  defaultValue={field.value || "text"}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -62,6 +93,7 @@ export function CustomFieldsConfig() {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="textarea">Textarea</SelectItem>
                     <SelectItem value="number">Number</SelectItem>
                     <SelectItem value="date">Date</SelectItem>
                     <SelectItem value="select">Select (Dropdown)</SelectItem>
@@ -73,13 +105,14 @@ export function CustomFieldsConfig() {
             )}
           />
           <FormField
+            control={form.control}
             name="entity_type"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Apply To</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
-                  defaultValue={field.value || "job"}
+                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -98,6 +131,7 @@ export function CustomFieldsConfig() {
             )}
           />
           <FormField
+            control={form.control}
             name="placeholder"
             render={({ field }) => (
               <FormItem>
@@ -110,6 +144,7 @@ export function CustomFieldsConfig() {
             )}
           />
           <FormField
+            control={form.control}
             name="default_value"
             render={({ field }) => (
               <FormItem>
@@ -121,7 +156,27 @@ export function CustomFieldsConfig() {
               </FormItem>
             )}
           />
+          {fieldType === 'select' && (
+            <FormField
+              control={form.control}
+              name="selectOptions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Options (one per line)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Option 1&#10;Option 2&#10;Option 3"
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
+            control={form.control}
             name="required"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">

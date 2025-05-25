@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -127,6 +126,17 @@ export const JobsCreateModal = ({
     }
   }, [recentlyAddedClient, form]);
 
+  // Initialize custom field values with default values
+  useEffect(() => {
+    if (open && availableFields.length > 0) {
+      const defaultValues: Record<string, string> = {};
+      availableFields.forEach(field => {
+        defaultValues[field.id] = field.default_value || '';
+      });
+      setCustomFieldValues(defaultValues);
+    }
+  }, [open, availableFields]);
+
   const handleAddTag = (tag: string) => {
     if (!selectedTags.includes(tag)) {
       setSelectedTags([...selectedTags, tag]);
@@ -196,7 +206,10 @@ export const JobsCreateModal = ({
 
     // Validate required custom fields
     const requiredFields = availableFields.filter(field => field.required);
-    const missingFields = requiredFields.filter(field => !customFieldValues[field.id]);
+    const missingFields = requiredFields.filter(field => {
+      const value = customFieldValues[field.id];
+      return !value || value.trim() === '';
+    });
     
     if (missingFields.length > 0) {
       toast.error(`Please fill in required fields: ${missingFields.map(f => f.name).join(', ')}`);
@@ -239,7 +252,13 @@ export const JobsCreateModal = ({
       if (newJob) {
         // Save custom field values if any
         if (Object.keys(customFieldValues).length > 0) {
-          await saveCustomFieldValues(newJob.id, customFieldValues);
+          const nonEmptyValues = Object.fromEntries(
+            Object.entries(customFieldValues).filter(([_, value]) => value && value.trim() !== '')
+          );
+          
+          if (Object.keys(nonEmptyValues).length > 0) {
+            await saveCustomFieldValues(newJob.id, nonEmptyValues);
+          }
         }
         
         toast.success(`Job created successfully: ${newJob.id}`);

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Dialog,
   DialogContent,
@@ -57,16 +57,31 @@ export function ConfigItemDialog({
     },
   });
 
+  // Reset form when dialog opens with initial values
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: "",
+        ...initialValues
+      });
+    }
+  }, [open, initialValues, form]);
+
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
     try {
       await onSubmit(values);
       onOpenChange(false);
       form.reset();
+    } catch (error) {
+      console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Watch field_type to conditionally show select options
+  const fieldType = form.watch("field_type");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,7 +105,11 @@ export function ConfigItemDialog({
               )}
             />
             
-            {customFields}
+            {/* Render custom fields with access to form state */}
+            {typeof customFields === 'function' 
+              ? customFields({ form, fieldType })
+              : customFields
+            }
             {children}
             
             <DialogFooter className="pt-4">
