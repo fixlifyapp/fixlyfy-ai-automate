@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, momentLocalizer, Views } from "react-big-calendar";
+import { Calendar, momentLocalizer, View } from "react-big-calendar";
 import moment from "moment";
 import { format } from "date-fns";
 import { Job } from "@/types/job";
@@ -15,7 +16,7 @@ import "./SchedulePage.css";
 const localizer = momentLocalizer(moment);
 
 const SchedulePage = () => {
-  const [selectedView, setSelectedView] = useState<Views>("month");
+  const [selectedView, setSelectedView] = useState<View>("month");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { jobs, isLoading } = useJobs();
 
@@ -39,19 +40,6 @@ const SchedulePage = () => {
   const eventStyleGetter = (event: any, start: Date, end: Date, isSelected: boolean) => {
     const job = event.resource as Job;
     let backgroundColor = '#3182CE'; // Default color
-    let style = {
-      backgroundColor: backgroundColor,
-      borderRadius: '5px',
-      opacity: 0.8,
-      color: 'white',
-      border: '0px',
-      display: 'block',
-      textAlign: 'left',
-      padding: '2px 5px',
-      overflow: 'hidden',
-      whiteSpace: 'nowrap',
-      textOverflow: 'ellipsis'
-    };
 
     switch (job.status) {
       case 'scheduled':
@@ -70,10 +58,20 @@ const SchedulePage = () => {
         backgroundColor = '#718096';
     }
 
-    style = { ...style, backgroundColor: backgroundColor };
-
     return {
-      style: style
+      style: {
+        backgroundColor: backgroundColor,
+        borderRadius: '5px',
+        opacity: 0.8,
+        color: 'white',
+        border: '0px',
+        display: 'block',
+        textAlign: 'left' as const,
+        padding: '2px 5px',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap' as const,
+        textOverflow: 'ellipsis'
+      }
     };
   };
 
@@ -109,7 +107,7 @@ const SchedulePage = () => {
               eventPropGetter={eventStyleGetter}
               views={['month', 'week', 'day']}
               view={selectedView}
-              onView={(newView) => setSelectedView(newView as Views)}
+              onView={(newView) => setSelectedView(newView as View)}
             />
           )}
         </CardContent>

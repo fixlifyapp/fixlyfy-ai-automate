@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Paperclip, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Job, useJobs } from "@/hooks/useJobs";
+import { Job } from "@/types/job";
+import { useJobs } from "@/hooks/useJobs";
 import { useClients } from "@/hooks/useClients";
 import { Client } from "@/hooks/useClients";
 import { Badge } from "@/components/ui/badge";
