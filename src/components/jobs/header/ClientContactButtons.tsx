@@ -18,7 +18,7 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
 
   const handleMessageClick = () => {
     if (job) {
-      // Navigate to Connect Center with client information
+      // Navigate to Connect Center and open message dialog
       const searchParams = new URLSearchParams({
         tab: 'messages',
         clientId: job.clientId,
@@ -27,6 +27,15 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
       });
       
       navigate(`/connect?${searchParams.toString()}`);
+      
+      // Also open the message dialog directly
+      setTimeout(() => {
+        openMessageDialog({
+          id: job.clientId,
+          name: job.client,
+          phone: job.phone || ""
+        });
+      }, 100);
     }
     
     // Also call the original onMessageClick if needed
