@@ -13,7 +13,7 @@ const ConnectCenterPage = () => {
 
   // Set up real-time updates for connect center page
   useUnifiedRealtime({
-    tables: ['messages', 'calls', 'emails', 'conversations', 'clients'],
+    tables: ['messages', 'clients'],
     onUpdate: () => {
       console.log('Real-time update triggered for connect center page');
       setRefreshTrigger(prev => prev + 1);

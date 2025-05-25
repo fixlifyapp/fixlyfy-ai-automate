@@ -11,7 +11,7 @@ const EstimatesPage = () => {
 
   // Set up real-time updates for estimates page
   useUnifiedRealtime({
-    tables: ['estimates', 'jobs', 'clients', 'line_items'],
+    tables: ['estimates', 'jobs', 'clients'],
     onUpdate: () => {
       console.log('Real-time update triggered for estimates page');
       setRefreshTrigger(prev => prev + 1);
@@ -33,7 +33,14 @@ const EstimatesPage = () => {
           </Button>
         </div>
         
-        <EstimatesList key={refreshTrigger} />
+        <EstimatesList 
+          key={refreshTrigger}
+          estimates={[]}
+          onEdit={() => {}}
+          onConvert={() => {}}
+          onAddWarranty={() => {}}
+          onSend={() => {}}
+        />
       </div>
     </PageLayout>
   );

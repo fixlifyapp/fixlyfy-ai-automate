@@ -36,8 +36,13 @@ const FinancePage = () => {
           </TabsList>
 
           <TabsContent value="payments" className="space-y-6">
-            <PaymentsFilters />
-            <PaymentsTable key={refreshTrigger} />
+            <PaymentsFilters onFilterChange={() => {}} />
+            <PaymentsTable 
+              key={refreshTrigger} 
+              payments={[]} 
+              onRefund={() => {}} 
+              canRefund={() => false} 
+            />
           </TabsContent>
 
           <TabsContent value="invoices" className="space-y-6">
@@ -47,7 +52,7 @@ const FinancePage = () => {
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-6">
-            <FinanceAiInsights key={refreshTrigger} />
+            <FinanceAiInsights key={refreshTrigger} onClose={() => {}} />
           </TabsContent>
         </Tabs>
       </div>

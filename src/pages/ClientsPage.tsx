@@ -11,6 +11,7 @@ import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 const ClientsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isGridView, setIsGridView] = useState(false);
 
   // Set up real-time updates for clients page
   useUnifiedRealtime({
@@ -37,7 +38,7 @@ const ClientsPage = () => {
         </div>
         
         <ClientsFilters />
-        <ClientsList key={refreshTrigger} />
+        <ClientsList key={refreshTrigger} isGridView={isGridView} />
         
         <ClientsCreateModal 
           open={isCreateModalOpen}

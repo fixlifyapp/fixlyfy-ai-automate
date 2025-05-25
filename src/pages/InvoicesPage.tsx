@@ -10,7 +10,7 @@ const InvoicesPage = () => {
 
   // Set up real-time updates for invoices page
   useUnifiedRealtime({
-    tables: ['invoices', 'jobs', 'clients', 'payments', 'line_items'],
+    tables: ['invoices', 'jobs', 'clients', 'payments'],
     onUpdate: () => {
       console.log('Real-time update triggered for invoices page');
       setRefreshTrigger(prev => prev + 1);

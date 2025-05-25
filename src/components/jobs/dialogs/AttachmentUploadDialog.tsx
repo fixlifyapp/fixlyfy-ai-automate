@@ -8,61 +8,64 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useState, useRef, ChangeEvent } from "react";
 import { toast } from "sonner";
 import { FileText, X, Upload } from "lucide-react";
 
-interface Attachment {
-  id: number;
-  name: string;
-  size: string;
-}
-
 interface AttachmentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialAttachments: Attachment[];
-  onSave: (attachments: Attachment[]) => void;
+  onUpload: (files: File[]) => Promise<void>;
+  isUploading?: boolean;
 }
 
 export function AttachmentUploadDialog({
   open,
   onOpenChange,
-  initialAttachments,
-  onSave,
+  onUpload,
+  isUploading = false,
 }: AttachmentUploadDialogProps) {
-  const [attachments, setAttachments] = useState<Attachment[]>(initialAttachments);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files).map((file, index) => ({
-        id: Math.max(...attachments.map(a => a.id), 0) + index + 1,
-        name: file.name,
-        size: `${(file.size / 1024).toFixed(0)} KB`
-      }));
-      
-      setAttachments(prev => [...prev, ...newFiles]);
-      toast.success(`${newFiles.length} file(s) added`);
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
     }
   };
 
-  const handleRemoveAttachment = (id: number) => {
-    setAttachments(prev => prev.filter(a => a.id !== id));
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
-    onSave(attachments);
-    onOpenChange(false);
-    toast.success("Attachments updated");
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error("Please select files to upload");
+      return;
+    }
+
+    try {
+      await onUpload(selectedFiles);
+      setSelectedFiles([]);
+    } catch (error) {
+      toast.error("Failed to upload files");
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Manage Attachments</DialogTitle>
+          <DialogTitle>Upload Attachments</DialogTitle>
         </DialogHeader>
         
         <div className="py-4 space-y-6">
@@ -78,9 +81,10 @@ export function AttachmentUploadDialog({
               variant="outline" 
               className="w-full"
               onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
             >
               <Upload size={16} className="mr-2" />
-              Choose Files
+              {isUploading ? "Uploading..." : "Choose Files"}
             </Button>
             <p className="mt-2 text-sm text-gray-500">
               Or drag and drop files here
@@ -90,44 +94,57 @@ export function AttachmentUploadDialog({
             </p>
           </div>
           
-          <div className="space-y-2">
-            <Label className="mb-2 block">
-              Uploaded Attachments ({attachments.length} files)
-            </Label>
-            
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {attachments.map((attachment) => (
-                <div 
-                  key={attachment.id} 
-                  className="flex items-center justify-between p-2 border border-gray-200 rounded-md"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText size={16} className="text-gray-500" />
-                    <span>{attachment.name}</span>
-                    <span className="text-xs text-gray-500">{attachment.size}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveAttachment(attachment.id)}
-                  >
-                    <X size={16} />
-                  </Button>
-                </div>
-              ))}
+          {selectedFiles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                Selected Files ({selectedFiles.length})
+              </p>
               
-              {attachments.length === 0 && (
-                <p className="text-sm text-gray-500">No files uploaded</p>
-              )}
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {selectedFiles.map((file, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center justify-between p-2 border border-gray-200 rounded-md"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-gray-500" />
+                      <span className="text-sm">{file.name}</span>
+                      <span className="text-xs text-gray-500">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveFile(index)}
+                      disabled={isUploading}
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setSelectedFiles([]);
+              onOpenChange(false);
+            }}
+            disabled={isUploading}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button 
+            onClick={handleUpload}
+            disabled={selectedFiles.length === 0 || isUploading}
+          >
+            {isUploading ? "Uploading..." : `Upload ${selectedFiles.length} file(s)`}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

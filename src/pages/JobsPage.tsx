@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
@@ -37,7 +37,14 @@ const JobsPage = () => {
         </div>
         
         <JobsFilters />
-        <JobsList key={refreshTrigger} />
+        <JobsList 
+          key={refreshTrigger}
+          jobs={[]}
+          isGridView={false}
+          selectedJobs={[]}
+          onSelectJob={() => {}}
+          onSelectAllJobs={() => {}}
+        />
         
         <JobsCreateModal 
           open={isCreateModalOpen}
