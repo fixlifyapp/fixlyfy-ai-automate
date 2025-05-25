@@ -74,6 +74,16 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           tags,
           created_at,
           updated_at,
+          job_type,
+          priority,
+          lead_source,
+          estimated_duration,
+          special_instructions,
+          client_requirements,
+          access_instructions,
+          preferred_time,
+          equipment_needed,
+          safety_notes,
           clients(name, phone, email, address, city, state, zip)
         `);
         
@@ -174,7 +184,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw new Error('Title and client are required');
       }
       
-      // Prepare job data with proper types
+      // Prepare job data with proper types and include all the overview fields
       const newJob = {
         id: jobId,
         title: job.title,
@@ -182,6 +192,16 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         status: job.status || 'scheduled',
         client_id: job.client_id,
         service: job.service || 'General Service',
+        job_type: job.job_type || job.service || 'General Service',
+        priority: job.priority || 'medium',
+        lead_source: job.lead_source,
+        estimated_duration: job.estimated_duration,
+        special_instructions: job.special_instructions,
+        client_requirements: job.client_requirements,
+        access_instructions: job.access_instructions,
+        preferred_time: job.preferred_time,
+        equipment_needed: job.equipment_needed || [],
+        safety_notes: job.safety_notes,
         ...(job.technician_id && job.technician_id !== '' && { technician_id: job.technician_id }),
         schedule_start: job.schedule_start,
         schedule_end: job.schedule_end,
@@ -208,6 +228,16 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           date,
           revenue,
           tags,
+          job_type,
+          priority,
+          lead_source,
+          estimated_duration,
+          special_instructions,
+          client_requirements,
+          access_instructions,
+          preferred_time,
+          equipment_needed,
+          safety_notes,
           created_at,
           updated_at,
           clients(name, phone, email, address, city, state, zip)

@@ -235,7 +235,7 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object
+      // Create the job object with all the fields needed for overview
       const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
         title: `${data.service || 'General'} Service`,
         description: data.description,
@@ -249,7 +249,8 @@ export const JobsCreateModal = ({
         revenue: 0,
         tags: selectedTags,
         job_type: data.service || "General Service",
-        lead_source: leadSource || undefined
+        lead_source: leadSource || undefined,
+        priority: "medium" // Default priority
       };
 
       console.log('Creating job with data:', jobData);

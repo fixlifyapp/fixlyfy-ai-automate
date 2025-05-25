@@ -42,6 +42,11 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
     return colors[priority as keyof typeof colors] || colors.medium;
   };
 
+  // Get priority and lead source from job data (newly created jobs) or overview data (existing jobs)
+  const priority = overview?.priority || "medium";
+  const leadSource = overview?.lead_source || "Not specified";
+  const estimatedDuration = overview?.estimated_duration;
+
   return (
     <div className="space-y-6">
       {/* Job Summary */}
@@ -60,23 +65,23 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Priority</p>
-              <Badge variant="outline" className={getPriorityColor(overview?.priority || "medium")}>
-                {(overview?.priority || "medium").charAt(0).toUpperCase() + (overview?.priority || "medium").slice(1)}
+              <Badge variant="outline" className={getPriorityColor(priority)}>
+                {priority.charAt(0).toUpperCase() + priority.slice(1)}
               </Badge>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Lead Source</p>
-              <p className="font-medium">{overview?.lead_source || "Not specified"}</p>
+              <p className="font-medium">{leadSource}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Estimated Duration</p>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <p className="font-medium">
-                  {overview?.estimated_duration ? `${overview.estimated_duration} minutes` : "Not specified"}
-                </p>
+            {estimatedDuration && (
+              <div>
+                <p className="text-sm text-muted-foreground">Estimated Duration</p>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium">{estimatedDuration} minutes</p>
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-600">
@@ -131,7 +136,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       </Card>
 
       {/* Property Information */}
-      {overview && (
+      {overview && (overview.property_type || overview.property_age || overview.property_size || overview.previous_service_date) && (
         <Card className="border-fixlyfy-border shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -176,63 +181,65 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       )}
 
       {/* Job Instructions */}
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            Instructions & Notes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {job.description && (
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Job Description</p>
-              <p className="mt-1">{job.description}</p>
-            </div>
-          )}
-          
-          {overview?.special_instructions && (
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Special Instructions</p>
-              <p className="mt-1">{overview.special_instructions}</p>
-            </div>
-          )}
-          
-          {overview?.client_requirements && (
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Client Requirements</p>
-              <p className="mt-1">{overview.client_requirements}</p>
-            </div>
-          )}
-          
-          {overview?.access_instructions && (
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Access Instructions</p>
-              <p className="mt-1">{overview.access_instructions}</p>
-            </div>
-          )}
-          
-          {overview?.safety_notes && (
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Safety Notes</p>
-              <p className="mt-1 text-red-600">{overview.safety_notes}</p>
-            </div>
-          )}
-          
-          {overview?.equipment_needed && overview.equipment_needed.length > 0 && (
-            <div>
-              <p className="text-sm text-muted-foreground font-medium">Equipment Needed</p>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {overview.equipment_needed.map((equipment, index) => (
-                  <Badge key={index} variant="outline" className="bg-blue-50 border-blue-200 text-blue-600">
-                    {equipment}
-                  </Badge>
-                ))}
+      {(job.description || overview?.special_instructions || overview?.client_requirements || overview?.access_instructions || overview?.safety_notes || (overview?.equipment_needed && overview.equipment_needed.length > 0)) && (
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Instructions & Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {job.description && (
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Job Description</p>
+                <p className="mt-1">{job.description}</p>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+            
+            {overview?.special_instructions && (
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Special Instructions</p>
+                <p className="mt-1">{overview.special_instructions}</p>
+              </div>
+            )}
+            
+            {overview?.client_requirements && (
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Client Requirements</p>
+                <p className="mt-1">{overview.client_requirements}</p>
+              </div>
+            )}
+            
+            {overview?.access_instructions && (
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Access Instructions</p>
+                <p className="mt-1">{overview.access_instructions}</p>
+              </div>
+            )}
+            
+            {overview?.safety_notes && (
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Safety Notes</p>
+                <p className="mt-1 text-red-600">{overview.safety_notes}</p>
+              </div>
+            )}
+            
+            {overview?.equipment_needed && overview.equipment_needed.length > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Equipment Needed</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {overview.equipment_needed.map((equipment, index) => (
+                    <Badge key={index} variant="outline" className="bg-blue-50 border-blue-200 text-blue-600">
+                      {equipment}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tags */}
       {job.tags && job.tags.length > 0 && (
