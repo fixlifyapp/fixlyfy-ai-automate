@@ -377,11 +377,11 @@ export const JobsCreateModal = ({
                         <SelectItem value="loading-clients" disabled>Loading clients...</SelectItem>
                       ) : clients.length > 0 ? (
                         clients
-                          .filter(client => client.id && client.id.trim() !== '')
+                          .filter(client => client.id && client.id.trim() !== '' && client.name && client.name.trim() !== '')
                           .map((client: Client) => (
                             <SelectItem 
                               key={client.id} 
-                              value={client.id || `client-${Math.random()}`}
+                              value={client.id}
                               className={cn(
                                 recentlyAddedClient === client.id && "bg-green-50 border-green-200"
                               )}
@@ -477,7 +477,7 @@ export const JobsCreateModal = ({
                             .map((jobType) => (
                               <SelectItem 
                                 key={jobType.id} 
-                                value={jobType.name || `jobtype-${jobType.id}`}
+                                value={jobType.name}
                                 className={cn(
                                   recentlyAddedJobType === jobType.name && "bg-green-50 border-green-200"
                                 )}
@@ -534,7 +534,7 @@ export const JobsCreateModal = ({
                             .map((source) => (
                               <SelectItem 
                                 key={source.id} 
-                                value={source.name || `leadsource-${source.id}`}
+                                value={source.name}
                                 className={cn(
                                   recentlyAddedLeadSource === source.name && "bg-green-50 border-green-200"
                                 )}
@@ -669,9 +669,9 @@ export const JobsCreateModal = ({
                           <SelectItem value="loading-technicians" disabled>Loading technicians...</SelectItem>
                         ) : technicians.length > 0 ? (
                           technicians
-                            .filter(tech => tech.id && tech.id.trim() !== '')
+                            .filter(tech => tech.id && tech.id.trim() !== '' && tech.name && tech.name.trim() !== '')
                             .map((tech) => (
-                              <SelectItem key={tech.id} value={tech.id || `tech-${Math.random()}`}>
+                              <SelectItem key={tech.id} value={tech.id}>
                                 {tech.name}
                               </SelectItem>
                             ))
@@ -804,7 +804,7 @@ export const JobsCreateModal = ({
                             .map(tag => (
                               <SelectItem 
                                 key={tag.id} 
-                                value={tag.name || `tag-${tag.id}`}
+                                value={tag.name}
                                 disabled={selectedTags.includes(tag.name || '')}
                               >
                                 {tag.name}
