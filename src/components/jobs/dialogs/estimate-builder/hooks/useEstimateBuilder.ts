@@ -1,435 +1,295 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Product, LineItem } from "@/components/jobs/builder/types";
-import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
+import { Estimate } from "@/hooks/useEstimates";
 
-// Define the function interface
-export interface UseEstimateBuilderProps {
-  estimateId: string | null;
-  open: boolean;
-  onSyncToInvoice?: (estimate?: any) => void;
-  jobId: string;
+interface EstimateFormData {
+  estimateId?: string;
+  estimateNumber: string;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxable: boolean;
+  }>;
+  notes: string;
+  status: string;
+  total: number;
 }
 
-export const useEstimateBuilder = ({
-  estimateId,
-  open,
-  onSyncToInvoice,
-  jobId
-}: UseEstimateBuilderProps) => {
-  const [estimateNumber, setEstimateNumber] = useState<string>("");
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [notes, setNotes] = useState<string>("");
-  const [taxRate, setTaxRate] = useState<number>(0);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
-  const [recommendedWarranty, setRecommendedWarranty] = useState<Product | null>(null);
-  const [techniciansNote, setTechniciansNote] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { generateUniqueNumber } = useEstimateInfo();
+export const useEstimateBuilder = (jobId: string) => {
+  const [formData, setFormData] = useState<EstimateFormData>({
+    estimateNumber: `EST-${Date.now()}`,
+    items: [],
+    notes: "",
+    status: "draft",
+    total: 0
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  // Function to calculate subtotal
-  const calculateSubtotal = useCallback(() => {
-    if (!Array.isArray(lineItems) || lineItems.length === 0) return 0;
-    return lineItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-  }, [lineItems]);
-
-  // Function to calculate total tax
-  const calculateTotalTax = useCallback(() => {
-    if (!Array.isArray(lineItems) || lineItems.length === 0) return 0;
-    return lineItems.reduce((sum, item) => {
-      const itemSubtotal = item.unitPrice * item.quantity;
-      return sum + (item.taxable ? itemSubtotal * (taxRate / 100) : 0);
-    }, 0);
-  }, [lineItems, taxRate]);
-
-  // Function to calculate grand total
-  const calculateGrandTotal = useCallback(() => {
-    return calculateSubtotal() + calculateTotalTax();
-  }, [calculateSubtotal, calculateTotalTax]);
-
-  // Function to calculate total margin
-  const calculateTotalMargin = useCallback(() => {
-    if (!Array.isArray(lineItems) || lineItems.length === 0) return 0;
-    return lineItems.reduce((sum, item) => {
-      const cost = (item.ourPrice || 0) * item.quantity;
-      const revenue = item.unitPrice * item.quantity;
-      return sum + (revenue - cost);
-    }, 0);
-  }, [lineItems]);
-
-  // Function to calculate margin percentage
-  const calculateMarginPercentage = useCallback(() => {
-    const totalMargin = calculateTotalMargin();
-    const subtotal = calculateSubtotal();
-    return subtotal > 0 ? (totalMargin / subtotal) * 100 : 0;
-  }, [calculateTotalMargin, calculateSubtotal]);
-
-  // Fetch estimate data from Supabase
-  const fetchEstimateData = async () => {
-    if (!estimateId) return;
-
-    setIsLoading(true);
-    try {
-      console.log("Fetching estimate data for id:", estimateId);
+  const updateFormData = useCallback((updates: Partial<EstimateFormData>) => {
+    setFormData(prev => {
+      const updated = { ...prev, ...updates };
       
-      // First, get the basic estimate data
-      const { data: estimateData, error } = await supabase
-        .from('estimates')
-        .select('*')
-        .eq('id', estimateId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching estimate:", error);
-        toast.error("Failed to load estimate");
-        return;
+      // Recalculate total when items change
+      if (updates.items) {
+        updated.total = updates.items.reduce((sum, item) => {
+          const itemTotal = item.quantity * item.unitPrice;
+          return sum + (item.taxable ? itemTotal * 1.13 : itemTotal); // 13% tax
+        }, 0);
       }
+      
+      return updated;
+    });
+  }, []);
 
-      if (estimateData) {
-        console.log("Fetched estimate data:", estimateData);
-        setEstimateNumber(estimateData.estimate_number);
-        setNotes(estimateData.notes || '');
-        
-        // Fetch the line items from line_items table
-        const { data: itemsData, error: itemsError } = await supabase
+  const initializeFromEstimate = useCallback((estimate: Estimate) => {
+    const getEstimateItems = async () => {
+      try {
+        const { data: lineItems, error } = await supabase
           .from('line_items')
           .select('*')
-          .eq('parent_type', 'estimate')
-          .eq('parent_id', estimateId);
+          .eq('parent_id', estimate.id)
+          .eq('parent_type', 'estimate');
           
-        if (itemsError) {
-          console.error("Error fetching estimate items:", itemsError);
-          toast.error("Failed to load estimate items");
-        } else if (itemsData) {
-          console.log("Fetched estimate items:", itemsData);
-          // Transform the items data into LineItem format
-          const transformedItems: LineItem[] = itemsData.map(item => ({
-            id: item.id,
-            name: item.description || "", // Add name property
-            description: item.description || "",
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            price: Number(item.unit_price),
-            discount: 0,
-            tax: item.taxable ? taxRate : 0,
-            total: Number(item.unit_price) * item.quantity,
-            ourPrice: 0, // Default value
-            taxable: item.taxable
-          }));
-          
-          setLineItems(transformedItems);
-        }
+        if (error) throw error;
         
-        // Default tax rate to 0 if not found
-        setTaxRate(0);
+        const items = lineItems?.map(item => ({
+          description: item.description || "",
+          quantity: item.quantity || 1,
+          unitPrice: item.unit_price || 0,
+          taxable: item.taxable || true
+        })) || [];
+        
+        updateFormData({
+          estimateId: estimate.id,
+          estimateNumber: estimate.estimate_number,
+          items,
+          notes: estimate.notes || "",
+          status: estimate.status,
+          total: estimate.total || 0
+        });
+      } catch (error) {
+        console.error("Error loading estimate items:", error);
+        toast.error("Failed to load estimate items");
       }
-    } catch (error) {
-      console.error("Error fetching estimate:", error);
-      toast.error("Failed to load estimate");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    
+    getEstimateItems();
+  }, [updateFormData]);
 
-  // Save estimate changes to Supabase
-  const saveEstimateChanges = async () => {
-    setIsLoading(true);
+  const resetForm = useCallback(() => {
+    setFormData({
+      estimateNumber: `EST-${Date.now()}`,
+      items: [],
+      notes: "",
+      status: "draft",
+      total: 0
+    });
+  }, []);
+
+  const createEstimate = useCallback(async (): Promise<Estimate | null> => {
+    if (isSubmitting) return null; // Prevent duplicate submissions
+    
+    setIsSubmitting(true);
+    
     try {
-      console.log("Saving estimate changes");
-      console.log("Line items to save:", lineItems);
+      // Create the estimate
+      const { data: estimate, error: estimateError } = await supabase
+        .from('estimates')
+        .insert({
+          job_id: jobId,
+          estimate_number: formData.estimateNumber,
+          total: formData.total,
+          status: formData.status,
+          notes: formData.notes
+        })
+        .select()
+        .single();
+        
+      if (estimateError) throw estimateError;
       
-      // Check if we have at least one line item
-      if (!Array.isArray(lineItems) || lineItems.length === 0) {
-        toast.error("Please add at least one item to the estimate");
-        setIsLoading(false);
-        return false;
-      }
-      
-      // If no estimate ID, create a new one
-      if (!estimateId) {
-        // Generate a new estimate number
-        const newEstimateNumber = estimateNumber || generateUniqueNumber('EST');
+      // Create line items
+      if (formData.items.length > 0) {
+        const lineItems = formData.items.map(item => ({
+          parent_id: estimate.id,
+          parent_type: 'estimate',
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }));
         
-        // Create the estimate
-        const { data: newEstimate, error: createError } = await supabase
-          .from('estimates')
-          .insert({
-            job_id: jobId,
-            estimate_number: newEstimateNumber,
-            notes: notes,
-            total: calculateGrandTotal(),
-            status: 'draft'
-          })
-          .select()
-          .single();
-        
-        if (createError) {
-          console.error("Error creating estimate:", createError);
-          toast.error("Failed to create estimate");
-          return false;
-        }
-        
-        console.log("Created new estimate:", newEstimate);
-        
-        // Now save all line items
-        if (lineItems.length > 0) {
-          const itemsToInsert = lineItems.map(item => ({
-            parent_id: newEstimate.id,
-            parent_type: 'estimate',
-            description: item.description || item.name || "",
-            unit_price: item.unitPrice,
-            quantity: item.quantity,
-            taxable: item.taxable
-          }));
+        const { error: lineItemsError } = await supabase
+          .from('line_items')
+          .insert(lineItems);
           
-          const { error: lineItemsError } = await supabase
-            .from('line_items')
-            .insert(itemsToInsert);
-            
-          if (lineItemsError) {
-            console.error("Error saving line items:", lineItemsError);
-            toast.error("Some line items may not have been saved");
-            return false;
-          }
-        }
-        
-        toast.success(`Estimate ${newEstimateNumber} created`);
-        return true;
+        if (lineItemsError) throw lineItemsError;
       }
       
-      // For existing estimate, update it
-      const { error } = await supabase
+      // Update form data with the created estimate ID
+      updateFormData({ estimateId: estimate.id });
+      
+      toast.success("Estimate created successfully");
+      return {
+        id: estimate.id,
+        job_id: estimate.job_id,
+        estimate_number: estimate.estimate_number,
+        date: estimate.date || estimate.created_at,
+        total: estimate.total,
+        status: estimate.status,
+        created_at: estimate.created_at,
+        updated_at: estimate.updated_at
+      };
+    } catch (error) {
+      console.error("Error creating estimate:", error);
+      toast.error("Failed to create estimate");
+      return null;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [jobId, formData, updateFormData, isSubmitting]);
+
+  const updateEstimate = useCallback(async (estimateId: string): Promise<Estimate | null> => {
+    if (isSubmitting) return null;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Update the estimate
+      const { data: estimate, error: estimateError } = await supabase
         .from('estimates')
         .update({
-          notes: notes,
-          total: calculateGrandTotal()
+          estimate_number: formData.estimateNumber,
+          total: formData.total,
+          status: formData.status,
+          notes: formData.notes
         })
-        .eq('id', estimateId);
-
-      if (error) {
-        console.error("Error updating estimate:", error);
-        toast.error("Failed to update estimate");
-        return false;
-      }
+        .eq('id', estimateId)
+        .select()
+        .single();
+        
+      if (estimateError) throw estimateError;
       
-      // Handle the line items using upsert and delete operations
-      // Get existing items for this estimate
-      const { data: existingItems, error: fetchError } = await supabase
+      // Delete existing line items
+      const { error: deleteError } = await supabase
         .from('line_items')
-        .select('id')
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', estimateId);
+        .delete()
+        .eq('parent_id', estimateId)
+        .eq('parent_type', 'estimate');
         
-      if (fetchError) {
-        console.error("Error fetching existing items:", fetchError);
-        toast.error("Failed to update estimate items");
-        return false;
-      }
+      if (deleteError) throw deleteError;
       
-      const existingItemIds = existingItems?.map(item => item.id) || [];
-      const currentItemIds = lineItems.map(item => item.id);
-      
-      // Find items to delete (in existing but not in current)
-      const itemsToDelete = existingItemIds.filter(id => !currentItemIds.includes(id));
-      
-      // Delete items not in our current list
-      if (itemsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('line_items')
-          .delete()
-          .in('id', itemsToDelete);
-          
-        if (deleteError) {
-          console.error("Error deleting removed items:", deleteError);
-          toast.error("Failed to remove some items from the estimate");
-          return false;
-        }
-      }
-      
-      // Now handle updates and inserts for each item
-      for (const item of lineItems) {
-        const isExisting = existingItemIds.includes(item.id);
-        
-        // Prepare item data for upsert
-        const itemData = {
-          id: item.id,
+      // Create new line items
+      if (formData.items.length > 0) {
+        const lineItems = formData.items.map(item => ({
           parent_id: estimateId,
           parent_type: 'estimate',
-          description: item.description || item.name || "",
-          unit_price: item.unitPrice,
+          description: item.description,
           quantity: item.quantity,
+          unit_price: item.unitPrice,
           taxable: item.taxable
-        };
+        }));
         
-        if (isExisting) {
-          // Update existing item
-          const { error: updateError } = await supabase
-            .from('line_items')
-            .update(itemData)
-            .eq('id', item.id)
-            .eq('parent_id', estimateId);
-            
-          if (updateError) {
-            console.error("Error updating item:", updateError, item);
-            toast.error("Failed to update some items");
-            return false;
-          }
-        } else {
-          // For new items, generate a proper UUID
-          if (item.id.startsWith('item-')) {
-            delete (itemData as any).id;
-          }
+        const { error: lineItemsError } = await supabase
+          .from('line_items')
+          .insert(lineItems);
           
-          // Insert new item
-          const { error: insertError } = await supabase
-            .from('line_items')
-            .insert(itemData);
-            
-          if (insertError) {
-            console.error("Error inserting new item:", insertError, item);
-            toast.error("Failed to add some new items");
-            return false;
-          }
-        }
+        if (lineItemsError) throw lineItemsError;
       }
-
-      toast.success(`Estimate ${estimateNumber} updated`);
-      return true;
+      
+      toast.success("Estimate updated successfully");
+      return {
+        id: estimate.id,
+        job_id: estimate.job_id,
+        estimate_number: estimate.estimate_number,
+        date: estimate.date || estimate.created_at,
+        total: estimate.total,
+        status: estimate.status,
+        created_at: estimate.created_at,
+        updated_at: estimate.updated_at
+      };
     } catch (error) {
-      console.error("Error saving estimate:", error);
-      toast.error("Failed to save estimate");
-      return false;
+      console.error("Error updating estimate:", error);
+      toast.error("Failed to update estimate");
+      return null;
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
+  }, [formData, isSubmitting]);
 
-  // Handle adding a product to the line items
-  const handleAddProduct = (product: Product) => {
-    console.log("Adding product to estimate:", product);
-    const newLineItem: LineItem = {
-      id: `item-${Date.now()}`,
-      name: product.name,
-      description: product.description || product.name,
-      quantity: product.quantity || 1,
-      unitPrice: product.price,
-      price: product.price,
-      discount: 0,
-      tax: 0,
-      total: product.price * (product.quantity || 1),
-      ourPrice: product.ourPrice || product.cost || 0,
-      taxable: product.taxable || true
-    };
-
-    setLineItems(prev => [...prev, newLineItem]);
-  };
-
-  // Handle removing a line item
-  const handleRemoveLineItem = (id: string) => {
-    setLineItems(prev => prev.filter((item) => item.id !== id));
-  };
-
-  // Handle updating a line item
-  const handleUpdateLineItem = (id: string | null, field: string, value: any) => {
-    if (id === null) {
-      // This is for global properties like notes or taxRate
-      if (field === "notes") {
-        setNotes(value);
-      } else if (field === "taxRate") {
-        setTaxRate(value);
-      }
-      return;
+  const sendEstimate = useCallback(async (
+    estimateId: string,
+    recipient: string,
+    method: 'email' | 'sms',
+    customMessage?: string
+  ) => {
+    if (isSending) {
+      toast.error("Estimate is already being sent");
+      return false;
     }
     
-    setLineItems(prev =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const updatedItem = { ...item, [field]: value };
-          
-          // Recalculate item total when quantity or price changes
-          if (field === "quantity" || field === "unitPrice") {
-            updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
-          }
-          
-          return updatedItem;
-        }
-        return item;
-      })
-    );
-  };
-
-  // Handle editing a line item
-  const handleEditLineItem = (id: string) => {
-    setSelectedLineItemId(id);
-    // Find the line item
-    const lineItem = lineItems.find(item => item.id === id);
-    if (lineItem) {
-      setSelectedProduct({
-        id: lineItem.id,
-        name: lineItem.name || lineItem.description,
-        description: lineItem.description,
-        category: "",
-        price: lineItem.unitPrice,
-        cost: lineItem.ourPrice || 0,
-        taxable: lineItem.taxable,
-        quantity: lineItem.quantity
-      });
-      return true;
-    }
-    return false;
-  };
-
-  // Handle sync to invoice
-  const handleSyncToInvoice = () => {
-    if (onSyncToInvoice) {
-      onSyncToInvoice();
-      toast.success("Estimate synced to invoice");
-    }
-  };
-
-  useEffect(() => {
-    if (open) {
-      if (estimateId) {
-        fetchEstimateData();
-      } else {
-        // Generate a new estimate number
-        const newEstimateNumber = generateUniqueNumber('EST');
-        setEstimateNumber(newEstimateNumber);
+    setIsSending(true);
+    
+    // Immediately show sending feedback
+    toast.info(`Sending estimate via ${method}...`, {
+      duration: 2000
+    });
+    
+    try {
+      // Get estimate details
+      const { data: estimateDetails, error: estimateError } = await supabase
+        .from('estimate_details_view')
+        .select('*')
+        .eq('estimate_id', estimateId)
+        .single();
         
-        // Clear the line items for a new estimate
-        setLineItems([]);
-      }
+      if (estimateError) throw estimateError;
+      
+      // Create communication record
+      const communicationData = {
+        estimate_id: estimateId,
+        communication_type: method,
+        recipient,
+        subject: method === 'email' ? `Estimate ${estimateDetails.estimate_number}` : null,
+        content: customMessage || `Your estimate ${estimateDetails.estimate_number} is ready for review.`,
+        status: 'pending',
+        estimate_number: estimateDetails.estimate_number,
+        client_name: estimateDetails.client_name,
+        client_email: estimateDetails.client_email,
+        client_phone: estimateDetails.client_phone
+      };
+      
+      const { error: commError } = await supabase
+        .from('estimate_communications')
+        .insert(communicationData);
+        
+      if (commError) throw commError;
+      
+      // Immediate success feedback
+      toast.success(`Estimate sent successfully via ${method}!`);
+      return true;
+    } catch (error) {
+      console.error("Error sending estimate:", error);
+      toast.error(`Failed to send estimate via ${method}`);
+      return false;
+    } finally {
+      setIsSending(false);
     }
-  }, [open, estimateId]);
+  }, [isSending]);
 
   return {
-    estimateNumber,
-    lineItems,
-    notes,
-    selectedProduct,
-    selectedLineItemId,
-    recommendedWarranty,
-    techniciansNote,
-    taxRate,
-    isLoading,
-    setTechniciansNote,
-    setRecommendedWarranty,
-    setLineItems,
-    handleAddProduct,
-    handleRemoveLineItem,
-    handleUpdateLineItem,
-    handleEditLineItem,
-    calculateSubtotal,
-    calculateTotalTax,
-    calculateGrandTotal,
-    calculateTotalMargin,
-    calculateMarginPercentage,
-    handleSyncToInvoice,
-    saveEstimateChanges,
-    setNotes,
-    setTaxRate
+    formData,
+    isSubmitting,
+    isSending,
+    updateFormData,
+    createEstimate,
+    updateEstimate,
+    sendEstimate,
+    resetForm,
+    initializeFromEstimate
   };
 };

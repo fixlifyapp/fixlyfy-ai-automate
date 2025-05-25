@@ -3,11 +3,14 @@ import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Receipt, Edit, Eye, Trash2, DollarSign } from "lucide-react";
+import { Plus, Receipt, Edit, Eye, Trash2, Send } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { InvoiceBuilderDialog } from "../dialogs/InvoiceBuilderDialog";
+import { InvoiceSendDialog } from "../dialogs/InvoiceSendDialog";
+import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
 import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
+import { useJobDetails } from "../context/JobDetailsContext";
 import { toast } from "sonner";
 
 interface ModernJobInvoicesTabProps {
@@ -15,15 +18,18 @@ interface ModernJobInvoicesTabProps {
 }
 
 export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
+  const { job } = useJobDetails();
   const { invoices, isLoading, refreshInvoices } = useInvoices(jobId);
   const { estimates } = useEstimates(jobId);
   const [isInvoiceBuilderOpen, setIsInvoiceBuilderOpen] = useState(false);
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const { sendInvoice } = useInvoiceBuilder(jobId);
 
-  // Real-time updates for invoices and payments
+  // Real-time updates for invoices, payments, and line_items
   useUnifiedRealtime({
-    tables: ['invoices', 'payments', 'line_items'],
+    tables: ['invoices', 'payments', 'line_items', 'invoice_communications'],
     onUpdate: () => {
       console.log("Real-time update for invoices/payments");
       if (refreshInvoices) {
@@ -45,6 +51,11 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     setIsInvoiceBuilderOpen(true);
   };
 
+  const handleSendInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setIsSendDialogOpen(true);
+  };
+
   const handleCreateNew = () => {
     setSelectedEstimate(null);
     setSelectedInvoice(null);
@@ -59,6 +70,16 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
       case 'draft': return 'bg-gray-100 text-gray-700 border-gray-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
+  };
+
+  // Get client info from job context
+  const getClientInfo = () => {
+    if (!job) return { email: '', phone: '' };
+    
+    return {
+      email: job.email || '',
+      phone: job.phone || ''
+    };
   };
 
   if (isLoading) {
@@ -165,6 +186,15 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleSendInvoice(invoice)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEditInvoice(invoice)}
                         >
                           <Edit className="h-4 w-4" />
@@ -199,6 +229,20 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
           // Real-time updates will handle the refresh automatically
         }}
       />
+
+      {selectedInvoice && (
+        <InvoiceSendDialog
+          open={isSendDialogOpen}
+          onOpenChange={setIsSendDialogOpen}
+          invoiceId={selectedInvoice.id}
+          invoiceNumber={selectedInvoice.number}
+          clientEmail={getClientInfo().email}
+          clientPhone={getClientInfo().phone}
+          onSend={async (recipient, method, message) => {
+            return await sendInvoice(selectedInvoice.id, recipient, method, message);
+          }}
+        />
+      )}
     </>
   );
 };

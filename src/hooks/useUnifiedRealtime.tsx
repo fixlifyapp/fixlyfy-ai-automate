@@ -3,7 +3,7 @@ import { useEffect, useCallback } from 'react';
 import { useGlobalRealtime } from '@/contexts/GlobalRealtimeProvider';
 
 interface UseUnifiedRealtimeProps {
-  tables: ('jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'line_items' | 'jobHistory' | 'job_custom_field_values' | 'tags' | 'job_types' | 'job_statuses' | 'custom_fields' | 'lead_sources')[];
+  tables: ('jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'line_items' | 'jobHistory' | 'job_custom_field_values' | 'tags' | 'job_types' | 'job_statuses' | 'custom_fields' | 'lead_sources' | 'invoice_communications' | 'estimate_communications')[];
   onUpdate: () => void;
   enabled?: boolean;
 }
@@ -40,7 +40,9 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
         'job_types': 'refreshJobTypes',
         'job_statuses': 'refreshJobStatuses',
         'custom_fields': 'refreshCustomFields',
-        'lead_sources': 'refreshLeadSources'
+        'lead_sources': 'refreshLeadSources',
+        'invoice_communications': 'refreshInvoices', // Invoice communications trigger invoices refresh
+        'estimate_communications': 'refreshEstimates' // Estimate communications trigger estimates refresh
       };
 
       const callbackName = tableCallbackMap[table];

@@ -33,6 +33,7 @@ export const useInvoiceBuilder = (jobId: string) => {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const updateFormData = useCallback((updates: Partial<InvoiceFormData>) => {
     setFormData(prev => {
@@ -135,6 +136,8 @@ export const useInvoiceBuilder = (jobId: string) => {
   }, []);
 
   const createInvoice = useCallback(async (): Promise<Invoice | null> => {
+    if (isSubmitting) return null; // Prevent duplicate submissions
+    
     setIsSubmitting(true);
     
     try {
@@ -194,9 +197,11 @@ export const useInvoiceBuilder = (jobId: string) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [jobId, formData, updateFormData]);
+  }, [jobId, formData, updateFormData, isSubmitting]);
 
   const updateInvoice = useCallback(async (invoiceId: string): Promise<Invoice | null> => {
+    if (isSubmitting) return null;
+    
     setIsSubmitting(true);
     
     try {
@@ -261,7 +266,67 @@ export const useInvoiceBuilder = (jobId: string) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData]);
+  }, [formData, isSubmitting]);
+
+  const sendInvoice = useCallback(async (
+    invoiceId: string,
+    recipient: string,
+    method: 'email' | 'sms',
+    customMessage?: string
+  ) => {
+    if (isSending) {
+      toast.error("Invoice is already being sent");
+      return false;
+    }
+    
+    setIsSending(true);
+    
+    // Immediately show sending feedback
+    toast.info(`Sending invoice via ${method}...`, {
+      duration: 2000
+    });
+    
+    try {
+      // Get invoice details
+      const { data: invoiceDetails, error: invoiceError } = await supabase
+        .from('invoice_details_view')
+        .select('*')
+        .eq('invoice_id', invoiceId)
+        .single();
+        
+      if (invoiceError) throw invoiceError;
+      
+      // Create communication record
+      const communicationData = {
+        invoice_id: invoiceId,
+        communication_type: method,
+        recipient,
+        subject: method === 'email' ? `Invoice ${invoiceDetails.invoice_number}` : null,
+        content: customMessage || `Your invoice ${invoiceDetails.invoice_number} is ready for payment.`,
+        status: 'pending',
+        invoice_number: invoiceDetails.invoice_number,
+        client_name: invoiceDetails.client_name,
+        client_email: invoiceDetails.client_email,
+        client_phone: invoiceDetails.client_phone
+      };
+      
+      const { error: commError } = await supabase
+        .from('invoice_communications')
+        .insert(communicationData);
+        
+      if (commError) throw commError;
+      
+      // Immediate success feedback
+      toast.success(`Invoice sent successfully via ${method}!`);
+      return true;
+    } catch (error) {
+      console.error("Error sending invoice:", error);
+      toast.error(`Failed to send invoice via ${method}`);
+      return false;
+    } finally {
+      setIsSending(false);
+    }
+  }, [isSending]);
 
   const recordPayment = useCallback(async (
     invoiceId: string, 
@@ -308,9 +373,11 @@ export const useInvoiceBuilder = (jobId: string) => {
   return {
     formData,
     isSubmitting,
+    isSending,
     updateFormData,
     createInvoice,
     updateInvoice,
+    sendInvoice,
     recordPayment,
     resetForm,
     initializeFromEstimate,
