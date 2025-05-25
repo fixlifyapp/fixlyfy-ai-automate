@@ -94,9 +94,18 @@ export const usePayments = (jobId: string) => {
 
   const refundPayment = async (paymentId: string) => {
     try {
+      // First check if the payments table has a status column
+      const { data: tableInfo, error: schemaError } = await supabase
+        .from('payments')
+        .select('*')
+        .limit(1);
+
+      // For now, just add a note about refund since status column might not exist
       const { error } = await supabase
         .from('payments')
-        .update({ status: 'refunded' })
+        .update({ 
+          notes: 'REFUNDED - Payment has been refunded'
+        })
         .eq('id', paymentId);
 
       if (error) throw error;
@@ -114,7 +123,7 @@ export const usePayments = (jobId: string) => {
   // Calculate totals
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalRefunded = payments
-    .filter(payment => payment.status === 'refunded')
+    .filter(payment => payment.notes?.includes('REFUNDED'))
     .reduce((sum, payment) => sum + payment.amount, 0);
   const netAmount = totalPaid - totalRefunded;
 

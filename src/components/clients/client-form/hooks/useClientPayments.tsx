@@ -1,8 +1,6 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { PaymentMethod, PaymentStatus } from "@/types/payment";
 import { useClientPaymentsRealtime } from "./useClientPaymentsRealtime";
 
 export interface ClientPayment {

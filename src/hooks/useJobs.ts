@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -14,7 +15,7 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
-export const useJobs = () => {
+export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,9 +29,14 @@ export const useJobs = () => {
         .from('jobs')
         .select(`*, 
           clients ( name, id ), 
-          estimates ( id, total_amount ), 
-          invoices ( id, total_amount )
+          estimates ( id, total ), 
+          invoices ( id, total )
         `, { count: 'exact' });
+
+      // Apply client filter if provided
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
 
       if (filters.status) {
         query = query.eq('status', filters.status);
@@ -38,20 +44,17 @@ export const useJobs = () => {
       if (filters.priority) {
         query = query.eq('priority', filters.priority);
       }
-      if (filters.clientId) {
-        query = query.eq('client_id', filters.clientId);
-      }
       if (filters.propertyId) {
         query = query.eq('property_id', filters.propertyId);
       }
 
       if (filters.startDate && filters.endDate) {
-        query = query.gte('start_date', filters.startDate.toISOString());
-        query = query.lte('start_date', filters.endDate.toISOString());
+        query = query.gte('date', filters.startDate.toISOString());
+        query = query.lte('date', filters.endDate.toISOString());
       } else if (filters.startDate) {
-        query = query.gte('start_date', filters.startDate.toISOString());
+        query = query.gte('date', filters.startDate.toISOString());
       } else if (filters.endDate) {
-        query = query.lte('start_date', filters.endDate.toISOString());
+        query = query.lte('date', filters.endDate.toISOString());
       }
 
       if (filters.query) {
@@ -80,9 +83,88 @@ export const useJobs = () => {
     }
   };
 
+  const addJob = async (jobData: Partial<Job>) => {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .insert([jobData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Job created successfully"
+      });
+
+      await fetchJobs();
+      return data;
+    } catch (error: any) {
+      console.error("Error creating job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create job",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const updateJob = async (jobId: string, updates: Partial<Job>) => {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .update(updates)
+        .eq('id', jobId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await fetchJobs();
+      return data;
+    } catch (error: any) {
+      console.error("Error updating job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update job",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const deleteJob = async (jobId: string) => {
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Job deleted successfully"
+      });
+
+      await fetchJobs();
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete job",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchJobs();
-  }, [filters]);
+  }, [filters, clientId]);
 
   // Set up real-time updates
   useRealtimeSync({
@@ -104,6 +186,11 @@ export const useJobs = () => {
     totalJobs,
     filters,
     updateFilters,
+    addJob,
+    updateJob,
+    deleteJob,
     refreshJobs: fetchJobs
   };
 };
+
+export type { Job };

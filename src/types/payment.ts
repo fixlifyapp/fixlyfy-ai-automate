@@ -9,7 +9,10 @@ export interface Payment {
   reference?: string;
   status?: string;
   client_id?: string;
+  clientId?: string; // For compatibility
+  clientName?: string; // For display purposes
   job_id?: string;
+  jobId?: string; // For compatibility
   job_title?: string;
   invoice_number?: string;
   technician_id?: string;
@@ -25,3 +28,4 @@ export interface PaymentInput {
 }
 
 export type PaymentMethod = 'credit-card' | 'cash' | 'cheque' | 'e-transfer';
+export type PaymentStatus = 'paid' | 'refunded' | 'disputed' | 'pending';
