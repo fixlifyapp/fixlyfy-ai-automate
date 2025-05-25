@@ -3,21 +3,19 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
-import { JobDetails } from "@/components/jobs/JobDetails";
-import { JobHistory } from "@/components/jobs/JobHistory";
 import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
 import { JobDetailsQuickActions } from "@/components/jobs/JobDetailsQuickActions";
 import { TabsContent } from "@/components/ui/tabs";
-import { JobPayments } from "@/components/jobs/JobPayments";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { JobEstimatesTab } from "@/components/jobs/JobEstimatesTab";
-import { JobInvoices } from "@/components/jobs/JobInvoices";
 import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { toast } from "sonner";
 import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
-import { JobCustomFieldsDisplay } from "@/components/jobs/JobCustomFieldsDisplay";
 import { JobOverview } from "@/components/jobs/JobOverview";
+import { ModernJobEstimatesTab } from "@/components/jobs/overview/ModernJobEstimatesTab";
+import { ModernJobInvoicesTab } from "@/components/jobs/overview/ModernJobInvoicesTab";
+import { ModernJobPaymentsTab } from "@/components/jobs/overview/ModernJobPaymentsTab";
+import { ModernJobHistoryTab } from "@/components/jobs/overview/ModernJobHistoryTab";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,19 +24,15 @@ const JobDetailsPage = () => {
   const { hasPermission } = useRBAC();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
-  // Check for activeTab in location state when component mounts or location changes
   useEffect(() => {
     if (location.state && location.state.activeTab) {
       setActiveTab(location.state.activeTab);
-      
-      // Clear the state to prevent persistent tab selection on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location]);
   
-  // Handle unified realtime updates for this job and all related data
   useUnifiedRealtime({
-    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients', 'job_custom_field_values'],
+    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients', 'job_custom_field_values', 'job_attachments'],
     onUpdate: () => {
       console.log("Unified realtime update triggered for job details");
       setRefreshTrigger(prev => prev + 1);
@@ -46,9 +40,7 @@ const JobDetailsPage = () => {
     enabled: !!id
   });
   
-  // Handle estimate conversion
   const handleEstimateConverted = () => {
-    // Switch to invoices tab
     setActiveTab("invoices");
   };
   
@@ -72,16 +64,16 @@ const JobDetailsPage = () => {
                   <JobOverview jobId={id || ""} />
                 </TabsContent>
                 <TabsContent value="estimates">
-                  <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+                  <ModernJobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
                 </TabsContent>
                 <TabsContent value="invoices">
-                  <JobInvoices jobId={id || ""} />
+                  <ModernJobInvoicesTab jobId={id || ""} />
                 </TabsContent>
                 <TabsContent value="payments">
-                  <JobPayments jobId={id || ""} />
+                  <ModernJobPaymentsTab jobId={id || ""} />
                 </TabsContent>
                 <TabsContent value="history">
-                  <JobHistory jobId={id || ""} />
+                  <ModernJobHistoryTab jobId={id || ""} />
                 </TabsContent>
               </JobDetailsTabs>
             </div>

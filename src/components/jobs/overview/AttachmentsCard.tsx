@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Paperclip, Upload, Download, Trash2, Plus, Eye } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Paperclip, Upload, Download, Trash2, Plus, FileText, Image, Film } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useJobAttachments } from "@/hooks/useJobAttachments";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ interface Attachment {
   file_path: string;
   file_size: number;
   created_at: string;
+  mime_type?: string;
 }
 
 interface AttachmentsCardProps {
@@ -37,20 +39,11 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
         .from('job_attachments')
         .select('*')
         .eq('job_id', jobId)
-        .order('uploaded_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Map uploaded_at to created_at for the interface
-      const mappedData = (data || []).map(item => ({
-        id: item.id,
-        file_name: item.file_name,
-        file_path: item.file_path,
-        file_size: item.file_size,
-        created_at: item.uploaded_at
-      }));
-      
-      setAttachments(mappedData);
+      setAttachments(data || []);
     } catch (error) {
       console.error('Error fetching attachments:', error);
       toast.error('Failed to load attachments');
@@ -71,7 +64,6 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
     if (success) {
       setSelectedFiles([]);
       fetchAttachments();
-      // Clear the input
       const input = document.getElementById('file-input') as HTMLInputElement;
       if (input) input.value = '';
     }
@@ -101,14 +93,12 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
 
   const handleDelete = async (attachment: Attachment) => {
     try {
-      // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('job-attachments')
         .remove([attachment.file_path]);
 
       if (storageError) throw storageError;
 
-      // Delete from database
       const { error: dbError } = await supabase
         .from('job_attachments')
         .delete()
@@ -131,13 +121,24 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const getFileIcon = (fileName: string, mimeType?: string) => {
+    if (mimeType?.startsWith('image/')) {
+      return <Image className="h-4 w-4 text-blue-500" />;
+    }
+    if (mimeType?.startsWith('video/')) {
+      return <Film className="h-4 w-4 text-purple-500" />;
+    }
+    return <FileText className="h-4 w-4 text-gray-500" />;
+  };
+
   if (isLoading) {
     return (
       <ModernCard variant="elevated">
-        <ModernCardContent>
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <ModernCardContent className="p-6">
+          <div className="space-y-3">
+            {[1, 2].map(i => (
+              <Skeleton key={i} className="w-full h-16" />
+            ))}
           </div>
         </ModernCardContent>
       </ModernCard>
@@ -206,18 +207,20 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
         )}
 
         {attachments.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">
-            No attachments yet
-          </p>
+          <div className="text-center py-8 text-muted-foreground">
+            <Paperclip className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-lg font-medium">No attachments yet</p>
+            <p className="text-sm">Upload files to keep job documentation organized</p>
+          </div>
         ) : (
           <div className="space-y-2">
             {attachments.map((attachment) => (
               <div
                 key={attachment.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <Paperclip className="h-4 w-4 text-gray-400" />
+                  {getFileIcon(attachment.file_name, attachment.mime_type)}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {attachment.file_name}
