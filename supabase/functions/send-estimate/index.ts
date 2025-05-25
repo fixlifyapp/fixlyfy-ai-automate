@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -26,6 +25,77 @@ interface SendEstimateRequest {
   communicationId?: string;
 }
 
+const generateEstimateEmailHTML = (estimateNumber: string, clientName: string, estimateData: any) => {
+  const { lineItems, total, taxRate, notes, viewUrl } = estimateData;
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const taxAmount = subtotal * (taxRate / 100);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Estimate ${estimateNumber}</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .estimate-number { color: #007bff; font-size: 24px; font-weight: bold; }
+            .line-items { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .line-items th, .line-items td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            .line-items th { background: #f8f9fa; font-weight: bold; }
+            .totals { text-align: right; margin: 20px 0; }
+            .total-row { font-weight: bold; font-size: 18px; color: #007bff; }
+            .view-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .notes { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Estimate <span class="estimate-number">${estimateNumber}</span></h1>
+            <p>Dear ${clientName},</p>
+            <p>Please find your estimate details below. We appreciate the opportunity to serve you!</p>
+        </div>
+
+        <table class="line-items">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${lineItems.map(item => `
+                    <tr>
+                        <td>${item.description}</td>
+                        <td>${item.quantity}</td>
+                        <td>$${item.unitPrice.toFixed(2)}</td>
+                        <td>$${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <p>Subtotal: $${subtotal.toFixed(2)}</p>
+            <p>Tax (${taxRate}%): $${taxAmount.toFixed(2)}</p>
+            <p class="total-row">Total: $${total.toFixed(2)}</p>
+        </div>
+
+        ${notes ? `<div class="notes"><strong>Notes:</strong><br>${notes}</div>` : ''}
+
+        ${viewUrl ? `<a href="${viewUrl}" class="view-button">View Full Estimate Online</a>` : ''}
+
+        <p>If you have any questions about this estimate, please don't hesitate to contact us.</p>
+        
+        <p>Thank you for your business!</p>
+    </body>
+    </html>
+  `;
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -51,7 +121,59 @@ serve(async (req) => {
 
     let result;
 
-    if (method === 'sms') {
+    if (method === 'email') {
+      // Send via SendGrid
+      if (!Deno.env.get('SENDGRID_API_KEY')) {
+        throw new Error('SendGrid API key not configured');
+      }
+
+      const subject = `Estimate ${estimateNumber} - $${estimateData.total.toFixed(2)}`;
+      const html = generateEstimateEmailHTML(estimateNumber, clientName || 'Valued Customer', estimateData);
+      
+      console.log("Sending email to:", recipient);
+      console.log("Email subject:", subject);
+
+      // Call our send-email function
+      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: recipient,
+          subject: subject,
+          html: html,
+          text: `Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}. ${estimateData.viewUrl ? `View online: ${estimateData.viewUrl}` : ''}`
+        })
+      });
+
+      const emailData = await emailResponse.json();
+
+      if (!emailResponse.ok || !emailData.success) {
+        console.error("Email sending error:", emailData);
+        throw new Error(`Email sending failed: ${emailData.error || 'Unknown error'}`);
+      }
+
+      console.log('Email sent successfully');
+
+      // Update communication record
+      if (communicationId) {
+        await supabase
+          .from('estimate_communications')
+          .update({
+            status: 'delivered',
+            delivered_at: new Date().toISOString()
+          })
+          .eq('id', communicationId);
+      }
+
+      result = {
+        success: true,
+        message: 'Estimate sent via email successfully'
+      };
+
+    } else if (method === 'sms') {
       // Send via Twilio SMS
       if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
         throw new Error('Missing Twilio credentials');
@@ -107,32 +229,6 @@ serve(async (req) => {
         success: true,
         message: 'Estimate sent via SMS successfully',
         sid: twilioData.sid,
-      };
-
-    } else if (method === 'email') {
-      // For now, we'll simulate email sending since SendGrid is not configured
-      // In the future, this could be connected to SendGrid or another email service
-      
-      console.log('Email sending requested but not yet implemented');
-      console.log('Would send email to:', recipient);
-      console.log('Email subject: Estimate', estimateNumber);
-      
-      // Update communication record as delivered (simulated)
-      if (communicationId) {
-        await supabase
-          .from('estimate_communications')
-          .update({
-            status: 'delivered',
-            delivered_at: new Date().toISOString()
-          })
-          .eq('id', communicationId);
-      }
-
-      // For now, return success but indicate email is not fully implemented
-      result = {
-        success: true,
-        message: 'Email functionality not yet implemented - estimate link created',
-        note: 'SMS is currently the recommended method for sending estimates'
       };
     } else {
       throw new Error('Invalid send method');
