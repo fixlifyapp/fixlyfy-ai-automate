@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -67,11 +68,6 @@ export const EstimateBuilderDialog = ({
     onSyncToInvoice,
     jobId
   });
-  
-  // Set tax rate to 13% fixed
-  if (estimateBuilder.taxRate !== 13) {
-    estimateBuilder.setTaxRate(13);
-  }
   
   const handleProductSelect = (product: Product) => {
     estimateBuilder.handleAddProduct(product);
@@ -174,6 +170,18 @@ export const EstimateBuilderDialog = ({
       }
     }
   };
+
+  // Wrapper function to match the expected signature for EstimateForm
+  const handleUpdateLineItemWrapper = (id: string, field: string, value: any) => {
+    const updates: Partial<LineItem> = { [field]: value };
+    estimateBuilder.handleUpdateLineItem(id, updates);
+  };
+
+  // Wrapper function to match the expected signature for EstimateSendDialog
+  const handleSaveEstimateWrapper = async (): Promise<boolean> => {
+    const result = await estimateBuilder.saveEstimateChanges();
+    return result !== null;
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,7 +241,7 @@ export const EstimateBuilderDialog = ({
                   estimateNumber={estimateBuilder.estimateNumber}
                   lineItems={estimateBuilder.lineItems || []}
                   onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
-                  onUpdateLineItem={estimateBuilder.handleUpdateLineItem}
+                  onUpdateLineItem={handleUpdateLineItemWrapper}
                   onEditLineItem={handleEditLineItem}
                   onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
                   onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
@@ -304,7 +312,7 @@ export const EstimateBuilderDialog = ({
       <EstimateSendDialog
         open={isSendDialogOpen}
         onOpenChange={setIsSendDialogOpen}
-        onSave={estimateBuilder.saveEstimateChanges}
+        onSave={handleSaveEstimateWrapper}
         onAddWarranty={handleAddWarranty}
         clientInfo={clientInfo || jobData?.client}
         estimateNumber={estimateBuilder.estimateNumber}
