@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -54,33 +53,41 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   
-  // Use refs to prevent duplicate subscriptions
+  // Use refs to prevent duplicate subscriptions and excessive refreshes
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
   const lastRefreshRef = useRef<number>(0);
-
-  // Debounced refresh to prevent excessive calls
   const refreshTimeoutRef = useRef<NodeJS.Timeout>();
+  const isMountedRef = useRef(true);
+
+  // Much more aggressive debouncing to prevent excessive API calls
   const debouncedRefresh = useCallback(() => {
     const now = Date.now();
-    if (now - lastRefreshRef.current < 1000) {
-      return; // Prevent rapid successive calls
+    const timeSinceLastRefresh = now - lastRefreshRef.current;
+    
+    // Prevent refreshes more frequent than every 2 seconds
+    if (timeSinceLastRefresh < 2000) {
+      console.log('Skipping refresh - too frequent');
+      return;
     }
     
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
+    
     refreshTimeoutRef.current = setTimeout(() => {
-      lastRefreshRef.current = Date.now();
-      refreshConversations();
-    }, 500);
+      if (isMountedRef.current) {
+        lastRefreshRef.current = Date.now();
+        refreshConversations();
+      }
+    }, 1000); // 1 second delay
   }, []);
 
-  // Centralized real-time subscription with better error handling
+  // Single real-time subscription with better cleanup
   useEffect(() => {
     if (isSubscribedRef.current) return;
     
-    console.log('Setting up centralized real-time messaging...');
+    console.log('Setting up real-time messaging subscription...');
     
     // Clean up any existing channel
     if (channelRef.current) {
@@ -88,12 +95,12 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     
     const messagesChannel = supabase
-      .channel('unified-messages-v3')
+      .channel('unified-messages-v4') // Changed version to force new subscription
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('Message change detected:', payload);
+          console.log('Message change detected:', payload.eventType);
           debouncedRefresh();
         }
       )
@@ -101,7 +108,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations' },
         (payload) => {
-          console.log('Conversation change detected:', payload);
+          console.log('Conversation change detected:', payload.eventType);
           debouncedRefresh();
         }
       )
@@ -116,6 +123,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => {
       console.log('Cleaning up real-time subscriptions...');
+      isMountedRef.current = false;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -125,11 +133,18 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       isSubscribedRef.current = false;
     };
-  }, []); // Remove debouncedRefresh from dependencies to prevent re-subscriptions
+  }, []); // Remove debouncedRefresh from dependencies
 
   const refreshConversations = useCallback(async () => {
+    // Don't refresh if already loading or if component is unmounted
+    if (isLoading || !isMountedRef.current) {
+      return;
+    }
+
     try {
       console.log('Refreshing conversations...');
+      setIsLoading(true);
+      
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
@@ -145,7 +160,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      if (conversationsData) {
+      if (conversationsData && isMountedRef.current) {
         const formattedConversations = await Promise.all(
           conversationsData.map(async (conv) => {
             const { data: messages, error: messagesError } = await supabase
@@ -186,19 +201,28 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         );
 
         const validConversations = formattedConversations.filter(conv => conv !== null) as Conversation[];
-        setConversations(validConversations);
+        
+        if (isMountedRef.current) {
+          setConversations(validConversations);
 
-        // Update active conversation if it exists
-        if (activeConversation) {
-          const updatedActive = validConversations.find(c => c.id === activeConversation.id);
-          if (updatedActive) {
-            setActiveConversation(updatedActive);
+          // Update active conversation if it exists
+          if (activeConversation) {
+            const updatedActive = validConversations.find(c => c.id === activeConversation.id);
+            if (updatedActive) {
+              setActiveConversation(updatedActive);
+            }
           }
         }
       }
     } catch (error) {
       console.error('Error refreshing conversations:', error);
-      toast.error('Failed to refresh conversations');
+      if (isMountedRef.current) {
+        toast.error('Failed to refresh conversations');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [activeConversation]);
 
@@ -386,7 +410,12 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         toast.success("Message sent successfully");
         
-        setTimeout(() => refreshConversations(), 100);
+        // Trigger a refresh after a short delay
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            debouncedRefresh();
+          }
+        }, 500);
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
@@ -394,12 +423,12 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setIsSending(false);
     }
-  }, [activeConversation, isSending, findOrCreateConversation, refreshConversations]);
+  }, [activeConversation, isSending, findOrCreateConversation, debouncedRefresh]);
 
-  // Load conversations on mount
+  // Load conversations on mount with a single call
   useEffect(() => {
     refreshConversations();
-  }, [refreshConversations]);
+  }, []); // Only run once on mount
 
   return (
     <MessageContext.Provider value={{
@@ -411,7 +440,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       openMessageDialog,
       closeMessageDialog,
       sendMessage,
-      refreshConversations
+      refreshConversations: debouncedRefresh
     }}>
       {children}
     </MessageContext.Provider>

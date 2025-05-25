@@ -5,6 +5,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
 const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
 const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+const sendGridApiKey = Deno.env.get('SENDGRID_API_KEY');
+
+console.log("=== EDGE FUNCTION ENVIRONMENT CHECK ===");
+console.log("Twilio Account SID:", twilioAccountSid ? "SET" : "MISSING");
+console.log("Twilio Auth Token:", twilioAuthToken ? "SET" : "MISSING");
+console.log("Twilio Phone Number:", twilioPhoneNumber ? "SET" : "MISSING");
+console.log("SendGrid API Key:", sendGridApiKey ? "SET" : "MISSING");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -109,12 +116,23 @@ const generateEstimateEmailHTML = (estimateNumber: string, clientName: string, e
 };
 
 serve(async (req) => {
+  console.log("=== ESTIMATE SEND REQUEST RECEIVED ===");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const requestBody = await req.text();
+    console.log("Raw request body:", requestBody);
+    
+    const parsedBody = JSON.parse(requestBody);
+    console.log("Parsed request body:", parsedBody);
+
     const { 
       method, 
       recipient, 
@@ -122,28 +140,35 @@ serve(async (req) => {
       estimateData, 
       clientName,
       communicationId 
-    }: SendEstimateRequest = await req.json();
+    }: SendEstimateRequest = parsedBody;
 
-    console.log(`Sending estimate ${estimateNumber} via ${method} to ${recipient}`);
+    console.log(`Processing request: method=${method}, recipient=${recipient}, estimate=${estimateNumber}`);
 
     // Create Supabase client for database operations
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase configuration');
+    }
 
+    const supabase = createClient(supabaseUrl, supabaseKey);
     let result;
 
     if (method === 'email') {
-      // Send via SendGrid
-      if (!Deno.env.get('SENDGRID_API_KEY')) {
+      console.log("=== PROCESSING EMAIL SEND ===");
+      
+      if (!sendGridApiKey) {
         throw new Error('SendGrid API key not configured');
       }
 
       const subject = `Estimate ${estimateNumber} - $${estimateData.total.toFixed(2)}`;
       const html = generateEstimateEmailHTML(estimateNumber, clientName || 'Valued Customer', estimateData);
       
-      console.log("Sending email to:", recipient);
-      console.log("Email subject:", subject);
+      console.log("Email details:");
+      console.log("- To:", recipient);
+      console.log("- Subject:", subject);
+      console.log("- Has portal link:", !!estimateData.portalLoginLink);
 
       // Call our send-email function
       const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
@@ -161,9 +186,10 @@ serve(async (req) => {
       });
 
       const emailData = await emailResponse.json();
+      console.log("Email response:", emailData);
 
       if (!emailResponse.ok || !emailData.success) {
-        console.error("Email sending error:", emailData);
+        console.error("Email sending failed:", emailData);
         throw new Error(`Email sending failed: ${emailData.error || 'Unknown error'}`);
       }
 
@@ -171,13 +197,15 @@ serve(async (req) => {
 
       // Update communication record
       if (communicationId) {
-        await supabase
+        const updateResult = await supabase
           .from('estimate_communications')
           .update({
             status: 'delivered',
             delivered_at: new Date().toISOString()
           })
           .eq('id', communicationId);
+        
+        console.log("Communication update result:", updateResult);
       }
 
       result = {
@@ -186,28 +214,30 @@ serve(async (req) => {
       };
 
     } else if (method === 'sms') {
-      // Send via Twilio SMS
+      console.log("=== PROCESSING SMS SEND ===");
+      
       if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
+        console.error("Missing Twilio credentials");
         throw new Error('Missing Twilio credentials');
       }
 
       const formattedTo = recipient.startsWith('+') ? recipient : `+1${recipient.replace(/\D/g, '')}`;
       
-      // Create SMS message with viewing link and portal access
       let message = `Hi ${clientName || 'there'}! Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}.`;
       
-      // Add view URL if available
       if (estimateData.viewUrl) {
         message += ` View estimate: ${estimateData.viewUrl}`;
       }
       
-      // Add portal login link if available
       if (estimateData.portalLoginLink) {
         message += ` Secure portal (approve/reject): ${estimateData.portalLoginLink}`;
       }
 
-      console.log("Sending SMS to:", formattedTo);
-      console.log("SMS content:", message);
+      console.log("SMS details:");
+      console.log("- To:", formattedTo);
+      console.log("- From:", twilioPhoneNumber);
+      console.log("- Message length:", message.length);
+      console.log("- Has portal link:", !!estimateData.portalLoginLink);
 
       const twilioResponse = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
@@ -226,17 +256,18 @@ serve(async (req) => {
       );
 
       const twilioData = await twilioResponse.json();
+      console.log("Twilio response:", twilioData);
 
       if (!twilioResponse.ok) {
-        console.error("Twilio error response:", twilioData);
+        console.error("Twilio API error:", twilioData);
         throw new Error(`Twilio API error: ${twilioData.message || JSON.stringify(twilioData)}`);
       }
 
-      console.log('SMS sent successfully:', twilioData.sid);
+      console.log('SMS sent successfully with SID:', twilioData.sid);
 
       // Update communication record
       if (communicationId) {
-        await supabase
+        const updateResult = await supabase
           .from('estimate_communications')
           .update({
             status: 'delivered',
@@ -244,6 +275,8 @@ serve(async (req) => {
             provider_message_id: twilioData.sid
           })
           .eq('id', communicationId);
+        
+        console.log("Communication update result:", updateResult);
       }
 
       result = {
@@ -254,6 +287,9 @@ serve(async (req) => {
     } else {
       throw new Error('Invalid send method');
     }
+
+    console.log("=== ESTIMATE SEND COMPLETED SUCCESSFULLY ===");
+    console.log("Final result:", result);
 
     return new Response(
       JSON.stringify(result),
@@ -266,7 +302,10 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in send-estimate function:', error);
+    console.error('=== ERROR IN SEND-ESTIMATE FUNCTION ===');
+    console.error('Error details:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     return new Response(
       JSON.stringify({ 

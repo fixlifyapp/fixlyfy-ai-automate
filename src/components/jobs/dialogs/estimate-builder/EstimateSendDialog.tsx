@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -60,34 +61,24 @@ type SendStep = "warranty" | "send-method" | "confirmation";
 // Utility function to format phone number for Twilio
 const formatPhoneForTwilio = (phoneNumber: string): string => {
   if (!phoneNumber) return "";
-  
-  // Remove all non-numeric characters
   const cleaned = phoneNumber.replace(/\D/g, '');
-  
-  // If it's already in international format with country code, return as is
   if (cleaned.startsWith('1') && cleaned.length === 11) {
     return `+${cleaned}`;
   }
-  
-  // If it's a 10-digit US number, add +1
   if (cleaned.length === 10) {
     return `+1${cleaned}`;
   }
-  
-  // If it already has a country code but no +, add it
   if (cleaned.length > 10) {
     return `+${cleaned}`;
   }
-  
   console.warn("Invalid phone number format:", phoneNumber);
-  return phoneNumber; // Return original if we can't format it
+  return phoneNumber;
 };
 
-// Simplified validation functions
 const isValidPhoneNumber = (phoneNumber: string): boolean => {
   if (!phoneNumber) return false;
   const cleaned = phoneNumber.replace(/\D/g, '');
-  return cleaned.length >= 10; // At least 10 digits
+  return cleaned.length >= 10;
 };
 
 const isValidEmail = (email: string): boolean => {
@@ -129,7 +120,6 @@ export const EstimateSendDialog = ({
     try {
       console.log("Fetching estimate details for estimate number:", estimateNumber);
       
-      // First try to fetch from the view
       const { data: details, error: detailsError } = await supabase
         .from('estimate_details_view')
         .select('*')
@@ -142,18 +132,14 @@ export const EstimateSendDialog = ({
 
       console.log("Estimate details from view:", details);
 
-      // If we have details from view, use them
       if (details) {
         setEstimateDetails(details);
-        
-        // Update client info with the fetched data
         setClientInfo({
           id: details.client_id,
           name: details.client_name,
           email: details.client_email,
           phone: details.client_phone
         });
-        
         console.log("Client info updated from estimate details:", {
           id: details.client_id,
           name: details.client_name,
@@ -161,7 +147,6 @@ export const EstimateSendDialog = ({
           phone: details.client_phone
         });
       } else {
-        // Fallback: try to fetch estimate and client data separately
         console.log("No data from view, trying direct fetch");
         
         const { data: estimate, error: estimateError } = await supabase
@@ -174,7 +159,6 @@ export const EstimateSendDialog = ({
           console.error('Error fetching estimate directly:', estimateError);
         }
 
-        // If we have a jobId, fetch client data from the job
         if (jobId || estimate?.job_id) {
           const targetJobId = jobId || estimate?.job_id;
           
@@ -201,7 +185,6 @@ export const EstimateSendDialog = ({
           }
         }
 
-        // Create fallback estimate details if we have an estimate
         if (estimate) {
           const fallbackDetails: EstimateDetails = {
             estimate_id: estimate.id,
@@ -224,7 +207,6 @@ export const EstimateSendDialog = ({
         }
       }
 
-      // Fetch line items for this estimate
       const estimateId = details?.estimate_id || estimateDetails?.estimate_id;
       if (estimateId) {
         const { data: items, error: itemsError } = await supabase
@@ -249,7 +231,6 @@ export const EstimateSendDialog = ({
     }
   };
 
-  // Get client contact info with improved data flow
   const getClientContactInfo = () => {
     const contactData = {
       name: clientInfo?.name || estimateDetails?.client_name || 'Unknown Client',
@@ -262,18 +243,15 @@ export const EstimateSendDialog = ({
   };
 
   const contactInfo = getClientContactInfo();
-  
-  // Simplified contact info validation
   const hasValidEmail = isValidEmail(contactInfo.email);
   const hasValidPhone = isValidPhoneNumber(contactInfo.phone);
   
   console.log("Contact validation - Email valid:", hasValidEmail, "Phone valid:", hasValidPhone);
   console.log("Contact info:", contactInfo);
 
-  // Set default send method and recipient when contact info is available
   useEffect(() => {
     if (contactInfo.name !== 'Unknown Client') {
-      setValidationError(""); // Clear previous validation errors
+      setValidationError("");
       
       if (hasValidEmail && sendMethod === "email") {
         setSendTo(contactInfo.email);
@@ -282,22 +260,15 @@ export const EstimateSendDialog = ({
         setSendTo(formattedPhone);
         console.log("Auto-filled phone number:", formattedPhone);
       } else if (hasValidEmail && !hasValidPhone) {
-        // Default to email if only email is available
         setSendMethod("email");
         setSendTo(contactInfo.email);
       } else if (hasValidPhone && !hasValidEmail) {
-        // Default to SMS if only phone is available
         setSendMethod("sms");
         const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
         setSendTo(formattedPhone);
       }
     }
   }, [contactInfo, sendMethod, hasValidEmail, hasValidPhone]);
-
-  // Type guard functions
-  const hasFullEstimateDetails = (details: EstimateDetails | null): details is EstimateDetails => {
-    return details !== null && 'estimate_id' in details;
-  };
 
   const getEstimateId = (): string | null => {
     if (estimateDetails && 'estimate_id' in estimateDetails) {
@@ -320,7 +291,6 @@ export const EstimateSendDialog = ({
     return undefined;
   };
 
-  // Reset the dialog state when opened
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       console.log("Dialog opening, resetting state");
@@ -329,7 +299,6 @@ export const EstimateSendDialog = ({
       setCustomNote("");
       setValidationError("");
     } else {
-      // Clear data when closing
       console.log("Dialog closing, clearing data");
       setEstimateDetails(null);
       setLineItems([]);
@@ -339,7 +308,6 @@ export const EstimateSendDialog = ({
     onOpenChange(newOpen);
   };
   
-  // Handle warranty selection
   const handleWarrantySelect = (warranty: Product | null, note: string) => {
     console.log("Warranty selected:", warranty?.name || "none", "with note:", note);
     
@@ -348,24 +316,20 @@ export const EstimateSendDialog = ({
       setCustomNote(note);
     }
     
-    // Move to next step
     console.log("Moving to send-method step");
     setCurrentStep("send-method");
   };
   
-  // Handle skipping warranty
   const handleSkipWarranty = () => {
     console.log("Skipping warranty, moving to send-method step");
     setCurrentStep("send-method");
   };
 
-  // Handle send method change with validation
   const handleSendMethodChange = (value: "email" | "sms") => {
     console.log("Send method changed to:", value);
     setSendMethod(value);
     setValidationError("");
     
-    // Update sendTo based on new method
     if (value === "email" && hasValidEmail) {
       setSendTo(contactInfo.email);
     } else if (value === "sms" && hasValidPhone) {
@@ -376,7 +340,6 @@ export const EstimateSendDialog = ({
     }
   };
 
-  // Validate recipient input
   const validateRecipient = (method: "email" | "sms", recipient: string): string | null => {
     if (!recipient.trim()) {
       return `Please enter a ${method === "email" ? "email address" : "phone number"}`;
@@ -395,15 +358,18 @@ export const EstimateSendDialog = ({
     return null;
   };
   
-  // Send the estimate to the client with portal login link
   const handleSendEstimate = async () => {
-    console.log("Starting send estimate process");
+    console.log("=== STARTING ESTIMATE SEND PROCESS ===");
+    console.log("Send method:", sendMethod);
+    console.log("Send to:", sendTo);
+    console.log("Estimate number:", estimateNumber);
+    console.log("Client info:", contactInfo);
 
-    // Validate recipient first
     const validationErrorMsg = validateRecipient(sendMethod, sendTo);
     if (validationErrorMsg) {
       setValidationError(validationErrorMsg);
       toast.error(validationErrorMsg);
+      console.error("Validation failed:", validationErrorMsg);
       return;
     }
 
@@ -411,60 +377,53 @@ export const EstimateSendDialog = ({
     setValidationError("");
     
     try {
-      console.log("First saving the estimate...");
-      
-      // First save the estimate to ensure it exists in the database
+      console.log("Step 1: Saving estimate...");
       const success = await onSave();
       
       if (!success) {
+        console.error("Failed to save estimate");
         toast.error("Failed to save estimate. Please try again.");
         setIsProcessing(false);
         return;
       }
 
-      console.log("Estimate saved successfully, now fetching the saved estimate...");
-      
-      // After saving, fetch the estimate again to get the proper ID
+      console.log("Step 2: Estimate saved, fetching updated details...");
       await fetchEstimateAndClientDetails();
-      
-      // Wait a moment for the state to update
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const estimateId = getEstimateId();
       const estimateTotal = getEstimateTotal();
       const estimateNotes = getEstimateNotes();
 
-      console.log("Proceeding with send estimate process with:", {
+      console.log("Step 3: Estimate details retrieved:", {
         estimateId,
-        sendMethod,
-        sendTo,
-        estimateTotal
+        estimateTotal,
+        estimateNotes
       });
 
       if (!estimateId) {
+        console.error("No estimate ID found");
         toast.error("Estimate not found. Please save the estimate first and try again.");
         setIsProcessing(false);
         return;
       }
 
-      // Format phone number if SMS
       let finalRecipient = sendTo;
       if (sendMethod === "sms") {
         finalRecipient = formatPhoneForTwilio(sendTo);
-        console.log("Final formatted phone number:", finalRecipient);
+        console.log("Formatted phone number:", finalRecipient);
         
         if (!isValidPhoneNumber(finalRecipient)) {
           const error = "Invalid phone number format";
           setValidationError(error);
           toast.error(error);
+          console.error(error);
           setIsProcessing(false);
           return;
         }
       }
 
-      console.log("Creating estimate communication record...");
-      
-      // Create estimate communication record
+      console.log("Step 4: Creating communication record...");
       const { data: commData, error: commError } = await supabase
         .from('estimate_communications')
         .insert({
@@ -473,8 +432,8 @@ export const EstimateSendDialog = ({
           recipient: finalRecipient,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. View it here: ${window.location.origin}/estimate/view/${estimateNumber}`
-            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateTotal.toFixed(2)}. View online: ${window.location.origin}/estimate/view/${estimateNumber}`,
+            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}.`
+            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateTotal.toFixed(2)}.`,
           status: 'pending',
           estimate_number: estimateNumber,
           client_name: contactInfo.name,
@@ -491,26 +450,28 @@ export const EstimateSendDialog = ({
         return;
       }
 
-      console.log("Communication record created:", commData);
+      console.log("Step 5: Communication record created:", commData);
 
       // Generate client portal login token
       let portalLoginLink = '';
       if (contactInfo.email) {
         try {
+          console.log("Step 6: Generating portal login token...");
           const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
             p_email: contactInfo.email
           });
 
           if (!tokenError && tokenData) {
             portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
+            console.log("Portal login link generated");
+          } else {
+            console.warn("Failed to generate portal login token:", tokenError);
           }
         } catch (error) {
           console.error('Error generating portal login token:', error);
-          // Continue without portal link if there's an issue
         }
       }
 
-      // Prepare estimate data for the edge function
       const estimateData = {
         lineItems: lineItems.map(item => ({
           description: item.description,
@@ -520,13 +481,14 @@ export const EstimateSendDialog = ({
           total: item.quantity * Number(item.unit_price)
         })),
         total: estimateTotal,
-        taxRate: 13, // Default tax rate - could be made configurable
+        taxRate: 13,
         notes: customNote || estimateNotes,
         viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`,
         portalLoginLink: portalLoginLink
       };
 
-      console.log("Calling send-estimate edge function with data:", {
+      console.log("Step 7: Calling send-estimate edge function...");
+      console.log("Request payload:", {
         method: sendMethod,
         recipient: finalRecipient,
         estimateNumber: estimateNumber,
@@ -535,7 +497,6 @@ export const EstimateSendDialog = ({
         communicationId: commData.id
       });
 
-      // Call the edge function to send the estimate
       const { data, error } = await supabase.functions.invoke('send-estimate', {
         body: {
           method: sendMethod,
@@ -552,13 +513,13 @@ export const EstimateSendDialog = ({
         throw new Error(error.message);
       }
       
-      console.log("Edge function response:", data);
+      console.log("Step 8: Edge function response:", data);
       
       if (data?.success) {
         const method = sendMethod === "email" ? "email" : "text message";
         toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
+        console.log("SUCCESS: Estimate sent successfully");
         
-        // Create notification for the client
         if (estimateDetails?.client_id) {
           await supabase
             .from('client_notifications')
@@ -575,10 +536,9 @@ export const EstimateSendDialog = ({
             });
         }
         
-        // Move to confirmation step
         setCurrentStep("confirmation");
       } else {
-        // Update communication record as failed
+        console.error("Edge function returned error:", data);
         await supabase
           .from('estimate_communications')
           .update({
@@ -591,29 +551,20 @@ export const EstimateSendDialog = ({
         setIsProcessing(false);
       }
     } catch (error: any) {
-      console.error("Error sending estimate:", error);
+      console.error("CRITICAL ERROR in send estimate process:", error);
       toast.error(`An error occurred while sending the estimate: ${error.message}`);
       setIsProcessing(false);
     }
+    
+    console.log("=== ESTIMATE SEND PROCESS COMPLETED ===");
   };
   
-  // Close the dialog and redirect to estimates tab
   const handleCloseAfterSend = () => {
-    // Close the dialog
     onOpenChange(false);
-    
-    // Get the current URL path
     const currentPath = window.location.pathname;
-    
-    // If we're on a job details page, navigate to the estimates tab
     if (currentPath.includes('/jobs/')) {
-      // Extract the job ID from the current URL
       const jobId = currentPath.split('/').pop();
-      
-      // Use navigate to stay on same page but switch to estimates tab
       const jobDetailsUrl = `/jobs/${jobId}`;
-      
-      // Navigate to job details with estimates tab selected
       navigate(jobDetailsUrl, { state: { activeTab: "estimates" } });
     }
   };
@@ -645,7 +596,6 @@ export const EstimateSendDialog = ({
         </DialogHeader>
         
         <div className="py-4">
-          {/* Warranty Selection Step */}
           {currentStep === "warranty" && (
             <WarrantySelectionStep
               onSelectWarranty={handleWarrantySelect}
@@ -653,7 +603,6 @@ export const EstimateSendDialog = ({
             />
           )}
           
-          {/* Send Method Step */}
           {currentStep === "send-method" && (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground mb-4">
@@ -693,6 +642,7 @@ export const EstimateSendDialog = ({
                     ) : (
                       <p className="text-sm text-amber-600 mt-1">No valid phone number available for this client</p>
                     )}
+                    <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
                   </div>
                 </div>
               </RadioGroup>
@@ -735,7 +685,6 @@ export const EstimateSendDialog = ({
             </div>
           )}
           
-          {/* Confirmation Step */}
           {currentStep === "confirmation" && (
             <div className="text-center p-6">
               <div className="flex justify-center mb-4">
@@ -746,6 +695,9 @@ export const EstimateSendDialog = ({
                 The estimate has been sent to the client via {sendMethod === "email" ? "email" : "text message"}.
                 {sendMethod === "email" && (
                   <span className="block mt-2">The client can access their portal to view, approve, or reject the estimate.</span>
+                )}
+                {sendMethod === "sms" && (
+                  <span className="block mt-2">The client can access their portal to view, approve, or reject the estimate via the secure link.</span>
                 )}
                 {customNote && <span className="block mt-2">Your warranty recommendation was included.</span>}
               </p>
