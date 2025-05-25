@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -14,12 +15,70 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
+interface DatabaseJob {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  client_id?: string;
+  technician_id?: string;
+  property_id?: string;
+  date?: string;
+  schedule_start?: string;
+  schedule_end?: string;
+  created_at?: string;
+  updated_at?: string;
+  revenue?: number;
+  tags?: string[];
+  notes?: string;
+  job_type?: string;
+  lead_source?: string;
+  service?: string;
+  tasks?: string | string[];
+  created_by?: string;
+  clients?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+  estimates?: Array<{
+    id: string;
+    total: number;
+  }>;
+  invoices?: Array<{
+    id: string;
+    total: number;
+  }>;
+}
+
 export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalJobs, setTotalJobs] = useState(0);
   const [filters, setFilters] = useState<JobsFilter>({});
+
+  const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
+    let tasks: string[] = [];
+    
+    if (typeof dbJob.tasks === 'string') {
+      try {
+        tasks = JSON.parse(dbJob.tasks);
+      } catch {
+        tasks = [];
+      }
+    } else if (Array.isArray(dbJob.tasks)) {
+      tasks = dbJob.tasks;
+    }
+
+    return {
+      ...dbJob,
+      tasks,
+      custom_fields: []
+    };
+  };
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -68,25 +127,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         throw error;
       }
 
-      // Transform the data to match our Job interface
-      const transformedJobs: Job[] = data?.map(job => ({
-        ...job,
-        // Properly handle tasks transformation from database JSON to array
-        tasks: (() => {
-          if (!job.tasks) return [];
-          if (Array.isArray(job.tasks)) return job.tasks;
-          if (typeof job.tasks === 'string') {
-            try {
-              return JSON.parse(job.tasks);
-            } catch {
-              return [];
-            }
-          }
-          return [];
-        })(),
-        custom_fields: [] // Will be populated if enableCustomFields is true
-      })) || [];
-
+      const transformedJobs = (data || []).map(transformDatabaseJob);
       setJobs(transformedJobs);
       setTotalJobs(count || 0);
     } catch (error: any) {
@@ -103,7 +144,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   const addJob = async (jobData: Partial<Job>) => {
     try {
-      // Transform job data for database - ensure required fields are present
       const jobToInsert = {
         id: jobData.id || `JOB-${Date.now()}`,
         title: jobData.title || 'New Job',
@@ -121,7 +161,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         job_type: jobData.job_type,
         lead_source: jobData.lead_source,
         service: jobData.service,
-        tasks: typeof jobData.tasks === 'string' ? jobData.tasks : JSON.stringify(jobData.tasks || []),
+        tasks: JSON.stringify(jobData.tasks || []),
         created_by: jobData.created_by
       };
 
@@ -140,25 +180,9 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
       await fetchJobs();
       
-      // Transform the returned data to match Job interface
-      const transformedJob: Job = {
-        ...data,
-        tasks: (() => {
-          if (!data.tasks) return [];
-          if (Array.isArray(data.tasks)) return data.tasks;
-          if (typeof data.tasks === 'string') {
-            try {
-              return JSON.parse(data.tasks);
-            } catch {
-              return [];
-            }
-          }
-          return [];
-        })(),
-        custom_fields: []
-      };
-      
-      return transformedJob;
+      if (data) {
+        return transformDatabaseJob(data);
+      }
     } catch (error: any) {
       console.error("Error creating job:", error);
       toast({
@@ -172,7 +196,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   const updateJob = async (jobId: string, updates: Partial<Job>) => {
     try {
-      // Transform updates for database
       const updateData = {
         ...updates,
         tasks: updates.tasks ? JSON.stringify(updates.tasks) : undefined
