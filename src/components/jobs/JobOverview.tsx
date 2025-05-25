@@ -9,6 +9,7 @@ import { TasksCard } from "./overview/TasksCard";
 import { TechnicianCard } from "./overview/TechnicianCard";
 import { AdditionalInfoCard } from "./overview/AdditionalInfoCard";
 import { AttachmentsCard } from "./overview/AttachmentsCard";
+import { JobCustomFieldsDisplay } from "./JobCustomFieldsDisplay";
 
 interface JobOverviewProps {
   jobId: string;
@@ -43,6 +44,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       <TechnicianCard job={job} />
       <AttachmentsCard jobId={jobId} />
       <JobDescriptionCard description={job.description || ""} />
+      <JobCustomFieldsDisplay jobId={jobId} />
       <TasksCard tasks={job.tasks || []} />
       <JobTagsCard tags={job.tags || []} />
       <AdditionalInfoCard job={job} />
