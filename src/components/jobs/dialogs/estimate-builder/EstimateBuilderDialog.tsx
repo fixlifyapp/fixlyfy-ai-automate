@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -142,6 +141,9 @@ export const EstimateBuilderDialog = ({
     setIsProductEditDialogOpen(false);
   };
   
+  // Check if estimate has any line items
+  const hasLineItems = estimateBuilder.lineItems && estimateBuilder.lineItems.length > 0;
+  
   // Open send dialog instead of just saving
   const handleSendEstimate = () => {
     setIsSendDialogOpen(true);
@@ -247,17 +249,36 @@ export const EstimateBuilderDialog = ({
               )}
             </div>
             
-            <div className="p-4 border-t bg-muted/20 flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSendEstimate}
-                className="flex items-center gap-1"
-              >
-                <Send size={16} />
-                Send to Client
-              </Button>
+            <div className="p-4 border-t bg-muted/20 flex flex-col gap-3">
+              {/* Warning message when no line items */}
+              {!hasLineItems && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                  <div className="flex items-center gap-2 text-amber-700">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Cannot send empty estimate</span>
+                  </div>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Please add at least one item to the estimate before sending it to the client.
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSendEstimate}
+                  disabled={!hasLineItems}
+                  className="flex items-center gap-1"
+                  title={!hasLineItems ? "Add items to the estimate before sending" : "Send estimate to client"}
+                >
+                  <Send size={16} />
+                  Send to Client
+                </Button>
+              </div>
             </div>
           </div>
         </div>
