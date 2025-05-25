@@ -15,45 +15,6 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
-// Updated interface to match actual Supabase types
-interface DatabaseJob {
-  id: string;
-  title: string;
-  description?: string;
-  status: string;
-  client_id?: string;
-  technician_id?: string;
-  property_id?: string;
-  date?: string;
-  schedule_start?: string;
-  schedule_end?: string;
-  created_at?: string;
-  updated_at?: string;
-  revenue?: number;
-  tags?: string[];
-  notes?: string;
-  job_type?: string;
-  lead_source?: string;
-  service?: string;
-  tasks?: any; // Use any to handle Json type from Supabase
-  created_by?: string;
-  clients?: {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-  };
-  estimates?: Array<{
-    id: string;
-    total: number;
-  }>;
-  invoices?: Array<{
-    id: string;
-    total: number;
-  }>;
-}
-
 export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -261,10 +222,12 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     fetchJobs();
   }, [filters, clientId]);
 
-  // Set up real-time updates
+  // Set up real-time updates - wrap async function to fix type mismatch
   useRealtimeSync({
     tables: ['jobs', 'clients', 'estimates', 'invoices', 'client_properties'],
-    onUpdate: fetchJobs,
+    onUpdate: () => {
+      fetchJobs().catch(console.error);
+    },
     enabled: true
   });
 
