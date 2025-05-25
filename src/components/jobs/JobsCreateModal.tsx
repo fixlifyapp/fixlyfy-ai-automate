@@ -69,6 +69,17 @@ export const JobsCreateModal = ({
   const [tasks, setTasks] = useState<string[]>([]);
   const [newTask, setNewTask] = useState<string>("");
   
+  // New overview fields
+  const [priority, setPriority] = useState<string>("medium");
+  const [leadSource, setLeadSource] = useState<string>("");
+  const [estimatedDuration, setEstimatedDuration] = useState<string>("");
+  const [specialInstructions, setSpecialInstructions] = useState<string>("");
+  const [clientRequirements, setClientRequirements] = useState<string>("");
+  const [accessInstructions, setAccessInstructions] = useState<string>("");
+  const [safetyNotes, setSafetyNotes] = useState<string>("");
+  const [equipmentNeeded, setEquipmentNeeded] = useState<string[]>([]);
+  const [newEquipment, setNewEquipment] = useState<string>("");
+  
   // Quick-add dialog states
   const [showJobTypeDialog, setShowJobTypeDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
@@ -169,6 +180,17 @@ export const JobsCreateModal = ({
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleAddEquipment = () => {
+    if (newEquipment.trim() && !equipmentNeeded.includes(newEquipment.trim())) {
+      setEquipmentNeeded([...equipmentNeeded, newEquipment.trim()]);
+      setNewEquipment("");
+    }
+  };
+
+  const handleRemoveEquipment = (index: number) => {
+    setEquipmentNeeded(equipmentNeeded.filter((_, i) => i !== index));
+  };
+
   const resetForm = () => {
     form.reset();
     setStartDate(new Date());
@@ -180,6 +202,15 @@ export const JobsCreateModal = ({
     setCustomFieldValues({});
     setTasks([]);
     setNewTask("");
+    setPriority("medium");
+    setLeadSource("");
+    setEstimatedDuration("");
+    setSpecialInstructions("");
+    setClientRequirements("");
+    setAccessInstructions("");
+    setSafetyNotes("");
+    setEquipmentNeeded([]);
+    setNewEquipment("");
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
     setRecentlyAddedClient(null);
@@ -230,7 +261,7 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object
+      // Create the job object with overview fields
       const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
         title: `${data.service || 'General'} Service`,
         description: data.description,
@@ -242,7 +273,17 @@ export const JobsCreateModal = ({
         schedule_end: scheduledEndDate.toISOString(),
         date: scheduledStartDate.toISOString(),
         revenue: 0,
-        tags: selectedTags
+        tags: selectedTags,
+        // New overview fields
+        job_type: data.service || "General Service",
+        priority: priority,
+        lead_source: leadSource || undefined,
+        estimated_duration: estimatedDuration ? parseInt(estimatedDuration) : undefined,
+        special_instructions: specialInstructions || undefined,
+        client_requirements: clientRequirements || undefined,
+        access_instructions: accessInstructions || undefined,
+        safety_notes: safetyNotes || undefined,
+        equipment_needed: equipmentNeeded.length > 0 ? equipmentNeeded : undefined
       };
 
       console.log('Creating job with data:', jobData);
@@ -445,6 +486,44 @@ export const JobsCreateModal = ({
                     </Select>
                   </div>
                   
+                  {/* Priority */}
+                  <div className="space-y-2">
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select value={priority} onValueChange={setPriority}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Lead Source */}
+                  <div className="space-y-2">
+                    <Label htmlFor="leadSource">Lead Source</Label>
+                    <Input
+                      id="leadSource"
+                      placeholder="e.g., Phone call, Website, Referral"
+                      value={leadSource}
+                      onChange={(e) => setLeadSource(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Estimated Duration */}
+                  <div className="space-y-2">
+                    <Label htmlFor="estimatedDuration">Estimated Duration (minutes)</Label>
+                    <Input
+                      id="estimatedDuration"
+                      type="number"
+                      placeholder="e.g., 120"
+                      value={estimatedDuration}
+                      onChange={(e) => setEstimatedDuration(e.target.value)}
+                    />
+                  </div>
+                  
                   {/* Job Description */}
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="description">Description</Label>
@@ -606,6 +685,94 @@ export const JobsCreateModal = ({
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+              
+              {/* Additional Instructions Section */}
+              <div className="md:col-span-2 p-4 border rounded-lg space-y-4">
+                <h3 className="text-lg font-semibold">Instructions & Requirements</h3>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="specialInstructions">Special Instructions</Label>
+                    <Textarea
+                      id="specialInstructions"
+                      placeholder="Any special instructions for the technician..."
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="clientRequirements">Client Requirements</Label>
+                    <Textarea
+                      id="clientRequirements"
+                      placeholder="Specific client requirements or preferences..."
+                      value={clientRequirements}
+                      onChange={(e) => setClientRequirements(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="accessInstructions">Access Instructions</Label>
+                    <Textarea
+                      id="accessInstructions"
+                      placeholder="How to access the property, keys, gate codes, etc..."
+                      value={accessInstructions}
+                      onChange={(e) => setAccessInstructions(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="safetyNotes">Safety Notes</Label>
+                    <Textarea
+                      id="safetyNotes"
+                      placeholder="Important safety considerations..."
+                      value={safetyNotes}
+                      onChange={(e) => setSafetyNotes(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                  
+                  {/* Equipment Needed */}
+                  <div className="space-y-2">
+                    <Label htmlFor="equipmentNeeded">Equipment Needed</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add equipment..."
+                          value={newEquipment}
+                          onChange={(e) => setNewEquipment(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEquipment())}
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleAddEquipment}
+                          disabled={!newEquipment.trim()}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      {equipmentNeeded.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {equipmentNeeded.map((equipment, index) => (
+                            <Badge key={index} variant="outline" className="flex items-center gap-1">
+                              {equipment}
+                              <X 
+                                size={14} 
+                                className="cursor-pointer" 
+                                onClick={() => handleRemoveEquipment(index)}
+                              />
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               

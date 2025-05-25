@@ -17,11 +17,12 @@ import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { toast } from "sonner";
 import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
 import { JobCustomFieldsDisplay } from "@/components/jobs/JobCustomFieldsDisplay";
+import { JobOverview } from "@/components/jobs/JobOverview";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<string>("estimates");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const { hasPermission } = useRBAC();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
@@ -37,7 +38,7 @@ const JobDetailsPage = () => {
   
   // Handle unified realtime updates for this job and all related data
   useUnifiedRealtime({
-    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients', 'job_custom_field_values'],
+    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'jobHistory', 'clients', 'job_custom_field_values', 'job_overview'],
     onUpdate: () => {
       console.log("Unified realtime update triggered for job details");
       setRefreshTrigger(prev => prev + 1);
@@ -67,6 +68,9 @@ const JobDetailsPage = () => {
                 activeTab={activeTab} 
                 onTabChange={setActiveTab}
               >
+                <TabsContent value="overview">
+                  <JobOverview jobId={id || ""} />
+                </TabsContent>
                 <TabsContent value="estimates">
                   <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
                 </TabsContent>

@@ -33,6 +33,17 @@ export interface Job {
     value: string;
     field_type: string;
   }>;
+  // New overview fields
+  job_type?: string;
+  priority?: string;
+  lead_source?: string;
+  estimated_duration?: number;
+  special_instructions?: string;
+  client_requirements?: string;
+  access_instructions?: string;
+  preferred_time?: string;
+  equipment_needed?: string[];
+  safety_notes?: string;
 }
 
 export const useJobs = (clientId?: string, includeCustomFields: boolean = false) => {
