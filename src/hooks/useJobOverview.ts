@@ -14,13 +14,6 @@ export interface JobOverview {
   emergency_contact?: any;
   billing_contact?: any;
   lead_source?: string;
-  estimated_duration?: number;
-  special_instructions?: string;
-  client_requirements?: string;
-  access_instructions?: string;
-  preferred_time?: string;
-  equipment_needed?: string[];
-  safety_notes?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -39,20 +32,13 @@ export const useJobOverview = (jobId: string) => {
       try {
         setIsLoading(true);
         
-        // First, get the job data with additional fields (removed priority)
+        // First, get the job data with only lead_source (other fields were removed)
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
             id,
             job_type,
-            lead_source,
-            estimated_duration,
-            special_instructions,
-            client_requirements,
-            access_instructions,
-            preferred_time,
-            equipment_needed,
-            safety_notes
+            lead_source
           `)
           .eq('id', jobId)
           .maybeSingle();
@@ -76,18 +62,11 @@ export const useJobOverview = (jobId: string) => {
           return;
         }
 
-        // Combine the data (removed priority)
+        // Combine the data (only with remaining fields)
         const combinedOverview: JobOverview = {
           id: overviewData?.id || '',
           job_id: jobId,
           lead_source: jobData?.lead_source,
-          estimated_duration: jobData?.estimated_duration,
-          special_instructions: jobData?.special_instructions,
-          client_requirements: jobData?.client_requirements,
-          access_instructions: jobData?.access_instructions,
-          preferred_time: jobData?.preferred_time,
-          equipment_needed: jobData?.equipment_needed || [],
-          safety_notes: jobData?.safety_notes,
           property_type: overviewData?.property_type,
           property_age: overviewData?.property_age,
           property_size: overviewData?.property_size,
@@ -113,17 +92,9 @@ export const useJobOverview = (jobId: string) => {
 
   const saveOverview = async (data: Partial<JobOverview>) => {
     try {
-      // Separate job table fields from job_overview table fields (removed priority)
+      // Separate job table fields from job_overview table fields (only lead_source remains)
       const jobFields = {
-        job_type: data.lead_source,
-        lead_source: data.lead_source,
-        estimated_duration: data.estimated_duration,
-        special_instructions: data.special_instructions,
-        client_requirements: data.client_requirements,
-        access_instructions: data.access_instructions,
-        preferred_time: data.preferred_time,
-        equipment_needed: data.equipment_needed,
-        safety_notes: data.safety_notes
+        lead_source: data.lead_source
       };
 
       const overviewFields = {
