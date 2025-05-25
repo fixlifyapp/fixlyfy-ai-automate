@@ -50,10 +50,9 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
   // Get estimates data
   const { estimates: estimatesData, setEstimates: setEstimatesData, isLoading } = useEstimateData(jobId);
   
-  // Dialog state management
+  // Dialog state management - removed isEstimateDialogOpen
   const [isUpsellDialogOpen, setIsUpsellDialogOpen] = useState(false);
   const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
-  const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [isConvertToInvoiceDialogOpen, setIsConvertToInvoiceDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
@@ -124,9 +123,9 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
     setIsConvertToInvoiceDialogOpen(true);
   };
 
-  // Handle create estimate with dialog opening
+  // Handle create estimate - now opens EstimateBuilderDialog instead
   const handleCreateEstimate = () => {
-    setIsEstimateDialogOpen(true);
+    setIsEstimateBuilderOpen(true);
   };
 
   // Handle delete estimate with dialog opening
@@ -149,8 +148,6 @@ export const useEstimates = (jobId: string, onEstimateConverted?: () => void) =>
       setIsUpsellDialogOpen,
       isEstimateBuilderOpen,
       setIsEstimateBuilderOpen,
-      isEstimateDialogOpen,
-      setIsEstimateDialogOpen,
       isConvertToInvoiceDialogOpen,
       setIsConvertToInvoiceDialogOpen,
       isDeleteConfirmOpen, 

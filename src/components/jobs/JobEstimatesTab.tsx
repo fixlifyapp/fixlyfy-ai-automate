@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { useEstimates } from "./estimates/useEstimates";
-import { EstimateDialog } from "./dialogs/EstimateDialog";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
 import { UpsellDialog } from "./dialogs/UpsellDialog";
@@ -62,12 +61,12 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         />
 
         {/* Dialogs */}
-        <EstimateDialog
-          open={dialogs.isEstimateDialogOpen}
-          onOpenChange={dialogs.setIsEstimateDialogOpen}
-          onEstimateCreated={handlers.handleEstimateCreated}
-          clientInfo={info.clientInfo}
-          companyInfo={info.companyInfo}
+        <EstimateBuilderDialog
+          open={dialogs.isEstimateBuilderOpen}
+          onOpenChange={dialogs.setIsEstimateBuilderOpen}
+          estimateId={state.selectedEstimateId}
+          jobId={jobId}
+          onSyncToInvoice={handlers.handleSyncToInvoice}
         />
 
         <ConvertToInvoiceDialog
@@ -93,14 +92,6 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           techniciansNote={state.techniciansNote}
           jobId={jobId}
           onAccept={handlers.handleUpsellAccept}
-        />
-
-        <EstimateBuilderDialog
-          open={dialogs.isEstimateBuilderOpen}
-          onOpenChange={dialogs.setIsEstimateBuilderOpen}
-          estimateId={state.selectedEstimateId}
-          jobId={jobId}
-          onSyncToInvoice={handlers.handleSyncToInvoice}
         />
 
         <WarrantySelectionDialog
