@@ -3,7 +3,7 @@ import { useEffect, useCallback } from 'react';
 import { useGlobalRealtime } from '@/contexts/GlobalRealtimeProvider';
 
 interface UseUnifiedRealtimeProps {
-  tables: ('jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'jobHistory')[];
+  tables: ('jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'jobHistory' | 'job_custom_field_values')[];
   onUpdate: () => void;
   enabled?: boolean;
 }
