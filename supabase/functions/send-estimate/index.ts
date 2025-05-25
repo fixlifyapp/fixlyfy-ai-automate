@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
 const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -22,6 +23,7 @@ interface SendEstimateRequest {
     notes?: string;
   };
   clientName?: string;
+  communicationId?: string;
 }
 
 serve(async (req) => {
@@ -31,9 +33,23 @@ serve(async (req) => {
   }
 
   try {
-    const { method, recipient, estimateNumber, estimateData, clientName }: SendEstimateRequest = await req.json();
+    const { 
+      method, 
+      recipient, 
+      estimateNumber, 
+      estimateData, 
+      clientName,
+      communicationId 
+    }: SendEstimateRequest = await req.json();
 
     console.log(`Sending estimate ${estimateNumber} via ${method} to ${recipient}`);
+
+    // Create Supabase client for database operations
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let result;
 
     if (method === 'sms') {
       // Send via Twilio SMS
@@ -69,19 +85,23 @@ serve(async (req) => {
 
       console.log('SMS sent successfully:', twilioData.sid);
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Estimate sent via SMS successfully',
-          sid: twilioData.sid,
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      );
+      // Update communication record
+      if (communicationId) {
+        await supabase
+          .from('estimate_communications')
+          .update({
+            status: 'delivered',
+            delivered_at: new Date().toISOString(),
+            provider_message_id: twilioData.sid
+          })
+          .eq('id', communicationId);
+      }
+
+      result = {
+        success: true,
+        message: 'Estimate sent via SMS successfully',
+        sid: twilioData.sid,
+      };
 
     } else if (method === 'email') {
       // Send via SendGrid
@@ -110,8 +130,8 @@ serve(async (req) => {
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 8px;">${item.description || item.name}</td>
                   <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.quantity}</td>
-                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
-                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.unitPrice?.toFixed(2) || '0.00'}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -163,21 +183,34 @@ serve(async (req) => {
 
       console.log('Email sent successfully via SendGrid');
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Estimate sent via email successfully',
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      );
+      // Update communication record
+      if (communicationId) {
+        await supabase
+          .from('estimate_communications')
+          .update({
+            status: 'delivered',
+            delivered_at: new Date().toISOString()
+          })
+          .eq('id', communicationId);
+      }
+
+      result = {
+        success: true,
+        message: 'Estimate sent via email successfully',
+      };
+    } else {
+      throw new Error('Invalid send method');
     }
 
-    throw new Error('Invalid send method');
+    return new Response(
+      JSON.stringify(result),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    );
 
   } catch (error) {
     console.error('Error in send-estimate function:', error);

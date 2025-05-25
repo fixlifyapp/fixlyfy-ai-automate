@@ -22,7 +22,12 @@ interface EstimateSendDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: () => Promise<boolean>;
   onAddWarranty: (warranty: Product | null, note: string) => void;
-  clientInfo?: { email?: string; phone?: string } | null;
+  clientInfo?: { 
+    id?: string;
+    name?: string;
+    email?: string; 
+    phone?: string; 
+  } | null;
   estimateNumber: string;
 }
 
@@ -82,7 +87,27 @@ export const EstimateSendDialog = ({
       const success = await onSave();
       
       if (success) {
-        // Get estimate data from the saved estimate (you'll need to pass this data)
+        // Create estimate communication record
+        const { data: commData, error: commError } = await supabase
+          .from('estimate_communications')
+          .insert({
+            estimate_id: null, // We'll need to get the actual estimate ID
+            communication_type: sendMethod,
+            recipient: sendTo,
+            subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
+            content: sendMethod === 'sms' 
+              ? `Hi ${clientInfo?.name || 'there'}! Your estimate ${estimateNumber} is ready. Please review and let us know if you have any questions.`
+              : `Please find your estimate ${estimateNumber} attached.`,
+            status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (commError) {
+          console.error('Error creating communication record:', commError);
+        }
+
+        // Get estimate data from the saved estimate
         const estimateData = {
           lineItems: [], // This should come from the estimate builder
           total: 0, // This should come from the estimate builder
@@ -97,7 +122,8 @@ export const EstimateSendDialog = ({
             recipient: sendTo,
             estimateNumber: estimateNumber,
             estimateData: estimateData,
-            clientName: clientInfo?.name || ""
+            clientName: clientInfo?.name || "",
+            communicationId: commData?.id
           }
         });
         
@@ -106,12 +132,35 @@ export const EstimateSendDialog = ({
         }
         
         if (data.success) {
+          // Update communication record as sent
+          if (commData?.id) {
+            await supabase
+              .from('estimate_communications')
+              .update({
+                status: 'sent',
+                sent_at: new Date().toISOString(),
+                provider_message_id: data.sid || data.messageId
+              })
+              .eq('id', commData.id);
+          }
+
           const method = sendMethod === "email" ? "email" : "text message";
           toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
           
           // Move to confirmation step
           setCurrentStep("confirmation");
         } else {
+          // Update communication record as failed
+          if (commData?.id) {
+            await supabase
+              .from('estimate_communications')
+              .update({
+                status: 'failed',
+                error_message: data.error || 'Unknown error'
+              })
+              .eq('id', commData.id);
+          }
+          
           toast.error(`Failed to send estimate: ${data.error || 'Unknown error'}`);
           setIsProcessing(false);
         }
@@ -140,11 +189,9 @@ export const EstimateSendDialog = ({
       const jobId = currentPath.split('/').pop();
       
       // Use navigate to stay on same page but switch to estimates tab
-      // We'll use the current URL plus a query param to trigger the tab change
       const jobDetailsUrl = `/jobs/${jobId}`;
       
       // Navigate to job details with estimates tab selected
-      // We'll handle this in the JobDetailsPage component
       navigate(jobDetailsUrl, { state: { activeTab: "estimates" } });
     }
   };
@@ -172,6 +219,10 @@ export const EstimateSendDialog = ({
           {/* Send Method Step */}
           {currentStep === "send-method" && (
             <div className="space-y-6">
+              <div className="text-sm text-muted-foreground mb-4">
+                Choose how to send the estimate to your client:
+              </div>
+              
               <RadioGroup value={sendMethod} onValueChange={(v) => setSendMethod(v as "email" | "sms")}>
                 <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
                   sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
@@ -226,7 +277,7 @@ export const EstimateSendDialog = ({
                 </Button>
                 <Button 
                   onClick={handleSendEstimate} 
-                  disabled={!sendTo || isProcessing}
+                  disabled={!sendTo || isProcessing || (!hasEmail && !hasPhone)}
                 >
                   {isProcessing ? "Sending..." : "Send Estimate"}
                 </Button>
@@ -242,7 +293,7 @@ export const EstimateSendDialog = ({
               </div>
               <h3 className="text-lg font-semibold mb-2">Estimate Sent Successfully</h3>
               <p className="text-muted-foreground mb-6">
-                The estimate has been sent to the client.
+                The estimate has been sent to the client via {sendMethod === "email" ? "email" : "text message"}.
                 {customNote && <span className="block mt-2">Your warranty recommendation was included.</span>}
               </p>
               <Button onClick={handleCloseAfterSend}>
