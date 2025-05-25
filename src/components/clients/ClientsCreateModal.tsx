@@ -20,15 +20,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useClients } from "@/hooks/useClients";
+import { useClients, Client } from "@/hooks/useClients";
 import { toast } from "sonner";
 
 interface ClientsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: (client: Client) => void;
 }
 
-export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalProps) => {
+export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCreateModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addClient } = useClients();
   
@@ -62,9 +63,14 @@ export const ClientsCreateModal = ({ open, onOpenChange }: ClientsCreateModalPro
         notes: formData.get('notes') as string,
       };
       
-      await addClient(clientData);
+      const newClient = await addClient(clientData);
       onOpenChange(false);
       toast.success("Client added successfully");
+      
+      // Call the onSuccess callback if provided
+      if (onSuccess && newClient) {
+        onSuccess(newClient);
+      }
       
     } catch (error) {
       console.error("Error adding client:", error);
