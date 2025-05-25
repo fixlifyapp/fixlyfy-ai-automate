@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -29,6 +28,7 @@ interface EstimateSendDialogProps {
     phone?: string; 
   } | null;
   estimateNumber: string;
+  jobId?: string;
 }
 
 interface EstimateDetails {
@@ -100,8 +100,9 @@ export const EstimateSendDialog = ({
   onOpenChange,
   onSave,
   onAddWarranty,
-  clientInfo,
-  estimateNumber
+  clientInfo: propClientInfo,
+  estimateNumber,
+  jobId
 }: EstimateSendDialogProps) => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<SendStep>("warranty");
@@ -113,16 +114,17 @@ export const EstimateSendDialog = ({
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string>("");
+  const [clientInfo, setClientInfo] = useState(propClientInfo);
   
-  // Fetch estimate and client details when dialog opens
+  // Fetch job and client details when dialog opens
   useEffect(() => {
     if (open && estimateNumber) {
-      console.log("Dialog opened, fetching estimate details for:", estimateNumber);
-      fetchEstimateDetails();
+      console.log("Dialog opened, fetching data for:", estimateNumber);
+      fetchEstimateAndClientDetails();
     }
-  }, [open, estimateNumber]);
+  }, [open, estimateNumber, jobId]);
 
-  const fetchEstimateDetails = async () => {
+  const fetchEstimateAndClientDetails = async () => {
     setIsLoading(true);
     try {
       console.log("Fetching estimate details for estimate number:", estimateNumber);
@@ -136,15 +138,31 @@ export const EstimateSendDialog = ({
 
       if (detailsError && detailsError.code !== 'PGRST116') {
         console.error('Error fetching estimate details:', detailsError);
-        toast.error('Failed to load estimate details');
-        return;
       }
 
       console.log("Estimate details from view:", details);
 
-      // If view doesn't return data, try fetching estimate directly
-      if (!details) {
-        console.log("No data from view, trying direct estimate fetch");
+      // If we have details from view, use them
+      if (details) {
+        setEstimateDetails(details);
+        
+        // Update client info with the fetched data
+        setClientInfo({
+          id: details.client_id,
+          name: details.client_name,
+          email: details.client_email,
+          phone: details.client_phone
+        });
+        
+        console.log("Client info updated from estimate details:", {
+          id: details.client_id,
+          name: details.client_name,
+          email: details.client_email,
+          phone: details.client_phone
+        });
+      } else {
+        // Fallback: try to fetch estimate and client data separately
+        console.log("No data from view, trying direct fetch");
         
         const { data: estimate, error: estimateError } = await supabase
           .from('estimates')
@@ -154,11 +172,37 @@ export const EstimateSendDialog = ({
 
         if (estimateError) {
           console.error('Error fetching estimate directly:', estimateError);
-          toast.error('Failed to load estimate');
-          return;
+          throw estimateError;
         }
 
-        // Create fallback estimate details using clientInfo and estimate data
+        // If we have a jobId, fetch client data from the job
+        if (jobId || estimate.job_id) {
+          const targetJobId = jobId || estimate.job_id;
+          
+          const { data: job, error: jobError } = await supabase
+            .from('jobs')
+            .select(`
+              *,
+              client:clients(*)
+            `)
+            .eq('id', targetJobId)
+            .single();
+
+          if (!jobError && job?.client) {
+            const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
+            
+            setClientInfo({
+              id: clientData.id,
+              name: clientData.name,
+              email: clientData.email,
+              phone: clientData.phone
+            });
+            
+            console.log("Client info fetched from job:", clientData);
+          }
+        }
+
+        // Create fallback estimate details
         const fallbackDetails: EstimateDetails = {
           estimate_id: estimate.id,
           estimate_number: estimate.estimate_number,
@@ -177,9 +221,6 @@ export const EstimateSendDialog = ({
 
         setEstimateDetails(fallbackDetails);
         console.log("Using fallback estimate details:", fallbackDetails);
-      } else {
-        setEstimateDetails(details);
-        console.log("Estimate details loaded from view:", details);
       }
 
       // Fetch line items for this estimate
@@ -200,7 +241,7 @@ export const EstimateSendDialog = ({
       }
 
     } catch (error: any) {
-      console.error('Error in fetchEstimateDetails:', error);
+      console.error('Error in fetchEstimateAndClientDetails:', error);
       toast.error('Failed to load estimate data');
     } finally {
       setIsLoading(false);
@@ -209,11 +250,10 @@ export const EstimateSendDialog = ({
 
   // Get client contact info with improved data flow
   const getClientContactInfo = () => {
-    // First try estimateDetails, then fallback to clientInfo
     const contactData = {
-      name: estimateDetails?.client_name || clientInfo?.name || 'Unknown Client',
-      email: estimateDetails?.client_email || clientInfo?.email || '',
-      phone: estimateDetails?.client_phone || clientInfo?.phone || ''
+      name: clientInfo?.name || estimateDetails?.client_name || 'Unknown Client',
+      email: clientInfo?.email || estimateDetails?.client_email || '',
+      phone: clientInfo?.phone || estimateDetails?.client_phone || ''
     };
     
     console.log("Final contact data:", contactData);
@@ -259,21 +299,21 @@ export const EstimateSendDialog = ({
   };
 
   const getEstimateId = (): string | null => {
-    if (hasFullEstimateDetails(estimateDetails)) {
+    if (estimateDetails && 'estimate_id' in estimateDetails) {
       return estimateDetails.estimate_id;
     }
     return null;
   };
 
   const getEstimateTotal = (): number => {
-    if (hasFullEstimateDetails(estimateDetails)) {
+    if (estimateDetails && 'total' in estimateDetails) {
       return estimateDetails.total;
     }
     return 0;
   };
 
   const getEstimateNotes = (): string | undefined => {
-    if (hasFullEstimateDetails(estimateDetails)) {
+    if (estimateDetails && 'notes' in estimateDetails) {
       return estimateDetails.notes;
     }
     return undefined;

@@ -14,6 +14,7 @@ import { WarrantySelectionDialog } from "../dialogs/WarrantySelectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { recordEstimateCreated } from "@/services/jobHistoryService";
+import { useJobDetails } from "../context/JobDetailsContext";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -21,6 +22,8 @@ interface ModernJobEstimatesTabProps {
 }
 
 export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
+  const { job } = useJobDetails();
+  
   const {
     estimates,
     isLoading,
@@ -45,6 +48,18 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     
     // Call original handler
     handlers.handleEstimateCreated(amount);
+  };
+
+  // Get client info from job context
+  const getClientInfo = () => {
+    if (!job) return null;
+    
+    return {
+      id: job.clientId,
+      name: job.client,
+      email: job.email,
+      phone: job.phone
+    };
   };
 
   if (error) {
@@ -162,6 +177,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         onOpenChange={dialogs.setIsEstimateBuilderOpen}
         estimateId={state.selectedEstimateId}
         jobId={jobId}
+        clientInfo={getClientInfo()}
         onSyncToInvoice={handlers.handleSyncToInvoice}
       />
 
