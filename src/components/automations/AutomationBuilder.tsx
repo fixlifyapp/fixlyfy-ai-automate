@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 import { useAutomations } from "@/hooks/useAutomations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -407,3 +408,4 @@ export const AutomationBuilder = ({ onClose, onSave }: AutomationBuilderProps) =
     </Dialog>
   );
 };
+
