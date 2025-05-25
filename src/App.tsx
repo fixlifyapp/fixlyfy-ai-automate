@@ -8,6 +8,7 @@ import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
 import Dashboard from "./pages/Dashboard";
 import JobsPage from "./pages/JobsPage";
 import ClientsPage from "./pages/ClientsPage";
+import ClientDetailPage from "./pages/ClientDetailPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
 import SettingsPage from "./pages/SettingsPage";
 import AuthPage from "./pages/AuthPage";
@@ -46,6 +47,7 @@ function App() {
                     <Route path="/jobs" element={<JobsPage />} />
                     <Route path="/jobs/:id" element={<JobDetailsPage />} />
                     <Route path="/clients" element={<ClientsPage />} />
+                    <Route path="/clients/:id" element={<ClientDetailPage />} />
                     <Route path="/team" element={<TeamManagementPage />} />
                     <Route path="/admin/team" element={<TeamManagementPage />} />
                     <Route path="/admin/roles" element={<AdminRolesPage />} />

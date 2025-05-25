@@ -21,13 +21,13 @@ interface ConfigItemCardProps {
   items: ConfigItem[];
   isLoading: boolean;
   canManage: boolean;
-  onAdd: (values: any) => Promise<void>;
-  onUpdate: (id: string, values: any) => Promise<void>;
+  onAdd: (values: any) => Promise<any>;
+  onUpdate: (id: string, values: any) => Promise<any>;
   onDelete: (id: string) => Promise<boolean>;
   refreshItems: () => void;
   renderCustomColumns?: (item: ConfigItem) => React.ReactNode;
   schema?: any;
-  itemDialogFields?: React.ComponentType<any>;
+  itemDialogFields?: React.ComponentType<any> | ((props: { form: any; fieldType?: string }) => React.ReactNode);
   initialValues?: Record<string, any>;
 }
 
