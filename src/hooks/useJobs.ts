@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,7 +33,6 @@ export interface Job {
     value: string;
     field_type: string;
   }>;
-  // Keep only the remaining fields
   job_type?: string;
   lead_source?: string;
   tasks?: string[];
@@ -164,17 +164,20 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
     }
   };
   
-  // Set up unified realtime sync
+  // Set up unified realtime sync - automatically refreshes on changes
   useUnifiedRealtime({
     tables: ['jobs', 'clients', 'job_custom_field_values'],
-    onUpdate: fetchJobs,
+    onUpdate: () => {
+      console.log('Real-time update triggered for jobs');
+      fetchJobs();
+    },
     enabled: true
   });
   
   // Set up initial data fetch and refresh on dependency changes
   useEffect(() => {
     fetchJobs();
-  }, [clientId, refreshTrigger, includeCustomFields]);
+  }, [clientId, includeCustomFields]);
   
   const addJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -285,8 +288,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
       
       toast.success(`Job ${jobId} created successfully`);
       
-      // Refresh the jobs list
-      fetchJobs();
+      // Real-time will handle the refresh automatically - no manual refresh needed
       
       return jobWithClient;
     } catch (error) {
@@ -338,6 +340,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
       if (error) throw error;
       
       toast.success('Job updated successfully');
+      // Real-time will handle the refresh automatically
       return data;
     } catch (error) {
       console.error('Error updating job:', error);
@@ -356,6 +359,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
       if (error) throw error;
       
       toast.success('Job deleted successfully');
+      // Real-time will handle the refresh automatically
       return true;
     } catch (error) {
       console.error('Error deleting job:', error);
@@ -370,6 +374,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
     addJob,
     updateJob,
     deleteJob,
-    refreshJobs: () => setRefreshTrigger(prev => prev + 1)
+    refreshJobs: fetchJobs // Keep this for manual refresh if needed
   };
 };
