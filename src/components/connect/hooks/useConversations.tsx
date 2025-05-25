@@ -1,12 +1,16 @@
 
 import { useMessageContext } from "@/contexts/MessageContext";
+import { useState } from "react";
 
 export const useConversations = () => {
   const { 
     conversations, 
     refreshConversations, 
-    isLoading 
+    isLoading,
+    openMessageDialog 
   } = useMessageContext();
+
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   // Transform the conversations to match the expected format for connect center
   const transformedConversations = conversations.map(conv => ({
@@ -14,7 +18,7 @@ export const useConversations = () => {
     client: conv.client,
     lastMessage: conv.lastMessage || '',
     lastMessageTime: conv.lastMessageTime || '',
-    unreadCount: 0, // Could be calculated based on read status
+    unread: 0, // Changed from unreadCount to unread to match ConversationsList interface
     messages: conv.messages.map(msg => ({
       id: msg.id,
       text: msg.body,
@@ -30,9 +34,19 @@ export const useConversations = () => {
     }))
   }));
 
+  const handleConversationClick = (conversationId: string) => {
+    setActiveConversationId(conversationId);
+    const conversation = transformedConversations.find(c => c.id === conversationId);
+    if (conversation) {
+      openMessageDialog(conversation.client);
+    }
+  };
+
   return {
     conversations: transformedConversations,
     refreshConversations,
-    isLoading
+    isLoading,
+    activeConversation: activeConversationId,
+    handleConversationClick
   };
 };
