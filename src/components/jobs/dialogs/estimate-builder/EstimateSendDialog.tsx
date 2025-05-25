@@ -78,6 +78,7 @@ export const EstimateSendDialog = ({
   // Fetch estimate and client details when dialog opens
   useEffect(() => {
     if (open && estimateNumber) {
+      console.log("Dialog opened, fetching estimate details for:", estimateNumber);
       fetchEstimateDetails();
     }
   }, [open, estimateNumber]);
@@ -98,6 +99,8 @@ export const EstimateSendDialog = ({
   const fetchEstimateDetails = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching estimate details for estimate number:", estimateNumber);
+      
       // Fetch estimate details with client info using the view
       const { data: details, error: detailsError } = await supabase
         .from('estimate_details_view')
@@ -110,6 +113,8 @@ export const EstimateSendDialog = ({
         toast.error('Failed to load estimate details');
         return;
       }
+
+      console.log("Estimate details loaded:", details);
 
       if (details) {
         setEstimateDetails(details);
@@ -133,6 +138,7 @@ export const EstimateSendDialog = ({
         if (itemsError) {
           console.error('Error fetching line items:', itemsError);
         } else if (items) {
+          console.log("Line items loaded:", items.length, "items");
           setLineItems(items);
         }
       }
@@ -150,11 +156,13 @@ export const EstimateSendDialog = ({
   // Reset the dialog state when opened
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
+      console.log("Dialog opening, resetting state");
       setCurrentStep("warranty");
       setIsProcessing(false);
       setCustomNote("");
     } else {
       // Clear data when closing
+      console.log("Dialog closing, clearing data");
       setEstimateDetails(null);
       setLineItems([]);
       setSendTo("");
@@ -164,17 +172,21 @@ export const EstimateSendDialog = ({
   
   // Handle warranty selection
   const handleWarrantySelect = (warranty: Product | null, note: string) => {
+    console.log("Warranty selected:", warranty?.name || "none", "with note:", note);
+    
     if (warranty) {
       onAddWarranty(warranty, note);
       setCustomNote(note);
     }
     
     // Move to next step
+    console.log("Moving to send-method step");
     setCurrentStep("send-method");
   };
   
   // Handle skipping warranty
   const handleSkipWarranty = () => {
+    console.log("Skipping warranty, moving to send-method step");
     setCurrentStep("send-method");
   };
 
@@ -193,7 +205,7 @@ export const EstimateSendDialog = ({
 
     // Check if estimate has line items
     if (!lineItems || lineItems.length === 0) {
-      toast.error("Cannot send estimate: Please add at least one item to the estimate first");
+      toast.error("Please add items to the estimate first before sending it to the client");
       return;
     }
 
