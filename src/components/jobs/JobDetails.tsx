@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X } from "lucide-react";
@@ -10,7 +11,6 @@ import { JobDetailsEditDialog } from "./dialogs/JobDetailsEditDialog";
 import { JobTypeDialog } from "./dialogs/JobTypeDialog";
 import { TeamSelectionDialog } from "./dialogs/TeamSelectionDialog";
 import { SourceSelectionDialog } from "./dialogs/SourceSelectionDialog";
-import { PrioritySelectionDialog } from "./dialogs/PrioritySelectionDialog";
 import { ScheduleSelectionDialog } from "./dialogs/ScheduleSelectionDialog";
 import { TagsManagementDialog } from "./dialogs/TagsManagementDialog";
 import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
@@ -73,7 +73,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     type: job?.service || "Loading...",
     tags: ["HVAC", "Residential"], // TODO: Use actual tags from job
     team: "Robert Smith", // TODO: Use actual technician data
-    priority: "Medium", // TODO: Use actual priority
     source: "Phone Call" // TODO: Use actual source
   });
 
@@ -116,7 +115,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
-  const [isPriorityDialogOpen, setIsPriorityDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isTagsDialogOpen, setIsTagsDialogOpen] = useState(false);
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
@@ -140,17 +138,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     };
     
     return tagColors[tag] || "bg-purple-50 border-purple-200 text-purple-600";
-  };
-  
-  // Priority colors based on priority level
-  const getPriorityColor = (priority: string) => {
-    const priorityColors: Record<string, string> = {
-      "High": "text-red-600",
-      "Medium": "text-orange-600",
-      "Low": "text-green-600"
-    };
-    
-    return priorityColors[priority] || "text-purple-600";
   };
 
   // Handle saving client info
@@ -178,11 +165,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   // Handle updating source
   const handleUpdateSource = (source: string) => {
     setJobDetails(prev => ({ ...prev, source }));
-  };
-
-  // Handle updating priority
-  const handleUpdatePriority = (priority: string) => {
-    setJobDetails(prev => ({ ...prev, priority }));
   };
 
   // Handle updating schedule
@@ -585,13 +567,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         onOpenChange={setIsSourceDialogOpen}
         initialSource={jobDetails.source}
         onSave={handleUpdateSource}
-      />
-      
-      <PrioritySelectionDialog
-        open={isPriorityDialogOpen}
-        onOpenChange={setIsPriorityDialogOpen}
-        initialPriority={jobDetails.priority}
-        onSave={handleUpdatePriority}
       />
       
       <ScheduleSelectionDialog

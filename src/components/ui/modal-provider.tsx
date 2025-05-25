@@ -8,7 +8,6 @@ export type ModalType =
   | "teamSelection" 
   | "assignTechnician" 
   | "deleteConfirm" 
-  | "prioritySelection" 
   | "sourceSelection" 
   | "jobType" 
   | "refund" 
