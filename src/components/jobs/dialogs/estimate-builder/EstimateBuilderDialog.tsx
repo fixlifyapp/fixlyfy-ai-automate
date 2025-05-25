@@ -1,27 +1,27 @@
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
-import { EstimateForm } from "./EstimateForm";
-import { EstimatePreview } from "./EstimatePreview";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
-import { CustomLineItemDialog } from "./CustomLineItemDialog";
-import { Product, LineItem } from "@/components/jobs/builder/types";
-import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
-import { useEstimates } from "@/hooks/useEstimates";
+import { Button } from "@/components/ui/button";
+import { ProductForm } from "@/components/jobs/builder/ProductForm";
+import { ProductsList } from "@/components/jobs/builder/ProductsList";
+import { LineItems } from "@/components/jobs/builder/LineItems";
+import { useProducts } from "@/hooks/useProducts";
+import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
+import { EstimateSummary } from "@/components/jobs/builder/EstimateSummary";
 import { EstimateSendDialog } from "./EstimateSendDialog";
-import { useJobs } from "@/hooks/useJobs";
+import { useEstimateInfo } from "@/components/jobs/estimates/hooks/useEstimateInfo";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  estimateId?: string;
+  estimateId: string | null;
   jobId: string;
-  onSyncToInvoice?: () => void;
+  onSyncToInvoice?: (estimate?: any) => void;
 }
 
 export const EstimateBuilderDialog = ({
@@ -31,269 +31,136 @@ export const EstimateBuilderDialog = ({
   jobId,
   onSyncToInvoice
 }: EstimateBuilderDialogProps) => {
-  const [activeTab, setActiveTab] = useState("form");
-  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
-  const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("products");
+  const { products, isLoading: isProductsLoading } = useProducts();
+  const { clientInfo, companyInfo, jobInfo } = useEstimateInfo(jobId);
   
-  // Fetch job data
-  const { jobs, isLoading } = useJobs(jobId);
-  // Find the specific job we're interested in
-  const [jobData, setJobData] = useState<any>(null);
-  
-  // Get the job data when jobs are loaded
-  useEffect(() => {
-    if (!isLoading && jobs.length > 0) {
-      const foundJob = jobs.find(job => job.id === jobId);
-      if (foundJob) {
-        setJobData(foundJob);
-      }
-    }
-  }, [jobs, isLoading, jobId]);
-  
-  const estimateBuilder = useEstimateBuilder({
-    estimateId: estimateId || null,
-    open,
-    onSyncToInvoice,
-    jobId
-  });
-  
-  // Set tax rate to 13% fixed
-  if (estimateBuilder.taxRate !== 13) {
-    estimateBuilder.setTaxRate(13);
-  }
-  
-  const handleProductSelect = (product: Product) => {
-    estimateBuilder.handleAddProduct(product);
-    if (!estimateId) {
-      // If it's a new estimate, select first product and proceed to editing
-      setIsProductSearchOpen(false);
-    }
-  };
-  
-  const handleCustomLineItemSave = (item: Partial<LineItem>) => {
-    // ... keep existing code (creating a new line item and adding it to the estimate)
-    const newLineItem: LineItem = {
-      id: `item-${Date.now()}`,
-      description: item.description || item.name || "Custom Item",
-      quantity: item.quantity || 1,
-      unitPrice: item.unitPrice || 0,
-      taxable: item.taxable !== undefined ? item.taxable : true,
-      discount: item.discount || 0,
-      ourPrice: item.ourPrice || 0,
-      name: item.name || "Custom Item",
-      price: item.unitPrice || 0,
-      total: (item.quantity || 1) * (item.unitPrice || 0)
-    };
-    
-    // Update lineItems by using the state update function from useEstimateBuilder
-    const updatedLineItems = [...estimateBuilder.lineItems, newLineItem];
-    estimateBuilder.setLineItems(updatedLineItems);
-    setIsCustomLineItemDialogOpen(false);
-  };
+  const {
+    estimateNumber,
+    lineItems,
+    notes,
+    selectedProduct,
+    selectedLineItemId,
+    recommendedWarranty,
+    techniciansNote,
+    taxRate,
+    isLoading,
+    setTechniciansNote,
+    setRecommendedWarranty,
+    setLineItems,
+    handleAddProduct,
+    handleRemoveLineItem,
+    handleUpdateLineItem,
+    handleEditLineItem,
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage,
+    handleSyncToInvoice,
+    saveEstimateChanges,
+    setNotes,
+    setTaxRate
+  } = useEstimateBuilder({ estimateId, open, onSyncToInvoice, jobId });
 
-  const handleEditLineItem = (id: string) => {
-    // ... keep existing code (finding and editing a line item)
-    const lineItem = estimateBuilder.lineItems.find(item => item.id === id);
-    if (lineItem) {
-      // Create a product object from the line item to edit
-      const productToEdit: Product = {
-        id: lineItem.id,
-        name: lineItem.name || lineItem.description,
-        description: lineItem.description,
-        category: "",
-        price: lineItem.unitPrice,
-        ourPrice: lineItem.ourPrice || 0,
-        cost: lineItem.ourPrice || 0,
-        taxable: lineItem.taxable,
-        tags: [],
-        quantity: lineItem.quantity
-      };
-      setSelectedProduct(productToEdit);
-      setIsProductEditDialogOpen(true);
-      return true;
-    }
-    return false;
-  };
-
-  const handleProductUpdate = (updatedProduct: Product) => {
-    // ... keep existing code (updating a product in line items)
-    const updatedLineItems = estimateBuilder.lineItems.map(item => {
-      if (item.id === updatedProduct.id) {
-        return {
-          ...item,
-          name: updatedProduct.name,
-          description: updatedProduct.description || updatedProduct.name,
-          unitPrice: updatedProduct.price,
-          price: updatedProduct.price,
-          ourPrice: updatedProduct.ourPrice || 0,
-          taxable: updatedProduct.taxable,
-          quantity: updatedProduct.quantity || item.quantity,
-          total: (updatedProduct.quantity || item.quantity) * updatedProduct.price
-        };
-      }
-      return item;
-    });
-    
-    estimateBuilder.setLineItems(updatedLineItems);
-    setIsProductEditDialogOpen(false);
-  };
-  
-  // Open send dialog instead of just saving
-  const handleSendEstimate = () => {
-    setIsSendDialogOpen(true);
-  };
-  
-  // Handle adding a warranty product
-  const handleAddWarranty = (warranty: Product | null, note: string) => {
-    if (warranty) {
-      estimateBuilder.handleAddProduct({
-        ...warranty,
-        ourPrice: 0 // Reset ourPrice for warranty in customer estimate
-      });
-      
-      if (note) {
-        estimateBuilder.setNotes(note);
-      }
-    }
-  };
-  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="p-6 border-b bg-muted/20">
-          <div className="flex items-center gap-2">
-            {isMobile && activeTab !== "form" && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setActiveTab("form")} 
-                className="mr-1"
-              >
-                <ArrowLeft size={18} />
-              </Button>
-            )}
-            <DialogTitle className="text-xl">
-              {estimateId ? `Edit Estimate ${estimateBuilder.estimateNumber}` : 'Create New Estimate'}
-            </DialogTitle>
-          </div>
-        </DialogHeader>
-        
-        <div className="flex flex-grow overflow-hidden">
-          {!isMobile && (
-            <div className="w-20 bg-muted/10 border-r flex flex-col items-center pt-8 gap-8">
-              <button 
-                onClick={() => setActiveTab("form")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "form" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
-                <ListPlus size={20} />
-                <span>Form</span>
-              </button>
-              
-              <button 
-                onClick={() => setActiveTab("preview")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "preview" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
-                <FileText size={20} />
-                <span>Preview</span>
-              </button>
-            </div>
-          )}
-          
-          <div className="flex-grow overflow-hidden flex flex-col">
-            {isMobile && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="border-b">
-                <TabsList className="w-full bg-background">
-                  <TabsTrigger value="form" className="flex-1">Form</TabsTrigger>
-                  <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-            
-            <div className="flex-grow overflow-auto p-6">
-              {activeTab === "form" && (
-                <EstimateForm
-                  estimateNumber={estimateBuilder.estimateNumber}
-                  lineItems={estimateBuilder.lineItems || []}
-                  onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
-                  onUpdateLineItem={estimateBuilder.handleUpdateLineItem}
-                  onEditLineItem={handleEditLineItem}
-                  onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
-                  onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
-                  taxRate={estimateBuilder.taxRate}
-                  setTaxRate={estimateBuilder.setTaxRate}
-                  calculateSubtotal={estimateBuilder.calculateSubtotal}
-                  calculateTotalTax={estimateBuilder.calculateTotalTax}
-                  calculateGrandTotal={estimateBuilder.calculateGrandTotal}
-                  calculateTotalMargin={estimateBuilder.calculateTotalMargin}
-                  calculateMarginPercentage={estimateBuilder.calculateMarginPercentage}
-                  showMargin={false}
-                />
-              )}
-              
-              {activeTab === "preview" && (
-                <EstimatePreview 
-                  estimateNumber={estimateBuilder.estimateNumber}
-                  lineItems={estimateBuilder.lineItems || []}
-                  taxRate={estimateBuilder.taxRate}
-                  calculateSubtotal={estimateBuilder.calculateSubtotal}
-                  calculateTotalTax={estimateBuilder.calculateTotalTax}
-                  calculateGrandTotal={estimateBuilder.calculateGrandTotal}
-                  notes={estimateBuilder.notes || ""}
-                />
-              )}
-            </div>
-            
-            <div className="p-4 border-t bg-muted/20 flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSendEstimate}
-                className="flex items-center gap-1"
-              >
-                <Send size={16} />
-                Send to Client
-              </Button>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-      
-      {/* Product Search Dialog */}
-      <ProductSearch
-        open={isProductSearchOpen}
-        onOpenChange={setIsProductSearchOpen}
-        onProductSelect={handleProductSelect}
-      />
-      
-      {/* Custom Line Item Dialog */}
-      <CustomLineItemDialog
-        open={isCustomLineItemDialogOpen}
-        onOpenChange={setIsCustomLineItemDialogOpen}
-        onSave={handleCustomLineItemSave}
-      />
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Estimate Builder - {estimateNumber}</DialogTitle>
+          </DialogHeader>
 
-      {/* Product Edit Dialog */}
-      <ProductEditInEstimateDialog
-        open={isProductEditDialogOpen}
-        onOpenChange={setIsProductEditDialogOpen}
-        product={selectedProduct}
-        onSave={handleProductUpdate}
-      />
-      
-      {/* Estimate Send Dialog with Warranty Selection */}
+          <Tabs defaultValue="products" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="products" onClick={() => setActiveTab("products")}>Products</TabsTrigger>
+              <TabsTrigger value="line-items" onClick={() => setActiveTab("line-items")}>Line Items</TabsTrigger>
+              <TabsTrigger value="summary" onClick={() => setActiveTab("summary")}>Summary</TabsTrigger>
+            </TabsList>
+            
+            <div className="flex h-full">
+              <div className="w-1/2 pr-4">
+                <TabsContent value="products" className="outline-none">
+                  <ProductForm 
+                    selectedProduct={selectedProduct} 
+                    onAddProduct={handleAddProduct} 
+                    isLoading={isProductsLoading}
+                  />
+                  <ProductsList 
+                    products={products} 
+                    onProductSelect={handleAddProduct} 
+                    isLoading={isProductsLoading}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="line-items" className="outline-none">
+                  <LineItems
+                    lineItems={lineItems}
+                    onRemove={handleRemoveLineItem}
+                    onUpdate={handleUpdateLineItem}
+                    onEdit={handleEditLineItem}
+                  />
+                </TabsContent>
+              </div>
+
+              <div className="w-1/2 pl-4">
+                <TabsContent value="summary" className="outline-none">
+                  <EstimateSummary
+                    estimateNumber={estimateNumber}
+                    lineItems={lineItems}
+                    notes={notes}
+                    taxRate={taxRate}
+                    onNotesChange={setNotes}
+                    onTaxRateChange={setTaxRate}
+                    subtotal={calculateSubtotal()}
+                    totalTax={calculateTotalTax()}
+                    grandTotal={calculateGrandTotal()}
+                    totalMargin={calculateTotalMargin()}
+                    marginPercentage={calculateMarginPercentage()}
+                    companyInfo={companyInfo}
+                    clientInfo={clientInfo}
+                    jobInfo={jobInfo}
+                  />
+                </TabsContent>
+              </div>
+            </div>
+          </Tabs>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => setIsSendDialogOpen(true)} 
+              disabled={isLoading}
+            >
+              {isLoading ? "Saving..." : "Send Estimate"}
+            </Button>
+            {estimateId && (
+              <Button variant="secondary" onClick={handleSyncToInvoice}>
+                Sync to Invoice
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <EstimateSendDialog
         open={isSendDialogOpen}
         onOpenChange={setIsSendDialogOpen}
-        onSave={estimateBuilder.saveEstimateChanges}
-        onAddWarranty={handleAddWarranty}
-        clientInfo={jobData?.client}
-        estimateNumber={estimateBuilder.estimateNumber}
+        onSave={saveEstimateChanges}
+        onAddWarranty={(warranty, note) => {
+          if (warranty) {
+            setRecommendedWarranty(warranty);
+            setTechniciansNote(note);
+          }
+        }}
+        clientInfo={info.clientInfo}
+        estimateNumber={estimateNumber}
+        estimateId={estimateId}
+        estimateTotal={calculateGrandTotal()}
       />
-    </Dialog>
+    </>
   );
 };

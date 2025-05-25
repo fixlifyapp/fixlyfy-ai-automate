@@ -364,6 +364,42 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_default: boolean | null
+          name: string
+          subject: string | null
+          type: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          subject?: string | null
+          type: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          subject?: string | null
+          type?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           client_id: string | null
@@ -504,6 +540,62 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimate_communications: {
+        Row: {
+          communication_type: string
+          content: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          estimate_id: string | null
+          id: string
+          provider_message_id: string | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          communication_type: string
+          content: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          estimate_id?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          communication_type?: string
+          content?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          estimate_id?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_communications_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
             referencedColumns: ["id"]
           },
         ]
