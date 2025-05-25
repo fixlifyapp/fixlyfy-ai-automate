@@ -24,7 +24,7 @@ interface Task {
 }
 
 export const JobOverview = ({ jobId }: JobOverviewProps) => {
-  const { job, isLoading } = useJobDetails();
+  const { job, isLoading, refreshJob } = useJobDetails();
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const { updateJob } = useJobs();
 
@@ -53,6 +53,8 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
     
     if (result) {
       console.log("Tasks updated successfully:", taskNames);
+      // Trigger real-time refresh
+      refreshJob();
     }
   };
 
@@ -80,15 +82,39 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       {/* Primary Information Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
-          <JobDescriptionCard description={job.description || ""} jobId={jobId} editable />
-          <JobSummaryCard job={job} jobId={jobId} editable />
-          <TechnicianCard job={job} jobId={jobId} editable />
+          <JobDescriptionCard 
+            description={job.description || ""} 
+            jobId={jobId} 
+            editable 
+            onUpdate={refreshJob}
+          />
+          <JobSummaryCard 
+            job={job} 
+            jobId={jobId} 
+            editable 
+            onUpdate={refreshJob}
+          />
+          <TechnicianCard 
+            job={job} 
+            jobId={jobId} 
+            editable 
+            onUpdate={refreshJob}
+          />
         </div>
         
         <div className="space-y-6">
           <AdditionalInfoCard job={job} />
-          <ScheduleInfoCard job={job} jobId={jobId} editable />
-          <AttachmentsCard jobId={jobId} editable />
+          <ScheduleInfoCard 
+            job={job} 
+            jobId={jobId} 
+            editable 
+            onUpdate={refreshJob}
+          />
+          <AttachmentsCard 
+            jobId={jobId} 
+            editable 
+            onUpdate={refreshJob}
+          />
         </div>
       </div>
 
@@ -100,8 +126,14 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             jobId={jobId} 
             editable 
             onManageTasks={() => setIsTaskDialogOpen(true)}
+            onUpdate={refreshJob}
           />
-          <JobTagsCard tags={job.tags || []} jobId={jobId} editable />
+          <JobTagsCard 
+            tags={job.tags || []} 
+            jobId={jobId} 
+            editable 
+            onUpdate={refreshJob}
+          />
         </div>
         <ConditionalCustomFieldsCard jobId={jobId} />
       </div>

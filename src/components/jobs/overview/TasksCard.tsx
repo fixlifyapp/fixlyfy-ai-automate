@@ -10,9 +10,10 @@ interface TasksCardProps {
   jobId: string;
   editable?: boolean;
   onManageTasks?: () => void;
+  onUpdate?: () => void;
 }
 
-export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks }: TasksCardProps) => {
+export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks, onUpdate }: TasksCardProps) => {
   const taskList = Array.isArray(tasks) ? tasks : [];
   
   return (

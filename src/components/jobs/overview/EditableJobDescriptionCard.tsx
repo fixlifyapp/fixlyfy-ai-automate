@@ -10,9 +10,10 @@ import { toast } from "sonner";
 interface EditableJobDescriptionCardProps {
   description: string;
   jobId: string;
+  onUpdate?: () => void;
 }
 
-export const EditableJobDescriptionCard = ({ description, jobId }: EditableJobDescriptionCardProps) => {
+export const EditableJobDescriptionCard = ({ description, jobId, onUpdate }: EditableJobDescriptionCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(description || "");
   const { updateJob } = useJobs();
@@ -22,6 +23,10 @@ export const EditableJobDescriptionCard = ({ description, jobId }: EditableJobDe
     if (result) {
       setIsEditing(false);
       toast.success("Job description updated successfully");
+      // Trigger real-time refresh
+      if (onUpdate) {
+        onUpdate();
+      }
     }
   };
 

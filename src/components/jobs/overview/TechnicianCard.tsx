@@ -14,9 +14,10 @@ interface TechnicianCardProps {
   job: JobInfo;
   jobId?: string;
   editable?: boolean;
+  onUpdate?: () => void;
 }
 
-export const TechnicianCard = ({ job, jobId, editable = false }: TechnicianCardProps) => {
+export const TechnicianCard = ({ job, jobId, editable = false, onUpdate }: TechnicianCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(job.technician_id || "unassigned");
   const { updateJob } = useJobs();
@@ -31,6 +32,10 @@ export const TechnicianCard = ({ job, jobId, editable = false }: TechnicianCardP
     if (result) {
       setIsEditing(false);
       toast.success("Technician assignment updated successfully");
+      // Trigger real-time refresh
+      if (onUpdate) {
+        onUpdate();
+      }
     }
   };
 

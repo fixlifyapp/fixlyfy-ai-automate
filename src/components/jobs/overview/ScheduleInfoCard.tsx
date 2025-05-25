@@ -12,9 +12,10 @@ interface ScheduleInfoCardProps {
   job: JobInfo;
   jobId?: string;
   editable?: boolean;
+  onUpdate?: () => void;
 }
 
-export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoCardProps) => {
+export const ScheduleInfoCard = ({ job, jobId, editable = false, onUpdate }: ScheduleInfoCardProps) => {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const { updateJob } = useJobs();
 
@@ -27,6 +28,10 @@ export const ScheduleInfoCard = ({ job, jobId, editable = false }: ScheduleInfoC
     });
     if (result) {
       toast.success("Schedule updated successfully");
+      // Trigger real-time refresh
+      if (onUpdate) {
+        onUpdate();
+      }
     }
   };
 

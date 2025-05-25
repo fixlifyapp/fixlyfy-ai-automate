@@ -13,9 +13,10 @@ interface JobTagsCardProps {
   tags: string[];
   jobId?: string;
   editable?: boolean;
+  onUpdate?: () => void;
 }
 
-export const JobTagsCard = ({ tags, jobId, editable = false }: JobTagsCardProps) => {
+export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTagsCardProps) => {
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const { updateJob } = useJobs();
   const { items: tagItems } = useTags();
@@ -61,6 +62,10 @@ export const JobTagsCard = ({ tags, jobId, editable = false }: JobTagsCardProps)
               const result = await updateJob(jobId, { tags: selectedTags });
               if (result) {
                 toast.success("Tags updated successfully");
+                // Trigger real-time refresh
+                if (onUpdate) {
+                  onUpdate();
+                }
               }
             }
           }}
@@ -75,6 +80,10 @@ export const JobTagsCard = ({ tags, jobId, editable = false }: JobTagsCardProps)
     const result = await updateJob(jobId, { tags: selectedTags });
     if (result) {
       toast.success("Tags updated successfully");
+      // Trigger real-time refresh
+      if (onUpdate) {
+        onUpdate();
+      }
     }
   };
 

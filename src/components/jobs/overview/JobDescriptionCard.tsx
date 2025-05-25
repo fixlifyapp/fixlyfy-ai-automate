@@ -8,11 +8,12 @@ interface JobDescriptionCardProps {
   description: string;
   jobId?: string;
   editable?: boolean;
+  onUpdate?: () => void;
 }
 
-export const JobDescriptionCard = ({ description, jobId, editable = false }: JobDescriptionCardProps) => {
+export const JobDescriptionCard = ({ description, jobId, editable = false, onUpdate }: JobDescriptionCardProps) => {
   if (editable && jobId) {
-    return <EditableJobDescriptionCard description={description} jobId={jobId} />;
+    return <EditableJobDescriptionCard description={description} jobId={jobId} onUpdate={onUpdate} />;
   }
 
   // Always show the card, even if description is empty

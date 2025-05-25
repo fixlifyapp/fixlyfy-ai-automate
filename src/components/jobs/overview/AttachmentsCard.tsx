@@ -10,9 +10,10 @@ import { toast } from "sonner";
 interface AttachmentsCardProps {
   jobId: string;
   editable?: boolean;
+  onUpdate?: () => void;
 }
 
-export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProps) => {
+export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: AttachmentsCardProps) => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   
   // Mock attachments data - replace with real data later
@@ -34,11 +35,19 @@ export const AttachmentsCard = ({ jobId, editable = false }: AttachmentsCardProp
   const handleDelete = (attachmentId: number) => {
     setAttachments(prev => prev.filter(att => att.id !== attachmentId));
     toast.success("Attachment deleted successfully");
+    // Trigger real-time refresh
+    if (onUpdate) {
+      onUpdate();
+    }
   };
 
   const handleUploadSuccess = (newAttachments: any[]) => {
     setAttachments(newAttachments);
     toast.success("Attachments updated successfully");
+    // Trigger real-time refresh
+    if (onUpdate) {
+      onUpdate();
+    }
   };
 
   return (
