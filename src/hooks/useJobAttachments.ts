@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUnifiedRealtime } from "./useUnifiedRealtime";
 
 export interface JobAttachment {
   id: string;
@@ -41,6 +42,16 @@ export const useJobAttachments = (jobId?: string) => {
     }
   };
 
+  // Set up real-time updates for job attachments
+  useUnifiedRealtime({
+    tables: ['job_attachments'],
+    onUpdate: () => {
+      console.log('Real-time update for job attachments');
+      fetchAttachments();
+    },
+    enabled: !!jobId
+  });
+
   // Upload files to storage and save to database
   const uploadAttachments = async (files: File[]) => {
     if (!jobId || files.length === 0) return false;
@@ -72,7 +83,7 @@ export const useJobAttachments = (jobId?: string) => {
 
       await Promise.all(uploadPromises);
       toast.success(`${files.length} file(s) uploaded successfully`);
-      await fetchAttachments(); // Refresh the list
+      // Real-time will handle the refresh automatically
       return true;
     } catch (error) {
       console.error('Error uploading attachments:', error);
@@ -94,7 +105,7 @@ export const useJobAttachments = (jobId?: string) => {
       if (error) throw error;
       
       toast.success('Attachment deleted successfully');
-      await fetchAttachments(); // Refresh the list
+      // Real-time will handle the refresh automatically
       return true;
     } catch (error) {
       console.error('Error deleting attachment:', error);
