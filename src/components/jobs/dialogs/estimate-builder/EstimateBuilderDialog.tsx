@@ -148,7 +148,7 @@ export const EstimateBuilderDialog = ({
   // Handle send estimate with validation
   const handleSendEstimate = () => {
     if (!hasLineItems) {
-      toast.error("Please add items to the estimate first before sending it to the client");
+      toast.error("Please add at least one item to the estimate before sending it to the client");
       return;
     }
     setIsSendDialogOpen(true);
