@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,9 @@ export const useInvoiceBuilder = (
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [notes, setNotes] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>();
+  const [issueDate, setIssueDate] = useState<Date>(new Date());
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [taxRate, setTaxRate] = useState(0);
 
   // Generate unique invoice number
   const generateInvoiceNumber = () => {
@@ -35,6 +39,13 @@ export const useInvoiceBuilder = (
     const random = Math.floor(Math.random() * 1000);
     return `INV-${timestamp}-${random}`;
   };
+
+  // Initialize invoice number on mount
+  useEffect(() => {
+    if (!invoiceId && !invoiceNumber) {
+      setInvoiceNumber(generateInvoiceNumber());
+    }
+  }, [invoiceId, invoiceNumber]);
 
   // Load existing invoice if editing
   useEffect(() => {
@@ -64,18 +75,26 @@ export const useInvoiceBuilder = (
       if (itemsError) throw itemsError;
       
       setInvoice(invoiceData);
+      setInvoiceNumber(invoiceData.invoice_number);
       setNotes(invoiceData.notes || "");
       if (invoiceData.due_date) {
         setDueDate(new Date(invoiceData.due_date));
+      }
+      if (invoiceData.date) {
+        setIssueDate(new Date(invoiceData.date));
       }
       
       const transformedItems: LineItem[] = itemsData?.map(item => ({
         id: item.id,
         description: item.description || '',
+        name: item.description || '',
         quantity: item.quantity || 1,
         unitPrice: Number(item.unit_price || 0),
+        price: Number(item.unit_price || 0),
         taxable: item.taxable !== false,
-        total: (item.quantity || 1) * Number(item.unit_price || 0)
+        total: (item.quantity || 1) * Number(item.unit_price || 0),
+        ourPrice: 0,
+        discount: 0
       })) || [];
       
       setLineItems(transformedItems);
@@ -91,8 +110,7 @@ export const useInvoiceBuilder = (
     try {
       setIsLoading(true);
       
-      const total = lineItems.reduce((sum, item) => sum + item.total, 0);
-      const invoiceNumber = invoice?.invoice_number || generateInvoiceNumber();
+      const total = calculateGrandTotal();
       
       let savedInvoice: Invoice;
       
@@ -125,7 +143,7 @@ export const useInvoiceBuilder = (
             status: 'unpaid',
             notes,
             due_date: dueDate?.toISOString(),
-            date: new Date().toISOString(),
+            date: issueDate.toISOString(),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -174,6 +192,67 @@ export const useInvoiceBuilder = (
     }
   };
 
+  // Additional methods expected by InvoiceBuilderDialog
+  const initializeFromEstimate = (estimate: any) => {
+    if (estimate.items) {
+      setLineItems(estimate.items);
+    }
+    if (estimate.notes) {
+      setNotes(estimate.notes);
+    }
+    setInvoiceNumber(generateInvoiceNumber());
+  };
+
+  const initializeFromInvoice = (existingInvoice: Invoice) => {
+    setInvoice(existingInvoice);
+    setInvoiceNumber(existingInvoice.invoice_number);
+    setNotes(existingInvoice.notes || "");
+    if (existingInvoice.due_date) {
+      setDueDate(new Date(existingInvoice.due_date));
+    }
+    if (existingInvoice.date) {
+      setIssueDate(new Date(existingInvoice.date));
+    }
+  };
+
+  const resetForm = () => {
+    setLineItems([]);
+    setNotes("");
+    setDueDate(undefined);
+    setIssueDate(new Date());
+    setInvoiceNumber(generateInvoiceNumber());
+    setTaxRate(0);
+    setInvoice(null);
+  };
+
+  const handleAddProduct = (product: Product) => {
+    const newLineItem: LineItem = {
+      id: `temp-${Date.now()}`,
+      description: product.description || product.name,
+      name: product.name,
+      quantity: product.quantity || 1,
+      unitPrice: product.price,
+      price: product.price,
+      taxable: product.taxable !== false,
+      total: (product.quantity || 1) * product.price,
+      ourPrice: product.ourPrice || 0,
+      discount: 0
+    };
+    setLineItems(prev => [...prev, newLineItem]);
+  };
+
+  const handleUpdateLineItem = (id: string, updates: Partial<LineItem>) => {
+    setLineItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
+        : item
+    ));
+  };
+
+  const handleRemoveLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
+
   const addLineItem = (item: LineItem) => {
     setLineItems(prev => [...prev, { ...item, id: `temp-${Date.now()}` }]);
   };
@@ -190,8 +269,50 @@ export const useInvoiceBuilder = (
     ));
   };
 
+  const calculateSubtotal = () => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  };
+
+  const calculateTotalTax = () => {
+    const subtotal = calculateSubtotal();
+    return subtotal * (taxRate / 100);
+  };
+
+  const calculateGrandTotal = () => {
+    return calculateSubtotal() + calculateTotalTax();
+  };
+
+  const calculateTotalMargin = () => {
+    return lineItems.reduce((sum, item) => {
+      const cost = item.ourPrice || 0;
+      const margin = (item.unitPrice - cost) * item.quantity;
+      return sum + margin;
+    }, 0);
+  };
+
+  const calculateMarginPercentage = () => {
+    const total = calculateSubtotal();
+    const margin = calculateTotalMargin();
+    return total > 0 ? (margin / total) * 100 : 0;
+  };
+
   const calculateTotal = () => {
-    return lineItems.reduce((sum, item) => sum + item.total, 0);
+    return calculateGrandTotal();
+  };
+
+  const saveInvoiceChanges = async () => {
+    return await saveInvoice();
+  };
+
+  // Form data object for compatibility
+  const formData = {
+    invoiceId: invoice?.id || null,
+    invoiceNumber,
+    notes,
+    dueDate,
+    issueDate,
+    lineItems,
+    taxRate
   };
 
   return {
@@ -200,12 +321,30 @@ export const useInvoiceBuilder = (
     lineItems,
     notes,
     dueDate,
+    issueDate,
+    invoiceNumber,
+    taxRate,
+    formData,
     setNotes,
     setDueDate,
+    setLineItems,
+    setTaxRate,
     addLineItem,
     removeLineItem,
     updateLineItem,
     saveInvoice,
-    calculateTotal
+    saveInvoiceChanges,
+    calculateTotal,
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage,
+    initializeFromEstimate,
+    initializeFromInvoice,
+    resetForm,
+    handleAddProduct,
+    handleUpdateLineItem,
+    handleRemoveLineItem
   };
 };

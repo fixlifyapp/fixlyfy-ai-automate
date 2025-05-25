@@ -245,8 +245,8 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object with ALL fields
-      const jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
+      // Create the job object with proper types - this now matches the database schema
+      const jobDataForDatabase = {
         title: `${data.service || 'General'} Service`,
         description: data.description,
         status: "scheduled",
@@ -260,12 +260,12 @@ export const JobsCreateModal = ({
         tags: selectedTags,
         job_type: data.service || "General Service",
         lead_source: leadSource || undefined,
-        tasks: tasks
+        tasks: JSON.stringify(tasks) // Convert to JSON string for database
       };
 
-      console.log('Creating job with complete data:', jobData);
+      console.log('Creating job with database-compatible data:', jobDataForDatabase);
 
-      const newJob = await addJob(jobData);
+      const newJob = await addJob(jobDataForDatabase);
       
       if (newJob) {
         // Save custom field values if any
