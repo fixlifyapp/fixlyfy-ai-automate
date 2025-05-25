@@ -20,7 +20,7 @@ interface ConversationsListProps {
   conversations: Conversation[];
   activeConversation: string | null;
   isLoading: boolean;
-  onConversationClick: (id: string) => void;
+  onConversationClick: (conversation: Conversation) => void;
 }
 
 export const ConversationsList = ({
@@ -52,7 +52,7 @@ export const ConversationsList = ({
       {conversations.map((conversation) => (
         <div 
           key={conversation.id}
-          onClick={() => onConversationClick(conversation.id)}
+          onClick={() => onConversationClick(conversation)}
           className={cn(
             "p-4 border-b border-fixlyfy-border cursor-pointer hover:bg-fixlyfy-bg-hover",
             activeConversation === conversation.id && "bg-fixlyfy-bg-hover"

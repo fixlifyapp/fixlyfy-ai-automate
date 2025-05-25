@@ -85,7 +85,8 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
             <ConversationsList
               conversations={filteredConversations}
               onConversationClick={handleConversationSelect}
-              activeConversationId={activeConversation}
+              activeConversation={activeConversation}
+              isLoading={false}
             />
           )}
         </div>
