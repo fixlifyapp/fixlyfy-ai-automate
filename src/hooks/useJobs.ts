@@ -15,6 +15,7 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
+// Updated interface to match actual Supabase types
 interface DatabaseJob {
   id: string;
   title: string;
@@ -34,7 +35,7 @@ interface DatabaseJob {
   job_type?: string;
   lead_source?: string;
   service?: string;
-  tasks?: string | string[];
+  tasks?: any; // Use any to handle Json type from Supabase
   created_by?: string;
   clients?: {
     id: string;
@@ -60,17 +61,23 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const [totalJobs, setTotalJobs] = useState(0);
   const [filters, setFilters] = useState<JobsFilter>({});
 
-  const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
+  const transformDatabaseJob = (dbJob: any): Job => {
     let tasks: string[] = [];
     
-    if (typeof dbJob.tasks === 'string') {
-      try {
-        tasks = JSON.parse(dbJob.tasks);
-      } catch {
-        tasks = [];
+    // Handle tasks transformation from various possible types
+    if (dbJob.tasks) {
+      if (typeof dbJob.tasks === 'string') {
+        try {
+          tasks = JSON.parse(dbJob.tasks);
+        } catch {
+          tasks = [];
+        }
+      } else if (Array.isArray(dbJob.tasks)) {
+        tasks = dbJob.tasks;
+      } else if (typeof dbJob.tasks === 'object') {
+        // Handle case where tasks might be a JSON object
+        tasks = Array.isArray(dbJob.tasks) ? dbJob.tasks : [];
       }
-    } else if (Array.isArray(dbJob.tasks)) {
-      tasks = dbJob.tasks;
     }
 
     return {
