@@ -22,6 +22,13 @@ interface Task {
   completed: boolean;
 }
 
+interface ClientInfo {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
 export const JobOverview = ({ jobId }: JobOverviewProps) => {
   const { job, isLoading } = useJobDetails();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -40,6 +47,19 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
         </CardContent>
       </Card>
     );
+  }
+
+  // Parse client data - it might be a string or object depending on how it's stored
+  let clientInfo: ClientInfo;
+  if (typeof job.client === 'string') {
+    clientInfo = {
+      name: job.client,
+      phone: job.phone,
+      email: job.email,
+      address: job.address
+    };
+  } else {
+    clientInfo = job.client as unknown as ClientInfo;
   }
 
   // Convert tasks from job.tasks (string array) to Task objects for the dialog
@@ -150,27 +170,27 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div>
-                <p className="font-medium">{job.client?.name || "Unknown Client"}</p>
+                <p className="font-medium">{clientInfo.name || "Unknown Client"}</p>
               </div>
               
-              {job.client?.phone && (
+              {clientInfo.phone && (
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{job.client.phone}</span>
+                  <span className="text-sm">{clientInfo.phone}</span>
                 </div>
               )}
               
-              {job.client?.email && (
+              {clientInfo.email && (
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{job.client.email}</span>
+                  <span className="text-sm">{clientInfo.email}</span>
                 </div>
               )}
               
-              {job.client?.address && (
+              {clientInfo.address && (
                 <div className="flex items-start space-x-2">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <span className="text-sm">{job.client.address}</span>
+                  <span className="text-sm">{clientInfo.address}</span>
                 </div>
               )}
             </div>
@@ -275,7 +295,10 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       <JobDetailsEditDialog 
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        job={job}
+        initialDescription={job.description || ""}
+        onSave={(description) => {
+          updateJob(jobId, { description });
+        }}
       />
 
       <TaskManagementDialog

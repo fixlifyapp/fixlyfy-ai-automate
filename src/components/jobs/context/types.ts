@@ -17,6 +17,13 @@ export interface JobInfo {
   job_type?: string;
   lead_source?: string;
   tasks?: string[];
+  date?: string;
+  custom_fields?: Array<{
+    id: string;
+    name: string;
+    value: string;
+    field_type: string;
+  }>;
 }
 
 export interface JobDetailsContextType {
