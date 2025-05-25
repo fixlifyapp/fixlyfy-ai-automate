@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, CheckCircle, Circle, MapPin, Phone, Mail, Calendar, Clock, Tag, User, Edit, Plus, X } from "lucide-react";
@@ -277,11 +276,11 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Client Info & Contact Panel */}
+      {/* Client Information Section - Updated structure like JobsCreateModal */}
       <Card className="border-fixlyfy-border shadow-sm">
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Client Information</h3>
+            <h3 className="text-lg font-semibold">Client Information</h3>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -302,7 +301,7 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
             {/* Client Info */}
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Full Name</p>
+                <p className="text-sm text-muted-foreground">Client</p>
                 {editingClientInfo ? (
                   <Input 
                     value={tempClientInfo.fullName}
@@ -381,160 +380,69 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
         </CardContent>
       </Card>
       
-      {/* Job Description */}
+      {/* Job Details Section - Similar to JobsCreateModal structure */}
       <Card className="border-fixlyfy-border shadow-sm">
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Job Description</h3>
+            <h3 className="text-lg font-semibold">Job Details</h3>
           </div>
           
-          <div className="cursor-pointer" onClick={() => setIsDescriptionDialogOpen(true)}>
-            <p className="text-gray-700">{jobDetails.description}</p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-4">
-            {jobDetails.tags.map((tag, index) => (
-              <Badge 
-                key={index} 
-                variant="outline" 
-                className={`flex items-center gap-1 ${getTagColor(tag)}`}
-                onClick={() => setIsTagsDialogOpen(true)}
-              >
-                {tag}
-              </Badge>
-            ))}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-purple-600 border-purple-200"
-              onClick={() => setIsTagsDialogOpen(true)}
-            >
-              <Tag size={14} className="mr-1" />
-              Manage Tags
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Job Type */}
+            <div className="space-y-2 md:col-span-2">
+              <p className="text-sm text-muted-foreground">Job Type</p>
+              <div className="cursor-pointer" onClick={() => setIsTypeDialogOpen(true)}>
+                <Badge className="text-purple-600 bg-purple-50">{jobDetails.type}</Badge>
+              </div>
+            </div>
+            
+            {/* Job Description */}
+            <div className="space-y-2 md:col-span-2">
+              <p className="text-sm text-muted-foreground">Description</p>
+              <div className="cursor-pointer" onClick={() => setIsDescriptionDialogOpen(true)}>
+                <p className="text-gray-700">{jobDetails.description}</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
       
-      {/* Appliances Section */}
+      {/* Schedule Section - Similar to JobsCreateModal structure */}
       <Card className="border-fixlyfy-border shadow-sm">
         <CardContent className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Appliances</h3>
+            <h3 className="text-lg font-semibold">Schedule</h3>
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => setIsApplianceDialogOpen(true)}
+              onClick={() => setIsScheduleDialogOpen(true)}
             >
               <Edit size={16} />
             </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {appliances.map((appliance) => (
-              <div key={appliance.id} className="flex items-center gap-3 border rounded-lg p-3">
-                <div className="p-2 bg-gray-100 rounded-full">
-                  {getApplianceIcon(appliance.type)}
-                </div>
-                <div>
-                  <div className="font-medium capitalize">{appliance.type}</div>
-                  {appliance.model && <div className="text-sm text-gray-500">{appliance.model}</div>}
-                </div>
+            {/* Start Date & Time */}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Start Date</p>
+              <div className="flex items-center gap-1">
+                <Calendar size={16} className="text-purple-600" />
+                <p className="text-purple-600">{jobDetails.scheduleDate}</p>
               </div>
-            ))}
+            </div>
             
-            {appliances.length === 0 && (
-              <div className="text-gray-500 italic">No appliances added</div>
-            )}
-
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2 h-auto py-3" 
-              onClick={() => setIsApplianceDialogOpen(true)}
-            >
-              <Plus size={16} />
-              <span>Add Appliance</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Job Metadata */}
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Job Details</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div onClick={() => setIsTypeDialogOpen(true)} className="cursor-pointer">
-                  <p className="text-sm text-muted-foreground">Job Type</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="text-purple-600 bg-purple-50">{jobDetails.type}</Badge>
-                    {additionalJobTypes.map((type, index) => (
-                      <Badge 
-                        key={index} 
-                        className="flex items-center gap-1 bg-purple-50 text-purple-600"
-                      >
-                        {type}
-                        <X 
-                          size={14} 
-                          className="ml-1 cursor-pointer" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveJobType(index);
-                          }} 
-                        />
-                      </Badge>
-                    ))}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-7 px-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsTypeDialogOpen(true);
-                      }}
-                    >
-                      <Plus size={14} />
-                    </Button>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Start Time</p>
+              <div className="flex items-center gap-1">
+                <Clock size={16} className="text-purple-600" />
+                <p className="text-purple-600">{jobDetails.scheduleTime}</p>
               </div>
-              
+            </div>
+            
+            {/* Technician */}
+            <div className="space-y-2 md:col-span-2">
               <div className="flex justify-between items-center">
-                <div onClick={() => setIsScheduleDialogOpen(true)} className="cursor-pointer">
-                  <p className="text-sm text-muted-foreground">Schedule Date & Time</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={16} className="text-purple-600" />
-                      <p className="text-purple-600">{jobDetails.scheduleDate}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={16} className="text-purple-600" />
-                      <p className="text-purple-600">{jobDetails.scheduleTime}</p>
-                    </div>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setIsScheduleDialogOpen(true)}
-                >
-                  <Edit size={16} />
-                </Button>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <div onClick={() => setIsTeamDialogOpen(true)} className="cursor-pointer">
-                  <p className="text-sm text-muted-foreground">Team</p>
-                  <div className="flex items-center gap-1">
-                    <User size={16} className={getTeamColor(jobDetails.team)} />
-                    <p className={getTeamColor(jobDetails.team)}>{jobDetails.team}</p>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Technician</p>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -543,134 +451,112 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                   <Edit size={16} />
                 </Button>
               </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div onClick={() => setIsPriorityDialogOpen(true)} className="cursor-pointer">
-                  <p className="text-sm text-muted-foreground">Priority</p>
-                  <p className={getPriorityColor(jobDetails.priority)}>{jobDetails.priority}</p>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setIsPriorityDialogOpen(true)}
-                >
-                  <Edit size={16} />
-                </Button>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <div onClick={() => setIsSourceDialogOpen(true)} className="cursor-pointer">
-                  <p className="text-sm text-muted-foreground">Source</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="text-purple-600 bg-purple-50">{jobDetails.source}</Badge>
-                    {additionalSources.map((source, index) => (
-                      <Badge 
-                        key={index} 
-                        className="flex items-center gap-1 bg-purple-50 text-purple-600"
-                      >
-                        {source}
-                        <X 
-                          size={14} 
-                          className="ml-1 cursor-pointer" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveSource(index);
-                          }} 
-                        />
-                      </Badge>
-                    ))}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-7 px-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsSourceDialogOpen(true);
-                      }}
-                    >
-                      <Plus size={14} />
-                    </Button>
-                  </div>
-                </div>
+              <div className="flex items-center gap-1">
+                <User size={16} className={getTeamColor(jobDetails.team)} />
+                <p className={getTeamColor(jobDetails.team)}>{jobDetails.team}</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
       
-      {/* Tasks & Attachments Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tasks */}
-        <Card className="border-fixlyfy-border shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-lg font-medium">Tasks</h3>
-                <p className="text-sm text-muted-foreground">
-                  {tasks.filter(t => !t.completed).length} tasks remaining
-                </p>
-              </div>
-              <Button 
-                variant="ghost" 
-                className="text-purple-600 h-8"
-                onClick={() => setIsTasksDialogOpen(true)}
-              >
-                <Edit size={16} />
-              </Button>
+      {/* Tasks Section - Similar to JobsCreateModal structure */}
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Tasks</h3>
+              <p className="text-sm text-muted-foreground">
+                {tasks.filter(t => !t.completed).length} tasks remaining
+              </p>
             </div>
-            
-            <div className="space-y-3 cursor-pointer" onClick={() => setIsTasksDialogOpen(true)}>
-              {tasks.map((task) => (
-                <div key={task.id} className="flex items-center gap-2">
-                  {task.completed ? (
-                    <CheckCircle size={18} className="text-green-500" />
-                  ) : (
-                    <Circle size={18} className="text-gray-300" />
-                  )}
-                  <span className={task.completed ? "line-through text-gray-500" : ""}>
-                    {task.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Attachments */}
-        <Card className="border-fixlyfy-border shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-lg font-medium">Attachments</h3>
-                <p className="text-sm text-muted-foreground">{attachments.length} files</p>
+            <Button 
+              variant="ghost" 
+              className="text-purple-600 h-8"
+              onClick={() => setIsTasksDialogOpen(true)}
+            >
+              <Edit size={16} />
+            </Button>
+          </div>
+          
+          <div className="space-y-3 cursor-pointer" onClick={() => setIsTasksDialogOpen(true)}>
+            {tasks.map((task) => (
+              <div key={task.id} className="flex items-center gap-2">
+                {task.completed ? (
+                  <CheckCircle size={18} className="text-green-500" />
+                ) : (
+                  <Circle size={18} className="text-gray-300" />
+                )}
+                <span className={task.completed ? "line-through text-gray-500" : ""}>
+                  {task.name}
+                </span>
               </div>
-              <div className="flex gap-2">
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Tags & Attachments Section - Similar to JobsCreateModal structure */}
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Tags & Attachments</h3>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Tags */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Tags</p>
                 <Button 
                   variant="ghost" 
-                  className="text-purple-600 h-8"
+                  size="sm" 
+                  onClick={() => setIsTagsDialogOpen(true)}
+                >
+                  <Edit size={16} />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {jobDetails.tags.map((tag, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="outline" 
+                    className={`flex items-center gap-1 ${getTagColor(tag)}`}
+                    onClick={() => setIsTagsDialogOpen(true)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            {/* Attachments */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Attachments ({attachments.length} files)</p>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
                   onClick={() => setIsAttachmentsDialogOpen(true)}
                 >
                   <Edit size={16} />
                 </Button>
               </div>
-            </div>
-            
-            <div className="space-y-3 cursor-pointer" onClick={() => setIsAttachmentsDialogOpen(true)}>
-              {attachments.map((attachment) => (
-                <div key={attachment.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText size={18} className="text-gray-500" />
-                    <span>{attachment.name}</span>
+              <div className="space-y-3 cursor-pointer" onClick={() => setIsAttachmentsDialogOpen(true)}>
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText size={18} className="text-gray-500" />
+                      <span>{attachment.name}</span>
+                    </div>
+                    <span className="text-sm text-gray-500">{attachment.size}</span>
                   </div>
-                  <span className="text-sm text-gray-500">{attachment.size}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
       
       {/* Dialogs */}
       <JobDetailsEditDialog

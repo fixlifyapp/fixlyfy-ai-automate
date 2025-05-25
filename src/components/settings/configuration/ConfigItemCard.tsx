@@ -3,37 +3,35 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, Plus, Pencil, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfigItemDialog } from "./ConfigItemDialog";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import * as z from "zod";
 
-interface ConfigItemCardProps<T = any> {
-  title: string;
-  description: string;
-  items: T[];
-  isLoading: boolean;
-  canManage: boolean;
-  onAdd: (item: any) => Promise<any>;
-  onUpdate: (id: string, item: any) => Promise<any>;
-  onDelete: (id: string) => Promise<boolean>;
-  refreshItems: () => void;
-  renderCustomColumns?: (item: T) => React.ReactNode;
-  schema?: z.ZodSchema;
-  itemDialogFields?: (props: { form: any; fieldType?: string }) => React.ReactNode;
-  initialValues?: any;
+interface ConfigItem {
+  id: string;
+  name: string;
+  [key: string]: any;
 }
 
-export function ConfigItemCard<T extends { id: string; name: string; created_at?: string }>({
+interface ConfigItemCardProps {
+  title: string;
+  description: string;
+  items: ConfigItem[];
+  isLoading: boolean;
+  canManage: boolean;
+  onAdd: (values: any) => Promise<void>;
+  onUpdate: (id: string, values: any) => Promise<void>;
+  onDelete: (id: string) => Promise<boolean>;
+  refreshItems: () => void;
+  renderCustomColumns?: (item: ConfigItem) => React.ReactNode;
+  schema?: any;
+  itemDialogFields?: React.ComponentType<any>;
+  initialValues?: Record<string, any>;
+}
+
+export function ConfigItemCard({
   title,
   description,
   items,
@@ -47,10 +45,10 @@ export function ConfigItemCard<T extends { id: string; name: string; created_at?
   schema,
   itemDialogFields,
   initialValues = {}
-}: ConfigItemCardProps<T>) {
+}: ConfigItemCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<T | null>(null);
-  const [deletingItem, setDeletingItem] = useState<T | null>(null);
+  const [editingItem, setEditingItem] = useState<ConfigItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<ConfigItem | null>(null);
 
   const handleAdd = async (values: any) => {
     try {
@@ -65,7 +63,6 @@ export function ConfigItemCard<T extends { id: string; name: string; created_at?
 
   const handleUpdate = async (values: any) => {
     if (!editingItem) return;
-    
     try {
       await onUpdate(editingItem.id, values);
       setEditingItem(null);
@@ -78,7 +75,6 @@ export function ConfigItemCard<T extends { id: string; name: string; created_at?
 
   const handleDelete = async () => {
     if (!deletingItem) return;
-    
     try {
       const success = await onDelete(deletingItem.id);
       if (success) {
@@ -91,21 +87,22 @@ export function ConfigItemCard<T extends { id: string; name: string; created_at?
     }
   };
 
-  const columns: ColumnDef<T>[] = [
+  const columns = [
     {
       accessorKey: "name",
       header: "Name",
     },
-    ...(renderCustomColumns ? [{
-      id: "custom",
-      header: "Details",
-      cell: ({ row }: { row: { original: T } }) => renderCustomColumns(row.original),
-    }] : []),
+    ...(renderCustomColumns ? [
+      {
+        id: "custom",
+        header: "Details",
+        cell: ({ row }: any) => renderCustomColumns(row.original),
+      }
+    ] : []),
     {
       id: "actions",
-      cell: ({ row }: { row: { original: T } }) => {
+      cell: ({ row }: any) => {
         const item = row.original;
-
         return canManage ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -144,15 +141,15 @@ export function ConfigItemCard<T extends { id: string; name: string; created_at?
             {canManage && (
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add {title.slice(0, -1)}
+                Add
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={items}
+          <DataTable 
+            columns={columns} 
+            data={items} 
             isLoading={isLoading}
           />
         </CardContent>
@@ -161,22 +158,24 @@ export function ConfigItemCard<T extends { id: string; name: string; created_at?
       <ConfigItemDialog
         open={isDialogOpen || !!editingItem}
         onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingItem(null);
+          if (!open) {
+            setIsDialogOpen(false);
+            setEditingItem(null);
+          }
         }}
         title={editingItem ? `Edit ${title.slice(0, -1)}` : `Add ${title.slice(0, -1)}`}
-        onSubmit={editingItem ? handleUpdate : handleAdd}
         initialValues={editingItem || initialValues}
-        customFields={itemDialogFields}
+        onSubmit={editingItem ? handleUpdate : handleAdd}
         schema={schema}
+        customFields={itemDialogFields}
       />
 
       <ConfirmDeleteDialog
         open={!!deletingItem}
         onOpenChange={(open) => !open && setDeletingItem(null)}
-        onConfirm={handleDelete}
         title={`Delete ${deletingItem?.name}`}
-        description={`Are you sure you want to delete "${deletingItem?.name}"? This action cannot be undone.`}
+        description="Are you sure you want to delete this item? This action cannot be undone."
+        onConfirm={handleDelete}
       />
     </>
   );
