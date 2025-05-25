@@ -92,7 +92,6 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             job={job} 
             jobId={jobId} 
             editable 
-            onUpdate={refreshJob}
           />
           <TechnicianCard 
             job={job} 

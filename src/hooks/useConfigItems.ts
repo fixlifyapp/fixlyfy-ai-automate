@@ -46,9 +46,14 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
   const fetchItems = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from(tableName as any)
-        .select('*');
+      let query = supabase.from(tableName as any).select('*');
+      
+      // For job statuses, order by sequence
+      if (tableName === 'job_statuses') {
+        query = query.order('sequence', { ascending: true });
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -64,17 +69,24 @@ export function useConfigItems<T extends ConfigItem>(tableName: string) {
   useEffect(() => {
     fetchItems();
     
-    // Set up realtime subscription
+    // Set up realtime subscription with proper error handling
     const channel = supabase
       .channel(`public:${tableName}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: tableName },
-        () => {
+        (payload) => {
+          console.log(`Real-time update for ${tableName}:`, payload);
           fetchItems();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Subscribed to real-time updates for ${tableName}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`Error subscribing to ${tableName} real-time updates`);
+        }
+      });
       
     return () => {
       supabase.removeChannel(channel);

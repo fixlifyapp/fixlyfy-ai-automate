@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Clock, Loader2, MoreHorizontal, XCircle, Calendar, AlertTriangle } from "lucide-react";
 import { 
@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useJobStatuses } from "@/hooks/useConfigItems";
 
 interface JobStatusBadgeProps {
   status: string;
@@ -30,6 +31,7 @@ export const JobStatusBadge = ({
   className 
 }: JobStatusBadgeProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const { items: jobStatuses } = useJobStatuses();
 
   const getStatusIcon = (statusValue: string) => {
     switch (statusValue) {
@@ -51,11 +53,17 @@ export const JobStatusBadge = ({
   };
 
   const getStatusColor = (statusValue: string) => {
+    // Find the status in our database statuses first
+    const dbStatus = jobStatuses.find(s => s.name === statusValue);
+    if (dbStatus && dbStatus.color) {
+      return `bg-${dbStatus.color}/10 text-${dbStatus.color} border-${dbStatus.color}/20`;
+    }
+    
+    // Fallback to default colors
     switch (statusValue) {
       case "open":
-        return "bg-fixlyfy-bg-interface text-fixlyfy-primary border-fixlyfy-primary";
       case "scheduled":
-        return "bg-fixlyfy-info/10 text-fixlyfy-info border-fixlyfy-info/20";
+        return "bg-fixlyfy-bg-interface text-fixlyfy-primary border-fixlyfy-primary";
       case "in-progress":
       case "in_progress":
         return "bg-fixlyfy-warning/10 text-fixlyfy-warning border-fixlyfy-warning/20";
@@ -72,6 +80,13 @@ export const JobStatusBadge = ({
   };
 
   const getStatusLabel = (statusValue: string) => {
+    // Find the status in our database statuses first
+    const dbStatus = jobStatuses.find(s => s.name === statusValue);
+    if (dbStatus) {
+      return dbStatus.name.charAt(0).toUpperCase() + dbStatus.name.slice(1);
+    }
+    
+    // Fallback to default labels
     switch (statusValue) {
       case "open":
         return "Open";
@@ -88,7 +103,7 @@ export const JobStatusBadge = ({
       case "ask-review":
         return "Ask Review";
       default:
-        return statusValue;
+        return statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
     }
   };
 
@@ -146,48 +161,18 @@ export const JobStatusBadge = ({
       <DropdownMenuContent align="start">
         <DropdownMenuLabel>Job Status</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          className={status === "open" ? "bg-fixlyfy/10" : ""} 
-          onClick={() => handleStatusChange("open")}
-        >
-          <Clock size={16} className="mr-2 text-fixlyfy-primary" />
-          Open
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className={status === "scheduled" ? "bg-fixlyfy/10" : ""} 
-          onClick={() => handleStatusChange("scheduled")}
-        >
-          <Calendar size={16} className="mr-2 text-fixlyfy-info" />
-          Scheduled
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className={status === "in-progress" ? "bg-fixlyfy/10" : ""} 
-          onClick={() => handleStatusChange("in-progress")}
-        >
-          <Loader2 size={16} className="mr-2 text-fixlyfy-warning" />
-          In Progress
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className={status === "completed" ? "bg-fixlyfy/10" : ""} 
-          onClick={() => handleStatusChange("completed")}
-        >
-          <Check size={16} className="mr-2 text-fixlyfy-success" />
-          Completed
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className={status === "canceled" ? "bg-fixlyfy/10" : ""} 
-          onClick={() => handleStatusChange("canceled")}
-        >
-          <XCircle size={16} className="mr-2 text-fixlyfy-error" />
-          Cancelled
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className={status === "ask-review" ? "bg-fixlyfy/10" : ""} 
-          onClick={() => handleStatusChange("ask-review")}
-        >
-          <AlertTriangle size={16} className="mr-2 text-fixlyfy-secondary" />
-          Ask Review
-        </DropdownMenuItem>
+        {jobStatuses
+          .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+          .map((statusOption) => (
+            <DropdownMenuItem 
+              key={statusOption.id}
+              className={status === statusOption.name ? "bg-fixlyfy/10" : ""} 
+              onClick={() => handleStatusChange(statusOption.name)}
+            >
+              {getStatusIcon(statusOption.name)}
+              <span className="ml-2">{getStatusLabel(statusOption.name)}</span>
+            </DropdownMenuItem>
+          ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

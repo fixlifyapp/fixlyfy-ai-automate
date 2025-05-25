@@ -187,12 +187,12 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw new Error('Title and client are required');
       }
       
-      // Prepare job data with remaining fields only
+      // Prepare job data with remaining fields only - default status to "scheduled"
       const newJob = {
         id: jobId,
         title: job.title,
         description: job.description || '',
-        status: job.status || 'scheduled',
+        status: job.status || 'scheduled', // Default to scheduled status
         client_id: job.client_id,
         service: job.service || 'General Service',
         job_type: job.job_type || job.service || 'General Service',

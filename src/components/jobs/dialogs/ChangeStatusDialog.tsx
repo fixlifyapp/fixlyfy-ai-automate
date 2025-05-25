@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, Clock, Loader2, XCircle, Calendar, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useJobStatuses } from "@/hooks/useConfigItems";
 
 interface ChangeStatusDialogProps {
   selectedJobs: string[];
@@ -24,27 +25,39 @@ interface ChangeStatusDialogProps {
 export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: ChangeStatusDialogProps) {
   const [status, setStatus] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { items: jobStatuses } = useJobStatuses();
 
-  const statusOptions = [
-    { value: "open", label: "Open", icon: <Clock className="h-4 w-4 text-fixlyfy-primary" /> },
-    { value: "scheduled", label: "Scheduled", icon: <Calendar className="h-4 w-4 text-fixlyfy-info" /> },
-    { value: "in-progress", label: "In Progress", icon: <Loader2 className="h-4 w-4 text-fixlyfy-warning" /> },
-    { value: "completed", label: "Completed", icon: <Check className="h-4 w-4 text-fixlyfy-success" /> },
-    { value: "canceled", label: "Cancelled", icon: <XCircle className="h-4 w-4 text-fixlyfy-error" /> },
-    { value: "ask-review", label: "Ask Review", icon: <AlertTriangle className="h-4 w-4 text-fixlyfy-secondary" /> },
-  ];
+  const getStatusIcon = (statusValue: string) => {
+    switch (statusValue) {
+      case "completed":
+        return <Check className="h-4 w-4 text-fixlyfy-success" />;
+      case "scheduled":
+        return <Calendar className="h-4 w-4 text-fixlyfy-info" />;
+      case "in-progress":
+        return <Loader2 className="h-4 w-4 text-fixlyfy-warning" />;
+      case "cancelled":
+        return <XCircle className="h-4 w-4 text-fixlyfy-error" />;
+      case "ask-review":
+        return <AlertTriangle className="h-4 w-4 text-fixlyfy-secondary" />;
+      default:
+        return <Clock className="h-4 w-4 text-fixlyfy-primary" />;
+    }
+  };
 
   const getStatusClass = (value: string) => {
+    const dbStatus = jobStatuses.find(s => s.name === value);
+    if (dbStatus && dbStatus.color) {
+      return `border-${dbStatus.color}/20 text-${dbStatus.color}`;
+    }
+    
     switch (value) {
-      case "open":
-        return "border-fixlyfy-primary/20 text-fixlyfy-primary";
       case "scheduled":
-        return "border-fixlyfy-info/20 text-fixlyfy-info";
+        return "border-fixlyfy-primary/20 text-fixlyfy-primary";
       case "in-progress":
         return "border-fixlyfy-warning/20 text-fixlyfy-warning";
       case "completed":
         return "border-fixlyfy-success/20 text-fixlyfy-success";
-      case "canceled":
+      case "cancelled":
         return "border-fixlyfy-error/20 text-fixlyfy-error";
       case "ask-review":
         return "border-fixlyfy-secondary/20 text-fixlyfy-secondary";
@@ -98,26 +111,28 @@ export function ChangeStatusDialog({ selectedJobs, onOpenChange, onSuccess }: Ch
       <form onSubmit={handleSubmit}>
         <div className="py-6">
           <RadioGroup value={status} onValueChange={setStatus} className="grid grid-cols-2 gap-3">
-            {statusOptions.map((option) => (
-              <div key={option.value}>
-                <RadioGroupItem
-                  value={option.value}
-                  id={`status-${option.value}`}
-                  className="peer sr-only"
-                />
-                <Label
-                  htmlFor={`status-${option.value}`}
-                  className={cn(
-                    "flex items-center justify-center gap-2 rounded-md border bg-card p-3 hover:bg-accent hover:text-accent-foreground",
-                    "cursor-pointer peer-data-[state=checked]:border-2",
-                    getStatusClass(option.value)
-                  )}
-                >
-                  {option.icon}
-                  {option.label}
-                </Label>
-              </div>
-            ))}
+            {jobStatuses
+              .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+              .map((statusOption) => (
+                <div key={statusOption.id}>
+                  <RadioGroupItem
+                    value={statusOption.name}
+                    id={`status-${statusOption.name}`}
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor={`status-${statusOption.name}`}
+                    className={cn(
+                      "flex items-center justify-center gap-2 rounded-md border bg-card p-3 hover:bg-accent hover:text-accent-foreground",
+                      "cursor-pointer peer-data-[state=checked]:border-2",
+                      getStatusClass(statusOption.name)
+                    )}
+                  >
+                    {getStatusIcon(statusOption.name)}
+                    {statusOption.name.charAt(0).toUpperCase() + statusOption.name.slice(1)}
+                  </Label>
+                </div>
+              ))}
           </RadioGroup>
         </div>
         
