@@ -21,7 +21,7 @@ import { JobCustomFieldsDisplay } from "@/components/jobs/JobCustomFieldsDisplay
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<string>("details");
+  const [activeTab, setActiveTab] = useState<string>("estimates");
   const { hasPermission } = useRBAC();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
@@ -67,12 +67,6 @@ const JobDetailsPage = () => {
                 activeTab={activeTab} 
                 onTabChange={setActiveTab}
               >
-                <TabsContent value="details">
-                  <div className="space-y-6">
-                    <JobDetails jobId={id || ""} />
-                    <JobCustomFieldsDisplay jobId={id || ""} />
-                  </div>
-                </TabsContent>
                 <TabsContent value="estimates">
                   <JobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
                 </TabsContent>

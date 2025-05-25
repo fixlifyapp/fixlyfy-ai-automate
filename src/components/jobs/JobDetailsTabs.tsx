@@ -10,7 +10,7 @@ interface JobDetailsTabsProps {
 }
 
 export const JobDetailsTabs = ({
-  activeTab = "details",
+  activeTab = "estimates",
   onTabChange,
   children,
   onEstimateTabClick
@@ -26,9 +26,6 @@ export const JobDetailsTabs = ({
       <Tabs defaultValue={activeTab} value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex justify-between items-center border-b mb-4">
           <TabsList className="bg-transparent p-0 h-12">
-            <TabsTrigger value="details" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
-              Overview
-            </TabsTrigger>
             <TabsTrigger value="estimates" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-fixlyfy data-[state=active]:shadow-none px-4 h-12">
               Estimates
             </TabsTrigger>

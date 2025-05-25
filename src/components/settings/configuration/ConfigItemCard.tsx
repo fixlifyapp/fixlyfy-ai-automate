@@ -27,7 +27,7 @@ interface ConfigItemCardProps {
   refreshItems: () => void;
   renderCustomColumns?: (item: ConfigItem) => React.ReactNode;
   schema?: any;
-  itemDialogFields?: React.ComponentType<any> | ((props: { form: any; fieldType?: string }) => React.ReactNode);
+  itemDialogFields?: ((props: { form: any; fieldType?: string }) => React.ReactNode);
   initialValues?: Record<string, any>;
 }
 
@@ -80,10 +80,13 @@ export function ConfigItemCard({
       if (success) {
         setDeletingItem(null);
         refreshItems();
+        return true;
       }
+      return false;
     } catch (error) {
       console.error("Error deleting item:", error);
       toast.error("Failed to delete item");
+      return false;
     }
   };
 
