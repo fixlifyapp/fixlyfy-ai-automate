@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { DeleteJobsDialog } from "../jobs/dialogs/DeleteJobsDialog";
 import { BulkActionsBar } from "../jobs/BulkActionsBar";
-import { useConfigItems } from "@/hooks/useConfigItems";
+import { useJobStatuses, useJobTypes } from "@/hooks/useConfigItems";
 
 interface ClientJobsProps {
   clientId?: string;
@@ -31,8 +31,8 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   } = useJobs(clientId);
   
   // Get dynamic configuration data from database
-  const { jobStatuses } = useConfigItems('job_statuses');
-  const { jobTypes } = useConfigItems('job_types');
+  const { items: jobStatuses } = useJobStatuses();
+  const { items: jobTypes } = useJobTypes();
   
   const navigate = useNavigate();
 
