@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -53,20 +53,41 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  
+  // Use refs to prevent duplicate subscriptions
+  const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
-  // Centralized real-time subscription for all messages and conversations
+  // Debounced refresh to prevent excessive calls
+  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshConversations();
+    }, 500);
+  }, []);
+
+  // Centralized real-time subscription with better error handling
   useEffect(() => {
+    if (isSubscribedRef.current) return;
+    
     console.log('Setting up centralized real-time messaging...');
     
+    // Clean up any existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+    
     const messagesChannel = supabase
-      .channel('unified-messages')
+      .channel('unified-messages-v2')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
           console.log('Message change detected:', payload);
-          // Refresh conversations when any message changes
-          refreshConversations();
+          debouncedRefresh();
         }
       )
       .on(
@@ -74,24 +95,35 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         { event: '*', schema: 'public', table: 'conversations' },
         (payload) => {
           console.log('Conversation change detected:', payload);
-          // Refresh conversations when conversation data changes
-          refreshConversations();
+          debouncedRefresh();
         }
       )
       .subscribe((status) => {
         console.log('Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          isSubscribedRef.current = true;
+        }
       });
+
+    channelRef.current = messagesChannel;
 
     return () => {
       console.log('Cleaning up real-time subscriptions...');
-      supabase.removeChannel(messagesChannel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      isSubscribedRef.current = false;
     };
-  }, []);
+  }, [debouncedRefresh]);
 
-  const refreshConversations = async () => {
+  const refreshConversations = useCallback(async () => {
     try {
       console.log('Refreshing conversations...');
-      const { data: conversationsData } = await supabase
+      const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
           id,
@@ -101,20 +133,30 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         `)
         .order('last_message_at', { ascending: false });
 
+      if (error) {
+        console.error('Error fetching conversations:', error);
+        return;
+      }
+
       if (conversationsData) {
         const formattedConversations = await Promise.all(
           conversationsData.map(async (conv) => {
-            const { data: messages } = await supabase
+            const { data: messages, error: messagesError } = await supabase
               .from('messages')
               .select('*')
               .eq('conversation_id', conv.id)
               .order('created_at', { ascending: true });
 
+            if (messagesError) {
+              console.error('Error fetching messages for conversation:', conv.id, messagesError);
+              return null;
+            }
+
             const lastMessage = messages?.[messages.length - 1];
 
-            // Format messages to ensure correct types
+            // Format messages with proper error handling
             const formattedMessages: Message[] = (messages || []).map(msg => ({
-              id: msg.id,
+              id: msg.id || '',
               body: msg.body || '',
               direction: (msg.direction === 'inbound' || msg.direction === 'outbound') ? msg.direction : 'outbound',
               created_at: msg.created_at || new Date().toISOString(),
@@ -137,11 +179,13 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
           })
         );
 
-        setConversations(formattedConversations);
+        // Filter out null results from failed conversation fetches
+        const validConversations = formattedConversations.filter(conv => conv !== null) as Conversation[];
+        setConversations(validConversations);
 
         // Update active conversation if it exists
         if (activeConversation) {
-          const updatedActive = formattedConversations.find(c => c.id === activeConversation.id);
+          const updatedActive = validConversations.find(c => c.id === activeConversation.id);
           if (updatedActive) {
             setActiveConversation(updatedActive);
           }
@@ -149,17 +193,23 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     } catch (error) {
       console.error('Error refreshing conversations:', error);
+      toast.error('Failed to refresh conversations');
     }
-  };
+  }, [activeConversation]);
 
-  const findOrCreateConversation = async (clientId: string) => {
+  const findOrCreateConversation = useCallback(async (clientId: string) => {
     try {
       // First, try to find existing conversation for this client
-      const { data: existingConv } = await supabase
+      const { data: existingConv, error: findError } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', clientId)
         .single();
+
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding conversation:', findError);
+        return null;
+      }
 
       if (existingConv) {
         return existingConv.id;
@@ -186,9 +236,9 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Error in findOrCreateConversation:', error);
       return null;
     }
-  };
+  }, []);
 
-  const openMessageDialog = async (client: { id?: string; name: string; phone?: string; email?: string }, jobId?: string) => {
+  const openMessageDialog = useCallback(async (client: { id?: string; name: string; phone?: string; email?: string }, jobId?: string) => {
     console.log('Opening message dialog for client:', client);
     setIsLoading(true);
     
@@ -260,14 +310,14 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [conversations]);
 
-  const closeMessageDialog = () => {
+  const closeMessageDialog = useCallback(() => {
     setIsMessageDialogOpen(false);
     setActiveConversation(null);
-  };
+  }, []);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || !activeConversation || isSending) return;
     
     const client = activeConversation.client;
@@ -279,9 +329,9 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsSending(true);
 
     try {
-      console.log('Sending message:', content, 'to client:', client);
+      console.log('Sending message via Twilio:', { content, phone: client.phone });
       
-      // Send SMS via Twilio
+      // Send SMS via Twilio with better error handling
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           to: client.phone,
@@ -289,18 +339,26 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       });
 
-      if (error) throw error;
-
-      if (!data.success) {
-        toast.error(`Failed to send message: ${data.error || 'Unknown error'}`);
-        return;
+      if (error) {
+        console.error('Twilio function error:', error);
+        throw new Error(`Twilio function failed: ${error.message}`);
       }
+
+      if (!data || !data.success) {
+        console.error('Twilio SMS failed:', data);
+        throw new Error(`Failed to send SMS: ${data?.error || 'Unknown error'}`);
+      }
+
+      console.log('SMS sent successfully:', data.sid);
 
       // Find or create conversation - always check for existing first
       let conversationId = activeConversation.id;
       
       if (!conversationId && client.id) {
         conversationId = await findOrCreateConversation(client.id);
+        if (!conversationId) {
+          throw new Error('Failed to create conversation');
+        }
       }
 
       // Store message in database
@@ -319,31 +377,36 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (messageError) {
           console.error('Error saving message:', messageError);
+          throw new Error('Failed to save message to database');
         }
 
         // Update conversation timestamp
-        await supabase
+        const { error: updateError } = await supabase
           .from('conversations')
           .update({ last_message_at: new Date().toISOString() })
           .eq('id', conversationId);
 
+        if (updateError) {
+          console.error('Error updating conversation timestamp:', updateError);
+        }
+
         toast.success("Message sent successfully");
         
         // Refresh conversations to show the new message
-        await refreshConversations();
+        setTimeout(() => refreshConversations(), 100);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      toast.error(`Failed to send message: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSending(false);
     }
-  };
+  }, [activeConversation, isSending, findOrCreateConversation, refreshConversations]);
 
   // Load conversations on mount
   useEffect(() => {
     refreshConversations();
-  }, []);
+  }, [refreshConversations]);
 
   return (
     <MessageContext.Provider value={{

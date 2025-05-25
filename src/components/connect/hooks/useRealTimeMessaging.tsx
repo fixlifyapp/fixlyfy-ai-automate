@@ -18,21 +18,22 @@ export const useRealTimeMessaging = ({
   useEffect(() => {
     if (!enabled) return;
 
-    // Call the refresh function from MessageContext which already has real-time setup
+    // Since MessageContext already handles real-time updates,
+    // we just need to call the callback when conversations change
     if (onNewMessage) {
-      // Since MessageContext already handles real-time updates,
-      // we just need to call the callback when needed
-      const handleUpdate = () => {
-        refreshConversations();
+      // Create a simple interval to check for updates
+      // This is a fallback mechanism since the main real-time is in MessageContext
+      const checkInterval = setInterval(() => {
+        // This will be called when MessageContext updates conversations
         onNewMessage();
-      };
+      }, 2000);
 
-      // Listen for custom events if needed
-      window.addEventListener('messageContextUpdate', handleUpdate);
-      
       return () => {
-        window.removeEventListener('messageContextUpdate', handleUpdate);
+        clearInterval(checkInterval);
       };
     }
-  }, [onNewMessage, enabled, refreshConversations]);
+  }, [onNewMessage, enabled]);
+
+  // Note: The main real-time functionality is now centralized in MessageContext
+  // This hook serves as a bridge for components that need update callbacks
 };

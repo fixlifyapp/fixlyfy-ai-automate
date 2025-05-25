@@ -35,10 +35,14 @@ export const useConversations = () => {
   }));
 
   const handleConversationClick = (conversationId: string) => {
+    console.log('Conversation clicked:', conversationId);
     setActiveConversationId(conversationId);
     const conversation = transformedConversations.find(c => c.id === conversationId);
     if (conversation) {
+      console.log('Opening dialog for client:', conversation.client);
       openMessageDialog(conversation.client);
+    } else {
+      console.error('Conversation not found:', conversationId);
     }
   };
 
