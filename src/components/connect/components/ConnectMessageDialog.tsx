@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Send, Bot, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { UnifiedMessageList } from "@/components/messages/UnifiedMessageList";
 import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
@@ -17,6 +17,7 @@ interface ConnectMessageDialogProps {
 export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectMessageDialogProps) => {
   const { activeConversation, sendMessage, isSending } = useMessageContext();
   const [messageText, setMessageText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Use activeConversation from context if available, otherwise fall back to prop
   const currentConversation = activeConversation || conversation;
@@ -32,11 +33,25 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
     onUseSuggestion: handleUseSuggestion
   });
 
+  // Auto-scroll to bottom when dialog opens or messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (isOpen && currentConversation?.messages?.length > 0) {
+      // Small delay to ensure the dialog content is rendered
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [isOpen, currentConversation?.messages?.length]);
+
   const handleSend = async () => {
     if (!messageText.trim() || isSending || !currentConversation) return;
     
     await sendMessage(messageText);
     setMessageText("");
+    // Scroll to bottom after sending message
+    setTimeout(scrollToBottom, 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -92,6 +107,8 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
               clientName={currentConversation.client.name}
               clientInfo={currentConversation.client}
             />
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </div>
           
           <div className="flex-shrink-0 space-y-3">
