@@ -18,6 +18,7 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
   const { activeConversation, sendMessage, isSending } = useMessageContext();
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use activeConversation from context if available, otherwise fall back to prop
   const currentConversation = activeConversation || conversation;
@@ -33,17 +34,31 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
     onUseSuggestion: handleUseSuggestion
   });
 
-  // Auto-scroll to bottom when dialog opens or messages change
+  // Improved scroll to bottom function
   const scrollToBottom = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+    // Fallback to the ref method
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Auto-scroll to bottom when dialog opens or messages change
+  useEffect(() => {
+    if (isOpen) {
+      // Multiple attempts to ensure scrolling works
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 150);
+      setTimeout(scrollToBottom, 300);
+    }
+  }, [isOpen]);
+
+  // Scroll when messages change
   useEffect(() => {
     if (isOpen && currentConversation?.messages?.length > 0) {
-      // Small delay to ensure the dialog content is rendered
       setTimeout(scrollToBottom, 100);
     }
-  }, [isOpen, currentConversation?.messages?.length]);
+  }, [currentConversation?.messages?.length, isOpen]);
 
   const handleSend = async () => {
     if (!messageText.trim() || isSending || !currentConversation) return;
@@ -100,7 +115,10 @@ export const ConnectMessageDialog = ({ isOpen, onClose, conversation }: ConnectM
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
-          <div className="flex-1 overflow-y-auto">
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto"
+          >
             <UnifiedMessageList 
               messages={unifiedMessages}
               isLoading={false}
