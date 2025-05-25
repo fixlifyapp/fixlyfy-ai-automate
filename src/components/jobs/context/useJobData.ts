@@ -23,7 +23,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     
     const fetchJobData = async () => {
       try {
-        // Fetch job details from Supabase with all fields including the new ones
+        // Fetch job details from Supabase with remaining fields only
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
@@ -86,7 +86,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           }
         }
         
-        // Create job info object with all fields
+        // Create job info object with remaining fields only
         const jobInfo: JobInfo = {
           id: jobData.id,
           clientId: client.id || "",
@@ -104,13 +104,6 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           schedule_end: jobData.schedule_end,
           job_type: jobData.job_type || jobData.service,
           lead_source: jobData.lead_source,
-          estimated_duration: jobData.estimated_duration,
-          special_instructions: jobData.special_instructions,
-          client_requirements: jobData.client_requirements,
-          access_instructions: jobData.access_instructions,
-          preferred_time: jobData.preferred_time,
-          equipment_needed: jobData.equipment_needed || [],
-          safety_notes: jobData.safety_notes,
           tasks: tasksArray
         };
         

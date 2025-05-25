@@ -899,27 +899,19 @@ export type Database = {
       }
       jobs: {
         Row: {
-          access_instructions: string | null
           client_id: string | null
-          client_requirements: string | null
           created_at: string | null
           created_by: string | null
           date: string | null
           description: string | null
-          equipment_needed: string[] | null
-          estimated_duration: number | null
           id: string
           job_type: string | null
           lead_source: string | null
           notes: string | null
-          preferred_time: string | null
-          priority: string | null
           revenue: number | null
-          safety_notes: string | null
           schedule_end: string | null
           schedule_start: string | null
           service: string | null
-          special_instructions: string | null
           status: string | null
           tags: string[] | null
           tasks: Json | null
@@ -928,27 +920,19 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          access_instructions?: string | null
           client_id?: string | null
-          client_requirements?: string | null
           created_at?: string | null
           created_by?: string | null
           date?: string | null
           description?: string | null
-          equipment_needed?: string[] | null
-          estimated_duration?: number | null
           id: string
           job_type?: string | null
           lead_source?: string | null
           notes?: string | null
-          preferred_time?: string | null
-          priority?: string | null
           revenue?: number | null
-          safety_notes?: string | null
           schedule_end?: string | null
           schedule_start?: string | null
           service?: string | null
-          special_instructions?: string | null
           status?: string | null
           tags?: string[] | null
           tasks?: Json | null
@@ -957,27 +941,19 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          access_instructions?: string | null
           client_id?: string | null
-          client_requirements?: string | null
           created_at?: string | null
           created_by?: string | null
           date?: string | null
           description?: string | null
-          equipment_needed?: string[] | null
-          estimated_duration?: number | null
           id?: string
           job_type?: string | null
           lead_source?: string | null
           notes?: string | null
-          preferred_time?: string | null
-          priority?: string | null
           revenue?: number | null
-          safety_notes?: string | null
           schedule_end?: string | null
           schedule_start?: string | null
           service?: string | null
-          special_instructions?: string | null
           status?: string | null
           tags?: string[] | null
           tasks?: Json | null

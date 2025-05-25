@@ -32,16 +32,9 @@ export interface Job {
     value: string;
     field_type: string;
   }>;
-  // All the additional fields (removed priority)
+  // Keep only the remaining fields
   job_type?: string;
   lead_source?: string;
-  estimated_duration?: number;
-  special_instructions?: string;
-  client_requirements?: string;
-  access_instructions?: string;
-  preferred_time?: string;
-  equipment_needed?: string[];
-  safety_notes?: string;
   tasks?: string[];
 }
 
@@ -55,7 +48,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
-      // Prepare base query with ALL fields (removed priority)
+      // Prepare base query with remaining fields only
       let query = supabase
         .from('jobs')
         .select(`
@@ -75,13 +68,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           updated_at,
           job_type,
           lead_source,
-          estimated_duration,
-          special_instructions,
-          client_requirements,
-          access_instructions,
-          preferred_time,
-          equipment_needed,
-          safety_notes,
           tasks,
           clients(name, phone, email, address, city, state, zip)
         `);
@@ -201,7 +187,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         throw new Error('Title and client are required');
       }
       
-      // Prepare job data with ALL fields (removed priority)
+      // Prepare job data with remaining fields only
       const newJob = {
         id: jobId,
         title: job.title,
@@ -211,13 +197,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         service: job.service || 'General Service',
         job_type: job.job_type || job.service || 'General Service',
         lead_source: job.lead_source,
-        estimated_duration: job.estimated_duration,
-        special_instructions: job.special_instructions,
-        client_requirements: job.client_requirements,
-        access_instructions: job.access_instructions,
-        preferred_time: job.preferred_time,
-        equipment_needed: job.equipment_needed || [],
-        safety_notes: job.safety_notes,
         tasks: job.tasks || [],
         ...(job.technician_id && job.technician_id !== '' && { technician_id: job.technician_id }),
         schedule_start: job.schedule_start,
@@ -227,7 +206,7 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
         tags: job.tags || []
       };
       
-      console.log('Creating job with ALL data:', newJob);
+      console.log('Creating job with data:', newJob);
       
       const { data, error } = await supabase
         .from('jobs')
@@ -247,13 +226,6 @@ export const useJobs = (clientId?: string, includeCustomFields: boolean = false)
           tags,
           job_type,
           lead_source,
-          estimated_duration,
-          special_instructions,
-          client_requirements,
-          access_instructions,
-          preferred_time,
-          equipment_needed,
-          safety_notes,
           tasks,
           created_at,
           updated_at,

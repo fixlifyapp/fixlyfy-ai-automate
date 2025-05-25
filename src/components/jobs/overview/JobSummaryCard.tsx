@@ -18,7 +18,7 @@ export const JobSummaryCard = ({ job }: JobSummaryCardProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Job Type</p>
             <p className="font-medium">{job.service || job.job_type || "General Service"}</p>
@@ -27,12 +27,6 @@ export const JobSummaryCard = ({ job }: JobSummaryCardProps) => {
             <p className="text-sm text-muted-foreground">Lead Source</p>
             <p className="font-medium">{job.lead_source || "Not specified"}</p>
           </div>
-          {job.estimated_duration && (
-            <div>
-              <p className="text-sm text-muted-foreground">Estimated Duration</p>
-              <p className="font-medium">{job.estimated_duration} minutes</p>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
