@@ -82,6 +82,19 @@ export const EstimateSendDialog = ({
     }
   }, [open, estimateNumber]);
 
+  // Update sendTo when sendMethod changes
+  useEffect(() => {
+    if (estimateDetails) {
+      if (sendMethod === "email" && estimateDetails.client_email) {
+        setSendTo(estimateDetails.client_email);
+      } else if (sendMethod === "sms" && estimateDetails.client_phone) {
+        setSendTo(estimateDetails.client_phone);
+      } else {
+        setSendTo("");
+      }
+    }
+  }, [sendMethod, estimateDetails]);
+
   const fetchEstimateDetails = async () => {
     setIsLoading(true);
     try {
@@ -163,6 +176,12 @@ export const EstimateSendDialog = ({
   // Handle skipping warranty
   const handleSkipWarranty = () => {
     setCurrentStep("send-method");
+  };
+
+  // Handle send method change
+  const handleSendMethodChange = (value: "email" | "sms") => {
+    setSendMethod(value);
+    // The useEffect above will handle updating sendTo
   };
   
   // Send the estimate to the client
@@ -329,7 +348,7 @@ export const EstimateSendDialog = ({
                 Send estimate {estimateNumber} to {estimateDetails.client_name}:
               </div>
               
-              <RadioGroup value={sendMethod} onValueChange={(v) => setSendMethod(v as "email" | "sms")}>
+              <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
                 <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
                   sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
                 }`}>
