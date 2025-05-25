@@ -15,6 +15,28 @@ export function LeadSourcesConfig() {
     refreshItems
   } = useLeadSources();
 
+  const renderItemDialogFields = ({ form }: { form: any; fieldType?: string }) => (
+    <FormField
+      control={form.control}
+      name="is_active"
+      render={({ field }) => (
+        <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+          <FormControl>
+            <Checkbox
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          </FormControl>
+          <div className="space-y-1 leading-none">
+            <FormLabel>
+              Lead source is active
+            </FormLabel>
+          </div>
+        </FormItem>
+      )}
+    />
+  );
+
   return (
     <ConfigItemCard
       title="Lead Sources"
@@ -33,26 +55,7 @@ export function LeadSourcesConfig() {
           </span>
         </div>
       )}
-      itemDialogFields={(
-        <FormField
-          name="is_active"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>
-                  Lead source is active
-                </FormLabel>
-              </div>
-            </FormItem>
-          )}
-        />
-      )}
+      itemDialogFields={renderItemDialogFields}
       initialValues={{ is_active: true }}
     />
   );

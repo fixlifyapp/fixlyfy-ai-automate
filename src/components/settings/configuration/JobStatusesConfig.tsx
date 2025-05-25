@@ -25,6 +25,86 @@ export function JobStatusesConfig() {
     refreshItems
   } = useJobStatuses();
 
+  const renderItemDialogFields = ({ form }: { form: any; fieldType?: string }) => (
+    <>
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description (optional)</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="Enter description" />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="color"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Color</FormLabel>
+            <div className="flex gap-4 items-center">
+              <FormControl>
+                <Input
+                  type="color"
+                  {...field}
+                  className="w-12 h-8 p-1"
+                  value={field.value || "#3b82f6"}
+                />
+              </FormControl>
+              <FormControl>
+                <Input
+                  {...field}
+                  value={field.value || "#3b82f6"}
+                  placeholder="#HEX"
+                  className="w-full"
+                />
+              </FormControl>
+            </div>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="sequence"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Sequence Order</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                {...field} 
+                value={field.value || 0} 
+                onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="is_default"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <div className="space-y-1 leading-none">
+              <FormLabel>
+                Set as default status
+              </FormLabel>
+            </div>
+          </FormItem>
+        )}
+      />
+    </>
+  );
+
   return (
     <ConfigItemCard
       title="Job Statuses"
@@ -44,81 +124,7 @@ export function JobStatusesConfig() {
       )}
       initialValues={{ sequence: 1 }}
       schema={jobStatusSchema}
-      itemDialogFields={(
-        <>
-          <FormField
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description (optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter description" />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="color"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Color</FormLabel>
-                <div className="flex gap-4 items-center">
-                  <FormControl>
-                    <Input
-                      type="color"
-                      {...field}
-                      className="w-12 h-8 p-1"
-                      value={field.value || "#3b82f6"}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      value={field.value || "#3b82f6"}
-                      placeholder="#HEX"
-                      className="w-full"
-                    />
-                  </FormControl>
-                </div>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="sequence"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sequence Order</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    value={field.value || 0} 
-                    onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="is_default"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Set as default status
-                  </FormLabel>
-                </div>
-              </FormItem>
-            )}
-          />
-        </>
-      )}
+      itemDialogFields={renderItemDialogFields}
     />
   );
 }

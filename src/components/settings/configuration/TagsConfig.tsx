@@ -33,6 +33,61 @@ export function TagsConfig() {
     refreshItems
   } = useTags();
 
+  const renderItemDialogFields = ({ form }: { form: any; fieldType?: string }) => (
+    <>
+      <FormField
+        control={form.control}
+        name="category"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Category</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {TAG_CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="color"
+        render={({ field }) => (
+          <FormItem className="flex flex-col">
+            <FormLabel>Color</FormLabel>
+            <div className="flex gap-4 items-center">
+              <FormControl>
+                <Input
+                  type="color"
+                  {...field}
+                  className="w-12 h-8 p-1"
+                  value={field.value || "#3b82f6"}
+                />
+              </FormControl>
+              <FormControl>
+                <Input
+                  {...field}
+                  value={field.value || "#3b82f6"}
+                  placeholder="#HEX"
+                  className="w-full"
+                />
+              </FormControl>
+            </div>
+          </FormItem>
+        )}
+      />
+    </>
+  );
+
   return (
     <ConfigItemCard
       title="Tags"
@@ -53,58 +108,7 @@ export function TagsConfig() {
       )}
       initialValues={{ category: 'General' }}
       schema={tagSchema}
-      itemDialogFields={(
-        <>
-          <FormField
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {TAG_CATEGORIES.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="color"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Color</FormLabel>
-                <div className="flex gap-4 items-center">
-                  <FormControl>
-                    <Input
-                      type="color"
-                      {...field}
-                      className="w-12 h-8 p-1"
-                      value={field.value || "#3b82f6"}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      value={field.value || "#3b82f6"}
-                      placeholder="#HEX"
-                      className="w-full"
-                    />
-                  </FormControl>
-                </div>
-              </FormItem>
-            )}
-          />
-        </>
-      )}
+      itemDialogFields={renderItemDialogFields}
     />
   );
 }
