@@ -376,20 +376,22 @@ export const JobsCreateModal = ({
                       {isLoadingClients ? (
                         <SelectItem value="loading-clients" disabled>Loading clients...</SelectItem>
                       ) : clients.length > 0 ? (
-                        clients.map((client: Client) => (
-                          <SelectItem 
-                            key={client.id} 
-                            value={client.id || `client-${Math.random()}`}
-                            className={cn(
-                              recentlyAddedClient === client.id && "bg-green-50 border-green-200"
-                            )}
-                          >
-                            {client.name}
-                            {recentlyAddedClient === client.id && (
-                              <span className="ml-2 text-xs text-green-600">(just added)</span>
-                            )}
-                          </SelectItem>
-                        ))
+                        clients
+                          .filter(client => client.id && client.id.trim() !== '')
+                          .map((client: Client) => (
+                            <SelectItem 
+                              key={client.id} 
+                              value={client.id || `client-${Math.random()}`}
+                              className={cn(
+                                recentlyAddedClient === client.id && "bg-green-50 border-green-200"
+                              )}
+                            >
+                              {client.name}
+                              {recentlyAddedClient === client.id && (
+                                <span className="ml-2 text-xs text-green-600">(just added)</span>
+                              )}
+                            </SelectItem>
+                          ))
                       ) : (
                         <SelectItem value="no-clients" disabled>No clients available</SelectItem>
                       )}
@@ -470,20 +472,22 @@ export const JobsCreateModal = ({
                         {isLoadingJobTypes ? (
                           <SelectItem value="loading-job-types" disabled>Loading job types...</SelectItem>
                         ) : jobTypes.length > 0 ? (
-                          jobTypes.map((jobType) => (
-                            <SelectItem 
-                              key={jobType.id} 
-                              value={jobType.name || `jobtype-${jobType.id}`}
-                              className={cn(
-                                recentlyAddedJobType === jobType.name && "bg-green-50 border-green-200"
-                              )}
-                            >
-                              {jobType.name}
-                              {recentlyAddedJobType === jobType.name && (
-                                <span className="ml-2 text-xs text-green-600">(just added)</span>
-                              )}
-                            </SelectItem>
-                          ))
+                          jobTypes
+                            .filter(jobType => jobType.name && jobType.name.trim() !== '')
+                            .map((jobType) => (
+                              <SelectItem 
+                                key={jobType.id} 
+                                value={jobType.name || `jobtype-${jobType.id}`}
+                                className={cn(
+                                  recentlyAddedJobType === jobType.name && "bg-green-50 border-green-200"
+                                )}
+                              >
+                                {jobType.name}
+                                {recentlyAddedJobType === jobType.name && (
+                                  <span className="ml-2 text-xs text-green-600">(just added)</span>
+                                )}
+                              </SelectItem>
+                            ))
                         ) : (
                           <>
                             <SelectItem value="HVAC">HVAC Repair</SelectItem>
@@ -526,7 +530,7 @@ export const JobsCreateModal = ({
                           <SelectItem value="loading-lead-sources" disabled>Loading lead sources...</SelectItem>
                         ) : leadSources.length > 0 ? (
                           leadSources
-                            .filter(source => source.is_active)
+                            .filter(source => source.is_active && source.name && source.name.trim() !== '')
                             .map((source) => (
                               <SelectItem 
                                 key={source.id} 
@@ -664,11 +668,13 @@ export const JobsCreateModal = ({
                         {isLoadingTechnicians ? (
                           <SelectItem value="loading-technicians" disabled>Loading technicians...</SelectItem>
                         ) : technicians.length > 0 ? (
-                          technicians.map((tech) => (
-                            <SelectItem key={tech.id} value={tech.id || `tech-${Math.random()}`}>
-                              {tech.name}
-                            </SelectItem>
-                          ))
+                          technicians
+                            .filter(tech => tech.id && tech.id.trim() !== '')
+                            .map((tech) => (
+                              <SelectItem key={tech.id} value={tech.id || `tech-${Math.random()}`}>
+                                {tech.name}
+                              </SelectItem>
+                            ))
                         ) : (
                           <SelectItem value="no-technicians" disabled>No technicians available</SelectItem>
                         )}
@@ -793,18 +799,20 @@ export const JobsCreateModal = ({
                         {isLoadingTags ? (
                           <SelectItem value="loading-tags" disabled>Loading tags...</SelectItem>
                         ) : tags.length > 0 ? (
-                          tags.map(tag => (
-                            <SelectItem 
-                              key={tag.id} 
-                              value={tag.name || `tag-${tag.id}`}
-                              disabled={selectedTags.includes(tag.name || '')}
-                            >
-                              {tag.name}
-                              {tag.category && tag.category !== 'General' && (
-                                <span className="ml-2 text-xs text-muted-foreground">({tag.category})</span>
-                              )}
-                            </SelectItem>
-                          ))
+                          tags
+                            .filter(tag => tag.name && tag.name.trim() !== '')
+                            .map(tag => (
+                              <SelectItem 
+                                key={tag.id} 
+                                value={tag.name || `tag-${tag.id}`}
+                                disabled={selectedTags.includes(tag.name || '')}
+                              >
+                                {tag.name}
+                                {tag.category && tag.category !== 'General' && (
+                                  <span className="ml-2 text-xs text-muted-foreground">({tag.category})</span>
+                                )}
+                              </SelectItem>
+                            ))
                         ) : (
                           <>
                             <SelectItem value="Urgent">Urgent</SelectItem>

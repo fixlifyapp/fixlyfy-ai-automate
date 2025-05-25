@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Job } from "@/types/job";
@@ -15,7 +14,7 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
-// Define explicit database job type to avoid complex inference
+// Simplified database job type
 interface DatabaseJob {
   id: string;
   title: string;
@@ -35,7 +34,7 @@ interface DatabaseJob {
   job_type?: string;
   lead_source?: string;
   service?: string;
-  tasks: any; // This will be transformed
+  tasks: any;
   created_by?: string;
   clients?: {
     id: string;
@@ -43,16 +42,60 @@ interface DatabaseJob {
     email?: string;
     phone?: string;
     address?: string;
-  };
+  } | null;
   estimates?: Array<{
     id: string;
     total: number;
-  }>;
+  }> | null;
   invoices?: Array<{
     id: string;
     total: number;
-  }>;
+  }> | null;
 }
+
+// Simplified transform function
+const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
+  let tasks: string[] = [];
+  
+  if (dbJob.tasks) {
+    if (typeof dbJob.tasks === 'string') {
+      try {
+        tasks = JSON.parse(dbJob.tasks);
+      } catch {
+        tasks = [];
+      }
+    } else if (Array.isArray(dbJob.tasks)) {
+      tasks = dbJob.tasks;
+    }
+  }
+
+  return {
+    id: dbJob.id,
+    title: dbJob.title,
+    description: dbJob.description,
+    status: dbJob.status,
+    client_id: dbJob.client_id,
+    technician_id: dbJob.technician_id,
+    property_id: dbJob.property_id,
+    date: dbJob.date,
+    schedule_start: dbJob.schedule_start,
+    schedule_end: dbJob.schedule_end,
+    created_at: dbJob.created_at,
+    updated_at: dbJob.updated_at,
+    revenue: dbJob.revenue,
+    tags: dbJob.tags,
+    notes: dbJob.notes,
+    job_type: dbJob.job_type,
+    lead_source: dbJob.lead_source,
+    service: dbJob.service,
+    tasks,
+    created_by: dbJob.created_by,
+    clients: dbJob.clients,
+    estimates: dbJob.estimates,
+    invoices: dbJob.invoices,
+    custom_fields: []
+  };
+};
 
 export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const { toast } = useToast();
@@ -60,32 +103,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const [isLoading, setIsLoading] = useState(true);
   const [totalJobs, setTotalJobs] = useState(0);
   const [filters, setFilters] = useState<JobsFilter>({});
-
-  const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
-    let tasks: string[] = [];
-    
-    // Handle tasks transformation from various possible types
-    if (dbJob.tasks) {
-      if (typeof dbJob.tasks === 'string') {
-        try {
-          tasks = JSON.parse(dbJob.tasks);
-        } catch {
-          tasks = [];
-        }
-      } else if (Array.isArray(dbJob.tasks)) {
-        tasks = dbJob.tasks;
-      } else if (typeof dbJob.tasks === 'object') {
-        // Handle case where tasks might be a JSON object
-        tasks = Array.isArray(dbJob.tasks) ? dbJob.tasks : [];
-      }
-    }
-
-    return {
-      ...dbJob,
-      tasks,
-      custom_fields: []
-    };
-  };
 
   const fetchJobs = async (): Promise<void> => {
     setIsLoading(true);
@@ -98,7 +115,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
           invoices ( id, total )
         `, { count: 'exact' });
 
-      // Apply client filter if provided
       if (clientId) {
         query = query.eq('client_id', clientId);
       }
@@ -261,7 +277,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     fetchJobs();
   }, [filters, clientId]);
 
-  // Set up real-time updates with explicit void return
   useRealtimeSync({
     tables: ['jobs', 'clients', 'estimates', 'invoices', 'client_properties'],
     onUpdate: () => {
