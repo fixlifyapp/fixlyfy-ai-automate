@@ -1,6 +1,8 @@
 
 import React from "react";
 import { EditableJobDescriptionCard } from "./EditableJobDescriptionCard";
+import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
+import { FileText } from "lucide-react";
 
 interface JobDescriptionCardProps {
   description: string;
@@ -13,13 +15,21 @@ export const JobDescriptionCard = ({ description, jobId, editable = false }: Job
     return <EditableJobDescriptionCard description={description} jobId={jobId} />;
   }
 
-  // Fallback to simple display if not editable
-  if (!description) return null;
-
+  // Always show the card, even if description is empty
   return (
-    <div className="bg-white rounded-lg border p-6">
-      <h3 className="text-lg font-semibold mb-4">Job Description</h3>
-      <p>{description}</p>
-    </div>
+    <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+      <ModernCardHeader className="pb-4">
+        <ModernCardTitle icon={FileText}>
+          Job Description
+        </ModernCardTitle>
+      </ModernCardHeader>
+      <ModernCardContent>
+        {description ? (
+          <p className="text-gray-700 leading-relaxed">{description}</p>
+        ) : (
+          <p className="text-muted-foreground text-sm">No description provided</p>
+        )}
+      </ModernCardContent>
+    </ModernCard>
   );
 };

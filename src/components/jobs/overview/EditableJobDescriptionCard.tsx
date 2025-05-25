@@ -14,7 +14,7 @@ interface EditableJobDescriptionCardProps {
 
 export const EditableJobDescriptionCard = ({ description, jobId }: EditableJobDescriptionCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(description);
+  const [editValue, setEditValue] = useState(description || "");
   const { updateJob } = useJobs();
 
   const handleSave = async () => {
@@ -26,12 +26,11 @@ export const EditableJobDescriptionCard = ({ description, jobId }: EditableJobDe
   };
 
   const handleCancel = () => {
-    setEditValue(description);
+    setEditValue(description || "");
     setIsEditing(false);
   };
 
-  if (!description && !isEditing) return null;
-
+  // Always show the card
   return (
     <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
       <ModernCardHeader className="pb-4">
@@ -80,7 +79,13 @@ export const EditableJobDescriptionCard = ({ description, jobId }: EditableJobDe
             autoFocus
           />
         ) : (
-          <p className="text-gray-700 leading-relaxed">{description}</p>
+          <div>
+            {description ? (
+              <p className="text-gray-700 leading-relaxed">{description}</p>
+            ) : (
+              <p className="text-muted-foreground text-sm">No description provided. Click edit to add one.</p>
+            )}
+          </div>
         )}
       </ModernCardContent>
     </ModernCard>
