@@ -15,6 +15,45 @@ interface JobsFilter {
   endDate?: Date | null;
 }
 
+// Define explicit database job type to avoid complex inference
+interface DatabaseJob {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  client_id?: string;
+  technician_id?: string;
+  property_id?: string;
+  date?: string;
+  schedule_start?: string;
+  schedule_end?: string;
+  created_at?: string;
+  updated_at?: string;
+  revenue?: number;
+  tags?: string[];
+  notes?: string;
+  job_type?: string;
+  lead_source?: string;
+  service?: string;
+  tasks: any; // This will be transformed
+  created_by?: string;
+  clients?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+  estimates?: Array<{
+    id: string;
+    total: number;
+  }>;
+  invoices?: Array<{
+    id: string;
+    total: number;
+  }>;
+}
+
 export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -22,7 +61,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const [totalJobs, setTotalJobs] = useState(0);
   const [filters, setFilters] = useState<JobsFilter>({});
 
-  const transformDatabaseJob = (dbJob: any): Job => {
+  const transformDatabaseJob = (dbJob: DatabaseJob): Job => {
     let tasks: string[] = [];
     
     // Handle tasks transformation from various possible types
@@ -48,7 +87,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     };
   };
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (): Promise<void> => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -95,7 +134,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         throw error;
       }
 
-      const transformedJobs = (data || []).map(transformDatabaseJob);
+      const transformedJobs = (data || []).map((dbJob: any) => transformDatabaseJob(dbJob as DatabaseJob));
       setJobs(transformedJobs);
       setTotalJobs(count || 0);
     } catch (error: any) {
@@ -110,7 +149,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
   };
 
-  const addJob = async (jobData: Partial<Job>) => {
+  const addJob = async (jobData: Partial<Job>): Promise<Job | undefined> => {
     try {
       const jobToInsert = {
         id: jobData.id || `JOB-${Date.now()}`,
@@ -149,7 +188,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       await fetchJobs();
       
       if (data) {
-        return transformDatabaseJob(data);
+        return transformDatabaseJob(data as DatabaseJob);
       }
     } catch (error: any) {
       console.error("Error creating job:", error);
@@ -162,7 +201,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
   };
 
-  const updateJob = async (jobId: string, updates: Partial<Job>) => {
+  const updateJob = async (jobId: string, updates: Partial<Job>): Promise<any> => {
     try {
       const updateData = {
         ...updates,
@@ -191,7 +230,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
   };
 
-  const deleteJob = async (jobId: string) => {
+  const deleteJob = async (jobId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('jobs')
@@ -222,16 +261,16 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     fetchJobs();
   }, [filters, clientId]);
 
-  // Set up real-time updates - wrap async function to fix type mismatch
+  // Set up real-time updates with explicit void return
   useRealtimeSync({
     tables: ['jobs', 'clients', 'estimates', 'invoices', 'client_properties'],
     onUpdate: () => {
-      fetchJobs().catch(console.error);
+      void fetchJobs();
     },
     enabled: true
   });
 
-  const updateFilters = (newFilters: JobsFilter) => {
+  const updateFilters = (newFilters: JobsFilter): void => {
     setFilters(prevFilters => ({
       ...prevFilters,
       ...newFilters

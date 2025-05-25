@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,7 @@ import { useJobCustomFields } from "@/hooks/useJobCustomFields";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
 import { useJobAttachments } from "@/hooks/useJobAttachments";
+import { PropertySelector } from "./PropertySelector";
 
 interface JobsCreateModalProps {
   open: boolean;
@@ -47,6 +47,7 @@ interface JobFormData {
   end_time: string;
   technician_id: string;
   tasks: string[];
+  property_id: string;
 }
 
 export const JobsCreateModal = ({
@@ -74,6 +75,7 @@ export const JobsCreateModal = ({
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [tasks, setTasks] = useState<string[]>([]);
   const [newTask, setNewTask] = useState<string>("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   
   // Additional fields
   const [leadSource, setLeadSource] = useState<string>("");
@@ -101,7 +103,8 @@ export const JobsCreateModal = ({
       end_date: new Date(),
       end_time: "17:00",
       technician_id: "unassigned",
-      tasks: []
+      tasks: [],
+      property_id: ""
     }
   });
 
@@ -111,6 +114,14 @@ export const JobsCreateModal = ({
       form.setValue("client_id", preselectedClientId);
     }
   }, [open, preselectedClientId, form]);
+
+  // Reset property selection when client changes
+  useEffect(() => {
+    const clientId = form.watch("client_id");
+    if (clientId !== preselectedClientId) {
+      setSelectedPropertyId("");
+    }
+  }, [form.watch("client_id"), preselectedClientId]);
 
   // Auto-select recently added items
   useEffect(() => {
@@ -192,6 +203,7 @@ export const JobsCreateModal = ({
     setTasks([]);
     setNewTask("");
     setLeadSource("");
+    setSelectedPropertyId("");
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
     setRecentlyAddedClient(null);
@@ -256,6 +268,7 @@ export const JobsCreateModal = ({
         client_id: data.client_id,
         service: data.service || "General Service",
         technician_id: data.technician_id && data.technician_id !== "unassigned" ? data.technician_id : undefined,
+        property_id: selectedPropertyId || undefined,
         schedule_start: scheduledStartDate.toISOString(),
         schedule_end: scheduledEndDate.toISOString(),
         date: scheduledStartDate.toISOString(),
@@ -310,6 +323,8 @@ export const JobsCreateModal = ({
   const selectedClient = form.watch("client_id") ? 
     clients.find(client => client.id === form.watch("client_id")) : 
     null;
+
+  const selectedClientId = form.watch("client_id");
 
   return (
     <>
@@ -381,6 +396,15 @@ export const JobsCreateModal = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Property Selection */}
+                {selectedClientId && (
+                  <PropertySelector
+                    clientId={selectedClientId}
+                    selectedPropertyId={selectedPropertyId}
+                    onPropertySelect={setSelectedPropertyId}
+                  />
+                )}
 
                 {selectedClient && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
