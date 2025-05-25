@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,7 +40,7 @@ export const InvoiceSendDialog = ({
   const [isSending, setIsSending] = useState(false);
 
   // Set default recipient when method changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (method === 'email' && clientEmail) {
       setRecipient(clientEmail);
     } else if (method === 'sms' && clientPhone) {
