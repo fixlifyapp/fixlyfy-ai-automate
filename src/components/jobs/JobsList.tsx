@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -115,8 +116,8 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                       <Badge variant="outline" className="mb-2">
                         {job.id}
                       </Badge>
-                      <h3 className="font-medium">{job.client?.name || "Unknown Client"}</h3>
-                      <p className="text-xs text-fixlyfy-text-secondary">{job.client?.address || "No address"}</p>
+                      <h3 className="font-medium">{job.clients?.name || "Unknown Client"}</h3>
+                      <p className="text-xs text-fixlyfy-text-secondary">{job.clients?.address || "No address"}</p>
                     </div>
                     <Badge className={cn(
                       job.status === "scheduled" && "bg-fixlyfy-info/10 text-fixlyfy-info",
@@ -251,7 +252,7 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                       <span className="font-medium">{job.id}</span>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{job.client?.name || "Unknown Client"}</div>
+                      <div className="font-medium">{job.clients?.name || "Unknown Client"}</div>
                       <div className="text-xs text-fixlyfy-text-secondary">{job.service || job.title || "No service specified"}</div>
                     </TableCell>
                     <TableCell>

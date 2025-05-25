@@ -23,6 +23,9 @@ export interface Job {
   clients?: {
     id: string;
     name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
   };
   estimates?: Array<{
     id: string;
@@ -31,5 +34,10 @@ export interface Job {
   invoices?: Array<{
     id: string;
     total_amount?: number;
+  }>;
+  custom_fields?: Array<{
+    id: string;
+    name: string;
+    value?: string;
   }>;
 }

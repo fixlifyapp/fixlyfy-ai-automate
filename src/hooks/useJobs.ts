@@ -28,7 +28,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       let query = supabase
         .from('jobs')
         .select(`*, 
-          clients ( name, id ), 
+          clients ( name, id, email, phone, address ), 
           estimates ( id, total ), 
           invoices ( id, total )
         `, { count: 'exact' });
@@ -69,7 +69,14 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         throw error;
       }
 
-      setJobs(data || []);
+      // Transform the data to match our Job interface
+      const transformedJobs = data?.map(job => ({
+        ...job,
+        tasks: Array.isArray(job.tasks) ? job.tasks : [],
+        custom_fields: [] // Will be populated if enableCustomFields is true
+      })) || [];
+
+      setJobs(transformedJobs);
       setTotalJobs(count || 0);
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
@@ -85,9 +92,14 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   const addJob = async (jobData: Partial<Job>) => {
     try {
+      const jobToInsert = {
+        ...jobData,
+        tasks: jobData.tasks || []
+      };
+
       const { data, error } = await supabase
         .from('jobs')
-        .insert([jobData])
+        .insert([jobToInsert])
         .select()
         .single();
 
