@@ -104,8 +104,10 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   const addJob = async (jobData: Partial<Job>) => {
     try {
-      // Transform job data for database - ensure tasks is a JSON string
+      // Transform job data for database - ensure required fields are present
       const jobToInsert = {
+        id: jobData.id || `JOB-${Date.now()}`,
+        title: jobData.title || 'New Job',
         ...jobData,
         tasks: typeof jobData.tasks === 'string' ? jobData.tasks : JSON.stringify(jobData.tasks || [])
       };

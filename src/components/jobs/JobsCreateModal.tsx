@@ -245,8 +245,9 @@ export const JobsCreateModal = ({
       scheduledEndDate.setHours(endHours);
       scheduledEndDate.setMinutes(endMinutes);
 
-      // Create the job object with proper types - ensure tasks is an array
+      // Create the job object with proper types - ensure tasks is an array for frontend
       const jobDataForDatabase = {
+        id: `JOB-${Date.now()}`,
         title: `${data.service || 'General'} Service`,
         description: data.description,
         status: "scheduled",
@@ -260,7 +261,7 @@ export const JobsCreateModal = ({
         tags: selectedTags,
         job_type: data.service || "General Service",
         lead_source: leadSource || undefined,
-        tasks: tasks // Pass tasks as array, not string
+        tasks: tasks // Pass tasks as array for frontend, will be stringified in the hook
       };
 
       console.log('Creating job with database-compatible data:', jobDataForDatabase);

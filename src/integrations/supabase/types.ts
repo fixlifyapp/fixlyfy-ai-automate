@@ -975,6 +975,7 @@ export type Database = {
           balance: number | null
           created_at: string | null
           date: string | null
+          due_date: string | null
           estimate_id: string | null
           id: string
           invoice_number: string
@@ -989,6 +990,7 @@ export type Database = {
           balance?: number | null
           created_at?: string | null
           date?: string | null
+          due_date?: string | null
           estimate_id?: string | null
           id?: string
           invoice_number: string
@@ -1003,6 +1005,7 @@ export type Database = {
           balance?: number | null
           created_at?: string | null
           date?: string | null
+          due_date?: string | null
           estimate_id?: string | null
           id?: string
           invoice_number?: string
