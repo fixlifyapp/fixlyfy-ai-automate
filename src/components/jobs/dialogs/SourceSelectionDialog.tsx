@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
+import { useLeadSources } from "@/hooks/useConfigItems";
 
 interface SourceSelectionDialogProps {
   open: boolean;
@@ -31,18 +32,13 @@ export function SourceSelectionDialog({
 }: SourceSelectionDialogProps) {
   const [selectedSource, setSelectedSource] = useState(initialSource);
   const [newSource, setNewSource] = useState("");
+  const { items: leadSources, isLoading, addItem } = useLeadSources();
   
-  const sources = [
-    "Google", 
-    "Facebook", 
-    "Instagram",
-    "Phone Call",
-    "Website",
-    "Referral",
-    "Direct",
-    "Email Campaign",
-    "Other"
-  ];
+  const activeSources = leadSources.filter(source => source.is_active);
+
+  useEffect(() => {
+    setSelectedSource(initialSource);
+  }, [initialSource]);
 
   const handleSave = () => {
     onSave(selectedSource);
@@ -50,11 +46,24 @@ export function SourceSelectionDialog({
     toast.success("Lead source updated");
   };
 
-  const handleAddSource = () => {
-    if (newSource.trim() && onAddSource) {
-      onAddSource(newSource.trim());
-      setNewSource("");
-      toast.success("Custom source added");
+  const handleAddSource = async () => {
+    if (newSource.trim()) {
+      try {
+        const newLeadSource = await addItem({
+          name: newSource.trim(),
+          is_active: true
+        });
+        
+        if (newLeadSource && onAddSource) {
+          onAddSource(newLeadSource.name);
+          setSelectedSource(newLeadSource.name);
+        }
+        
+        setNewSource("");
+        toast.success("Custom source added");
+      } catch (error) {
+        toast.error("Failed to add source");
+      }
     }
   };
 
@@ -65,18 +74,44 @@ export function SourceSelectionDialog({
           <DialogTitle>Select Lead Source</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <RadioGroup 
-            value={selectedSource} 
-            onValueChange={setSelectedSource}
-            className="space-y-3"
-          >
-            {sources.map((source) => (
-              <div key={source} className="flex items-center space-x-2">
-                <RadioGroupItem value={source} id={`source-${source}`} />
-                <Label htmlFor={`source-${source}`}>{source}</Label>
-              </div>
-            ))}
-          </RadioGroup>
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading sources...</div>
+          ) : (
+            <RadioGroup 
+              value={selectedSource} 
+              onValueChange={setSelectedSource}
+              className="space-y-3"
+            >
+              {activeSources.map((source) => (
+                <div key={source.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={source.name} id={`source-${source.id}`} />
+                  <Label htmlFor={`source-${source.id}`}>{source.name}</Label>
+                </div>
+              ))}
+              
+              {/* Fallback options if no database sources */}
+              {activeSources.length === 0 && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Google" id="source-google" />
+                    <Label htmlFor="source-google">Google</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Facebook" id="source-facebook" />
+                    <Label htmlFor="source-facebook">Facebook</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Website" id="source-website" />
+                    <Label htmlFor="source-website">Website</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Referral" id="source-referral" />
+                    <Label htmlFor="source-referral">Referral</Label>
+                  </div>
+                </>
+              )}
+            </RadioGroup>
+          )}
           
           {onAddSource && (
             <div className="mt-6 border-t pt-4">

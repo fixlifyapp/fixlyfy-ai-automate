@@ -18,9 +18,10 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useTechnicians } from "@/hooks/useTechnicians";
-import { useJobTypes, useTags } from "@/hooks/useConfigItems";
+import { useJobTypes, useTags, useLeadSources } from "@/hooks/useConfigItems";
 import { QuickAddJobTypeDialog } from "./quick-add/QuickAddJobTypeDialog";
 import { QuickAddTagDialog } from "./quick-add/QuickAddTagDialog";
+import { QuickAddLeadSourceDialog } from "./quick-add/QuickAddLeadSourceDialog";
 import { useJobCustomFields } from "@/hooks/useJobCustomFields";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
@@ -57,6 +58,7 @@ export const JobsCreateModal = ({
   const { technicians, isLoading: isLoadingTechnicians } = useTechnicians();
   const { items: jobTypes, isLoading: isLoadingJobTypes } = useJobTypes();
   const { items: tags, isLoading: isLoadingTags } = useTags();
+  const { items: leadSources, isLoading: isLoadingLeadSources } = useLeadSources();
   const { availableFields, saveCustomFieldValues } = useJobCustomFields();
   const { uploadAttachments, isUploading } = useJobAttachments();
   
@@ -78,9 +80,11 @@ export const JobsCreateModal = ({
   const [showJobTypeDialog, setShowJobTypeDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
+  const [showLeadSourceDialog, setShowLeadSourceDialog] = useState(false);
   const [recentlyAddedJobType, setRecentlyAddedJobType] = useState<string | null>(null);
   const [recentlyAddedTag, setRecentlyAddedTag] = useState<string | null>(null);
   const [recentlyAddedClient, setRecentlyAddedClient] = useState<string | null>(null);
+  const [recentlyAddedLeadSource, setRecentlyAddedLeadSource] = useState<string | null>(null);
   
   const navigate = useNavigate();
 
@@ -189,6 +193,7 @@ export const JobsCreateModal = ({
     setRecentlyAddedJobType(null);
     setRecentlyAddedTag(null);
     setRecentlyAddedClient(null);
+    setRecentlyAddedLeadSource(null);
   };
 
   const handleJobTypeAdded = (jobType: { id: string; name: string }) => {
@@ -202,6 +207,10 @@ export const JobsCreateModal = ({
   const handleClientAdded = (client: Client) => {
     setRecentlyAddedClient(client.id);
     toast.success(`Client ${client.name} created successfully`);
+  };
+
+  const handleLeadSourceAdded = (leadSource: { id: string; name: string }) => {
+    setRecentlyAddedLeadSource(leadSource.name);
   };
 
   const handleSubmit = async (data: JobFormData) => {
@@ -461,13 +470,59 @@ export const JobsCreateModal = ({
                   
                   {/* Lead Source */}
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="leadSource">Lead Source</Label>
-                    <Input
-                      id="leadSource"
-                      placeholder="e.g., Phone call, Website, Referral"
-                      value={leadSource}
-                      onChange={(e) => setLeadSource(e.target.value)}
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="leadSource">Lead Source</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowLeadSourceDialog(true)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                    <Select 
+                      value={leadSource} 
+                      onValueChange={setLeadSource}
+                    >
+                      <SelectTrigger className={cn(
+                        recentlyAddedLeadSource === leadSource && "ring-2 ring-green-500"
+                      )}>
+                        <SelectValue placeholder="Select lead source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingLeadSources ? (
+                          <SelectItem value="loading" disabled>Loading lead sources...</SelectItem>
+                        ) : leadSources.length > 0 ? (
+                          leadSources
+                            .filter(source => source.is_active)
+                            .map((source) => (
+                              <SelectItem 
+                                key={source.id} 
+                                value={source.name}
+                                className={cn(
+                                  recentlyAddedLeadSource === source.name && "bg-green-50 border-green-200"
+                                )}
+                              >
+                                {source.name}
+                                {recentlyAddedLeadSource === source.name && (
+                                  <span className="ml-2 text-xs text-green-600">(just added)</span>
+                                )}
+                              </SelectItem>
+                            ))
+                        ) : (
+                          <>
+                            <SelectItem value="Google">Google</SelectItem>
+                            <SelectItem value="Facebook">Facebook</SelectItem>
+                            <SelectItem value="Website">Website</SelectItem>
+                            <SelectItem value="Referral">Referral</SelectItem>
+                            <SelectItem value="Phone Call">Phone Call</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   {/* Job Description */}
@@ -817,6 +872,12 @@ export const JobsCreateModal = ({
         open={showClientDialog}
         onOpenChange={setShowClientDialog}
         onSuccess={handleClientAdded}
+      />
+      
+      <QuickAddLeadSourceDialog
+        open={showLeadSourceDialog}
+        onOpenChange={setShowLeadSourceDialog}
+        onLeadSourceAdded={handleLeadSourceAdded}
       />
     </>
   );

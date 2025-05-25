@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getTagColor } from "@/data/tags";
 import { Job } from "@/hooks/useJobs";
+import { useTags } from "@/hooks/useConfigItems";
 
 interface JobsListProps {
   jobs: Job[];
@@ -38,6 +38,35 @@ interface JobsListProps {
 
 export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob, onSelectAllJobs }: JobsListProps) => {
   const navigate = useNavigate();
+  const { items: tagItems } = useTags();
+
+  // Create a map for tag colors
+  const tagColorMap = tagItems.reduce((acc, tag) => {
+    acc[tag.name] = tag.color || '#6366f1';
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Updated tag color function to use database colors
+  const getTagColor = (tagName: string) => {
+    const color = tagColorMap[tagName];
+    if (color) {
+      // Convert hex color to Tailwind classes
+      return `border-current text-current`;
+    }
+    
+    // Fallback to existing color scheme
+    const tagColors: Record<string, string> = {
+      "HVAC": "bg-purple-50 border-purple-200 text-purple-600",
+      "Residential": "bg-blue-50 border-blue-200 text-blue-600",
+      "Commercial": "bg-indigo-50 border-indigo-200 text-indigo-600",
+      "Emergency": "bg-red-50 border-red-200 text-red-600",
+      "Maintenance": "bg-green-50 border-green-200 text-green-600",
+      "Installation": "bg-amber-50 border-amber-200 text-amber-600",
+      "Repair": "bg-orange-50 border-orange-200 text-orange-600"
+    };
+    
+    return tagColors[tagName] || "bg-purple-50 border-purple-200 text-purple-600";
+  };
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
@@ -103,18 +132,22 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                   </div>
                 </div>
                 <div className="p-4">
-                  {/* Tags section for grid view */}
+                  {/* Tags section for grid view with database colors */}
                   {job.tags && job.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {job.tags.slice(0, 2).map((tag, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className={`text-xs ${getTagColor(tag)}`}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
+                      {job.tags.slice(0, 2).map((tag, index) => {
+                        const tagColor = tagColorMap[tag];
+                        return (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className={`text-xs ${getTagColor(tag)}`}
+                            style={tagColor ? { borderColor: tagColor, color: tagColor } : undefined}
+                          >
+                            {tag}
+                          </Badge>
+                        );
+                      })}
                       {job.tags.length > 2 && (
                         <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-600">
                           +{job.tags.length - 2}
@@ -237,15 +270,19 @@ export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob
                     <TableCell>
                       {job.tags && job.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {job.tags.slice(0, 2).map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className={`text-xs ${getTagColor(tag)}`}
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
+                          {job.tags.slice(0, 2).map((tag, index) => {
+                            const tagColor = tagColorMap[tag];
+                            return (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className={`text-xs ${getTagColor(tag)}`}
+                                style={tagColor ? { borderColor: tagColor, color: tagColor } : undefined}
+                              >
+                                {tag}
+                              </Badge>
+                            );
+                          })}
                           {job.tags.length > 2 && (
                             <Badge 
                               variant="outline" 
