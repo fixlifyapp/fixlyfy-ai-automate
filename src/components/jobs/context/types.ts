@@ -11,6 +11,19 @@ export interface JobInfo {
   status?: string;
   description?: string;
   tags?: string[];
+  technician_id?: string;
+  schedule_start?: string;
+  schedule_end?: string;
+  job_type?: string;
+  priority?: string;
+  lead_source?: string;
+  estimated_duration?: number;
+  special_instructions?: string;
+  client_requirements?: string;
+  access_instructions?: string;
+  preferred_time?: string;
+  equipment_needed?: string[];
+  safety_notes?: string;
 }
 
 export interface JobDetailsContextType {

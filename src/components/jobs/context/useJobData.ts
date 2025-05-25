@@ -23,7 +23,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     
     const fetchJobData = async () => {
       try {
-        // Fetch job details from Supabase with proper join
+        // Fetch job details from Supabase with proper join and all fields
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
@@ -71,7 +71,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           client.country || ''
         ].filter(Boolean).join(', ');
         
-        // Create job info object
+        // Create job info object with all fields
         const jobInfo: JobInfo = {
           id: jobData.id,
           clientId: client.id || "",
@@ -83,7 +83,20 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           total: jobData.revenue || 0,
           status: jobData.status || "scheduled",
           description: jobData.description || "",
-          tags: jobData.tags || []
+          tags: jobData.tags || [],
+          technician_id: jobData.technician_id,
+          schedule_start: jobData.schedule_start,
+          schedule_end: jobData.schedule_end,
+          job_type: jobData.job_type || jobData.service,
+          priority: jobData.priority || "medium",
+          lead_source: jobData.lead_source,
+          estimated_duration: jobData.estimated_duration,
+          special_instructions: jobData.special_instructions,
+          client_requirements: jobData.client_requirements,
+          access_instructions: jobData.access_instructions,
+          preferred_time: jobData.preferred_time,
+          equipment_needed: jobData.equipment_needed || [],
+          safety_notes: jobData.safety_notes
         };
         
         console.log('Processed job info:', jobInfo);
