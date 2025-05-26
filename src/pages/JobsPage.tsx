@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -219,8 +218,10 @@ const JobsPage = () => {
       <JobsCreateModal 
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
+        onJobCreated={addJob}
         onSuccess={(job) => {
           toast.success(`Job ${job.id} created successfully`);
+          refreshJobs();
         }}
       />
     </PageLayout>

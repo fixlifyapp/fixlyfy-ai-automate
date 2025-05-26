@@ -24,7 +24,7 @@ import { toast } from "sonner";
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onJobCreated?: (job: any) => Promise<void>;
+  onJobCreated?: (job: any) => Promise<any>;
   onSuccess?: (job: any) => void;
   preselectedClientId?: string;
 }
@@ -51,10 +51,6 @@ export const JobsCreateModal = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { clients, isLoading } = useClients();
-
-  const generateJobId = () => {
-    return "j" + Math.random().toString(36).substring(2, 9);
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -85,26 +81,29 @@ export const JobsCreateModal = ({
     setIsSubmitting(true);
     
     try {
-      const newJob = {
-        ...formData,
-        id: generateJobId(),
+      // Prepare job data for addJob function
+      const jobData = {
+        title: formData.title,
+        client_id: formData.client_id,
+        description: formData.description,
         date: formData.schedule_start || new Date().toISOString(),
-        revenue: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        schedule_start: formData.schedule_start || undefined,
+        status: 'scheduled',
+        revenue: 0
       };
 
       if (onJobCreated) {
-        await onJobCreated(newJob);
+        const createdJob = await onJobCreated(jobData);
+        
+        if (createdJob && onSuccess) {
+          onSuccess(createdJob);
+        }
+        
+        onOpenChange(false);
+        resetForm();
+      } else {
+        toast.error("Job creation function not available");
       }
-      
-      if (onSuccess) {
-        onSuccess(newJob);
-      }
-      
-      toast.success("Job created successfully!");
-      onOpenChange(false);
-      resetForm();
     } catch (error) {
       console.error("Error creating job:", error);
       toast.error("Failed to create job. Please try again.");
