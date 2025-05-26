@@ -25,7 +25,7 @@ interface ModernJobHistoryTabProps {
 }
 
 export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
-  const { history, isLoading, refreshHistory } = useJobHistory(jobId);
+  const { historyItems, isLoading, refreshHistory } = useJobHistory(jobId);
 
   // Real-time updates for job history
   useEffect(() => {
@@ -118,14 +118,14 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
   };
 
   // Group history by date
-  const groupedHistory = history.reduce((groups, item) => {
+  const groupedHistory = historyItems.reduce((groups, item) => {
     const date = new Date(item.created_at).toDateString();
     if (!groups[date]) {
       groups[date] = [];
     }
     groups[date].push(item);
     return groups;
-  }, {} as Record<string, typeof history>);
+  }, {} as Record<string, typeof historyItems>);
 
   const sortedDates = Object.keys(groupedHistory).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
@@ -139,7 +139,7 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
             <div className="flex items-center gap-2">
               <span>Job History</span>
               <Badge variant="outline" className="font-semibold">
-                {history.length} events
+                {historyItems.length} events
               </Badge>
             </div>
           </ModernCardTitle>
@@ -158,7 +158,7 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
                 </div>
               ))}
             </div>
-          ) : history.length === 0 ? (
+          ) : historyItems.length === 0 ? (
             <div className="text-center py-12">
               <History className="mx-auto h-12 w-12 text-slate-400 mb-4" />
               <h3 className="text-lg font-semibold text-slate-700 mb-2">No history yet</h3>

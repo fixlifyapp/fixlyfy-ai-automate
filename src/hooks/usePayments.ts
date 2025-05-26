@@ -1,9 +1,27 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Payment, PaymentMethod } from '@/types/payment';
 
-export type { Payment, PaymentMethod } from '@/types/payment';
+// Define types locally to avoid import issues
+export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
+export type PaymentStatus = "paid" | "refunded" | "disputed";
+
+export interface Payment {
+  id: string;
+  date: string;
+  clientId?: string;
+  clientName?: string;
+  jobId?: string;
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  reference?: string;
+  notes?: string;
+  technicianId?: string;
+  technicianName?: string;
+  invoice_id?: string;
+  created_at?: string;
+}
 
 export const usePayments = (jobId: string) => {
   const [payments, setPayments] = useState<Payment[]>([]);
