@@ -8,7 +8,7 @@ import { CustomLineItemDialog } from "./estimate-builder/CustomLineItemDialog";
 import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "./ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
+import { ArrowLeft, FileText, ListPlus, Send, ArrowRight, Lightbulb } from "lucide-react";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 import { Estimate } from "@/hooks/useEstimates";
@@ -16,6 +16,8 @@ import { Invoice } from "@/hooks/useInvoices";
 import { UnifiedDocumentForm } from "./unified/UnifiedDocumentForm";
 import { UnifiedDocumentPreview } from "./unified/UnifiedDocumentPreview";
 import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
+import { DocumentConversionDialog } from "./unified/DocumentConversionDialog";
+import { SmartTemplateSelector } from "./unified/SmartTemplateSelector";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 
 export type DocumentType = "estimate" | "invoice";
@@ -52,6 +54,8 @@ export const UnifiedDocumentBuilder = ({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
+  const [showSmartTemplates, setShowSmartTemplates] = useState(false);
   const isMobile = useIsMobile();
   
   // Fetch job data
@@ -75,10 +79,25 @@ export const UnifiedDocumentBuilder = ({
     open,
     onSyncToInvoice
   });
+
+  // Show smart templates for new documents
+  useEffect(() => {
+    if (open && !existingDocument && documentBuilder.lineItems.length === 0 && documentBuilder.jobData) {
+      setShowSmartTemplates(true);
+    }
+  }, [open, existingDocument, documentBuilder.lineItems.length, documentBuilder.jobData]);
   
   const handleProductSelect = (product: Product) => {
     documentBuilder.handleAddProduct(product);
     setIsProductSearchOpen(false);
+  };
+
+  const handleTemplateSelect = (templateItems: Product[]) => {
+    templateItems.forEach(item => {
+      documentBuilder.handleAddProduct(item);
+    });
+    setShowSmartTemplates(false);
+    toast.success(`Added ${templateItems.length} items from template`);
   };
   
   const handleCustomLineItemSave = (item: Partial<LineItem>) => {
@@ -173,6 +192,19 @@ export const UnifiedDocumentBuilder = ({
       onOpenChange(false);
     }
   };
+
+  // Handle conversion from estimate to invoice
+  const handleConvertToInvoice = async () => {
+    if (documentType === 'estimate' && documentBuilder.convertToInvoice) {
+      const invoice = await documentBuilder.convertToInvoice();
+      if (invoice && onDocumentCreated) {
+        onDocumentCreated(invoice);
+      }
+      if (invoice) {
+        onOpenChange(false);
+      }
+    }
+  };
   
   // Handle adding a warranty product
   const handleAddWarranty = (warranty: Product | null, note: string) => {
@@ -243,6 +275,16 @@ export const UnifiedDocumentBuilder = ({
                 <FileText size={20} />
                 <span>Preview</span>
               </button>
+
+              {showSmartTemplates && (
+                <button 
+                  onClick={() => setActiveTab("templates")}
+                  className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "templates" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
+                >
+                  <Lightbulb size={20} />
+                  <span>Templates</span>
+                </button>
+              )}
             </div>
           )}
           
@@ -252,6 +294,9 @@ export const UnifiedDocumentBuilder = ({
                 <TabsList className="w-full bg-background">
                   <TabsTrigger value="form" className="flex-1">Form</TabsTrigger>
                   <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
+                  {showSmartTemplates && (
+                    <TabsTrigger value="templates" className="flex-1">Templates</TabsTrigger>
+                  )}
                 </TabsList>
               </Tabs>
             )}
@@ -295,12 +340,44 @@ export const UnifiedDocumentBuilder = ({
                   dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
                 />
               )}
+
+              {activeTab === "templates" && showSmartTemplates && (
+                <div className="space-y-4">
+                  <SmartTemplateSelector
+                    jobData={documentBuilder.jobData}
+                    onSelectTemplate={handleTemplateSelect}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSmartTemplates(false)}
+                    className="w-full"
+                  >
+                    Skip Templates
+                  </Button>
+                </div>
+              )}
             </div>
             
-            <div className="p-4 border-t bg-muted/20 flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
+            <div className="p-4 border-t bg-muted/20 flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                
+                {/* Convert to Invoice button for estimates */}
+                {documentType === 'estimate' && existingDocument && hasLineItems && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsConversionDialogOpen(true)}
+                    className="gap-2"
+                    disabled={documentBuilder.isSubmitting}
+                  >
+                    <ArrowRight size={16} />
+                    Convert to Invoice
+                  </Button>
+                )}
+              </div>
+
               <Button 
                 onClick={documentType === 'estimate' ? handleSendDocument : handleSaveAndSend}
                 className="flex items-center gap-1"
@@ -340,6 +417,17 @@ export const UnifiedDocumentBuilder = ({
         product={selectedProduct}
         onSave={handleProductUpdate}
       />
+
+      {/* Document Conversion Dialog */}
+      {documentType === 'estimate' && existingDocument && (
+        <DocumentConversionDialog
+          open={isConversionDialogOpen}
+          onOpenChange={setIsConversionDialogOpen}
+          estimate={existingDocument as Estimate}
+          onConvert={handleConvertToInvoice}
+          isConverting={documentBuilder.isSubmitting}
+        />
+      )}
       
       {/* Send Dialog with Warranty Selection (for estimates) */}
       {documentType === 'estimate' && (
