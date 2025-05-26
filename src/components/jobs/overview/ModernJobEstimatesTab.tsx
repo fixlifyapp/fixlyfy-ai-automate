@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -79,54 +78,64 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const handleViewEstimate = async (estimate: Estimate) => {
     setActionInProgress(prev => ({ ...prev, [estimate.id]: 'viewing' }));
     
-    await addHistoryItem({
-      job_id: jobId,
-      entity_id: estimate.id,
-      entity_type: 'estimate',
-      type: 'estimate',
-      title: 'Estimate Viewed',
-      description: `Estimate ${estimate.estimate_number} was viewed`,
-      meta: { action: 'view', estimate_number: estimate.estimate_number }
-    });
-    
-    setSelectedEstimateId(estimate.id);
-    setIsEditDialogOpen(true);
-    
-    setTimeout(() => {
-      setActionInProgress(prev => {
-        const newState = { ...prev };
-        delete newState[estimate.id];
-        return newState;
+    try {
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: estimate.id,
+        entity_type: 'estimate',
+        type: 'estimate',
+        title: 'Estimate Viewed',
+        description: `Estimate ${estimate.estimate_number} was viewed`,
+        meta: { action: 'view', estimate_number: estimate.estimate_number }
       });
-    }, 300);
+      
+      toast.success(`Viewing estimate ${estimate.estimate_number}`);
+      
+    } finally {
+      setTimeout(() => {
+        setActionInProgress(prev => {
+          const newState = { ...prev };
+          delete newState[estimate.id];
+          return newState;
+        });
+      }, 300);
+    }
   };
 
   const handleEditEstimate = async (estimate: Estimate) => {
     setActionInProgress(prev => ({ ...prev, [estimate.id]: 'editing' }));
     
-    await addHistoryItem({
-      job_id: jobId,
-      entity_id: estimate.id,
-      entity_type: 'estimate',
-      type: 'estimate',
-      title: 'Estimate Edit Started',
-      description: `Started editing estimate ${estimate.estimate_number}`,
-      meta: { action: 'edit_started', estimate_number: estimate.estimate_number }
-    });
-    
-    setSelectedEstimateId(estimate.id);
-    setIsEditDialogOpen(true);
-    
-    setTimeout(() => {
-      setActionInProgress(prev => {
-        const newState = { ...prev };
-        delete newState[estimate.id];
-        return newState;
+    try {
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: estimate.id,
+        entity_type: 'estimate',
+        type: 'estimate',
+        title: 'Estimate Edit Started',
+        description: `Started editing estimate ${estimate.estimate_number}`,
+        meta: { action: 'edit_started', estimate_number: estimate.estimate_number }
       });
-    }, 300);
+      
+      setSelectedEstimateId(estimate.id);
+      setIsEditDialogOpen(true);
+      
+    } finally {
+      setTimeout(() => {
+        setActionInProgress(prev => {
+          const newState = { ...prev };
+          delete newState[estimate.id];
+          return newState;
+        });
+      }, 300);
+    }
   };
 
   const handleSendEstimate = async (estimate: Estimate) => {
+    if (estimate.status === 'sent' || estimate.status === 'converted') {
+      toast.info(`Estimate has already been ${estimate.status}`);
+      return;
+    }
+
     setProcessingEstimateId(estimate.id);
     setActionInProgress(prev => ({ ...prev, [estimate.id]: 'sending' }));
     
@@ -141,7 +150,13 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         meta: { action: 'send', estimate_number: estimate.estimate_number }
       });
       
-      await estimateActions.actions.handleSendEstimate(estimate.id);
+      const success = await estimateActions.actions.handleSendEstimate(estimate.id);
+      if (success) {
+        toast.success(`Estimate ${estimate.estimate_number} sent successfully`);
+      }
+    } catch (error) {
+      toast.error('Failed to send estimate');
+      console.error('Error sending estimate:', error);
     } finally {
       setProcessingEstimateId(null);
       setActionInProgress(prev => {
@@ -207,7 +222,24 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     }
   };
 
-  const ActionButton = ({ children, variant = "outline", size = "sm", onClick, disabled, className = "", loading = false, icon: Icon, loadingText }: any) => (
+  const isActionDisabled = (estimate: Estimate, action: string) => {
+    const isProcessing = processingEstimateId === estimate.id || Object.keys(actionInProgress).length > 0;
+    
+    switch (action) {
+      case 'send':
+        return isProcessing || estimate.status === 'sent' || estimate.status === 'converted';
+      case 'convert':
+        return isProcessing || estimate.status === 'converted';
+      case 'view':
+      case 'edit':
+      case 'delete':
+        return isProcessing;
+      default:
+        return false;
+    }
+  };
+
+  const EnhancedButton = ({ children, variant = "outline", size = "sm", onClick, disabled, className = "", loading = false, icon: Icon, loadingText }: any) => (
     <Button
       variant={variant}
       size={size}
@@ -345,64 +377,70 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                     </div>
                     
                     <div className="flex items-center gap-3 flex-wrap">
-                      <ActionButton
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
                         icon={Eye}
                         onClick={() => handleViewEstimate(estimate)}
-                        disabled={processingEstimateId === estimate.id}
+                        disabled={isActionDisabled(estimate, 'view')}
                         loading={actionInProgress[estimate.id] === 'viewing'}
                         loadingText="Opening..."
                         className="hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
                       >
                         View
-                      </ActionButton>
+                      </EnhancedButton>
                       
-                      <ActionButton
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
                         icon={Edit}
                         onClick={() => handleEditEstimate(estimate)}
-                        disabled={processingEstimateId === estimate.id}
+                        disabled={isActionDisabled(estimate, 'edit')}
                         loading={actionInProgress[estimate.id] === 'editing'}
                         loadingText="Opening..."
                         className="hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50"
                       >
                         Edit
-                      </ActionButton>
+                      </EnhancedButton>
                       
-                      {estimate.status !== 'sent' && estimate.status !== 'converted' && (
-                        <ActionButton
-                          icon={Send}
-                          onClick={() => handleSendEstimate(estimate)}
-                          disabled={processingEstimateId === estimate.id || estimateActions.state.isSending}
-                          loading={actionInProgress[estimate.id] === 'sending' || (processingEstimateId === estimate.id && estimateActions.state.isSending)}
-                          loadingText="Sending..."
-                          className="hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50"
-                        >
-                          Send
-                        </ActionButton>
-                      )}
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
+                        icon={Send}
+                        onClick={() => handleSendEstimate(estimate)}
+                        disabled={isActionDisabled(estimate, 'send')}
+                        loading={actionInProgress[estimate.id] === 'sending'}
+                        loadingText="Sending..."
+                        className="hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 disabled:opacity-50"
+                      >
+                        Send
+                      </EnhancedButton>
                       
-                      {estimate.status !== 'converted' && (
-                        <ActionButton
-                          icon={ArrowRight}
-                          onClick={() => handleConvertClick(estimate)}
-                          disabled={processingEstimateId === estimate.id || estimateActions.state.isConverting}
-                          loading={estimateActions.state.isConverting && estimateActions.state.selectedEstimate?.id === estimate.id}
-                          loadingText="Converting..."
-                          className="hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50"
-                        >
-                          Convert
-                        </ActionButton>
-                      )}
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
+                        icon={ArrowRight}
+                        onClick={() => handleConvertClick(estimate)}
+                        disabled={isActionDisabled(estimate, 'convert')}
+                        loading={estimateActions.state.isConverting && estimateActions.state.selectedEstimate?.id === estimate.id}
+                        loadingText="Converting..."
+                        className="hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                      >
+                        Convert
+                      </EnhancedButton>
                       
-                      <ActionButton
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
                         icon={Trash2}
                         onClick={() => handleDeleteClick(estimate)}
-                        disabled={processingEstimateId === estimate.id || estimateActions.state.isDeleting}
+                        disabled={isActionDisabled(estimate, 'delete')}
                         loading={estimateActions.state.isDeleting && estimateActions.state.selectedEstimate?.id === estimate.id}
                         loadingText="Removing..."
                         className="hover:border-red-300 hover:text-red-700 hover:bg-red-50"
                       >
                         Remove
-                      </ActionButton>
+                      </EnhancedButton>
                     </div>
                   </div>
                 </div>

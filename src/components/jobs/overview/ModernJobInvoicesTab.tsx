@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInvoices } from "@/hooks/useInvoices";
@@ -17,11 +16,14 @@ import {
   Plus,
   DollarSign,
   Loader2,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useJobHistory } from "@/hooks/useJobHistory";
+import { toast } from "sonner";
+import { EnhancedButton } from "@/components/ui/enhanced-button";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
@@ -68,7 +70,68 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     };
   }, [jobId, refreshInvoices]);
 
+  const handleViewInvoice = async (invoice: any) => {
+    setActionInProgress(prev => ({ ...prev, [invoice.id]: 'viewing' }));
+    
+    try {
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: invoice.id,
+        entity_type: 'invoice',
+        type: 'invoice',
+        title: 'Invoice Viewed',
+        description: `Invoice ${invoice.invoice_number} was viewed`,
+        meta: { action: 'view', invoice_number: invoice.invoice_number }
+      });
+      
+      // Here you would typically open a view dialog or navigate to invoice view
+      toast.success(`Viewing invoice ${invoice.invoice_number}`);
+      
+    } finally {
+      setTimeout(() => {
+        setActionInProgress(prev => {
+          const newState = { ...prev };
+          delete newState[invoice.id];
+          return newState;
+        });
+      }, 300);
+    }
+  };
+
+  const handleEditInvoice = async (invoice: any) => {
+    setActionInProgress(prev => ({ ...prev, [invoice.id]: 'editing' }));
+    
+    try {
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: invoice.id,
+        entity_type: 'invoice',
+        type: 'invoice',
+        title: 'Invoice Edit Started',
+        description: `Started editing invoice ${invoice.invoice_number}`,
+        meta: { action: 'edit_started', invoice_number: invoice.invoice_number }
+      });
+      
+      // Here you would typically open an edit dialog
+      toast.success(`Editing invoice ${invoice.invoice_number}`);
+      
+    } finally {
+      setTimeout(() => {
+        setActionInProgress(prev => {
+          const newState = { ...prev };
+          delete newState[invoice.id];
+          return newState;
+        });
+      }, 300);
+    }
+  };
+
   const handleSendInvoice = async (invoice: any) => {
+    if (invoice.status === 'sent') {
+      toast.info('Invoice has already been sent');
+      return;
+    }
+
     setProcessingInvoiceId(invoice.id);
     setActionInProgress(prev => ({ ...prev, [invoice.id]: 'sending' }));
     
@@ -83,7 +146,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         meta: { action: 'send', invoice_number: invoice.invoice_number }
       });
       
-      await invoiceActions.actions.handleSendInvoice(invoice.id);
+      const success = await invoiceActions.actions.handleSendInvoice(invoice.id);
+      if (success) {
+        toast.success(`Invoice ${invoice.invoice_number} sent successfully`);
+      }
+    } catch (error) {
+      toast.error('Failed to send invoice');
+      console.error('Error sending invoice:', error);
     } finally {
       setProcessingInvoiceId(null);
       setActionInProgress(prev => {
@@ -95,6 +164,11 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   };
 
   const handleMarkAsPaid = async (invoice: any) => {
+    if (invoice.status === 'paid') {
+      toast.info('Invoice is already marked as paid');
+      return;
+    }
+
     setProcessingInvoiceId(invoice.id);
     setActionInProgress(prev => ({ ...prev, [invoice.id]: 'marking-paid' }));
     
@@ -109,7 +183,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         meta: { action: 'mark_paid', invoice_number: invoice.invoice_number }
       });
       
-      await invoiceActions.actions.markAsPaid(invoice.id);
+      const success = await invoiceActions.actions.markAsPaid(invoice.id);
+      if (success) {
+        toast.success(`Invoice ${invoice.invoice_number} marked as paid`);
+      }
+    } catch (error) {
+      toast.error('Failed to mark invoice as paid');
+      console.error('Error marking invoice as paid:', error);
     } finally {
       setProcessingInvoiceId(null);
       setActionInProgress(prev => {
@@ -137,9 +217,17 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         meta: { action: 'delete', invoice_number: invoiceActions.state.selectedInvoice.invoice_number }
       });
       
-      await invoiceActions.actions.confirmDeleteInvoice();
+      const success = await invoiceActions.actions.confirmDeleteInvoice();
+      if (success) {
+        toast.success('Invoice deleted successfully');
+      }
     }
     setShowDeleteDialog(false);
+  };
+
+  const handleCreateInvoice = () => {
+    // Here you would typically open an invoice creation dialog
+    toast.info('Opening invoice creation dialog...');
   };
 
   const getStatusColor = (status: string) => {
@@ -153,36 +241,22 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     }
   };
 
-  const ActionButton = ({ children, variant = "outline", size = "sm", onClick, disabled, className = "", loading = false, icon: Icon, loadingText }: any) => (
-    <Button
-      variant={variant}
-      size={size}
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`
-        relative overflow-hidden transition-all duration-300 ease-out transform
-        hover:scale-105 hover:-translate-y-0.5 active:scale-95
-        shadow-md hover:shadow-xl border-2
-        backdrop-blur-sm bg-white/90 hover:bg-white
-        disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none
-        ${className}
-      `}
-    >
-      <div className="flex items-center gap-2 relative z-10">
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : Icon ? (
-          <Icon className="h-4 w-4" />
-        ) : null}
-        <span className="font-medium">
-          {loading && loadingText ? loadingText : children}
-        </span>
-      </div>
-      {!disabled && !loading && (
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-700 ease-out" />
-      )}
-    </Button>
-  );
+  const isActionDisabled = (invoice: any, action: string) => {
+    const isProcessing = processingInvoiceId === invoice.id || Object.keys(actionInProgress).length > 0;
+    
+    switch (action) {
+      case 'send':
+        return isProcessing || invoice.status === 'sent';
+      case 'markPaid':
+        return isProcessing || invoice.status === 'paid';
+      case 'view':
+      case 'edit':
+      case 'delete':
+        return isProcessing;
+      default:
+        return false;
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -205,16 +279,15 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                 </div>
               </div>
             </ModernCardTitle>
-            <Button 
-              onClick={() => {/* Add create invoice handler */}}
-              className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 via-blue-600 to-cyan-600 hover:from-emerald-700 hover:via-blue-700 hover:to-cyan-700 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl border-0 px-6 py-3 rounded-xl font-semibold text-white relative overflow-hidden group"
+            <EnhancedButton 
+              onClick={handleCreateInvoice}
+              gradient
+              glow
+              icon={Plus}
+              className="px-6 py-3 rounded-xl font-semibold text-white"
             >
-              <div className="flex items-center gap-2 relative z-10">
-                <Plus className="h-4 w-4" />
-                <span>Create Invoice</span>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            </Button>
+              Create Invoice
+            </EnhancedButton>
           </div>
         </ModernCardHeader>
         
@@ -239,16 +312,15 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                   Create invoices to bill your clients for completed work
                 </p>
                 <div className="pt-4">
-                  <Button 
-                    onClick={() => {/* Add create invoice handler */}}
-                    className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl border-0 px-8 py-3 rounded-xl font-semibold text-white relative overflow-hidden group"
+                  <EnhancedButton 
+                    onClick={handleCreateInvoice}
+                    gradient
+                    glow
+                    icon={Plus}
+                    className="px-8 py-3 rounded-xl font-semibold text-white"
                   >
-                    <div className="flex items-center gap-2 relative z-10">
-                      <Plus className="h-5 w-5" />
-                      <span>Create First Invoice</span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  </Button>
+                    Create First Invoice
+                  </EnhancedButton>
                 </div>
               </div>
             </div>
@@ -286,6 +358,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                         </div>
                         {invoice.balance > 0 && (
                           <div className="flex items-center text-sm font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full border border-orange-200">
+                            <AlertCircle className="h-3 w-3 mr-1" />
                             <span>Balance: ${invoice.balance.toFixed(2)}</span>
                           </div>
                         )}
@@ -296,56 +369,70 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     </div>
                     
                     <div className="flex items-center gap-3 flex-wrap">
-                      <ActionButton
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
                         icon={Eye}
+                        onClick={() => handleViewInvoice(invoice)}
+                        disabled={isActionDisabled(invoice, 'view')}
+                        loading={actionInProgress[invoice.id] === 'viewing'}
+                        loadingText="Opening..."
                         className="hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50"
                       >
                         View
-                      </ActionButton>
+                      </EnhancedButton>
                       
-                      <ActionButton
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
                         icon={Edit}
+                        onClick={() => handleEditInvoice(invoice)}
+                        disabled={isActionDisabled(invoice, 'edit')}
+                        loading={actionInProgress[invoice.id] === 'editing'}
+                        loadingText="Opening..."
                         className="hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50"
                       >
                         Edit
-                      </ActionButton>
+                      </EnhancedButton>
                       
-                      {invoice.status !== 'sent' && (
-                        <ActionButton
-                          icon={Send}
-                          onClick={() => handleSendInvoice(invoice)}
-                          disabled={processingInvoiceId === invoice.id || invoiceActions.state.isSending}
-                          loading={actionInProgress[invoice.id] === 'sending' || (processingInvoiceId === invoice.id && invoiceActions.state.isSending)}
-                          loadingText="Sending..."
-                          className="hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50"
-                        >
-                          Send
-                        </ActionButton>
-                      )}
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
+                        icon={Send}
+                        onClick={() => handleSendInvoice(invoice)}
+                        disabled={isActionDisabled(invoice, 'send')}
+                        loading={actionInProgress[invoice.id] === 'sending'}
+                        loadingText="Sending..."
+                        className="hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 disabled:opacity-50"
+                      >
+                        Send
+                      </EnhancedButton>
                       
-                      {invoice.status !== 'paid' && (
-                        <ActionButton
-                          icon={CreditCard}
-                          onClick={() => handleMarkAsPaid(invoice)}
-                          disabled={processingInvoiceId === invoice.id || invoiceActions.state.isProcessing}
-                          loading={actionInProgress[invoice.id] === 'marking-paid' || (processingInvoiceId === invoice.id && invoiceActions.state.isProcessing)}
-                          loadingText="Processing..."
-                          className="hover:border-green-300 hover:text-green-700 hover:bg-green-50"
-                        >
-                          Mark Paid
-                        </ActionButton>
-                      )}
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
+                        icon={CreditCard}
+                        onClick={() => handleMarkAsPaid(invoice)}
+                        disabled={isActionDisabled(invoice, 'markPaid')}
+                        loading={actionInProgress[invoice.id] === 'marking-paid'}
+                        loadingText="Processing..."
+                        className="hover:border-green-300 hover:text-green-700 hover:bg-green-50 disabled:opacity-50"
+                      >
+                        Mark Paid
+                      </EnhancedButton>
                       
-                      <ActionButton
+                      <EnhancedButton
+                        variant="outline"
+                        size="sm"
                         icon={Trash2}
                         onClick={() => handleDeleteClick(invoice)}
-                        disabled={processingInvoiceId === invoice.id || invoiceActions.state.isDeleting}
+                        disabled={isActionDisabled(invoice, 'delete')}
                         loading={invoiceActions.state.isDeleting && invoiceActions.state.selectedInvoice?.id === invoice.id}
                         loadingText="Removing..."
                         className="hover:border-red-300 hover:text-red-700 hover:bg-red-50"
                       >
                         Remove
-                      </ActionButton>
+                      </EnhancedButton>
                     </div>
                   </div>
                 </div>

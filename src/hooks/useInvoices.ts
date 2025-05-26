@@ -10,8 +10,8 @@ export interface Invoice {
   date: string;
   status: string;
   total: number;
-  amount_paid?: number;
-  balance?: number;
+  amount_paid: number; // Make this required to match the actions hook
+  balance: number;
   notes?: string;
   items?: any[];
   created_at: string;
@@ -39,6 +39,7 @@ export const useInvoices = (jobId: string) => {
       const invoicesWithBalance = data?.map(invoice => ({
         ...invoice,
         number: invoice.invoice_number, // Alias for compatibility
+        amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         notes: invoice.notes || ''
       })) || [];
@@ -61,6 +62,7 @@ export const useInvoices = (jobId: string) => {
 
   return {
     invoices,
+    setInvoices, // Add this missing method
     isLoading,
     refreshInvoices
   };
