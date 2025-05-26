@@ -5,15 +5,18 @@ import { supabase } from '@/integrations/supabase/client';
 export interface Invoice {
   id: string;
   job_id: string;
-  number: string;
+  invoice_number: string;
+  number: string; // Alias for compatibility
   date: string;
   status: string;
   total: number;
   amount_paid?: number;
   balance?: number;
+  notes?: string;
   items?: any[];
   created_at: string;
   updated_at: string;
+  due_date?: string;
 }
 
 export const useInvoices = (jobId: string) => {
@@ -32,10 +35,12 @@ export const useInvoices = (jobId: string) => {
 
       if (error) throw error;
       
-      // Calculate balance for each invoice
+      // Calculate balance for each invoice and add alias properties
       const invoicesWithBalance = data?.map(invoice => ({
         ...invoice,
-        balance: (invoice.total || 0) - (invoice.amount_paid || 0)
+        number: invoice.invoice_number, // Alias for compatibility
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
+        notes: invoice.notes || ''
       })) || [];
       
       setInvoices(invoicesWithBalance);

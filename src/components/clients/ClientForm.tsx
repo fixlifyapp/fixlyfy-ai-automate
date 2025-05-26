@@ -9,8 +9,10 @@ import { useNavigate } from "react-router-dom";
 import { ClientFormHeader } from "./client-form/ClientFormHeader";
 import { ClientInsights } from "./client-form/ClientInsights";
 import { ClientDetailsTab } from "./client-form/ClientDetailsTab";
+import { EmptyTabContent } from "./client-form/EmptyTabContent";
 import { InvoiceModal } from "./client-form/InvoiceModal";
 import { PaymentsTab } from "./client-form/PaymentsTab";
+import { PropertiesTab } from "./client-form/PropertiesTab";
 
 // Import custom hooks
 import { useClientData } from "./client-form/hooks/useClientData";
@@ -99,7 +101,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-1">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1">
             <TabsTrigger value="details" className="relative">
               <User size={16} className="mr-2" />
               Details
@@ -109,6 +111,9 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             </TabsTrigger>
             <TabsTrigger value="payments" className="relative">
               Payments
+            </TabsTrigger>
+            <TabsTrigger value="properties" className="relative">
+              Properties
             </TabsTrigger>
           </TabsList>
           
@@ -131,6 +136,11 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
               clientId={clientId} 
               onCreateInvoice={handleCreateInvoice} 
             />
+          </TabsContent>
+          
+          {/* Properties Tab */}
+          <TabsContent value="properties" className="space-y-6">
+            <PropertiesTab clientId={clientId} />
           </TabsContent>
         </Tabs>
       </div>
