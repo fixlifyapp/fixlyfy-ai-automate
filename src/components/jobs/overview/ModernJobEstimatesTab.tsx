@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +25,10 @@ import { Button } from "@/components/ui/button";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
+  onEstimateConverted?: () => void;
 }
 
-export const ModernJobEstimatesTab = ({ jobId }: ModernJobEstimatesTabProps) => {
+export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [processingEstimateId, setProcessingEstimateId] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<{[key: string]: string}>({});
@@ -40,7 +40,8 @@ export const ModernJobEstimatesTab = ({ jobId }: ModernJobEstimatesTabProps) => 
     jobId, 
     estimates, 
     setEstimates,
-    refreshEstimates
+    refreshEstimates,
+    onEstimateConverted
   );
 
   // Real-time updates for estimates
@@ -180,7 +181,7 @@ export const ModernJobEstimatesTab = ({ jobId }: ModernJobEstimatesTabProps) => 
         meta: { action: 'convert', estimate_number: estimate.estimate_number }
       });
       
-      const success = await estimateActions.actions.convertToInvoice(estimate.id);
+      const success = await estimateActions.actions.confirmConvertToInvoice();
       if (success) {
         toast.success(`Estimate ${estimate.estimate_number} converted to invoice`);
       }
