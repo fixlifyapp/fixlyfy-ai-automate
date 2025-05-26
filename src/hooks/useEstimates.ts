@@ -15,6 +15,8 @@ export interface Estimate {
   items?: any[];
   created_at: string;
   updated_at: string;
+  viewed?: boolean; // Add viewed property
+  techniciansNote?: string; // Add techniciansNote property
 }
 
 export const useEstimates = (jobId: string) => {

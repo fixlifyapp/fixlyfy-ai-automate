@@ -66,7 +66,7 @@ export const useEstimateWarranty = (
                 ],
                 total: est.total + selectedWarranty.price,
                 notes: customNote || est.notes,
-                techniciansNote: customNote || est.techniciansNote
+                techniciansNote: customNote || est.techniciansNote || ""
               } 
             : est
         );
