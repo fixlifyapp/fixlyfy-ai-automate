@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useJobDetails } from "./context/JobDetailsContext";
+import { useJobFinancials } from "@/hooks/useJobFinancials";
 
 interface JobDetailsHeaderProps {
   jobId?: string;
@@ -14,7 +15,8 @@ interface JobDetailsHeaderProps {
 
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
   const navigate = useNavigate();
-  const { job, isLoading, currentStatus, invoiceAmount, balance, updateJobStatus } = useJobDetails();
+  const { job, isLoading, currentStatus, updateJobStatus } = useJobDetails();
+  const { invoiceAmount, balance, isLoading: financialsLoading } = useJobFinancials(job?.id || jobId || "");
   
   // Safely use the modal context with a fallback
   let openModal: (type: any, props?: any) => void;
@@ -107,8 +109,8 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
               navigate(`/clients/${job.clientId}`);
             }
           }}
-          invoiceAmount={invoiceAmount}
-          balance={balance}
+          invoiceAmount={financialsLoading ? 0 : invoiceAmount}
+          balance={financialsLoading ? 0 : balance}
         />
         
         <div>

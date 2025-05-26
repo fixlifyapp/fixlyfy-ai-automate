@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useInvoiceActions } from "../invoices/hooks/useInvoiceActions";
 import { supabase } from "@/integrations/supabase/client";
+import { InvoiceBuilderDialog } from "../dialogs/InvoiceBuilderDialog";
 import { 
   FileText, 
   Eye, 
@@ -32,6 +32,8 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<{[key: string]: string}>({});
+  const [isInvoiceBuilderOpen, setIsInvoiceBuilderOpen] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   const { invoices, isLoading, setInvoices, refreshInvoices } = useInvoices(jobId);
   const { addHistoryItem } = useJobHistory(jobId);
@@ -83,7 +85,9 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         meta: { action: 'view', invoice_number: invoice.invoice_number }
       });
       
-      toast.success(`Viewing invoice ${invoice.invoice_number}`);
+      // Open invoice in edit mode for viewing
+      setSelectedInvoiceId(invoice.id);
+      setIsInvoiceBuilderOpen(true);
       
     } finally {
       setTimeout(() => {
@@ -110,7 +114,9 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         meta: { action: 'edit_started', invoice_number: invoice.invoice_number }
       });
       
-      toast.success(`Editing invoice ${invoice.invoice_number}`);
+      // Open invoice builder for editing
+      setSelectedInvoiceId(invoice.id);
+      setIsInvoiceBuilderOpen(true);
       
     } finally {
       setTimeout(() => {
@@ -223,7 +229,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   };
 
   const handleCreateInvoice = () => {
-    toast.info('Opening invoice creation dialog...');
+    setSelectedInvoiceId(null);
+    setIsInvoiceBuilderOpen(true);
+  };
+
+  const handleInvoiceCreated = () => {
+    refreshInvoices();
+    setIsInvoiceBuilderOpen(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -440,6 +452,15 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invoice Builder Dialog */}
+      <InvoiceBuilderDialog
+        open={isInvoiceBuilderOpen}
+        onOpenChange={setIsInvoiceBuilderOpen}
+        jobId={jobId}
+        invoice={selectedInvoiceId ? invoices.find(inv => inv.id === selectedInvoiceId) : undefined}
+        onInvoiceCreated={handleInvoiceCreated}
+      />
     </div>
   );
 };

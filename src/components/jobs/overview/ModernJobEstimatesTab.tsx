@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "../estimates/hooks/useEstimateActions";
 import { supabase } from "@/integrations/supabase/client";
+import { EstimateBuilderDialog } from "../dialogs/estimate-builder/EstimateBuilderDialog";
 import { 
   FileText, 
   Eye, 
