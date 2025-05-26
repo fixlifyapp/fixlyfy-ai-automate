@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EstimateBuilderDialog } from "../dialogs/estimate-builder/EstimateBuilderDialog";
 import { useEstimates, Estimate } from "@/hooks/useEstimates";
 import { useEstimateActions } from "../estimates/hooks/useEstimateActions";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Calculator, 
   Eye, 
@@ -15,12 +16,13 @@ import {
   Trash2, 
   ArrowRight, 
   Plus,
-  FileText,
-  DollarSign 
+  DollarSign,
+  Loader2
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useJobHistory } from "@/hooks/useJobHistory";
+import { toast } from "sonner";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -33,16 +35,44 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [processingEstimateId, setProcessingEstimateId] = useState<string | null>(null);
 
-  const { estimates, isLoading, setEstimates } = useEstimates(jobId);
+  const { estimates, isLoading, setEstimates, refreshEstimates } = useEstimates(jobId);
   const { addHistoryItem } = useJobHistory(jobId);
   
   const estimateActions = useEstimateActions(
     jobId, 
     estimates, 
-    setEstimates, 
+    setEstimates,
+    refreshEstimates,
     onEstimateConverted
   );
+
+  // Real-time updates for estimates
+  useEffect(() => {
+    if (!jobId) return;
+
+    const channel = supabase
+      .channel('estimates-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'estimates',
+          filter: `job_id=eq.${jobId}`
+        },
+        (payload) => {
+          console.log('Real-time estimate update:', payload);
+          refreshEstimates();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [jobId, refreshEstimates]);
 
   const handleViewEstimate = async (estimate: Estimate) => {
     await addHistoryItem({
@@ -51,8 +81,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
       entity_type: 'estimate',
       type: 'estimate',
       title: 'Estimate Viewed',
-      description: `Estimate ${estimate.number} was viewed`,
-      meta: { action: 'view', estimate_number: estimate.number }
+      description: `Estimate ${estimate.estimate_number} was viewed`,
+      meta: { action: 'view', estimate_number: estimate.estimate_number }
     });
     
     setSelectedEstimateId(estimate.id);
@@ -66,8 +96,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
       entity_type: 'estimate',
       type: 'estimate',
       title: 'Estimate Edit Started',
-      description: `Started editing estimate ${estimate.number}`,
-      meta: { action: 'edit_started', estimate_number: estimate.number }
+      description: `Started editing estimate ${estimate.estimate_number}`,
+      meta: { action: 'edit_started', estimate_number: estimate.estimate_number }
     });
     
     setSelectedEstimateId(estimate.id);
@@ -75,17 +105,23 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   };
 
   const handleSendEstimate = async (estimate: Estimate) => {
-    await addHistoryItem({
-      job_id: jobId,
-      entity_id: estimate.id,
-      entity_type: 'estimate',
-      type: 'communication',
-      title: 'Estimate Sent',
-      description: `Estimate ${estimate.number} was sent to client`,
-      meta: { action: 'send', estimate_number: estimate.number }
-    });
+    setProcessingEstimateId(estimate.id);
     
-    await estimateActions.actions.handleSendEstimate(estimate.id);
+    try {
+      await addHistoryItem({
+        job_id: jobId,
+        entity_id: estimate.id,
+        entity_type: 'estimate',
+        type: 'communication',
+        title: 'Estimate Sent',
+        description: `Estimate ${estimate.estimate_number} was sent to client`,
+        meta: { action: 'send', estimate_number: estimate.estimate_number }
+      });
+      
+      await estimateActions.actions.handleSendEstimate(estimate.id);
+    } finally {
+      setProcessingEstimateId(null);
+    }
   };
 
   const handleDeleteClick = (estimate: Estimate) => {
@@ -106,8 +142,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         entity_type: 'estimate',
         type: 'estimate',
         title: 'Estimate Deleted',
-        description: `Estimate ${estimateActions.state.selectedEstimate.number} was deleted`,
-        meta: { action: 'delete', estimate_number: estimateActions.state.selectedEstimate.number }
+        description: `Estimate ${estimateActions.state.selectedEstimate.estimate_number} was deleted`,
+        meta: { action: 'delete', estimate_number: estimateActions.state.selectedEstimate.estimate_number }
       });
       
       await estimateActions.actions.confirmDeleteEstimate();
@@ -123,8 +159,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         entity_type: 'estimate',
         type: 'estimate',
         title: 'Estimate Converted',
-        description: `Estimate ${estimateActions.state.selectedEstimate.number} was converted to invoice`,
-        meta: { action: 'convert', estimate_number: estimateActions.state.selectedEstimate.number }
+        description: `Estimate ${estimateActions.state.selectedEstimate.estimate_number} was converted to invoice`,
+        meta: { action: 'convert', estimate_number: estimateActions.state.selectedEstimate.estimate_number }
       });
       
       await estimateActions.actions.confirmConvertToInvoice();
@@ -145,15 +181,15 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
 
   return (
     <div className="space-y-6">
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
+      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+        <ModernCardHeader className="pb-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-lg">
           <div className="flex items-center justify-between">
-            <ModernCardTitle icon={Calculator}>
+            <ModernCardTitle icon={Calculator} className="text-gray-800">
               Estimates ({estimates.length})
             </ModernCardTitle>
             <Button 
               onClick={() => setIsCreateDialogOpen(true)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
             >
               <Plus className="h-4 w-4" />
               Create Estimate
@@ -168,13 +204,16 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
               ))}
             </div>
           ) : estimates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Calculator className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No estimates yet</p>
-              <p className="text-sm">Create your first estimate to get started</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="relative">
+                <Calculator className="mx-auto h-16 w-16 text-gray-300 mb-6" />
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full opacity-20 blur-xl transform scale-150"></div>
+              </div>
+              <p className="text-xl font-medium text-gray-600 mb-2">No estimates yet</p>
+              <p className="text-sm text-gray-500 mb-6">Create your first estimate to get started</p>
               <Button 
                 onClick={() => setIsCreateDialogOpen(true)}
-                className="mt-4"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Estimate
@@ -183,19 +222,25 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
           ) : (
             <div className="space-y-4">
               {estimates.map((estimate) => (
-                <div key={estimate.id} className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
+                <div 
+                  key={estimate.id} 
+                  className="group border rounded-xl p-6 bg-white hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl border-gray-200 hover:border-blue-200"
+                  style={{
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-medium text-gray-900">
-                          Estimate {estimate.number}
+                      <div className="flex items-center gap-4 mb-3">
+                        <h4 className="font-semibold text-gray-900 text-lg group-hover:text-blue-900 transition-colors">
+                          Estimate {estimate.estimate_number}
                         </h4>
-                        <Badge className={getStatusColor(estimate.status)}>
+                        <Badge className={`${getStatusColor(estimate.status)} font-medium`}>
                           {estimate.status}
                         </Badge>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          ${estimate.total?.toFixed(2) || '0.00'}
+                        <div className="flex items-center text-lg font-bold text-green-600">
+                          <DollarSign className="h-5 w-5 mr-1" />
+                          {estimate.total?.toFixed(2) || '0.00'}
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -208,7 +253,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewEstimate(estimate)}
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transform hover:scale-105 transition-all duration-200"
+                        disabled={processingEstimateId === estimate.id}
                       >
                         <Eye className="h-4 w-4" />
                         View
@@ -218,20 +264,26 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditEstimate(estimate)}
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-2 hover:bg-green-50 hover:border-green-300 hover:text-green-700 transform hover:scale-105 transition-all duration-200"
+                        disabled={processingEstimateId === estimate.id}
                       >
                         <Edit className="h-4 w-4" />
                         Edit
                       </Button>
                       
-                      {estimate.status !== 'sent' && (
+                      {estimate.status !== 'sent' && estimate.status !== 'converted' && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleSendEstimate(estimate)}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-2 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transform hover:scale-105 transition-all duration-200"
+                          disabled={processingEstimateId === estimate.id || estimateActions.state.isSending}
                         >
-                          <Send className="h-4 w-4" />
+                          {processingEstimateId === estimate.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
                           Send
                         </Button>
                       )}
@@ -241,9 +293,14 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                           variant="outline"
                           size="sm"
                           onClick={() => handleConvertClick(estimate)}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-2 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transform hover:scale-105 transition-all duration-200"
+                          disabled={processingEstimateId === estimate.id || estimateActions.state.isConverting}
                         >
-                          <ArrowRight className="h-4 w-4" />
+                          {estimateActions.state.isConverting && estimateActions.state.selectedEstimate?.id === estimate.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ArrowRight className="h-4 w-4" />
+                          )}
                           Convert
                         </Button>
                       )}
@@ -252,9 +309,14 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteClick(estimate)}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                        className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transform hover:scale-105 transition-all duration-200"
+                        disabled={processingEstimateId === estimate.id || estimateActions.state.isDeleting}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {estimateActions.state.isDeleting && estimateActions.state.selectedEstimate?.id === estimate.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                         Remove
                       </Button>
                     </div>
@@ -284,22 +346,29 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-red-200">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-800">Delete Estimate</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete estimate {estimateActions.state.selectedEstimate?.number}? 
-              This action cannot be undone.
+              Are you sure you want to delete estimate {estimateActions.state.selectedEstimate?.estimate_number}? 
+              This action cannot be undone and will permanently remove the estimate and all its associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 transform hover:scale-105 transition-all duration-200"
               disabled={estimateActions.state.isDeleting}
             >
-              {estimateActions.state.isDeleting ? 'Deleting...' : 'Delete'}
+              {estimateActions.state.isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -307,21 +376,29 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
 
       {/* Convert Confirmation Dialog */}
       <AlertDialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-purple-200">
           <AlertDialogHeader>
-            <AlertDialogTitle>Convert to Invoice</AlertDialogTitle>
+            <AlertDialogTitle className="text-purple-800">Convert to Invoice</AlertDialogTitle>
             <AlertDialogDescription>
-              Convert estimate {estimateActions.state.selectedEstimate?.number} to an invoice? 
-              This will create a new invoice with the same line items.
+              Convert estimate {estimateActions.state.selectedEstimate?.estimate_number} to an invoice? 
+              This will create a new invoice with the same line items and mark the estimate as converted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmConvert}
+              className="bg-purple-600 hover:bg-purple-700 transform hover:scale-105 transition-all duration-200"
               disabled={estimateActions.state.isConverting}
             >
-              {estimateActions.state.isConverting ? 'Converting...' : 'Convert'}
+              {estimateActions.state.isConverting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                'Convert'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

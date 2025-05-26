@@ -15,8 +15,8 @@ export interface Estimate {
   items?: any[];
   created_at: string;
   updated_at: string;
-  viewed?: boolean; // Add viewed property
-  techniciansNote?: string; // Add techniciansNote property
+  viewed?: boolean;
+  techniciansNote?: string;
 }
 
 export const useEstimates = (jobId: string) => {
@@ -27,6 +27,7 @@ export const useEstimates = (jobId: string) => {
     if (!jobId) return;
     
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('estimates')
         .select('*')
@@ -51,6 +52,10 @@ export const useEstimates = (jobId: string) => {
     }
   };
 
+  const refreshEstimates = async () => {
+    await fetchEstimates();
+  };
+
   useEffect(() => {
     fetchEstimates();
   }, [jobId]);
@@ -59,6 +64,6 @@ export const useEstimates = (jobId: string) => {
     estimates,
     setEstimates,
     isLoading,
-    refreshEstimates: fetchEstimates
+    refreshEstimates
   };
 };
