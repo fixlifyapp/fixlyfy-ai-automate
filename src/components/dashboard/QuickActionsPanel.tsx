@@ -11,13 +11,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { toast } from "sonner";
+import { useJobs } from "@/hooks/useJobs";
 
 export const QuickActionsPanel = () => {
   const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const { addJob } = useJobs();
   
-  const handleJobCreated = (job: any) => {
-    toast.success(`Job ${job.id} created successfully`);
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      const createdJob = await addJob(jobData);
+      if (createdJob) {
+        toast.success(`Job ${createdJob.id} created successfully`);
+        navigate(`/jobs/${createdJob.id}`);
+        return createdJob;
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      toast.error('Failed to create job');
+      throw error;
+    }
+  };
+
+  const handleJobSuccess = (job: any) => {
     navigate(`/jobs/${job.id}`);
   };
 
@@ -57,7 +73,8 @@ export const QuickActionsPanel = () => {
       <ScheduleJobModal 
         open={isCreateJobModalOpen}
         onOpenChange={setIsCreateJobModalOpen}
-        onSuccess={handleJobCreated}
+        onJobCreated={handleJobCreated}
+        onSuccess={handleJobSuccess}
       />
     </div>
   );

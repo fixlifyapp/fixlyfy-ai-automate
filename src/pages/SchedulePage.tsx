@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,6 +12,7 @@ import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { Job } from "@/hooks/useJobs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { useJobs } from "@/hooks/useJobs";
 
 const SchedulePage = () => {
   const { user, loading: authLoading } = useAuth();
@@ -20,6 +22,8 @@ const SchedulePage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showAIInsights, setShowAIInsights] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  
+  const { addJob } = useJobs();
 
   console.log('SchedulePage: Component mounted', { user, authLoading, view });
 
@@ -52,9 +56,24 @@ const SchedulePage = () => {
     setCurrentDate(newDate);
   };
 
+  // Handle job creation using centralized logic
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      const createdJob = await addJob(jobData);
+      if (createdJob) {
+        console.log('SchedulePage: Job created successfully', { jobId: createdJob.id });
+        toast.success(`Job ${createdJob.id} has been created and scheduled`);
+        return createdJob;
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      toast.error('Failed to create job');
+      throw error;
+    }
+  };
+
   // Handle successful job creation
-  const handleJobCreated = (job: Job) => {
-    console.log('SchedulePage: Job created successfully', { jobId: job.id });
+  const handleJobSuccess = (job: Job) => {
     toast.success(`Job ${job.id} has been created and scheduled`);
   };
 
@@ -127,11 +146,12 @@ const SchedulePage = () => {
       
       <ScheduleCalendar view={view} currentDate={currentDate} />
       
-      {/* Replace ScheduleJobModal with ScheduleJobModal */}
+      {/* Use centralized ScheduleJobModal */}
       <ScheduleJobModal 
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
-        onSuccess={handleJobCreated}
+        onJobCreated={handleJobCreated}
+        onSuccess={handleJobSuccess}
       />
     </PageLayout>
   );

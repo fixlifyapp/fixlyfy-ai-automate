@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -22,6 +23,28 @@ const JobsPage = () => {
   
   // Use jobs hook with custom fields enabled
   const { jobs, isLoading, addJob, updateJob, deleteJob, refreshJobs } = useJobs(undefined, true);
+  
+  // Handle job creation using centralized logic
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      const createdJob = await addJob(jobData);
+      if (createdJob) {
+        toast.success(`Job ${createdJob.id} created successfully`);
+        refreshJobs();
+        return createdJob;
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      toast.error('Failed to create job');
+      throw error;
+    }
+  };
+
+  // Handle successful job creation
+  const handleJobSuccess = (job: any) => {
+    toast.success(`Job ${job.id} created successfully`);
+    refreshJobs();
+  };
   
   // Handler for bulk status updates
   const handleUpdateJobsStatus = (jobIds: string[], newStatus: string) => {
@@ -218,11 +241,8 @@ const JobsPage = () => {
       <ScheduleJobModal 
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
-        onJobCreated={addJob}
-        onSuccess={(job) => {
-          toast.success(`Job ${job.id} created successfully`);
-          refreshJobs();
-        }}
+        onJobCreated={handleJobCreated}
+        onSuccess={handleJobSuccess}
       />
     </PageLayout>
   );

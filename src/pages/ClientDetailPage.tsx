@@ -6,13 +6,31 @@ import { ClientForm } from "@/components/clients/ClientForm";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { useJobs } from "@/hooks/useJobs";
+import { toast } from "sonner";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const { addJob } = useJobs();
   
-  const handleJobCreated = (job: any) => {
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      const createdJob = await addJob(jobData);
+      if (createdJob) {
+        toast.success(`Job ${createdJob.id} created successfully!`);
+        navigate(`/jobs/${createdJob.id}`);
+        return createdJob;
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      toast.error('Failed to create job');
+      throw error;
+    }
+  };
+
+  const handleJobSuccess = (job: any) => {
     navigate(`/jobs/${job.id}`);
   };
 
@@ -38,7 +56,8 @@ const ClientDetailPage = () => {
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         preselectedClientId={id}
-        onSuccess={handleJobCreated}
+        onJobCreated={handleJobCreated}
+        onSuccess={handleJobSuccess}
       />
     </PageLayout>
   );

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,21 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   
   const navigate = useNavigate();
 
-  const handleJobCreated = (job: any) => {
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      const createdJob = await addJob(jobData);
+      if (createdJob) {
+        toast.success(`Job ${createdJob.id} created successfully!`);
+        return createdJob;
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      toast.error('Failed to create job');
+      throw error;
+    }
+  };
+
+  const handleJobSuccess = (job: any) => {
     toast.success("Job created successfully!");
   };
 
@@ -336,8 +349,8 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         preselectedClientId={clientId}
-        onJobCreated={addJob}
-        onSuccess={handleJobCreated}
+        onJobCreated={handleJobCreated}
+        onSuccess={handleJobSuccess}
       />
 
       <DeleteJobsDialog
