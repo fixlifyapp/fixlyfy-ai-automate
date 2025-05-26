@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
-  Template,
+  FileText,
   Plus,
   Copy,
   Edit,
@@ -171,7 +170,7 @@ export const JobTemplateManager = ({ onUseTemplate }: JobTemplateManagerProps) =
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Template className="h-5 w-5" />
+            <FileText className="h-5 w-5" />
             Job Templates
           </CardTitle>
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -338,7 +337,7 @@ export const JobTemplateManager = ({ onUseTemplate }: JobTemplateManagerProps) =
 
         {templates.length === 0 && (
           <div className="text-center py-12">
-            <Template className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Templates Yet</h3>
             <p className="text-muted-foreground mb-4">
               Create your first job template to speed up job creation.

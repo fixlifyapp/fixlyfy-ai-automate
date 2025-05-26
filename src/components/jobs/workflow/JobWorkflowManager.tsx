@@ -107,7 +107,7 @@ export const JobWorkflowManager = ({ jobId, currentStatus }: JobWorkflowManagerP
                     {step.name}
                   </span>
                   <Badge variant={step.completed ? 'default' : 'secondary'} className="text-xs">
-                    {step.status}
+                    {step.completed ? 'completed' : step.current ? 'current' : 'pending'}
                   </Badge>
                 </div>
                 

@@ -14,7 +14,7 @@ import {
   Target, 
   TrendingUp, 
   Calendar,
-  Template,
+  FileText,
   Workflow
 } from "lucide-react";
 import { JobsList } from "@/components/jobs/JobsList";
@@ -30,7 +30,8 @@ const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("jobs");
-  const { addJob } = useJobs();
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const { jobs, addJob } = useJobs();
   
   const handleJobCreated = async (jobData: any) => {
     try {
@@ -55,6 +56,18 @@ const JobsPage = () => {
     console.log("Using template:", template);
     toast.success(`Applied template: ${template.name}`);
     setIsCreateJobModalOpen(true);
+  };
+
+  const handleSelectJob = (jobId: string) => {
+    setSelectedJobs(prev => 
+      prev.includes(jobId) 
+        ? prev.filter(id => id !== jobId)
+        : [...prev, jobId]
+    );
+  };
+
+  const handleSelectAllJobs = (select: boolean) => {
+    setSelectedJobs(select ? jobs.map(job => job.id) : []);
   };
 
   return (
@@ -89,7 +102,7 @@ const JobsPage = () => {
               Scheduler
             </TabsTrigger>
             <TabsTrigger value="templates" className="flex items-center gap-2">
-              <Template className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
               Templates
             </TabsTrigger>
             <TabsTrigger value="workflow" className="flex items-center gap-2">
@@ -123,7 +136,13 @@ const JobsPage = () => {
               </div>
             </ModernCard>
             
-            <JobsList isGridView={isGridView} />
+            <JobsList 
+              isGridView={isGridView}
+              jobs={jobs}
+              selectedJobs={selectedJobs}
+              onSelectJob={handleSelectJob}
+              onSelectAllJobs={handleSelectAllJobs}
+            />
           </TabsContent>
 
           <TabsContent value="scheduler" className="space-y-6">
