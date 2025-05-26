@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, ExternalLink, Edit, Trash2 } from "lucide-react";
-import { JobsCreateModal } from "../jobs/JobsCreateModal";
+import { ScheduleJobModal } from "../schedule/ScheduleJobModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,7 +27,8 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     jobs,
     isLoading,
     updateJob,
-    deleteJob
+    deleteJob,
+    addJob
   } = useJobs(clientId);
   
   // Get dynamic configuration data from database
@@ -331,10 +332,11 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
         </div>
       )}
 
-      <JobsCreateModal 
+      <ScheduleJobModal 
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         preselectedClientId={clientId}
+        onJobCreated={addJob}
         onSuccess={handleJobCreated}
       />
 

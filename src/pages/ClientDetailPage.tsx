@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ClientForm } from "@/components/clients/ClientForm";
-import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -34,7 +34,7 @@ const ClientDetailPage = () => {
         <ClientForm clientId={id} onCreateJob={() => setIsCreateJobModalOpen(true)} />
       </div>
       
-      <JobsCreateModal 
+      <ScheduleJobModal 
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         preselectedClientId={id}
