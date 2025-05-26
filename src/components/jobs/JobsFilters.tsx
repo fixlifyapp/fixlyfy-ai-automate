@@ -73,7 +73,7 @@ export const JobsFilters = () => {
         <SelectContent>
           <SelectItem value="all">All Statuses</SelectItem>
           {statusesLoading ? (
-            <SelectItem value="" disabled>Loading...</SelectItem>
+            <SelectItem value="loading" disabled>Loading...</SelectItem>
           ) : (
             jobStatuses
               .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
@@ -102,7 +102,7 @@ export const JobsFilters = () => {
         <SelectContent>
           <SelectItem value="all">All Types</SelectItem>
           {typesLoading ? (
-            <SelectItem value="" disabled>Loading...</SelectItem>
+            <SelectItem value="loading" disabled>Loading...</SelectItem>
           ) : (
             jobTypes.map((type) => (
               <SelectItem key={type.id} value={type.name.toLowerCase()}>
