@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -88,6 +87,16 @@ export default function FinancePage() {
       status: "completed" as const,
       date: "2024-01-12",
       reference: "CASH-001"
+    },
+    {
+      id: "pay3",
+      invoiceNumber: "INV-005",
+      clientName: "Test Client",
+      amount: 200,
+      method: "credit-card" as const,
+      status: "failed" as const,
+      date: "2024-01-10",
+      reference: "ch_failed_123"
     }
   ], []);
 
@@ -136,33 +145,33 @@ export default function FinancePage() {
   }, [mockPayments]);
 
   // Event handlers
-  const handleCreateInvoice = () => {
+  function handleCreateInvoice() {
     toast.info("Invoice creation feature coming soon!");
-  };
+  }
 
-  const handleEditInvoice = (id: string) => {
+  function handleEditInvoice(id: string) {
     toast.info(`Edit invoice ${id} - Feature coming soon!`);
-  };
+  }
 
-  const handleSendInvoice = (id: string) => {
+  function handleSendInvoice(id: string) {
     toast.success(`Invoice ${id} sent successfully!`);
-  };
+  }
 
-  const handleViewInvoice = (id: string) => {
+  function handleViewInvoice(id: string) {
     toast.info(`View invoice ${id} - Feature coming soon!`);
-  };
+  }
 
-  const handleAddPayment = () => {
+  function handleAddPayment() {
     toast.info("Payment recording feature coming soon!");
-  };
+  }
 
-  const handleRefundPayment = (id: string) => {
+  function handleRefundPayment(id: string) {
     toast.info(`Refund payment ${id} - Feature coming soon!`);
-  };
+  }
 
-  const handleExportPayments = () => {
+  function handleExportPayments() {
     toast.success("Payment export started!");
-  };
+  }
 
   return (
     <PageLayout>
