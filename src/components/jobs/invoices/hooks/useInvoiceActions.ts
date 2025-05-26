@@ -2,21 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Invoice {
-  id: string;
-  job_id: string;
-  invoice_number: string;
-  total: number;
-  amount_paid: number;
-  balance: number;
-  status: string;
-  date: string;
-  due_date?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Invoice } from '@/hooks/useInvoices';
 
 export interface InvoiceActionsState {
   selectedInvoice: Invoice | null;

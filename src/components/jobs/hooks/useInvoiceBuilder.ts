@@ -238,6 +238,8 @@ export const useInvoiceBuilder = (jobId: string) => {
         number: invoice.invoice_number,
         date: invoice.date || invoice.created_at,
         total: invoice.total,
+        amount_paid: invoice.amount_paid || 0,
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         status: invoice.status,
         notes: invoice.notes,
         created_at: invoice.created_at,
