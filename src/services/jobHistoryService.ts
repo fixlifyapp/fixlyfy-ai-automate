@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { HistoryItem } from '@/hooks/useJobHistory';
+import { Database } from '@/integrations/supabase/types';
 import { PaymentMethod } from '@/types/payment';
 
 export const recordStatusChange = async (

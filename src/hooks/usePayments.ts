@@ -1,33 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
-export type PaymentStatus = "paid" | "refunded" | "disputed";
-
-export interface Payment {
-  id: string;
-  invoice_id: string;
-  amount: number;
-  method: PaymentMethod;
-  date: string;
-  notes?: string;
-  reference?: string;
-  status?: PaymentStatus;
-  client_id?: string;
-  job_id?: string;
-  technician_id?: string;
-  technician_name?: string;
-  created_at: string;
-}
-
-export interface PaymentInput {
-  amount: number;
-  method: PaymentMethod;
-  date: string;
-  notes?: string;
-  status?: PaymentStatus;
-}
+import { PaymentMethod, PaymentStatus, Payment, PaymentInput } from '@/types/payment';
 
 export const usePayments = (jobId: string) => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -49,7 +23,21 @@ export const usePayments = (jobId: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      
+      // Transform the data to match our Payment interface
+      const transformedPayments: Payment[] = (data || []).map(payment => ({
+        id: payment.id,
+        date: payment.date,
+        amount: payment.amount,
+        method: payment.method as PaymentMethod,
+        status: 'paid' as PaymentStatus, // Default status since column doesn't exist yet
+        reference: payment.reference,
+        notes: payment.notes,
+        invoice_id: payment.invoice_id,
+        created_at: payment.created_at
+      }));
+      
+      setPayments(transformedPayments);
       setError(null);
     } catch (err) {
       console.error('Error fetching payments:', err);
@@ -81,12 +69,10 @@ export const usePayments = (jobId: string) => {
 
   const refundPayment = async (paymentId: string) => {
     try {
-      const { error } = await supabase
-        .from('payments')
-        .update({ status: 'refunded' })
-        .eq('id', paymentId);
-
-      if (error) throw error;
+      // For now, just update locally since status column doesn't exist
+      setPayments(prev => prev.map(p => 
+        p.id === paymentId ? { ...p, status: 'refunded' as PaymentStatus } : p
+      ));
       await fetchPayments();
     } catch (err) {
       console.error('Error refunding payment:', err);
@@ -138,3 +124,6 @@ export const usePayments = (jobId: string) => {
     fetchPayments
   };
 };
+
+// Re-export types for convenience
+export type { PaymentMethod, PaymentStatus, Payment, PaymentInput };

@@ -1,9 +1,8 @@
-
 // This file defines the data models that will be used with Supabase
 // These match the tables defined in the Pre-Supabase Integration Checklist
 
 import { UserRole } from "@/components/auth/types";
-import { PaymentMethod, PaymentStatus } from "./payment";
+import { PaymentMethod, PaymentStatus } from "@/types/payment";
 
 // User model
 export interface DbUser {
