@@ -105,14 +105,24 @@ export const useUnifiedDocumentBuilder = ({
     if (existingDocument && open) {
       const initializeFromExisting = async () => {
         try {
+          // Get document number safely
+          const documentNumber = documentType === 'estimate' 
+            ? (existingDocument as Estimate).estimate_number || (existingDocument as Estimate).number
+            : (existingDocument as Invoice).invoice_number || (existingDocument as Invoice).number;
+
+          // Get total/amount safely
+          const total = documentType === 'estimate'
+            ? (existingDocument as Estimate).total || (existingDocument as Estimate).amount || 0
+            : (existingDocument as Invoice).total || 0;
+
           // Set basic document data
           setFormData({
             documentId: existingDocument.id,
-            documentNumber: existingDocument.number || existingDocument.estimate_number || existingDocument.invoice_number || '',
+            documentNumber: documentNumber || '',
             items: [],
             notes: existingDocument.notes || "",
             status: existingDocument.status || "draft",
-            total: existingDocument.total || existingDocument.amount || 0
+            total: total
           });
 
           setNotes(existingDocument.notes || "");
@@ -155,6 +165,33 @@ export const useUnifiedDocumentBuilder = ({
       initializeFromExisting();
     }
   }, [existingDocument, open, documentType]);
+
+  // Calculate functions - defined early to avoid declaration order issues
+  const calculateSubtotal = useCallback(() => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  }, [lineItems]);
+
+  const calculateTotalTax = useCallback(() => {
+    const subtotal = calculateSubtotal();
+    return subtotal * (taxRate / 100);
+  }, [calculateSubtotal, taxRate]);
+
+  const calculateGrandTotal = useCallback(() => {
+    return calculateSubtotal() + calculateTotalTax();
+  }, [calculateSubtotal, calculateTotalTax]);
+
+  const calculateTotalMargin = useCallback(() => {
+    return lineItems.reduce((sum, item) => {
+      const itemMargin = (item.unitPrice - (item.ourPrice || 0)) * item.quantity;
+      return sum + itemMargin;
+    }, 0);
+  }, [lineItems]);
+
+  const calculateMarginPercentage = useCallback(() => {
+    const totalRevenue = calculateSubtotal();
+    const totalMargin = calculateTotalMargin();
+    return totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
+  }, [calculateSubtotal, calculateTotalMargin]);
 
   // Generate smart notes based on job data
   const generateSmartNotes = (job: any): string => {
@@ -206,7 +243,8 @@ export const useUnifiedDocumentBuilder = ({
       setIsSubmitting(true);
       
       // Generate smart invoice number
-      const invoiceNumber = `INV-${existingDocument.number?.replace('EST-', '') || Date.now()}`;
+      const estimateNumber = (existingDocument as Estimate).estimate_number || (existingDocument as Estimate).number;
+      const invoiceNumber = `INV-${estimateNumber?.replace('EST-', '') || Date.now()}`;
       
       // Create invoice with enhanced data
       const invoiceData = {
@@ -348,32 +386,6 @@ export const useUnifiedDocumentBuilder = ({
         : item
     ));
   }, []);
-
-  const calculateSubtotal = useCallback(() => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  }, [lineItems]);
-
-  const calculateTotalTax = useCallback(() => {
-    const subtotal = calculateSubtotal();
-    return subtotal * (taxRate / 100);
-  }, [calculateSubtotal, taxRate]);
-
-  const calculateGrandTotal = useCallback(() => {
-    return calculateSubtotal() + calculateTotalTax();
-  }, [calculateSubtotal, calculateTotalTax]);
-
-  const calculateTotalMargin = useCallback(() => {
-    return lineItems.reduce((sum, item) => {
-      const itemMargin = (item.unitPrice - (item.ourPrice || 0)) * item.quantity;
-      return sum + itemMargin;
-    }, 0);
-  }, [lineItems]);
-
-  const calculateMarginPercentage = useCallback(() => {
-    const totalRevenue = calculateSubtotal();
-    const totalMargin = calculateTotalMargin();
-    return totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
-  }, [calculateSubtotal, calculateTotalMargin]);
 
   const saveDocumentChanges = useCallback(async (): Promise<Estimate | Invoice | null> => {
     if (isSubmitting) return null;

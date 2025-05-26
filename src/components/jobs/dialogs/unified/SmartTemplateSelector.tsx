@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +68,7 @@ export const SmartTemplateSelector = ({
       name: p.name,
       description: p.description,
       price: p.price,
+      cost: p.cost || 0,
       ourPrice: p.ourprice || p.cost || 0,
       category: p.category,
       taxable: p.taxable,
@@ -94,6 +94,7 @@ export const SmartTemplateSelector = ({
       name: p.name,
       description: p.description,
       price: p.price * 1.2, // 20% premium pricing
+      cost: p.cost || 0,
       ourPrice: p.ourprice || p.cost || 0,
       category: p.category,
       taxable: p.taxable,
