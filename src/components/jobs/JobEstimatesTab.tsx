@@ -5,11 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { useEstimates } from "@/hooks/useEstimates";
-import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
-import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
-import { UpsellDialog } from "./dialogs/UpsellDialog";
-import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
-import { WarrantySelectionDialog } from "./dialogs/WarrantySelectionDialog";
+import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
 
 interface JobEstimatesTabProps {
   jobId: string;
@@ -18,17 +14,27 @@ interface JobEstimatesTabProps {
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
   const { estimates, isLoading, setEstimates } = useEstimates(jobId);
-  const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
-  const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
+  const [isDocumentBuilderOpen, setIsDocumentBuilderOpen] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
 
   const handleCreateEstimate = () => {
-    setSelectedEstimateId(null);
-    setIsEstimateBuilderOpen(true);
+    setSelectedEstimate(null);
+    setIsDocumentBuilderOpen(true);
   };
 
-  const handleEditEstimate = (estimateId: string) => {
-    setSelectedEstimateId(estimateId);
-    setIsEstimateBuilderOpen(true);
+  const handleEditEstimate = (estimate: any) => {
+    setSelectedEstimate(estimate);
+    setIsDocumentBuilderOpen(true);
+  };
+
+  const handleEstimateCreated = (estimate: any) => {
+    if (selectedEstimate) {
+      // Update existing estimate
+      setEstimates(estimates.map(est => est.id === estimate.id ? estimate : est));
+    } else {
+      // Add new estimate
+      setEstimates([...estimates, estimate]);
+    }
   };
 
   return (
@@ -52,11 +58,13 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onDelete={() => {}}
         />
 
-        <EstimateBuilderDialog
-          open={isEstimateBuilderOpen}
-          onOpenChange={setIsEstimateBuilderOpen}
-          estimateId={selectedEstimateId}
+        <UnifiedDocumentBuilder
+          open={isDocumentBuilderOpen}
+          onOpenChange={setIsDocumentBuilderOpen}
+          documentType="estimate"
+          existingDocument={selectedEstimate}
           jobId={jobId}
+          onDocumentCreated={handleEstimateCreated}
           onSyncToInvoice={onEstimateConverted}
         />
       </CardContent>
