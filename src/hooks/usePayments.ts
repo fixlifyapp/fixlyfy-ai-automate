@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Payment, PaymentMethod } from '@/types/payment';
+import type { Payment, PaymentMethod } from '@/types/payment';
 
-export { Payment, PaymentMethod } from '@/types/payment';
+export type { Payment, PaymentMethod } from '@/types/payment';
 
 export const usePayments = (jobId: string) => {
   const [payments, setPayments] = useState<Payment[]>([]);

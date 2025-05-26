@@ -3,261 +3,216 @@ import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { History, Calendar, User, MessageSquare, Clock, Activity, FileText, DollarSign, Wrench, Phone, Search, Filter } from "lucide-react";
-import { useEnhancedJobHistory } from "@/hooks/useEnhancedJobHistory";
+import { useJobHistory } from "@/hooks/useJobHistory";
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  History, 
+  FileText, 
+  CreditCard, 
+  Send, 
+  User, 
+  Settings,
+  Calendar,
+  Phone,
+  Mail,
+  MessageSquare
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 interface ModernJobHistoryTabProps {
   jobId: string;
 }
 
 export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
-  const { historyItems, isLoading, canViewItem } = useEnhancedJobHistory(jobId);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterUser, setFilterUser] = useState("all");
+  const { history, isLoading, refreshHistory } = useJobHistory(jobId);
 
-  // Filter items that the current user can view
-  const visibleItems = historyItems.filter(canViewItem);
+  // Real-time updates for job history
+  useEffect(() => {
+    if (!jobId) return;
 
-  // Apply search and filters
-  const filteredItems = visibleItems.filter(item => {
-    const matchesSearch = searchTerm === "" || 
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === "all" || item.type === filterType;
-    const matchesUser = filterUser === "all" || item.user_name === filterUser;
-    
-    return matchesSearch && matchesType && matchesUser;
-  });
+    const channel = supabase
+      .channel('job-history-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_history',
+          filter: `job_id=eq.${jobId}`
+        },
+        (payload) => {
+          console.log('Real-time job history update:', payload);
+          refreshHistory();
+        }
+      )
+      .subscribe();
 
-  // Get unique users for filter
-  const uniqueUsers = Array.from(new Set(visibleItems.map(item => item.user_name).filter(Boolean)));
-
-  // Get unique types for filter
-  const uniqueTypes = Array.from(new Set(visibleItems.map(item => item.type)));
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [jobId, refreshHistory]);
 
   const getHistoryIcon = (type: string) => {
     switch (type) {
-      case 'status-change':
-      case 'status_change':
-        return <Activity className="h-4 w-4 text-blue-500" />;
-      case 'payment':
-      case 'payment-recorded':
-        return <DollarSign className="h-4 w-4 text-green-500" />;
-      case 'note':
-      case 'user-action':
-        return <MessageSquare className="h-4 w-4 text-gray-500" />;
       case 'estimate':
       case 'estimate-created':
+      case 'estimate-status-change':
       case 'estimate-updated':
-        return <FileText className="h-4 w-4 text-purple-500" />;
+        return <FileText className="h-4 w-4" />;
       case 'invoice':
       case 'invoice-created':
-      case 'invoice-updated':
-        return <FileText className="h-4 w-4 text-orange-500" />;
-      case 'technician':
-      case 'technician-assigned':
-        return <Wrench className="h-4 w-4 text-blue-600" />;
+      case 'invoice-status-change':
+        return <FileText className="h-4 w-4" />;
+      case 'payment':
+      case 'payment-recorded':
+      case 'payment-received':
+        return <CreditCard className="h-4 w-4" />;
       case 'communication':
-        return <Phone className="h-4 w-4 text-indigo-500" />;
-      case 'attachment':
-        return <FileText className="h-4 w-4 text-gray-600" />;
-      case 'navigation':
-        return <Activity className="h-4 w-4 text-gray-400" />;
-      case 'form-interaction':
-        return <MessageSquare className="h-4 w-4 text-blue-400" />;
+        return <Send className="h-4 w-4" />;
+      case 'status-change':
+        return <Settings className="h-4 w-4" />;
+      case 'technician-assigned':
+        return <User className="h-4 w-4" />;
+      case 'call':
+        return <Phone className="h-4 w-4" />;
+      case 'email':
+        return <Mail className="h-4 w-4" />;
+      case 'message':
+        return <MessageSquare className="h-4 w-4" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+        return <History className="h-4 w-4" />;
     }
   };
 
-  const getHistoryTypeColor = (type: string) => {
+  const getHistoryColor = (type: string) => {
     switch (type) {
-      case 'status-change':
-      case 'status_change':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'payment':
-      case 'payment-recorded':
-        return 'bg-green-50 text-green-700 border-green-200';
-      case 'note':
-      case 'user-action':
-        return 'bg-gray-50 text-gray-700 border-gray-200';
       case 'estimate':
       case 'estimate-created':
+      case 'estimate-status-change':
       case 'estimate-updated':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
+        return 'bg-blue-100 text-blue-700 border-blue-300';
       case 'invoice':
       case 'invoice-created':
-      case 'invoice-updated':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'technician':
-      case 'technician-assigned':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'invoice-status-change':
+        return 'bg-purple-100 text-purple-700 border-purple-300';
+      case 'payment':
+      case 'payment-recorded':
+      case 'payment-received':
+        return 'bg-emerald-100 text-emerald-700 border-emerald-300';
       case 'communication':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'attachment':
-        return 'bg-gray-50 text-gray-700 border-gray-200';
-      case 'navigation':
-        return 'bg-gray-50 text-gray-600 border-gray-200';
-      case 'form-interaction':
-        return 'bg-blue-50 text-blue-600 border-blue-200';
+        return 'bg-orange-100 text-orange-700 border-orange-300';
+      case 'status-change':
+        return 'bg-slate-100 text-slate-700 border-slate-300';
+      case 'technician-assigned':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-300';
+      case 'call':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'email':
+        return 'bg-cyan-100 text-cyan-700 border-cyan-300';
+      case 'message':
+        return 'bg-pink-100 text-pink-700 border-pink-300';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-slate-100 text-slate-700 border-slate-300';
     }
   };
 
-  const formatType = (type: string) => {
-    return type.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
+  // Group history by date
+  const groupedHistory = history.reduce((groups, item) => {
+    const date = new Date(item.created_at).toDateString();
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(item);
+    return groups;
+  }, {} as Record<string, typeof history>);
+
+  const sortedDates = Object.keys(groupedHistory).sort((a, b) => 
+    new Date(b).getTime() - new Date(a).getTime()
+  );
 
   return (
     <div className="space-y-6">
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <ModernCardTitle icon={History}>
-            Job History ({filteredItems.length} of {visibleItems.length})
-          </ModernCardTitle>
-          
-          {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search history..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      <ModernCard className="border border-slate-200 bg-white">
+        <ModernCardHeader className="border-b border-slate-200">
+          <ModernCardTitle icon={History} className="text-slate-800 text-xl font-semibold">
+            <div className="flex items-center gap-2">
+              <span>Job History</span>
+              <Badge variant="outline" className="font-semibold">
+                {history.length} events
+              </Badge>
             </div>
-            
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {uniqueTypes.map(type => (
-                  <SelectItem key={type} value={type}>
-                    {formatType(type)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={filterUser} onValueChange={setFilterUser}>
-              <SelectTrigger className="w-full sm:w-48">
-                <User className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by user" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                {uniqueUsers.map(user => (
-                  <SelectItem key={user} value={user || ''}>
-                    {user || 'System'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          </ModernCardTitle>
         </ModernCardHeader>
-        <ModernCardContent className="space-y-4">
+        
+        <ModernCardContent className="space-y-6">
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[1, 2, 3, 4, 5].map(i => (
-                <Skeleton key={i} className="w-full h-16" />
+                <div key={i} className="flex items-start gap-3">
+                  <Skeleton className="w-8 h-8 rounded-full bg-slate-200" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="w-3/4 h-4 bg-slate-200" />
+                    <Skeleton className="w-1/2 h-3 bg-slate-200" />
+                  </div>
+                </div>
               ))}
             </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <History className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">
-                {searchTerm || filterType !== "all" || filterUser !== "all" 
-                  ? "No matching history found" 
-                  : "No history available"
-                }
+          ) : history.length === 0 ? (
+            <div className="text-center py-12">
+              <History className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+              <h3 className="text-lg font-semibold text-slate-700 mb-2">No history yet</h3>
+              <p className="text-slate-500">
+                Job activities and changes will appear here as they happen
               </p>
-              <p className="text-sm">
-                {searchTerm || filterType !== "all" || filterUser !== "all"
-                  ? "Try adjusting your search or filters"
-                  : "Job activity will appear here as it happens"
-                }
-              </p>
-              {(searchTerm || filterType !== "all" || filterUser !== "all") && (
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setFilterType("all");
-                    setFilterUser("all");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredItems.map((item, index) => (
-                <div key={item.id} className="relative">
-                  {/* Timeline line */}
-                  {index < filteredItems.length - 1 && (
-                    <div className="absolute left-6 top-8 bottom-0 w-px bg-gray-200" />
-                  )}
+            <div className="space-y-6">
+              {sortedDates.map((date) => (
+                <div key={date} className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                    <Calendar className="h-4 w-4" />
+                    <span>{new Date(date).toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}</span>
+                  </div>
                   
-                  <div className="flex gap-4">
-                    {/* Timeline dot */}
-                    <div className="flex-shrink-0 w-12 h-12 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center">
-                      {getHistoryIcon(item.type)}
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pb-4">
-                      <div className="bg-gray-50 rounded-lg p-4 border hover:bg-gray-100 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <h4 className="font-medium text-gray-900">{item.title}</h4>
-                              <Badge 
-                                variant="outline" 
-                                className={getHistoryTypeColor(item.type)}
-                              >
-                                {formatType(item.type)}
-                              </Badge>
-                              {item.entity_type && (
-                                <Badge variant="outline" className="text-xs">
-                                  {item.entity_type}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-gray-700 mb-2">{item.description}</p>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-                              </div>
+                  <div className="space-y-3 ml-6 border-l-2 border-slate-200 pl-4">
+                    {groupedHistory[date].map((item, index) => (
+                      <div key={item.id} className="flex items-start gap-3 group">
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white ${getHistoryColor(item.type)}`}>
+                          {getHistoryIcon(item.type)}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-slate-900 text-sm">
+                                {item.title}
+                              </h4>
+                              <p className="text-sm text-slate-600 mt-1">
+                                {item.description}
+                              </p>
                               {item.user_name && (
-                                <div className="flex items-center gap-1">
-                                  <User className="h-4 w-4" />
-                                  {item.user_name}
+                                <div className="flex items-center gap-1 mt-2 text-xs text-slate-500">
+                                  <User className="h-3 w-3" />
+                                  <span>by {item.user_name}</span>
                                 </div>
                               )}
-                              {item.meta && Object.keys(item.meta).length > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{Object.keys(item.meta).length} details
-                                </Badge>
-                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-xs text-slate-500 flex-shrink-0">
+                              <span>
+                                {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               ))}
