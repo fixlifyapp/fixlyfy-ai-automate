@@ -7,7 +7,7 @@ import { ModernCard } from "@/components/ui/modern-card";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { Plus, Grid, List, Loader2, Upload, Briefcase, Target, Zap, Clock } from "lucide-react";
-import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { toast } from "sonner";
 import { useJobs } from "@/hooks/useJobs";
@@ -215,7 +215,7 @@ const JobsPage = () => {
         )}
       </AnimatedContainer>
       
-      <JobsCreateModal 
+      <ScheduleJobModal 
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
         onJobCreated={addJob}

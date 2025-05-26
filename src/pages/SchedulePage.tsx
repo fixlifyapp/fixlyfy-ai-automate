@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Calendar, Loader2, Clock, Users, CheckCircle } from "lucide-react";
 import { AIInsightsPanel } from "@/components/schedule/AIInsightsPanel";
 import { useSearchParams } from "react-router-dom";
-import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { Job } from "@/hooks/useJobs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -128,8 +127,8 @@ const SchedulePage = () => {
       
       <ScheduleCalendar view={view} currentDate={currentDate} />
       
-      {/* Replace ScheduleJobModal with JobsCreateModal */}
-      <JobsCreateModal 
+      {/* Replace ScheduleJobModal with ScheduleJobModal */}
+      <ScheduleJobModal 
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen}
         onSuccess={handleJobCreated}

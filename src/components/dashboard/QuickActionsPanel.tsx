@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { JobsCreateModal } from "@/components/jobs/JobsCreateModal";
+import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { toast } from "sonner";
 
 export const QuickActionsPanel = () => {
@@ -54,7 +54,7 @@ export const QuickActionsPanel = () => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <JobsCreateModal 
+      <ScheduleJobModal 
         open={isCreateJobModalOpen}
         onOpenChange={setIsCreateJobModalOpen}
         onSuccess={handleJobCreated}
