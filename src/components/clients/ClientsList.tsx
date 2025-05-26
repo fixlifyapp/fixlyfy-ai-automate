@@ -1,392 +1,289 @@
-import { useState, useEffect } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { 
-  MoreVertical, 
-  Eye, 
-  Trash,
-  Mail,
-  Phone,
-  FileDown,
-  Edit,
-  Loader2,
-  MessageSquare
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Client } from "@/utils/test-data/types";
+import { ModernCard } from "@/components/ui/modern-card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  ExternalLink, 
+  Edit, 
+  Star,
+  MapPin, 
+  DollarSign,
+  Calendar,
+  Building,
+  User
+} from "lucide-react";
+import { useClients } from "@/hooks/useClients";
+import { ClientContactActions } from "./ClientContactActions";
+import { ClientSegmentBadge } from "./ClientSegmentBadge";
+import { useClientStats } from "@/hooks/useClientStats";
 
 interface ClientsListProps {
-  isGridView: boolean;
+  isGridView?: boolean;
 }
 
-export const ClientsList = ({ isGridView }: ClientsListProps) => {
+interface ClientWithStats {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  company?: string;
+  type?: string;
+  status?: string;
+  created_at?: string;
+}
+
+const ClientCard = ({ client }: { client: ClientWithStats }) => {
   const navigate = useNavigate();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { stats, isLoading: statsLoading } = useClientStats(client.id);
 
-  // Fetch clients from Supabase
-  useEffect(() => {
-    const fetchClients = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('clients')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        
-        if (data) {
-          // Format the client IDs for display
-          const formattedClients = data.map((client, index) => ({
-            ...client,
-            displayId: `C-${1001 + index}`
-          }));
-          
-          setClients(formattedClients);
-          console.log("Fetched clients:", formattedClients);
-        } else {
-          setClients([]);
-        }
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-        toast.error('Failed to load clients');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchClients();
-  }, []);
-
-  const handleClientClick = (clientId: string) => {
-    navigate(`/clients/${clientId}`);
-  };
-  
-  const handleCheckboxChange = (clientId: string) => {
-    setSelectedClients(prev => {
-      if (prev.includes(clientId)) {
-        return prev.filter(id => id !== clientId);
-      } else {
-        return [...prev, clientId];
-      }
-    });
+  const handleClientClick = () => {
+    navigate(`/clients/${client.id}`);
   };
 
-  const handleSelectAllChange = () => {
-    if (selectAll) {
-      setSelectedClients([]);
-    } else {
-      setSelectedClients(clients.map(client => client.id || ''));
-    }
-    setSelectAll(!selectAll);
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/clients/${client.id}`);
   };
 
-  const handleBulkEdit = () => {
-    // This would open a bulk edit modal in a real implementation
-    toast.info(`Editing ${selectedClients.length} clients`);
+  const formatAddress = () => {
+    const parts = [client.address, client.city, client.state, client.zip].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'No address';
   };
 
-  const handleMessageClient = (client: Client) => {
-    // Navigate to Connect Center with query params to open the message dialog for this client
-    navigate(`/connect?tab=messages&clientId=${client.id}&clientName=${encodeURIComponent(client.name)}&clientPhone=${encodeURIComponent(client.phone || '')}`);
+  if (statsLoading) {
+    return (
+      <ModernCard variant="elevated" className="p-6">
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </ModernCard>
+    );
+  }
+
+  return (
+    <div className="cursor-pointer" onClick={handleClientClick}>
+      <ModernCard 
+        variant="elevated" 
+        className="hover:shadow-lg transition-all duration-300 group"
+      >
+        <div className="p-6 space-y-4">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-lg">{client.name}</h3>
+                <ClientSegmentBadge stats={stats} />
+              </div>
+              {client.company && (
+                <div className="flex items-center text-sm text-muted-foreground mb-1">
+                  <Building className="h-4 w-4 mr-1" />
+                  {client.company}
+                </div>
+              )}
+              <div className="flex items-center text-sm text-muted-foreground">
+                <User className="h-4 w-4 mr-1" />
+                {client.type || 'Residential'}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEditClick}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Address */}
+          <div className="flex items-center text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 mr-2" />
+            <span className="truncate">{formatAddress()}</span>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 py-3 border-t border-b">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-blue-600">{stats.totalJobs}</div>
+              <div className="text-xs text-muted-foreground">Jobs</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-600">
+                ${stats.totalRevenue.toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground">Revenue</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-purple-600">
+                ${Math.round(stats.averageJobValue).toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground">Avg Job</div>
+            </div>
+          </div>
+
+          {/* Contact Actions */}
+          <ClientContactActions client={client} compact />
+        </div>
+      </ModernCard>
+    </div>
+  );
+};
+
+const ClientRow = ({ client }: { client: ClientWithStats }) => {
+  const navigate = useNavigate();
+  const { stats, isLoading: statsLoading } = useClientStats(client.id);
+
+  const handleClientClick = () => {
+    navigate(`/clients/${client.id}`);
   };
 
-  const handleExportClients = () => {
-    // Export selected or all clients
-    const exportData = selectedClients.length > 0 
-      ? clients.filter(client => client.id && selectedClients.includes(client.id))
-      : clients;
-      
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Client ID,Name,Email,Phone,Status,Type\n"
-      + exportData.map(client => 
-          `${client.id},${client.name},${client.email || ''},${client.phone || ''},${client.status || ''},${client.type || ''}`
-        ).join("\n");
-        
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "clients_export.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/clients/${client.id}`);
   };
 
-  const getDisplayId = (client: any) => {
-    return client.displayId || client.id?.substring(0, 8) || '';
+  const formatAddress = () => {
+    const parts = [client.address, client.city, client.state].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : '—';
   };
+
+  if (statsLoading) {
+    return (
+      <tr className="border-b">
+        <td className="p-4"><Skeleton className="h-5 w-32" /></td>
+        <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+        <td className="p-4"><Skeleton className="h-4 w-40" /></td>
+        <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+        <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+        <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+        <td className="p-4"><Skeleton className="h-8 w-24" /></td>
+        <td className="p-4"><Skeleton className="h-8 w-8" /></td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr 
+      className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+      onClick={handleClientClick}
+    >
+      <td className="p-4">
+        <div className="flex items-center gap-2">
+          <div>
+            <div className="font-medium">{client.name}</div>
+            {client.company && (
+              <div className="text-sm text-muted-foreground">{client.company}</div>
+            )}
+          </div>
+          <ClientSegmentBadge stats={stats} />
+        </div>
+      </td>
+      <td className="p-4">
+        <Badge variant="outline">{client.type || 'Residential'}</Badge>
+      </td>
+      <td className="p-4">
+        <div className="text-sm max-w-[200px] truncate">{formatAddress()}</div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm font-medium">{stats.totalJobs}</div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm font-medium text-green-600">
+          ${stats.totalRevenue.toLocaleString()}
+        </div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm">
+          {stats.lastServiceDate 
+            ? new Date(stats.lastServiceDate).toLocaleDateString()
+            : '—'
+          }
+        </div>
+      </td>
+      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+        <ClientContactActions client={client} compact />
+      </td>
+      <td className="p-4 text-right">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleEditClick}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+      </td>
+    </tr>
+  );
+};
+
+export const ClientsList = ({ isGridView = false }: ClientsListProps) => {
+  const { clients, isLoading } = useClients();
 
   if (isLoading) {
     return (
-      <div className="fixlyfy-card p-8 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-fixlyfy animate-spin mr-2" />
-        <p>Loading clients...</p>
-      </div>
+      <ModernCard variant="elevated" className="p-8 text-center">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+          <span>Loading clients...</span>
+        </div>
+      </ModernCard>
     );
   }
 
   if (clients.length === 0) {
     return (
-      <div className="fixlyfy-card p-8 text-center">
-        <p className="text-fixlyfy-text-secondary mb-4">No clients found</p>
-        <p className="text-sm">Import clients or create new ones to get started</p>
+      <ModernCard variant="elevated" className="p-12 text-center">
+        <div className="text-muted-foreground">
+          <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">No clients found</h3>
+          <p>Start by adding your first client.</p>
+        </div>
+      </ModernCard>
+    );
+  }
+
+  if (isGridView) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {clients.map((client) => (
+          <ClientCard key={client.id} client={client} />
+        ))}
       </div>
     );
   }
 
   return (
-    <>
-      {/* Bulk Actions Bar */}
-      {selectedClients.length > 0 && (
-        <div className="fixlyfy-card p-2 mb-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{selectedClients.length} clients selected</span>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex gap-2 ml-2 border-fixlyfy/20 text-fixlyfy"
-              onClick={handleBulkEdit}
-            >
-              <Edit size={16} /> Bulk Edit
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex gap-2 border-fixlyfy/20 text-fixlyfy"
-              onClick={handleExportClients}
-            >
-              <FileDown size={16} /> Export Selected
-            </Button>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-fixlyfy-text-secondary"
-            onClick={() => setSelectedClients([])}
-          >
-            Clear Selection
-          </Button>
-        </div>
-      )}
-      
-      {isGridView ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {clients.map((client) => (
-            <div
-              key={client.id}
-              className="fixlyfy-card hover:shadow-lg transition-shadow relative"
-            >
-              <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
-                <Checkbox 
-                  checked={selectedClients.includes(client.id || '')} 
-                  onCheckedChange={() => handleCheckboxChange(client.id || '')}
-                />
-              </div>
-              <div
-                className="p-4 border-b border-fixlyfy-border cursor-pointer"
-                onClick={() => client.id && handleClientClick(client.id)}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <Badge variant="outline" className="mb-2">
-                      {getDisplayId(client)}
-                    </Badge>
-                    <h3 className="font-medium">{client.name}</h3>
-                    <p className="text-xs text-fixlyfy-text-secondary">{client.address}</p>
-                  </div>
-                  
-                  <Badge className={cn(
-                    client.status === "active" && "bg-fixlyfy-success/10 text-fixlyfy-success",
-                    client.status === "inactive" && "bg-fixlyfy-text-secondary/10 text-fixlyfy-text-secondary"
-                  )}>
-                    {client.status === "active" ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="p-4">
-                <div className="mb-3">
-                  <Badge className="bg-fixlyfy/10 text-fixlyfy">{client.type}</Badge>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center">
-                    <Mail size={14} className="text-fixlyfy-text-secondary mr-2" />
-                    <span className="text-fixlyfy-text-secondary">{client.email}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Phone size={14} className="text-fixlyfy-text-secondary mr-2" />
-                    <span className="text-fixlyfy-text-secondary">{client.phone}</span>
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-between items-center">
-                  <div className="text-sm">
-                    <span className="text-fixlyfy-text-secondary">Client ID:</span>
-                    <span className="ml-2 font-medium">{getDisplayId(client)}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-fixlyfy border-fixlyfy/20"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        client.id && handleClientClick(client.id);
-                      }}
-                    >
-                      View
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-indigo-500 border-indigo-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMessageClient(client);
-                      }}
-                      title="Message Client"
-                    >
-                      <MessageSquare size={14} />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="fixlyfy-card overflow-hidden">
-          <div className="flex justify-between items-center p-4 border-b border-fixlyfy-border">
-            <div className="text-sm font-medium">All Clients ({clients.length})</div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex gap-2 border-fixlyfy/20 text-fixlyfy"
-              onClick={handleExportClients}
-            >
-              <FileDown size={16} /> Export All
-            </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox 
-                    checked={selectAll} 
-                    onCheckedChange={handleSelectAllChange}
-                  />
-                </TableHead>
-                <TableHead>Client ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((client, idx) => (
-                <TableRow 
-                  key={client.id}
-                  className={idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50"}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox 
-                      checked={selectedClients.includes(client.id || '')} 
-                      onCheckedChange={() => handleCheckboxChange(client.id || '')}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <span 
-                      className="font-medium hover:text-fixlyfy transition-colors cursor-pointer"
-                      onClick={() => client.id && handleClientClick(client.id)}
-                    >
-                      {getDisplayId(client)}
-                    </span>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div 
-                      className="font-medium cursor-pointer"
-                      onClick={() => client.id && handleClientClick(client.id)}
-                    >
-                      {client.name}
-                    </div>
-                    <div className="text-xs text-fixlyfy-text-secondary truncate max-w-[200px]">
-                      {client.address}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{client.email}</div>
-                    <div className="text-sm">{client.phone}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn(
-                      client.status === "active" && "bg-fixlyfy-success/10 text-fixlyfy-success",
-                      client.status === "inactive" && "bg-fixlyfy-text-secondary/10 text-fixlyfy-text-secondary"
-                    )}>
-                      {client.status || "Unknown"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-fixlyfy/10 text-fixlyfy">
-                      {client.type || "Unknown"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleMessageClient(client)}
-                        title="Message Client"
-                      >
-                        <MessageSquare size={16} className="text-indigo-500" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical size={16} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => client.id && handleClientClick(client.id)}>
-                            <Eye size={16} className="mr-2" /> View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleBulkEdit()}>
-                            <Edit size={16} className="mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-fixlyfy-error">
-                            <Trash size={16} className="mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </>
+    <ModernCard variant="elevated">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-4 font-semibold">Client</th>
+              <th className="text-left p-4 font-semibold">Type</th>
+              <th className="text-left p-4 font-semibold">Address</th>
+              <th className="text-left p-4 font-semibold">Jobs</th>
+              <th className="text-left p-4 font-semibold">Revenue</th>
+              <th className="text-left p-4 font-semibold">Last Service</th>
+              <th className="text-left p-4 font-semibold">Contact</th>
+              <th className="text-right p-4 w-20">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients.map((client) => (
+              <ClientRow key={client.id} client={client} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </ModernCard>
   );
 };
