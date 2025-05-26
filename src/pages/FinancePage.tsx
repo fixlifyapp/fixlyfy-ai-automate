@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { FinancialDashboard } from "@/components/finance/FinancialDashboard";
 import { InvoiceManager } from "@/components/finance/InvoiceManager";
 import { PaymentTracker } from "@/components/finance/PaymentTracker";
+import { AdvancedReportsPanel } from "@/components/reports/AdvancedReportsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { 
@@ -195,7 +196,7 @@ export default function FinancePage() {
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Reports
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -234,13 +235,7 @@ export default function FinancePage() {
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <div className="text-center py-12">
-              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Financial Reports</h3>
-              <p className="text-muted-foreground mb-4">
-                Advanced financial reporting and analytics coming soon
-              </p>
-            </div>
+            <AdvancedReportsPanel />
           </TabsContent>
         </Tabs>
       </AnimatedContainer>
