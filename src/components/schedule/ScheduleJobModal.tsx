@@ -84,7 +84,7 @@ export const ScheduleJobModal = ({
   const [showAISuggestion, setShowAISuggestion] = useState(false);
   const [newTask, setNewTask] = useState("");
   
-  // Configuration hooks
+  // Configuration hooks with dynamic data from database
   const { clients, isLoading: clientsLoading } = useClients();
   const { items: jobTypes, isLoading: jobTypesLoading } = useJobTypes();
   const { items: leadSources, isLoading: leadSourcesLoading } = useLeadSources();
@@ -177,7 +177,7 @@ export const ScheduleJobModal = ({
     setIsSubmitting(true);
     
     try {
-      // Calculate schedule_end if not set
+      // Calculate schedule_end if not set but schedule_start exists
       let scheduleEnd = formData.schedule_end;
       if (formData.schedule_start && !scheduleEnd) {
         const startDate = new Date(formData.schedule_start);
@@ -185,7 +185,7 @@ export const ScheduleJobModal = ({
         scheduleEnd = endDate.toISOString();
       }
 
-      // Prepare job data
+      // Prepare comprehensive job data
       const jobData = {
         title: formData.title,
         client_id: formData.client_id,
@@ -373,7 +373,17 @@ export const ScheduleJobModal = ({
                         <SelectItem value="" disabled>Loading types...</SelectItem>
                       ) : (
                         jobTypes.map(type => (
-                          <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                          <SelectItem key={type.id} value={type.name}>
+                            <div className="flex items-center gap-2">
+                              {type.color && (
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: type.color }}
+                                />
+                              )}
+                              {type.name}
+                            </div>
+                          </SelectItem>
                         ))
                       )}
                     </SelectContent>
@@ -390,9 +400,11 @@ export const ScheduleJobModal = ({
                       {leadSourcesLoading ? (
                         <SelectItem value="" disabled>Loading sources...</SelectItem>
                       ) : (
-                        leadSources.map(source => (
-                          <SelectItem key={source.id} value={source.name}>{source.name}</SelectItem>
-                        ))
+                        leadSources
+                          .filter(source => source.is_active)
+                          .map(source => (
+                            <SelectItem key={source.id} value={source.name}>{source.name}</SelectItem>
+                          ))
                       )}
                     </SelectContent>
                   </Select>
@@ -556,7 +568,7 @@ export const ScheduleJobModal = ({
               </div>
             </div>
 
-            {/* Tags Section */}
+            {/* Tags Section - Dynamic from Database */}
             {!tagsLoading && tags.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Tags</h3>
@@ -567,6 +579,10 @@ export const ScheduleJobModal = ({
                       variant={formData.tags.includes(tag.id) ? "default" : "outline"}
                       className="cursor-pointer"
                       onClick={() => handleTagToggle(tag.id)}
+                      style={tag.color && formData.tags.includes(tag.id) ? 
+                        { backgroundColor: tag.color, color: 'white' } : 
+                        tag.color ? { borderColor: tag.color, color: tag.color } : {}
+                      }
                     >
                       <Tag className="w-3 h-3 mr-1" />
                       {tag.name}
@@ -611,7 +627,7 @@ export const ScheduleJobModal = ({
               </div>
             </div>
 
-            {/* Custom Fields Section */}
+            {/* Custom Fields Section - Dynamic from Database */}
             {!customFieldsLoading && customFields.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Additional Information</h3>
