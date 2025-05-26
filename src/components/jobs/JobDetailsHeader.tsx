@@ -16,7 +16,16 @@ interface JobDetailsHeaderProps {
 export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
   const navigate = useNavigate();
   const { job, isLoading, currentStatus, updateJobStatus } = useJobDetails();
-  const { invoiceAmount, balance, isLoading: financialsLoading } = useJobFinancials(job?.id || jobId || "");
+  const { 
+    invoiceAmount, 
+    balance, 
+    totalPaid,
+    overdueAmount,
+    paidInvoices,
+    unpaidInvoices,
+    isLoading: financialsLoading,
+    refresh: refreshFinancials
+  } = useJobFinancials(job?.id || jobId || "");
   
   // Safely use the modal context with a fallback
   let openModal: (type: any, props?: any) => void;
@@ -111,6 +120,11 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
           }}
           invoiceAmount={financialsLoading ? 0 : invoiceAmount}
           balance={financialsLoading ? 0 : balance}
+          totalPaid={financialsLoading ? 0 : totalPaid}
+          overdueAmount={financialsLoading ? 0 : overdueAmount}
+          paidInvoices={financialsLoading ? 0 : paidInvoices}
+          unpaidInvoices={financialsLoading ? 0 : unpaidInvoices}
+          isLoadingFinancials={financialsLoading}
         />
         
         <div>
