@@ -894,6 +894,36 @@ export type Database = {
           },
         ]
       }
+      id_counters: {
+        Row: {
+          created_at: string | null
+          current_value: number
+          entity_type: string
+          id: string
+          prefix: string
+          start_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_value?: number
+          entity_type: string
+          id?: string
+          prefix: string
+          start_value?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_value?: number
+          entity_type?: string
+          id?: string
+          prefix?: string
+          start_value?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       invoice_communications: {
         Row: {
           client_email: string | null
@@ -1337,6 +1367,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          address: string | null
           client_id: string | null
           created_at: string | null
           created_by: string | null
@@ -1355,10 +1386,11 @@ export type Database = {
           tags: string[] | null
           tasks: Json | null
           technician_id: string | null
-          title: string
+          title: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
           client_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1377,10 +1409,11 @@ export type Database = {
           tags?: string[] | null
           tasks?: Json | null
           technician_id?: string | null
-          title: string
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
           client_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1399,7 +1432,7 @@ export type Database = {
           tags?: string[] | null
           tasks?: Json | null
           technician_id?: string | null
-          title?: string
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2173,6 +2206,10 @@ export type Database = {
     Functions: {
       generate_client_login_token: {
         Args: { p_email: string }
+        Returns: string
+      }
+      generate_next_id: {
+        Args: { p_entity_type: string }
         Returns: string
       }
       get_service_areas: {

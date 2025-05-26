@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { generateNextId } from "@/utils/idGeneration";
 
 export interface Client {
   id: string;
@@ -50,29 +50,25 @@ export const useClients = () => {
     fetchClients();
   }, [refreshTrigger]);
 
-  // Update the type to accept partial client data with name as required
   const addClient = async (client: { name: string } & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
     try {
-      // We're not setting the ID manually since Supabase will generate a UUID automatically
-      // The client ID format (C-XXXX) will be handled in the UI display, not in the database
+      // Generate new client ID using the database function
+      const clientId = await generateNextId('client');
       
       const { data, error } = await supabase
         .from('clients')
-        .insert(client)
+        .insert({
+          ...client,
+          id: clientId
+        })
         .select()
         .single();
         
       if (error) throw error;
       
-      // For display purposes in the UI, we can format the ID as needed
-      const formattedClient = {
-        ...data,
-        displayId: `C-${1001 + clients.length}` // This is just for UI display
-      };
-      
-      setClients(prev => [formattedClient, ...prev]);
+      setClients(prev => [data, ...prev]);
       toast.success('Client added successfully');
-      return formattedClient;
+      return data;
     } catch (error) {
       console.error('Error adding client:', error);
       toast.error('Failed to add client');

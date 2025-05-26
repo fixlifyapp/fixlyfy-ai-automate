@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -103,6 +102,16 @@ export const JobsList = ({
     }
   };
 
+  const formatTime = (job: Job) => {
+    if (job.schedule_start) {
+      return format(new Date(job.schedule_start), "HH:mm");
+    }
+    if (job.date) {
+      return format(new Date(job.date), "HH:mm");
+    }
+    return "TBD";
+  };
+
   if (jobs.length === 0) {
     return (
       <ModernCard variant="elevated" className="p-12 text-center">
@@ -150,7 +159,7 @@ export const JobsList = ({
                           onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <span className="font-mono text-sm text-muted-foreground">{job.id}</span>
+                        <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
                       </div>
                       <Button
                         variant="ghost"
@@ -163,10 +172,8 @@ export const JobsList = ({
                     </div>
                     
                     <div>
-                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">{job.title}</h3>
-                      {job.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
-                      )}
+                      <h3 className="font-semibold text-lg mb-1">{job.client?.name || 'Unknown Client'}</h3>
+                      <p className="text-sm text-muted-foreground">{formatTime(job)}</p>
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -193,10 +200,10 @@ export const JobsList = ({
                       )}
                     </div>
                     
-                    {job.date && (
+                    {job.address && (
                       <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {format(new Date(job.date), "MMM dd, yyyy")}
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span className="truncate">{job.address}</span>
                       </div>
                     )}
                     
@@ -232,7 +239,7 @@ export const JobsList = ({
     );
   }
 
-  // List view (table format)
+  // List view (table format) with new columns
   return (
     <ModernCard variant="elevated">
       <div className="overflow-x-auto">
@@ -245,11 +252,11 @@ export const JobsList = ({
                   onCheckedChange={onSelectAllJobs}
                 />
               </th>
-              <th className="text-left p-4 font-semibold">Job ID</th>
-              <th className="text-left p-4 font-semibold">Title</th>
-              <th className="text-left p-4 font-semibold">Status</th>
-              <th className="text-left p-4 font-semibold">Type</th>
-              <th className="text-left p-4 font-semibold">Date</th>
+              <th className="text-left p-4 font-semibold">Job Number</th>
+              <th className="text-left p-4 font-semibold">Client Name</th>
+              <th className="text-left p-4 font-semibold">Time</th>
+              <th className="text-left p-4 font-semibold">Address</th>
+              <th className="text-left p-4 font-semibold">Tags</th>
               <th className="text-left p-4 font-semibold">Revenue</th>
               <th className="text-right p-4 w-20">Actions</th>
             </tr>
@@ -257,8 +264,6 @@ export const JobsList = ({
           <tbody>
             {jobs.map((job) => {
               const statusStyle = getStatusBadgeStyle(job.status);
-              const jobTypeDisplay = getJobTypeDisplay(job);
-              const statusIcon = getStatusIcon(job.status);
               
               return (
                 <tr 
@@ -274,47 +279,49 @@ export const JobsList = ({
                     />
                   </td>
                   <td className="p-4">
-                    <span className="font-mono text-sm">{job.id}</span>
-                  </td>
-                  <td className="p-4">
-                    <div>
-                      <div className="font-medium">{job.title}</div>
-                      {job.description && (
-                        <div className="text-sm text-muted-foreground line-clamp-1">
-                          {job.description}
-                        </div>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs"
+                        style={statusStyle}
+                      >
+                        {job.status}
+                      </Badge>
                     </div>
                   </td>
                   <td className="p-4">
-                    <Badge 
-                      variant="outline" 
-                      className="flex items-center gap-1 w-fit"
-                      style={statusStyle}
-                    >
-                      {statusIcon}
-                      {job.status}
-                    </Badge>
+                    <div className="font-medium">{job.client?.name || 'Unknown Client'}</div>
                   </td>
                   <td className="p-4">
-                    {jobTypeDisplay.color ? (
-                      <Badge 
-                        variant="outline"
-                        style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
-                      >
-                        {jobTypeDisplay.name}
-                      </Badge>
+                    <div className="flex items-center text-sm">
+                      <Clock className="h-4 w-4 mr-2" />
+                      {formatTime(job)}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    {job.address ? (
+                      <div className="flex items-center text-sm">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span className="truncate max-w-[200px]">{job.address}</span>
+                      </div>
                     ) : (
-                      <Badge variant="secondary">
-                        {jobTypeDisplay.name}
-                      </Badge>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="p-4">
-                    {job.date ? (
-                      <div className="flex items-center text-sm">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {format(new Date(job.date), "MMM dd, yyyy")}
+                    {job.tags && job.tags.length > 0 ? (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {job.tags.slice(0, 2).map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {job.tags.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{job.tags.length - 2}
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -336,7 +343,7 @@ export const JobsList = ({
                       size="sm"
                       onClick={(e) => handleEditJob(e, job.id)}
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <Edit className="h-4 w-4" />
                     </Button>
                   </td>
                 </tr>

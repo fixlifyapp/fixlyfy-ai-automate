@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { useJobTypes, useJobStatuses } from "@/hooks/useConfigItems";
+import { generateNextId } from "@/utils/idGeneration";
 
 export interface Job {
   id: string;
-  title: string;
+  title?: string; // Made optional
   client_id?: string;
   description?: string;
   job_type?: string;
@@ -24,6 +25,7 @@ export interface Job {
   tags?: string[];
   tasks?: string[];
   property_id?: string;
+  address?: string; // Added address field
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -32,6 +34,10 @@ export interface Job {
     name: string;
     email?: string;
     phone?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
   };
 }
 
@@ -62,7 +68,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         .from('jobs')
         .select(`
           *,
-          client:clients(id, name, email, phone)
+          client:clients(id, name, email, phone, address, city, state, zip)
         `);
       
       if (clientId) {
@@ -81,7 +87,9 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         tags: Array.isArray(job.tags) ? job.tags : [],
         tasks: Array.isArray(job.tasks) 
           ? job.tasks.map(task => typeof task === 'string' ? task : String(task))
-          : []
+          : [],
+        // Auto-generate title if missing
+        title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
       }));
       
       setJobs(processedJobs);
@@ -123,14 +131,39 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
 
   const addJob = async (jobData: Partial<Job>) => {
     try {
-      // Generate job ID with current timestamp
-      const timestamp = Date.now();
-      const jobId = `JOB-${timestamp}`;
+      // Generate new job ID using the database function
+      const jobId = await generateNextId('job');
+      
+      // Auto-generate title if not provided
+      const autoTitle = jobData.title || 
+        `${jobData.client?.name || 'Service'} - ${jobData.job_type || jobData.service || 'General Service'}`;
+      
+      // Get client address if client_id is provided
+      let clientAddress = '';
+      if (jobData.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('address, city, state, zip')
+          .eq('id', jobData.client_id)
+          .single();
+        
+        if (clientData) {
+          const addressParts = [
+            clientData.address,
+            clientData.city,
+            clientData.state,
+            clientData.zip
+          ].filter(Boolean);
+          clientAddress = addressParts.join(', ');
+        }
+      }
       
       // Validate and normalize job data using configuration
       const validatedJobData = validateJobData({
         ...jobData,
         id: jobId,
+        title: autoTitle,
+        address: clientAddress,
         created_by: user?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

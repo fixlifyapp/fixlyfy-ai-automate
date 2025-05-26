@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Info, Calendar, User, Wrench } from "lucide-react";
+import { Edit, Info, Calendar, User, Wrench, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useJobStatuses, useJobTypes } from "@/hooks/useConfigItems";
 
@@ -80,8 +80,8 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Job ID</h3>
-              <p className="font-mono text-sm">{job.id}</p>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Job Number</h3>
+              <p className="font-mono text-sm font-medium text-fixlyfy">{job.id}</p>
             </div>
             
             <div>
@@ -142,6 +142,16 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
             )}
           </div>
           
+          {job.address && (
+            <div className="pt-4 border-t">
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Service Address</h3>
+              <div className="flex items-start text-sm">
+                <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-0.5" />
+                <p className="leading-relaxed">{job.address}</p>
+              </div>
+            </div>
+          )}
+          
           {job.description && (
             <div className="pt-4 border-t">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
@@ -151,7 +161,7 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
           
           {job.revenue && job.revenue > 0 && (
             <div className="pt-4 border-t">
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Expected Revenue</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Total Revenue</h3>
               <p className="text-lg font-semibold text-green-600">${job.revenue.toFixed(2)}</p>
             </div>
           )}
