@@ -137,94 +137,94 @@ export const JobsList = ({
             const statusIcon = getStatusIcon(job.status);
             
             return (
-              <ModernCard 
-                key={job.id} 
-                variant="elevated" 
-                className="cursor-pointer hover:shadow-lg transition-all duration-300 group"
-                onClick={() => handleJobClick(job.id)}
-              >
-                <div className="p-6 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        checked={selectedJobs.includes(job.id)}
-                        onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <span className="font-mono text-sm text-muted-foreground">{job.id}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleEditJob(e, job.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2 line-clamp-2">{job.title}</h3>
-                    {job.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Badge 
-                      variant="outline" 
-                      className="flex items-center gap-1"
-                      style={statusStyle}
-                    >
-                      {statusIcon}
-                      {job.status}
-                    </Badge>
-                    
-                    {jobTypeDisplay.color ? (
-                      <Badge 
-                        variant="outline"
-                        style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
+              <div key={job.id} className="cursor-pointer" onClick={() => handleJobClick(job.id)}>
+                <ModernCard 
+                  variant="elevated" 
+                  className="hover:shadow-lg transition-all duration-300 group"
+                >
+                  <div className="p-6 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          checked={selectedJobs.includes(job.id)}
+                          onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="font-mono text-sm text-muted-foreground">{job.id}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleEditJob(e, job.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        {jobTypeDisplay.name}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        {jobTypeDisplay.name}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {job.date && (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {format(new Date(job.date), "MMM dd, yyyy")}
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
-                  
-                  {job.revenue && job.revenue > 0 && (
-                    <div className="flex items-center text-sm font-medium text-green-600">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      ${job.revenue.toFixed(2)}
-                    </div>
-                  )}
-                  
-                  {job.tags && job.tags.length > 0 && (
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <Tag className="h-3 w-3 text-muted-foreground" />
-                      {job.tags.slice(0, 2).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {job.tags.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{job.tags.length - 2} more
-                        </span>
+                    
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">{job.title}</h3>
+                      {job.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
                       )}
                     </div>
-                  )}
-                </div>
-              </ModernCard>
+                    
+                    <div className="flex items-center justify-between">
+                      <Badge 
+                        variant="outline" 
+                        className="flex items-center gap-1"
+                        style={statusStyle}
+                      >
+                        {statusIcon}
+                        {job.status}
+                      </Badge>
+                      
+                      {jobTypeDisplay.color ? (
+                        <Badge 
+                          variant="outline"
+                          style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
+                        >
+                          {jobTypeDisplay.name}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          {jobTypeDisplay.name}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {job.date && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {format(new Date(job.date), "MMM dd, yyyy")}
+                      </div>
+                    )}
+                    
+                    {job.revenue && job.revenue > 0 && (
+                      <div className="flex items-center text-sm font-medium text-green-600">
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        ${job.revenue.toFixed(2)}
+                      </div>
+                    )}
+                    
+                    {job.tags && job.tags.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Tag className="h-3 w-3 text-muted-foreground" />
+                        {job.tags.slice(0, 2).map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {job.tags.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{job.tags.length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </ModernCard>
+              </div>
             );
           })}
         </div>

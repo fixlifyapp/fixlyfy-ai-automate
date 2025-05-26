@@ -29,7 +29,7 @@ interface JobDetailsQuickActionsProps {
 export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) => {
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const { jobs, isLoading } = useJobs(jobId);
+  const { jobs, isLoading } = useJobs();
   const { addHistoryItem } = useJobHistory(jobId);
   
   const job = jobs.find(j => j.id === jobId);

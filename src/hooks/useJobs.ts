@@ -27,6 +27,12 @@ export interface Job {
   created_at?: string;
   updated_at?: string;
   created_by?: string;
+  client?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
@@ -52,7 +58,12 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const fetchJobs = useCallback(async () => {
     setIsLoading(true);
     try {
-      let query = supabase.from('jobs').select('*');
+      let query = supabase
+        .from('jobs')
+        .select(`
+          *,
+          client:clients(id, name, email, phone)
+        `);
       
       if (clientId) {
         query = query.eq('client_id', clientId);
@@ -68,7 +79,9 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       const processedJobs = (data || []).map(job => ({
         ...job,
         tags: Array.isArray(job.tags) ? job.tags : [],
-        tasks: Array.isArray(job.tasks) ? job.tasks : []
+        tasks: Array.isArray(job.tasks) 
+          ? job.tasks.map(task => typeof task === 'string' ? task : String(task))
+          : []
       }));
       
       setJobs(processedJobs);
@@ -122,7 +135,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         tags: Array.isArray(jobData.tags) ? jobData.tags : [],
-        tasks: Array.isArray(jobData.tasks) ? jobData.tasks : []
+        tasks: Array.isArray(jobData.tasks) ? jobData.tasks.map(task => String(task)) : []
       });
 
       const { data, error } = await supabase
@@ -192,6 +205,10 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const refreshJobs = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs, refreshTrigger]);
 
   return {
     jobs,

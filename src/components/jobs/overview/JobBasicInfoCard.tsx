@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Info, Calendar, User, Wrench } from "lucide-react";
 import { format } from "date-fns";
-import { EditJobDialog } from "../dialogs/EditJobDialog";
 import { useJobStatuses, useJobTypes } from "@/hooks/useConfigItems";
 
 interface JobBasicInfoCardProps {
@@ -59,119 +58,105 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
   const jobTypeDisplay = getJobTypeDisplay(job);
 
   return (
-    <>
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <ModernCardTitle icon={Info}>
-              Job Information
-            </ModernCardTitle>
-            {editable && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditDialogOpen(true)}
-                className="text-fixlyfy hover:text-fixlyfy-dark"
+    <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+      <ModernCardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <ModernCardTitle icon={Info}>
+            Job Information
+          </ModernCardTitle>
+          {editable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditDialogOpen(true)}
+              className="text-fixlyfy hover:text-fixlyfy-dark"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </ModernCardHeader>
+      <ModernCardContent>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Job ID</h3>
+              <p className="font-mono text-sm">{job.id}</p>
+            </div>
+            
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
+              <Badge 
+                variant="outline"
+                style={statusStyle}
+                className="font-medium"
               >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </ModernCardHeader>
-        <ModernCardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Job ID</h3>
-                <p className="font-mono text-sm">{job.id}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
+                {job.status}
+              </Badge>
+            </div>
+            
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Service Type</h3>
+              {jobTypeDisplay.color ? (
                 <Badge 
                   variant="outline"
-                  style={statusStyle}
+                  style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
                   className="font-medium"
                 >
-                  {job.status}
+                  <Wrench className="h-3 w-3 mr-1" />
+                  {jobTypeDisplay.name}
                 </Badge>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Service Type</h3>
-                {jobTypeDisplay.color ? (
-                  <Badge 
-                    variant="outline"
-                    style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
-                    className="font-medium"
-                  >
-                    <Wrench className="h-3 w-3 mr-1" />
-                    {jobTypeDisplay.name}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="font-medium">
-                    <Wrench className="h-3 w-3 mr-1" />
-                    {jobTypeDisplay.name}
-                  </Badge>
-                )}
-              </div>
-              
-              {job.lead_source && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Lead Source</h3>
-                  <p className="text-sm">{job.lead_source}</p>
-                </div>
-              )}
-              
-              {job.date && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Service Date</h3>
-                  <div className="flex items-center text-sm">
-                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {format(new Date(job.date), "EEEE, MMMM do, yyyy")}
-                  </div>
-                </div>
-              )}
-              
-              {job.technician_id && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Assigned Technician</h3>
-                  <div className="flex items-center text-sm">
-                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Technician {job.technician_id}
-                  </div>
-                </div>
+              ) : (
+                <Badge variant="secondary" className="font-medium">
+                  <Wrench className="h-3 w-3 mr-1" />
+                  {jobTypeDisplay.name}
+                </Badge>
               )}
             </div>
             
-            {job.description && (
-              <div className="pt-4 border-t">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-                <p className="text-sm leading-relaxed">{job.description}</p>
+            {job.lead_source && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Lead Source</h3>
+                <p className="text-sm">{job.lead_source}</p>
               </div>
             )}
             
-            {job.revenue && job.revenue > 0 && (
-              <div className="pt-4 border-t">
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Expected Revenue</h3>
-                <p className="text-lg font-semibold text-green-600">${job.revenue.toFixed(2)}</p>
+            {job.date && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Service Date</h3>
+                <div className="flex items-center text-sm">
+                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {format(new Date(job.date), "EEEE, MMMM do, yyyy")}
+                </div>
+              </div>
+            )}
+            
+            {job.technician_id && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">Assigned Technician</h3>
+                <div className="flex items-center text-sm">
+                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Technician {job.technician_id}
+                </div>
               </div>
             )}
           </div>
-        </ModernCardContent>
-      </ModernCard>
-
-      <EditJobDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        job={job}
-        onSuccess={() => {
-          setIsEditDialogOpen(false);
-          if (onUpdate) {
-            onUpdate();
-          }
-        }}
-      />
-    </>
+          
+          {job.description && (
+            <div className="pt-4 border-t">
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
+              <p className="text-sm leading-relaxed">{job.description}</p>
+            </div>
+          )}
+          
+          {job.revenue && job.revenue > 0 && (
+            <div className="pt-4 border-t">
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Expected Revenue</h3>
+              <p className="text-lg font-semibold text-green-600">${job.revenue.toFixed(2)}</p>
+            </div>
+          )}
+        </div>
+      </ModernCardContent>
+    </ModernCard>
   );
 };
