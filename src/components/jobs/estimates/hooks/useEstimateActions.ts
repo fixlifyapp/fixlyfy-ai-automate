@@ -1,66 +1,116 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Estimate } from '@/hooks/useEstimates';
 
-export interface EstimateActionsHook {
-  isLoading: boolean;
-  sendEstimate: (estimateId: string) => Promise<boolean>;
-  deleteEstimate: (estimateId: string) => Promise<boolean>;
-  duplicateEstimate: (estimateId: string) => Promise<boolean>;
+export interface EstimateActionsState {
+  selectedEstimate: Estimate | null;
+  isDeleting: boolean;
+  isConverting: boolean;
 }
 
-export const useEstimateActions = (): EstimateActionsHook => {
-  const [isLoading, setIsLoading] = useState(false);
+export interface EstimateActionsActions {
+  setSelectedEstimate: (estimate: Estimate | null) => void;
+  handleSendEstimate: (estimateId: string) => Promise<boolean>;
+  confirmDeleteEstimate: () => Promise<boolean>;
+  confirmConvertToInvoice: () => Promise<boolean>;
+}
 
-  const sendEstimate = async (estimateId: string): Promise<boolean> => {
-    setIsLoading(true);
+export interface EstimateActionsHook {
+  state: EstimateActionsState;
+  actions: EstimateActionsActions;
+}
+
+export const useEstimateActions = (
+  jobId: string,
+  estimates: Estimate[],
+  setEstimates: (estimates: Estimate[]) => void,
+  onEstimateConverted?: () => void
+): EstimateActionsHook => {
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+
+  const handleSendEstimate = async (estimateId: string): Promise<boolean> => {
     try {
       // Mock implementation - in a real app this would call the API
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update estimate status to 'sent'
+      setEstimates(estimates.map(est => 
+        est.id === estimateId ? { ...est, status: 'sent' } : est
+      ));
+      
       toast.success('Estimate sent successfully');
       return true;
     } catch (error) {
       toast.error('Failed to send estimate');
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const deleteEstimate = async (estimateId: string): Promise<boolean> => {
-    setIsLoading(true);
+  const confirmDeleteEstimate = async (): Promise<boolean> => {
+    if (!selectedEstimate) return false;
+    
+    setIsDeleting(true);
     try {
       // Mock implementation - in a real app this would call the API
       await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Remove estimate from list
+      setEstimates(estimates.filter(est => est.id !== selectedEstimate.id));
+      
       toast.success('Estimate deleted successfully');
+      setSelectedEstimate(null);
       return true;
     } catch (error) {
       toast.error('Failed to delete estimate');
       return false;
     } finally {
-      setIsLoading(false);
+      setIsDeleting(false);
     }
   };
 
-  const duplicateEstimate = async (estimateId: string): Promise<boolean> => {
-    setIsLoading(true);
+  const confirmConvertToInvoice = async (): Promise<boolean> => {
+    if (!selectedEstimate) return false;
+    
+    setIsConverting(true);
     try {
       // Mock implementation - in a real app this would call the API
       await new Promise(resolve => setTimeout(resolve, 800));
-      toast.success('Estimate duplicated successfully');
+      
+      // Update estimate status to 'converted'
+      setEstimates(estimates.map(est => 
+        est.id === selectedEstimate.id ? { ...est, status: 'converted' } : est
+      ));
+      
+      toast.success('Estimate converted to invoice successfully');
+      setSelectedEstimate(null);
+      
+      if (onEstimateConverted) {
+        onEstimateConverted();
+      }
+      
       return true;
     } catch (error) {
-      toast.error('Failed to duplicate estimate');
+      toast.error('Failed to convert estimate');
       return false;
     } finally {
-      setIsLoading(false);
+      setIsConverting(false);
     }
   };
 
   return {
-    isLoading,
-    sendEstimate,
-    deleteEstimate,
-    duplicateEstimate
+    state: {
+      selectedEstimate,
+      isDeleting,
+      isConverting
+    },
+    actions: {
+      setSelectedEstimate,
+      handleSendEstimate,
+      confirmDeleteEstimate,
+      confirmConvertToInvoice
+    }
   };
 };

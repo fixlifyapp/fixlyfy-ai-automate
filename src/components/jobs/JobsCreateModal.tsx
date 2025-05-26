@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,9 @@ import { toast } from "sonner";
 interface JobsCreateModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onJobCreated: (job: any) => Promise<void>;
+  onJobCreated?: (job: any) => Promise<void>;
+  onSuccess?: (job: any) => void;
+  preselectedClientId?: string;
 }
 
 interface FormData {
@@ -33,10 +36,16 @@ interface FormData {
   schedule_start: string;
 }
 
-export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) => {
+export const JobsCreateModal = ({ 
+  open, 
+  onOpenChange, 
+  onJobCreated, 
+  onSuccess, 
+  preselectedClientId 
+}: JobsCreateModalProps) => {
   const [formData, setFormData] = useState<FormData>({
     title: "",
-    client_id: "",
+    client_id: preselectedClientId || "",
     description: "",
     schedule_start: "",
   });
@@ -59,7 +68,7 @@ export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) =>
   const resetForm = () => {
     setFormData({
       title: "",
-      client_id: "",
+      client_id: preselectedClientId || "",
       description: "",
       schedule_start: "",
     });
@@ -85,7 +94,14 @@ export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) =>
         updated_at: new Date().toISOString(),
       };
 
-      await onJobCreated(newJob);
+      if (onJobCreated) {
+        await onJobCreated(newJob);
+      }
+      
+      if (onSuccess) {
+        onSuccess(newJob);
+      }
+      
       toast.success("Job created successfully!");
       onOpenChange(false);
       resetForm();
@@ -123,7 +139,7 @@ export const JobsCreateModal = ({ open, onOpenChange }: JobsCreateModalProps) =>
             
             <div>
               <Label htmlFor="client_id">Client</Label>
-              <Select onValueChange={handleClientChange}>
+              <Select onValueChange={handleClientChange} value={formData.client_id}>
                 <SelectTrigger id="client_id">
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>

@@ -9,6 +9,9 @@ export interface EstimateDataHook {
   refetch: () => Promise<void>;
 }
 
+// Re-export Estimate type for convenience
+export type { Estimate };
+
 export const useEstimateData = (estimateId?: string): EstimateDataHook => {
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [isLoading, setIsLoading] = useState(false);
