@@ -239,10 +239,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs, refreshTrigger]);
-
   return {
     jobs,
     isLoading,
