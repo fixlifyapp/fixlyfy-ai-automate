@@ -1,379 +1,350 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { 
-  MoreVertical, 
-  Pencil, 
-  Eye, 
-  Calendar, 
-  UserPlus, 
-  Mail, 
-  Trash, 
-  File,
-  Tag
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getTagColor } from "@/data/tags";
+import { ModernCard } from "@/components/ui/modern-card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  ExternalLink, 
+  Edit, 
+  Calendar, 
+  User, 
+  MapPin, 
+  DollarSign,
+  Tag,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import { format } from "date-fns";
 import { Job } from "@/hooks/useJobs";
-import { useTags } from "@/hooks/useConfigItems";
+import { useJobStatuses, useJobTypes } from "@/hooks/useConfigItems";
 
 interface JobsListProps {
   jobs: Job[];
-  isGridView: boolean;
+  isGridView?: boolean;
   selectedJobs: string[];
   onSelectJob: (jobId: string, isSelected: boolean) => void;
   onSelectAllJobs: (isSelected: boolean) => void;
 }
 
-export const JobsList = ({ jobs = [], isGridView, selectedJobs = [], onSelectJob, onSelectAllJobs }: JobsListProps) => {
+export const JobsList = ({ 
+  jobs, 
+  isGridView = false, 
+  selectedJobs, 
+  onSelectJob, 
+  onSelectAllJobs 
+}: JobsListProps) => {
   const navigate = useNavigate();
-  const { items: tagItems } = useTags();
-
-  // Create a map for tag colors
-  const tagColorMap = tagItems.reduce((acc, tag) => {
-    acc[tag.name] = tag.color || '#6366f1';
-    return acc;
-  }, {} as Record<string, string>);
-
-  // Updated tag color function to use database colors
-  const getTagColor = (tagName: string) => {
-    const color = tagColorMap[tagName];
-    if (color) {
-      // Convert hex color to Tailwind classes
-      return `border-current text-current`;
-    }
-    
-    // Fallback to existing color scheme
-    const tagColors: Record<string, string> = {
-      "HVAC": "bg-purple-50 border-purple-200 text-purple-600",
-      "Residential": "bg-blue-50 border-blue-200 text-blue-600",
-      "Commercial": "bg-indigo-50 border-indigo-200 text-indigo-600",
-      "Emergency": "bg-red-50 border-red-200 text-red-600",
-      "Maintenance": "bg-green-50 border-green-200 text-green-600",
-      "Installation": "bg-amber-50 border-amber-200 text-amber-600",
-      "Repair": "bg-orange-50 border-orange-200 text-orange-600"
-    };
-    
-    return tagColors[tagName] || "bg-purple-50 border-purple-200 text-purple-600";
-  };
+  
+  // Get configuration data for styling and display
+  const { items: jobStatuses } = useJobStatuses();
+  const { items: jobTypes } = useJobTypes();
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
   };
 
-  const areAllJobsSelected = jobs.length > 0 && selectedJobs && jobs.every(job => selectedJobs.includes(job.id));
-
-  const handleCheckboxClick = (e: React.MouseEvent, jobId: string) => {
+  const handleEditJob = (e: React.MouseEvent, jobId: string) => {
     e.stopPropagation();
-    onSelectJob(jobId, !(selectedJobs && selectedJobs.includes(jobId)));
+    navigate(`/jobs/${jobId}`);
   };
 
-  const handleSelectAll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelectAllJobs(!areAllJobsSelected);
+  const areAllJobsSelected = jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
+
+  // Get status styling from configuration
+  const getStatusBadgeStyle = (status: string) => {
+    const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
+    if (statusConfig?.color) {
+      return { backgroundColor: `${statusConfig.color}20`, color: statusConfig.color, borderColor: statusConfig.color };
+    }
+    
+    // Fallback styles
+    const statusStyles: Record<string, any> = {
+      "completed": { backgroundColor: "#10b98120", color: "#10b981", borderColor: "#10b981" },
+      "in-progress": { backgroundColor: "#3b82f620", color: "#3b82f6", borderColor: "#3b82f6" }, 
+      "scheduled": { backgroundColor: "#f59e0b20", color: "#f59e0b", borderColor: "#f59e0b" },
+      "cancelled": { backgroundColor: "#ef444420", color: "#ef4444", borderColor: "#ef4444" },
+      "canceled": { backgroundColor: "#ef444420", color: "#ef4444", borderColor: "#ef4444" }
+    };
+    
+    return statusStyles[status.toLowerCase()] || { backgroundColor: "#6b728020", color: "#6b7280", borderColor: "#6b7280" };
   };
 
-  const isJobSelected = (jobId: string) => selectedJobs && selectedJobs.includes(jobId);
+  // Get job type styling from configuration
+  const getJobTypeDisplay = (job: Job) => {
+    if (job.job_type) {
+      const jobTypeConfig = jobTypes?.find(jt => jt.name === job.job_type);
+      return {
+        name: jobTypeConfig?.name || job.job_type,
+        color: jobTypeConfig?.color
+      };
+    }
+    if (job.service) {
+      return { name: job.service, color: null };
+    }
+    return { name: "Service Job", color: null };
+  };
 
-  return (
-    <>
-      {isGridView ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {jobs.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-fixlyfy-text-secondary">
-              <p>No jobs found.</p>
-              <p className="text-sm mt-2">Try creating a new job or adjusting your filters.</p>
-            </div>
-          ) : (
-            jobs.map((job) => (
-              <div 
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'in-progress':
+        return <Clock className="h-4 w-4" />;
+      case 'scheduled':
+        return <Calendar className="h-4 w-4" />;
+      case 'cancelled':
+      case 'canceled':
+        return <AlertCircle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  if (jobs.length === 0) {
+    return (
+      <ModernCard variant="elevated" className="p-12 text-center">
+        <div className="text-muted-foreground">
+          <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
+          <p>Start by creating your first job.</p>
+        </div>
+      </ModernCard>
+    );
+  }
+
+  if (isGridView) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              checked={areAllJobsSelected}
+              onCheckedChange={onSelectAllJobs}
+            />
+            <span className="text-sm text-muted-foreground">
+              Select all ({jobs.length})
+            </span>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {jobs.map((job) => {
+            const statusStyle = getStatusBadgeStyle(job.status);
+            const jobTypeDisplay = getJobTypeDisplay(job);
+            const statusIcon = getStatusIcon(job.status);
+            
+            return (
+              <ModernCard 
                 key={job.id} 
-                className={cn(
-                  "fixlyfy-card hover:shadow-lg transition-shadow cursor-pointer relative",
-                  isJobSelected(job.id) && "ring-2 ring-fixlyfy"
-                )} 
+                variant="elevated" 
+                className="cursor-pointer hover:shadow-lg transition-all duration-300 group"
                 onClick={() => handleJobClick(job.id)}
               >
-                <div className="absolute top-3 left-3 z-10" onClick={(e) => handleCheckboxClick(e, job.id)}>
-                  <Checkbox checked={isJobSelected(job.id)} />
-                </div>
-
-                <div className="p-4 border-b border-fixlyfy-border">
-                  <div className="flex justify-between items-start">
-                    <div className="pl-7">
-                      <Badge variant="outline" className="mb-2">
-                        {job.id}
-                      </Badge>
-                      <h3 className="font-medium">{job.client?.name || "Unknown Client"}</h3>
-                      <p className="text-xs text-fixlyfy-text-secondary">{job.client?.address || "No address"}</p>
-                    </div>
-                    <Badge className={cn(
-                      job.status === "scheduled" && "bg-fixlyfy-info/10 text-fixlyfy-info",
-                      job.status === "in-progress" && "bg-fixlyfy-warning/10 text-fixlyfy-warning",
-                      job.status === "completed" && "bg-fixlyfy-success/10 text-fixlyfy-success",
-                      job.status === "canceled" && "bg-fixlyfy-error/10 text-fixlyfy-error"
-                    )}>
-                      {job.status === "scheduled" && "Scheduled"}
-                      {job.status === "in-progress" && "In Progress"}
-                      {job.status === "completed" && "Completed"}
-                      {job.status === "canceled" && "Canceled"}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="p-4">
-                  {/* Tags section for grid view with database colors */}
-                  {job.tags && job.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {job.tags.slice(0, 2).map((tag, index) => {
-                        const tagColor = tagColorMap[tag];
-                        return (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className={`text-xs ${getTagColor(tag)}`}
-                            style={tagColor ? { borderColor: tagColor, color: tagColor } : undefined}
-                          >
-                            {tag}
-                          </Badge>
-                        );
-                      })}
-                      {job.tags.length > 2 && (
-                        <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-600">
-                          +{job.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Custom fields preview */}
-                  {job.custom_fields && job.custom_fields.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs text-muted-foreground mb-1">Custom Info:</div>
-                      <div className="space-y-1">
-                        {job.custom_fields.slice(0, 2).map((field) => (
-                          <div key={field.id} className="text-xs">
-                            <span className="font-medium">{field.name}:</span>{' '}
-                            <span className="text-muted-foreground">
-                              {field.value || 'Not set'}
-                            </span>
-                          </div>
-                        ))}
-                        {job.custom_fields.length > 2 && (
-                          <div className="text-xs text-muted-foreground">
-                            +{job.custom_fields.length - 2} more fields
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                
-                  <div className="flex justify-between items-center mb-3">
-                    <div className="flex items-center">
-                      <Calendar size={14} className="text-fixlyfy-text-secondary mr-1" />
-                      <span className="text-xs text-fixlyfy-text-secondary">
-                        {job.date ? new Date(job.date).toLocaleDateString() : "No date"} 
-                        {job.schedule_start ? new Date(job.schedule_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <span className="text-xs">{job.technician_id ? "Assigned" : "Unassigned"}</span>
-                    </div>
-                    <div className="text-sm font-medium">
-                      ${(job.revenue || 0).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      ) : (
-        <div className="fixlyfy-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox 
-                    checked={areAllJobsSelected} 
-                    onClick={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Job #</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Custom Info</TableHead>
-                <TableHead>Scheduled</TableHead>
-                <TableHead>Technician</TableHead>
-                <TableHead>Revenue</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {jobs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-fixlyfy-text-secondary">
-                    <p>No jobs found.</p>
-                    <p className="text-sm mt-2">Try creating a new job or adjusting your filters.</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                jobs.map((job, idx) => (
-                  <TableRow 
-                    key={job.id}
-                    className={cn(
-                      idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50",
-                      "cursor-pointer hover:bg-fixlyfy-bg-interface",
-                      isJobSelected(job.id) && "bg-fixlyfy/5"
-                    )}
-                    onClick={() => handleJobClick(job.id)}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-2">
                       <Checkbox 
-                        checked={isJobSelected(job.id)} 
-                        onClick={(e) => handleCheckboxClick(e, job.id)}
+                        checked={selectedJobs.includes(job.id)}
+                        onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                        onClick={(e) => e.stopPropagation()}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{job.id}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{job.client?.name || "Unknown Client"}</div>
-                      <div className="text-xs text-fixlyfy-text-secondary">{job.service || job.title || "No service specified"}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn(
-                        job.status === "scheduled" && "bg-fixlyfy-info/10 text-fixlyfy-info",
-                        job.status === "in-progress" && "bg-fixlyfy-warning/10 text-fixlyfy-warning",
-                        job.status === "completed" && "bg-fixlyfy-success/10 text-fixlyfy-success",
-                        job.status === "canceled" && "bg-fixlyfy-error/10 text-fixlyfy-error"
-                      )}>
-                        {job.status === "scheduled" && "Scheduled"}
-                        {job.status === "in-progress" && "In Progress"}
-                        {job.status === "completed" && "Completed"}
-                        {job.status === "canceled" && "Canceled"}
+                      <span className="font-mono text-sm text-muted-foreground">{job.id}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleEditJob(e, job.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-2">{job.title}</h3>
+                    {job.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Badge 
+                      variant="outline" 
+                      className="flex items-center gap-1"
+                      style={statusStyle}
+                    >
+                      {statusIcon}
+                      {job.status}
+                    </Badge>
+                    
+                    {jobTypeDisplay.color ? (
+                      <Badge 
+                        variant="outline"
+                        style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
+                      >
+                        {jobTypeDisplay.name}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {job.tags && job.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {job.tags.slice(0, 2).map((tag, index) => {
-                            const tagColor = tagColorMap[tag];
-                            return (
-                              <Badge
-                                key={index}
-                                variant="outline"
-                                className={`text-xs ${getTagColor(tag)}`}
-                                style={tagColor ? { borderColor: tagColor, color: tagColor } : undefined}
-                              >
-                                {tag}
-                              </Badge>
-                            );
-                          })}
-                          {job.tags.length > 2 && (
-                            <Badge 
-                              variant="outline" 
-                              className="text-xs bg-gray-50 border-gray-200 text-gray-600"
-                              title={job.tags.slice(2).join(", ")}
-                            >
-                              +{job.tags.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">No tags</span>
+                    ) : (
+                      <Badge variant="secondary">
+                        {jobTypeDisplay.name}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {job.date && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {format(new Date(job.date), "MMM dd, yyyy")}
+                    </div>
+                  )}
+                  
+                  {job.revenue && job.revenue > 0 && (
+                    <div className="flex items-center text-sm font-medium text-green-600">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      ${job.revenue.toFixed(2)}
+                    </div>
+                  )}
+                  
+                  {job.tags && job.tags.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                      {job.tags.slice(0, 2).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {job.tags.length > 2 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{job.tags.length - 2} more
+                        </span>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {job.custom_fields && job.custom_fields.length > 0 ? (
-                        <div className="space-y-1">
-                          {job.custom_fields.slice(0, 1).map((field) => (
-                            <div key={field.id} className="text-xs">
-                              <span className="font-medium">{field.name}:</span>{' '}
-                              <span className="text-muted-foreground">
-                                {field.value || 'Not set'}
-                              </span>
-                            </div>
-                          ))}
-                          {job.custom_fields.length > 1 && (
-                            <div className="text-xs text-muted-foreground">
-                              +{job.custom_fields.length - 1} more
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">No custom fields</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {job.date ? new Date(job.date).toLocaleDateString() : "No date"}
-                      {job.schedule_start && (
-                        <div className="text-xs text-fixlyfy-text-secondary">
-                          {new Date(job.schedule_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span>{job.technician_id ? "Assigned" : "Unassigned"}</span>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      ${(job.revenue || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical size={16} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                            <Eye size={16} className="mr-2" /> View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Pencil size={16} className="mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <UserPlus size={16} className="mr-2" /> Assign Technician
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail size={16} className="mr-2" /> Send Reminder
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Tag size={16} className="mr-2" /> Manage Tags
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <File size={16} className="mr-2" /> View Invoice
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-fixlyfy-error">
-                            <Trash size={16} className="mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </div>
+                  )}
+                </div>
+              </ModernCard>
+            );
+          })}
         </div>
-      )}
-    </>
+      </div>
+    );
+  }
+
+  // List view (table format)
+  return (
+    <ModernCard variant="elevated">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-4 w-12">
+                <Checkbox 
+                  checked={areAllJobsSelected}
+                  onCheckedChange={onSelectAllJobs}
+                />
+              </th>
+              <th className="text-left p-4 font-semibold">Job ID</th>
+              <th className="text-left p-4 font-semibold">Title</th>
+              <th className="text-left p-4 font-semibold">Status</th>
+              <th className="text-left p-4 font-semibold">Type</th>
+              <th className="text-left p-4 font-semibold">Date</th>
+              <th className="text-left p-4 font-semibold">Revenue</th>
+              <th className="text-right p-4 w-20">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.map((job) => {
+              const statusStyle = getStatusBadgeStyle(job.status);
+              const jobTypeDisplay = getJobTypeDisplay(job);
+              const statusIcon = getStatusIcon(job.status);
+              
+              return (
+                <tr 
+                  key={job.id} 
+                  className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => handleJobClick(job.id)}
+                >
+                  <td className="p-4">
+                    <Checkbox 
+                      checked={selectedJobs.includes(job.id)}
+                      onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </td>
+                  <td className="p-4">
+                    <span className="font-mono text-sm">{job.id}</span>
+                  </td>
+                  <td className="p-4">
+                    <div>
+                      <div className="font-medium">{job.title}</div>
+                      {job.description && (
+                        <div className="text-sm text-muted-foreground line-clamp-1">
+                          {job.description}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <Badge 
+                      variant="outline" 
+                      className="flex items-center gap-1 w-fit"
+                      style={statusStyle}
+                    >
+                      {statusIcon}
+                      {job.status}
+                    </Badge>
+                  </td>
+                  <td className="p-4">
+                    {jobTypeDisplay.color ? (
+                      <Badge 
+                        variant="outline"
+                        style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
+                      >
+                        {jobTypeDisplay.name}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        {jobTypeDisplay.name}
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {job.date ? (
+                      <div className="flex items-center text-sm">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {format(new Date(job.date), "MMM dd, yyyy")}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {job.revenue && job.revenue > 0 ? (
+                      <div className="flex items-center text-sm font-medium text-green-600">
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        ${job.revenue.toFixed(2)}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleEditJob(e, job.id)}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </ModernCard>
   );
 };
