@@ -101,6 +101,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
   }, [clientId]);
 
+  // Re-add the missing useEffect
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs, refreshTrigger]);
