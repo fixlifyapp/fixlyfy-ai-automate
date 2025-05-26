@@ -39,17 +39,17 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
   
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <Skeleton className="h-6 w-24" />
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-32" />
+      <div className="p-4">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-28" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
           </div>
         </div>
       </div>
@@ -58,10 +58,10 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
 
   if (!job) {
     return (
-      <div className="p-8">
-        <div className="text-center py-8">
-          <div className="text-red-500 text-lg font-medium">Error loading job details</div>
-          <p className="text-slate-500 mt-2">Please try refreshing the page</p>
+      <div className="p-4">
+        <div className="text-center py-6">
+          <div className="text-red-500 font-medium">Error loading job details</div>
+          <p className="text-slate-500 text-sm mt-1">Please try refreshing the page</p>
         </div>
       </div>
     );
@@ -110,8 +110,8 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
   };
   
   return (
-    <div className="p-8">
-      <div className="flex flex-col xl:flex-row gap-8 xl:items-start xl:justify-between">
+    <div className="p-4">
+      <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:justify-between">
         <div className="flex-1 min-w-0">
           <JobInfoSection 
             job={job}
@@ -134,7 +134,7 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
           />
         </div>
         
-        <div className="xl:flex-shrink-0">
+        <div className="lg:flex-shrink-0">
           <JobActions 
             onCompleteJob={handleCompleteJob}
             onCancelJob={handleCancelJob}

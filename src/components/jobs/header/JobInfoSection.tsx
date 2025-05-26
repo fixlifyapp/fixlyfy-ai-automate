@@ -51,43 +51,43 @@ export const JobInfoSection = ({
   if (isLoadingFinancials) {
     return (
       <div className="space-y-4">
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-6 w-24" />
-          <div className="flex items-start gap-4">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-5 w-20" />
+          <div className="flex items-start gap-3">
             <div className="flex flex-col">
-              <Skeleton className="h-7 w-40 mb-1" />
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-6 w-32 mb-1" />
+              <Skeleton className="h-4 w-20 mb-1" />
+              <Skeleton className="h-4 w-28" />
             </div>
             <div className="flex gap-2">
-              <Skeleton className="h-8 w-8 rounded" />
-              <Skeleton className="h-8 w-8 rounded" />
-              <Skeleton className="h-8 w-8 rounded" />
+              <Skeleton className="h-7 w-7 rounded" />
+              <Skeleton className="h-7 w-7 rounded" />
+              <Skeleton className="h-7 w-7 rounded" />
             </div>
           </div>
         </div>
-        <div className="flex gap-4">
-          <Skeleton className="h-20 w-36 rounded-xl" />
-          <Skeleton className="h-20 w-36 rounded-xl" />
-          <Skeleton className="h-20 w-36 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Skeleton className="h-16 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-lg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Job Info Section */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div className="flex flex-col gap-3">
+    <div className="space-y-4">
+      {/* Job Info Section - Simplified */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+        <div className="flex flex-col gap-2">
           <JobStatusBadge status={status} onStatusChange={onStatusChange} />
           
-          <div className="flex items-start gap-4">
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-bold text-slate-900">{job.client}</h1>
-              <span className="text-sm text-slate-500 font-medium">Job #{job.id}</span>
+          <div className="flex items-start gap-3">
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-xl font-bold text-slate-900 truncate">{job.client}</h1>
+              <span className="text-xs text-slate-500 font-medium">Job #{job.id}</span>
               {job.service && (
-                <span className="text-sm text-slate-600 mt-1">{job.service}</span>
+                <span className="text-sm text-slate-600 truncate">{job.service}</span>
               )}
             </div>
             
@@ -100,20 +100,20 @@ export const JobInfoSection = ({
         </div>
       </div>
 
-      {/* Financial Overview - Minimalistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Financial Overview - Compact Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Total Invoiced */}
-        <div className="group relative overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 p-5 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full shadow-sm">
-              <FileText className="h-5 w-5 text-white" />
+        <div className="relative overflow-hidden rounded-lg border border-blue-200 bg-blue-50/80 p-3 transition-shadow hover:shadow-md">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded-lg">
+              <FileText className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+            <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
               Invoiced
             </span>
           </div>
           <div className="space-y-1">
-            <div className="text-2xl font-bold text-blue-900">
+            <div className="text-xl font-bold text-blue-900">
               {formatCurrency(invoiceAmount)}
             </div>
             {(paidInvoices > 0 || unpaidInvoices > 0) && (
@@ -125,17 +125,17 @@ export const JobInfoSection = ({
         </div>
 
         {/* Total Paid */}
-        <div className="group relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-5 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-full shadow-sm">
-              <CreditCard className="h-5 w-5 text-white" />
+        <div className="relative overflow-hidden rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 transition-shadow hover:shadow-md">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-center w-8 h-8 bg-emerald-500 rounded-lg">
+              <CreditCard className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">
+            <span className="text-xs font-medium text-emerald-600 uppercase tracking-wide">
               Received
             </span>
           </div>
           <div className="space-y-1">
-            <div className="text-2xl font-bold text-emerald-900">
+            <div className="text-xl font-bold text-emerald-900">
               {formatCurrency(totalPaid)}
             </div>
             {totalPaid > 0 && (
@@ -147,31 +147,31 @@ export const JobInfoSection = ({
         </div>
         
         {/* Balance/Outstanding */}
-        <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-300 hover:shadow-lg ${
+        <div className={`relative overflow-hidden rounded-lg border p-3 transition-shadow hover:shadow-md ${
           balance > 0 
-            ? "border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50" 
-            : "border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50"
+            ? "border-orange-200 bg-orange-50/80" 
+            : "border-slate-200 bg-slate-50/80"
         }`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full shadow-sm ${
+          <div className="flex items-center justify-between mb-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${
               balance > 0 
                 ? "bg-orange-500" 
                 : "bg-slate-500"
             }`}>
               {balance > 0 ? (
-                <AlertCircle className="h-5 w-5 text-white" />
+                <AlertCircle className="h-4 w-4 text-white" />
               ) : (
-                <TrendingUp className="h-5 w-5 text-white" />
+                <TrendingUp className="h-4 w-4 text-white" />
               )}
             </div>
-            <span className={`text-xs font-semibold uppercase tracking-wide ${
+            <span className={`text-xs font-medium uppercase tracking-wide ${
               balance > 0 ? "text-orange-600" : "text-slate-600"
             }`}>
               {balance > 0 ? "Outstanding" : "Complete"}
             </span>
           </div>
           <div className="space-y-1">
-            <div className={`text-2xl font-bold ${
+            <div className={`text-xl font-bold ${
               balance > 0 ? "text-orange-900" : "text-slate-900"
             }`}>
               {formatCurrency(balance)}
