@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
-import { DollarSign, AlertCircle, TrendingUp, CreditCard } from "lucide-react";
+import { DollarSign, AlertCircle, TrendingUp, CreditCard, FileText } from "lucide-react";
 
 interface JobInfoSectionProps {
   job: {
@@ -50,14 +50,14 @@ export const JobInfoSection = ({
 
   if (isLoadingFinancials) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="space-y-4">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-6 w-24" />
           <div className="flex items-start gap-4">
             <div className="flex flex-col">
-              <Skeleton className="h-6 w-32 mb-1" />
-              <Skeleton className="h-4 w-20 mb-2" />
-              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-7 w-40 mb-1" />
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-4 w-32" />
             </div>
             <div className="flex gap-2">
               <Skeleton className="h-8 w-8 rounded" />
@@ -67,103 +67,127 @@ export const JobInfoSection = ({
           </div>
         </div>
         <div className="flex gap-4">
-          <Skeleton className="h-16 w-32 rounded-lg" />
-          <Skeleton className="h-16 w-32 rounded-lg" />
-          <Skeleton className="h-16 w-32 rounded-lg" />
+          <Skeleton className="h-20 w-36 rounded-xl" />
+          <Skeleton className="h-20 w-36 rounded-xl" />
+          <Skeleton className="h-20 w-36 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Status and Job Info */}
-      <div className="flex flex-col gap-3">
-        <JobStatusBadge status={status} onStatusChange={onStatusChange} />
-        
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col">
-            <h2 className="text-xl font-semibold text-slate-900">{job.client}</h2>
-            <span className="text-sm text-slate-500">Job #{job.id}</span>
-            {job.service && (
-              <span className="text-sm text-slate-600 mt-1">{job.service}</span>
-            )}
-          </div>
+    <div className="space-y-6">
+      {/* Job Info Section */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex flex-col gap-3">
+          <JobStatusBadge status={status} onStatusChange={onStatusChange} />
           
-          <ClientContactButtons
-            onCallClick={onCallClick}
-            onMessageClick={onMessageClick}
-            onEditClient={onEditClient}
-          />
+          <div className="flex items-start gap-4">
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold text-slate-900">{job.client}</h1>
+              <span className="text-sm text-slate-500 font-medium">Job #{job.id}</span>
+              {job.service && (
+                <span className="text-sm text-slate-600 mt-1">{job.service}</span>
+              )}
+            </div>
+            
+            <ClientContactButtons
+              onCallClick={onCallClick}
+              onMessageClick={onMessageClick}
+              onEditClient={onEditClient}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Enhanced Financial Summary - 3 Minimalistic Cards */}
-      <div className="flex gap-3 flex-wrap">
-        {/* Total Invoice Amount */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 rounded-lg border border-blue-100 min-w-[140px]">
-          <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-blue-600 font-medium">Total Invoiced</span>
-            <span className="font-semibold text-blue-900 text-lg">
-              {formatCurrency(invoiceAmount)}
+      {/* Financial Overview - Minimalistic Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Total Invoiced */}
+        <div className="group relative overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 p-5 transition-all duration-300 hover:shadow-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full shadow-sm">
+              <FileText className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+              Invoiced
             </span>
-            {unpaidInvoices > 0 && (
-              <span className="text-xs text-blue-500">{unpaidInvoices} unpaid</span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-2xl font-bold text-blue-900">
+              {formatCurrency(invoiceAmount)}
+            </div>
+            {(paidInvoices > 0 || unpaidInvoices > 0) && (
+              <div className="text-xs text-blue-600">
+                {paidInvoices} paid • {unpaidInvoices} pending
+              </div>
             )}
           </div>
         </div>
 
         {/* Total Paid */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 rounded-lg border border-emerald-100 min-w-[140px]">
-          <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 rounded-full">
-            <CreditCard className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-emerald-600 font-medium">Total Paid</span>
-            <span className="font-semibold text-emerald-900 text-lg">
-              {formatCurrency(totalPaid)}
+        <div className="group relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-5 transition-all duration-300 hover:shadow-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-full shadow-sm">
+              <CreditCard className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">
+              Received
             </span>
-            {paidInvoices > 0 && (
-              <span className="text-xs text-emerald-500">{paidInvoices} paid</span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-2xl font-bold text-emerald-900">
+              {formatCurrency(totalPaid)}
+            </div>
+            {totalPaid > 0 && (
+              <div className="text-xs text-emerald-600">
+                Payment received
+              </div>
             )}
           </div>
         </div>
         
         {/* Balance/Outstanding */}
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border min-w-[140px] ${
+        <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-300 hover:shadow-lg ${
           balance > 0 
-            ? "bg-orange-50 border-orange-100" 
-            : "bg-slate-50 border-slate-100"
+            ? "border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50" 
+            : "border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50"
         }`}>
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-            balance > 0 
-              ? "bg-orange-100" 
-              : "bg-slate-100"
-          }`}>
-            {balance > 0 ? (
-              <AlertCircle className="h-4 w-4 text-orange-600" />
-            ) : (
-              <TrendingUp className="h-4 w-4 text-slate-600" />
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span className={`text-xs font-medium ${
+          <div className="flex items-center justify-between mb-3">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full shadow-sm ${
+              balance > 0 
+                ? "bg-orange-500" 
+                : "bg-slate-500"
+            }`}>
+              {balance > 0 ? (
+                <AlertCircle className="h-5 w-5 text-white" />
+              ) : (
+                <TrendingUp className="h-5 w-5 text-white" />
+              )}
+            </div>
+            <span className={`text-xs font-semibold uppercase tracking-wide ${
               balance > 0 ? "text-orange-600" : "text-slate-600"
             }`}>
-              {balance > 0 ? "Outstanding" : "Fully Paid"}
+              {balance > 0 ? "Outstanding" : "Complete"}
             </span>
-            <span className={`font-semibold text-lg ${
+          </div>
+          <div className="space-y-1">
+            <div className={`text-2xl font-bold ${
               balance > 0 ? "text-orange-900" : "text-slate-900"
             }`}>
               {formatCurrency(balance)}
-            </span>
-            {overdueAmount > 0 && (
-              <span className="text-xs text-red-500">
+            </div>
+            {overdueAmount > 0 ? (
+              <div className="text-xs text-red-600 font-medium">
                 ${overdueAmount.toFixed(2)} overdue
-              </span>
+              </div>
+            ) : balance === 0 ? (
+              <div className="text-xs text-slate-600">
+                Fully paid
+              </div>
+            ) : (
+              <div className="text-xs text-orange-600">
+                Payment pending
+              </div>
             )}
           </div>
         </div>

@@ -34,16 +34,23 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
     openModal = modalContext.openModal;
   } catch (error) {
     console.warn("Modal context not available:", error);
-    // Provide a fallback function that shows a toast instead
     openModal = () => toast.error("Modal functionality unavailable");
   }
   
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4 w-48"></div>
-          <div className="h-5 bg-gray-200 rounded w-72"></div>
+      <div className="p-8">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -51,15 +58,17 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
 
   if (!job) {
     return (
-      <div className="p-6">
-        <div className="text-red-500">Error loading job details</div>
+      <div className="p-8">
+        <div className="text-center py-8">
+          <div className="text-red-500 text-lg font-medium">Error loading job details</div>
+          <p className="text-slate-500 mt-2">Please try refreshing the page</p>
+        </div>
       </div>
     );
   }
 
   const handleCallClick = () => {
     if (job.phone) {
-      // Use the proper modal type that's defined in ModalType
       openModal("callClient", {
         title: "Call Client",
         description: `Call ${job.client} at ${job.phone}?`,
@@ -73,7 +82,6 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
 
   const handleMessageClick = () => {
     if (job.phone) {
-      // Use the proper modal type that's defined in ModalType
       openModal("messageClient", {
         title: "Message Client",
         description: `Message ${job.client} at ${job.phone}?`,
@@ -85,12 +93,10 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
     }
   };
   
-  // Handle status change
   const handleStatusChange = (newStatus: string) => {
     updateJobStatus(newStatus);
   };
   
-  // Job action handlers
   const handleCompleteJob = () => {
     handleStatusChange("completed");
   };
@@ -101,33 +107,34 @@ export const JobDetailsHeader = ({ jobId }: JobDetailsHeaderProps = {}) => {
 
   const handleReschedule = () => {
     toast.success("Job rescheduling initiated");
-    // In a real app, this would open a rescheduling dialog
   };
   
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row justify-between gap-4 md:items-center">
-        <JobInfoSection 
-          job={job}
-          status={currentStatus}
-          onStatusChange={handleStatusChange}
-          onCallClick={handleCallClick}
-          onMessageClick={handleMessageClick}
-          onEditClient={() => {
-            if (job.clientId) {
-              navigate(`/clients/${job.clientId}`);
-            }
-          }}
-          invoiceAmount={financialsLoading ? 0 : invoiceAmount}
-          balance={financialsLoading ? 0 : balance}
-          totalPaid={financialsLoading ? 0 : totalPaid}
-          overdueAmount={financialsLoading ? 0 : overdueAmount}
-          paidInvoices={financialsLoading ? 0 : paidInvoices}
-          unpaidInvoices={financialsLoading ? 0 : unpaidInvoices}
-          isLoadingFinancials={financialsLoading}
-        />
+    <div className="p-8">
+      <div className="flex flex-col xl:flex-row gap-8 xl:items-start xl:justify-between">
+        <div className="flex-1 min-w-0">
+          <JobInfoSection 
+            job={job}
+            status={currentStatus}
+            onStatusChange={handleStatusChange}
+            onCallClick={handleCallClick}
+            onMessageClick={handleMessageClick}
+            onEditClient={() => {
+              if (job.clientId) {
+                navigate(`/clients/${job.clientId}`);
+              }
+            }}
+            invoiceAmount={financialsLoading ? 0 : invoiceAmount}
+            balance={financialsLoading ? 0 : balance}
+            totalPaid={financialsLoading ? 0 : totalPaid}
+            overdueAmount={financialsLoading ? 0 : overdueAmount}
+            paidInvoices={financialsLoading ? 0 : paidInvoices}
+            unpaidInvoices={financialsLoading ? 0 : unpaidInvoices}
+            isLoadingFinancials={financialsLoading}
+          />
+        </div>
         
-        <div>
+        <div className="xl:flex-shrink-0">
           <JobActions 
             onCompleteJob={handleCompleteJob}
             onCancelJob={handleCancelJob}
