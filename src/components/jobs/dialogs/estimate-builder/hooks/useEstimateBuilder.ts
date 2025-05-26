@@ -140,7 +140,7 @@ export const useEstimateBuilder = ({ estimateId, open, onSyncToInvoice, jobId }:
         setNotes(estimate.notes || "");
         updateFormData({
           estimateId: estimate.id,
-          estimateNumber: estimate.estimate_number,
+          estimateNumber: estimate.number,
           items: lineItemsData?.map(item => ({
             description: item.description || "",
             quantity: item.quantity || 1,
@@ -219,9 +219,12 @@ export const useEstimateBuilder = ({ estimateId, open, onSyncToInvoice, jobId }:
         id: estimate.id,
         job_id: estimate.job_id,
         estimate_number: estimate.estimate_number,
+        number: estimate.estimate_number,
         date: estimate.date || estimate.created_at,
         total: estimate.total,
+        amount: estimate.total,
         status: estimate.status,
+        notes: estimate.notes,
         created_at: estimate.created_at,
         updated_at: estimate.updated_at
       };
@@ -287,9 +290,12 @@ export const useEstimateBuilder = ({ estimateId, open, onSyncToInvoice, jobId }:
         id: estimate.id,
         job_id: estimate.job_id,
         estimate_number: estimate.estimate_number,
+        number: estimate.estimate_number,
         date: estimate.date || estimate.created_at,
         total: estimate.total,
+        amount: estimate.total,
         status: estimate.status,
+        notes: estimate.notes,
         created_at: estimate.created_at,
         updated_at: estimate.updated_at
       };

@@ -2,15 +2,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
+export type PaymentStatus = "paid" | "refunded" | "disputed";
+
 export interface Payment {
   id: string;
   invoice_id: string;
   amount: number;
-  method: string;
+  method: PaymentMethod;
   date: string;
   notes?: string;
   reference?: string;
-  status?: string;
+  status?: PaymentStatus;
   client_id?: string;
   job_id?: string;
   technician_id?: string;
@@ -20,10 +23,10 @@ export interface Payment {
 
 export interface PaymentInput {
   amount: number;
-  method: string;
+  method: PaymentMethod;
   date: string;
   notes?: string;
-  status?: string;
+  status?: PaymentStatus;
 }
 
 export const usePayments = (jobId: string) => {

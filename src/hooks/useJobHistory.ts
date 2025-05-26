@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { HistoryItem, HistoryItemInput } from '@/types/job-history';
 import { useRBAC } from '@/components/auth/RBACProvider';
 
+// Export types for external use
 export type { HistoryItem, HistoryItemInput } from '@/types/job-history';
 
 export const useJobHistory = (jobId: string) => {

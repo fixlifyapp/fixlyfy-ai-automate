@@ -1,22 +1,21 @@
 
-import React from "react";
-import { LineItem } from "../../builder/types";
+import { LineItem } from "@/components/jobs/builder/types";
 
 interface InvoicePreviewProps {
-  invoiceNumber: string;
+  invoice_number: string;
   lineItems: LineItem[];
   taxRate: number;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
-  notes?: string;
-  clientInfo?: any;
-  issueDate?: string;
-  dueDate?: string;
+  notes: string;
+  clientInfo: any;
+  issueDate: string;
+  dueDate: string;
 }
 
 export const InvoicePreview = ({
-  invoiceNumber,
+  invoice_number,
   lineItems,
   taxRate,
   calculateSubtotal,
@@ -27,91 +26,78 @@ export const InvoicePreview = ({
   issueDate,
   dueDate
 }: InvoicePreviewProps) => {
-  const subtotal = calculateSubtotal();
-  const tax = calculateTotalTax();
-  const total = calculateGrandTotal();
-
   return (
-    <div className="bg-white p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-8">
+    <div className="max-w-4xl mx-auto p-8 bg-white">
+      <div className="border-b-2 border-gray-200 pb-6 mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">INVOICE</h1>
+        <p className="text-lg text-gray-600">#{invoice_number}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">INVOICE</h1>
-          <p className="text-gray-600 mt-2">#{invoiceNumber}</p>
+          <h3 className="font-semibold text-gray-900 mb-2">Bill To:</h3>
+          <div className="text-gray-700">
+            <p className="font-medium">{clientInfo?.name || 'Client Name'}</p>
+            <p>{clientInfo?.email}</p>
+            <p>{clientInfo?.phone}</p>
+          </div>
         </div>
+        
         <div className="text-right">
-          <p className="text-sm text-gray-600">Issue Date: {issueDate || new Date().toLocaleDateString()}</p>
-          <p className="text-sm text-gray-600">Due Date: {dueDate || new Date().toLocaleDateString()}</p>
+          <div className="mb-2">
+            <span className="text-gray-600">Issue Date: </span>
+            <span className="font-medium">{issueDate}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Due Date: </span>
+            <span className="font-medium">{dueDate}</span>
+          </div>
         </div>
       </div>
 
-      {/* Client Info */}
-      {clientInfo && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-2">Bill To:</h3>
-          <div className="text-gray-700">
-            <p>{clientInfo.name}</p>
-            {clientInfo.company && <p>{clientInfo.company}</p>}
-            {clientInfo.email && <p>{clientInfo.email}</p>}
-            {clientInfo.phone && <p>{clientInfo.phone}</p>}
-            {clientInfo.address && <p>{clientInfo.address}</p>}
-          </div>
-        </div>
-      )}
-
-      {/* Line Items */}
       <div className="mb-8">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b-2 border-gray-300">
-              <th className="text-left py-2">Description</th>
-              <th className="text-right py-2">Qty</th>
-              <th className="text-right py-2">Rate</th>
-              <th className="text-right py-2">Amount</th>
+            <tr className="border-b-2 border-gray-200">
+              <th className="text-left py-3 px-2 font-semibold text-gray-900">Description</th>
+              <th className="text-center py-3 px-2 font-semibold text-gray-900">Qty</th>
+              <th className="text-right py-3 px-2 font-semibold text-gray-900">Unit Price</th>
+              <th className="text-right py-3 px-2 font-semibold text-gray-900">Total</th>
             </tr>
           </thead>
           <tbody>
             {lineItems.map((item, index) => (
-              <tr key={index} className="border-b border-gray-200">
-                <td className="py-3">
-                  <div>
-                    <p className="font-medium">{item.name || item.description}</p>
-                    {item.description && item.name !== item.description && (
-                      <p className="text-sm text-gray-600">{item.description}</p>
-                    )}
-                  </div>
-                </td>
-                <td className="text-right py-3">{item.quantity}</td>
-                <td className="text-right py-3">${item.unitPrice.toFixed(2)}</td>
-                <td className="text-right py-3">${(item.quantity * item.unitPrice).toFixed(2)}</td>
+              <tr key={index} className="border-b border-gray-100">
+                <td className="py-3 px-2 text-gray-800">{item.description}</td>
+                <td className="py-3 px-2 text-center text-gray-800">{item.quantity}</td>
+                <td className="py-3 px-2 text-right text-gray-800">${item.unitPrice.toFixed(2)}</td>
+                <td className="py-3 px-2 text-right text-gray-800">${(item.quantity * item.unitPrice).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Totals */}
       <div className="flex justify-end mb-8">
         <div className="w-64">
-          <div className="flex justify-between py-2">
-            <span>Subtotal:</span>
-            <span>${subtotal.toFixed(2)}</span>
+          <div className="flex justify-between py-2 border-b border-gray-200">
+            <span className="text-gray-600">Subtotal:</span>
+            <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
           </div>
-          <div className="flex justify-between py-2">
-            <span>Tax ({taxRate}%):</span>
-            <span>${tax.toFixed(2)}</span>
+          <div className="flex justify-between py-2 border-b border-gray-200">
+            <span className="text-gray-600">Tax ({taxRate}%):</span>
+            <span className="font-medium">${calculateTotalTax().toFixed(2)}</span>
           </div>
-          <div className="flex justify-between py-2 border-t-2 border-gray-300 font-bold text-lg">
-            <span>Total:</span>
-            <span>${total.toFixed(2)}</span>
+          <div className="flex justify-between py-3 border-b-2 border-gray-900">
+            <span className="text-lg font-semibold text-gray-900">Total:</span>
+            <span className="text-lg font-bold text-gray-900">${calculateGrandTotal().toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* Notes */}
       {notes && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-2">Notes:</h3>
+        <div className="border-t border-gray-200 pt-6">
+          <h4 className="font-semibold text-gray-900 mb-2">Notes:</h4>
           <p className="text-gray-700 whitespace-pre-wrap">{notes}</p>
         </div>
       )}

@@ -9,8 +9,6 @@ import { Product, LineItem } from "@/components/jobs/builder/types";
 interface InvoiceFormData {
   invoiceId?: string;
   invoiceNumber: string;
-  issueDate: string;
-  dueDate: string;
   items: Array<{
     description: string;
     quantity: number;
@@ -25,8 +23,6 @@ interface InvoiceFormData {
 export const useInvoiceBuilder = (jobId: string) => {
   const [formData, setFormData] = useState<InvoiceFormData>({
     invoiceNumber: `INV-${Date.now()}`,
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     items: [],
     notes: "",
     status: "draft",
@@ -37,23 +33,6 @@ export const useInvoiceBuilder = (jobId: string) => {
   const [taxRate, setTaxRate] = useState<number>(13);
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-
-  const updateFormData = useCallback((updates: Partial<InvoiceFormData>) => {
-    setFormData(prev => {
-      const updated = { ...prev, ...updates };
-      
-      // Recalculate total when items change
-      if (updates.items) {
-        updated.total = updates.items.reduce((sum, item) => {
-          const itemTotal = item.quantity * item.unitPrice;
-          return sum + (item.taxable ? itemTotal * (1 + taxRate / 100) : itemTotal);
-        }, 0);
-      }
-      
-      return updated;
-    });
-  }, [taxRate]);
 
   const handleAddProduct = useCallback((product: Product) => {
     const newLineItem: LineItem = {
@@ -97,23 +76,7 @@ export const useInvoiceBuilder = (jobId: string) => {
     return calculateSubtotal() + calculateTotalTax();
   }, [calculateSubtotal, calculateTotalTax]);
 
-  const calculateTotalMargin = useCallback(() => {
-    return lineItems.reduce((sum, item) => {
-      const itemMargin = (item.unitPrice - (item.ourPrice || 0)) * item.quantity;
-      return sum + itemMargin;
-    }, 0);
-  }, [lineItems]);
-
-  const calculateMarginPercentage = useCallback(() => {
-    const totalRevenue = calculateSubtotal();
-    const totalMargin = calculateTotalMargin();
-    return totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
-  }, [calculateSubtotal, calculateTotalMargin]);
-
   const initializeFromEstimate = useCallback((estimate: Estimate) => {
-    const invoiceNumber = `INV-${Date.now()}`;
-    
-    // Get estimate line items
     const getEstimateItems = async () => {
       try {
         const { data: lineItemsData, error } = await supabase
@@ -139,17 +102,6 @@ export const useInvoiceBuilder = (jobId: string) => {
         
         setLineItems(items);
         setNotes(estimate.notes || "");
-        updateFormData({
-          invoiceNumber,
-          items: lineItemsData?.map(item => ({
-            description: item.description || "",
-            quantity: item.quantity || 1,
-            unitPrice: item.unit_price || 0,
-            taxable: item.taxable || true
-          })) || [],
-          notes: estimate.notes || "",
-          total: estimate.total || 0
-        });
       } catch (error) {
         console.error("Error loading estimate items:", error);
         toast.error("Failed to load estimate items");
@@ -157,7 +109,7 @@ export const useInvoiceBuilder = (jobId: string) => {
     };
     
     getEstimateItems();
-  }, [updateFormData]);
+  }, []);
 
   const initializeFromInvoice = useCallback((invoice: Invoice) => {
     const getInvoiceItems = async () => {
@@ -185,20 +137,13 @@ export const useInvoiceBuilder = (jobId: string) => {
         
         setLineItems(items);
         setNotes(invoice.notes || "");
-        updateFormData({
+        setFormData(prev => ({
+          ...prev,
           invoiceId: invoice.id,
           invoiceNumber: invoice.number,
-          issueDate: new Date(invoice.date).toISOString().split('T')[0],
-          items: lineItemsData?.map(item => ({
-            description: item.description || "",
-            quantity: item.quantity || 1,
-            unitPrice: item.unit_price || 0,
-            taxable: item.taxable || true
-          })) || [],
-          notes: invoice.notes || "",
           status: invoice.status,
-          total: invoice.total || 0
-        });
+          total: invoice.total
+        }));
       } catch (error) {
         console.error("Error loading invoice items:", error);
         toast.error("Failed to load invoice items");
@@ -206,13 +151,11 @@ export const useInvoiceBuilder = (jobId: string) => {
     };
     
     getInvoiceItems();
-  }, [updateFormData]);
+  }, []);
 
   const resetForm = useCallback(() => {
     setFormData({
       invoiceNumber: `INV-${Date.now()}`,
-      issueDate: new Date().toISOString().split('T')[0],
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       items: [],
       notes: "",
       status: "draft",
@@ -222,248 +165,92 @@ export const useInvoiceBuilder = (jobId: string) => {
     setNotes("");
   }, []);
 
-  const createInvoice = useCallback(async (): Promise<Invoice | null> => {
+  const saveInvoiceChanges = useCallback(async (): Promise<Invoice | null> => {
     if (isSubmitting) return null;
     
     setIsSubmitting(true);
     
     try {
-      // Create the invoice
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          job_id: jobId,
-          invoice_number: formData.invoiceNumber,
-          total: calculateGrandTotal(),
-          balance: calculateGrandTotal(),
-          amount_paid: 0,
-          status: formData.status,
-          notes: notes,
-          date: formData.issueDate
-        })
-        .select()
-        .single();
-        
-      if (invoiceError) throw invoiceError;
-      
-      // Create line items from lineItems state
-      if (lineItems.length > 0) {
-        const lineItemsData = lineItems.map(item => ({
-          parent_id: invoice.id,
-          parent_type: 'invoice',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-        
-        const { error: lineItemsError } = await supabase
-          .from('line_items')
-          .insert(lineItemsData);
+      const invoiceData = {
+        job_id: jobId,
+        invoice_number: formData.invoiceNumber,
+        total: calculateGrandTotal(),
+        status: formData.status,
+        notes: notes
+      };
+
+      let invoice;
+      if (formData.invoiceId) {
+        // Update existing invoice
+        const { data, error } = await supabase
+          .from('invoices')
+          .update(invoiceData)
+          .eq('id', formData.invoiceId)
+          .select()
+          .single();
           
-        if (lineItemsError) throw lineItemsError;
+        if (error) throw error;
+        invoice = data;
+      } else {
+        // Create new invoice
+        const { data, error } = await supabase
+          .from('invoices')
+          .insert(invoiceData)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        invoice = data;
       }
       
-      // Update form data with the created invoice ID
-      updateFormData({ invoiceId: invoice.id });
+      // Handle line items
+      if (invoice) {
+        // Delete existing line items
+        await supabase
+          .from('line_items')
+          .delete()
+          .eq('parent_id', invoice.id)
+          .eq('parent_type', 'invoice');
+        
+        // Create new line items
+        if (lineItems.length > 0) {
+          const lineItemsData = lineItems.map(item => ({
+            parent_id: invoice.id,
+            parent_type: 'invoice',
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            taxable: item.taxable
+          }));
+          
+          await supabase
+            .from('line_items')
+            .insert(lineItemsData);
+        }
+      }
       
-      toast.success("Invoice created successfully");
+      toast.success(formData.invoiceId ? "Invoice updated successfully" : "Invoice created successfully");
+      
       return {
         id: invoice.id,
-        number: invoice.invoice_number,
         job_id: invoice.job_id,
-        date: invoice.date,
-        due_date: formData.dueDate,
+        invoice_number: invoice.invoice_number,
+        number: invoice.invoice_number,
+        date: invoice.date || invoice.created_at,
         total: invoice.total,
         status: invoice.status,
-        notes: invoice.notes
+        notes: invoice.notes,
+        created_at: invoice.created_at,
+        updated_at: invoice.updated_at
       };
     } catch (error) {
-      console.error("Error creating invoice:", error);
-      toast.error("Failed to create invoice");
+      console.error("Error saving invoice:", error);
+      toast.error("Failed to save invoice");
       return null;
     } finally {
       setIsSubmitting(false);
     }
-  }, [jobId, formData, lineItems, notes, calculateGrandTotal, updateFormData, isSubmitting]);
-
-  const updateInvoice = useCallback(async (invoiceId: string): Promise<Invoice | null> => {
-    if (isSubmitting) return null;
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Update the invoice
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .update({
-          invoice_number: formData.invoiceNumber,
-          total: calculateGrandTotal(),
-          balance: calculateGrandTotal(),
-          status: formData.status,
-          notes: notes,
-          date: formData.issueDate
-        })
-        .eq('id', invoiceId)
-        .select()
-        .single();
-        
-      if (invoiceError) throw invoiceError;
-      
-      // Delete existing line items
-      const { error: deleteError } = await supabase
-        .from('line_items')
-        .delete()
-        .eq('parent_id', invoiceId)
-        .eq('parent_type', 'invoice');
-        
-      if (deleteError) throw deleteError;
-      
-      // Create new line items
-      if (lineItems.length > 0) {
-        const lineItemsData = lineItems.map(item => ({
-          parent_id: invoiceId,
-          parent_type: 'invoice',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-        
-        const { error: lineItemsError } = await supabase
-          .from('line_items')
-          .insert(lineItemsData);
-          
-        if (lineItemsError) throw lineItemsError;
-      }
-      
-      toast.success("Invoice updated successfully");
-      return {
-        id: invoice.id,
-        number: invoice.invoice_number,
-        job_id: invoice.job_id,
-        date: invoice.date,
-        due_date: formData.dueDate,
-        total: invoice.total,
-        status: invoice.status,
-        notes: invoice.notes
-      };
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-      toast.error("Failed to update invoice");
-      return null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [formData, lineItems, notes, calculateGrandTotal, isSubmitting]);
-
-  const sendInvoice = useCallback(async (
-    invoiceId: string,
-    recipient: string,
-    method: 'email' | 'sms',
-    customMessage?: string
-  ) => {
-    if (isSending) {
-      toast.error("Invoice is already being sent");
-      return false;
-    }
-    
-    setIsSending(true);
-    
-    toast.info(`Sending invoice via ${method}...`, {
-      duration: 2000
-    });
-    
-    try {
-      // Get invoice details
-      const { data: invoiceDetails, error: invoiceError } = await supabase
-        .from('invoice_details_view')
-        .select('*')
-        .eq('invoice_id', invoiceId)
-        .single();
-        
-      if (invoiceError) throw invoiceError;
-      
-      // Create communication record
-      const communicationData = {
-        invoice_id: invoiceId,
-        communication_type: method,
-        recipient,
-        subject: method === 'email' ? `Invoice ${invoiceDetails.invoice_number}` : null,
-        content: customMessage || `Your invoice ${invoiceDetails.invoice_number} is ready for payment.`,
-        status: 'pending',
-        invoice_number: invoiceDetails.invoice_number,
-        client_name: invoiceDetails.client_name,
-        client_email: invoiceDetails.client_email,
-        client_phone: invoiceDetails.client_phone
-      };
-      
-      const { error: commError } = await supabase
-        .from('invoice_communications')
-        .insert(communicationData);
-        
-      if (commError) throw commError;
-      
-      toast.success(`Invoice sent successfully via ${method}!`);
-      return true;
-    } catch (error) {
-      console.error("Error sending invoice:", error);
-      toast.error(`Failed to send invoice via ${method}`);
-      return false;
-    } finally {
-      setIsSending(false);
-    }
-  }, [isSending]);
-
-  const recordPayment = useCallback(async (
-    invoiceId: string, 
-    amount: number, 
-    method: string, 
-    reference?: string, 
-    notes?: string
-  ) => {
-    try {
-      // Record the payment
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          invoice_id: invoiceId,
-          amount,
-          method,
-          reference: reference || "",
-          notes: notes || "",
-          date: new Date().toISOString()
-        });
-        
-      if (paymentError) throw paymentError;
-      
-      // Update invoice balance
-      const { error: updateError } = await supabase
-        .from('invoices')
-        .update({
-          amount_paid: calculateGrandTotal() >= amount ? amount : calculateGrandTotal(),
-          balance: Math.max(0, calculateGrandTotal() - amount),
-          status: calculateGrandTotal() <= amount ? 'paid' : 'partial'
-        })
-        .eq('id', invoiceId);
-        
-      if (updateError) throw updateError;
-      
-      toast.success("Payment recorded successfully");
-    } catch (error) {
-      console.error("Error recording payment:", error);
-      toast.error("Failed to record payment");
-      throw error;
-    }
-  }, [calculateGrandTotal]);
-
-  const saveInvoiceChanges = useCallback(async () => {
-    if (formData.invoiceId) {
-      return await updateInvoice(formData.invoiceId);
-    } else {
-      return await createInvoice();
-    }
-  }, [formData.invoiceId, updateInvoice, createInvoice]);
+  }, [jobId, formData, lineItems, notes, calculateGrandTotal, isSubmitting]);
 
   return {
     formData,
@@ -471,26 +258,16 @@ export const useInvoiceBuilder = (jobId: string) => {
     taxRate,
     notes,
     invoiceNumber: formData.invoiceNumber,
-    issueDate: formData.issueDate,
-    dueDate: formData.dueDate,
     isSubmitting,
-    isSending,
     setLineItems,
     setTaxRate,
     setNotes,
-    updateFormData,
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
-    calculateTotalMargin,
-    calculateMarginPercentage,
-    createInvoice,
-    updateInvoice,
-    sendInvoice,
-    recordPayment,
     saveInvoiceChanges,
     resetForm,
     initializeFromEstimate,

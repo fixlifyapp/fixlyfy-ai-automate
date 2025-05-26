@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
-import { useEstimates } from "./estimates/useEstimates";
+import { useEstimates } from "@/hooks/useEstimates";
 import { DeleteConfirmDialog } from "./dialogs/DeleteConfirmDialog";
 import { ConvertToInvoiceDialog } from "./estimates/dialogs/ConvertToInvoiceDialog";
 import { UpsellDialog } from "./dialogs/UpsellDialog";
@@ -17,34 +17,26 @@ interface JobEstimatesTabProps {
 }
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
-  const {
-    estimates,
-    isLoading,
-    error,
-    dialogs,
-    state,
-    handlers,
-    info
-  } = useEstimates(jobId, onEstimateConverted);
+  const { estimates, isLoading, setEstimates } = useEstimates(jobId);
+  const [isEstimateBuilderOpen, setIsEstimateBuilderOpen] = useState(false);
+  const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
 
-  if (error) {
-    return (
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardContent className="p-6">
-          <div className="text-center py-8 text-fixlyfy-error">
-            <p>There was an error loading estimates. Please try again later.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleCreateEstimate = () => {
+    setSelectedEstimateId(null);
+    setIsEstimateBuilderOpen(true);
+  };
+
+  const handleEditEstimate = (estimateId: string) => {
+    setSelectedEstimateId(estimateId);
+    setIsEstimateBuilderOpen(true);
+  };
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Estimates</h3>
-          <Button className="gap-2" onClick={handlers.handleCreateEstimate}>
+          <Button className="gap-2" onClick={handleCreateEstimate}>
             <Plus size={16} />
             Create Estimate
           </Button>
@@ -53,51 +45,19 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         <EstimatesList
           estimates={estimates}
           isLoading={isLoading}
-          onEdit={handlers.handleEditEstimate}
-          onConvert={handlers.handleConvertToInvoice}
-          onAddWarranty={handlers.handleAddWarranty}
-          onSend={handlers.handleSendEstimate}
-          onDelete={handlers.handleDeleteEstimate}
+          onEdit={handleEditEstimate}
+          onConvert={() => {}}
+          onAddWarranty={() => {}}
+          onSend={() => {}}
+          onDelete={() => {}}
         />
 
-        {/* Dialogs */}
         <EstimateBuilderDialog
-          open={dialogs.isEstimateBuilderOpen}
-          onOpenChange={dialogs.setIsEstimateBuilderOpen}
-          estimateId={state.selectedEstimateId}
+          open={isEstimateBuilderOpen}
+          onOpenChange={setIsEstimateBuilderOpen}
+          estimateId={selectedEstimateId}
           jobId={jobId}
-          onSyncToInvoice={handlers.handleSyncToInvoice}
-        />
-
-        <ConvertToInvoiceDialog
-          open={dialogs.isConvertToInvoiceDialogOpen}
-          onOpenChange={dialogs.setIsConvertToInvoiceDialogOpen}
-          estimate={state.selectedEstimate}
-          onConfirm={handlers.confirmConvertToInvoice}
-        />
-
-        <DeleteConfirmDialog
-          title="Delete Estimate"
-          description={`Are you sure you want to delete this estimate? This action cannot be undone.`}
-          onOpenChange={dialogs.setIsDeleteConfirmOpen}
-          onConfirm={handlers.confirmDeleteEstimate}
-          isDeleting={state.isDeleting}
-          open={dialogs.isDeleteConfirmOpen}
-        />
-
-        <UpsellDialog
-          open={dialogs.isUpsellDialogOpen}
-          onOpenChange={dialogs.setIsUpsellDialogOpen}
-          recommendedProduct={state.recommendedProduct}
-          techniciansNote={state.techniciansNote}
-          jobId={jobId}
-          onAccept={handlers.handleUpsellAccept}
-        />
-
-        <WarrantySelectionDialog
-          open={dialogs.isWarrantyDialogOpen}
-          onOpenChange={dialogs.setIsWarrantyDialogOpen}
-          onConfirm={handlers.handleWarrantySelection}
+          onSyncToInvoice={onEstimateConverted}
         />
       </CardContent>
     </Card>
