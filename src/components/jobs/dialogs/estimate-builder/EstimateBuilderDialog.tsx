@@ -12,7 +12,6 @@ import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
-import { useEstimates } from "@/hooks/useEstimates";
 import { EstimateSendDialog } from "./EstimateSendDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
@@ -49,7 +48,6 @@ export const EstimateBuilderDialog = ({
   
   // Fetch job data
   const { jobs, isLoading } = useJobs(jobId);
-  // Find the specific job we're interested in
   const [jobData, setJobData] = useState<any>(null);
   
   // Get the job data when jobs are loaded
@@ -71,14 +69,10 @@ export const EstimateBuilderDialog = ({
   
   const handleProductSelect = (product: Product) => {
     estimateBuilder.handleAddProduct(product);
-    if (!estimateId) {
-      // If it's a new estimate, select first product and proceed to editing
-      setIsProductSearchOpen(false);
-    }
+    setIsProductSearchOpen(false);
   };
   
   const handleCustomLineItemSave = (item: Partial<LineItem>) => {
-    // ... keep existing code (creating a new line item and adding it to the estimate)
     const newLineItem: LineItem = {
       id: `item-${Date.now()}`,
       description: item.description || item.name || "Custom Item",
@@ -92,17 +86,14 @@ export const EstimateBuilderDialog = ({
       total: (item.quantity || 1) * (item.unitPrice || 0)
     };
     
-    // Update lineItems by using the state update function from useEstimateBuilder
     const updatedLineItems = [...estimateBuilder.lineItems, newLineItem];
     estimateBuilder.setLineItems(updatedLineItems);
     setIsCustomLineItemDialogOpen(false);
   };
 
   const handleEditLineItem = (id: string) => {
-    // ... keep existing code (finding and editing a line item)
     const lineItem = estimateBuilder.lineItems.find(item => item.id === id);
     if (lineItem) {
-      // Create a product object from the line item to edit
       const productToEdit: Product = {
         id: lineItem.id,
         name: lineItem.name || lineItem.description,
@@ -123,7 +114,6 @@ export const EstimateBuilderDialog = ({
   };
 
   const handleProductUpdate = (updatedProduct: Product) => {
-    // ... keep existing code (updating a product in line items)
     const updatedLineItems = estimateBuilder.lineItems.map(item => {
       if (item.id === updatedProduct.id) {
         return {
@@ -162,7 +152,7 @@ export const EstimateBuilderDialog = ({
     if (warranty) {
       estimateBuilder.handleAddProduct({
         ...warranty,
-        ourPrice: 0 // Reset ourPrice for warranty in customer estimate
+        ourPrice: 0
       });
       
       if (note) {
@@ -277,6 +267,7 @@ export const EstimateBuilderDialog = ({
               <Button 
                 onClick={handleSendEstimate}
                 className="flex items-center gap-1"
+                disabled={!hasLineItems}
               >
                 <Send size={16} />
                 Send to Client

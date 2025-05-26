@@ -10,8 +10,8 @@ interface InvoicePreviewProps {
   calculateGrandTotal: () => number;
   notes: string;
   clientInfo: any;
-  issueDate: string;
-  dueDate: string;
+  issueDate?: string;
+  dueDate?: string;
 }
 
 export const InvoicePreview = ({
@@ -26,6 +26,9 @@ export const InvoicePreview = ({
   issueDate,
   dueDate
 }: InvoicePreviewProps) => {
+  const currentDate = new Date().toLocaleDateString();
+  const defaultDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString();
+
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white">
       <div className="border-b-2 border-gray-200 pb-6 mb-6">
@@ -46,11 +49,11 @@ export const InvoicePreview = ({
         <div className="text-right">
           <div className="mb-2">
             <span className="text-gray-600">Issue Date: </span>
-            <span className="font-medium">{issueDate}</span>
+            <span className="font-medium">{issueDate || currentDate}</span>
           </div>
           <div>
             <span className="text-gray-600">Due Date: </span>
-            <span className="font-medium">{dueDate}</span>
+            <span className="font-medium">{dueDate || defaultDueDate}</span>
           </div>
         </div>
       </div>

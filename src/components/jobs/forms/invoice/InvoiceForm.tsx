@@ -1,17 +1,20 @@
 
-import { LineItem } from "@/components/jobs/builder/types";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Edit3 } from "lucide-react";
+import { LineItem } from "../../builder/types";
 
 interface InvoiceFormProps {
   invoice_number: string;
   lineItems: LineItem[];
   onRemoveLineItem: (id: string) => void;
   onUpdateLineItem: (id: string, field: string, value: any) => void;
+  onEditLineItem?: (id: string) => boolean;
   onAddEmptyLineItem: () => void;
+  onAddCustomLine?: () => void;
   taxRate: number;
   setTaxRate: (rate: number) => void;
   calculateSubtotal: () => number;
@@ -26,7 +29,9 @@ export const InvoiceForm = ({
   lineItems,
   onRemoveLineItem,
   onUpdateLineItem,
+  onEditLineItem,
   onAddEmptyLineItem,
+  onAddCustomLine,
   taxRate,
   setTaxRate,
   calculateSubtotal,
@@ -50,10 +55,18 @@ export const InvoiceForm = ({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium">Line Items</h3>
-          <Button onClick={onAddEmptyLineItem} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onAddEmptyLineItem} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item
+            </Button>
+            {onAddCustomLine && (
+              <Button onClick={onAddCustomLine} size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Custom Line
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -61,11 +74,23 @@ export const InvoiceForm = ({
             <div key={item.id} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
               <div className="col-span-5">
                 <Label>Description</Label>
-                <Input
-                  value={item.description}
-                  onChange={(e) => onUpdateLineItem(item.id, 'description', e.target.value)}
-                  placeholder="Item description"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={item.description}
+                    onChange={(e) => onUpdateLineItem(item.id, 'description', e.target.value)}
+                    placeholder="Item description"
+                  />
+                  {onEditLineItem && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditLineItem(item.id)}
+                      className="p-1 h-8 w-8"
+                    >
+                      <Edit3 size={14} />
+                    </Button>
+                  )}
+                </div>
               </div>
               
               <div className="col-span-2">

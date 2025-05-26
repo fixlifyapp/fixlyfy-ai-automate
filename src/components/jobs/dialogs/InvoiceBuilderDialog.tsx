@@ -12,7 +12,6 @@ import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "./ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
-import { InvoiceSendDialog } from "./InvoiceSendDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 import { Estimate } from "@/hooks/useEstimates";
@@ -40,7 +39,6 @@ export const InvoiceBuilderDialog = ({
   const [isCustomLineItemDialogOpen, setIsCustomLineItemDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
-  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const isMobile = useIsMobile();
   
   // Fetch job data
@@ -144,63 +142,28 @@ export const InvoiceBuilderDialog = ({
   // Check if invoice has any line items
   const hasLineItems = invoiceBuilder.lineItems && invoiceBuilder.lineItems.length > 0;
   
-  // Handle send invoice with validation
-  const handleSendInvoice = async () => {
+  // Handle save and send invoice
+  const handleSaveAndSend = async () => {
     if (!hasLineItems) {
-      toast.error("Please add at least one item to the invoice before sending it to the client");
+      toast.error("Please add at least one item to the invoice before saving");
       return;
     }
     
-    // Save invoice first if it's new
-    if (!invoiceBuilder.formData.invoiceId) {
-      const newInvoice = await invoiceBuilder.saveInvoiceChanges();
-      if (newInvoice && onInvoiceCreated) {
-        onInvoiceCreated(newInvoice);
-      }
+    const result = await invoiceBuilder.saveInvoiceChanges();
+    if (result && onInvoiceCreated) {
+      onInvoiceCreated(result);
     }
     
-    setIsSendDialogOpen(true);
+    if (result) {
+      toast.success("Invoice saved and ready to send");
+      onOpenChange(false);
+    }
   };
 
   // Wrapper function to match the expected signature for InvoiceForm
   const handleUpdateLineItemWrapper = (id: string, field: string, value: any) => {
     const updates: Partial<LineItem> = { [field]: value };
     invoiceBuilder.handleUpdateLineItem(id, updates);
-  };
-
-  // Wrapper function to save invoice and add warranty
-  const handleSaveInvoiceWrapper = async (): Promise<boolean> => {
-    const result = await invoiceBuilder.saveInvoiceChanges();
-    if (result && onInvoiceCreated) {
-      onInvoiceCreated(result);
-    }
-    return result !== null;
-  };
-
-  const handleAddWarranty = (warranty: Product | null, note: string) => {
-    if (warranty) {
-      // Add warranty to the line items
-      const warrantyLineItem: LineItem = {
-        id: `warranty-${Date.now()}`,
-        description: `${warranty.name}: ${warranty.description}`,
-        name: warranty.name,
-        quantity: 1,
-        unitPrice: warranty.price,
-        price: warranty.price,
-        ourPrice: warranty.ourPrice || 0,
-        taxable: false,
-        discount: 0,
-        total: warranty.price
-      };
-      
-      const updatedLineItems = [...invoiceBuilder.lineItems, warrantyLineItem];
-      invoiceBuilder.setLineItems(updatedLineItems);
-      
-      // Update notes with warranty recommendation
-      const currentNotes = invoiceBuilder.notes || "";
-      const warrantyNote = note ? `\n\nWarranty Recommendation: ${note}` : "";
-      invoiceBuilder.setNotes(currentNotes + warrantyNote);
-    }
   };
   
   return (
@@ -258,7 +221,7 @@ export const InvoiceBuilderDialog = ({
             <div className="flex-grow overflow-auto p-6">
               {activeTab === "form" && (
                 <InvoiceForm
-                  invoiceNumber={invoiceBuilder.invoiceNumber}
+                  invoice_number={invoiceBuilder.invoiceNumber}
                   lineItems={invoiceBuilder.lineItems || []}
                   onRemoveLineItem={invoiceBuilder.handleRemoveLineItem}
                   onUpdateLineItem={handleUpdateLineItemWrapper}
@@ -270,15 +233,14 @@ export const InvoiceBuilderDialog = ({
                   calculateSubtotal={invoiceBuilder.calculateSubtotal}
                   calculateTotalTax={invoiceBuilder.calculateTotalTax}
                   calculateGrandTotal={invoiceBuilder.calculateGrandTotal}
-                  calculateTotalMargin={invoiceBuilder.calculateTotalMargin}
-                  calculateMarginPercentage={invoiceBuilder.calculateMarginPercentage}
-                  showMargin={false}
+                  notes={invoiceBuilder.notes || ""}
+                  setNotes={invoiceBuilder.setNotes}
                 />
               )}
               
               {activeTab === "preview" && (
                 <InvoicePreview 
-                  invoiceNumber={invoiceBuilder.invoiceNumber}
+                  invoice_number={invoiceBuilder.invoiceNumber}
                   lineItems={invoiceBuilder.lineItems || []}
                   taxRate={invoiceBuilder.taxRate}
                   calculateSubtotal={invoiceBuilder.calculateSubtotal}
@@ -286,8 +248,8 @@ export const InvoiceBuilderDialog = ({
                   calculateGrandTotal={invoiceBuilder.calculateGrandTotal}
                   notes={invoiceBuilder.notes || ""}
                   clientInfo={jobData?.client}
-                  issueDate={invoiceBuilder.issueDate}
-                  dueDate={invoiceBuilder.dueDate}
+                  issueDate={new Date().toLocaleDateString()}
+                  dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
                 />
               )}
             </div>
@@ -297,11 +259,12 @@ export const InvoiceBuilderDialog = ({
                 Cancel
               </Button>
               <Button 
-                onClick={handleSendInvoice}
+                onClick={handleSaveAndSend}
                 className="flex items-center gap-1"
+                disabled={!hasLineItems || invoiceBuilder.isSubmitting}
               >
                 <Send size={16} />
-                Send to Client
+                {invoiceBuilder.isSubmitting ? 'Saving...' : 'Save & Send'}
               </Button>
             </div>
           </div>
@@ -328,17 +291,6 @@ export const InvoiceBuilderDialog = ({
         onOpenChange={setIsProductEditDialogOpen}
         product={selectedProduct}
         onSave={handleProductUpdate}
-      />
-      
-      {/* Invoice Send Dialog */}
-      <InvoiceSendDialog
-        open={isSendDialogOpen}
-        onOpenChange={setIsSendDialogOpen}
-        onSave={handleSaveInvoiceWrapper}
-        onAddWarranty={handleAddWarranty}
-        clientInfo={jobData?.client}
-        invoiceNumber={invoiceBuilder.invoiceNumber}
-        jobId={jobId}
       />
     </Dialog>
   );
