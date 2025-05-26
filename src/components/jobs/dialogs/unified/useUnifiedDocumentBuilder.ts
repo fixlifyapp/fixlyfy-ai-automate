@@ -111,15 +111,26 @@ export const useUnifiedDocumentBuilder = ({
     
     try {
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
-      const numberField = documentType === 'estimate' ? 'estimate_number' : 'invoice_number';
       
-      const documentData = {
+      // Create document data with proper fields for each type
+      const baseDocumentData = {
         job_id: jobId,
-        [numberField]: formData.documentNumber,
         total: calculateGrandTotal(),
         status: formData.status,
         notes: notes
       };
+
+      const documentData = documentType === 'estimate' 
+        ? {
+            ...baseDocumentData,
+            estimate_number: formData.documentNumber
+          }
+        : {
+            ...baseDocumentData,
+            invoice_number: formData.documentNumber,
+            amount_paid: 0,
+            balance: calculateGrandTotal()
+          };
 
       let document;
       if (formData.documentId) {
