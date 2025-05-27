@@ -75,10 +75,14 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
 
       if (error) throw error;
 
-      // Calculate unread count for each conversation
+      // Transform the data to match our Conversation interface
       const conversationsWithUnread = (data || []).map(conv => ({
         ...conv,
-        unread_count: conv.messages.filter((msg: any) => !msg.read_at && msg.direction === 'inbound').length
+        messages: (conv.messages || []).map((msg: any) => ({
+          ...msg,
+          direction: msg.direction as "inbound" | "outbound"
+        })),
+        unread_count: (conv.messages || []).filter((msg: any) => !msg.read_at && msg.direction === 'inbound').length
       }));
 
       setConversations(conversationsWithUnread);

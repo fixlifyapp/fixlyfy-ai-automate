@@ -64,7 +64,18 @@ export const CallsList = () => {
         .limit(50);
 
       if (error) throw error;
-      setCalls(data || []);
+      
+      // Transform the data to match our Call interface
+      const transformedCalls = (data || []).map(call => ({
+        ...call,
+        direction: call.direction as "incoming" | "outgoing" | "missed",
+        client: call.clients ? {
+          name: call.clients.name,
+          phone: call.clients.phone
+        } : undefined
+      }));
+      
+      setCalls(transformedCalls);
     } catch (error) {
       console.error('Error loading calls:', error);
     } finally {
@@ -94,10 +105,10 @@ export const CallsList = () => {
   };
 
   const handleMessageClient = (call: Call) => {
-    if (call.clients) {
+    if (call.client) {
       openMessageDialog({
         id: call.client_id || "",
-        name: call.clients.name,
+        name: call.client.name,
         phone: call.phone_number
       });
     }
@@ -169,7 +180,7 @@ export const CallsList = () => {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {call.clients?.name || formatPhoneNumber(call.phone_number)}
+                        {call.client?.name || formatPhoneNumber(call.phone_number)}
                       </span>
                       <Badge variant={getStatusColor(call.status, call.direction)}>
                         {call.direction === 'missed' ? 'Missed' : call.status}
@@ -190,7 +201,7 @@ export const CallsList = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {call.clients && (
+                  {call.client && (
                     <Button
                       variant="outline"
                       size="sm"

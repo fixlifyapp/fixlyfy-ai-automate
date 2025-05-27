@@ -46,7 +46,16 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
         .order('purchased_at', { ascending: false });
 
       if (error) throw error;
-      setOwnedNumbers(data || []);
+      
+      // Transform the data to match our PhoneNumber interface
+      const transformedNumbers = (data || []).map(number => ({
+        ...number,
+        capabilities: typeof number.capabilities === 'object' && number.capabilities !== null 
+          ? number.capabilities as { voice: boolean; sms: boolean; mms: boolean; }
+          : { voice: true, sms: true, mms: false }
+      }));
+      
+      setOwnedNumbers(transformedNumbers);
     } catch (error) {
       console.error('Error loading owned numbers:', error);
     } finally {
@@ -135,7 +144,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                     </div>
                     <div>
                       <div className="font-medium">
-                        {formatPhoneNumber(number.phone_number)}
+                        {number.phone_number}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-4">
                         {number.locality && (
@@ -145,7 +154,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                           </span>
                         )}
                         <span>${number.monthly_price}/month</span>
-                        <span>{formatCapabilities(number.capabilities)}</span>
+                        <span>Voice, SMS, MMS</span>
                       </div>
                       {number.purchased_at && (
                         <div className="text-xs text-gray-400">
@@ -184,7 +193,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                     </div>
                     <div>
                       <div className="font-medium">
-                        {formatPhoneNumber(number.phoneNumber)}
+                        {number.phoneNumber}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-4">
                         {number.locality && (
@@ -197,7 +206,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                           <DollarSign className="h-3 w-3" />
                           ${number.price}
                         </span>
-                        <span>{formatCapabilities(number.capabilities)}</span>
+                        <span>Voice, SMS, MMS</span>
                       </div>
                     </div>
                   </div>
