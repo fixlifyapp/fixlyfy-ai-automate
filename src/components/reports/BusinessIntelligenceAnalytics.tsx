@@ -19,10 +19,26 @@ import {
   Lightbulb,
   BarChart3,
   PieChart,
-  LineChart,
   Filter
 } from "lucide-react";
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter } from 'recharts';
+import { 
+  LineChart as RechartsLineChart, 
+  Line, 
+  AreaChart, 
+  Area, 
+  BarChart as RechartsBarChart, 
+  Bar, 
+  PieChart as RechartsPieChart, 
+  Pie, 
+  Cell, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  ScatterChart, 
+  Scatter 
+} from 'recharts';
 
 export const BusinessIntelligenceAnalytics = () => {
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
@@ -258,7 +274,7 @@ export const BusinessIntelligenceAnalytics = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={analyticsData.trendsData}>
+                <RechartsLineChart data={analyticsData.trendsData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -267,7 +283,7 @@ export const BusinessIntelligenceAnalytics = () => {
                   <Line type="monotone" dataKey="customers" stroke="#82ca9d" strokeWidth={2} />
                   <Line type="monotone" dataKey="satisfaction" stroke="#ffc658" strokeWidth={2} />
                   <Line type="monotone" dataKey="efficiency" stroke="#ff7300" strokeWidth={2} />
-                </LineChart>
+                </RechartsLineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>

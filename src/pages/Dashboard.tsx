@@ -60,14 +60,6 @@ const Dashboard = () => {
           { text: "AI Insights", icon: Bot, variant: "success" },
           { text: "Multi-metric", icon: Target, variant: "info" }
         ]}
-        actions={[
-          {
-            label: "Advanced Reports",
-            href: "/advanced-reports",
-            icon: BarChart3,
-            variant: "outline"
-          }
-        ]}
       />
 
       <div className="space-y-6">

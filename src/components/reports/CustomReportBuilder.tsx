@@ -2,471 +2,483 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { 
   Plus, 
-  X, 
+  Trash2, 
+  Save, 
+  Play, 
   BarChart3, 
   PieChart, 
   LineChart, 
   Table,
-  Calendar,
-  Filter,
-  Settings,
+  Download,
+  Share,
   Eye,
-  Save
+  Settings
 } from "lucide-react";
+import { LineChart as RechartsLineChart, Line, BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface ReportWidget {
+interface Widget {
   id: string;
-  type: 'chart' | 'table' | 'metric' | 'kpi';
-  chartType?: 'bar' | 'line' | 'pie' | 'area';
+  type: 'chart' | 'metric' | 'table';
   title: string;
   dataSource: string;
-  filters: any[];
-  dimensions: string[];
+  chartType?: 'line' | 'bar' | 'pie';
   metrics: string[];
-  position: { x: number; y: number; width: number; height: number };
+  filters: any[];
+  position: { x: number; y: number; w: number; h: number };
+}
+
+interface ReportConfig {
+  name: string;
+  description: string;
+  widgets: Widget[];
+  filters: any[];
+  schedule?: {
+    frequency: 'daily' | 'weekly' | 'monthly';
+    recipients: string[];
+  };
 }
 
 export const CustomReportBuilder = () => {
-  const [reportName, setReportName] = useState("");
-  const [reportDescription, setReportDescription] = useState("");
-  const [widgets, setWidgets] = useState<ReportWidget[]>([]);
-  const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("design");
+  const [reportConfig, setReportConfig] = useState<ReportConfig>({
+    name: "Custom Revenue Report",
+    description: "Track revenue metrics and trends",
+    widgets: [],
+    filters: []
+  });
 
-  const dataSources = [
-    { id: 'jobs', name: 'Jobs', tables: ['jobs', 'job_status', 'job_types'] },
-    { id: 'clients', name: 'Clients', tables: ['clients', 'client_properties'] },
-    { id: 'financials', name: 'Financials', tables: ['invoices', 'payments', 'estimates'] },
-    { id: 'team', name: 'Team', tables: ['profiles', 'technicians'] }
+  const [selectedWidget, setSelectedWidget] = useState<Widget | null>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // Sample data for charts
+  const sampleData = [
+    { month: 'Jan', revenue: 65000, jobs: 45, satisfaction: 4.2 },
+    { month: 'Feb', revenue: 72000, jobs: 52, satisfaction: 4.3 },
+    { month: 'Mar', revenue: 68000, jobs: 48, satisfaction: 4.4 },
+    { month: 'Apr', revenue: 78000, jobs: 55, satisfaction: 4.5 },
+    { month: 'May', revenue: 85000, jobs: 62, satisfaction: 4.6 },
+    { month: 'Jun', revenue: 92000, jobs: 68, satisfaction: 4.7 }
   ];
 
   const availableMetrics = [
     { id: 'revenue', name: 'Revenue', type: 'currency' },
-    { id: 'job_count', name: 'Job Count', type: 'number' },
-    { id: 'completion_rate', name: 'Completion Rate', type: 'percentage' },
-    { id: 'response_time', name: 'Response Time', type: 'duration' },
-    { id: 'customer_rating', name: 'Customer Rating', type: 'rating' }
+    { id: 'jobs', name: 'Jobs Completed', type: 'number' },
+    { id: 'satisfaction', name: 'Customer Satisfaction', type: 'rating' },
+    { id: 'efficiency', name: 'Technician Efficiency', type: 'percentage' },
+    { id: 'customers', name: 'Active Customers', type: 'number' }
   ];
 
-  const availableDimensions = [
-    { id: 'date', name: 'Date', type: 'date' },
-    { id: 'technician', name: 'Technician', type: 'category' },
-    { id: 'service_type', name: 'Service Type', type: 'category' },
-    { id: 'client_type', name: 'Client Type', type: 'category' },
-    { id: 'region', name: 'Region', type: 'category' }
+  const dataSources = [
+    { id: 'jobs', name: 'Jobs Data' },
+    { id: 'customers', name: 'Customer Data' },
+    { id: 'financial', name: 'Financial Data' },
+    { id: 'technicians', name: 'Technician Data' }
   ];
 
-  const addWidget = (type: ReportWidget['type']) => {
-    const newWidget: ReportWidget = {
+  const addWidget = (type: 'chart' | 'metric' | 'table') => {
+    const newWidget: Widget = {
       id: `widget-${Date.now()}`,
       type,
-      chartType: type === 'chart' ? 'bar' : undefined,
-      title: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      title: `New ${type}`,
       dataSource: 'jobs',
+      chartType: type === 'chart' ? 'line' : undefined,
+      metrics: ['revenue'],
       filters: [],
-      dimensions: [],
-      metrics: [],
-      position: { x: 0, y: widgets.length * 300, width: 6, height: 4 }
+      position: { x: 0, y: 0, w: 6, h: 4 }
     };
-    setWidgets([...widgets, newWidget]);
-    setSelectedWidget(newWidget.id);
+
+    setReportConfig({
+      ...reportConfig,
+      widgets: [...reportConfig.widgets, newWidget]
+    });
+    setSelectedWidget(newWidget);
   };
 
-  const updateWidget = (id: string, updates: Partial<ReportWidget>) => {
-    setWidgets(widgets.map(w => w.id === id ? { ...w, ...updates } : w));
+  const updateWidget = (widgetId: string, updates: Partial<Widget>) => {
+    setReportConfig({
+      ...reportConfig,
+      widgets: reportConfig.widgets.map(widget => 
+        widget.id === widgetId ? { ...widget, ...updates } : widget
+      )
+    });
   };
 
-  const removeWidget = (id: string) => {
-    setWidgets(widgets.filter(w => w.id !== id));
-    if (selectedWidget === id) {
-      setSelectedWidget(null);
+  const deleteWidget = (widgetId: string) => {
+    setReportConfig({
+      ...reportConfig,
+      widgets: reportConfig.widgets.filter(widget => widget.id !== widgetId)
+    });
+    setSelectedWidget(null);
+  };
+
+  const renderChart = (widget: Widget) => {
+    const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+    
+    switch (widget.chartType) {
+      case 'line':
+        return (
+          <ResponsiveContainer width="100%" height={200}>
+            <RechartsLineChart data={sampleData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              {widget.metrics.map((metric, index) => (
+                <Line 
+                  key={metric}
+                  type="monotone" 
+                  dataKey={metric} 
+                  stroke={colors[index % colors.length]} 
+                  strokeWidth={2} 
+                />
+              ))}
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        );
+      case 'bar':
+        return (
+          <ResponsiveContainer width="100%" height={200}>
+            <RechartsBarChart data={sampleData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              {widget.metrics.map((metric, index) => (
+                <Bar 
+                  key={metric}
+                  dataKey={metric} 
+                  fill={colors[index % colors.length]} 
+                />
+              ))}
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        );
+      case 'pie':
+        const pieData = widget.metrics.map((metric, index) => ({
+          name: availableMetrics.find(m => m.id === metric)?.name || metric,
+          value: sampleData[sampleData.length - 1][metric as keyof typeof sampleData[0]] || 0
+        }));
+        return (
+          <ResponsiveContainer width="100%" height={200}>
+            <RechartsPieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                outerRadius={60}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, value }) => `${name}: ${value}`}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        );
+      default:
+        return <div className="h-48 flex items-center justify-center text-gray-500">No chart type selected</div>;
     }
   };
 
-  const selectedWidgetData = selectedWidget ? widgets.find(w => w.id === selectedWidget) : null;
-
-  const getWidgetIcon = (type: string, chartType?: string) => {
-    if (type === 'chart') {
-      switch (chartType) {
-        case 'bar': return BarChart3;
-        case 'line': return LineChart;
-        case 'pie': return PieChart;
-        default: return BarChart3;
-      }
+  const renderWidget = (widget: Widget) => {
+    switch (widget.type) {
+      case 'chart':
+        return (
+          <Card key={widget.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedWidget(widget)}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">{widget.title}</CardTitle>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteWidget(widget.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {renderChart(widget)}
+            </CardContent>
+          </Card>
+        );
+      case 'metric':
+        const metricValue = sampleData[sampleData.length - 1][widget.metrics[0] as keyof typeof sampleData[0]] || 0;
+        return (
+          <Card key={widget.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedWidget(widget)}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">{widget.title}</CardTitle>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteWidget(widget.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metricValue.toLocaleString()}</div>
+              <p className="text-sm text-gray-600">{availableMetrics.find(m => m.id === widget.metrics[0])?.name}</p>
+            </CardContent>
+          </Card>
+        );
+      case 'table':
+        return (
+          <Card key={widget.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedWidget(widget)}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">{widget.title}</CardTitle>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteWidget(widget.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {sampleData.slice(-3).map((row, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span>{row.month}</span>
+                    <span>${row.revenue.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return null;
     }
-    return type === 'table' ? Table : BarChart3;
   };
 
   const saveReport = () => {
-    const reportData = {
-      name: reportName,
-      description: reportDescription,
-      widgets,
-      createdAt: new Date().toISOString()
-    };
-    console.log('Saving report:', reportData);
+    console.log('Saving report:', reportConfig);
     // Integration with backend would go here
   };
 
+  const runReport = () => {
+    console.log('Running report:', reportConfig);
+    setIsPreviewMode(true);
+  };
+
   return (
-    <div className="h-screen flex flex-col">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="border-b bg-white p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-xl font-semibold">Custom Report Builder</h1>
-              <p className="text-sm text-gray-600">Create custom reports and dashboards</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              Preview
-            </Button>
-            <Button size="sm" onClick={saveReport}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Report
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Custom Report Builder</h2>
+          <p className="text-gray-600">Design and build custom reports with drag-and-drop widgets</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+            <Eye className="h-4 w-4 mr-2" />
+            {isPreviewMode ? 'Edit Mode' : 'Preview'}
+          </Button>
+          <Button variant="outline" onClick={saveReport}>
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+          <Button onClick={runReport}>
+            <Play className="h-4 w-4 mr-2" />
+            Run Report
+          </Button>
         </div>
       </div>
 
-      <div className="flex-1 flex">
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="design">Design</TabsTrigger>
-              <TabsTrigger value="data">Data</TabsTrigger>
-              <TabsTrigger value="filters">Filters</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Widget Library */}
+        {!isPreviewMode && (
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Widget Library</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start" 
+                  onClick={() => addWidget('chart')}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Add Chart
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start" 
+                  onClick={() => addWidget('metric')}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Add Metric
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start" 
+                  onClick={() => addWidget('table')}
+                >
+                  <Table className="h-4 w-4 mr-2" />
+                  Add Table
+                </Button>
+              </CardContent>
+            </Card>
 
-            <TabsContent value="design" className="mt-6">
-              <div className="space-y-6">
-                {/* Report Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Report Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+            {/* Widget Configuration */}
+            {selectedWidget && (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="text-lg">Widget Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="widget-title">Title</Label>
+                    <Input
+                      id="widget-title"
+                      value={selectedWidget.title}
+                      onChange={(e) => updateWidget(selectedWidget.id, { title: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="data-source">Data Source</Label>
+                    <Select
+                      value={selectedWidget.dataSource}
+                      onValueChange={(value) => updateWidget(selectedWidget.id, { dataSource: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dataSources.map((source) => (
+                          <SelectItem key={source.id} value={source.id}>
+                            {source.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedWidget.type === 'chart' && (
                     <div>
-                      <Label htmlFor="report-name">Report Name</Label>
-                      <Input
-                        id="report-name"
-                        value={reportName}
-                        onChange={(e) => setReportName(e.target.value)}
-                        placeholder="Enter report name..."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="report-description">Description</Label>
-                      <Textarea
-                        id="report-description"
-                        value={reportDescription}
-                        onChange={(e) => setReportDescription(e.target.value)}
-                        placeholder="Describe your report..."
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Widget Toolbar */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Add Widgets</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addWidget('chart')}
-                      >
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Chart
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addWidget('table')}
-                      >
-                        <Table className="h-4 w-4 mr-2" />
-                        Table
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addWidget('kpi')}
-                      >
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        KPI Card
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addWidget('metric')}
-                      >
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Metric
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Widgets List */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Report Widgets ({widgets.length})</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {widgets.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>No widgets added yet.</p>
-                        <p className="text-sm">Add widgets to start building your report.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {widgets.map((widget) => {
-                          const IconComponent = getWidgetIcon(widget.type, widget.chartType);
-                          
-                          return (
-                            <div
-                              key={widget.id}
-                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                selectedWidget === widget.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                              }`}
-                              onClick={() => setSelectedWidget(widget.id)}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <IconComponent className="h-4 w-4 text-gray-600" />
-                                  <div>
-                                    <p className="font-medium">{widget.title}</p>
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline">{widget.type}</Badge>
-                                      {widget.chartType && (
-                                        <Badge variant="outline">{widget.chartType}</Badge>
-                                      )}
-                                      <span className="text-xs text-gray-500">
-                                        {widget.metrics.length} metrics, {widget.dimensions.length} dimensions
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeWidget(widget.id);
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="data" className="mt-6">
-              {selectedWidgetData ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Configure: {selectedWidgetData.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div>
-                      <Label>Widget Title</Label>
-                      <Input
-                        value={selectedWidgetData.title}
-                        onChange={(e) => updateWidget(selectedWidgetData.id, { title: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Data Source</Label>
+                      <Label htmlFor="chart-type">Chart Type</Label>
                       <Select
-                        value={selectedWidgetData.dataSource}
-                        onValueChange={(value) => updateWidget(selectedWidgetData.id, { dataSource: value })}
+                        value={selectedWidget.chartType}
+                        onValueChange={(value: 'line' | 'bar' | 'pie') => updateWidget(selectedWidget.id, { chartType: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {dataSources.map((source) => (
-                            <SelectItem key={source.id} value={source.id}>
-                              {source.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="line">Line Chart</SelectItem>
+                          <SelectItem value="bar">Bar Chart</SelectItem>
+                          <SelectItem value="pie">Pie Chart</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                  )}
 
-                    {selectedWidgetData.type === 'chart' && (
-                      <div>
-                        <Label>Chart Type</Label>
-                        <Select
-                          value={selectedWidgetData.chartType || 'bar'}
-                          onValueChange={(value) => updateWidget(selectedWidgetData.id, { chartType: value as any })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="bar">Bar Chart</SelectItem>
-                            <SelectItem value="line">Line Chart</SelectItem>
-                            <SelectItem value="pie">Pie Chart</SelectItem>
-                            <SelectItem value="area">Area Chart</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    <div>
-                      <Label>Metrics</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {availableMetrics.map((metric) => (
-                          <div key={metric.id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedWidgetData.metrics.includes(metric.id)}
-                              onChange={(e) => {
-                                const metrics = e.target.checked
-                                  ? [...selectedWidgetData.metrics, metric.id]
-                                  : selectedWidgetData.metrics.filter(m => m !== metric.id);
-                                updateWidget(selectedWidgetData.id, { metrics });
-                              }}
-                            />
-                            <Label className="text-sm">{metric.name}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Dimensions</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {availableDimensions.map((dimension) => (
-                          <div key={dimension.id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedWidgetData.dimensions.includes(dimension.id)}
-                              onChange={(e) => {
-                                const dimensions = e.target.checked
-                                  ? [...selectedWidgetData.dimensions, dimension.id]
-                                  : selectedWidgetData.dimensions.filter(d => d !== dimension.id);
-                                updateWidget(selectedWidgetData.id, { dimensions });
-                              }}
-                            />
-                            <Label className="text-sm">{dimension.name}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-gray-500">Select a widget to configure its data settings.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="filters" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Report Filters</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">Add filters to control data across all widgets</p>
-                      <Button size="sm" variant="outline">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Filter
-                      </Button>
-                    </div>
-                    <div className="text-center py-8 text-gray-500">
-                      <Filter className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p>No filters configured yet.</p>
+                  <div>
+                    <Label>Metrics</Label>
+                    <div className="space-y-2 mt-2">
+                      {availableMetrics.map((metric) => (
+                        <label key={metric.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedWidget.metrics.includes(metric.id)}
+                            onChange={(e) => {
+                              const metrics = e.target.checked
+                                ? [...selectedWidget.metrics, metric.id]
+                                : selectedWidget.metrics.filter(m => m !== metric.id);
+                              updateWidget(selectedWidget.id, { metrics });
+                            }}
+                          />
+                          <span className="text-sm">{metric.name}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="preview" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Report Preview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-gray-500">
-                    <Eye className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p>Preview functionality coming soon.</p>
-                    <p className="text-sm">Add widgets and configure data to see preview.</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Right Sidebar - Widget Properties */}
-        {selectedWidgetData && (
-          <div className="w-80 border-l bg-gray-50 p-4">
-            <h3 className="font-medium mb-4">Widget Properties</h3>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-xs">Position & Size</Label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div>
-                    <Label className="text-xs text-gray-500">Width</Label>
-                    <Input size="sm" value={selectedWidgetData.position.width} />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500">Height</Label>
-                    <Input size="sm" value={selectedWidgetData.position.height} />
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-xs">Styling</Label>
-                <div className="space-y-2 mt-1">
-                  <Button size="sm" variant="outline" className="w-full justify-start">
-                    <Settings className="h-3 w-3 mr-2" />
-                    Style Options
-                  </Button>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
+
+        {/* Report Canvas */}
+        <div className={isPreviewMode ? "lg:col-span-4" : "lg:col-span-3"}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>{reportConfig.name}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{reportConfig.widgets.length} widgets</Badge>
+                  <Button size="sm" variant="ghost">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardTitle>
+              <p className="text-sm text-gray-600">{reportConfig.description}</p>
+            </CardHeader>
+            <CardContent>
+              {reportConfig.widgets.length === 0 ? (
+                <div className="text-center py-12">
+                  <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900">No widgets added</h3>
+                  <p className="text-gray-600">Start building your report by adding widgets from the library</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {reportConfig.widgets.map(renderWidget)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Export Options */}
+          {isPreviewMode && reportConfig.widgets.length > 0 && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="text-lg">Export & Share</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export PDF
+                  </Button>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Excel
+                  </Button>
+                  <Button variant="outline">
+                    <Share className="h-4 w-4 mr-2" />
+                    Share Link
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

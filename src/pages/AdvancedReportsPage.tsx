@@ -2,7 +2,7 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, FileText, Brain, Crown, Template } from "lucide-react";
+import { BarChart3, FileText, Brain, Crown, Layers } from "lucide-react";
 import { ReportTemplates } from "@/components/reports/ReportTemplates";
 import { CustomReportBuilder } from "@/components/reports/CustomReportBuilder";
 import { BusinessIntelligenceAnalytics } from "@/components/reports/BusinessIntelligenceAnalytics";
@@ -16,7 +16,7 @@ const AdvancedReportsPage = () => {
         subtitle="Comprehensive reporting, business intelligence, and predictive analytics"
         icon={BarChart3}
         badges={[
-          { text: "Templates", icon: Template, variant: "fixlyfy" },
+          { text: "Templates", icon: Layers, variant: "fixlyfy" },
           { text: "AI Insights", icon: Brain, variant: "success" },
           { text: "Executive", icon: Crown, variant: "info" }
         ]}
