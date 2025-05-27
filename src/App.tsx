@@ -1,9 +1,11 @@
+
 import { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProviders } from "@/components/ui/AppProviders";
+import { PageLoadingFallback } from "@/components/ui/page-loading";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
@@ -32,7 +34,7 @@ function App() {
           <Toaster />
           <BrowserRouter>
             <div className="min-h-screen bg-gray-50">
-              <Suspense fallback={<div>Loading...</div>}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
