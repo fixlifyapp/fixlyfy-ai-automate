@@ -9,6 +9,121 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_agent_configs: {
+        Row: {
+          aws_region: string | null
+          business_niche: string
+          connect_instance_arn: string | null
+          created_at: string
+          custom_prompt_additions: string | null
+          diagnostic_price: number
+          emergency_surcharge: number
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aws_region?: string | null
+          business_niche?: string
+          connect_instance_arn?: string | null
+          created_at?: string
+          custom_prompt_additions?: string | null
+          diagnostic_price?: number
+          emergency_surcharge?: number
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aws_region?: string | null
+          business_niche?: string
+          connect_instance_arn?: string | null
+          created_at?: string
+          custom_prompt_additions?: string | null
+          diagnostic_price?: number
+          emergency_surcharge?: number
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      amazon_connect_calls: {
+        Row: {
+          ai_agent_config_id: string | null
+          ai_transcript: string | null
+          appointment_data: Json | null
+          appointment_scheduled: boolean | null
+          call_duration: number | null
+          call_status: string | null
+          client_id: string | null
+          contact_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          instance_id: string
+          phone_number: string
+          started_at: string
+        }
+        Insert: {
+          ai_agent_config_id?: string | null
+          ai_transcript?: string | null
+          appointment_data?: Json | null
+          appointment_scheduled?: boolean | null
+          call_duration?: number | null
+          call_status?: string | null
+          client_id?: string | null
+          contact_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          instance_id: string
+          phone_number: string
+          started_at?: string
+        }
+        Update: {
+          ai_agent_config_id?: string | null
+          ai_transcript?: string | null
+          appointment_data?: Json | null
+          appointment_scheduled?: boolean | null
+          call_duration?: number | null
+          call_status?: string | null
+          client_id?: string | null
+          contact_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          instance_id?: string
+          phone_number?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amazon_connect_calls_ai_agent_config_id_fkey"
+            columns: ["ai_agent_config_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agent_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amazon_connect_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amazon_connect_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       automation_actions: {
         Row: {
           action_config: Json
@@ -248,6 +363,39 @@ export type Database = {
           success_count?: number | null
           template_id?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      aws_credentials: {
+        Row: {
+          aws_access_key_id: string
+          aws_region: string | null
+          aws_secret_access_key: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aws_access_key_id: string
+          aws_region?: string | null
+          aws_secret_access_key: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aws_access_key_id?: string
+          aws_region?: string | null
+          aws_secret_access_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -1,158 +1,214 @@
 
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  MessageSquare, 
+  Phone, 
+  Mail, 
+  CreditCard, 
+  Brain,
+  Settings,
+  Zap,
+  Cloud
+} from "lucide-react";
+import { AmazonConnectSettings } from "./AmazonConnectSettings";
+
+interface IntegrationCard {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  status: 'connected' | 'available' | 'coming-soon';
+  category: 'communication' | 'payment' | 'ai' | 'automation';
+}
+
+const integrations: IntegrationCard[] = [
+  {
+    id: 'amazon-connect',
+    name: 'Amazon Connect AI',
+    description: 'AI-powered phone assistant for automatic appointment scheduling',
+    icon: <Brain className="h-5 w-5" />,
+    status: 'connected',
+    category: 'ai'
+  },
+  {
+    id: 'twilio',
+    name: 'Twilio (Legacy)',
+    description: 'SMS and voice communications (being replaced by Amazon SNS)',
+    icon: <MessageSquare className="h-5 w-5" />,
+    status: 'connected',
+    category: 'communication'
+  },
+  {
+    id: 'amazon-sns',
+    name: 'Amazon SNS',
+    description: 'Next-generation SMS notifications and alerts',
+    icon: <Cloud className="h-5 w-5" />,
+    status: 'connected',
+    category: 'communication'
+  },
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    description: 'Payment processing and invoicing',
+    icon: <CreditCard className="h-5 w-5" />,
+    status: 'available',
+    category: 'payment'
+  },
+  {
+    id: 'sendgrid',
+    name: 'SendGrid',
+    description: 'Email marketing and transactional emails',
+    icon: <Mail className="h-5 w-5" />,
+    status: 'available',
+    category: 'communication'
+  },
+  {
+    id: 'zapier',
+    name: 'Zapier',
+    description: 'Connect with 5000+ apps and automate workflows',
+    icon: <Zap className="h-5 w-5" />,
+    status: 'coming-soon',
+    category: 'automation'
+  }
+];
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'connected':
+      return 'success';
+    case 'available':
+      return 'secondary';
+    case 'coming-soon':
+      return 'outline';
+    default:
+      return 'secondary';
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'connected':
+      return 'Connected';
+    case 'available':
+      return 'Available';
+    case 'coming-soon':
+      return 'Coming Soon';
+    default:
+      return 'Unknown';
+  }
+};
 
 export const SettingsIntegrations = () => {
-  const integrations = [
-    {
-      id: "payment",
-      name: "Stripe Payments",
-      description: "Process credit card payments and manage subscriptions.",
-      logo: "https://cdn.worldvectorlogo.com/logos/stripe-2.svg",
-      connected: true
-    },
-    {
-      id: "sms",
-      name: "Twilio SMS",
-      description: "Send automated SMS notifications to clients and technicians.",
-      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Twilio-logo-red.svg/2560px-Twilio-logo-red.svg.png",
-      connected: true
-    },
-    {
-      id: "calendar",
-      name: "Google Calendar",
-      description: "Sync job schedules with Google Calendar.",
-      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Google_Calendar_icon_%282020%29.svg/2048px-Google_Calendar_icon_%282020%29.svg.png",
-      connected: true
-    },
-    {
-      id: "email",
-      name: "Mailchimp",
-      description: "Send marketing emails and manage email campaigns.",
-      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Mailchimp_Freddie_Camapaign.png/600px-Mailchimp_Freddie_Camapaign.png",
-      connected: false
-    },
-    {
-      id: "accounting",
-      name: "QuickBooks",
-      description: "Sync invoices, payments, and customer data with QuickBooks.",
-      logo: "https://logos-world.net/wp-content/uploads/2021/02/QuickBooks-Logo-2006-2015.png",
-      connected: false
-    },
-    {
-      id: "zapier",
-      name: "Zapier",
-      description: "Connect Fixlyfy to thousands of other apps and services.",
-      logo: "https://cdn.worldvectorlogo.com/logos/zapier-1.svg",
-      connected: false
+  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+
+  const categories = {
+    ai: { name: 'AI & Automation', icon: <Brain className="h-4 w-4" /> },
+    communication: { name: 'Communication', icon: <MessageSquare className="h-4 w-4" /> },
+    payment: { name: 'Payments', icon: <CreditCard className="h-4 w-4" /> },
+    automation: { name: 'Workflow', icon: <Zap className="h-4 w-4" /> }
+  };
+
+  const renderIntegrationDetails = () => {
+    switch (selectedIntegration) {
+      case 'amazon-connect':
+        return <AmazonConnectSettings />;
+      default:
+        return (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Integration Settings</h3>
+              <p className="text-gray-600">
+                Select an integration from the list to configure its settings.
+              </p>
+            </CardContent>
+          </Card>
+        );
     }
-  ];
-  
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium mb-4">Connected Applications</h3>
-        <div className="space-y-6">
-          {integrations.map((integration) => (
-            <div 
-              key={integration.id} 
-              className="flex items-center justify-between p-4 border rounded-lg"
-            >
-              <div className="flex items-center">
-                <div className="h-12 w-12 flex-shrink-0 flex items-center justify-center mr-4">
-                  <img 
-                    src={integration.logo} 
-                    alt={integration.name} 
-                    className="max-h-10 max-w-10 object-contain" 
-                  />
+        <h2 className="text-2xl font-bold mb-2">Integrations</h2>
+        <p className="text-gray-600">
+          Connect your favorite tools and services to enhance your workflow.
+        </p>
+      </div>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview">All Integrations</TabsTrigger>
+          <TabsTrigger value="configure">Configure</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {Object.entries(categories).map(([categoryId, category]) => {
+            const categoryIntegrations = integrations.filter(integration => integration.category === categoryId);
+            
+            if (categoryIntegrations.length === 0) return null;
+
+            return (
+              <div key={categoryId}>
+                <div className="flex items-center gap-2 mb-4">
+                  {category.icon}
+                  <h3 className="text-lg font-semibold">{category.name}</h3>
                 </div>
-                <div>
-                  <div className="flex items-center">
-                    <h4 className="font-medium">{integration.name}</h4>
-                    {integration.connected ? (
-                      <Badge className="ml-2 bg-fixlyfy-success/10 text-fixlyfy-success">Connected</Badge>
-                    ) : (
-                      <Badge className="ml-2 bg-fixlyfy-text-secondary/10 text-fixlyfy-text-secondary">Not Connected</Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-fixlyfy-text-secondary">{integration.description}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {categoryIntegrations.map((integration) => (
+                    <Card 
+                      key={integration.id} 
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        selectedIntegration === integration.id ? 'ring-2 ring-primary' : ''
+                      }`}
+                      onClick={() => setSelectedIntegration(integration.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gray-100 rounded-lg">
+                              {integration.icon}
+                            </div>
+                            <div>
+                              <CardTitle className="text-base">{integration.name}</CardTitle>
+                            </div>
+                          </div>
+                          <Badge variant={getStatusColor(integration.status) as any}>
+                            {getStatusText(integration.status)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <p className="text-sm text-gray-600">{integration.description}</p>
+                        <div className="mt-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            disabled={integration.status === 'coming-soon'}
+                          >
+                            {integration.status === 'connected' ? 'Configure' : 
+                             integration.status === 'available' ? 'Connect' : 'Coming Soon'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
-              <div>
-                {integration.connected ? (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Configure</Button>
-                    <Button variant="outline" size="sm" className="text-fixlyfy-error">Disconnect</Button>
-                  </div>
-                ) : (
-                  <Button className="bg-fixlyfy hover:bg-fixlyfy/90" size="sm">Connect</Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <div>
-        <h3 className="text-lg font-medium mb-4">API Access</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="api-access">Enable API Access</Label>
-              <p className="text-sm text-fixlyfy-text-secondary">Allow external applications to access your Fixlyfy data</p>
-            </div>
-            <Switch id="api-access" />
-          </div>
-          
-          <div className="p-4 bg-fixlyfy-bg-interface rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium">API Key</h4>
-              <Badge className="bg-fixlyfy-warning/10 text-fixlyfy-warning">Read/Write</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="bg-white rounded p-2 text-xs font-mono flex-1 border">
-                •••••••••••••••••••••••••••••••••••••••••••••••••••••
-              </div>
-              <Button variant="outline" size="sm">Show</Button>
-              <Button variant="outline" size="sm">Refresh</Button>
-            </div>
-            <p className="text-xs text-fixlyfy-text-secondary mt-2">
-              This key has full access to your Fixlyfy account. Keep it secure!
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <Separator />
-      
-      <div>
-        <h3 className="text-lg font-medium mb-4">Webhooks</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="webhooks">Enable Webhooks</Label>
-              <p className="text-sm text-fixlyfy-text-secondary">Send event notifications to external URLs</p>
-            </div>
-            <Switch id="webhooks" />
-          </div>
-          
-          <div className="p-4 bg-fixlyfy-bg-interface rounded-lg">
-            <p className="text-sm text-fixlyfy-text-secondary mb-4">
-              Configure webhooks to trigger on specific events like job creation, status changes, and more.
-            </p>
-            <Button variant="outline">Add Webhook</Button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex justify-end">
-        <Button className="bg-fixlyfy hover:bg-fixlyfy/90">Save Changes</Button>
-      </div>
+            );
+          })}
+        </TabsContent>
+
+        <TabsContent value="configure" className="space-y-6">
+          {renderIntegrationDetails()}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
