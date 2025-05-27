@@ -1,15 +1,18 @@
 
-import React, { ReactNode } from 'react';
-import { ModalProvider } from './modal-provider';
+import { ReactNode } from 'react';
+import { RBACProvider } from '@/components/auth/RBACProvider';
+import { AuthProvider } from '@/hooks/use-auth';
 
 interface AppProvidersProps {
   children: ReactNode;
 }
 
-export function AppProviders({ children }: AppProvidersProps) {
+export const AppProviders = ({ children }: AppProvidersProps) => {
   return (
-    <ModalProvider>
-      {children}
-    </ModalProvider>
+    <AuthProvider>
+      <RBACProvider>
+        {children}
+      </RBACProvider>
+    </AuthProvider>
   );
-}
+};
