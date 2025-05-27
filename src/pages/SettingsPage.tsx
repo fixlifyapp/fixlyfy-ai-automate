@@ -2,193 +2,81 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
-import { SettingsUser } from "@/components/settings/SettingsUser";
-import { SettingsCompany } from "@/components/settings/SettingsCompany";
-import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
-import { AISettings } from "@/components/settings/AISettings";
-import { Link } from "react-router-dom";
-import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersRound, Settings2, Shield, Sliders, User, Package, Phone, Brain } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { Settings, User, Bell, Shield, Phone } from "lucide-react";
+import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
 
 const SettingsPage = () => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("general");
-  
+
   return (
     <PageLayout>
       <PageHeader
         title="Settings"
         subtitle="Manage your account and application preferences"
-        icon={Settings2}
-        badges={[
-          { text: "Security", icon: Shield, variant: "fixlyfy" },
-          { text: "Customization", icon: Sliders, variant: "success" },
-          { text: "Profile Management", icon: User, variant: "info" }
-        ]}
+        icon={Settings}
       />
       
-      {/* Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Configuration Card */}
-        <Link to="/configuration">
-          <Card className="h-full hover:shadow-md transition-shadow">
-            <CardContent className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Settings2 className="h-6 w-6 text-fixlyfy" />
-              </div>
-              <div>
-                <h3 className="font-medium">Configuration</h3>
-                <p className="text-sm text-muted-foreground">Manage business niche, tags, job types, statuses, and custom fields</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+      <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-5 mb-6">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Settings size={16} />
+            <span className="hidden sm:inline">General</span>
+          </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User size={16} />
+            <span className="hidden sm:inline">Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell size={16} />
+            <span className="hidden sm:inline">Notifications</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-2">
+            <Shield size={16} />
+            <span className="hidden sm:inline">Security</span>
+          </TabsTrigger>
+          <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
+            <Phone size={16} />
+            <span className="hidden sm:inline">Phone Numbers</span>
+          </TabsTrigger>
+        </TabsList>
         
-        {/* Products Card */}
-        <Card 
-          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
-            activeTab === "products" ? 'ring-2 ring-fixlyfy' : ''
-          }`}
-          onClick={() => setActiveTab("products")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Package className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">Products & Inventory</h3>
-              <p className="text-sm text-muted-foreground">Manage your parts, products, and inventory</p>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="general" className="mt-0">
+          <div className="text-center py-8">
+            <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">General Settings</h3>
+            <p className="text-gray-500">General application settings coming soon.</p>
+          </div>
+        </TabsContent>
         
-        {/* Phone Numbers Card */}
-        <Card 
-          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
-            activeTab === "phone-numbers" ? 'ring-2 ring-fixlyfy' : ''
-          }`}
-          onClick={() => setActiveTab("phone-numbers")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Phone className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">Phone Numbers</h3>
-              <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="profile" className="mt-0">
+          <div className="text-center py-8">
+            <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Profile Settings</h3>
+            <p className="text-gray-500">Profile management coming soon.</p>
+          </div>
+        </TabsContent>
         
-        {/* AI Settings Card */}
-        <Card 
-          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
-            activeTab === "ai-settings" ? 'ring-2 ring-fixlyfy' : ''
-          }`}
-          onClick={() => setActiveTab("ai-settings")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Brain className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">AI Settings</h3>
-              <p className="text-sm text-muted-foreground">Configure AI agent and automation settings</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="fixlyfy-card overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-7 h-auto p-0 bg-fixlyfy-bg-interface">
-            <TabsTrigger 
-              value="general" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              General
-            </TabsTrigger>
-            <TabsTrigger 
-              value="user" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Your Profile
-            </TabsTrigger>
-            <TabsTrigger 
-              value="company" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Company
-            </TabsTrigger>
-            <TabsTrigger 
-              value="integrations" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Integrations
-            </TabsTrigger>
-            <TabsTrigger 
-              value="products" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Products
-            </TabsTrigger>
-            <TabsTrigger 
-              value="phone-numbers" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Phone Numbers
-            </TabsTrigger>
-            <TabsTrigger 
-              value="ai-settings" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              AI Settings
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="general" className="p-6">
-            <SettingsGeneral />
-          </TabsContent>
-          
-          <TabsContent value="user" className="p-6">
-            <SettingsUser />
-          </TabsContent>
-          
-          <TabsContent value="company" className="p-6">
-            <SettingsCompany />
-          </TabsContent>
-          
-          <TabsContent value="integrations" className="p-6">
-            <SettingsIntegrations />
-          </TabsContent>
-          
-          <TabsContent value="products" className="p-6">
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium mb-2">Products & Inventory</h3>
-              <p className="text-gray-600 mb-4">
-                This section will contain product and inventory management features.
-              </p>
-              <Link to="/products" className="text-fixlyfy hover:underline">
-                Go to Products Page →
-              </Link>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="phone-numbers" className="p-6">
-            <PhoneNumberManagement />
-          </TabsContent>
-          
-          <TabsContent value="ai-settings" className="p-6">
-            <AISettings />
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent value="notifications" className="mt-0">
+          <div className="text-center py-8">
+            <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Notification Settings</h3>
+            <p className="text-gray-500">Notification preferences coming soon.</p>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="security" className="mt-0">
+          <div className="text-center py-8">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Security Settings</h3>
+            <p className="text-gray-500">Security and privacy settings coming soon.</p>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="phone-numbers" className="mt-0">
+          <PhoneNumberManagement />
+        </TabsContent>
+      </Tabs>
     </PageLayout>
   );
 };
