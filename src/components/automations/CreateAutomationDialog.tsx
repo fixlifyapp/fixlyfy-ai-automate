@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Mail, Zap, Clock, Bell, Gift, CheckCircle, AlertTriangle, User, MessageSquare, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ActionTypeSelector } from "./ActionTypeSelector";
-import { TwilioActionConfig } from "./TwilioActionConfig";
+import { AmazonConnectConfig } from "../connect/AmazonConnectConfig";
 
 interface CreateAutomationDialogProps {
   open: boolean;
@@ -362,12 +362,12 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
                     </div>
                   </div>
 
-                  {selectedActionType && (selectedActionType === 'sms' || selectedActionType === 'call') && (
+                  {selectedActionType && (selectedActionType === 'sms' || selectedActionType === 'call' || selectedActionType === 'ai-call') && (
                     <div>
                       <Label>Configure {selectedActionType.toUpperCase()} Action</Label>
                       <div className="mt-2 p-4 border border-fixlyfy-border rounded-lg">
-                        <TwilioActionConfig
-                          actionType={selectedActionType as "sms" | "call"}
+                        <AmazonConnectConfig
+                          actionType={selectedActionType as "sms" | "call" | "ai-call"}
                           config={actionConfig}
                           onChange={handleActionConfigChange}
                         />
