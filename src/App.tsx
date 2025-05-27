@@ -9,7 +9,7 @@ import { AppProviders } from "@/components/ui/AppProviders";
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
 const JobsPage = lazy(() => import("@/pages/JobsPage"));
-const ClientFormPage = lazy(() => import("@/pages/ClientFormPage"));
+const ClientDetailPage = lazy(() => import("@/pages/ClientDetailPage"));
 const JobDetailsPage = lazy(() => import("@/pages/JobDetailsPage"));
 const SchedulePage = lazy(() => import("@/pages/SchedulePage"));
 const ConnectCenterPage = lazy(() => import("@/pages/ConnectCenterPage"));
@@ -18,10 +18,10 @@ const FinancePage = lazy(() => import("@/pages/FinancePage"));
 const InvoicesPage = lazy(() => import("@/pages/InvoicesPage"));
 const EstimatesPage = lazy(() => import("@/pages/EstimatesPage"));
 const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
-const TeamPage = lazy(() => import("@/pages/TeamPage"));
+const TeamManagementPage = lazy(() => import("@/pages/TeamManagementPage"));
 const AutomationsPage = lazy(() => import("@/pages/AutomationsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-const AIAssistantPage = lazy(() => import("@/pages/AIAssistantPage"));
+const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 const AdvancedDashboard = lazy(() => import("@/pages/AdvancedDashboard"));
 const AdvancedReportsPage = lazy(() => import("@/pages/AdvancedReportsPage"));
@@ -43,7 +43,7 @@ function App() {
                   <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
                   <Route path="/advanced-reports" element={<AdvancedReportsPage />} />
                   <Route path="/clients" element={<ClientsPage />} />
-                  <Route path="/clients/:id" element={<ClientFormPage />} />
+                  <Route path="/clients/:id" element={<ClientDetailPage />} />
                   <Route path="/jobs" element={<JobsPage />} />
                   <Route path="/jobs/:id" element={<JobDetailsPage />} />
                   <Route path="/schedule" element={<SchedulePage />} />
@@ -53,10 +53,10 @@ function App() {
                   <Route path="/invoices" element={<InvoicesPage />} />
                   <Route path="/estimates" element={<EstimatesPage />} />
                   <Route path="/products" element={<ProductsPage />} />
-                  <Route path="/team" element={<TeamPage />} />
+                  <Route path="/team" element={<TeamManagementPage />} />
                   <Route path="/automations" element={<AutomationsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/ai-assistant" element={<AIAssistantPage />} />
+                  <Route path="/ai-assistant" element={<AiAssistantPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                 </Routes>
               </Suspense>
