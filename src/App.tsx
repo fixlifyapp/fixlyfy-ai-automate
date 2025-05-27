@@ -1,11 +1,9 @@
-
 import { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProviders } from "@/components/ui/AppProviders";
-import { SmartNotificationsPanel } from "@/components/ai/SmartNotificationsPanel";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
@@ -55,7 +53,6 @@ function App() {
                   <Route path="/analytics" element={<AnalyticsPage />} />
                 </Routes>
               </Suspense>
-              <SmartNotificationsPanel />
             </div>
           </BrowserRouter>
         </TooltipProvider>
