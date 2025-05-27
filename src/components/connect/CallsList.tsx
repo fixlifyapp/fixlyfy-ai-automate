@@ -1,174 +1,230 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Loader2, PhoneOutgoing, PhoneIncoming, PhoneMissed, Clock } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { Phone, PhoneCall, PhoneIncoming, PhoneOutgoing, Clock, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
-import { CallDialog } from "./CallDialog";
+import { toast } from "sonner";
 
 interface Call {
   id: string;
-  call_sid: string | null;
-  client_id: string | null;
   phone_number: string;
-  direction: "incoming" | "outgoing" | "missed";
-  duration: string | null;
-  status: string | null;
+  direction: string;
+  status: string;
+  duration: string;
   started_at: string;
-  ended_at: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+  ended_at?: string;
+  client_id?: string;
+  notes?: string;
   clients?: {
-    id: string;
     name: string;
-  } | null;
+  };
 }
 
 export const CallsList = () => {
   const [calls, setCalls] = useState<Call[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [callDialogOpen, setCallDialogOpen] = useState(false);
-  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isCalling, setIsCalling] = useState(false);
+  const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchCalls();
+    fetchOwnedNumbers();
+  }, []);
 
   const fetchCalls = async () => {
     try {
-      setIsLoading(true);
       const { data, error } = await supabase
         .from('calls')
         .select(`
           *,
-          clients:client_id(id, name)
+          clients (name)
         `)
         .order('started_at', { ascending: false })
-        .limit(50);
+        .limit(20);
 
       if (error) throw error;
-      
-      // Type assertion to ensure direction field matches expected type
-      const typedCalls = (data || []).map(call => ({
-        ...call,
-        direction: call.direction as "incoming" | "outgoing" | "missed"
-      }));
-      
-      setCalls(typedCalls);
+      setCalls(data || []);
     } catch (error) {
-      console.error("Error fetching calls:", error);
-      toast.error("Failed to load calls");
+      console.error('Error fetching calls:', error);
+      toast.error('Failed to load calls');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCalls();
-  }, []);
+  const fetchOwnedNumbers = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
+        body: { action: 'list-owned' }
+      });
 
-  // Set up real-time sync for calls
-  useRealtimeSync({
-    tables: ['calls'],
-    onUpdate: fetchCalls,
-    enabled: true
-  });
-
-  const handleCallClick = (phoneNumber: string) => {
-    setSelectedPhoneNumber(phoneNumber);
-    setCallDialogOpen(true);
+      if (error) throw error;
+      setOwnedNumbers(data.phone_numbers || []);
+    } catch (error) {
+      console.error('Error loading owned numbers:', error);
+    }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
+  const makeCall = async () => {
+    if (!phoneNumber.trim()) {
+      toast.error('Please enter a phone number');
+      return;
+    }
+
+    if (ownedNumbers.length === 0) {
+      toast.error('No phone numbers available. Please purchase a number first.');
+      return;
+    }
+
+    setIsCalling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('make-call', {
+        body: {
+          to: phoneNumber,
+          from: ownedNumbers[0].phone_number
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success('Call initiated successfully');
+        setPhoneNumber("");
+        fetchCalls(); // Refresh calls list
+      } else {
+        toast.error(data.error || 'Failed to make call');
+      }
+    } catch (error) {
+      console.error('Error making call:', error);
+      toast.error('Failed to initiate call');
+    } finally {
+      setIsCalling(false);
+    }
   };
 
-  const formatDuration = (started: string, ended: string | null) => {
-    if (!ended) return null;
-    const duration = Math.floor((new Date(ended).getTime() - new Date(started).getTime()) / 1000);
-    const mins = Math.floor(duration / 60);
-    const secs = duration % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const getCallIcon = (direction: string) => {
+    switch (direction) {
+      case 'inbound':
+        return <PhoneIncoming className="h-4 w-4 text-green-600" />;
+      case 'outbound':
+        return <PhoneOutgoing className="h-4 w-4 text-blue-600" />;
+      case 'missed':
+        return <Phone className="h-4 w-4 text-red-600" />;
+      default:
+        return <Phone className="h-4 w-4 text-gray-600" />;
+    }
   };
 
-  const getStatusBadge = (status: string | null) => {
-    if (!status) return null;
-    
-    const statusColors: Record<string, string> = {
-      'ringing': 'bg-blue-100 text-blue-800',
-      'in-progress': 'bg-green-100 text-green-800',
-      'completed': 'bg-gray-100 text-gray-800',
-      'failed': 'bg-red-100 text-red-800',
-      'busy': 'bg-yellow-100 text-yellow-800',
-      'no-answer': 'bg-orange-100 text-orange-800'
+  const getCallStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
+      completed: 'success',
+      missed: 'destructive',
+      busy: 'secondary',
+      'no-answer': 'outline'
     };
-
+    
     return (
-      <Badge className={statusColors[status] || 'bg-gray-100 text-gray-800'}>
-        {status.replace('-', ' ').toUpperCase()}
+      <Badge variant={variants[status] || 'secondary'}>
+        {status.replace('-', ' ')}
       </Badge>
     );
   };
 
   return (
-    <>
-      <Card className="border-fixlyfy-border">
+    <div className="space-y-6">
+      {/* Make Call Section */}
+      <Card>
         <CardHeader>
-          <CardTitle>Recent Calls</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <PhoneCall className="h-5 w-5 text-fixlyfy" />
+            Make a Call
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 size={24} className="animate-spin text-fixlyfy" />
-            </div>
-          ) : calls.length === 0 ? (
-            <div className="text-center py-8 text-fixlyfy-text-secondary">
-              No calls found
+        <CardContent>
+          {ownedNumbers.length > 0 ? (
+            <div className="flex gap-3">
+              <Input
+                placeholder="Enter phone number (e.g., +1234567890)"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={makeCall} 
+                disabled={isCalling || !phoneNumber.trim()}
+                className="gap-2"
+              >
+                <PhoneCall className="h-4 w-4" />
+                {isCalling ? 'Calling...' : 'Call'}
+              </Button>
             </div>
           ) : (
-            <div className="divide-y divide-fixlyfy-border">
+            <div className="text-center py-4">
+              <Phone className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">
+                No phone numbers available. Purchase a number to start making calls.
+              </p>
+              <Button variant="outline" onClick={() => window.location.href = '/settings'}>
+                Purchase Phone Number
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Calls History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5 text-fixlyfy" />
+            Call History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy"></div>
+            </div>
+          ) : calls.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Phone className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-lg font-medium mb-2">No calls yet</h3>
+              <p className="text-sm">Your call history will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
               {calls.map((call) => (
-                <div key={call.id} className="flex items-center justify-between p-4 hover:bg-fixlyfy-bg-hover">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-muted rounded-full p-2">
-                      {call.direction === "incoming" ? (
-                        <PhoneIncoming className="h-5 w-5 text-green-500" />
-                      ) : call.direction === "outgoing" ? (
-                        <PhoneOutgoing className="h-5 w-5 text-blue-500" />
-                      ) : (
-                        <PhoneMissed className="h-5 w-5 text-red-500" />
-                      )}
-                    </div>
+                <div
+                  key={call.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    {getCallIcon(call.direction)}
                     <div>
-                      <h3 className="font-medium">
-                        {call.clients?.name || "Unknown Contact"}
-                      </h3>
-                      <p className="text-sm text-fixlyfy-text-secondary">{call.phone_number}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {getStatusBadge(call.status)}
-                        {call.ended_at && (
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock size={12} />
-                            {formatDuration(call.started_at, call.ended_at)}
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{call.phone_number}</span>
+                        {call.clients && (
+                          <span className="text-sm text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {call.clients.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {new Date(call.started_at).toLocaleString()}
+                        {call.duration && (
+                          <span>• Duration: {call.duration}</span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right flex items-center gap-2">
-                    <div>
-                      <p className="text-xs text-fixlyfy-text-secondary">
-                        {formatTimestamp(call.started_at)}
-                      </p>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="h-8 w-8 text-fixlyfy"
-                      onClick={() => handleCallClick(call.phone_number)}
-                    >
-                      <Phone size={16} />
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    {getCallStatusBadge(call.status)}
                   </div>
                 </div>
               ))}
@@ -176,12 +232,6 @@ export const CallsList = () => {
           )}
         </CardContent>
       </Card>
-
-      <CallDialog
-        isOpen={callDialogOpen}
-        onClose={() => setCallDialogOpen(false)}
-        phoneNumber={selectedPhoneNumber}
-      />
-    </>
+    </div>
   );
 };

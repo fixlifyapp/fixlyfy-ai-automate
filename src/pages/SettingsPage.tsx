@@ -7,10 +7,11 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
+import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersRound, Settings2, Shield, Sliders, User, Package } from "lucide-react";
+import { UsersRound, Settings2, Shield, Sliders, User, Package, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -31,7 +32,7 @@ const SettingsPage = () => {
       />
       
       {/* Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Configuration Card */}
         <Link to="/configuration">
           <Card className="h-full hover:shadow-md transition-shadow">
@@ -62,6 +63,24 @@ const SettingsPage = () => {
           </Card>
         </Link>
         
+        {/* Phone Numbers Card */}
+        <Card 
+          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
+            activeTab === "phone-numbers" ? 'ring-2 ring-fixlyfy' : ''
+          }`}
+          onClick={() => setActiveTab("phone-numbers")}
+        >
+          <CardContent className="flex items-center p-6 space-x-4">
+            <div className="bg-fixlyfy/10 p-3 rounded-full">
+              <Phone className="h-6 w-6 text-fixlyfy" />
+            </div>
+            <div>
+              <h3 className="font-medium">Phone Numbers</h3>
+              <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
+            </div>
+          </CardContent>
+        </Card>
+        
         {/* Role Management Card */}
         <PermissionRequired permission="users.roles.assign">
           <Link to="/admin/roles">
@@ -82,7 +101,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -107,6 +126,12 @@ const SettingsPage = () => {
             >
               Integrations
             </TabsTrigger>
+            <TabsTrigger 
+              value="phone-numbers" 
+              className="py-4 rounded-none data-[state=active]:bg-white"
+            >
+              Phone Numbers
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="general" className="p-6">
@@ -123,6 +148,10 @@ const SettingsPage = () => {
           
           <TabsContent value="integrations" className="p-6">
             <SettingsIntegrations />
+          </TabsContent>
+          
+          <TabsContent value="phone-numbers" className="p-6">
+            <PhoneNumberManagement />
           </TabsContent>
         </Tabs>
       </div>
