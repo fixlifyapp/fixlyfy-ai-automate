@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { ModernCard, ModernCardContent } from "@/components/ui/modern-card";
@@ -169,7 +168,7 @@ export function TeamManagementSettings() {
             <div className="flex gap-2">
               <GradientButton 
                 onClick={handleAddNewMember} 
-                variant="fixlyfy"
+                variant="primary"
                 icon={UserPlus}
               >
                 Invite Team Member
