@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, X } from "lucide-react";
-import { TimePeriod } from "@/pages/Dashboard";
+import { TimePeriod } from "@/types/dashboard";
 
 interface DashboardFilterControlsProps {
   currentPeriod: TimePeriod;

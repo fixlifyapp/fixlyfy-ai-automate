@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { TimePeriod } from "@/pages/Dashboard";
+import { TimePeriod } from "@/types/dashboard";
 import { toast } from "sonner";
 
 interface KpiData {

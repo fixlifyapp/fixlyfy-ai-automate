@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { BarChart3, Zap, Bot, Target } from "lucide-react";
+import { TimePeriod } from "@/types/dashboard";
 import {
   EnhancedKpiCards,
   DashboardCharts,
@@ -11,9 +13,11 @@ import {
   QuickActionsPanel,
   RecentJobs,
   UpcomingJobs,
-  ActivityFeed
+  ActivityFeed,
+  AIAgentWidget
 } from "@/components/dashboard";
-import { AIAgentWidget } from "@/components/dashboard/AIAgentWidget";
+
+export type { TimePeriod };
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
