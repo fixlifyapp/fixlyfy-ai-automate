@@ -15,9 +15,6 @@ import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useMessageContext } from "@/contexts/MessageContext";
-import { DispatcherMessagesView } from "@/components/connect/DispatcherMessagesView";
-import { RealCallsList } from "@/components/connect/RealCallsList";
-import { RealEmailsList } from "@/components/connect/RealEmailsList";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("messages");
@@ -39,7 +36,7 @@ const ConnectCenterPage = () => {
   const tabParam = searchParams.get("tab") || "messages";
   
   useEffect(() => {
-    if (tabParam && ["messages", "calls", "emails"].includes(tabParam)) {
+    if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -120,6 +117,9 @@ const ConnectCenterPage = () => {
       case "emails":
         toast.info("New email feature coming soon");
         break;
+      case "phone-numbers":
+        toast.info("Use the search above to find and purchase phone numbers");
+        break;
     }
   };
 
@@ -128,6 +128,7 @@ const ConnectCenterPage = () => {
       case "messages": return "New Message";
       case "calls": return "New Call";
       case "emails": return "New Email";
+      case "phone-numbers": return "Search Numbers";
       default: return "New Action";
     }
   };
@@ -157,7 +158,7 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-6">
+        <TabsList className="grid grid-cols-4 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
             <span className="hidden sm:inline">Messages</span>
@@ -179,18 +180,26 @@ const ConnectCenterPage = () => {
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
+            <PhoneCall size={16} />
+            <span className="hidden sm:inline">Numbers</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="messages" className="mt-0">
-          <DispatcherMessagesView />
+          <MessagesList searchResults={searchResults} />
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">
-          <RealCallsList />
+          <CallsList />
         </TabsContent>
         
         <TabsContent value="emails" className="mt-0">
-          <RealEmailsList />
+          <EmailsList />
+        </TabsContent>
+        
+        <TabsContent value="phone-numbers" className="mt-0">
+          <PhoneNumbersList />
         </TabsContent>
       </Tabs>
     </PageLayout>
