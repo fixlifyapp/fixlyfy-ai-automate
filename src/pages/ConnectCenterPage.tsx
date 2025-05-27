@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessagesList } from "@/components/connect/MessagesList";
-import { CallsList } from "@/components/connect/CallsList";
-import { EmailsList } from "@/components/connect/EmailsList";
+import { DispatcherMessagesView } from "@/components/connect/DispatcherMessagesView";
+import { RealCallsList } from "@/components/connect/RealCallsList";
+import { RealEmailsList } from "@/components/connect/RealEmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ const ConnectCenterPage = () => {
   useEffect(() => {
     const fetchUnreadCounts = async () => {
       try {
+        // Count unread messages
         const { data: conversations } = await supabase
           .from('conversations')
           .select(`
@@ -84,15 +86,22 @@ const ConnectCenterPage = () => {
           unreadMessages += unreadInConv;
         });
 
+        // Count missed calls
         const { data: missedCalls } = await supabase
           .from('calls')
           .select('id')
           .eq('direction', 'missed');
 
+        // Count unread emails
+        const { data: unreadEmails } = await supabase
+          .from('emails')
+          .select('id')
+          .eq('is_read', false);
+
         setUnreadCounts({
           messages: unreadMessages,
           calls: missedCalls?.length || 0,
-          emails: 0
+          emails: unreadEmails?.length || 0
         });
       } catch (error) {
         console.error("Error fetching unread counts:", error);
@@ -100,6 +109,28 @@ const ConnectCenterPage = () => {
     };
 
     fetchUnreadCounts();
+
+    // Set up real-time subscriptions to update counts
+    const messagesChannel = supabase
+      .channel('unread-counts-messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fetchUnreadCounts)
+      .subscribe();
+
+    const callsChannel = supabase
+      .channel('unread-counts-calls')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, fetchUnreadCounts)
+      .subscribe();
+
+    const emailsChannel = supabase
+      .channel('unread-counts-emails')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'emails' }, fetchUnreadCounts)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(callsChannel);
+      supabase.removeChannel(emailsChannel);
+    };
   }, []);
 
   const handleNewCommunication = () => {
@@ -187,15 +218,15 @@ const ConnectCenterPage = () => {
         </TabsList>
         
         <TabsContent value="messages" className="mt-0">
-          <MessagesList searchResults={searchResults} />
+          <DispatcherMessagesView searchResults={searchResults} />
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">
-          <CallsList />
+          <RealCallsList />
         </TabsContent>
         
         <TabsContent value="emails" className="mt-0">
-          <EmailsList />
+          <RealEmailsList />
         </TabsContent>
         
         <TabsContent value="phone-numbers" className="mt-0">
