@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -66,7 +65,7 @@ class AwsV4Signer {
     const urlObj = new URL(url);
     const host = urlObj.hostname;
     const path = urlObj.pathname;
-    const queryString = urlObj.search.slice(1); // Remove the '?' prefix
+    const queryString = urlObj.search.slice(1);
     
     // Add required headers
     const signedHeaders = {
@@ -121,48 +120,46 @@ class AwsV4Signer {
 
 // Helper function to make Amazon Connect API calls
 const makeConnectApiCall = async (
-  action: string,
+  endpoint: string,
+  method: string,
   payload: any,
   awsAccessKeyId: string,
   awsSecretAccessKey: string,
-  region: string,
-  instanceId: string
+  region: string
 ) => {
   const host = `connect.${region}.amazonaws.com`;
-  const url = `https://${host}/phone-number/${action.toLowerCase().replace(/([A-Z])/g, '-$1').slice(1)}`;
+  const url = `https://${host}${endpoint}`;
   
   const headers = {
     'Content-Type': 'application/x-amz-json-1.1',
-    'X-Amz-Target': `AWSConnectService.${action}`,
   };
 
   const payloadString = JSON.stringify(payload);
   
   try {
     const signer = new AwsV4Signer(awsAccessKeyId, awsSecretAccessKey, region, 'connect');
-    const signedHeaders = await signer.sign('POST', url, headers, payloadString);
+    const signedHeaders = await signer.sign(method, url, headers, payloadString);
 
-    console.log(`Making Amazon Connect API call: ${action}`);
+    console.log(`Making Amazon Connect API call to: ${endpoint}`);
     console.log('URL:', url);
-    console.log('Headers:', JSON.stringify(signedHeaders, null, 2));
+    console.log('Method:', method);
     console.log('Payload:', payloadString);
 
     const response = await fetch(url, {
-      method: 'POST',
+      method: method,
       headers: signedHeaders,
       body: payloadString
     });
 
     const responseText = await response.text();
     console.log('Response status:', response.status);
-    console.log('Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
     console.log('Response body:', responseText);
 
     if (!response.ok) {
       throw new Error(`Amazon Connect API error: ${response.status} - ${responseText}`);
     }
 
-    const result = JSON.parse(responseText);
+    const result = responseText ? JSON.parse(responseText) : {};
     console.log('Amazon Connect API Success:', result);
     return result;
   } catch (error) {
@@ -220,13 +217,13 @@ serve(async (req) => {
 
     const { action, areaCode, contains, country, phoneNumber }: PhoneNumberRequest = await req.json();
 
-    // Get AWS credentials and Amazon Connect instance - TRIM THE INSTANCE ID
+    // Get AWS credentials and Amazon Connect instance
     const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
     const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
-    const connectInstanceId = Deno.env.get('AMAZON_CONNECT_INSTANCE_ID')?.trim(); // TRIM HERE
+    const connectInstanceId = Deno.env.get('AMAZON_CONNECT_INSTANCE_ID')?.trim();
 
-    console.log('Connect Instance ID (after trim):', `"${connectInstanceId}"`);
+    console.log('Connect Instance ID:', `"${connectInstanceId}"`);
     console.log('AWS Region:', awsRegion);
     console.log('Action:', action);
 
@@ -250,13 +247,12 @@ serve(async (req) => {
           if (areaCode && /^\d{3}$/.test(areaCode)) {
             searchAreaCodes = [areaCode];
           } else if (contains) {
-            // Try to get area codes from city name
             searchAreaCodes = getAreaCodeFromCity(contains);
           }
 
           console.log(`Searching for phone numbers in ${countryCode}, area codes: ${searchAreaCodes}`);
 
-          // Use real Amazon Connect API call
+          // Use correct Amazon Connect API endpoint for searching available phone numbers
           const searchPayload = {
             InstanceId: connectInstanceId,
             PhoneNumberCountryCode: countryCode,
@@ -266,12 +262,12 @@ serve(async (req) => {
           };
 
           const result = await makeConnectApiCall(
-            'SearchAvailablePhoneNumbers',
+            '/phone-numbers/search-available',
+            'POST',
             searchPayload,
             awsAccessKeyId,
             awsSecretAccessKey,
-            awsRegion,
-            connectInstanceId
+            awsRegion
           );
 
           // Transform the Amazon Connect response to our format
@@ -312,7 +308,7 @@ serve(async (req) => {
         }
 
         try {
-          // Use real Amazon Connect API call
+          // Use correct Amazon Connect API endpoint for claiming phone numbers
           const purchasePayload = {
             InstanceId: connectInstanceId,
             PhoneNumber: phoneNumber,
@@ -321,12 +317,12 @@ serve(async (req) => {
           };
 
           const result = await makeConnectApiCall(
-            'ClaimPhoneNumber',
+            '/phone-numbers/claim',
+            'PUT',
             purchasePayload,
             awsAccessKeyId,
             awsSecretAccessKey,
-            awsRegion,
-            connectInstanceId
+            awsRegion
           );
 
           // Get user from auth header
