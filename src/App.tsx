@@ -16,12 +16,11 @@ const SchedulePage = lazy(() => import("@/pages/SchedulePage"));
 const ConnectCenterPage = lazy(() => import("@/pages/ConnectCenterPage"));
 const MessagesPage = lazy(() => import("@/pages/MessagesPage"));
 const FinancePage = lazy(() => import("@/pages/FinancePage"));
-const InvoicesPage = lazy(() => import("@/pages/InvoicesPage"));
-const EstimatesPage = lazy(() => import("@/pages/EstimatesPage"));
 const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
 const TeamManagementPage = lazy(() => import("@/pages/TeamManagementPage"));
 const AutomationsPage = lazy(() => import("@/pages/AutomationsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const ConfigurationPage = lazy(() => import("@/pages/ConfigurationPage"));
 const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 
@@ -47,12 +46,11 @@ function App() {
                   <Route path="/connect" element={<ConnectCenterPage />} />
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/finance" element={<FinancePage />} />
-                  <Route path="/invoices" element={<InvoicesPage />} />
-                  <Route path="/estimates" element={<EstimatesPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/team" element={<TeamManagementPage />} />
                   <Route path="/automations" element={<AutomationsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/configuration" element={<ConfigurationPage />} />
                   <Route path="/ai-assistant" element={<AiAssistantPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                 </Routes>

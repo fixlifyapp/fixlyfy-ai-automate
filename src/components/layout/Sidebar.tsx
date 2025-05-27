@@ -8,14 +8,11 @@ import {
   Briefcase, 
   Users, 
   Calendar, 
-  ClipboardList,
   DollarSign,
   MessageSquare,
   BarChart3,
   Settings,
-  FileText,
   Phone,
-  Package,
   Bot,
   Zap,
   UserCheck
@@ -52,18 +49,6 @@ export function Sidebar({ className }: SidebarProps) {
       label: 'Schedule',
       icon: Calendar,
       href: '/schedule',
-      color: "text-fixlyfy"
-    },
-    {
-      label: 'Estimates',
-      icon: ClipboardList,
-      href: '/estimates',
-      color: "text-fixlyfy"
-    },
-    {
-      label: 'Invoices',
-      icon: FileText,
-      href: '/invoices',
       color: "text-fixlyfy"
     },
     {
@@ -106,12 +91,6 @@ export function Sidebar({ className }: SidebarProps) {
       label: 'Team',
       icon: UserCheck,
       href: '/team',
-      color: "text-fixlyfy"
-    },
-    {
-      label: 'Products',
-      icon: Package,
-      href: '/products',
       color: "text-fixlyfy"
     },
     {
