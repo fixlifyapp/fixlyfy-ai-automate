@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { clients } from "@/data/clients";
 import { toast } from "@/components/ui/sonner";
-import { MessageDialog } from "@/components/jobs/dialogs/MessageDialog";
+import { ConnectMessageDialog } from "@/components/connect/components/ConnectMessageDialog";
 import { useAI } from "@/hooks/use-ai";
 
 interface Message {
@@ -399,13 +398,14 @@ const MessagesPage = () => {
         </div>
       </div>
       
-      <MessageDialog
-        open={isMessageDialogOpen}
-        onOpenChange={setIsMessageDialogOpen}
-        client={selectedClient || {
-          name: "New Client",
-          phone: ""
-        }}
+      <ConnectMessageDialog
+        isOpen={isMessageDialogOpen}
+        onClose={() => setIsMessageDialogOpen(false)}
+        conversation={selectedClient ? {
+          id: '',
+          client: selectedClient,
+          messages: []
+        } : null}
       />
     </PageLayout>
   );

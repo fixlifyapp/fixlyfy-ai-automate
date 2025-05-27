@@ -17,12 +17,11 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
   const handleMessageClick = async () => {
     if (job) {
       console.log('Message button clicked for job:', job);
-      // Open the message dialog for this client
       await openMessageDialog({
         id: job.clientId,
         name: job.client,
         phone: job.phone || "",
-        email: "" // Could be added if available from job data
+        email: ""
       });
     } else {
       console.error('No job data available');
