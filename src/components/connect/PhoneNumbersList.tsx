@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, ShoppingCart, MapPin, DollarSign } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { PhoneNumberSearch } from "./PhoneNumberSearch";
 
 interface PhoneNumber {
   id: string;
@@ -26,12 +27,9 @@ interface PhoneNumber {
   connect_phone_number_arn?: string;
 }
 
-interface PhoneNumbersListProps {
-  searchResults: any[];
-}
-
-export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
+export const PhoneNumbersList = () => {
   const [ownedNumbers, setOwnedNumbers] = useState<PhoneNumber[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
@@ -82,6 +80,8 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
       if (data.success) {
         toast.success(`Successfully purchased ${phoneNumber.phoneNumber}`);
         loadOwnedNumbers(); // Reload owned numbers
+        // Remove from search results
+        setSearchResults(prev => prev.filter(num => num.phoneNumber !== phoneNumber.phoneNumber));
       } else {
         throw new Error(data.error || 'Failed to purchase number');
       }
@@ -102,16 +102,11 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
     return phoneNumber;
   };
 
-  const formatCapabilities = (capabilities: any) => {
-    const caps = [];
-    if (capabilities?.voice) caps.push('Voice');
-    if (capabilities?.sms) caps.push('SMS');
-    if (capabilities?.mms) caps.push('MMS');
-    return caps.join(', ');
-  };
-
   return (
     <div className="space-y-6">
+      {/* Search Interface */}
+      <PhoneNumberSearch onSearchResults={setSearchResults} />
+
       {/* Owned Numbers */}
       <Card>
         <CardHeader>
@@ -147,7 +142,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                     </div>
                     <div>
                       <div className="font-medium">
-                        {number.phone_number}
+                        {formatPhoneNumber(number.phone_number)}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-4">
                         {number.locality && (
@@ -171,7 +166,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                       )}
                     </div>
                   </div>
-                  <Badge variant="success">Owned</Badge>
+                  <Badge variant="default" className="bg-green-600">Owned</Badge>
                 </div>
               ))}
             </div>
@@ -201,7 +196,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                     </div>
                     <div>
                       <div className="font-medium">
-                        {number.phoneNumber}
+                        {formatPhoneNumber(number.phoneNumber)}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-4">
                         {number.locality && (
