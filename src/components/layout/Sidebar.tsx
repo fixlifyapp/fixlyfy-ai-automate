@@ -110,9 +110,9 @@ export function Sidebar({ className }: SidebarProps) {
       color: "text-yellow-600"
     },
     {
-      label: 'Reports',
+      label: 'Analytics',
       icon: BarChart3,
-      href: '/reports',
+      href: '/analytics',
       color: "text-violet-500"
     },
     {

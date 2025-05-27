@@ -1,258 +1,206 @@
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { ReportWidget } from "./ReportWidget";
-import { Plus, Play, Save, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Plus, 
+  Save, 
+  Play, 
+  Download,
+  Filter,
+  BarChart3,
+  PieChart,
+  LineChart,
+  TrendingUp,
+  Calendar
+} from "lucide-react";
 
-interface Widget {
-  id: string;
-  type: 'chart' | 'table';
-  metric: string;
-  dimension?: string;
-  data?: any[];
-  columns?: any[];
+interface ReportBuilderProps {
+  activeTemplate?: string | null;
 }
 
-export const ReportBuilder = () => {
-  const [searchParams] = useSearchParams();
-  const templateId = searchParams.get('templateId');
-  
-  const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [technicianId, setTechnicianId] = useState<string>('all');
-  const [widgets, setWidgets] = useState<Widget[]>([]);
-  const [technicians, setTechnicians] = useState<any[]>([]);
-  const [reportName, setReportName] = useState('');
-  const [loading, setLoading] = useState(false);
+export const ReportBuilder = ({ activeTemplate }: ReportBuilderProps) => {
+  const [reportName, setReportName] = useState("");
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
+  const [selectedCharts, setSelectedCharts] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState("last30days");
 
-  useEffect(() => {
-    fetchTechnicians();
-    if (templateId) {
-      loadTemplate();
-    }
-  }, [templateId]);
+  const availableMetrics = [
+    { id: "revenue", name: "Total Revenue", category: "Financial", icon: TrendingUp },
+    { id: "jobs_completed", name: "Jobs Completed", category: "Operations", icon: BarChart3 },
+    { id: "customer_satisfaction", name: "Customer Satisfaction", category: "Quality", icon: BarChart3 },
+    { id: "response_time", name: "Average Response Time", category: "Performance", icon: BarChart3 },
+    { id: "technician_efficiency", name: "Technician Efficiency", category: "Performance", icon: BarChart3 },
+    { id: "completion_rate", name: "Job Completion Rate", category: "Operations", icon: BarChart3 },
+    { id: "profit_margin", name: "Profit Margin", category: "Financial", icon: TrendingUp },
+    { id: "client_retention", name: "Client Retention Rate", category: "Quality", icon: BarChart3 }
+  ];
 
-  const fetchTechnicians = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, name')
-      .eq('role', 'technician');
-    
-    setTechnicians(data || []);
+  const chartTypes = [
+    { id: "line", name: "Line Chart", icon: LineChart, description: "Show trends over time" },
+    { id: "bar", name: "Bar Chart", icon: BarChart3, description: "Compare categories" },
+    { id: "pie", name: "Pie Chart", icon: PieChart, description: "Show proportions" },
+    { id: "table", name: "Data Table", icon: Filter, description: "Detailed data view" }
+  ];
+
+  const handleMetricToggle = (metricId: string) => {
+    setSelectedMetrics(prev => 
+      prev.includes(metricId) 
+        ? prev.filter(id => id !== metricId)
+        : [...prev, metricId]
+    );
   };
 
-  const loadTemplate = () => {
-    // Load default widgets based on template
-    const defaultWidgets: Widget[] = [
-      {
-        id: 'widget-1',
-        type: 'chart',
-        metric: 'revenue',
-        dimension: 'date'
-      },
-      {
-        id: 'widget-2',
-        type: 'table',
-        metric: 'jobs',
-        dimension: 'status'
-      }
-    ];
-    setWidgets(defaultWidgets);
+  const handleChartToggle = (chartId: string) => {
+    setSelectedCharts(prev => 
+      prev.includes(chartId) 
+        ? prev.filter(id => id !== chartId)
+        : [...prev, chartId]
+    );
   };
 
-  const addWidget = (type: 'chart' | 'table') => {
-    const newWidget: Widget = {
-      id: `widget-${Date.now()}`,
-      type,
-      metric: 'revenue',
-      dimension: 'date'
-    };
-    setWidgets([...widgets, newWidget]);
-  };
-
-  const updateWidget = (id: string, updates: Partial<Widget>) => {
-    setWidgets(widgets.map(w => w.id === id ? { ...w, ...updates } : w));
-  };
-
-  const removeWidget = (id: string) => {
-    setWidgets(widgets.filter(w => w.id !== id));
-  };
-
-  const runReport = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('reports-run', {
-        body: {
-          templateId,
-          filters: { 
-            startDate, 
-            endDate, 
-            technicianId: technicianId === 'all' ? undefined : technicianId 
-          },
-          widgets: widgets.map(w => ({
-            type: w.type,
-            metric: w.metric,
-            dimension: w.dimension
-          }))
-        }
-      });
-
-      if (error) throw error;
-
-      // Update widgets with data
-      const updatedWidgets = widgets.map((widget, index) => ({
-        ...widget,
-        data: data.widgets[index]?.data || [],
-        columns: data.widgets[index]?.columns || []
-      }));
-
-      setWidgets(updatedWidgets);
-    } catch (error) {
-      console.error('Error running report:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveReport = async () => {
-    if (!reportName.trim()) return;
-
-    try {
-      const { error } = await supabase
-        .from('reports')
-        .insert({
-          name: reportName,
-          template_id: templateId,
-          filters: { 
-            startDate, 
-            endDate, 
-            technicianId: technicianId === 'all' ? undefined : technicianId 
-          },
-          widgets: widgets.map(w => ({
-            type: w.type,
-            metric: w.metric,
-            dimension: w.dimension
-          }))
-        });
-
-      if (error) throw error;
-      
-      console.log('Report saved successfully');
-    } catch (error) {
-      console.error('Error saving report:', error);
-    }
+  const generateReport = () => {
+    console.log("Generating report:", {
+      name: reportName,
+      metrics: selectedMetrics,
+      charts: selectedCharts,
+      dateRange
+    });
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Report Builder</h1>
-        <p className="text-fixlyfy-text-secondary">Build and customize your report</p>
-      </div>
-
-      {/* Filters */}
-      <Card className="p-4 mb-6">
-        <h2 className="font-medium mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <Label htmlFor="startDate">Start Date</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+    <div className="space-y-6">
+      {/* Report Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Report Configuration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="reportName">Report Name</Label>
+              <Input
+                id="reportName"
+                value={reportName}
+                onChange={(e) => setReportName(e.target.value)}
+                placeholder="Enter report name"
+              />
+            </div>
+            <div>
+              <Label>Date Range</Label>
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="last7days">Last 7 Days</SelectItem>
+                  <SelectItem value="last30days">Last 30 Days</SelectItem>
+                  <SelectItem value="last90days">Last 90 Days</SelectItem>
+                  <SelectItem value="last12months">Last 12 Months</SelectItem>
+                  <SelectItem value="ytd">Year to Date</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="endDate">End Date</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="technician">Technician</Label>
-            <Select value={technicianId} onValueChange={setTechnicianId}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Technicians" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Technicians</SelectItem>
-                {technicians.map(tech => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end">
-            <Button onClick={runReport} disabled={loading} className="gap-2">
-              <Play size={16} />
-              {loading ? 'Running...' : 'Preview'}
-            </Button>
-          </div>
-        </div>
+        </CardContent>
       </Card>
 
-      {/* Widget Controls */}
-      <Card className="p-4 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-medium">Widgets</h2>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => addWidget('chart')}>
-              <Plus size={16} className="mr-1" />
-              Chart
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => addWidget('table')}>
-              <Plus size={16} className="mr-1" />
-              Table
-            </Button>
+      {/* Metrics Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Metrics to Include</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {availableMetrics.map((metric) => (
+              <div
+                key={metric.id}
+                className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                  selectedMetrics.includes(metric.id)
+                    ? 'border-blue-500 bg-blue-50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => handleMetricToggle(metric.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <metric.icon className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-sm">{metric.name}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {metric.category}
+                    </Badge>
+                  </div>
+                  {selectedMetrics.includes(metric.id) && (
+                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {widgets.map(widget => (
-            <ReportWidget
-              key={widget.id}
-              widget={widget}
-              onUpdate={(updates) => updateWidget(widget.id, updates)}
-              onRemove={() => removeWidget(widget.id)}
-            />
-          ))}
-        </div>
+        </CardContent>
       </Card>
 
-      {/* Save Controls */}
-      <Card className="p-4">
-        <h2 className="font-medium mb-4">Save Report</h2>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <Label htmlFor="reportName">Report Name</Label>
-            <Input
-              id="reportName"
-              placeholder="Enter report name"
-              value={reportName}
-              onChange={(e) => setReportName(e.target.value)}
-            />
+      {/* Chart Types Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Visualization Options</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {chartTypes.map((chart) => (
+              <div
+                key={chart.id}
+                className={`p-4 border rounded-lg cursor-pointer transition-all text-center ${
+                  selectedCharts.includes(chart.id)
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => handleChartToggle(chart.id)}
+              >
+                <chart.icon className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                <h4 className="font-medium text-sm mb-1">{chart.name}</h4>
+                <p className="text-xs text-muted-foreground">{chart.description}</p>
+                {selectedCharts.includes(chart.id) && (
+                  <Badge className="mt-2" variant="default">Selected</Badge>
+                )}
+              </div>
+            ))}
           </div>
-          <Button onClick={saveReport} disabled={!reportName.trim()} className="gap-2">
-            <Save size={16} />
-            Save Report
-          </Button>
-          <Button variant="outline" className="gap-2">
-            <Calendar size={16} />
-            Schedule
-          </Button>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={generateReport} className="flex items-center gap-2">
+              <Play className="h-4 w-4" />
+              Generate Report
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save as Template
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Schedule Report
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Export Settings
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );
