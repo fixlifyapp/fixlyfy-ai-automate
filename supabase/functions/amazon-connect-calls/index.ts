@@ -15,6 +15,7 @@ interface ConnectCallRequest {
   instanceId?: string;
   clientId?: string;
   jobId?: string;
+  callType?: 'regular' | 'ai';
 }
 
 interface ConnectCallResponse {
@@ -43,13 +44,14 @@ serve(async (req) => {
       });
     }
 
-    const { action, fromNumber, toNumber, contactId, instanceId, clientId, jobId }: ConnectCallRequest = await req.json();
+    const { action, fromNumber, toNumber, contactId, instanceId, clientId, jobId, callType }: ConnectCallRequest = await req.json();
 
-    // Get AWS credentials
+    // Get AWS credentials and OpenAI key
     const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
     const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
     const connectInstanceId = Deno.env.get('AMAZON_CONNECT_INSTANCE_ID');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!awsAccessKeyId || !awsSecretAccessKey || !connectInstanceId) {
       return new Response(JSON.stringify({ 
@@ -75,15 +77,18 @@ serve(async (req) => {
           });
         }
 
+        const newContactId = crypto.randomUUID();
+
         // Store call record in database
         const { data: callRecord, error: dbError } = await supabaseClient
           .from('amazon_connect_calls')
           .insert({
-            contact_id: crypto.randomUUID(),
+            contact_id: newContactId,
             instance_id: connectInstanceId,
             phone_number: toNumber,
             client_id: clientId,
             call_status: 'initiated',
+            call_type: callType || 'regular',
             started_at: new Date().toISOString(),
           })
           .select()
@@ -93,12 +98,26 @@ serve(async (req) => {
           console.error('Error storing call record:', dbError);
         }
 
+        // If AI call and OpenAI is configured, prepare for AI-powered conversation
+        if (callType === 'ai' && openaiApiKey) {
+          console.log('Initiating AI-powered call with TTS capabilities');
+          
+          // Update call record to indicate AI capabilities
+          await supabaseClient
+            .from('amazon_connect_calls')
+            .update({ 
+              ai_enabled: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('contact_id', newContactId);
+        }
+
         // In a real implementation, this would make an actual Amazon Connect API call
         // For now, we'll simulate the call initiation
         response = {
           success: true,
-          contactId: callRecord?.contact_id || crypto.randomUUID(),
-          status: 'initiated'
+          contactId: newContactId,
+          status: callType === 'ai' ? 'ai_call_initiated' : 'call_initiated'
         };
         break;
 
