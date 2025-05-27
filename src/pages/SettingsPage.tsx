@@ -3,8 +3,10 @@ import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, User, Bell, Shield, Phone } from "lucide-react";
+import { Settings, User, Bell, Shield, Phone, Cog, Users } from "lucide-react";
 import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
+import { ConfigurationSettings } from "@/components/settings/ConfigurationSettings";
+import { TeamManagementSettings } from "@/components/settings/TeamManagementSettings";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -18,7 +20,7 @@ const SettingsPage = () => {
       />
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 mb-6">
+        <TabsList className="grid grid-cols-7 mb-6">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings size={16} />
             <span className="hidden sm:inline">General</span>
@@ -38,6 +40,14 @@ const SettingsPage = () => {
           <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
             <Phone size={16} />
             <span className="hidden sm:inline">Phone Numbers</span>
+          </TabsTrigger>
+          <TabsTrigger value="configuration" className="flex items-center gap-2">
+            <Cog size={16} />
+            <span className="hidden sm:inline">Configuration</span>
+          </TabsTrigger>
+          <TabsTrigger value="team" className="flex items-center gap-2">
+            <Users size={16} />
+            <span className="hidden sm:inline">Team</span>
           </TabsTrigger>
         </TabsList>
         
@@ -75,6 +85,14 @@ const SettingsPage = () => {
         
         <TabsContent value="phone-numbers" className="mt-0">
           <PhoneNumberManagement />
+        </TabsContent>
+        
+        <TabsContent value="configuration" className="mt-0">
+          <ConfigurationSettings />
+        </TabsContent>
+        
+        <TabsContent value="team" className="mt-0">
+          <TeamManagementSettings />
         </TabsContent>
       </Tabs>
     </PageLayout>
