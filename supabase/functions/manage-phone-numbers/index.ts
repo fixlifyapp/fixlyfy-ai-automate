@@ -66,6 +66,7 @@ class AwsV4Signer {
     const urlObj = new URL(url);
     const host = urlObj.hostname;
     const path = urlObj.pathname;
+    const queryString = urlObj.search.slice(1); // Remove the '?' prefix
     
     // Add required headers
     const signedHeaders = {
@@ -86,7 +87,7 @@ class AwsV4Signer {
     const canonicalRequest = [
       method,
       path,
-      '', // query string (empty for our use case)
+      queryString,
       canonicalHeaders,
       signedHeadersString,
       payloadHash
@@ -128,11 +129,11 @@ const makeConnectApiCall = async (
   instanceId: string
 ) => {
   const host = `connect.${region}.amazonaws.com`;
-  const url = `https://${host}/`;
+  const url = `https://${host}/phone-number/${action.toLowerCase().replace(/([A-Z])/g, '-$1').slice(1)}`;
   
   const headers = {
     'Content-Type': 'application/x-amz-json-1.1',
-    'X-Amz-Target': `Connect_20170801.${action}`,
+    'X-Amz-Target': `AWSConnectService.${action}`,
   };
 
   const payloadString = JSON.stringify(payload);
@@ -142,6 +143,8 @@ const makeConnectApiCall = async (
     const signedHeaders = await signer.sign('POST', url, headers, payloadString);
 
     console.log(`Making Amazon Connect API call: ${action}`);
+    console.log('URL:', url);
+    console.log('Headers:', JSON.stringify(signedHeaders, null, 2));
     console.log('Payload:', payloadString);
 
     const response = await fetch(url, {
@@ -150,13 +153,16 @@ const makeConnectApiCall = async (
       body: payloadString
     });
 
+    const responseText = await response.text();
+    console.log('Response status:', response.status);
+    console.log('Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+    console.log('Response body:', responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Amazon Connect API Error:', response.status, errorText);
-      throw new Error(`Amazon Connect API error: ${response.status} - ${errorText}`);
+      throw new Error(`Amazon Connect API error: ${response.status} - ${responseText}`);
     }
 
-    const result = await response.json();
+    const result = JSON.parse(responseText);
     console.log('Amazon Connect API Success:', result);
     return result;
   } catch (error) {
@@ -214,11 +220,15 @@ serve(async (req) => {
 
     const { action, areaCode, contains, country, phoneNumber }: PhoneNumberRequest = await req.json();
 
-    // Get AWS credentials and Amazon Connect instance
+    // Get AWS credentials and Amazon Connect instance - TRIM THE INSTANCE ID
     const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
     const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
-    const connectInstanceId = Deno.env.get('AMAZON_CONNECT_INSTANCE_ID');
+    const connectInstanceId = Deno.env.get('AMAZON_CONNECT_INSTANCE_ID')?.trim(); // TRIM HERE
+
+    console.log('Connect Instance ID (after trim):', `"${connectInstanceId}"`);
+    console.log('AWS Region:', awsRegion);
+    console.log('Action:', action);
 
     if (!awsAccessKeyId || !awsSecretAccessKey || !connectInstanceId) {
       return new Response(JSON.stringify({ 
