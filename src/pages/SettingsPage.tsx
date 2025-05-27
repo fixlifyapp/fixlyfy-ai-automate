@@ -33,7 +33,7 @@ const SettingsPage = () => {
       />
       
       {/* Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {/* Configuration Card */}
         <Link to="/configuration">
           <Card className="h-full hover:shadow-md transition-shadow">
@@ -48,24 +48,6 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
         </Link>
-        
-        {/* Products Card */}
-        <Card 
-          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
-            activeTab === "products" ? 'ring-2 ring-fixlyfy' : ''
-          }`}
-          onClick={() => setActiveTab("products")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Package className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">Products & Inventory</h3>
-              <p className="text-sm text-muted-foreground">Manage your parts, products, and inventory</p>
-            </div>
-          </CardContent>
-        </Card>
         
         {/* Phone Numbers Card */}
         <Card 
@@ -106,7 +88,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-7 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-6 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -130,12 +112,6 @@ const SettingsPage = () => {
               className="py-4 rounded-none data-[state=active]:bg-white"
             >
               Integrations
-            </TabsTrigger>
-            <TabsTrigger 
-              value="products" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Products
             </TabsTrigger>
             <TabsTrigger 
               value="phone-numbers" 
@@ -165,19 +141,6 @@ const SettingsPage = () => {
           
           <TabsContent value="integrations" className="p-6">
             <SettingsIntegrations />
-          </TabsContent>
-          
-          <TabsContent value="products" className="p-6">
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium mb-2">Products & Inventory</h3>
-              <p className="text-gray-600 mb-4">
-                This section will contain product and inventory management features.
-              </p>
-              <Link to="/products" className="text-fixlyfy hover:underline">
-                Go to Products Page →
-              </Link>
-            </div>
           </TabsContent>
           
           <TabsContent value="phone-numbers" className="p-6">
