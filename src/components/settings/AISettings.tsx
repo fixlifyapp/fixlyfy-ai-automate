@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Settings, Save, AlertCircle } from "lucide-react";
+import { Brain, Save, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,8 +17,6 @@ interface AIConfig {
   business_niche: string;
   diagnostic_price: number;
   emergency_surcharge: number;
-  connect_instance_arn: string;
-  aws_region: string;
   custom_prompt_additions: string;
   is_active: boolean;
 }
@@ -28,8 +27,6 @@ export const AISettings = () => {
     business_niche: 'General Service',
     diagnostic_price: 75.00,
     emergency_surcharge: 50.00,
-    connect_instance_arn: '',
-    aws_region: 'us-east-1',
     custom_prompt_additions: '',
     is_active: true
   });
@@ -58,8 +55,6 @@ export const AISettings = () => {
           business_niche: data.business_niche || 'General Service',
           diagnostic_price: data.diagnostic_price || 75.00,
           emergency_surcharge: data.emergency_surcharge || 50.00,
-          connect_instance_arn: data.connect_instance_arn || '',
-          aws_region: data.aws_region || 'us-east-1',
           custom_prompt_additions: data.custom_prompt_additions || '',
           is_active: data.is_active ?? true
         });
@@ -84,8 +79,6 @@ export const AISettings = () => {
         business_niche: config.business_niche,
         diagnostic_price: config.diagnostic_price,
         emergency_surcharge: config.emergency_surcharge,
-        connect_instance_arn: config.connect_instance_arn,
-        aws_region: config.aws_region,
         custom_prompt_additions: config.custom_prompt_additions,
         is_active: config.is_active
       };
@@ -131,9 +124,9 @@ export const AISettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">AI Settings</h2>
+        <h2 className="text-2xl font-bold mb-2">AI Dispatcher Settings</h2>
         <p className="text-gray-600">
-          Configure your AI agent for automated calling and appointment scheduling.
+          Configure your AI dispatcher that will handle incoming calls and schedule appointments automatically.
         </p>
       </div>
 
@@ -141,16 +134,16 @@ export const AISettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-fixlyfy" />
-            AI Agent Configuration
+            AI Dispatcher Configuration
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Agent Status */}
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-medium">AI Agent Status</Label>
+              <Label className="text-base font-medium">AI Dispatcher Status</Label>
               <p className="text-sm text-muted-foreground">
-                Enable or disable the AI calling agent
+                Enable or disable the AI dispatcher for automatic call handling
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -167,27 +160,20 @@ export const AISettings = () => {
           {/* Business Configuration */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="business_niche">Business Niche</Label>
+              <Label htmlFor="business_niche">Business Type/Niche</Label>
               <Input
                 id="business_niche"
                 value={config.business_niche}
                 onChange={(e) => setConfig(prev => ({ ...prev, business_niche: e.target.value }))}
-                placeholder="e.g., HVAC, Plumbing, Electrical"
+                placeholder="e.g., HVAC, Plumbing, Electrical, General Repair"
               />
+              <p className="text-xs text-muted-foreground">
+                This helps the AI understand your business context
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="aws_region">AWS Region</Label>
-              <Input
-                id="aws_region"
-                value={config.aws_region}
-                onChange={(e) => setConfig(prev => ({ ...prev, aws_region: e.target.value }))}
-                placeholder="us-east-1"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="diagnostic_price">Diagnostic Price ($)</Label>
+              <Label htmlFor="diagnostic_price">Diagnostic Fee ($)</Label>
               <Input
                 id="diagnostic_price"
                 type="number"
@@ -195,10 +181,13 @@ export const AISettings = () => {
                 value={config.diagnostic_price}
                 onChange={(e) => setConfig(prev => ({ ...prev, diagnostic_price: parseFloat(e.target.value) || 0 }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Standard diagnostic fee the AI will quote to customers
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="emergency_surcharge">Emergency Surcharge ($)</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="emergency_surcharge">Emergency Service Surcharge ($)</Label>
               <Input
                 id="emergency_surcharge"
                 type="number"
@@ -206,47 +195,37 @@ export const AISettings = () => {
                 value={config.emergency_surcharge}
                 onChange={(e) => setConfig(prev => ({ ...prev, emergency_surcharge: parseFloat(e.target.value) || 0 }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Additional fee for emergency or after-hours service calls
+              </p>
             </div>
           </div>
 
-          {/* Amazon Connect Configuration */}
+          {/* Custom Instructions */}
           <div className="space-y-2">
-            <Label htmlFor="connect_instance_arn">Amazon Connect Instance ARN</Label>
-            <Input
-              id="connect_instance_arn"
-              value={config.connect_instance_arn}
-              onChange={(e) => setConfig(prev => ({ ...prev, connect_instance_arn: e.target.value }))}
-              placeholder="arn:aws:connect:region:account:instance/instance-id"
-            />
-            <p className="text-xs text-muted-foreground">
-              The ARN of your Amazon Connect instance for AI calling
-            </p>
-          </div>
-
-          {/* Custom Prompt Additions */}
-          <div className="space-y-2">
-            <Label htmlFor="custom_prompt">Custom Prompt Additions</Label>
+            <Label htmlFor="custom_prompt">Custom Instructions for AI Dispatcher</Label>
             <Textarea
               id="custom_prompt"
               value={config.custom_prompt_additions}
               onChange={(e) => setConfig(prev => ({ ...prev, custom_prompt_additions: e.target.value }))}
-              placeholder="Add custom instructions for your AI agent..."
+              placeholder="Add specific instructions for how your AI dispatcher should handle calls..."
               rows={4}
             />
             <p className="text-xs text-muted-foreground">
-              Additional instructions to customize how your AI agent handles calls
+              Example: "Always ask about warranty status", "Mention our 24/7 emergency service", "Ask about previous service history"
             </p>
           </div>
 
-          {/* Warning Message */}
-          <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+          {/* Information Panel */}
+          <div className="flex items-start gap-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-amber-800">Important Configuration Notes:</p>
-              <ul className="mt-1 text-amber-700 list-disc list-inside space-y-1">
-                <li>Ensure your AWS credentials are properly configured</li>
-                <li>Amazon Connect instance must be properly set up</li>
-                <li>Test configuration in a development environment first</li>
+              <p className="font-medium text-blue-800">How it works:</p>
+              <ul className="mt-1 text-blue-700 list-disc list-inside space-y-1">
+                <li>Customers call your purchased phone number</li>
+                <li>AI dispatcher answers and understands their needs</li>
+                <li>AI quotes appropriate pricing and schedules appointments</li>
+                <li>All appointments appear in your schedule automatically</li>
               </ul>
             </div>
           </div>

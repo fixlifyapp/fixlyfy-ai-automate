@@ -6,11 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConnectCallsList } from "@/components/connect/ConnectCallsList";
 import { AIAgentDashboard } from "@/components/connect/AIAgentDashboard";
 import { AICallAnalytics } from "@/components/connect/AICallAnalytics";
-import { AmazonConnectInterface } from "@/components/connect/AmazonConnectInterface";
 import { Button } from "@/components/ui/button";
-import { Bot, Zap, BarChart3, Plus, Users, Target } from "lucide-react";
+import { Bot, Zap, BarChart3, Settings, Users, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 const AiCenterPage = () => {
@@ -18,6 +17,7 @@ const AiCenterPage = () => {
   const [unreadCounts, setUnreadCounts] = useState({
     aiCalls: 0
   });
+  const navigate = useNavigate();
 
   // Read query parameters to handle direct navigation
   const location = useLocation();
@@ -55,40 +55,43 @@ const AiCenterPage = () => {
   const handleNewAction = () => {
     switch (activeTab) {
       case "ai-calls":
-        // AI calls are automatically initiated by the AI agent
+        // Navigate to settings for AI configuration
+        navigate("/settings?tab=ai-settings");
         break;
       case "ai-monitor":
-        // Monitor view doesn't need new actions
+        // Refresh the monitor view
+        window.location.reload();
         break;
       case "ai-analytics":
-        // Analytics view doesn't need new actions
+        // Generate a new report or refresh analytics
+        window.location.reload();
         break;
     }
   };
 
   const getActionButtonText = () => {
     switch (activeTab) {
-      case "ai-calls": return "View AI Config";
-      case "ai-monitor": return "Monitor Agent";
-      case "ai-analytics": return "Generate Report";
-      default: return "New Action";
+      case "ai-calls": return "Configure AI Dispatcher";
+      case "ai-monitor": return "Refresh Monitor";
+      case "ai-analytics": return "Refresh Analytics";
+      default: return "Configure";
     }
   };
 
   return (
     <PageLayout>
       <PageHeader
-        title="AI Center"
-        subtitle="Manage AI-powered calling, monitoring, and analytics"
+        title="AI Dispatcher Center"
+        subtitle="Monitor and analyze your AI-powered call handling and appointment scheduling"
         icon={Bot}
         badges={[
           { text: "AI-Powered", icon: Bot, variant: "fixlyfy" },
           { text: "Real-time Monitor", icon: Zap, variant: "success" },
-          { text: "Advanced Analytics", icon: Target, variant: "info" }
+          { text: "Analytics", icon: Target, variant: "info" }
         ]}
         actionButton={{
           text: getActionButtonText(),
-          icon: Plus,
+          icon: activeTab === "ai-calls" ? Settings : BarChart3,
           onClick: handleNewAction
         }}
       />
@@ -114,7 +117,6 @@ const AiCenterPage = () => {
         
         <TabsContent value="ai-calls" className="mt-0">
           <div className="space-y-6">
-            <AmazonConnectInterface />
             <ConnectCallsList />
           </div>
         </TabsContent>
