@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -200,7 +199,7 @@ const ConnectCenterPage = () => {
         </TabsContent>
         
         <TabsContent value="phone-numbers" className="mt-0">
-          <PhoneNumbersList searchResults={searchResults} />
+          <PhoneNumbersList />
         </TabsContent>
       </Tabs>
     </PageLayout>
