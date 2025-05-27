@@ -61,11 +61,13 @@ export const sendClientMessage = async ({
   existingConversationId
 }: SendMessageParams) => {
   try {
-    // Call the Twilio edge function
-    const { data, error } = await supabase.functions.invoke('send-sms', {
+    // Call the Amazon SNS edge function
+    const { data, error } = await supabase.functions.invoke('amazon-sns-sms', {
       body: {
         to: clientPhone,
-        body: content
+        body: content,
+        client_id: clientId,
+        job_id: jobId
       }
     });
     
@@ -92,7 +94,7 @@ export const sendClientMessage = async ({
             sender: 'You',
             recipient: clientPhone,
             status: 'delivered',
-            message_sid: data.sid
+            message_sid: data.message_id
           });
           
         // Update conversation timestamp

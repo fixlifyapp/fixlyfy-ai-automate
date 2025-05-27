@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, PhoneOff, Volume2, VolumeX, Mic, MicOff } from "lucide-react";
+import { Phone, PhoneOff, Volume2, VolumeX, Mic, MicOff, Bot } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneNumber } from "@/types/database";
@@ -18,7 +18,8 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
   const [toNumber, setToNumber] = useState<string>("");
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [currentCallSid, setCurrentCallSid] = useState<string | null>(null);
+  const [currentContactId, setCurrentContactId] = useState<string | null>(null);
+  const [callType, setCallType] = useState<"regular" | "ai">("regular");
 
   const formatPhoneNumber = (phoneNumber: string) => {
     const cleaned = phoneNumber.replace(/\D/g, '');
@@ -36,11 +37,12 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('twilio-calls', {
+      const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'initiate',
           fromNumber: selectedFromNumber,
-          toNumber: toNumber
+          toNumber: toNumber,
+          callType: callType
         }
       });
 
@@ -48,8 +50,8 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
 
       if (data.success) {
         setIsCallActive(true);
-        setCurrentCallSid(data.callSid);
-        toast.success("Call initiated successfully");
+        setCurrentContactId(data.contactId);
+        toast.success("Call initiated successfully via Amazon Connect");
       } else {
         throw new Error("Failed to initiate call");
       }
@@ -60,20 +62,20 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
   };
 
   const hangupCall = async () => {
-    if (!currentCallSid) return;
+    if (!currentContactId) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('twilio-calls', {
+      const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'hangup',
-          callSid: currentCallSid
+          contactId: currentContactId
         }
       });
 
       if (error) throw error;
 
       setIsCallActive(false);
-      setCurrentCallSid(null);
+      setCurrentContactId(null);
       setIsMuted(false);
       toast.success("Call ended");
     } catch (error) {
@@ -90,11 +92,37 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
   return (
     <Card className="border-fixlyfy-border">
       <CardHeader>
-        <CardTitle>Make a Call</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Phone className="h-5 w-5" />
+          Amazon Connect Calling
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {!isCallActive ? (
           <>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Call Type</label>
+              <Select value={callType} onValueChange={(value: "regular" | "ai") => setCallType(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select call type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="regular">
+                    <div className="flex items-center gap-2">
+                      <Phone size={16} />
+                      Regular Call
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="ai">
+                    <div className="flex items-center gap-2">
+                      <Bot size={16} />
+                      AI Assistant Call
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <label className="text-sm font-medium mb-2 block">From Number</label>
               <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
@@ -126,20 +154,39 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
               disabled={!selectedFromNumber || !toNumber}
               className="w-full bg-green-600 hover:bg-green-700"
             >
-              <Phone size={16} className="mr-2" />
-              Call
+              {callType === "ai" ? (
+                <>
+                  <Bot size={16} className="mr-2" />
+                  Start AI Call
+                </>
+              ) : (
+                <>
+                  <Phone size={16} className="mr-2" />
+                  Call
+                </>
+              )}
             </Button>
           </>
         ) : (
           <div className="text-center space-y-4">
             <div className="p-6 bg-green-50 rounded-lg">
-              <div className="text-lg font-semibold">Call Active</div>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                {callType === "ai" && <Bot size={20} className="text-blue-600" />}
+                <div className="text-lg font-semibold">
+                  {callType === "ai" ? "AI Call Active" : "Call Active"}
+                </div>
+              </div>
               <div className="text-sm text-gray-600">
                 From: {formatPhoneNumber(selectedFromNumber)}
               </div>
               <div className="text-sm text-gray-600">
                 To: {formatPhoneNumber(toNumber)}
               </div>
+              {callType === "ai" && (
+                <div className="text-xs text-blue-600 mt-2">
+                  AI Assistant is handling this call
+                </div>
+              )}
             </div>
 
             <div className="flex justify-center space-x-4">

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, PhoneOff } from "lucide-react";
+import { Phone, PhoneOff, Bot } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +17,7 @@ export const CallDialog = ({ isOpen, onClose, phoneNumber }: CallDialogProps) =>
   const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
   const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
   const [isInitiating, setIsInitiating] = useState(false);
+  const [callType, setCallType] = useState<"regular" | "ai">("regular");
 
   // Load owned phone numbers
   useEffect(() => {
@@ -61,18 +62,19 @@ export const CallDialog = ({ isOpen, onClose, phoneNumber }: CallDialogProps) =>
     setIsInitiating(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('twilio-calls', {
+      const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'initiate',
           fromNumber: selectedFromNumber,
-          toNumber: phoneNumber
+          toNumber: phoneNumber,
+          callType: callType
         }
       });
 
       if (error) throw error;
 
       if (data.success) {
-        toast.success(`Call initiated to ${formatPhoneNumber(phoneNumber)}`);
+        toast.success(`${callType === "ai" ? "AI call" : "Call"} initiated to ${formatPhoneNumber(phoneNumber)}`);
         onClose();
       } else {
         throw new Error("Failed to initiate call");
@@ -98,6 +100,29 @@ export const CallDialog = ({ isOpen, onClose, phoneNumber }: CallDialogProps) =>
             <div className="p-3 bg-gray-50 rounded-md">
               <p className="font-medium">{formatPhoneNumber(phoneNumber)}</p>
             </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Call Type:</label>
+            <Select value={callType} onValueChange={(value: "regular" | "ai") => setCallType(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="regular">
+                  <div className="flex items-center gap-2">
+                    <Phone size={16} />
+                    Regular Call
+                  </div>
+                </SelectItem>
+                <SelectItem value="ai">
+                  <div className="flex items-center gap-2">
+                    <Bot size={16} />
+                    AI Assistant Call
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {ownedNumbers.length > 0 ? (
@@ -139,8 +164,8 @@ export const CallDialog = ({ isOpen, onClose, phoneNumber }: CallDialogProps) =>
               disabled={!selectedFromNumber || isInitiating || ownedNumbers.length === 0}
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
-              <Phone size={16} className="mr-2" />
-              {isInitiating ? "Calling..." : "Call"}
+              {callType === "ai" ? <Bot size={16} className="mr-2" /> : <Phone size={16} className="mr-2" />}
+              {isInitiating ? "Calling..." : (callType === "ai" ? "AI Call" : "Call")}
             </Button>
           </div>
         </div>

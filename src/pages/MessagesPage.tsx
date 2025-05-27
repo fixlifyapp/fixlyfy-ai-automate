@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, MessageSquare, Loader2, Bot, CheckCircle2 } from "lucide-react";
+import { Plus, MessageSquare, Loader2, Bot } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { clients } from "@/data/clients";
 import { toast } from "@/components/ui/sonner";
 import { ConnectMessageDialog } from "@/components/connect/components/ConnectMessageDialog";
 import { useAI } from "@/hooks/use-ai";
-import { LoadingSpinner, LoadingDots } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface Message {
   id: string;
@@ -49,49 +47,59 @@ const MessagesPage = () => {
     systemContext: "You are an assistant helping with client messaging for a field service company. Keep responses professional, friendly, and concise."
   });
 
-  // Initialize sample conversations
+  // Load real conversations from database
   useEffect(() => {
-    // In a real app, fetch conversations from the database
-    const sampleConversations: Conversation[] = clients.slice(0, 5).map((client, index) => ({
-      id: `conv-${index}`,
-      client: {
-        id: client.id,
-        name: client.name,
-        phone: client.phone,
-      },
-      lastMessage: index === 0 
-        ? "Yes, I'll be home for the appointment tomorrow." 
-        : "Thank you for scheduling the service.",
-      lastMessageTime: new Date(Date.now() - index * 3600000).toLocaleString(),
-      unread: index === 0 ? 2 : 0,
-      messages: [
-        {
-          id: `msg-${index}-1`,
-          text: "Hello! Just confirming our appointment tomorrow at 1:30 PM.",
-          sender: "You",
-          timestamp: new Date(Date.now() - (index + 1) * 7200000).toLocaleString(),
-          isClient: false
-        },
-        {
-          id: `msg-${index}-2`,
-          text: index === 0 
-            ? "Yes, I'll be home for the appointment tomorrow." 
-            : "Thank you for scheduling the service.",
-          sender: client.name,
-          timestamp: new Date(Date.now() - index * 3600000).toLocaleString(),
-          isClient: true,
-          clientId: client.id
+    const loadConversations = async () => {
+      try {
+        setIsLoadingConv(true);
+        
+        const { data: conversationsData, error } = await supabase
+          .from('conversations')
+          .select(`
+            *,
+            clients:client_id(id, name, phone),
+            messages(*)
+          `)
+          .eq('status', 'active')
+          .order('last_message_at', { ascending: false });
+
+        if (error) throw error;
+
+        const formattedConversations: Conversation[] = conversationsData?.map(conv => ({
+          id: conv.id,
+          client: {
+            id: conv.clients?.id || '',
+            name: conv.clients?.name || 'Unknown Client',
+            phone: conv.clients?.phone
+          },
+          lastMessage: conv.messages?.[conv.messages.length - 1]?.body || 'No messages yet',
+          lastMessageTime: new Date(conv.last_message_at || conv.created_at).toLocaleString(),
+          unread: 0, // TODO: Implement unread count logic
+          messages: conv.messages?.map((msg: any) => ({
+            id: msg.id,
+            text: msg.body,
+            sender: msg.direction === 'outbound' ? 'You' : conv.clients?.name || 'Client',
+            timestamp: new Date(msg.created_at).toLocaleString(),
+            isClient: msg.direction === 'inbound',
+            clientId: conv.clients?.id
+          })) || []
+        })) || [];
+
+        setConversations(formattedConversations);
+        
+        // Set the first conversation as active by default
+        if (formattedConversations.length > 0) {
+          setActiveConversation(formattedConversations[0].id);
         }
-      ]
-    }));
-    
-    setConversations(sampleConversations);
-    setIsLoadingConv(false);
-    
-    // Set the first conversation as active by default
-    if (sampleConversations.length > 0) {
-      setActiveConversation(sampleConversations[0].id);
-    }
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+        toast.error('Failed to load conversations');
+      } finally {
+        setIsLoadingConv(false);
+      }
+    };
+
+    loadConversations();
   }, []);
 
   const handleSendMessage = async () => {
@@ -129,12 +137,13 @@ const MessagesPage = () => {
       // Clear the input field
       setNewMessage("");
       
-      // Send SMS via Twilio edge function
+      // Send SMS via Amazon SNS edge function
       if (conversation.client.phone) {
-        const { data, error } = await supabase.functions.invoke('send-sms', {
+        const { data, error } = await supabase.functions.invoke('amazon-sns-sms', {
           body: {
             to: conversation.client.phone,
-            body: newMessage
+            body: newMessage,
+            client_id: conversation.client.id
           }
         });
         
@@ -143,6 +152,19 @@ const MessagesPage = () => {
           toast.error("Failed to send SMS. Please try again.");
         } else if (data.success) {
           toast.success("Message sent successfully");
+          
+          // Store message in database
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: activeConversation,
+              body: newMessage,
+              direction: 'outbound',
+              sender: 'You',
+              recipient: conversation.client.phone,
+              status: 'delivered',
+              message_sid: data.message_id
+            });
         } else {
           toast.error(`Failed to send SMS: ${data.error || 'Unknown error'}`);
         }
@@ -157,13 +179,30 @@ const MessagesPage = () => {
     }
   };
 
-  const handleNewMessageClick = (client: any) => {
-    setSelectedClient(client);
-    setIsMessageDialogOpen(true);
+  const handleNewMessageClick = async () => {
+    try {
+      // Load clients for new conversation
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('status', 'active')
+        .limit(1);
+      
+      if (error) throw error;
+      
+      if (clients && clients.length > 0) {
+        setSelectedClient(clients[0]);
+        setIsMessageDialogOpen(true);
+      } else {
+        toast.error("No clients available");
+      }
+    } catch (error) {
+      console.error("Error loading clients:", error);
+      toast.error("Failed to load clients");
+    }
   };
   
   const handleTabChange = (value: string) => {
-    // In a real app, this would fetch different message categories
     console.log("Tab changed to:", value);
   };
   
@@ -220,12 +259,12 @@ const MessagesPage = () => {
         <div>
           <h1 className="text-2xl font-bold">Messages</h1>
           <p className="text-fixlyfy-text-secondary">
-            Communicate with clients and team members.
+            Communicate with clients using Amazon SNS messaging.
           </p>
         </div>
         <Button 
           className="bg-fixlyfy hover:bg-fixlyfy/90"
-          onClick={() => handleNewMessageClick(clients[0])}
+          onClick={handleNewMessageClick}
         >
           <Plus size={18} className="mr-2" /> New Message
         </Button>
@@ -385,13 +424,13 @@ const MessagesPage = () => {
           ) : (
             <div className="flex flex-col items-center justify-center h-full">
               <MessageSquare className="h-16 w-16 mb-4 text-fixlyfy-text-muted" />
-              <h3 className="text-xl font-medium mb-2">Messaging Center</h3>
+              <h3 className="text-xl font-medium mb-2">Amazon SNS Messaging</h3>
               <p className="text-center text-fixlyfy-text-secondary max-w-sm mb-4">
-                Select a conversation or start a new one to begin messaging.
+                Select a conversation or start a new one to begin messaging via Amazon SNS.
               </p>
               <Button 
                 variant="outline"
-                onClick={() => handleNewMessageClick(clients[0])}
+                onClick={handleNewMessageClick}
               >
                 <Plus size={18} className="mr-2" /> Start New Conversation
               </Button>

@@ -4,18 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare } from "lucide-react";
+import { Phone, MessageSquare, Bot } from "lucide-react";
 
-interface TwilioActionConfigProps {
-  actionType: "sms" | "call";
+interface AmazonConnectConfigProps {
+  actionType: "sms" | "call" | "ai-call";
   config: any;
   onChange: (config: any) => void;
 }
 
-export const TwilioActionConfig = ({ actionType, config, onChange }: TwilioActionConfigProps) => {
+export const AmazonConnectConfig = ({ actionType, config, onChange }: AmazonConnectConfigProps) => {
   const [phoneNumber, setPhoneNumber] = useState(config.phoneNumber || "");
   const [message, setMessage] = useState(config.message || "");
   const [messageTemplate, setMessageTemplate] = useState(config.messageTemplate || "custom");
+  const [aiPrompt, setAiPrompt] = useState(config.aiPrompt || "");
 
   const handlePhoneNumberChange = (value: string) => {
     setPhoneNumber(value);
@@ -38,6 +39,11 @@ export const TwilioActionConfig = ({ actionType, config, onChange }: TwilioActio
     }
   };
 
+  const handleAiPromptChange = (value: string) => {
+    setAiPrompt(value);
+    onChange({ ...config, aiPrompt: value });
+  };
+
   const getTemplateMessage = (template: string) => {
     const templates = {
       "appointment-reminder": "Hi {ClientName}, this is a reminder about your appointment on {JobDate} at {JobTime}. If you need to reschedule, please call us at {CompanyPhone}.",
@@ -48,17 +54,29 @@ export const TwilioActionConfig = ({ actionType, config, onChange }: TwilioActio
     return templates[template as keyof typeof templates] || "";
   };
 
+  const getIcon = () => {
+    switch (actionType) {
+      case "sms": return <MessageSquare size={20} className="text-fixlyfy mr-2" />;
+      case "call": return <Phone size={20} className="text-fixlyfy mr-2" />;
+      case "ai-call": return <Bot size={20} className="text-fixlyfy mr-2" />;
+      default: return <Phone size={20} className="text-fixlyfy mr-2" />;
+    }
+  };
+
+  const getTitle = () => {
+    switch (actionType) {
+      case "sms": return "Amazon SNS SMS Configuration";
+      case "call": return "Amazon Connect Call Configuration";
+      case "ai-call": return "Amazon Connect AI Call Configuration";
+      default: return "Amazon Connect Configuration";
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center mb-4">
-        {actionType === "sms" ? (
-          <MessageSquare size={20} className="text-fixlyfy mr-2" />
-        ) : (
-          <Phone size={20} className="text-fixlyfy mr-2" />
-        )}
-        <h3 className="font-medium">
-          {actionType === "sms" ? "SMS Configuration" : "Call Configuration"}
-        </h3>
+        {getIcon()}
+        <h3 className="font-medium">{getTitle()}</h3>
       </div>
 
       <div>
@@ -125,6 +143,22 @@ export const TwilioActionConfig = ({ actionType, config, onChange }: TwilioActio
             </p>
           </div>
         </>
+      )}
+
+      {actionType === "ai-call" && (
+        <div>
+          <Label htmlFor="ai-prompt">AI Call Prompt</Label>
+          <Textarea
+            id="ai-prompt"
+            placeholder="Enter the AI assistant prompt for handling the call..."
+            value={aiPrompt}
+            onChange={(e) => handleAiPromptChange(e.target.value)}
+            className="mt-1 min-h-[100px]"
+          />
+          <p className="text-xs text-fixlyfy-text-secondary mt-1">
+            This prompt will guide the AI assistant during the call. Available variables: {`{ClientName}, {JobType}, {CompanyName}`}
+          </p>
+        </div>
       )}
     </div>
   );

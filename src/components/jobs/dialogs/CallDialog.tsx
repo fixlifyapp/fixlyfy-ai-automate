@@ -7,8 +7,10 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Phone } from "lucide-react";
+import { Phone, Bot } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CallDialogProps {
   open: boolean;
@@ -23,21 +25,50 @@ export const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
   const [callStatus, setCallStatus] = useState<"idle" | "calling" | "connected" | "ended">("idle");
   const [callDuration, setCallDuration] = useState(0);
   const [intervalId, setIntervalId] = useState<number | null>(null);
+  const [callType, setCallType] = useState<"regular" | "ai">("regular");
 
-  const handleCall = () => {
+  const handleCall = async () => {
+    if (!client.phone) {
+      toast.error("No phone number available for this client");
+      return;
+    }
+
     setCallStatus("calling");
     
-    // Simulate connecting after 2 seconds
-    setTimeout(() => {
-      setCallStatus("connected");
-      
-      // Start call timer
-      const id = window.setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-      
-      setIntervalId(id);
-    }, 2000);
+    try {
+      // Initiate call via Amazon Connect
+      const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
+        body: {
+          action: 'initiate',
+          toNumber: client.phone,
+          callType: callType
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        // Simulate connecting after 2 seconds
+        setTimeout(() => {
+          setCallStatus("connected");
+          
+          // Start call timer
+          const id = window.setInterval(() => {
+            setCallDuration(prev => prev + 1);
+          }, 1000);
+          
+          setIntervalId(id);
+        }, 2000);
+
+        toast.success(`${callType === "ai" ? "AI call" : "Call"} initiated via Amazon Connect`);
+      } else {
+        throw new Error("Failed to initiate call");
+      }
+    } catch (error) {
+      console.error("Error initiating call:", error);
+      toast.error("Failed to initiate call");
+      setCallStatus("idle");
+    }
   };
 
   const handleEndCall = () => {
@@ -99,15 +130,40 @@ export const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
             <h3 className="text-xl font-semibold">{client.name}</h3>
             <p className="text-fixlyfy-text-secondary">{client.phone || "No phone number available"}</p>
             
+            {callStatus === "idle" && (
+              <div className="w-full">
+                <label className="text-sm font-medium mb-2 block">Call Type</label>
+                <Select value={callType} onValueChange={(value: "regular" | "ai") => setCallType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="regular">
+                      <div className="flex items-center gap-2">
+                        <Phone size={16} />
+                        Regular Call
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="ai">
+                      <div className="flex items-center gap-2">
+                        <Bot size={16} />
+                        AI Assistant Call
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
             {callStatus === "connected" && (
               <p className="text-green-500 animate-pulse">
-                Call in progress - {formatDuration(callDuration)}
+                {callType === "ai" ? "AI Call in progress" : "Call in progress"} - {formatDuration(callDuration)}
               </p>
             )}
             
             {callStatus === "calling" && (
               <p className="text-amber-500 animate-pulse">
-                Calling...
+                {callType === "ai" ? "Initiating AI call..." : "Calling..."}
               </p>
             )}
             
@@ -122,8 +178,8 @@ export const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
         <div className="flex justify-center gap-4">
           {callStatus === "idle" && (
             <Button onClick={handleCall} className="bg-green-500 hover:bg-green-600 gap-2">
-              <Phone size={16} />
-              Call
+              {callType === "ai" ? <Bot size={16} /> : <Phone size={16} />}
+              {callType === "ai" ? "Start AI Call" : "Call"}
             </Button>
           )}
           

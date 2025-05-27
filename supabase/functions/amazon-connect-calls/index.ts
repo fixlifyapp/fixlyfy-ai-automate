@@ -25,9 +25,6 @@ interface ConnectCallResponse {
 }
 
 serve(async (req) => {
-  console.log(`${req.method} ${req.url}`)
-  
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -36,181 +33,120 @@ serve(async (req) => {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    );
 
-    // Get AWS credentials from environment
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { action, fromNumber, toNumber, contactId, instanceId, clientId, jobId }: ConnectCallRequest = await req.json();
+
+    // Get AWS credentials
     const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
     const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
+    const connectInstanceId = Deno.env.get('AMAZON_CONNECT_INSTANCE_ID');
 
-    if (!awsAccessKeyId || !awsSecretAccessKey) {
+    if (!awsAccessKeyId || !awsSecretAccessKey || !connectInstanceId) {
       return new Response(JSON.stringify({ 
-        error: 'AWS credentials not configured' 
+        success: false, 
+        error: 'Amazon Connect credentials not configured' 
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-      })
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    if (req.method === 'POST') {
-      const body: ConnectCallRequest = await req.json()
-      return await handleConnectCallAction(body, supabaseClient, awsAccessKeyId, awsSecretAccessKey, awsRegion)
+    let response: ConnectCallResponse = { success: false };
+
+    switch (action) {
+      case 'initiate':
+        if (!fromNumber || !toNumber) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Missing required fields: fromNumber, toNumber' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Store call record in database
+        const { data: callRecord, error: dbError } = await supabaseClient
+          .from('amazon_connect_calls')
+          .insert({
+            contact_id: crypto.randomUUID(),
+            instance_id: connectInstanceId,
+            phone_number: toNumber,
+            client_id: clientId,
+            call_status: 'initiated',
+            started_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error('Error storing call record:', dbError);
+        }
+
+        // In a real implementation, this would make an actual Amazon Connect API call
+        // For now, we'll simulate the call initiation
+        response = {
+          success: true,
+          contactId: callRecord?.contact_id || crypto.randomUUID(),
+          status: 'initiated'
+        };
+        break;
+
+      case 'hangup':
+        if (!contactId) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Missing contactId' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Update call status
+        await supabaseClient
+          .from('amazon_connect_calls')
+          .update({ 
+            call_status: 'completed',
+            ended_at: new Date().toISOString()
+          })
+          .eq('contact_id', contactId);
+
+        response = { success: true, status: 'completed' };
+        break;
+
+      default:
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Invalid action' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
     }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 405,
-    })
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
   } catch (error) {
-    console.error('Error in amazon-connect-calls:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
-  }
-})
-
-async function handleConnectCallAction(
-  params: ConnectCallRequest, 
-  supabaseClient: any, 
-  awsAccessKeyId: string, 
-  awsSecretAccessKey: string, 
-  awsRegion: string
-): Promise<Response> {
-  const { action, fromNumber, toNumber, contactId, instanceId } = params
-
-  switch (action) {
-    case 'initiate':
-      return await initiateConnectCall(fromNumber!, toNumber!, supabaseClient, awsAccessKeyId, awsSecretAccessKey, awsRegion)
-    case 'status':
-      return await getConnectCallStatus(contactId!, supabaseClient, awsAccessKeyId, awsSecretAccessKey, awsRegion)
-    case 'hangup':
-      return await hangupConnectCall(contactId!, supabaseClient, awsAccessKeyId, awsSecretAccessKey, awsRegion)
-    default:
-      return new Response(JSON.stringify({ error: 'Invalid action' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      })
-  }
-}
-
-async function initiateConnectCall(
-  fromNumber: string, 
-  toNumber: string, 
-  supabaseClient: any, 
-  awsAccessKeyId: string, 
-  awsSecretAccessKey: string, 
-  awsRegion: string
-): Promise<Response> {
-  try {
-    console.log(`Initiating Amazon Connect call from ${fromNumber} to ${toNumber}`)
-    
-    // Get user's Connect instance from configuration
-    const { data: aiConfig } = await supabaseClient
-      .from('ai_agent_configs')
-      .select('connect_instance_arn')
-      .eq('is_active', true)
-      .single();
-
-    if (!aiConfig?.connect_instance_arn) {
-      throw new Error('Amazon Connect instance not configured');
-    }
-
-    // Create a mock contact ID for now (in real implementation, use AWS SDK)
-    const contactId = `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Store call in database
-    const { error: dbError } = await supabaseClient
-      .from('amazon_connect_calls')
-      .insert({
-        contact_id: contactId,
-        instance_id: aiConfig.connect_instance_arn,
-        phone_number: toNumber,
-        call_status: 'initiated',
-        started_at: new Date().toISOString(),
-      })
-
-    if (dbError) {
-      console.error('Error storing Connect call:', dbError)
-    }
-
+    console.error('Error in amazon-connect-calls function:', error);
     return new Response(JSON.stringify({ 
-      success: true,
-      contactId: contactId,
-      status: 'initiated' 
+      success: false, 
+      error: error.message 
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (error) {
-    console.error('Error initiating Connect call:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    })
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
-}
-
-async function getConnectCallStatus(
-  contactId: string, 
-  supabaseClient: any,
-  awsAccessKeyId: string, 
-  awsSecretAccessKey: string, 
-  awsRegion: string
-): Promise<Response> {
-  try {
-    // Get call status from database
-    const { data: callData } = await supabaseClient
-      .from('amazon_connect_calls')
-      .select('call_status')
-      .eq('contact_id', contactId)
-      .single();
-
-    return new Response(JSON.stringify({ 
-      success: true,
-      status: callData?.call_status || 'unknown'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (error) {
-    console.error('Error getting Connect call status:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
-  }
-}
-
-async function hangupConnectCall(
-  contactId: string, 
-  supabaseClient: any,
-  awsAccessKeyId: string, 
-  awsSecretAccessKey: string, 
-  awsRegion: string
-): Promise<Response> {
-  try {
-    console.log(`Hanging up Amazon Connect call: ${contactId}`)
-    
-    // Update call status in database
-    const { error: dbError } = await supabaseClient
-      .from('amazon_connect_calls')
-      .update({ 
-        call_status: 'completed',
-        ended_at: new Date().toISOString()
-      })
-      .eq('contact_id', contactId)
-
-    if (dbError) {
-      console.error('Error updating Connect call status:', dbError)
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch (error) {
-    console.error('Error hanging up Connect call:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
-  }
-}
+});

@@ -77,12 +77,13 @@ export const useMessageSending = ({
         console.log("Created conversation:", currentConversationId);
       }
       
-      // Send SMS via Twilio edge function
-      console.log("Invoking send-sms function...");
-      const { data, error } = await supabase.functions.invoke('send-sms', {
+      // Send SMS via Amazon SNS edge function
+      console.log("Invoking amazon-sns-sms function...");
+      const { data, error } = await supabase.functions.invoke('amazon-sns-sms', {
         body: {
           to: client.phone,
-          body: message
+          body: message,
+          client_id: client.id
         }
       });
       
@@ -102,7 +103,7 @@ export const useMessageSending = ({
         return;
       }
       
-      console.log("SMS sent successfully:", data.sid);
+      console.log("SMS sent successfully:", data.message_id);
       
       // Store the message in the database
       if (currentConversationId) {
@@ -116,7 +117,7 @@ export const useMessageSending = ({
             sender: 'You',
             recipient: client.phone,
             status: 'delivered',
-            message_sid: data.sid
+            message_sid: data.message_id
           });
           
         if (msgError) {
