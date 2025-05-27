@@ -15,28 +15,108 @@ interface PhoneNumberRequest {
   phoneNumber?: string;
 }
 
-// Helper function to create AWS signature v4
-const createAwsSignature = (
-  method: string,
-  url: string,
-  headers: Record<string, string>,
-  payload: string,
-  awsAccessKeyId: string,
-  awsSecretAccessKey: string,
-  region: string,
-  service: string
-) => {
-  // This is a simplified implementation - in production, use the AWS SDK
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const datetime = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '') + 'Z';
-  
-  // For now, return a placeholder signature
-  // In production, implement proper AWS Signature Version 4
-  return {
-    'X-Amz-Date': datetime,
-    'Authorization': `AWS4-HMAC-SHA256 Credential=${awsAccessKeyId}/${date}/${region}/${service}/aws4_request, SignedHeaders=host;x-amz-date;x-amz-target, Signature=placeholder`
-  };
-};
+// AWS Signature Version 4 implementation
+class AwsV4Signer {
+  private accessKeyId: string;
+  private secretAccessKey: string;
+  private region: string;
+  private service: string;
+
+  constructor(accessKeyId: string, secretAccessKey: string, region: string, service: string) {
+    this.accessKeyId = accessKeyId;
+    this.secretAccessKey = secretAccessKey;
+    this.region = region;
+    this.service = service;
+  }
+
+  private async sha256(message: string): Promise<ArrayBuffer> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    return await crypto.subtle.digest('SHA-256', data);
+  }
+
+  private async hmac(key: ArrayBuffer | string, message: string): Promise<ArrayBuffer> {
+    const encoder = new TextEncoder();
+    const keyData = typeof key === 'string' ? encoder.encode(key) : key;
+    const messageData = encoder.encode(message);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    return await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  }
+
+  private toHex(buffer: ArrayBuffer): string {
+    return Array.from(new Uint8Array(buffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  async sign(method: string, url: string, headers: Record<string, string>, payload: string): Promise<Record<string, string>> {
+    const now = new Date();
+    const isoDateTime = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+    const date = isoDateTime.slice(0, 8);
+    
+    // Parse URL
+    const urlObj = new URL(url);
+    const host = urlObj.hostname;
+    const path = urlObj.pathname;
+    
+    // Add required headers
+    const signedHeaders = {
+      ...headers,
+      'host': host,
+      'x-amz-date': isoDateTime,
+    };
+
+    // Create canonical request
+    const sortedHeaderNames = Object.keys(signedHeaders).sort();
+    const canonicalHeaders = sortedHeaderNames
+      .map(name => `${name.toLowerCase()}:${signedHeaders[name]}\n`)
+      .join('');
+    const signedHeadersString = sortedHeaderNames.map(name => name.toLowerCase()).join(';');
+    
+    const payloadHash = this.toHex(await this.sha256(payload));
+    
+    const canonicalRequest = [
+      method,
+      path,
+      '', // query string (empty for our use case)
+      canonicalHeaders,
+      signedHeadersString,
+      payloadHash
+    ].join('\n');
+
+    // Create string to sign
+    const credentialScope = `${date}/${this.region}/${this.service}/aws4_request`;
+    const stringToSign = [
+      'AWS4-HMAC-SHA256',
+      isoDateTime,
+      credentialScope,
+      this.toHex(await this.sha256(canonicalRequest))
+    ].join('\n');
+
+    // Calculate signature
+    const dateKey = await this.hmac(`AWS4${this.secretAccessKey}`, date);
+    const regionKey = await this.hmac(dateKey, this.region);
+    const serviceKey = await this.hmac(regionKey, this.service);
+    const signingKey = await this.hmac(serviceKey, 'aws4_request');
+    const signature = this.toHex(await this.hmac(signingKey, stringToSign));
+
+    // Create authorization header
+    const authorization = `AWS4-HMAC-SHA256 Credential=${this.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeadersString}, Signature=${signature}`;
+
+    return {
+      ...signedHeaders,
+      'Authorization': authorization
+    };
+  }
+}
 
 // Helper function to make Amazon Connect API calls
 const makeConnectApiCall = async (
@@ -53,34 +133,32 @@ const makeConnectApiCall = async (
   const headers = {
     'Content-Type': 'application/x-amz-json-1.1',
     'X-Amz-Target': `Connect_20170801.${action}`,
-    'Host': host
   };
 
-  // Add AWS signature
-  const signature = createAwsSignature(
-    'POST',
-    url,
-    headers,
-    JSON.stringify(payload),
-    awsAccessKeyId,
-    awsSecretAccessKey,
-    region,
-    'connect'
-  );
-
+  const payloadString = JSON.stringify(payload);
+  
   try {
+    const signer = new AwsV4Signer(awsAccessKeyId, awsSecretAccessKey, region, 'connect');
+    const signedHeaders = await signer.sign('POST', url, headers, payloadString);
+
+    console.log(`Making Amazon Connect API call: ${action}`);
+    console.log('Payload:', payloadString);
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: { ...headers, ...signature },
-      body: JSON.stringify(payload)
+      headers: signedHeaders,
+      body: payloadString
     });
 
     if (!response.ok) {
-      console.error('Amazon Connect API Error:', response.status, await response.text());
-      throw new Error(`Amazon Connect API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Amazon Connect API Error:', response.status, errorText);
+      throw new Error(`Amazon Connect API error: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log('Amazon Connect API Success:', result);
+    return result;
   } catch (error) {
     console.error('Error calling Amazon Connect API:', error);
     throw error;
@@ -164,60 +242,11 @@ serve(async (req) => {
           } else if (contains) {
             // Try to get area codes from city name
             searchAreaCodes = getAreaCodeFromCity(contains);
-            if (searchAreaCodes.length === 0) {
-              // If no area codes found for the city, fall back to searching by name
-              console.log(`No area codes found for city: ${contains}, searching broadly`);
-            }
           }
 
           console.log(`Searching for phone numbers in ${countryCode}, area codes: ${searchAreaCodes}`);
 
-          // For demo purposes, generate realistic mock data based on search parameters
-          // In production, this would call the real Amazon Connect API
-          const generateMockNumbers = (country: string, areaCodes: string[], cityName?: string) => {
-            const baseNumbers = [];
-            const targetAreaCodes = areaCodes.length > 0 ? areaCodes : ['416']; // Default to Toronto if no area codes
-            
-            for (let i = 0; i < 5; i++) {
-              const areaCode = targetAreaCodes[i % targetAreaCodes.length];
-              const exchange = Math.floor(Math.random() * 900) + 100;
-              const number = Math.floor(Math.random() * 9000) + 1000;
-              const phoneNumber = `+1${areaCode}${exchange}${number}`;
-              
-              // Determine locality based on area code or search term
-              let locality = cityName || 'Toronto';
-              let region = countryCode === 'CA' ? 'ON' : 'CA';
-              
-              if (areaCode === '416' || areaCode === '647' || areaCode === '437') {
-                locality = 'Toronto';
-                region = 'ON';
-              } else if (areaCode === '514' || areaCode === '438') {
-                locality = 'Montreal';
-                region = 'QC';
-              } else if (areaCode === '604' || areaCode === '778') {
-                locality = 'Vancouver';
-                region = 'BC';
-              } else if (areaCode === '415') {
-                locality = 'San Francisco';
-                region = 'CA';
-              }
-              
-              baseNumbers.push({
-                phoneNumber,
-                locality,
-                region,
-                price: countryCode === 'CA' ? '2.50' : '2.00',
-                capabilities: { voice: true, sms: true, mms: false }
-              });
-            }
-            
-            return baseNumbers;
-          };
-
-          const mockPhoneNumbers = generateMockNumbers(countryCode, searchAreaCodes, contains);
-
-          // TODO: Replace with real Amazon Connect API call
-          /*
+          // Use real Amazon Connect API call
           const searchPayload = {
             InstanceId: connectInstanceId,
             PhoneNumberCountryCode: countryCode,
@@ -234,11 +263,19 @@ serve(async (req) => {
             awsRegion,
             connectInstanceId
           );
-          */
+
+          // Transform the Amazon Connect response to our format
+          const phoneNumbers = (result.AvailableNumbersList || []).map((number: any) => ({
+            phoneNumber: number.PhoneNumber,
+            locality: number.PhoneNumberCountryCode === 'CA' ? 'Canada' : 'United States',
+            region: number.PhoneNumberCountryCode === 'CA' ? 'ON' : 'CA',
+            price: countryCode === 'CA' ? '2.50' : '2.00',
+            capabilities: { voice: true, sms: true, mms: false }
+          }));
 
           return new Response(JSON.stringify({
             success: true,
-            phone_numbers: mockPhoneNumbers
+            phone_numbers: phoneNumbers
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -246,7 +283,7 @@ serve(async (req) => {
           console.error('Search error:', error);
           return new Response(JSON.stringify({
             success: false,
-            error: 'Failed to search phone numbers'
+            error: 'Failed to search phone numbers: ' + error.message
           }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -265,8 +302,7 @@ serve(async (req) => {
         }
 
         try {
-          // TODO: Replace with real Amazon Connect API call
-          /*
+          // Use real Amazon Connect API call
           const purchasePayload = {
             InstanceId: connectInstanceId,
             PhoneNumber: phoneNumber,
@@ -282,14 +318,6 @@ serve(async (req) => {
             awsRegion,
             connectInstanceId
           );
-          */
-
-          // For demo purposes, simulate successful purchase
-          const mockPurchaseResult = {
-            PhoneNumberId: `phone-${Date.now()}`,
-            PhoneNumberArn: `arn:aws:connect:${awsRegion}:123456789:phone-number/${phoneNumber}`,
-            PhoneNumber: phoneNumber
-          };
 
           // Get user from auth header
           const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
@@ -326,7 +354,7 @@ serve(async (req) => {
             .insert({
               phone_number: phoneNumber,
               connect_instance_id: connectInstanceId,
-              connect_phone_number_arn: mockPurchaseResult.PhoneNumberArn,
+              connect_phone_number_arn: result.PhoneNumberArn,
               status: 'owned',
               purchased_by: user.id,
               purchased_at: new Date().toISOString(),
@@ -351,7 +379,7 @@ serve(async (req) => {
 
           return new Response(JSON.stringify({
             success: true,
-            phone_number: mockPurchaseResult
+            phone_number: result
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
