@@ -13,6 +13,7 @@ import { clients } from "@/data/clients";
 import { toast } from "@/components/ui/sonner";
 import { ConnectMessageDialog } from "@/components/connect/components/ConnectMessageDialog";
 import { useAI } from "@/hooks/use-ai";
+import { LoadingSpinner, LoadingDots } from "@/components/ui/loading-spinner";
 
 interface Message {
   id: string;
@@ -245,8 +246,9 @@ const MessagesPage = () => {
           
           <div className="h-[600px] overflow-y-auto">
             {isLoadingConv ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-fixlyfy" />
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <LoadingSpinner size="lg" />
+                <p className="text-sm text-fixlyfy-text-secondary">Loading conversations...</p>
               </div>
             ) : conversations.length > 0 ? (
               conversations.map((conversation) => (
@@ -372,7 +374,7 @@ const MessagesPage = () => {
                     disabled={isLoading || !newMessage.trim()}
                   >
                     {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <LoadingSpinner size="sm" variant="white" />
                     ) : (
                       "Send"
                     )}

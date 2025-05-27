@@ -7,6 +7,7 @@ import { useMessageContext } from "@/contexts/MessageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { JobMessageList } from "./components/JobMessageList";
 import { useMessageAI } from "./hooks/messaging/useMessageAI";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface JobMessagesProps {
   jobId: string;
@@ -96,7 +97,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
               >
                 {isAILoading ? (
                   <>
-                    <Bot className="h-4 w-4 animate-pulse" />
+                    <LoadingSpinner size="sm" />
                     Generating...
                   </>
                 ) : (

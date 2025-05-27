@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useConversations } from "./hooks/useConversations";
 import { useRealTimeMessaging } from "./hooks/useRealTimeMessaging";
@@ -7,6 +6,7 @@ import { ConnectMessageDialog } from "./components/ConnectMessageDialog";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Users } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface MessagesListProps {
   searchResults?: any[];
@@ -54,7 +54,10 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy"></div>
+        <div className="flex flex-col items-center gap-3">
+          <LoadingSpinner size="lg" />
+          <p className="text-sm text-fixlyfy-text-secondary">Loading conversations...</p>
+        </div>
       </div>
     );
   }
