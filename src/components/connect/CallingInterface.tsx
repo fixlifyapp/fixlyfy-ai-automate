@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, PhoneOff, Volume2, VolumeX, Mic, MicOff, Bot } from "lucide-react";
+import { Phone, PhoneOff, Volume2, VolumeX, Mic, MicOff, Bot, Cloud } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +13,8 @@ interface PhoneNumber {
   phone_number: string;
   friendly_name?: string;
   status: string;
+  connect_instance_id?: string;
+  connect_phone_number_arn?: string;
 }
 
 export const CallingInterface = () => {
@@ -76,14 +78,14 @@ export const CallingInterface = () => {
           phone_number: toNumber,
           direction: 'outgoing',
           status: 'initiated',
-          notes: `${callType === 'ai' ? 'AI-powered call' : 'Regular call'} initiated from ${selectedFromNumber}`
+          notes: `${callType === 'ai' ? 'AI-powered call' : 'Regular call'} initiated from ${selectedFromNumber} via Amazon Connect`
         })
         .select()
         .single();
 
       if (callError) throw callError;
 
-      // Then initiate the actual call
+      // Then initiate the actual call through Amazon Connect
       const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'initiate',
@@ -98,7 +100,7 @@ export const CallingInterface = () => {
 
       if (data.success) {
         setCurrentContactId(data.contactId);
-        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated successfully`);
+        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated successfully via Amazon Connect`);
         
         // Update the call record with the contact ID
         await supabase
@@ -197,6 +199,10 @@ export const CallingInterface = () => {
         <CardTitle className="flex items-center gap-2">
           <Phone className="h-5 w-5" />
           Make a Call
+          <Badge variant="outline" className="ml-auto text-blue-600 border-blue-200">
+            <Cloud className="h-3 w-3 mr-1" />
+            Amazon Connect
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -234,8 +240,13 @@ export const CallingInterface = () => {
                 <SelectContent>
                   {ownedNumbers.map((number) => (
                     <SelectItem key={number.id} value={number.phone_number}>
-                      {formatPhoneNumber(number.phone_number)}
-                      {number.friendly_name && ` (${number.friendly_name})`}
+                      <div className="flex items-center gap-2">
+                        {formatPhoneNumber(number.phone_number)}
+                        {number.friendly_name && ` (${number.friendly_name})`}
+                        {number.connect_instance_id && (
+                          <span className="text-xs text-blue-600">Connect</span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -275,6 +286,7 @@ export const CallingInterface = () => {
             <div className="p-6 bg-green-50 rounded-lg">
               <div className="flex items-center justify-center gap-2 mb-2">
                 {callType === "ai" && <Bot size={20} className="text-blue-600" />}
+                <Cloud size={16} className="text-blue-600" />
                 <div className="text-lg font-semibold">
                   {callType === "ai" ? "AI Call Active" : "Call Active"}
                 </div>
@@ -290,6 +302,9 @@ export const CallingInterface = () => {
                   AI Assistant is handling this call
                 </div>
               )}
+              <div className="text-xs text-blue-600 mt-1">
+                Powered by Amazon Connect
+              </div>
             </div>
 
             <div className="flex justify-center space-x-4">

@@ -20,8 +20,10 @@ interface PhoneNumber {
     sms: boolean;
     mms: boolean;
   };
-  status: "available" | "owned" | "reserved";
+  status: "available" | "owned" | "reserved" | "purchased" | "released";
   purchased_at?: string;
+  connect_instance_id?: string;
+  connect_phone_number_arn?: string;
 }
 
 interface PhoneNumbersListProps {
@@ -52,7 +54,8 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
         ...number,
         capabilities: typeof number.capabilities === 'object' && number.capabilities !== null 
           ? number.capabilities as { voice: boolean; sms: boolean; mms: boolean; }
-          : { voice: true, sms: true, mms: false }
+          : { voice: true, sms: true, mms: false },
+        status: number.status as "available" | "owned" | "reserved" | "purchased" | "released"
       }));
       
       setOwnedNumbers(transformedNumbers);
@@ -161,6 +164,11 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                           Purchased: {new Date(number.purchased_at).toLocaleDateString()}
                         </div>
                       )}
+                      {number.connect_instance_id && (
+                        <div className="text-xs text-blue-600">
+                          Amazon Connect: {number.connect_instance_id.slice(-8)}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Badge variant="success">Owned</Badge>
@@ -207,6 +215,7 @@ export const PhoneNumbersList = ({ searchResults }: PhoneNumbersListProps) => {
                           ${number.price}
                         </span>
                         <span>Voice, SMS, MMS</span>
+                        <span className="text-blue-600 text-xs">Amazon Connect</span>
                       </div>
                     </div>
                   </div>

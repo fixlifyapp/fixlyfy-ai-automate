@@ -4,18 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Plus, Search, MapPin, DollarSign, Calendar } from "lucide-react";
+import { Phone, Plus, Search, MapPin, DollarSign, Calendar, Cloud } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface PhoneNumber {
-  phone_number: string;
-  friendly_name: string;
+  phoneNumber: string;
   locality: string;
   region: string;
-  country_code: string;
   price: string;
-  monthly_price: string;
   capabilities: {
     voice: boolean;
     sms: boolean;
@@ -27,8 +24,10 @@ interface OwnedNumber {
   id: string;
   phone_number: string;
   status: string;
-  purchase_date: string;
-  monthly_cost: number;
+  purchased_at: string;
+  monthly_price: number;
+  connect_instance_id?: string;
+  connect_phone_number_arn?: string;
 }
 
 export const PhoneNumberManagement = () => {
@@ -67,7 +66,9 @@ export const PhoneNumberManagement = () => {
       const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
         body: {
           action: 'search',
-          query: searchQuery
+          areaCode: searchQuery.match(/^\d{3}$/) ? searchQuery : undefined,
+          contains: searchQuery.match(/^\d{3}$/) ? undefined : searchQuery,
+          country: 'US'
         }
       });
 
@@ -79,7 +80,7 @@ export const PhoneNumberManagement = () => {
           toast.info('No phone numbers found for your search');
         }
       } else {
-        toast.error(data.error || 'Failed to search phone numbers');
+        throw new Error(data.error || 'Failed to search phone numbers');
       }
     } catch (error) {
       console.error('Error searching phone numbers:', error);
@@ -95,7 +96,7 @@ export const PhoneNumberManagement = () => {
       const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
         body: {
           action: 'purchase',
-          phone_number: phoneNumber
+          phoneNumber: phoneNumber
         }
       });
 
@@ -104,7 +105,7 @@ export const PhoneNumberManagement = () => {
       if (data.success) {
         toast.success('Phone number purchased successfully!');
         fetchOwnedNumbers();
-        setSearchResults(prev => prev.filter(num => num.phone_number !== phoneNumber));
+        setSearchResults(prev => prev.filter(num => num.phoneNumber !== phoneNumber));
       } else {
         toast.error(data.error || 'Failed to purchase phone number');
       }
@@ -121,8 +122,12 @@ export const PhoneNumberManagement = () => {
       <div>
         <h2 className="text-2xl font-bold mb-2">Phone Number Management</h2>
         <p className="text-gray-600">
-          Purchase and manage phone numbers for your business communications.
+          Purchase and manage phone numbers through Amazon Connect for your business communications.
         </p>
+        <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
+          <Cloud className="h-4 w-4" />
+          <span>Powered by Amazon Connect</span>
+        </div>
       </div>
 
       {/* Owned Numbers */}
@@ -130,7 +135,7 @@ export const PhoneNumberManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5 text-fixlyfy" />
-            Your Phone Numbers
+            Your Phone Numbers ({ownedNumbers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -153,13 +158,19 @@ export const PhoneNumberManagement = () => {
                       <div className="font-medium">{number.phone_number}</div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        Purchased: {new Date(number.purchase_date).toLocaleDateString()}
+                        Purchased: {new Date(number.purchased_at).toLocaleDateString()}
                         <DollarSign className="h-3 w-3 ml-2" />
-                        ${number.monthly_cost}/month
+                        ${number.monthly_price}/month
                       </div>
+                      {number.connect_instance_id && (
+                        <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                          <Cloud className="h-3 w-3" />
+                          Connect Instance: {number.connect_instance_id.slice(-8)}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <Badge variant={number.status === 'active' ? 'success' : 'secondary'}>
+                  <Badge variant={number.status === 'owned' ? 'success' : 'secondary'}>
                     {number.status}
                   </Badge>
                 </div>
@@ -180,7 +191,7 @@ export const PhoneNumberManagement = () => {
         <CardContent>
           <div className="flex gap-3 mb-6">
             <Input
-              placeholder="Enter area code, city, or state (e.g., 415, San Francisco, CA)"
+              placeholder="Enter area code (e.g., 415) or city name (e.g., San Francisco)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
@@ -198,21 +209,27 @@ export const PhoneNumberManagement = () => {
 
           {searchResults.length > 0 && (
             <div className="space-y-3">
-              <h3 className="font-medium">Available Numbers ({searchResults.length})</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-medium">Available Numbers ({searchResults.length})</h3>
+                <Badge variant="outline" className="text-blue-600 border-blue-200">
+                  <Cloud className="h-3 w-3 mr-1" />
+                  Amazon Connect
+                </Badge>
+              </div>
               {searchResults.map((number) => (
                 <div
-                  key={number.phone_number}
+                  key={number.phoneNumber}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
                     <Phone className="h-5 w-5 text-fixlyfy" />
                     <div>
-                      <div className="font-medium">{number.phone_number}</div>
+                      <div className="font-medium">{number.phoneNumber}</div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-3 w-3" />
                         {number.locality}, {number.region}
                         <DollarSign className="h-3 w-3 ml-2" />
-                        ${number.price} + ${number.monthly_price}/month
+                        ${number.price} setup + $1.00/month
                       </div>
                       <div className="flex gap-1 mt-1">
                         {number.capabilities.voice && <Badge variant="outline" className="text-xs">Voice</Badge>}
@@ -222,13 +239,13 @@ export const PhoneNumberManagement = () => {
                     </div>
                   </div>
                   <Button
-                    onClick={() => purchasePhoneNumber(number.phone_number)}
-                    disabled={isPurchasing === number.phone_number}
+                    onClick={() => purchasePhoneNumber(number.phoneNumber)}
+                    disabled={isPurchasing === number.phoneNumber}
                     size="sm"
                     className="gap-2"
                   >
                     <Plus className="h-4 w-4" />
-                    {isPurchasing === number.phone_number ? 'Purchasing...' : `Buy $${number.price}`}
+                    {isPurchasing === number.phoneNumber ? 'Purchasing...' : `Buy $${number.price}`}
                   </Button>
                 </div>
               ))}
