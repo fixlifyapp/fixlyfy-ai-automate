@@ -14,6 +14,7 @@ const ClientDetailPage = lazy(() => import("@/pages/ClientDetailPage"));
 const JobDetailsPage = lazy(() => import("@/pages/JobDetailsPage"));
 const SchedulePage = lazy(() => import("@/pages/SchedulePage"));
 const ConnectCenterPage = lazy(() => import("@/pages/ConnectCenterPage"));
+const AiCenterPage = lazy(() => import("@/pages/AiCenterPage"));
 const MessagesPage = lazy(() => import("@/pages/MessagesPage"));
 const FinancePage = lazy(() => import("@/pages/FinancePage"));
 const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
@@ -44,6 +45,7 @@ function App() {
                   <Route path="/jobs/:id" element={<JobDetailsPage />} />
                   <Route path="/schedule" element={<SchedulePage />} />
                   <Route path="/connect" element={<ConnectCenterPage />} />
+                  <Route path="/ai-center" element={<AiCenterPage />} />
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/finance" element={<FinancePage />} />
                   <Route path="/products" element={<ProductsPage />} />

@@ -8,10 +8,11 @@ import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
 import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
+import { AISettings } from "@/components/settings/AISettings";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersRound, Settings2, Shield, Sliders, User, Package, Phone } from "lucide-react";
+import { UsersRound, Settings2, Shield, Sliders, User, Package, Phone, Brain } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -49,19 +50,22 @@ const SettingsPage = () => {
         </Link>
         
         {/* Products Card */}
-        <Link to="/products">
-          <Card className="h-full hover:shadow-md transition-shadow">
-            <CardContent className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Package className="h-6 w-6 text-fixlyfy" />
-              </div>
-              <div>
-                <h3 className="font-medium">Products & Inventory</h3>
-                <p className="text-sm text-muted-foreground">Manage your parts, products, and inventory</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+        <Card 
+          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
+            activeTab === "products" ? 'ring-2 ring-fixlyfy' : ''
+          }`}
+          onClick={() => setActiveTab("products")}
+        >
+          <CardContent className="flex items-center p-6 space-x-4">
+            <div className="bg-fixlyfy/10 p-3 rounded-full">
+              <Package className="h-6 w-6 text-fixlyfy" />
+            </div>
+            <div>
+              <h3 className="font-medium">Products & Inventory</h3>
+              <p className="text-sm text-muted-foreground">Manage your parts, products, and inventory</p>
+            </div>
+          </CardContent>
+        </Card>
         
         {/* Phone Numbers Card */}
         <Card 
@@ -81,27 +85,28 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
         
-        {/* Role Management Card */}
-        <PermissionRequired permission="users.roles.assign">
-          <Link to="/admin/roles">
-            <Card className="h-full hover:shadow-md transition-shadow">
-              <CardContent className="flex items-center p-6 space-x-4">
-                <div className="bg-fixlyfy/10 p-3 rounded-full">
-                  <UsersRound className="h-6 w-6 text-fixlyfy" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Role Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </PermissionRequired>
+        {/* AI Settings Card */}
+        <Card 
+          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
+            activeTab === "ai-settings" ? 'ring-2 ring-fixlyfy' : ''
+          }`}
+          onClick={() => setActiveTab("ai-settings")}
+        >
+          <CardContent className="flex items-center p-6 space-x-4">
+            <div className="bg-fixlyfy/10 p-3 rounded-full">
+              <Brain className="h-6 w-6 text-fixlyfy" />
+            </div>
+            <div>
+              <h3 className="font-medium">AI Settings</h3>
+              <p className="text-sm text-muted-foreground">Configure AI agent and automation settings</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-7 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -127,10 +132,22 @@ const SettingsPage = () => {
               Integrations
             </TabsTrigger>
             <TabsTrigger 
+              value="products" 
+              className="py-4 rounded-none data-[state=active]:bg-white"
+            >
+              Products
+            </TabsTrigger>
+            <TabsTrigger 
               value="phone-numbers" 
               className="py-4 rounded-none data-[state=active]:bg-white"
             >
               Phone Numbers
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ai-settings" 
+              className="py-4 rounded-none data-[state=active]:bg-white"
+            >
+              AI Settings
             </TabsTrigger>
           </TabsList>
           
@@ -150,8 +167,25 @@ const SettingsPage = () => {
             <SettingsIntegrations />
           </TabsContent>
           
+          <TabsContent value="products" className="p-6">
+            <div className="text-center py-8">
+              <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-medium mb-2">Products & Inventory</h3>
+              <p className="text-gray-600 mb-4">
+                This section will contain product and inventory management features.
+              </p>
+              <Link to="/products" className="text-fixlyfy hover:underline">
+                Go to Products Page →
+              </Link>
+            </div>
+          </TabsContent>
+          
           <TabsContent value="phone-numbers" className="p-6">
             <PhoneNumberManagement />
+          </TabsContent>
+          
+          <TabsContent value="ai-settings" className="p-6">
+            <AISettings />
           </TabsContent>
         </Tabs>
       </div>

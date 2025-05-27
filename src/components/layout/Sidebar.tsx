@@ -58,21 +58,15 @@ export function Sidebar({ className }: SidebarProps) {
       color: "text-fixlyfy"
     },
     {
-      label: 'Messages',
-      icon: MessageSquare,
-      href: '/messages',
-      color: "text-fixlyfy"
-    },
-    {
       label: 'Connect Center',
-      icon: Phone,
+      icon: MessageSquare,
       href: '/connect',
       color: "text-fixlyfy"
     },
     {
-      label: 'AI Assistant',
+      label: 'AI Center',
       icon: Bot,
-      href: '/ai-assistant',
+      href: '/ai-center',
       color: "text-fixlyfy"
     },
     {

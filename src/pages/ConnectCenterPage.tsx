@@ -5,21 +5,16 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesList } from "@/components/connect/MessagesList";
 import { CallsList } from "@/components/connect/CallsList";
-import { ConnectCallsList } from "@/components/connect/ConnectCallsList";
 import { EmailsList } from "@/components/connect/EmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
-import { AIAgentDashboard } from "@/components/connect/AIAgentDashboard";
-import { AIAgentSettings } from "@/components/connect/AIAgentSettings";
-import { AICallAnalytics } from "@/components/connect/AICallAnalytics";
+import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall, Zap, Users, Target, Bot, Settings, BarChart3 } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { AmazonConnectInterface } from "@/components/connect/AmazonConnectInterface";
-import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { useMessageContext } from "@/contexts/MessageContext";
 
 const ConnectCenterPage = () => {
@@ -28,8 +23,7 @@ const ConnectCenterPage = () => {
   const [unreadCounts, setUnreadCounts] = useState({
     messages: 0,
     calls: 0,
-    emails: 0,
-    aiCalls: 0
+    emails: 0
   });
   const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
 
@@ -45,7 +39,7 @@ const ConnectCenterPage = () => {
   
   // Set the active tab based on URL parameters
   useEffect(() => {
-    if (tabParam && ["messages", "calls", "ai-calls", "ai-dashboard", "ai-settings", "ai-analytics", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -103,17 +97,10 @@ const ConnectCenterPage = () => {
           .select('id')
           .eq('direction', 'missed');
 
-        // Count recent AI calls
-        const { data: aiCalls } = await supabase
-          .from('amazon_connect_calls')
-          .select('id')
-          .gte('started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
         setUnreadCounts({
           messages: unreadMessages,
           calls: missedCalls?.length || 0,
-          emails: 0, // Mock for now
-          aiCalls: aiCalls?.length || 0
+          emails: 0 // Mock for now
         });
       } catch (error) {
         console.error("Error fetching unread counts:", error);
@@ -135,18 +122,6 @@ const ConnectCenterPage = () => {
           toast.info("Use the calling interface below to make calls");
         }
         break;
-      case "ai-calls":
-        toast.info("Amazon Connect AI calls are automatically initiated by the AI agent");
-        break;
-      case "ai-dashboard":
-        toast.info("Monitor your AI agent performance and activity");
-        break;
-      case "ai-settings":
-        toast.info("Configure your AI agent settings and AWS credentials");
-        break;
-      case "ai-analytics":
-        toast.info("View detailed analytics and insights about your AI calls");
-        break;
       case "emails":
         toast.info("New email feature coming soon");
         break;
@@ -160,10 +135,6 @@ const ConnectCenterPage = () => {
     switch (activeTab) {
       case "messages": return "New Message";
       case "calls": return "New Call";
-      case "ai-calls": return "View AI Config";
-      case "ai-dashboard": return "Monitor Agent";
-      case "ai-settings": return "Configure AI";
-      case "ai-analytics": return "View Analytics";
       case "emails": return "New Email";
       case "phone-numbers": return "Search Numbers";
       default: return "New Action";
@@ -177,12 +148,12 @@ const ConnectCenterPage = () => {
       
       <PageHeader
         title="Connect Center"
-        subtitle="Manage all client communications and AI-powered calling in one place"
+        subtitle="Manage all client communications and contact channels"
         icon={MessageSquare}
         badges={[
-          { text: "AI-Powered", icon: Bot, variant: "fixlyfy" },
-          { text: "Multi-Channel", icon: Users, variant: "success" },
-          { text: "Real-time Sync", icon: Target, variant: "info" }
+          { text: "Multi-Channel", icon: Users, variant: "fixlyfy" },
+          { text: "Real-time Sync", icon: Target, variant: "success" },
+          { text: "Communication Hub", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
           text: getActionButtonText(),
@@ -197,7 +168,7 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-8 mb-6">
+        <TabsList className="grid grid-cols-4 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
             <span className="hidden sm:inline">Messages</span>
@@ -211,25 +182,6 @@ const ConnectCenterPage = () => {
             {unreadCounts.calls > 0 && (
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="ai-calls" className="flex items-center gap-2">
-            <Bot size={16} />
-            <span className="hidden sm:inline">AI Calls</span>
-            {unreadCounts.aiCalls > 0 && (
-              <Badge className="ml-1 bg-blue-600">{unreadCounts.aiCalls}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="ai-dashboard" className="flex items-center gap-2">
-            <Zap size={16} />
-            <span className="hidden sm:inline">AI Monitor</span>
-          </TabsTrigger>
-          <TabsTrigger value="ai-settings" className="flex items-center gap-2">
-            <Settings size={16} />
-            <span className="hidden sm:inline">AI Config</span>
-          </TabsTrigger>
-          <TabsTrigger value="ai-analytics" className="flex items-center gap-2">
-            <BarChart3 size={16} />
-            <span className="hidden sm:inline">Analytics</span>
           </TabsTrigger>
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail size={16} />
@@ -251,31 +203,7 @@ const ConnectCenterPage = () => {
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">
-          <div className="space-y-6">
-            {ownedNumbers.length > 0 && (
-              <AmazonConnectInterface />
-            )}
-            <CallsList />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ai-calls" className="mt-0">
-          <div className="space-y-6">
-            <AmazonConnectInterface />
-            <ConnectCallsList />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ai-dashboard" className="mt-0">
-          <AIAgentDashboard />
-        </TabsContent>
-
-        <TabsContent value="ai-settings" className="mt-0">
-          <AIAgentSettings />
-        </TabsContent>
-
-        <TabsContent value="ai-analytics" className="mt-0">
-          <AICallAnalytics />
+          <CallsList />
         </TabsContent>
         
         <TabsContent value="emails" className="mt-0">
