@@ -22,12 +22,13 @@ import {
   Brain,
   Crown
 } from "lucide-react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function Sidebar({ className }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const routes = [
     {
@@ -134,8 +135,13 @@ export function Sidebar({ className }: SidebarProps) {
     }
   ];
 
+  const handleNavigation = (href: string) => {
+    console.log(`Navigating to: ${href}`);
+    navigate(href);
+  };
+
   return (
-    <div className={cn("pb-12", className)}>
+    <div className={cn("pb-12 w-64 bg-white border-r", className)}>
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
@@ -144,15 +150,15 @@ export function Sidebar({ className }: SidebarProps) {
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="space-y-1">
               {routes.map((route) => (
-                <Link key={route.href} to={route.href}>
-                  <Button
-                    variant={location.pathname === route.href ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                  >
-                    <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
-                    {route.label}
-                  </Button>
-                </Link>
+                <Button
+                  key={route.href}
+                  variant={location.pathname === route.href ? "secondary" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => handleNavigation(route.href)}
+                >
+                  <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
+                  {route.label}
+                </Button>
               ))}
             </div>
           </ScrollArea>
