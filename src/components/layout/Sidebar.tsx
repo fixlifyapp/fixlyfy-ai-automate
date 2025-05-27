@@ -18,11 +18,10 @@ import {
   Package,
   Bot,
   Zap,
-  UserCheck,
-  Brain,
-  Crown
+  UserCheck
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { TrackingWrapper } from "@/components/ui/TrackingWrapper";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -36,18 +35,6 @@ export function Sidebar({ className }: SidebarProps) {
       icon: LayoutDashboard,
       href: '/dashboard',
       color: "text-sky-500"
-    },
-    {
-      label: 'Advanced Dashboard',
-      icon: Brain,
-      href: '/advanced-dashboard',
-      color: "text-purple-500"
-    },
-    {
-      label: 'Advanced Reports',
-      icon: Crown,
-      href: '/advanced-reports',
-      color: "text-amber-500"
     },
     {
       label: 'Jobs',
@@ -150,15 +137,21 @@ export function Sidebar({ className }: SidebarProps) {
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="space-y-1">
               {routes.map((route) => (
-                <Button
+                <TrackingWrapper
                   key={route.href}
-                  variant={location.pathname === route.href ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleNavigation(route.href)}
+                  actionType="navigation"
+                  element="sidebar_menu"
+                  context={{ destination: route.href, label: route.label }}
                 >
-                  <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
-                  {route.label}
-                </Button>
+                  <Button
+                    variant={location.pathname === route.href ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => handleNavigation(route.href)}
+                  >
+                    <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
+                    {route.label}
+                  </Button>
+                </TrackingWrapper>
               ))}
             </div>
           </ScrollArea>

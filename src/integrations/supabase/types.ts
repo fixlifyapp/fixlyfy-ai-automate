@@ -51,6 +51,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_recommendations: {
+        Row: {
+          action_taken: boolean | null
+          content: string
+          context: Json | null
+          created_at: string
+          feedback: string | null
+          id: string
+          is_helpful: boolean | null
+          recommendation_type: string
+          shown_at: string
+          user_id: string
+        }
+        Insert: {
+          action_taken?: boolean | null
+          content: string
+          context?: Json | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          is_helpful?: boolean | null
+          recommendation_type: string
+          shown_at?: string
+          user_id: string
+        }
+        Update: {
+          action_taken?: boolean | null
+          content?: string
+          context?: Json | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          is_helpful?: boolean | null
+          recommendation_type?: string
+          shown_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       amazon_connect_calls: {
         Row: {
           ai_agent_config_id: string | null
@@ -2227,6 +2266,66 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_actions: {
+        Row: {
+          action_type: string
+          context: Json | null
+          created_at: string
+          element: string | null
+          id: string
+          page: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          context?: Json | null
+          created_at?: string
+          element?: string | null
+          id?: string
+          page: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          context?: Json | null
+          created_at?: string
+          element?: string | null
+          id?: string
+          page?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_ai_preferences: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          id: string
+          preference_key: string
+          preference_value: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          preference_key: string
+          preference_value: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          preference_key?: string
+          preference_value?: Json
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

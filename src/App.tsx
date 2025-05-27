@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProviders } from "@/components/ui/AppProviders";
+import { SmartNotificationsPanel } from "@/components/ai/SmartNotificationsPanel";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
@@ -23,8 +24,6 @@ const AutomationsPage = lazy(() => import("@/pages/AutomationsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
-const AdvancedDashboard = lazy(() => import("@/pages/AdvancedDashboard"));
-const AdvancedReportsPage = lazy(() => import("@/pages/AdvancedReportsPage"));
 
 const queryClient = new QueryClient();
 
@@ -40,8 +39,6 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
-                  <Route path="/advanced-reports" element={<AdvancedReportsPage />} />
                   <Route path="/clients" element={<ClientsPage />} />
                   <Route path="/clients/:id" element={<ClientDetailPage />} />
                   <Route path="/jobs" element={<JobsPage />} />
@@ -60,6 +57,7 @@ function App() {
                   <Route path="/analytics" element={<AnalyticsPage />} />
                 </Routes>
               </Suspense>
+              <SmartNotificationsPanel />
             </div>
           </BrowserRouter>
         </TooltipProvider>
