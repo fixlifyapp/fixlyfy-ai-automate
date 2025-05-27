@@ -17,7 +17,7 @@ export const TrackingWrapper = ({
 }: TrackingWrapperProps) => {
   const { trackAction } = useUserTracking();
 
-  const handleClick = (originalOnClick?: () => void) => {
+  const handleClick = (originalOnClick?: (event: any) => void) => {
     trackAction({
       actionType,
       element,
@@ -25,14 +25,20 @@ export const TrackingWrapper = ({
     });
     
     if (originalOnClick) {
-      originalOnClick();
+      originalOnClick({} as any);
     }
   };
 
   if (isValidElement(children)) {
     return cloneElement(children, {
-      onClick: () => handleClick(children.props.onClick)
-    });
+      ...children.props,
+      onClick: (event: any) => {
+        handleClick(children.props.onClick);
+        if (children.props.onClick) {
+          children.props.onClick(event);
+        }
+      }
+    } as any);
   }
 
   return <>{children}</>;

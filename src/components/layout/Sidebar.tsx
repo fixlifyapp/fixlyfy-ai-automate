@@ -34,91 +34,91 @@ export function Sidebar({ className }: SidebarProps) {
       label: 'Dashboard',
       icon: LayoutDashboard,
       href: '/dashboard',
-      color: "text-sky-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Jobs',
       icon: Briefcase,
       href: '/jobs',
-      color: "text-emerald-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Clients',
       icon: Users,
       href: '/clients',
-      color: "text-pink-700"
+      color: "text-fixlyfy"
     },
     {
       label: 'Schedule',
       icon: Calendar,
       href: '/schedule',
-      color: "text-orange-700"
+      color: "text-fixlyfy"
     },
     {
       label: 'Estimates',
       icon: ClipboardList,
       href: '/estimates',
-      color: "text-blue-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Invoices',
       icon: FileText,
       href: '/invoices',
-      color: "text-green-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Finance',
       icon: DollarSign,
       href: '/finance',
-      color: "text-green-700"
+      color: "text-fixlyfy"
     },
     {
       label: 'Messages',
       icon: MessageSquare,
       href: '/messages',
-      color: "text-indigo-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Connect Center',
       icon: Phone,
       href: '/connect',
-      color: "text-teal-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'AI Assistant',
       icon: Bot,
       href: '/ai-assistant',
-      color: "text-purple-600"
+      color: "text-fixlyfy"
     },
     {
       label: 'Automations',
       icon: Zap,
       href: '/automations',
-      color: "text-yellow-600"
+      color: "text-fixlyfy"
     },
     {
       label: 'Analytics',
       icon: BarChart3,
       href: '/analytics',
-      color: "text-violet-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Team',
       icon: UserCheck,
       href: '/team',
-      color: "text-rose-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Products',
       icon: Package,
       href: '/products',
-      color: "text-cyan-500"
+      color: "text-fixlyfy"
     },
     {
       label: 'Settings',
       icon: Settings,
       href: '/settings',
-      color: "text-gray-500"
+      color: "text-fixlyfy-text-muted"
     }
   ];
 
@@ -128,12 +128,17 @@ export function Sidebar({ className }: SidebarProps) {
   };
 
   return (
-    <div className={cn("pb-12 w-64 bg-white border-r", className)}>
+    <div className={cn("pb-12 w-64 bg-white border-r border-fixlyfy-border shadow-sm", className)}>
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
-          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-            Fixlyfy
-          </h2>
+          <div className="mb-6 px-4 py-2">
+            <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight">
+              Fixlyfy
+            </h2>
+            <p className="text-xs text-fixlyfy-text-muted mt-1">
+              Field Service Management
+            </p>
+          </div>
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="space-y-1">
               {routes.map((route) => (
@@ -144,12 +149,22 @@ export function Sidebar({ className }: SidebarProps) {
                   context={{ destination: route.href, label: route.label }}
                 >
                   <Button
-                    variant={location.pathname === route.href ? "secondary" : "ghost"}
-                    className="w-full justify-start"
+                    variant={location.pathname === route.href ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
+                      location.pathname === route.href 
+                        ? "bg-gradient-primary text-white shadow-md hover:shadow-lg" 
+                        : "text-fixlyfy-text hover:bg-fixlyfy/10 hover:text-fixlyfy"
+                    )}
                     onClick={() => handleNavigation(route.href)}
                   >
-                    <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
-                    {route.label}
+                    <route.icon className={cn(
+                      "mr-3 h-4 w-4 transition-colors", 
+                      location.pathname === route.href 
+                        ? "text-white" 
+                        : route.color
+                    )} />
+                    <span className="truncate">{route.label}</span>
                   </Button>
                 </TrackingWrapper>
               ))}
