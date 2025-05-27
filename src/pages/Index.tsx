@@ -19,12 +19,16 @@ export default function Index() {
     }
   }, [user, loading, navigate]);
 
-  return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
-      <div className="text-center">
-        <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
-        <p className="text-fixlyfy-text-secondary">Loading...</p>
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
+        <div className="text-center">
+          <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
+          <p className="text-fixlyfy-text-secondary">Loading...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
