@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Brain, Settings, Save, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 interface AIConfig {
   id?: string;
@@ -23,6 +23,7 @@ interface AIConfig {
 }
 
 export const AISettings = () => {
+  const { user } = useAuth();
   const [config, setConfig] = useState<AIConfig>({
     business_niche: 'General Service',
     diagnostic_price: 75.00,
@@ -72,6 +73,11 @@ export const AISettings = () => {
   };
 
   const saveAIConfig = async () => {
+    if (!user) {
+      toast.error('User not authenticated');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const configData = {
@@ -94,7 +100,10 @@ export const AISettings = () => {
       } else {
         const { data, error } = await supabase
           .from('ai_agent_configs')
-          .insert(configData)
+          .insert({
+            ...configData,
+            user_id: user.id
+          })
           .select()
           .single();
 
