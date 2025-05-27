@@ -128,7 +128,7 @@ export const useAIAgentConfig = () => {
     }
   };
 
-  const saveAWSCredentials = async (credentials: Partial<AWSCredentials>) => {
+  const saveAWSCredentials = async (credentials: { aws_access_key_id: string; aws_secret_access_key: string; aws_region: string }) => {
     if (!user) return false;
 
     try {
@@ -147,7 +147,9 @@ export const useAIAgentConfig = () => {
         .from('aws_credentials')
         .insert({
           user_id: user.id,
-          ...credentials,
+          aws_access_key_id: credentials.aws_access_key_id,
+          aws_secret_access_key: credentials.aws_secret_access_key,
+          aws_region: credentials.aws_region,
           is_active: true
         })
         .select()

@@ -5,16 +5,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesList } from "@/components/connect/MessagesList";
 import { CallsList } from "@/components/connect/CallsList";
+import { ConnectCallsList } from "@/components/connect/ConnectCallsList";
 import { EmailsList } from "@/components/connect/EmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall, Zap, Users, Target } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall, Zap, Users, Target, Bot } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
-import { EnhancedCallingInterface } from "@/components/connect/EnhancedCallingInterface";
+import { AmazonConnectInterface } from "@/components/connect/AmazonConnectInterface";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { useMessageContext } from "@/contexts/MessageContext";
 
@@ -24,7 +25,8 @@ const ConnectCenterPage = () => {
   const [unreadCounts, setUnreadCounts] = useState({
     messages: 0,
     calls: 0,
-    emails: 0
+    emails: 0,
+    aiCalls: 0
   });
   const [ownedNumbers, setOwnedNumbers] = useState<any[]>([]);
 
@@ -40,7 +42,7 @@ const ConnectCenterPage = () => {
   
   // Set the active tab based on URL parameters
   useEffect(() => {
-    if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["messages", "calls", "ai-calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -98,10 +100,17 @@ const ConnectCenterPage = () => {
           .select('id')
           .eq('direction', 'missed');
 
+        // Count recent AI calls
+        const { data: aiCalls } = await supabase
+          .from('amazon_connect_calls')
+          .select('id')
+          .gte('started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
         setUnreadCounts({
           messages: unreadMessages,
           calls: missedCalls?.length || 0,
-          emails: 0 // Mock for now
+          emails: 0, // Mock for now
+          aiCalls: aiCalls?.length || 0
         });
       } catch (error) {
         console.error("Error fetching unread counts:", error);
@@ -123,6 +132,9 @@ const ConnectCenterPage = () => {
           toast.info("Use the calling interface below to make calls");
         }
         break;
+      case "ai-calls":
+        toast.info("Amazon Connect AI calls are automatically initiated by the AI agent");
+        break;
       case "emails":
         toast.info("New email feature coming soon");
         break;
@@ -139,16 +151,17 @@ const ConnectCenterPage = () => {
       
       <PageHeader
         title="Connect Center"
-        subtitle="Manage all client communications and phone numbers in one place"
+        subtitle="Manage all client communications and AI-powered calling in one place"
         icon={MessageSquare}
         badges={[
-          { text: "Unified Communications", icon: Zap, variant: "fixlyfy" },
+          { text: "AI-Powered", icon: Bot, variant: "fixlyfy" },
           { text: "Multi-Channel", icon: Users, variant: "success" },
           { text: "Real-time Sync", icon: Target, variant: "info" }
         ]}
         actionButton={{
           text: activeTab === "messages" ? "New Message" : 
                 activeTab === "calls" ? "New Call" : 
+                activeTab === "ai-calls" ? "View AI Config" :
                 activeTab === "emails" ? "New Email" : "Search Numbers",
           icon: Plus,
           onClick: handleNewCommunication
@@ -161,7 +174,7 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 mb-6">
+        <TabsList className="grid grid-cols-5 mb-6">
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
             <span className="hidden sm:inline">Messages</span>
@@ -176,6 +189,13 @@ const ConnectCenterPage = () => {
               <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="ai-calls" className="flex items-center gap-2">
+            <Bot size={16} />
+            <span className="hidden sm:inline">AI Calls</span>
+            {unreadCounts.aiCalls > 0 && (
+              <Badge className="ml-1 bg-blue-600">{unreadCounts.aiCalls}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail size={16} />
             <span className="hidden sm:inline">Emails</span>
@@ -185,7 +205,7 @@ const ConnectCenterPage = () => {
           </TabsTrigger>
           <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
             <PhoneCall size={16} />
-            <span className="hidden sm:inline">Phone Numbers</span>
+            <span className="hidden sm:inline">Numbers</span>
           </TabsTrigger>
         </TabsList>
         
@@ -198,9 +218,16 @@ const ConnectCenterPage = () => {
         <TabsContent value="calls" className="mt-0">
           <div className="space-y-6">
             {ownedNumbers.length > 0 && (
-              <EnhancedCallingInterface ownedNumbers={ownedNumbers} />
+              <AmazonConnectInterface />
             )}
             <CallsList />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai-calls" className="mt-0">
+          <div className="space-y-6">
+            <AmazonConnectInterface />
+            <ConnectCallsList />
           </div>
         </TabsContent>
         
