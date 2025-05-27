@@ -72,8 +72,8 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        {/* Key Metrics - Fixed Grid Layout */}
+        <div className="w-full">
           <EnhancedKpiCards 
             timePeriod={timePeriod}
             dateRange={dateRange}

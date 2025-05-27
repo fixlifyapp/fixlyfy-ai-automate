@@ -205,7 +205,7 @@ export const EnhancedKpiCards = ({ timePeriod, dateRange, isRefreshing = false }
   }, [user, timePeriod, dateRange, isRefreshing]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {isLoading || isRefreshing
         ? Array.from({ length: 4 }).map((_, index) => (
             <Card key={index} className="animate-pulse overflow-hidden">
