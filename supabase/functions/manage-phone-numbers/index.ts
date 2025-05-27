@@ -1,11 +1,19 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
+
+interface PhoneNumberRequest {
+  action: 'search' | 'purchase' | 'list-owned';
+  areaCode?: string;
+  contains?: string;
+  country?: string;
+  phoneNumber?: string;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,169 +23,173 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { action, query, phone_number } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { action, areaCode, contains, country, phoneNumber }: PhoneNumberRequest = await req.json();
 
     // Get Twilio credentials
     const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
 
     if (!twilioAccountSid || !twilioAuthToken) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Twilio credentials not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Twilio credentials not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    const authString = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+    const basicAuth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
 
     switch (action) {
       case 'search':
-        if (!query) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Search query is required' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-
         // Search for available phone numbers
-        const searchUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/AvailablePhoneNumbers/US/Local.json?Contains=${encodeURIComponent(query)}`;
+        let searchUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/AvailablePhoneNumbers/${country || 'US'}/Local.json?`;
+        const params = new URLSearchParams();
+        if (areaCode) params.append('AreaCode', areaCode);
+        if (contains) params.append('Contains', contains);
+        params.append('Limit', '20');
         
-        const searchResponse = await fetch(searchUrl, {
+        const searchResponse = await fetch(searchUrl + params.toString(), {
           headers: {
-            'Authorization': `Basic ${authString}`,
-          },
+            'Authorization': `Basic ${basicAuth}`
+          }
         });
 
-        const searchResult = await searchResponse.json();
-
-        if (searchResponse.ok) {
-          const phoneNumbers = searchResult.available_phone_numbers.map((num: any) => ({
-            phone_number: num.phone_number,
-            friendly_name: num.friendly_name,
-            locality: num.locality || 'N/A',
-            region: num.region || 'N/A',
-            country_code: num.iso_country,
-            price: '1.00',
-            monthly_price: '1.00',
-            capabilities: {
-              voice: num.capabilities.voice,
-              sms: num.capabilities.sms,
-              mms: num.capabilities.mms,
-            },
-          }));
-
-          return new Response(
-            JSON.stringify({ success: true, phone_numbers: phoneNumbers }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          return new Response(
-            JSON.stringify({ success: false, error: searchResult.message || 'Failed to search phone numbers' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+        if (!searchResponse.ok) {
+          throw new Error('Failed to search phone numbers');
         }
+
+        const searchData = await searchResponse.json();
+        
+        return new Response(JSON.stringify({
+          success: true,
+          phone_numbers: searchData.available_phone_numbers || []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
 
       case 'purchase':
-        if (!phone_number) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Phone number is required' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+        if (!phoneNumber) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Phone number is required for purchase' 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
-        // Purchase phone number
-        const purchaseUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/IncomingPhoneNumbers.json`;
-        
-        const purchaseResponse = await fetch(purchaseUrl, {
+        // Purchase the phone number
+        const purchaseResponse = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/IncomingPhoneNumbers.json`, {
           method: 'POST',
           headers: {
-            'Authorization': `Basic ${authString}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
           },
           body: new URLSearchParams({
-            PhoneNumber: phone_number,
-          }),
+            PhoneNumber: phoneNumber,
+            SmsUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/twilio-webhook`,
+            VoiceUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/twilio-webhook`
+          })
         });
 
-        const purchaseResult = await purchaseResponse.json();
-
-        if (purchaseResponse.ok) {
-          // Store in database
-          const { error: dbError } = await supabaseClient
-            .from('phone_number_purchases')
-            .insert({
-              phone_number_id: crypto.randomUUID(),
-              twilio_phone_number_sid: purchaseResult.sid,
-              twilio_account_sid: twilioAccountSid,
-              purchase_price: 1.00,
-              monthly_cost: 1.00,
-              status: 'active',
-              purchase_date: new Date().toISOString(),
-            });
-
-          if (dbError) {
-            console.error('Error storing purchase record:', dbError);
-          }
-
-          return new Response(
-            JSON.stringify({ success: true, phone_number_sid: purchaseResult.sid }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          return new Response(
-            JSON.stringify({ success: false, error: purchaseResult.message || 'Failed to purchase phone number' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+        if (!purchaseResponse.ok) {
+          const errorData = await purchaseResponse.json();
+          throw new Error(errorData.message || 'Failed to purchase phone number');
         }
+
+        const purchaseData = await purchaseResponse.json();
+
+        // Get user from auth header
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+        if (authError || !user) {
+          throw new Error('Invalid authentication');
+        }
+
+        // Store in our database
+        const { error: dbError } = await supabaseClient
+          .from('phone_numbers')
+          .insert({
+            phone_number: phoneNumber,
+            twilio_sid: purchaseData.sid,
+            friendly_name: purchaseData.friendly_name,
+            status: 'owned',
+            purchased_by: user.id,
+            purchased_at: new Date().toISOString(),
+            capabilities: {
+              voice: purchaseData.capabilities?.voice || true,
+              sms: purchaseData.capabilities?.sms || true,
+              mms: purchaseData.capabilities?.mms || false
+            },
+            locality: purchaseData.locality,
+            region: purchaseData.region,
+            price: 1.00,
+            monthly_price: 1.00
+          });
+
+        if (dbError) {
+          console.error('Error storing phone number:', dbError);
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          phone_number: purchaseData
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
 
       case 'list-owned':
-        // Get owned phone numbers from Twilio
-        const listUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/IncomingPhoneNumbers.json`;
-        
-        const listResponse = await fetch(listUrl, {
-          headers: {
-            'Authorization': `Basic ${authString}`,
-          },
-        });
-
-        const listResult = await listResponse.json();
-
-        if (listResponse.ok) {
-          const ownedNumbers = listResult.incoming_phone_numbers.map((num: any) => ({
-            id: num.sid,
-            phone_number: num.phone_number,
-            friendly_name: num.friendly_name,
-            status: 'active',
-            purchase_date: num.date_created,
-            monthly_cost: 1.00,
-          }));
-
-          return new Response(
-            JSON.stringify({ success: true, phone_numbers: ownedNumbers }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          return new Response(
-            JSON.stringify({ success: false, error: listResult.message || 'Failed to list phone numbers' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+        // Get user from auth header
+        const { data: { user: listUser }, error: listAuthError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+        if (listAuthError || !listUser) {
+          throw new Error('Invalid authentication');
         }
 
+        const { data: ownedNumbers, error: listError } = await supabaseClient
+          .from('phone_numbers')
+          .select('*')
+          .eq('status', 'owned')
+          .order('purchased_at', { ascending: false });
+
+        if (listError) throw listError;
+
+        return new Response(JSON.stringify({
+          success: true,
+          phone_numbers: ownedNumbers || []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+
       default:
-        return new Response(
-          JSON.stringify({ success: false, error: 'Invalid action' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Invalid action' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
     }
 
   } catch (error) {
     console.error('Error in manage-phone-numbers function:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });

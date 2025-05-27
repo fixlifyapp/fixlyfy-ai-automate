@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,19 +7,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Phone, PhoneOff, Volume2, VolumeX, Mic, MicOff, Bot } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { PhoneNumber } from "@/types/database";
 
-interface CallingInterfaceProps {
-  ownedNumbers: PhoneNumber[];
+interface PhoneNumber {
+  id: string;
+  phone_number: string;
+  friendly_name?: string;
+  status: string;
 }
 
-export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
+export const CallingInterface = () => {
+  const [ownedNumbers, setOwnedNumbers] = useState<PhoneNumber[]>([]);
   const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
   const [toNumber, setToNumber] = useState<string>("");
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentContactId, setCurrentContactId] = useState<string | null>(null);
   const [callType, setCallType] = useState<"regular" | "ai">("regular");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadOwnedNumbers();
+  }, []);
+
+  const loadOwnedNumbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('phone_numbers')
+        .select('*')
+        .eq('status', 'owned')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      setOwnedNumbers(data || []);
+      if (data && data.length > 0) {
+        setSelectedFromNumber(data[0].phone_number);
+      }
+    } catch (error) {
+      console.error('Error loading phone numbers:', error);
+      toast.error('Failed to load your phone numbers');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatPhoneNumber = (phoneNumber: string) => {
     const cleaned = phoneNumber.replace(/\D/g, '');
@@ -37,27 +67,54 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
     }
 
     try {
+      setIsCallActive(true);
+      
+      // First, record the call in our database
+      const { data: callData, error: callError } = await supabase
+        .from('calls')
+        .insert({
+          phone_number: toNumber,
+          direction: 'outgoing',
+          status: 'initiated',
+          notes: `${callType === 'ai' ? 'AI-powered call' : 'Regular call'} initiated from ${selectedFromNumber}`
+        })
+        .select()
+        .single();
+
+      if (callError) throw callError;
+
+      // Then initiate the actual call
       const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'initiate',
           fromNumber: selectedFromNumber,
           toNumber: toNumber,
-          callType: callType
+          callType: callType,
+          callId: callData.id
         }
       });
 
       if (error) throw error;
 
       if (data.success) {
-        setIsCallActive(true);
         setCurrentContactId(data.contactId);
-        toast.success("Call initiated successfully via Amazon Connect");
+        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated successfully`);
+        
+        // Update the call record with the contact ID
+        await supabase
+          .from('calls')
+          .update({ 
+            status: 'in-progress',
+            call_sid: data.contactId 
+          })
+          .eq('id', callData.id);
       } else {
-        throw new Error("Failed to initiate call");
+        throw new Error(data.error || "Failed to initiate call");
       }
     } catch (error) {
       console.error('Error initiating call:', error);
       toast.error('Failed to initiate call');
+      setIsCallActive(false);
     }
   };
 
@@ -74,6 +131,15 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
 
       if (error) throw error;
 
+      // Update call record
+      await supabase
+        .from('calls')
+        .update({ 
+          status: 'completed',
+          ended_at: new Date().toISOString()
+        })
+        .eq('call_sid', currentContactId);
+
       setIsCallActive(false);
       setCurrentContactId(null);
       setIsMuted(false);
@@ -89,12 +155,48 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
     toast.info(isMuted ? "Unmuted" : "Muted");
   };
 
+  if (loading) {
+    return (
+      <Card className="border-fixlyfy-border">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy mx-auto"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading phone numbers...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (ownedNumbers.length === 0) {
+    return (
+      <Card className="border-fixlyfy-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5" />
+            Make a Call
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Phone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Phone Numbers</h3>
+            <p className="text-gray-500 mb-4">
+              You need to purchase a phone number before you can make calls.
+            </p>
+            <Button onClick={() => window.location.href = '/connect?tab=phone-numbers'}>
+              Get Phone Number
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-fixlyfy-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Phone className="h-5 w-5" />
-          Amazon Connect Calling
+          Make a Call
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -104,7 +206,7 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
               <label className="text-sm font-medium mb-2 block">Call Type</label>
               <Select value={callType} onValueChange={(value: "regular" | "ai") => setCallType(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select call type" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="regular">
@@ -133,6 +235,7 @@ export const CallingInterface = ({ ownedNumbers }: CallingInterfaceProps) => {
                   {ownedNumbers.map((number) => (
                     <SelectItem key={number.id} value={number.phone_number}>
                       {formatPhoneNumber(number.phone_number)}
+                      {number.friendly_name && ` (${number.friendly_name})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
