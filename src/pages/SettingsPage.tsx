@@ -7,7 +7,7 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
+import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
 import { AISettings } from "@/components/settings/AISettings";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
@@ -49,6 +49,24 @@ const SettingsPage = () => {
           </Card>
         </Link>
         
+        {/* Phone Numbers Card */}
+        <Card 
+          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
+            activeTab === "phone-numbers" ? 'ring-2 ring-fixlyfy' : ''
+          }`}
+          onClick={() => setActiveTab("phone-numbers")}
+        >
+          <CardContent className="flex items-center p-6 space-x-4">
+            <div className="bg-fixlyfy/10 p-3 rounded-full">
+              <Phone className="h-6 w-6 text-fixlyfy" />
+            </div>
+            <div>
+              <h3 className="font-medium">Phone Numbers</h3>
+              <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
+            </div>
+          </CardContent>
+        </Card>
+        
         {/* AI Settings Card */}
         <Card 
           className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
@@ -70,7 +88,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-6 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -126,7 +144,7 @@ const SettingsPage = () => {
           </TabsContent>
           
           <TabsContent value="phone-numbers" className="p-6">
-            <PhoneNumbersList />
+            <PhoneNumberManagement />
           </TabsContent>
           
           <TabsContent value="ai-settings" className="p-6">
