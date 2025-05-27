@@ -29,7 +29,6 @@ const ConnectCenterPage = () => {
 
   const { openMessageDialog } = useMessageContext();
 
-  // Read query parameters to handle direct navigation with a specific client
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const clientId = searchParams.get("clientId");
@@ -37,14 +36,12 @@ const ConnectCenterPage = () => {
   const clientPhone = searchParams.get("clientPhone");
   const tabParam = searchParams.get("tab") || "messages";
   
-  // Set the active tab based on URL parameters
   useEffect(() => {
     if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
   
-  // Handle opening the message dialog if client parameters are provided
   useEffect(() => {
     if (clientId && clientName) {
       openMessageDialog({
@@ -55,7 +52,6 @@ const ConnectCenterPage = () => {
     }
   }, [clientId, clientName, clientPhone, openMessageDialog]);
 
-  // Load owned phone numbers
   useEffect(() => {
     const loadOwnedNumbers = async () => {
       try {
@@ -73,11 +69,9 @@ const ConnectCenterPage = () => {
     loadOwnedNumbers();
   }, []);
 
-  // Fetch unread counts
   useEffect(() => {
     const fetchUnreadCounts = async () => {
       try {
-        // Count unread messages
         const { data: conversations } = await supabase
           .from('conversations')
           .select(`
@@ -91,7 +85,6 @@ const ConnectCenterPage = () => {
           unreadMessages += unreadInConv;
         });
 
-        // Count missed calls
         const { data: missedCalls } = await supabase
           .from('calls')
           .select('id')
@@ -100,7 +93,7 @@ const ConnectCenterPage = () => {
         setUnreadCounts({
           messages: unreadMessages,
           calls: missedCalls?.length || 0,
-          emails: 0 // Mock for now
+          emails: 0
         });
       } catch (error) {
         console.error("Error fetching unread counts:", error);
@@ -143,7 +136,6 @@ const ConnectCenterPage = () => {
 
   return (
     <PageLayout>
-      {/* Incoming call handler - shows when there's an incoming call */}
       <IncomingCallHandler />
       
       <PageHeader
@@ -162,7 +154,6 @@ const ConnectCenterPage = () => {
         }}
       />
       
-      {/* Global Search Component */}
       <div className="mb-6">
         <ConnectSearch onSearchResults={setSearchResults} />
       </div>
@@ -197,9 +188,7 @@ const ConnectCenterPage = () => {
         </TabsList>
         
         <TabsContent value="messages" className="mt-0">
-          <MessagesList 
-            searchResults={searchResults}
-          />
+          <MessagesList searchResults={searchResults} />
         </TabsContent>
         
         <TabsContent value="calls" className="mt-0">

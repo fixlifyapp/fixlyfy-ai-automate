@@ -1,3 +1,4 @@
+
 import { useMessageContext } from "@/contexts/MessageContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,6 @@ export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesPro
   const [client, setClient] = useState({ name: "", phone: "", id: "", email: "" });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch client details from job
   useEffect(() => {
     const fetchClientDetails = async () => {
       if (!jobId) return;
@@ -47,7 +47,6 @@ export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesPro
     fetchClientDetails();
   }, [jobId]);
 
-  // Find messages for this client from centralized conversations
   const clientConversation = conversations.find(conv => conv.client.id === client.id);
   const messages = clientConversation?.messages || [];
 
@@ -61,10 +60,10 @@ export const useJobMessages = ({ jobId, message, setMessage }: UseJobMessagesPro
     messages,
     client,
     isLoading,
-    isSendingMessage: false, // Handled by MessageContext
-    isAILoading: false, // This would be handled by AI hooks
-    handleSuggestResponse: () => {}, // Placeholder
+    isSendingMessage: false,
+    isAILoading: false,
+    handleSuggestResponse: () => {},
     handleUseSuggestion: (content: string) => setMessage(content),
-    handleSendMessage: handleOpenMessageDialog // Open dialog instead of direct send
+    handleSendMessage: handleOpenMessageDialog
   };
 };

@@ -24,23 +24,16 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
 
   const { isMessageDialogOpen, closeMessageDialog } = useMessageContext();
 
-  // Set up real-time messaging with error handling
   useRealTimeMessaging({
-    onNewMessage: () => {
-      console.log('Real-time update detected, refreshing conversations');
-      refreshConversations();
-    },
+    onNewMessage: refreshConversations,
     enabled: true
   });
 
   const handleConversationSelect = (conversation: any) => {
-    console.log('Conversation selected:', conversation);
     try {
       setSelectedConversation(conversation);
       if (handleConversationClick) {
         handleConversationClick(conversation.id);
-      } else {
-        console.error('handleConversationClick is not available');
       }
     } catch (error) {
       console.error('Error selecting conversation:', error);
@@ -52,7 +45,6 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
     closeMessageDialog();
   };
 
-  // Filter conversations based on search results if provided
   const filteredConversations = searchResults && searchResults.length > 0 
     ? conversations.filter(conv => 
         searchResults.some(result => result.id === conv.client.id)
@@ -103,7 +95,6 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
         </CardContent>
       </Card>
 
-      {/* Unified Message Dialog */}
       <ConnectMessageDialog
         isOpen={isMessageDialogOpen}
         onClose={handleCloseDialog}

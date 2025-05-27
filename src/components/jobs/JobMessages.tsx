@@ -18,12 +18,10 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch job client details and find existing conversation
   useEffect(() => {
     const fetchJobData = async () => {
       setIsLoading(true);
       try {
-        // Get job and client info
         const { data: job } = await supabase
           .from('jobs')
           .select(`
@@ -42,12 +40,10 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
           };
           setClient(clientData);
 
-          // Find conversation for this client from the centralized conversations
           const clientConversation = conversations.find(conv => conv.client.id === clientData.id);
           if (clientConversation) {
             setMessages(clientConversation.messages);
           } else {
-            // No existing conversation
             setMessages([]);
           }
         }
@@ -61,7 +57,7 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     if (jobId) {
       fetchJobData();
     }
-  }, [jobId, conversations]); // Re-run when conversations update
+  }, [jobId, conversations]);
 
   const handleOpenMessages = () => {
     if (client.id) {
@@ -69,15 +65,11 @@ export const JobMessages = ({ jobId }: JobMessagesProps) => {
     }
   };
 
-  const handleUseSuggestion = (content: string) => {
-    // This will be handled by the unified dialog
-  };
-
   const { isAILoading, handleSuggestResponse } = useMessageAI({
     messages,
     client,
     jobId,
-    onUseSuggestion: handleUseSuggestion
+    onUseSuggestion: () => {}
   });
 
   return (
