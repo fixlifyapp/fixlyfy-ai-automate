@@ -14,13 +14,20 @@ import {
   RecentJobs,
   UpcomingJobs,
   ActivityFeed,
-  AIAgentWidget
+  AIAgentWidget,
+  DashboardFilterControls
 } from "@/components/dashboard";
 
 export type { TimePeriod };
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("month");
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     // Simulate loading data
@@ -28,6 +35,19 @@ const Dashboard = () => {
       setIsLoading(false);
     }, 500);
   }, []);
+
+  const handleFilterChange = (period: TimePeriod, range?: { from: Date | undefined; to: Date | undefined }) => {
+    setTimePeriod(period);
+    if (range) {
+      setDateRange(range);
+    }
+    setIsRefreshing(true);
+    
+    // Simulate data refresh
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  };
 
   return (
     <PageLayout>
@@ -43,9 +63,22 @@ const Dashboard = () => {
       />
 
       <div className="space-y-6">
+        {/* Filter Controls */}
+        <div className="flex justify-end">
+          <DashboardFilterControls
+            currentPeriod={timePeriod}
+            dateRange={dateRange}
+            onFilterChange={handleFilterChange}
+          />
+        </div>
+
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <EnhancedKpiCards />
+          <EnhancedKpiCards 
+            timePeriod={timePeriod}
+            dateRange={dateRange}
+            isRefreshing={isRefreshing}
+          />
         </div>
 
         {/* Enhanced Dashboard Grid */}

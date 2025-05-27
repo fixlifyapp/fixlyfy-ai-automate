@@ -12,3 +12,6 @@ export { AIAgentWidget } from "./AIAgentWidget";
 export { ClientStats } from "./ClientStats";
 export { KpiSummaryCards } from "./KpiSummaryCards";
 export { DashboardFilterControls } from "./DashboardFilterControls";
+export { AdvancedAnalytics } from "./AdvancedAnalytics";
+export { SmartFilters } from "./SmartFilters";
+export { PredictiveInsights } from "./PredictiveInsights";
