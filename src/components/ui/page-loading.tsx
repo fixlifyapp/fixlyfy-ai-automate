@@ -13,12 +13,16 @@ export const PageLoading = ({ className }: PageLoadingProps) => {
       "animate-fade-in",
       className
     )}>
-      <div className="text-center space-y-4">
+      <div className="relative">
+        {/* Main spinner */}
         <LoadingSpinner size="xl" />
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium text-fixlyfy">Loading...</h3>
-          <p className="text-sm text-fixlyfy-text-secondary">Preparing your workspace</p>
-        </div>
+        
+        {/* Outer ring animation */}
+        <div className="absolute inset-0 border-4 border-transparent border-t-fixlyfy/20 rounded-full animate-spin" 
+             style={{ animationDuration: '2s', animationDirection: 'reverse' }} />
+        
+        {/* Pulse effect */}
+        <div className="absolute inset-0 bg-fixlyfy/10 rounded-full animate-ping" />
       </div>
     </div>
   );
@@ -26,12 +30,26 @@ export const PageLoading = ({ className }: PageLoadingProps) => {
 
 export const PageLoadingFallback = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-      <div className="text-center space-y-6">
-        <LoadingSpinner size="xl" />
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-fixlyfy">Loading Page...</h2>
-          <p className="text-fixlyfy-text-secondary">Please wait while we load your content</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="relative">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-fixlyfy/20 via-purple-500/20 to-fixlyfy/20 rounded-full blur-xl animate-pulse" />
+        
+        {/* Main content */}
+        <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg">
+          <div className="flex items-center justify-center">
+            <div className="relative">
+              {/* Primary spinner */}
+              <LoadingSpinner size="xl" />
+              
+              {/* Secondary ring */}
+              <div className="absolute inset-0 border-2 border-transparent border-t-fixlyfy/30 rounded-full animate-spin" 
+                   style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+              
+              {/* Outer glow effect */}
+              <div className="absolute -inset-2 bg-fixlyfy/5 rounded-full animate-pulse" />
+            </div>
+          </div>
         </div>
       </div>
     </div>

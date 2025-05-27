@@ -33,27 +33,29 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <BrowserRouter>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-gray-50 transition-all duration-300">
               <Suspense fallback={<PageLoadingFallback />}>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/clients" element={<ClientsPage />} />
-                  <Route path="/clients/:id" element={<ClientDetailPage />} />
-                  <Route path="/jobs" element={<JobsPage />} />
-                  <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                  <Route path="/schedule" element={<SchedulePage />} />
-                  <Route path="/connect" element={<ConnectCenterPage />} />
-                  <Route path="/ai-center" element={<AiCenterPage />} />
-                  <Route path="/messages" element={<MessagesPage />} />
-                  <Route path="/finance" element={<FinancePage />} />
-                  <Route path="/products" element={<ProductsPage />} />
-                  <Route path="/team" element={<TeamManagementPage />} />
-                  <Route path="/automations" element={<AutomationsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/configuration" element={<ConfigurationPage />} />
-                  <Route path="/analytics" element={<AnalyticsPage />} />
-                </Routes>
+                <div className="animate-fade-in">
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/clients" element={<ClientsPage />} />
+                    <Route path="/clients/:id" element={<ClientDetailPage />} />
+                    <Route path="/jobs" element={<JobsPage />} />
+                    <Route path="/jobs/:id" element={<JobDetailsPage />} />
+                    <Route path="/schedule" element={<SchedulePage />} />
+                    <Route path="/connect" element={<ConnectCenterPage />} />
+                    <Route path="/ai-center" element={<AiCenterPage />} />
+                    <Route path="/messages" element={<MessagesPage />} />
+                    <Route path="/finance" element={<FinancePage />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/team" element={<TeamManagementPage />} />
+                    <Route path="/automations" element={<AutomationsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/configuration" element={<ConfigurationPage />} />
+                    <Route path="/analytics" element={<AnalyticsPage />} />
+                  </Routes>
+                </div>
               </Suspense>
             </div>
           </BrowserRouter>
