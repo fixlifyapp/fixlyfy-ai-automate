@@ -22,7 +22,6 @@ const TeamManagementPage = lazy(() => import("@/pages/TeamManagementPage"));
 const AutomationsPage = lazy(() => import("@/pages/AutomationsPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const ConfigurationPage = lazy(() => import("@/pages/ConfigurationPage"));
-const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 
 const queryClient = new QueryClient();
@@ -53,7 +52,6 @@ function App() {
                   <Route path="/automations" element={<AutomationsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/configuration" element={<ConfigurationPage />} />
-                  <Route path="/ai-assistant" element={<AiAssistantPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                 </Routes>
               </Suspense>
