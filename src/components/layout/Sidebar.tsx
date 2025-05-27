@@ -1,214 +1,163 @@
 
-import { useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import React from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   LayoutDashboard, 
-  ListTodo, 
+  Briefcase, 
   Users, 
   Calendar, 
-  Settings, 
-  BarChart3, 
-  Menu, 
-  ChevronRight,
+  ClipboardList,
+  DollarSign,
+  MessageSquare,
+  BarChart3,
+  Settings,
+  FileText,
+  Phone,
   Package,
-  UserCheck,
-  Receipt,
-  Brain,
+  Bot,
   Zap,
-  MessageSquare
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { useRBAC } from '@/components/auth/RBACProvider';
+  UserCheck,
+  Brain,
+  Crown
+} from "lucide-react";
+import { useLocation, Link } from "react-router-dom";
 
-// Define menu items with required permissions
-const menuItems = [
-  { 
-    name: 'Dashboard', 
-    icon: LayoutDashboard, 
-    path: '/', 
-    highlight: false,
-    permission: null // Accessible to all
-  },
-  { 
-    name: 'Jobs', 
-    icon: ListTodo, 
-    path: '/jobs', 
-    badge: '12', 
-    highlight: true,
-    permission: 'jobs.view.own' // At minimum, users can view their own jobs
-  },
-  { 
-    name: 'Clients', 
-    icon: Users, 
-    path: '/clients',
-    highlight: false,
-    permission: 'jobs.view.own' // If you can view jobs, you can see clients
-  },
-  { 
-    name: 'Schedule', 
-    icon: Calendar, 
-    path: '/schedule',
-    highlight: false,
-    permission: 'jobs.view.own' // Basic scheduling access
-  },
-  {
-    name: 'Products',
-    icon: Package,
-    path: '/products',
-    highlight: false,
-    permission: 'jobs.view.own' // Basic products access
-  },
-  {
-    name: 'Finance',
-    icon: Receipt,
-    path: '/finance',
-    highlight: false,
-    permission: 'payments.view' // Only users with payment view permission can see Finance
-  },
-  {
-    name: 'Team',
-    icon: UserCheck,
-    path: '/admin/team',
-    highlight: false,
-    permission: 'users.view' // Users with user view permission can see team
-  },
-  {
-    name: 'AI Assistant',
-    icon: Brain,
-    path: '/ai-assistant',
-    highlight: false,
-    permission: null // Accessible to all
-  },
-  {
-    name: 'Connect Center',
-    icon: MessageSquare, 
-    path: '/connect', 
-    badge: '15',
-    highlight: false,
-    permission: null // Accessible to all
-  },
-  {
-    name: 'Automations',
-    icon: Zap,
-    path: '/automations',
-    highlight: false,
-    permission: 'settings.view' // Only those with settings access can see automations
-  },
-  { 
-    name: 'Reports', 
-    icon: BarChart3, 
-    path: '/reports',
-    highlight: false,
-    permission: 'reports.view' // Specific permission for reports
-  }
-];
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-const bottomMenuItems = [
-  { 
-    name: 'Settings', 
-    icon: Settings, 
-    path: '/settings',
-    highlight: false,
-    permission: null // Settings page is accessible but content is controlled
-  }
-];
-
-export const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+export function Sidebar({ className }: SidebarProps) {
   const location = useLocation();
-  const { hasPermission } = useRBAC();
-  
-  // Filter menu items based on permissions
-  const filteredMenuItems = menuItems.filter(item => 
-    !item.permission || hasPermission(item.permission)
-  );
-  
+
+  const routes = [
+    {
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      href: '/dashboard',
+      color: "text-sky-500"
+    },
+    {
+      label: 'Advanced Dashboard',
+      icon: Brain,
+      href: '/advanced-dashboard',
+      color: "text-purple-500"
+    },
+    {
+      label: 'Advanced Reports',
+      icon: Crown,
+      href: '/advanced-reports',
+      color: "text-amber-500"
+    },
+    {
+      label: 'Jobs',
+      icon: Briefcase,
+      href: '/jobs',
+      color: "text-emerald-500"
+    },
+    {
+      label: 'Clients',
+      icon: Users,
+      href: '/clients',
+      color: "text-pink-700"
+    },
+    {
+      label: 'Schedule',
+      icon: Calendar,
+      href: '/schedule',
+      color: "text-orange-700"
+    },
+    {
+      label: 'Estimates',
+      icon: ClipboardList,
+      href: '/estimates',
+      color: "text-blue-500"
+    },
+    {
+      label: 'Invoices',
+      icon: FileText,
+      href: '/invoices',
+      color: "text-green-500"
+    },
+    {
+      label: 'Finance',
+      icon: DollarSign,
+      href: '/finance',
+      color: "text-green-700"
+    },
+    {
+      label: 'Messages',
+      icon: MessageSquare,
+      href: '/messages',
+      color: "text-indigo-500"
+    },
+    {
+      label: 'Connect Center',
+      icon: Phone,
+      href: '/connect',
+      color: "text-teal-500"
+    },
+    {
+      label: 'AI Assistant',
+      icon: Bot,
+      href: '/ai-assistant',
+      color: "text-purple-600"
+    },
+    {
+      label: 'Automations',
+      icon: Zap,
+      href: '/automations',
+      color: "text-yellow-600"
+    },
+    {
+      label: 'Reports',
+      icon: BarChart3,
+      href: '/reports',
+      color: "text-violet-500"
+    },
+    {
+      label: 'Team',
+      icon: UserCheck,
+      href: '/team',
+      color: "text-rose-500"
+    },
+    {
+      label: 'Products',
+      icon: Package,
+      href: '/products',
+      color: "text-cyan-500"
+    },
+    {
+      label: 'Settings',
+      icon: Settings,
+      href: '/settings',
+      color: "text-gray-500"
+    }
+  ];
+
   return (
-    <div 
-      className={cn(
-        "h-screen bg-fixlyfy-bg-sidebar border-r border-fixlyfy-border flex flex-col transition-all duration-300",
-        collapsed ? "w-[70px]" : "w-[240px]"
-      )}
-    >
-      <div className="p-4 flex items-center justify-between">
-        {!collapsed && (
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold">
-              F
+    <div className={cn("pb-12", className)}>
+      <div className="space-y-4 py-4">
+        <div className="px-3 py-2">
+          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+            Fixlyfy
+          </h2>
+          <ScrollArea className="h-[calc(100vh-8rem)]">
+            <div className="space-y-1">
+              {routes.map((route) => (
+                <Link key={route.href} to={route.href}>
+                  <Button
+                    variant={location.pathname === route.href ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                  >
+                    <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
+                    {route.label}
+                  </Button>
+                </Link>
+              ))}
             </div>
-            <span className="ml-2 font-bold text-fixlyfy text-xl">Fixlyfy</span>
-          </div>
-        )}
-        {collapsed && (
-          <div className="h-8 w-8 rounded-md fixlyfy-gradient flex items-center justify-center text-white font-bold mx-auto">
-            F
-          </div>
-        )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={cn("text-fixlyfy-text-secondary", collapsed && "mx-auto mt-4")}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <ChevronRight size={20} /> : <Menu size={20} />}
-        </Button>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto hide-scrollbar pt-4">
-        <div className="space-y-1 px-3">
-          {filteredMenuItems.map((item) => (
-            <Link 
-              key={item.name} 
-              to={item.path}
-              className={cn(
-                "flex items-center py-2 px-3 rounded-lg group transition-colors relative",
-                location.pathname === item.path 
-                  ? "bg-fixlyfy text-white" 
-                  : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
-              )}
-            >
-              <item.icon size={20} className={cn(
-                collapsed ? "mx-auto" : "mr-3"
-              )} />
-              {!collapsed && (
-                <span className="flex-1">{item.name}</span>
-              )}
-              {!collapsed && item.badge && (
-                <Badge className="bg-fixlyfy-light text-white">{item.badge}</Badge>
-              )}
-              {collapsed && item.badge && (
-                <Badge className="bg-fixlyfy-light text-white absolute top-0 right-0 translate-x-1 -translate-y-1">
-                  {item.badge}
-                </Badge>
-              )}
-            </Link>
-          ))}
+          </ScrollArea>
         </div>
-      </div>
-      
-      <div className="p-3 space-y-1">
-        {bottomMenuItems.map((item) => (
-          <Link 
-            key={item.name} 
-            to={item.path}
-            className={cn(
-              "flex items-center py-2 px-3 rounded-lg group transition-colors",
-              location.pathname === item.path 
-                ? "bg-fixlyfy text-white" 
-                : "hover:bg-fixlyfy/10 text-fixlyfy-text-secondary"
-            )}
-          >
-            <item.icon size={20} className={cn(
-              collapsed ? "mx-auto" : "mr-3"
-            )} />
-            {!collapsed && (
-              <span className="flex-1">{item.name}</span>
-            )}
-          </Link>
-        ))}
       </div>
     </div>
   );
-};
+}
