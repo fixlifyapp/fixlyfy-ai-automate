@@ -6,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConnectCallsList } from "@/components/connect/ConnectCallsList";
 import { AIAgentDashboard } from "@/components/connect/AIAgentDashboard";
 import { AICallAnalytics } from "@/components/connect/AICallAnalytics";
+import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { Button } from "@/components/ui/button";
-import { Bot, Zap, BarChart3, Settings, Users, Target } from "lucide-react";
+import { Bot, Zap, BarChart3, Settings, Users, Target, Brain } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,7 @@ const AiCenterPage = () => {
   
   // Set the active tab based on URL parameters
   useEffect(() => {
-    if (tabParam && ["ai-calls", "ai-monitor", "ai-analytics"].includes(tabParam)) {
+    if (tabParam && ["ai-calls", "ai-monitor", "ai-analytics", "ai-assistant"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -66,6 +67,9 @@ const AiCenterPage = () => {
         // Generate a new report or refresh analytics
         window.location.reload();
         break;
+      case "ai-assistant":
+        // Focus on the input field of the AI assistant
+        break;
     }
   };
 
@@ -74,6 +78,7 @@ const AiCenterPage = () => {
       case "ai-calls": return "Configure AI Dispatcher";
       case "ai-monitor": return "Refresh Monitor";
       case "ai-analytics": return "Refresh Analytics";
+      case "ai-assistant": return "New Chat";
       default: return "Configure";
     }
   };
@@ -91,13 +96,13 @@ const AiCenterPage = () => {
         ]}
         actionButton={{
           text: getActionButtonText(),
-          icon: activeTab === "ai-calls" ? Settings : BarChart3,
+          icon: activeTab === "ai-calls" ? Settings : activeTab === "ai-assistant" ? Brain : BarChart3,
           onClick: handleNewAction
         }}
       />
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-6">
+        <TabsList className="grid grid-cols-4 mb-6">
           <TabsTrigger value="ai-calls" className="flex items-center gap-2">
             <Bot size={16} />
             <span className="hidden sm:inline">AI Calls</span>
@@ -113,6 +118,10 @@ const AiCenterPage = () => {
             <BarChart3 size={16} />
             <span className="hidden sm:inline">AI Analytics</span>
           </TabsTrigger>
+          <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
+            <Brain size={16} />
+            <span className="hidden sm:inline">AI Assistant</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="ai-calls" className="mt-0">
@@ -127,6 +136,12 @@ const AiCenterPage = () => {
 
         <TabsContent value="ai-analytics" className="mt-0">
           <AICallAnalytics />
+        </TabsContent>
+
+        <TabsContent value="ai-assistant" className="mt-0">
+          <div className="max-w-4xl mx-auto">
+            <AiAssistant />
+          </div>
         </TabsContent>
       </Tabs>
     </PageLayout>
