@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Phone, 
   Bot, 
@@ -12,7 +13,9 @@ import {
   MapPin, 
   DollarSign, 
   Zap,
-  Loader2
+  Loader2,
+  HelpCircle,
+  Sparkles
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneNumber } from "@/types/database";
@@ -57,8 +60,8 @@ export const PhoneNumbersList = () => {
     } catch (error) {
       console.error('Error fetching phone numbers:', error);
       toast({
-        title: "Error",
-        description: "Failed to load phone numbers",
+        title: "Error Loading Phone Numbers",
+        description: "We couldn't load your phone numbers. Please try refreshing the page.",
         variant: "destructive"
       });
     } finally {
@@ -89,8 +92,11 @@ export const PhoneNumbersList = () => {
       ));
 
       toast({
-        title: "Success",
-        description: `AI Dispatcher ${newStatus ? 'enabled' : 'disabled'} successfully`
+        title: newStatus ? "AI Dispatcher Enabled" : "AI Dispatcher Disabled",
+        description: newStatus 
+          ? `AI is now handling calls for ${formatPhoneNumber(phoneNumber.phone_number)}` 
+          : `AI dispatcher has been disabled for ${formatPhoneNumber(phoneNumber.phone_number)}`,
+        variant: newStatus ? "default" : "default"
       });
 
       // If enabling AI for the first time, open settings dialog
@@ -102,8 +108,8 @@ export const PhoneNumbersList = () => {
     } catch (error) {
       console.error('Error toggling AI dispatcher:', error);
       toast({
-        title: "Error",
-        description: "Failed to update AI Dispatcher settings",
+        title: "Configuration Error",
+        description: "Failed to update AI Dispatcher settings. Please check your connection and try again.",
         variant: "destructive"
       });
     } finally {
@@ -122,9 +128,12 @@ export const PhoneNumbersList = () => {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="border-blue-100">
         <CardHeader>
-          <CardTitle>Your Phone Numbers</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="h-5 w-5 bg-blue-100 rounded animate-pulse" />
+            <Skeleton className="h-6 w-48" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -137,7 +146,10 @@ export const PhoneNumbersList = () => {
                     <Skeleton className="h-3 w-24" />
                   </div>
                 </div>
-                <Skeleton className="h-6 w-16" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-6 w-12" />
+                </div>
               </div>
             ))}
           </div>
@@ -147,61 +159,83 @@ export const PhoneNumbersList = () => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
+    <TooltipProvider>
+      <Card className="border-blue-100 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Your Phone Numbers ({phoneNumbers.length})
+            <div className="p-2 bg-blue-100 rounded-full">
+              <Phone className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <span className="text-gray-900">Your Phone Numbers</span>
+              <span className="ml-2 text-sm font-normal text-blue-600">({phoneNumbers.length})</span>
+            </div>
+            <Tooltip>
+              <TooltipTrigger>
+                <HelpCircle className="h-4 w-4 text-gray-400" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs">Manage your purchased phone numbers and enable AI dispatcher for automated call handling</p>
+              </TooltipContent>
+            </Tooltip>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {phoneNumbers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Phone className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No phone numbers purchased</p>
-              <p className="text-sm">Purchase a phone number to get started</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="p-3 bg-gray-100 rounded-full w-fit mx-auto mb-4">
+                <Phone className="h-8 w-8 text-gray-400" />
+              </div>
+              <p className="text-lg font-medium text-gray-900 mb-2">No phone numbers purchased</p>
+              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                Purchase a phone number to get started with AI-powered call handling and customer management
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {phoneNumbers.map((phoneNumber) => (
-                <div key={phoneNumber.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${
+                <div key={phoneNumber.id} className="group flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-200">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-full transition-all duration-200 ${
                       phoneNumber.ai_dispatcher_enabled 
-                        ? 'bg-blue-100 text-blue-600' 
+                        ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-200' 
                         : 'bg-gray-100 text-gray-600'
                     }`}>
                       {phoneNumber.ai_dispatcher_enabled ? (
-                        <Bot className="h-6 w-6" />
+                        <div className="relative">
+                          <Bot className="h-6 w-6" />
+                          <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-blue-400" />
+                        </div>
                       ) : (
                         <Phone className="h-6 w-6" />
                       )}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="font-semibold text-gray-900 text-lg">
                           {formatPhoneNumber(phoneNumber.phone_number)}
                         </span>
                         {phoneNumber.ai_dispatcher_enabled ? (
-                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
                             <Bot className="h-3 w-3 mr-1" />
                             AI Active
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Standard</Badge>
+                          <Badge variant="outline" className="text-gray-600 border-gray-300">
+                            Standard
+                          </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
                         {phoneNumber.locality && (
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            {phoneNumber.locality}, {phoneNumber.region}
+                            <span>{phoneNumber.locality}, {phoneNumber.region}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-3 w-3" />
-                          ${phoneNumber.monthly_price}/month
+                          <span>${phoneNumber.monthly_price}/month</span>
                         </div>
                       </div>
                     </div>
@@ -210,27 +244,44 @@ export const PhoneNumbersList = () => {
                   <div className="flex items-center gap-3">
                     {/* AI Settings Button */}
                     {phoneNumber.ai_dispatcher_enabled && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAISettings(phoneNumber)}
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <Settings className="h-4 w-4 mr-1" />
-                        AI Settings
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAISettings(phoneNumber)}
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            AI Settings
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Configure AI behavior, pricing, and voice settings</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                     
                     {/* AI Dispatcher Toggle */}
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">AI</span>
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-white border">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-medium text-gray-700">AI</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Enable AI to automatically handle incoming calls</p>
+                        </TooltipContent>
+                      </Tooltip>
                       {aiToggleLoading === phoneNumber.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                       ) : (
                         <Switch
                           checked={phoneNumber.ai_dispatcher_enabled || false}
                           onCheckedChange={() => toggleAIDispatcher(phoneNumber)}
+                          className="data-[state=checked]:bg-blue-600"
                         />
                       )}
                     </div>
@@ -251,6 +302,6 @@ export const PhoneNumbersList = () => {
           phoneNumber={formatPhoneNumber(selectedPhoneNumber.phone_number)}
         />
       )}
-    </>
+    </TooltipProvider>
   );
 };
