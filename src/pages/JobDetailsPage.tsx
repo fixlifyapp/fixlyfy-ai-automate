@@ -44,10 +44,10 @@ const JobDetailsPage = () => {
       'line_items', // Added for estimate/invoice line items
       'estimate_communications', // Added for estimate communications
       'invoice_communications', // Added for invoice communications
-      'job_history' // Added for job history tracking
+      'jobHistory' // Fixed: Changed from 'job_history' to 'jobHistory'
     ],
-    onUpdate: (payload) => {
-      console.log("Real-time update detected:", payload);
+    onUpdate: () => {
+      console.log("Real-time update detected");
       const now = Date.now();
       
       // Throttle updates to prevent excessive refreshes (max once per 500ms)
@@ -56,26 +56,8 @@ const JobDetailsPage = () => {
         setRefreshTrigger(prev => prev + 1);
         setLastRefresh(now);
         
-        // Optional: Show a subtle toast for certain operations
-        if (payload.eventType === 'INSERT') {
-          const table = payload.table;
-          if (table === 'invoices') {
-            toast.success('Invoice created successfully');
-          } else if (table === 'payments') {
-            toast.success('Payment recorded successfully');
-          } else if (table === 'estimates') {
-            toast.success('Estimate created successfully');
-          }
-        } else if (payload.eventType === 'DELETE') {
-          const table = payload.table;
-          if (table === 'invoices') {
-            toast.success('Invoice deleted successfully');
-          } else if (table === 'payments') {
-            toast.success('Payment deleted successfully');
-          } else if (table === 'estimates') {
-            toast.success('Estimate deleted successfully');
-          }
-        }
+        // Show success toast for real-time updates
+        toast.success('Data updated successfully');
       }
     },
     enabled: !!id
