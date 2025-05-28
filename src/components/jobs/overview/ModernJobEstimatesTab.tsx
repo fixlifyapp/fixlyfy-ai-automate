@@ -31,6 +31,11 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     // TODO: Implement estimate editing
   };
 
+  const handleEstimateCreated = () => {
+    refreshEstimates();
+    setShowCreateForm(false);
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -127,7 +132,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         open={showCreateForm}
         onOpenChange={setShowCreateForm}
         jobId={jobId}
-        onSyncToInvoice={onEstimateConverted}
+        onSyncToInvoice={handleEstimateCreated}
       />
     </>
   );

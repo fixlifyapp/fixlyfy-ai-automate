@@ -20,6 +20,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
 
   const handleEstimateCreated = () => {
     setShowCreateForm(false);
+    // The EstimatesList component will automatically refresh via useEstimates hook
   };
 
   return (
@@ -42,7 +43,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           open={showCreateForm}
           onOpenChange={setShowCreateForm}
           jobId={jobId}
-          onSyncToInvoice={onEstimateConverted}
+          onSyncToInvoice={handleEstimateCreated}
         />
       </CardContent>
     </Card>
