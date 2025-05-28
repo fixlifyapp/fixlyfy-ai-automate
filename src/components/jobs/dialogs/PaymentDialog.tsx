@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,11 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update amount when balance changes
+  useEffect(() => {
+    setAmount(balance);
+  }, [balance]);
 
   const handleSubmit = async () => {
     if (amount <= 0) return;
