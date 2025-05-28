@@ -48,6 +48,16 @@ export interface BusinessMetrics {
     jobsCompleted: number;
     averageJobValue: number;
     customerSatisfaction: number;
+    clients?: {
+      total: number;
+    };
+    jobs?: {
+      total: number;
+      scheduled: number;
+    };
+    revenue?: {
+      total: number;
+    };
   };
 }
 
