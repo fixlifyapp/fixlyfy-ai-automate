@@ -22,6 +22,7 @@ const JobDetailsPage = () => {
   const [activeTab, setActiveTab] = useState<string>("overview");
   const { hasPermission } = useRBAC();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
   
   useEffect(() => {
     if (location.state && location.state.activeTab) {
@@ -30,26 +31,69 @@ const JobDetailsPage = () => {
     }
   }, [location]);
   
+  // Enhanced real-time refresh with more comprehensive table monitoring
   useUnifiedRealtime({
-    tables: ['jobs', 'invoices', 'payments', 'estimates', 'messages', 'clients', 'job_custom_field_values'],
-    onUpdate: () => {
-      console.log("Unified realtime update triggered for job details");
-      setRefreshTrigger(prev => prev + 1);
+    tables: [
+      'jobs', 
+      'invoices', 
+      'payments', 
+      'estimates', 
+      'messages', 
+      'clients', 
+      'job_custom_field_values',
+      'line_items', // Added for estimate/invoice line items
+      'estimate_communications', // Added for estimate communications
+      'invoice_communications', // Added for invoice communications
+      'job_history' // Added for job history tracking
+    ],
+    onUpdate: (payload) => {
+      console.log("Real-time update detected:", payload);
+      const now = Date.now();
+      
+      // Throttle updates to prevent excessive refreshes (max once per 500ms)
+      if (now - lastRefresh > 500) {
+        console.log("Triggering unified realtime refresh for job details");
+        setRefreshTrigger(prev => prev + 1);
+        setLastRefresh(now);
+        
+        // Optional: Show a subtle toast for certain operations
+        if (payload.eventType === 'INSERT') {
+          const table = payload.table;
+          if (table === 'invoices') {
+            toast.success('Invoice created successfully');
+          } else if (table === 'payments') {
+            toast.success('Payment recorded successfully');
+          } else if (table === 'estimates') {
+            toast.success('Estimate created successfully');
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const table = payload.table;
+          if (table === 'invoices') {
+            toast.success('Invoice deleted successfully');
+          } else if (table === 'payments') {
+            toast.success('Payment deleted successfully');
+          } else if (table === 'estimates') {
+            toast.success('Estimate deleted successfully');
+          }
+        }
+      }
     },
     enabled: !!id
   });
   
   const handleEstimateConverted = () => {
     setActiveTab("invoices");
+    // Force an additional refresh when estimate is converted
+    setRefreshTrigger(prev => prev + 1);
   };
   
   return (
     <PageLayout>
-      <JobDetailsProvider jobId={id || ""}>
+      <JobDetailsProvider jobId={id || ""} key={`${id}-${refreshTrigger}`}>
         <div className="container mx-auto px-4">
           <div className="mb-6">
             <Card className="border-fixlyfy-border shadow-sm">
-              <JobDetailsHeader />
+              <JobDetailsHeader key={`header-${refreshTrigger}`} />
             </Card>
           </div>
           
@@ -59,19 +103,32 @@ const JobDetailsPage = () => {
               onTabChange={setActiveTab}
             >
               <TabsContent value="overview">
-                <JobOverview jobId={id || ""} />
+                <JobOverview jobId={id || ""} key={`overview-${refreshTrigger}`} />
               </TabsContent>
               <TabsContent value="estimates">
-                <ModernJobEstimatesTab jobId={id || ""} onEstimateConverted={handleEstimateConverted} />
+                <ModernJobEstimatesTab 
+                  jobId={id || ""} 
+                  onEstimateConverted={handleEstimateConverted}
+                  key={`estimates-${refreshTrigger}`}
+                />
               </TabsContent>
               <TabsContent value="invoices">
-                <ModernJobInvoicesTab jobId={id || ""} />
+                <ModernJobInvoicesTab 
+                  jobId={id || ""} 
+                  key={`invoices-${refreshTrigger}`}
+                />
               </TabsContent>
               <TabsContent value="payments">
-                <ModernJobPaymentsTab jobId={id || ""} />
+                <ModernJobPaymentsTab 
+                  jobId={id || ""} 
+                  key={`payments-${refreshTrigger}`}
+                />
               </TabsContent>
               <TabsContent value="history">
-                <ModernJobHistoryTab jobId={id || ""} />
+                <ModernJobHistoryTab 
+                  jobId={id || ""} 
+                  key={`history-${refreshTrigger}`}
+                />
               </TabsContent>
             </JobDetailsTabs>
           </div>
