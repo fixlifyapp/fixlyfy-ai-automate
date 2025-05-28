@@ -118,7 +118,7 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
             </div>
             <div className="text-center">
               <div className="text-lg font-semibold text-green-600">
-                ${stats.totalRevenue.toLocaleString()}
+                ${Math.round(stats.totalRevenue).toLocaleString()}
               </div>
               <div className="text-xs text-muted-foreground">Revenue</div>
             </div>
@@ -198,7 +198,7 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
       </td>
       <td className="p-4">
         <div className="text-sm font-medium text-green-600">
-          ${stats.totalRevenue.toLocaleString()}
+          ${Math.round(stats.totalRevenue).toLocaleString()}
         </div>
       </td>
       <td className="p-4">
