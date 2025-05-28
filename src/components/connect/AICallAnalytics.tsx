@@ -1,289 +1,292 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Bot, TrendingUp, Phone, Calendar, Clock, Target } from "lucide-react";
+import { 
+  BarChart3, 
+  Bot, 
+  Clock, 
+  CheckCircle, 
+  ArrowRight, 
+  Calendar,
+  Star,
+  Phone
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { toast } from "@/components/ui/use-toast";
+import { formatDistanceToNow } from "date-fns";
 
-interface CallAnalyticsData {
-  hourlyData: Array<{ hour: string; calls: number; appointments: number }>;
-  statusDistribution: Array<{ name: string; value: number; color: string }>;
-  dailyTrends: Array<{ date: string; calls: number; success_rate: number }>;
-  appointmentConversion: {
-    total: number;
-    scheduled: number;
-    rate: number;
-  };
+interface AIAnalytics {
+  totalCalls: number;
+  resolvedCalls: number;
+  transferredCalls: number;
+  successRate: number;
+  averageCallDuration: number;
+  appointmentsScheduled: number;
+  customerSatisfactionAverage: number;
+  recentCalls: Array<{
+    id: string;
+    clientPhone: string;
+    duration: number;
+    status: string;
+    resolutionType: string;
+    appointmentScheduled: boolean;
+    customerSatisfaction: number;
+    startedAt: string;
+    summary: string;
+  }>;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
 export const AICallAnalytics = () => {
-  const [analytics, setAnalytics] = useState<CallAnalyticsData>({
-    hourlyData: [],
-    statusDistribution: [],
-    dailyTrends: [],
-    appointmentConversion: { total: 0, scheduled: 0, rate: 0 }
+  const [analytics, setAnalytics] = useState<AIAnalytics>({
+    totalCalls: 0,
+    resolvedCalls: 0,
+    transferredCalls: 0,
+    successRate: 0,
+    averageCallDuration: 0,
+    appointmentsScheduled: 0,
+    customerSatisfactionAverage: 0,
+    recentCalls: []
   });
-  const [timeRange, setTimeRange] = useState('7d');
+  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'year'>('week');
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchAnalytics = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Calculate date range
-      const now = new Date();
-      const daysBack = timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30;
-      const startDate = new Date(now.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+  useEffect(() => {
+    fetchAnalytics();
+  }, [timeframe]);
 
-      const { data: callsData, error } = await supabase
-        .from('amazon_connect_calls')
-        .select('*')
-        .gte('started_at', startDate.toISOString())
-        .order('started_at', { ascending: false });
+  const fetchAnalytics = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-ai-call-analytics', {
+        body: { timeframe }
+      });
 
       if (error) throw error;
-
-      if (callsData) {
-        // Process hourly data
-        const hourlyMap = new Map<string, { calls: number; appointments: number }>();
-        
-        // Process status distribution
-        const statusMap = new Map<string, number>();
-        
-        // Process daily trends
-        const dailyMap = new Map<string, { calls: number; appointments: number }>();
-
-        callsData.forEach(call => {
-          const callDate = new Date(call.started_at);
-          const hour = callDate.getHours();
-          const hourKey = `${hour}:00`;
-          const dayKey = callDate.toISOString().split('T')[0];
-
-          // Hourly data
-          const hourData = hourlyMap.get(hourKey) || { calls: 0, appointments: 0 };
-          hourData.calls += 1;
-          if (call.appointment_scheduled) hourData.appointments += 1;
-          hourlyMap.set(hourKey, hourData);
-
-          // Status distribution
-          statusMap.set(call.call_status, (statusMap.get(call.call_status) || 0) + 1);
-
-          // Daily trends
-          const dayData = dailyMap.get(dayKey) || { calls: 0, appointments: 0 };
-          dayData.calls += 1;
-          if (call.appointment_scheduled) dayData.appointments += 1;
-          dailyMap.set(dayKey, dayData);
-        });
-
-        // Convert to arrays
-        const hourlyData = Array.from(hourlyMap.entries())
-          .map(([hour, data]) => ({ hour, ...data }))
-          .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
-
-        const statusDistribution = Array.from(statusMap.entries())
-          .map(([name, value], index) => ({
-            name: name.charAt(0).toUpperCase() + name.slice(1),
-            value,
-            color: COLORS[index % COLORS.length]
-          }));
-
-        const dailyTrends = Array.from(dailyMap.entries())
-          .map(([date, data]) => ({
-            date: new Date(date).toLocaleDateString(),
-            calls: data.calls,
-            success_rate: data.calls > 0 ? Math.round((data.appointments / data.calls) * 100) : 0
-          }))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        // Appointment conversion
-        const totalCalls = callsData.length;
-        const scheduledAppointments = callsData.filter(call => call.appointment_scheduled).length;
-        const appointmentConversion = {
-          total: totalCalls,
-          scheduled: scheduledAppointments,
-          rate: totalCalls > 0 ? Math.round((scheduledAppointments / totalCalls) * 100) : 0
-        };
-
-        setAnalytics({
-          hourlyData,
-          statusDistribution,
-          dailyTrends,
-          appointmentConversion
-        });
-      }
+      setAnalytics(data.analytics);
     } catch (error) {
-      console.error("Error fetching call analytics:", error);
+      console.error('Error fetching AI analytics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load AI call analytics",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [timeRange]);
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
-  // Set up real-time sync
-  useRealtimeSync({
-    tables: ['amazon_connect_calls'],
-    onUpdate: fetchAnalytics,
-    enabled: true
-  });
+  const formatPhoneNumber = (phone: string) => {
+    return phone.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const getResolutionBadge = (resolutionType: string) => {
+    switch (resolutionType) {
+      case 'resolved':
+        return <Badge className="bg-green-100 text-green-800">Resolved</Badge>;
+      case 'transferred':
+        return <Badge className="bg-yellow-100 text-yellow-800">Transferred</Badge>;
+      case 'voicemail':
+        return <Badge className="bg-blue-100 text-blue-800">Voicemail</Badge>;
+      case 'abandoned':
+        return <Badge className="bg-red-100 text-red-800">Abandoned</Badge>;
+      default:
+        return <Badge variant="outline">{resolutionType}</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header with filters */}
+      {/* Header with Timeframe Selector */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-blue-600" />
-          <h2 className="text-xl font-semibold">AI Call Analytics</h2>
+        <div>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Bot className="h-6 w-6 text-blue-600" />
+            AI Call Analytics
+          </h2>
+          <p className="text-muted-foreground">Monitor your AI dispatcher performance</p>
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-32">
+        <Select value={timeframe} onValueChange={(value: any) => setTimeframe(value)}>
+          <SelectTrigger className="w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="24h">Last 24h</SelectItem>
-            <SelectItem value="7d">Last 7 days</SelectItem>
-            <SelectItem value="30d">Last 30 days</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">This Week</SelectItem>
+            <SelectItem value="month">This Month</SelectItem>
+            <SelectItem value="year">This Year</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-xs text-gray-600">Total Calls</p>
-                <p className="text-2xl font-bold">{analytics.appointmentConversion.total}</p>
-              </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <Phone className="h-4 w-4" />
+              Total AI Calls
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{analytics.totalCalls}</div>
+            <div className="text-xs text-muted-foreground">
+              {analytics.resolvedCalls} resolved, {analytics.transferredCalls} transferred
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-xs text-gray-600">Appointments Scheduled</p>
-                <p className="text-2xl font-bold">{analytics.appointmentConversion.scheduled}</p>
-              </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <CheckCircle className="h-4 w-4" />
+              Success Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{analytics.successRate}%</div>
+            <div className="text-xs text-muted-foreground">
+              Calls resolved without transfer
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-xs text-gray-600">Conversion Rate</p>
-                <p className="text-2xl font-bold">{analytics.appointmentConversion.rate}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Hourly Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              Hourly Call Activity
+              Avg Duration
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.hourlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="calls" fill="#3B82F6" name="Total Calls" />
-                <Bar dataKey="appointments" fill="#10B981" name="Appointments" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="text-2xl font-bold text-orange-600">
+              {formatDuration(analytics.averageCallDuration)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Average call length
+            </div>
           </CardContent>
         </Card>
 
-        {/* Call Status Distribution */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              Call Status Distribution
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              Appointments
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analytics.statusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {analytics.statusDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="text-2xl font-bold text-purple-600">{analytics.appointmentsScheduled}</div>
+            <div className="text-xs text-muted-foreground">
+              Scheduled by AI
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Daily Trends */}
+      {/* Customer Satisfaction */}
+      {analytics.customerSatisfactionAverage > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              Customer Satisfaction
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="text-3xl font-bold text-yellow-600">
+                {analytics.customerSatisfactionAverage}/5
+              </div>
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-5 w-5 ${
+                      star <= analytics.customerSatisfactionAverage
+                        ? 'text-yellow-500 fill-yellow-500'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-muted-foreground">
+                Average customer rating
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent AI Calls */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Daily Trends & Success Rate
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Recent AI Calls
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={analytics.dailyTrends}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip />
-              <Bar yAxisId="left" dataKey="calls" fill="#3B82F6" name="Daily Calls" />
-              <Line 
-                yAxisId="right" 
-                type="monotone" 
-                dataKey="success_rate" 
-                stroke="#10B981" 
-                strokeWidth={2}
-                name="Success Rate (%)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {analytics.recentCalls.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Bot className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-medium">No AI calls yet</p>
+              <p className="text-sm">AI call logs will appear here once you start receiving calls</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {analytics.recentCalls.map((call) => (
+                <div key={call.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 text-blue-600 rounded-full">
+                      <Bot className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {formatPhoneNumber(call.clientPhone)}
+                        </span>
+                        {getResolutionBadge(call.resolutionType)}
+                        {call.appointmentScheduled && (
+                          <Badge className="bg-purple-100 text-purple-800">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Appointment
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <span>{formatDuration(call.duration)}</span>
+                        <span className="mx-2">•</span>
+                        <span>{formatDistanceToNow(new Date(call.startedAt), { addSuffix: true })}</span>
+                        {call.customerSatisfaction && (
+                          <>
+                            <span className="mx-2">•</span>
+                            <span className="flex items-center gap-1">
+                              <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                              {call.customerSatisfaction}/5
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      {call.summary && (
+                        <p className="text-sm text-muted-foreground mt-1 max-w-md truncate">
+                          {call.summary}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

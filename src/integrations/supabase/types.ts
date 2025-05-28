@@ -51,6 +51,124 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_dispatcher_call_logs: {
+        Row: {
+          ai_transcript: string | null
+          appointment_data: Json | null
+          appointment_scheduled: boolean | null
+          call_duration: number | null
+          call_sid: string | null
+          call_status: string
+          call_summary: string | null
+          client_phone: string
+          contact_id: string | null
+          created_at: string
+          customer_satisfaction_score: number | null
+          ended_at: string | null
+          id: string
+          phone_number_id: string
+          resolution_type: string | null
+          started_at: string
+        }
+        Insert: {
+          ai_transcript?: string | null
+          appointment_data?: Json | null
+          appointment_scheduled?: boolean | null
+          call_duration?: number | null
+          call_sid?: string | null
+          call_status?: string
+          call_summary?: string | null
+          client_phone: string
+          contact_id?: string | null
+          created_at?: string
+          customer_satisfaction_score?: number | null
+          ended_at?: string | null
+          id?: string
+          phone_number_id: string
+          resolution_type?: string | null
+          started_at?: string
+        }
+        Update: {
+          ai_transcript?: string | null
+          appointment_data?: Json | null
+          appointment_scheduled?: boolean | null
+          call_duration?: number | null
+          call_sid?: string | null
+          call_status?: string
+          call_summary?: string | null
+          client_phone?: string
+          contact_id?: string | null
+          created_at?: string
+          customer_satisfaction_score?: number | null
+          ended_at?: string | null
+          id?: string
+          phone_number_id?: string
+          resolution_type?: string | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_dispatcher_call_logs_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_dispatcher_configs: {
+        Row: {
+          business_greeting: string | null
+          business_name: string
+          business_type: string
+          created_at: string
+          diagnostic_fee: number | null
+          emergency_detection_enabled: boolean | null
+          emergency_surcharge: number | null
+          hourly_rate: number | null
+          id: string
+          phone_number_id: string
+          updated_at: string
+          voice_selection: string | null
+        }
+        Insert: {
+          business_greeting?: string | null
+          business_name?: string
+          business_type?: string
+          created_at?: string
+          diagnostic_fee?: number | null
+          emergency_detection_enabled?: boolean | null
+          emergency_surcharge?: number | null
+          hourly_rate?: number | null
+          id?: string
+          phone_number_id: string
+          updated_at?: string
+          voice_selection?: string | null
+        }
+        Update: {
+          business_greeting?: string | null
+          business_name?: string
+          business_type?: string
+          created_at?: string
+          diagnostic_fee?: number | null
+          emergency_detection_enabled?: boolean | null
+          emergency_surcharge?: number | null
+          hourly_rate?: number | null
+          id?: string
+          phone_number_id?: string
+          updated_at?: string
+          voice_selection?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_dispatcher_configs_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: true
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_recommendations: {
         Row: {
           action_taken: boolean | null
@@ -1800,8 +1918,11 @@ export type Database = {
       }
       phone_numbers: {
         Row: {
+          ai_dispatcher_enabled: boolean | null
           assigned_to: string | null
           capabilities: Json | null
+          connect_instance_id: string | null
+          connect_phone_number_arn: string | null
           country_code: string
           created_at: string
           friendly_name: string | null
@@ -1824,8 +1945,11 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          ai_dispatcher_enabled?: boolean | null
           assigned_to?: string | null
           capabilities?: Json | null
+          connect_instance_id?: string | null
+          connect_phone_number_arn?: string | null
           country_code?: string
           created_at?: string
           friendly_name?: string | null
@@ -1848,8 +1972,11 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          ai_dispatcher_enabled?: boolean | null
           assigned_to?: string | null
           capabilities?: Json | null
+          connect_instance_id?: string | null
+          connect_phone_number_arn?: string | null
           country_code?: string
           created_at?: string
           friendly_name?: string | null
