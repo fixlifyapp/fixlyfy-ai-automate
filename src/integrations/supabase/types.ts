@@ -154,13 +154,6 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "amazon_connect_calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
         ]
       }
       automation_actions: {
@@ -489,13 +482,6 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
         ]
       }
       client_notifications: {
@@ -539,13 +525,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_notifications_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -629,13 +608,6 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "client_portal_users_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
         ]
       }
       client_properties: {
@@ -691,13 +663,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_properties_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -834,13 +799,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: true
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
-          {
             foreignKeyName: "conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
@@ -945,13 +903,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "emails_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -1629,13 +1580,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "jobs_property_id_fkey"
@@ -2364,6 +2308,13 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       fact_jobs: {
@@ -2391,13 +2342,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -2439,13 +2383,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
           },
         ]
       }
