@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -535,8 +534,23 @@ export const EstimateSendDialog = ({
               }
             });
         }
+
+        // Update estimate status to 'sent'
+        await supabase
+          .from('estimates')
+          .update({ status: 'sent' })
+          .eq('id', estimateId);
         
-        setCurrentStep("confirmation");
+        // Close dialog and trigger refresh
+        onOpenChange(false);
+        
+        // Navigate back to job details with estimates tab active
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/jobs/')) {
+          const jobId = currentPath.split('/').pop();
+          navigate(`/jobs/${jobId}`, { state: { activeTab: "estimates" }, replace: true });
+        }
+        
       } else {
         console.error("Edge function returned error:", data);
         await supabase
