@@ -1,92 +1,159 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MoreHorizontal, Send, Trash2, FileText, Edit } from "lucide-react";
+import { Estimate } from "@/hooks/useEstimates";
 
 interface EstimateActionsProps {
-  estimate: any;
-  onEdit: (estimateId: string) => void;
-  onConvert: (estimate: any) => void;
-  onAddWarranty: (estimate: any) => void;
-  onSend: (estimateId: string) => void;
-  onDelete: (estimateId: string) => void;
-  isProcessing?: boolean;
+  estimate: Estimate;
+  onSend: (estimateId: string) => Promise<boolean>;
+  onDelete: (estimate: Estimate) => Promise<boolean>;
+  onConvertToInvoice: (estimate: Estimate) => Promise<boolean>;
+  onEdit: (estimate: Estimate) => void;
+  isLoading: boolean;
 }
 
-export const EstimateActions = ({
-  estimate,
+export const EstimateActions = ({ 
+  estimate, 
+  onSend, 
+  onDelete, 
+  onConvertToInvoice, 
   onEdit,
-  onConvert,
-  onAddWarranty,
-  onSend,
-  onDelete,
-  isProcessing = false,
+  isLoading 
 }: EstimateActionsProps) => {
-  // Add a console log to debug the estimate object
-  console.log("Estimate in EstimateActions:", estimate);
-  
-  const handleEditClick = (e: React.MouseEvent) => {
-    // Prevent any default popup behavior
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("Edit button clicked for estimate ID:", estimate.id);
-    if (estimate && estimate.id) {
-      onEdit(estimate.id);
-    } else {
-      console.error("Cannot edit: Invalid estimate object or missing ID");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
+
+  const getStatusBadge = (status: string) => {
+    const statusStyles = {
+      'draft': 'bg-gray-100 text-gray-800',
+      'sent': 'bg-blue-100 text-blue-800',
+      'approved': 'bg-green-100 text-green-800',
+      'rejected': 'bg-red-100 text-red-800',
+      'converted': 'bg-purple-100 text-purple-800'
+    };
+
+    return (
+      <Badge className={statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800'}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const handleSend = async () => {
+    await onSend(estimate.id);
+  };
+
+  const handleDelete = async () => {
+    const success = await onDelete(estimate);
+    if (success) {
+      setShowDeleteDialog(false);
     }
   };
-  
+
+  const handleConvert = async () => {
+    const success = await onConvertToInvoice(estimate);
+    if (success) {
+      setShowConvertDialog(false);
+    }
+  };
+
   return (
-    <div className="flex justify-end gap-2">
-      <Button 
-        variant="outline" 
-        size="sm"
-        className="text-xs flex items-center gap-1"
-        onClick={handleEditClick}
-        disabled={isProcessing}
-      >
-        <Pencil size={14} />
-        Edit
-      </Button>
-      <Button 
-        variant="outline" 
-        size="sm"
-        className="text-xs"
-        onClick={() => onConvert(estimate)}
-        disabled={isProcessing}
-      >
-        To Invoice
-      </Button>
-      <Button 
-        variant="outline" 
-        size="sm"
-        className="text-xs"
-        onClick={() => onAddWarranty(estimate)}
-        disabled={isProcessing}
-      >
-        Add Warranty
-      </Button>
-      {estimate.status === "draft" && (
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="text-xs"
-          onClick={() => onSend(estimate.id)}
-          disabled={isProcessing}
-        >
-          Send
-        </Button>
-      )}
-      <Button 
-        variant="outline" 
-        size="sm"
-        className="text-xs text-fixlyfy-error"
-        onClick={() => onDelete(estimate.id)}
-        disabled={isProcessing}
-      >
-        {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-      </Button>
-    </div>
+    <>
+      <div className="flex items-center gap-2">
+        {getStatusBadge(estimate.status)}
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" disabled={isLoading}>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(estimate)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            
+            {estimate.status !== 'converted' && (
+              <>
+                <DropdownMenuItem onClick={handleSend}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send to Client
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => setShowConvertDialog(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Convert to Invoice
+                </DropdownMenuItem>
+              </>
+            )}
+            
+            <DropdownMenuItem 
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-red-600"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete estimate {estimate.estimate_number}? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Convert Confirmation Dialog */}
+      <AlertDialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert to Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will convert estimate {estimate.estimate_number} to an invoice. 
+              The estimate status will be marked as converted and cannot be changed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConvert}>
+              Convert to Invoice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

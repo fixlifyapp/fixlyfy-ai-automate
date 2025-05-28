@@ -83,25 +83,9 @@ export const usePayments = (jobId: string) => {
   };
 
   // Calculate totals
-  const totalPaid = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
-  const totalRefunded = payments.filter(p => p.status === 'refunded').reduce((sum, payment) => sum + (payment.amount || 0), 0);
+  const totalPaid = payments.filter(p => p.amount > 0).reduce((sum, payment) => sum + payment.amount, 0);
+  const totalRefunded = payments.filter(p => p.amount < 0).reduce((sum, payment) => sum + Math.abs(payment.amount), 0);
   const netAmount = totalPaid - totalRefunded;
-
-  // Mock functions for compatibility - these would need proper implementation
-  const addPayment = async (paymentData: any) => {
-    console.log('Add payment:', paymentData);
-    // Implementation would go here
-  };
-
-  const refundPayment = async (paymentId: string) => {
-    console.log('Refund payment:', paymentId);
-    // Implementation would go here
-  };
-
-  const deletePayment = async (paymentId: string) => {
-    console.log('Delete payment:', paymentId);
-    // Implementation would go here
-  };
 
   useEffect(() => {
     fetchPayments();
@@ -114,9 +98,6 @@ export const usePayments = (jobId: string) => {
     refreshPayments,
     totalPaid,
     totalRefunded,
-    netAmount,
-    addPayment,
-    refundPayment,
-    deletePayment
+    netAmount
   };
 };
