@@ -2,10 +2,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, FileText, Send, Trash2, Edit, DollarSign } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
-import { EstimateActions } from "@/components/jobs/estimates/EstimateActions";
 import { EstimateBuilderDialog } from "@/components/jobs/dialogs/estimate-builder/EstimateBuilderDialog";
 import { format } from "date-fns";
 
@@ -18,22 +18,50 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingEstimate, setEditingEstimate] = useState<any>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  const totalEstimateValue = estimates.reduce((sum, estimate) => sum + (estimate.total || 0), 0);
+  const getStatusBadge = (status: string) => {
+    const statusStyles = {
+      'draft': 'bg-gray-100 text-gray-800',
+      'sent': 'bg-blue-100 text-blue-800',
+      'approved': 'bg-green-100 text-green-800',
+      'rejected': 'bg-red-100 text-red-800',
+      'converted': 'bg-purple-100 text-purple-800'
+    };
 
-  const handleEditEstimate = (estimate: any) => {
-    // This would open an estimate editing form/modal
-    console.log('Edit estimate:', estimate);
-    // TODO: Implement estimate editing
+    return (
+      <Badge className={statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800'}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
   };
+
+  const totalEstimateValue = estimates.reduce((sum, estimate) => sum + (estimate.total || 0), 0);
+  const pendingApproval = estimates.filter(est => est.status === 'sent').length;
 
   const handleEstimateCreated = () => {
     refreshEstimates();
     setShowCreateForm(false);
+    setEditingEstimate(null);
+  };
+
+  const handleEditEstimate = (estimate: any) => {
+    setEditingEstimate(estimate);
+    setShowCreateForm(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingEstimate(null);
+    setShowCreateForm(true);
+  };
+
+  const handleDialogClose = () => {
+    setShowCreateForm(false);
+    setEditingEstimate(null);
   };
 
   return (
@@ -64,9 +92,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
               <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                {estimates.filter(est => est.status === 'sent').length}
-              </div>
+              <div className="text-2xl font-bold text-orange-600">{pendingApproval}</div>
             </CardContent>
           </Card>
         </div>
@@ -79,7 +105,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                 <FileText className="h-5 w-5" />
                 Estimates ({estimates.length})
               </CardTitle>
-              <Button onClick={() => setShowCreateForm(true)}>
+              <Button onClick={handleCreateNew}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Estimate
               </Button>
@@ -104,6 +130,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                         <span className="text-lg font-semibold text-blue-600">
                           {formatCurrency(estimate.total || 0)}
                         </span>
+                        {getStatusBadge(estimate.status)}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         <p>Created: {format(new Date(estimate.created_at), 'MMM dd, yyyy')}</p>
@@ -111,14 +138,55 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       </div>
                     </div>
                     
-                    <EstimateActions
-                      estimate={estimate}
-                      onSend={actions.handleSendEstimate}
-                      onDelete={actions.confirmDeleteEstimate}
-                      onConvertToInvoice={actions.confirmConvertToInvoice}
-                      onEdit={handleEditEstimate}
-                      isLoading={state.isDeleting || state.isConverting || state.isSending}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditEstimate(estimate)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => actions.handleSendEstimate(estimate.id)}
+                        disabled={state.isSending}
+                      >
+                        <Send className="h-4 w-4 mr-1" />
+                        Send
+                      </Button>
+                      
+                      {estimate.status !== 'converted' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            actions.setSelectedEstimate(estimate);
+                            actions.confirmConvertToInvoice();
+                          }}
+                          disabled={state.isConverting}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          Convert
+                        </Button>
+                      )}
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          actions.setSelectedEstimate(estimate);
+                          actions.confirmDeleteEstimate();
+                        }}
+                        disabled={state.isDeleting}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -130,8 +198,9 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
       {/* Estimate Builder Dialog */}
       <EstimateBuilderDialog
         open={showCreateForm}
-        onOpenChange={setShowCreateForm}
+        onOpenChange={handleDialogClose}
         jobId={jobId}
+        estimateId={editingEstimate?.id}
         onSyncToInvoice={handleEstimateCreated}
       />
     </>
