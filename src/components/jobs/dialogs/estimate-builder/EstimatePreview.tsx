@@ -1,4 +1,6 @@
 
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { LineItem } from "@/components/jobs/builder/types";
 
 interface EstimatePreviewProps {
@@ -9,6 +11,7 @@ interface EstimatePreviewProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
+  jobId: string;
   clientInfo?: {
     id?: string;
     name?: string;
@@ -25,14 +28,83 @@ export const EstimatePreview = ({
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
-  clientInfo,
+  jobId,
+  clientInfo: providedClientInfo,
 }: EstimatePreviewProps) => {
+  const [clientInfo, setClientInfo] = useState(providedClientInfo);
+  const [jobInfo, setJobInfo] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(!providedClientInfo);
+
+  useEffect(() => {
+    const fetchJobAndClientData = async () => {
+      if (providedClientInfo) {
+        setClientInfo(providedClientInfo);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        // Fetch job with client data
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients!inner(*)
+          `)
+          .eq('id', jobId)
+          .single();
+
+        if (jobError) {
+          console.error("Error fetching job data:", jobError);
+          return;
+        }
+
+        if (jobData) {
+          setJobInfo(jobData);
+          setClientInfo(jobData.clients);
+        }
+      } catch (error) {
+        console.error("Error in fetchJobAndClientData:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobAndClientData();
+  }, [jobId, providedClientInfo]);
   
   // Helper function to calculate the total for a line item
   const calculateLineTotal = (item: LineItem): number => {
     const subtotal = item.quantity * item.unitPrice;
-    const discountAmount = subtotal * (item.discount / 100);
+    const discountAmount = subtotal * ((item.discount || 0) / 100);
     return subtotal - discountAmount;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="border rounded-md p-6 bg-white">
+        <div className="flex items-center justify-center py-8">
+          <div className="text-muted-foreground">Loading client information...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Format client address
+  const formatClientAddress = () => {
+    if (!clientInfo) return "Client Address";
+    
+    const parts = [
+      clientInfo.address,
+      clientInfo.city,
+      clientInfo.state,
+      clientInfo.zip,
+      clientInfo.country
+    ].filter(Boolean);
+    
+    return parts.length > 0 ? parts.join(', ') : "Address not available";
   };
 
   return (
@@ -54,7 +126,7 @@ export const EstimatePreview = ({
         <div>
           <h3 className="text-sm font-medium uppercase text-muted-foreground mb-2">Bill To:</h3>
           <p className="font-medium">{clientInfo?.name || "Client Name"}</p>
-          <p className="text-sm text-muted-foreground">123 Main St, Apt 45</p>
+          <p className="text-sm text-muted-foreground">{formatClientAddress()}</p>
           <p className="text-sm text-muted-foreground">{clientInfo?.phone || "(555) 123-4567"}</p>
           <p className="text-sm text-muted-foreground">{clientInfo?.email || "client@example.com"}</p>
         </div>
@@ -88,7 +160,7 @@ export const EstimatePreview = ({
               <td className="py-2">{item.description}</td>
               <td className="text-right py-2">{item.quantity}</td>
               <td className="text-right py-2">${item.unitPrice.toFixed(2)}</td>
-              <td className="text-right py-2">{item.discount > 0 ? `${item.discount}%` : '-'}</td>
+              <td className="text-right py-2">{(item.discount || 0) > 0 ? `${item.discount}%` : '-'}</td>
               <td className="text-right py-2">${calculateLineTotal(item).toFixed(2)}</td>
             </tr>
           ))}

@@ -1,4 +1,6 @@
 
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { LineItem } from "@/components/jobs/builder/types";
 
 interface InvoicePreviewProps {
@@ -9,7 +11,8 @@ interface InvoicePreviewProps {
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
   notes: string;
-  clientInfo: any;
+  jobId?: string;
+  clientInfo?: any;
   issueDate?: string;
   dueDate?: string;
 }
@@ -22,12 +25,80 @@ export const InvoicePreview = ({
   calculateTotalTax,
   calculateGrandTotal,
   notes,
-  clientInfo,
+  jobId,
+  clientInfo: providedClientInfo,
   issueDate,
   dueDate
 }: InvoicePreviewProps) => {
+  const [clientInfo, setClientInfo] = useState(providedClientInfo);
+  const [isLoading, setIsLoading] = useState(!providedClientInfo && !!jobId);
+
+  useEffect(() => {
+    const fetchClientData = async () => {
+      if (providedClientInfo || !jobId) {
+        setClientInfo(providedClientInfo);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        // Fetch job with client data
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
+          .select(`
+            *,
+            clients!inner(*)
+          `)
+          .eq('id', jobId)
+          .single();
+
+        if (jobError) {
+          console.error("Error fetching job data:", jobError);
+          return;
+        }
+
+        if (jobData) {
+          setClientInfo(jobData.clients);
+        }
+      } catch (error) {
+        console.error("Error in fetchClientData:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchClientData();
+  }, [jobId, providedClientInfo]);
+
   const currentDate = new Date().toLocaleDateString();
   const defaultDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString();
+
+  // Format client address
+  const formatClientAddress = () => {
+    if (!clientInfo) return "Client Address";
+    
+    const parts = [
+      clientInfo.address,
+      clientInfo.city,
+      clientInfo.state,
+      clientInfo.zip,
+      clientInfo.country
+    ].filter(Boolean);
+    
+    return parts.length > 0 ? parts.join(', ') : "Address not available";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 bg-white">
+        <div className="flex items-center justify-center py-8">
+          <div className="text-muted-foreground">Loading client information...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white">
@@ -41,8 +112,9 @@ export const InvoicePreview = ({
           <h3 className="font-semibold text-gray-900 mb-2">Bill To:</h3>
           <div className="text-gray-700">
             <p className="font-medium">{clientInfo?.name || 'Client Name'}</p>
-            <p>{clientInfo?.email}</p>
-            <p>{clientInfo?.phone}</p>
+            <p className="text-sm">{formatClientAddress()}</p>
+            <p className="text-sm">{clientInfo?.phone || '(555) 123-4567'}</p>
+            <p className="text-sm">{clientInfo?.email || 'client@example.com'}</p>
           </div>
         </div>
         
