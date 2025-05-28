@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
 import { DollarSign, AlertCircle, TrendingUp, CreditCard, FileText } from "lucide-react";
+import { useJobFinancials } from "@/hooks/useJobFinancials";
 
 interface JobInfoSectionProps {
   job: {
@@ -17,13 +18,6 @@ interface JobInfoSectionProps {
     email: string;
     total: number;
   };
-  invoiceAmount: number;
-  balance: number;
-  totalPaid?: number;
-  overdueAmount?: number;
-  paidInvoices?: number;
-  unpaidInvoices?: number;
-  isLoadingFinancials?: boolean;
   status: string;
   onStatusChange: (newStatus: string) => void;
   onCallClick: () => void;
@@ -33,19 +27,23 @@ interface JobInfoSectionProps {
 
 export const JobInfoSection = ({
   job,
-  invoiceAmount,
-  balance,
-  totalPaid = 0,
-  overdueAmount = 0,
-  paidInvoices = 0,
-  unpaidInvoices = 0,
-  isLoadingFinancials = false,
   status,
   onStatusChange,
   onCallClick,
   onMessageClick,
   onEditClient
 }: JobInfoSectionProps) => {
+  // Use the real-time financial hook instead of passed props
+  const {
+    invoiceAmount,
+    balance,
+    totalPaid,
+    overdueAmount,
+    paidInvoices,
+    unpaidInvoices,
+    isLoading: isLoadingFinancials
+  } = useJobFinancials(job.id);
+
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
 
   if (isLoadingFinancials) {
