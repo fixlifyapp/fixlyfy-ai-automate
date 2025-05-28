@@ -40,6 +40,9 @@ export interface BusinessMetrics {
   averageJobValue: number;
   customerSatisfaction: number;
   lastRefreshed?: string;
+  clients?: number;
+  jobs?: number;
+  revenue?: number;
   metrics?: {
     totalRevenue: number;
     jobsCompleted: number;
