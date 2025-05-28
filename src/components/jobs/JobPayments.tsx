@@ -10,6 +10,7 @@ import { usePaymentActions } from "@/hooks/usePaymentActions";
 import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { formatDistanceToNow } from "date-fns";
 import { PaymentMethod } from "@/types/payment";
+import { formatCurrency } from "@/lib/utils";
 
 interface JobPaymentsProps {
   jobId: string;

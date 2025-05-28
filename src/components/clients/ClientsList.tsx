@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -19,6 +18,7 @@ import { useClients } from "@/hooks/useClients";
 import { ClientContactActions } from "./ClientContactActions";
 import { ClientSegmentBadge } from "./ClientSegmentBadge";
 import { useClientStats } from "@/hooks/useClientStats";
+import { formatCurrency } from "@/lib/utils";
 
 interface ClientsListProps {
   isGridView?: boolean;
@@ -118,13 +118,13 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
             </div>
             <div className="text-center">
               <div className="text-lg font-semibold text-green-600">
-                ${Math.round(stats.totalRevenue).toLocaleString()}
+                {formatCurrency(stats.totalRevenue)}
               </div>
               <div className="text-xs text-muted-foreground">Revenue</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-semibold text-purple-600">
-                ${Math.round(stats.averageJobValue).toLocaleString()}
+                {formatCurrency(stats.averageJobValue)}
               </div>
               <div className="text-xs text-muted-foreground">Avg Job</div>
             </div>
@@ -198,7 +198,7 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
       </td>
       <td className="p-4">
         <div className="text-sm font-medium text-green-600">
-          ${Math.round(stats.totalRevenue).toLocaleString()}
+          {formatCurrency(stats.totalRevenue)}
         </div>
       </td>
       <td className="p-4">

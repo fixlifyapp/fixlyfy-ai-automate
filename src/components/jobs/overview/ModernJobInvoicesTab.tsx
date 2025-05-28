@@ -9,6 +9,7 @@ import { InvoiceBuilderDialog } from "@/components/jobs/dialogs/InvoiceBuilderDi
 import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { format } from "date-fns";
 import { PaymentMethod } from "@/types/payment";
+import { formatCurrency } from "@/lib/utils";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
@@ -22,10 +23,6 @@ export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInv
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-  };
 
   const getStatusBadge = (status: string) => {
     const statusStyles = {

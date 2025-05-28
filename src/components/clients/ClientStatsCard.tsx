@@ -2,6 +2,7 @@
 import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Calendar, DollarSign, Wrench } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface ClientStatsCardProps {
   clientId: string;
@@ -16,7 +17,6 @@ interface ClientStatsCardProps {
 }
 
 export const ClientStatsCard = ({ clientId, stats }: ClientStatsCardProps) => {
-  const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleDateString();
@@ -68,4 +68,4 @@ export const ClientStatsCard = ({ clientId, stats }: ClientStatsCardProps) => {
       </ModernCardContent>
     </ModernCard>
   );
-};
+}
