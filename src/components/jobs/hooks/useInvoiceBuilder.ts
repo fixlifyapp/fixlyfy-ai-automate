@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { Product, LineItem } from "@/components/jobs/builder/types";
-import { generateSimpleNumber } from "@/utils/idGeneration";
+import { generateNextId } from "@/utils/idGeneration";
 
 interface InvoiceFormData {
   invoiceId?: string;
@@ -22,7 +22,7 @@ interface InvoiceFormData {
 
 export const useInvoiceBuilder = (jobId: string) => {
   const [formData, setFormData] = useState<InvoiceFormData>({
-    invoiceNumber: generateSimpleNumber('invoice'),
+    invoiceNumber: "",
     items: [],
     notes: "",
     status: "draft",
@@ -33,6 +33,30 @@ export const useInvoiceBuilder = (jobId: string) => {
   const [taxRate, setTaxRate] = useState<number>(13);
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate invoice number on component mount
+  useEffect(() => {
+    const generateInvoiceNumber = async () => {
+      try {
+        const invoiceNumber = await generateNextId('invoice');
+        setFormData(prev => ({
+          ...prev,
+          invoiceNumber
+        }));
+      } catch (error) {
+        console.error('Error generating invoice number:', error);
+        // Fallback to timestamp-based number
+        const timestamp = Date.now();
+        const shortNumber = timestamp.toString().slice(-4);
+        setFormData(prev => ({
+          ...prev,
+          invoiceNumber: `I-${shortNumber}`
+        }));
+      }
+    };
+
+    generateInvoiceNumber();
+  }, []);
 
   const handleAddProduct = useCallback((product: Product) => {
     const newLineItem: LineItem = {
@@ -153,9 +177,10 @@ export const useInvoiceBuilder = (jobId: string) => {
     getInvoiceItems();
   }, []);
 
-  const resetForm = useCallback(() => {
+  const resetForm = useCallback(async () => {
+    const invoiceNumber = await generateNextId('invoice');
     setFormData({
-      invoiceNumber: generateSimpleNumber('invoice'),
+      invoiceNumber,
       items: [],
       notes: "",
       status: "draft",

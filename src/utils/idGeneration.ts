@@ -1,34 +1,67 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+// Starting values for each entity type
+const STARTING_VALUES = {
+  job: 2000,
+  estimate: 2000,
+  invoice: 3000,
+  client: 1000
+};
+
+// Prefixes for each entity type
+const PREFIXES = {
+  job: 'J',
+  estimate: 'E',
+  invoice: 'I',
+  client: 'C'
+};
+
 export const generateNextId = async (entityType: 'job' | 'estimate' | 'invoice' | 'client'): Promise<string> => {
   try {
-    const { data, error } = await supabase.rpc('generate_next_id', {
-      p_entity_type: entityType
-    });
+    // First, check if we have a counter for this entity type
+    const { data: counter, error: fetchError } = await supabase
+      .from('id_counters')
+      .select('*')
+      .eq('entity_type', entityType)
+      .single();
 
-    if (error) {
-      console.error(`Error generating ${entityType} ID:`, error);
-      // Fallback to simple incremental numbers
-      const fallbackNumber = Math.floor(Math.random() * 9999) + 1;
-      const prefixes = { job: 'J', estimate: 'E', invoice: 'I', client: 'C' };
-      return `${prefixes[entityType]}-${fallbackNumber}`;
+    let nextNumber: number;
+
+    if (fetchError && fetchError.code === 'PGRST116') {
+      // No counter exists, create one with starting value
+      nextNumber = STARTING_VALUES[entityType];
+      
+      await supabase
+        .from('id_counters')
+        .insert({
+          entity_type: entityType,
+          prefix: PREFIXES[entityType],
+          current_value: nextNumber,
+          start_value: STARTING_VALUES[entityType]
+        });
+    } else if (counter) {
+      // Counter exists, increment it
+      nextNumber = counter.current_value + 1;
+      
+      await supabase
+        .from('id_counters')
+        .update({ current_value: nextNumber })
+        .eq('entity_type', entityType);
+    } else {
+      throw new Error('Unexpected error fetching counter');
     }
 
-    return data;
+    return `${PREFIXES[entityType]}-${nextNumber}`;
   } catch (error) {
     console.error(`Error generating ${entityType} ID:`, error);
-    // Fallback to simple incremental numbers
-    const fallbackNumber = Math.floor(Math.random() * 9999) + 1;
-    const prefixes = { job: 'J', estimate: 'E', invoice: 'I', client: 'C' };
-    return `${prefixes[entityType]}-${fallbackNumber}`;
+    // Fallback to random number if database operation fails
+    const fallbackNumber = Math.floor(Math.random() * 9999) + STARTING_VALUES[entityType];
+    return `${PREFIXES[entityType]}-${fallbackNumber}`;
   }
 };
 
 // Function for simple sequential numbers (used in estimate/invoice builders)
-export const generateSimpleNumber = (entityType: 'estimate' | 'invoice'): string => {
-  const timestamp = Date.now();
-  const shortNumber = timestamp.toString().slice(-4); // Last 4 digits
-  const prefixes = { estimate: 'E', invoice: 'I' };
-  return `${prefixes[entityType]}-${shortNumber}`;
+export const generateSimpleNumber = async (entityType: 'estimate' | 'invoice'): Promise<string> => {
+  return await generateNextId(entityType);
 };

@@ -1,10 +1,9 @@
-
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Estimate } from "@/hooks/useEstimates";
 import { Product, LineItem } from "@/components/jobs/builder/types";
-import { generateSimpleNumber } from "@/utils/idGeneration";
+import { generateNextId } from "@/utils/idGeneration";
 
 interface EstimateFormData {
   estimateId?: string;
@@ -22,7 +21,7 @@ interface EstimateFormData {
 
 export const useEstimateBuilder = (jobId: string) => {
   const [formData, setFormData] = useState<EstimateFormData>({
-    estimateNumber: generateSimpleNumber('estimate'),
+    estimateNumber: "",
     items: [],
     notes: "",
     status: "draft",
@@ -33,6 +32,30 @@ export const useEstimateBuilder = (jobId: string) => {
   const [taxRate, setTaxRate] = useState<number>(13);
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate estimate number on component mount
+  useEffect(() => {
+    const generateEstimateNumber = async () => {
+      try {
+        const estimateNumber = await generateNextId('estimate');
+        setFormData(prev => ({
+          ...prev,
+          estimateNumber
+        }));
+      } catch (error) {
+        console.error('Error generating estimate number:', error);
+        // Fallback to timestamp-based number
+        const timestamp = Date.now();
+        const shortNumber = timestamp.toString().slice(-4);
+        setFormData(prev => ({
+          ...prev,
+          estimateNumber: `E-${shortNumber}`
+        }));
+      }
+    };
+
+    generateEstimateNumber();
+  }, []);
 
   const handleAddProduct = useCallback((product: Product) => {
     const newLineItem: LineItem = {
@@ -118,9 +141,10 @@ export const useEstimateBuilder = (jobId: string) => {
     getEstimateItems();
   }, []);
 
-  const resetForm = useCallback(() => {
+  const resetForm = useCallback(async () => {
+    const estimateNumber = await generateNextId('estimate');
     setFormData({
-      estimateNumber: generateSimpleNumber('estimate'),
+      estimateNumber,
       items: [],
       notes: "",
       status: "draft",
@@ -200,10 +224,10 @@ export const useEstimateBuilder = (jobId: string) => {
         id: estimate.id,
         job_id: estimate.job_id,
         estimate_number: estimate.estimate_number,
-        number: estimate.estimate_number, // Add alias property
+        number: estimate.estimate_number,
+        amount: estimate.total,
         date: estimate.date || estimate.created_at,
         total: estimate.total,
-        amount: estimate.total, // Add alias property
         status: estimate.status,
         notes: estimate.notes,
         created_at: estimate.created_at,
