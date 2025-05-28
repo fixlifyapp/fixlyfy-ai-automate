@@ -11,12 +11,17 @@ interface EstimatePreviewProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
-  jobId: string;
+  jobId?: string;
   clientInfo?: {
     id?: string;
     name?: string;
     email?: string;
     phone?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
   } | null;
 }
 
@@ -33,11 +38,11 @@ export const EstimatePreview = ({
 }: EstimatePreviewProps) => {
   const [clientInfo, setClientInfo] = useState(providedClientInfo);
   const [jobInfo, setJobInfo] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(!providedClientInfo);
+  const [isLoading, setIsLoading] = useState(!providedClientInfo && !!jobId);
 
   useEffect(() => {
     const fetchJobAndClientData = async () => {
-      if (providedClientInfo) {
+      if (providedClientInfo || !jobId) {
         setClientInfo(providedClientInfo);
         setIsLoading(false);
         return;

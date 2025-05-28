@@ -3,26 +3,22 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, DollarSign, Send, MoreHorizontal, Trash2 } from "lucide-react";
+import { Plus, FileText, DollarSign, Send, Trash2, Edit, CreditCard } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useInvoiceActions } from "@/components/jobs/invoices/hooks/useInvoiceActions";
 import { InvoiceBuilderDialog } from "@/components/jobs/dialogs/InvoiceBuilderDialog";
 import { format } from "date-fns";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
+  onSwitchToPayments?: () => void;
 }
 
-export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
+export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInvoicesTabProps) => {
   const { invoices, setInvoices, isLoading, refreshInvoices } = useInvoices(jobId);
   const { state, actions } = useInvoiceActions(jobId, invoices, setInvoices, refreshInvoices);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<any>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -52,6 +48,32 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const handleInvoiceCreated = () => {
     refreshInvoices();
     setShowCreateForm(false);
+    setEditingInvoice(null);
+  };
+
+  const handleEditInvoice = (invoice: any) => {
+    setEditingInvoice(invoice);
+    setShowCreateForm(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingInvoice(null);
+    setShowCreateForm(true);
+  };
+
+  const handlePayInvoice = (invoice: any) => {
+    // Mark as paid and switch to payments tab
+    actions.markAsPaid(invoice.id, invoice.balance);
+    if (onSwitchToPayments) {
+      setTimeout(() => {
+        onSwitchToPayments();
+      }, 1000); // Small delay to allow the payment to be processed
+    }
+  };
+
+  const handleDialogClose = () => {
+    setShowCreateForm(false);
+    setEditingInvoice(null);
   };
 
   return (
@@ -104,7 +126,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                 <FileText className="h-5 w-5" />
                 Invoices ({invoices.length})
               </CardTitle>
-              <Button onClick={() => setShowCreateForm(true)}>
+              <Button onClick={handleCreateNew}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Invoice
               </Button>
@@ -139,42 +161,50 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditInvoice(invoice)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => actions.handleSendInvoice(invoice.id)}
+                        disabled={state.isSending}
+                      >
+                        <Send className="h-4 w-4 mr-1" />
+                        Send
+                      </Button>
+                      
                       {invoice.status === 'unpaid' && invoice.balance > 0 && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => actions.markAsPaid(invoice.id, invoice.balance)}
+                          onClick={() => handlePayInvoice(invoice)}
                           disabled={state.isProcessing}
+                          className="text-green-600 hover:text-green-700"
                         >
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          Mark as Paid
+                          <CreditCard className="h-4 w-4 mr-1" />
+                          Pay
                         </Button>
                       )}
                       
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" disabled={state.isDeleting || state.isSending}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => actions.handleSendInvoice(invoice.id)}>
-                            <Send className="h-4 w-4 mr-2" />
-                            Send to Client
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              actions.setSelectedInvoice(invoice);
-                              actions.confirmDeleteInvoice();
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          actions.setSelectedInvoice(invoice);
+                          actions.confirmDeleteInvoice();
+                        }}
+                        disabled={state.isDeleting}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -187,8 +217,9 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
       {/* Invoice Builder Dialog */}
       <InvoiceBuilderDialog
         open={showCreateForm}
-        onOpenChange={setShowCreateForm}
+        onOpenChange={handleDialogClose}
         jobId={jobId}
+        invoice={editingInvoice}
         onInvoiceCreated={handleInvoiceCreated}
       />
     </>

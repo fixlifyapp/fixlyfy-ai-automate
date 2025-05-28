@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Send, Trash2, DollarSign } from "lucide-react";
+import { Plus, FileText, Send, Trash2, DollarSign, Edit } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "./hooks/useEstimateActions";
 import { EstimateBuilderDialog } from "../dialogs/estimate-builder/EstimateBuilderDialog";
@@ -18,6 +18,7 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
   const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingEstimate, setEditingEstimate] = useState<any>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -39,6 +40,21 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
     );
   };
 
+  const handleEditEstimate = (estimate: any) => {
+    setEditingEstimate(estimate);
+    setShowCreateForm(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingEstimate(null);
+    setShowCreateForm(true);
+  };
+
+  const handleDialogClose = () => {
+    setShowCreateForm(false);
+    setEditingEstimate(null);
+  };
+
   return (
     <>
       <Card>
@@ -48,7 +64,7 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
               <FileText className="h-5 w-5" />
               Estimates ({estimates.length})
             </CardTitle>
-            <Button onClick={() => setShowCreateForm(true)}>
+            <Button onClick={handleCreateNew}>
               <Plus className="h-4 w-4 mr-2" />
               Create Estimate
             </Button>
@@ -82,6 +98,15 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditEstimate(estimate)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    
                     {estimate.status !== 'converted' && (
                       <>
                         <Button
@@ -120,7 +145,6 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
-                      Delete
                     </Button>
                   </div>
                 </div>
@@ -132,8 +156,9 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
 
       <EstimateBuilderDialog
         open={showCreateForm}
-        onOpenChange={setShowCreateForm}
+        onOpenChange={handleDialogClose}
         jobId={jobId}
+        estimateId={editingEstimate?.id}
         onSyncToInvoice={onEstimateConverted}
       />
     </>
