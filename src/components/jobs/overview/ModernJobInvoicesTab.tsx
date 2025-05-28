@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,9 @@ import { Plus, FileText, DollarSign, Send, Trash2, Edit, CreditCard } from "luci
 import { useInvoices } from "@/hooks/useInvoices";
 import { useInvoiceActions } from "@/components/jobs/invoices/hooks/useInvoiceActions";
 import { InvoiceBuilderDialog } from "@/components/jobs/dialogs/InvoiceBuilderDialog";
+import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { format } from "date-fns";
+import { PaymentMethod } from "@/types/payment";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
@@ -19,6 +20,8 @@ export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInv
   const { state, actions } = useInvoiceActions(jobId, invoices, setInvoices, refreshInvoices);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -62,12 +65,26 @@ export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInv
   };
 
   const handlePayInvoice = (invoice: any) => {
-    // Mark as paid and switch to payments tab
-    actions.markAsPaid(invoice.id, invoice.balance);
-    if (onSwitchToPayments) {
-      setTimeout(() => {
-        onSwitchToPayments();
-      }, 1000); // Small delay to allow the payment to be processed
+    setSelectedInvoiceForPayment(invoice);
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
+    if (!selectedInvoiceForPayment) return;
+
+    // Record the payment using the invoice actions
+    const success = await actions.markAsPaid(selectedInvoiceForPayment.id, amount);
+    
+    if (success) {
+      setShowPaymentDialog(false);
+      setSelectedInvoiceForPayment(null);
+      
+      // Switch to payments tab after a short delay
+      if (onSwitchToPayments) {
+        setTimeout(() => {
+          onSwitchToPayments();
+        }, 1000);
+      }
     }
   };
 
@@ -180,7 +197,7 @@ export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInv
                         Send
                       </Button>
                       
-                      {invoice.status === 'unpaid' && invoice.balance > 0 && (
+                      {(invoice.status === 'unpaid' || invoice.status === 'partial') && invoice.balance > 0 && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -221,6 +238,14 @@ export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInv
         jobId={jobId}
         invoice={editingInvoice}
         onInvoiceCreated={handleInvoiceCreated}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        balance={selectedInvoiceForPayment?.balance || 0}
+        onPaymentProcessed={handlePaymentProcessed}
       />
     </>
   );

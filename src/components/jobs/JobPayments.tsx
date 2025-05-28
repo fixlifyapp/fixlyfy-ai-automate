@@ -7,8 +7,9 @@ import { Plus, CreditCard, Trash2, RotateCcw } from "lucide-react";
 import { usePayments } from "@/hooks/usePayments";
 import { useInvoices } from "@/hooks/useInvoices";
 import { usePaymentActions } from "@/hooks/usePaymentActions";
-import { PaymentForm } from "./payments/PaymentForm";
+import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { formatDistanceToNow } from "date-fns";
+import { PaymentMethod } from "@/types/payment";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -18,7 +19,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const { payments, isLoading, totalPaid, totalRefunded, netAmount, refreshPayments } = usePayments(jobId);
   const { invoices } = useInvoices(jobId);
   const { addPayment, refundPayment, deletePayment, isProcessing } = usePaymentActions(jobId, refreshPayments);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -65,6 +66,36 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     }
   };
 
+  const handleAddPayment = () => {
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
+    // Find the first unpaid or partially paid invoice
+    const unpaidInvoice = invoices.find(inv => inv.balance > 0);
+    
+    if (!unpaidInvoice) {
+      // If no unpaid invoices, still create a payment record but without invoice association
+      // This would need to be handled in the payment system
+      return;
+    }
+
+    const success = await addPayment({
+      invoiceId: unpaidInvoice.id,
+      amount,
+      method,
+      reference,
+      notes
+    });
+
+    if (success) {
+      setShowPaymentDialog(false);
+    }
+  };
+
+  // Calculate outstanding balance from all invoices
+  const outstandingBalance = invoices.reduce((sum, invoice) => sum + (invoice.balance || 0), 0);
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -97,18 +128,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         </Card>
       </div>
 
-      {/* Payment Form */}
-      {showPaymentForm && (
-        <div className="flex justify-center">
-          <PaymentForm
-            invoices={invoices.filter(inv => inv.balance > 0)}
-            onSubmit={addPayment}
-            onCancel={() => setShowPaymentForm(false)}
-            isProcessing={isProcessing}
-          />
-        </div>
-      )}
-
       {/* Payments List */}
       <Card>
         <CardHeader>
@@ -117,7 +136,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
               <CreditCard className="h-5 w-5" />
               Payments ({payments.length})
             </CardTitle>
-            <Button onClick={() => setShowPaymentForm(true)} disabled={invoices.filter(inv => inv.balance > 0).length === 0}>
+            <Button onClick={handleAddPayment} disabled={outstandingBalance <= 0}>
               <Plus className="h-4 w-4 mr-2" />
               Add Payment
             </Button>
@@ -181,6 +200,14 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        balance={outstandingBalance}
+        onPaymentProcessed={handlePaymentProcessed}
+      />
     </div>
   );
 };
