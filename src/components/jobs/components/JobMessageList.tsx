@@ -54,7 +54,7 @@ export const JobMessageList = ({ messages, isLoading, clientName = "Client" }: J
           >
             <Avatar className="h-8 w-8 flex-shrink-0">
               <AvatarFallback className={cn(
-                "text-xs",
+                "text-sm",
                 isFromClient ? "bg-muted" : "bg-fixlyfy text-white"
               )}>
                 {senderInitials}
@@ -71,9 +71,9 @@ export const JobMessageList = ({ messages, isLoading, clientName = "Client" }: J
                   ? "bg-muted text-foreground" 
                   : "bg-fixlyfy text-white"
               )}>
-                <p className="text-sm break-words">{message.body}</p>
+                <p className="text-base break-words">{message.body}</p>
               </div>
-              <span className="text-xs text-muted-foreground mt-1">
+              <span className="text-sm text-muted-foreground mt-1">
                 {senderName} • {new Date(message.created_at).toLocaleString('ru-RU', {
                   month: 'short',
                   day: 'numeric',

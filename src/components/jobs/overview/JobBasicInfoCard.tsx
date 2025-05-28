@@ -81,7 +81,7 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-1">Job Number</h3>
-              <p className="font-mono text-sm font-medium text-fixlyfy">{job.id}</p>
+              <p className="font-mono text-base font-medium text-fixlyfy">{job.id}</p>
             </div>
             
             <div>
@@ -89,7 +89,7 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
               <Badge 
                 variant="outline"
                 style={statusStyle}
-                className="font-medium"
+                className="font-medium text-base"
               >
                 {job.status}
               </Badge>
@@ -101,13 +101,13 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
                 <Badge 
                   variant="outline"
                   style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
-                  className="font-medium"
+                  className="font-medium text-base"
                 >
                   <Wrench className="h-3 w-3 mr-1" />
                   {jobTypeDisplay.name}
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="font-medium">
+                <Badge variant="secondary" className="font-medium text-base">
                   <Wrench className="h-3 w-3 mr-1" />
                   {jobTypeDisplay.name}
                 </Badge>
@@ -117,14 +117,14 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
             {job.lead_source && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Lead Source</h3>
-                <p className="text-sm">{job.lead_source}</p>
+                <p className="text-base">{job.lead_source}</p>
               </div>
             )}
             
             {job.date && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Service Date</h3>
-                <div className="flex items-center text-sm">
+                <div className="flex items-center text-base">
                   <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                   {format(new Date(job.date), "EEEE, MMMM do, yyyy")}
                 </div>
@@ -134,7 +134,7 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
             {job.technician_id && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Assigned Technician</h3>
-                <div className="flex items-center text-sm">
+                <div className="flex items-center text-base">
                   <User className="h-4 w-4 mr-2 text-muted-foreground" />
                   Technician {job.technician_id}
                 </div>
@@ -145,7 +145,7 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
           {job.address && (
             <div className="pt-4 border-t">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Service Address</h3>
-              <div className="flex items-start text-sm">
+              <div className="flex items-start text-base">
                 <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-0.5" />
                 <p className="leading-relaxed">{job.address}</p>
               </div>
@@ -155,7 +155,7 @@ export const JobBasicInfoCard = ({ job, editable = false, onUpdate }: JobBasicIn
           {job.description && (
             <div className="pt-4 border-t">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-              <p className="text-sm leading-relaxed">{job.description}</p>
+              <p className="text-base leading-relaxed">{job.description}</p>
             </div>
           )}
           

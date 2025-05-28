@@ -162,13 +162,13 @@ export const ReportsJobs = ({ period, isLoading: externalLoading }: ReportsJobsP
     return jobs.map((job) => (
       <div key={job.id} className="fixlyfy-card mb-4 p-4">
         <div className="flex justify-between items-center mb-2">
-          <span className="font-medium">Job #{job.id}</span>
-          <Badge className="bg-fixlyfy/10 text-fixlyfy">
+          <span className="font-medium text-base">Job #{job.id}</span>
+          <Badge className="bg-fixlyfy/10 text-fixlyfy text-base">
             {job.service}
           </Badge>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-2 gap-2 text-base">
           <div>
             <p className="text-fixlyfy-text-secondary">Client:</p>
             <p>{job.client}</p>
@@ -229,13 +229,13 @@ export const ReportsJobs = ({ period, isLoading: externalLoading }: ReportsJobsP
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Job #</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead>Technician</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Revenue</TableHead>
+                <TableHead className="text-base">Job #</TableHead>
+                <TableHead className="text-base">Client</TableHead>
+                <TableHead className="text-base">Service</TableHead>
+                <TableHead className="text-base">Technician</TableHead>
+                <TableHead className="text-base">Date</TableHead>
+                <TableHead className="text-base">Duration</TableHead>
+                <TableHead className="text-base">Revenue</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -244,27 +244,27 @@ export const ReportsJobs = ({ period, isLoading: externalLoading }: ReportsJobsP
                   key={job.id}
                   className={idx % 2 === 0 ? "bg-white" : "bg-fixlyfy-bg-interface/50"}
                 >
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium text-base">
                     {job.id}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-base">
                     {job.client}
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-fixlyfy/10 text-fixlyfy">
+                    <Badge className="bg-fixlyfy/10 text-fixlyfy text-base">
                       {job.service}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-base">
                     {job.technician}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-base">
                     {format(job.date, 'MMM dd, yyyy')}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-base">
                     {Math.floor(job.duration / 60)}h {job.duration % 60}m
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium text-base">
                     ${job.revenue.toFixed(2)}
                   </TableCell>
                 </TableRow>
