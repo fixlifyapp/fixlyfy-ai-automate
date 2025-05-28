@@ -97,7 +97,10 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => actions.confirmConvertToInvoice(estimate)}
+                          onClick={() => {
+                            actions.setSelectedEstimate(estimate);
+                            actions.confirmConvertToInvoice();
+                          }}
                           disabled={state.isConverting}
                         >
                           <DollarSign className="h-4 w-4 mr-1" />
@@ -109,7 +112,10 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => actions.confirmDeleteEstimate(estimate)}
+                      onClick={() => {
+                        actions.setSelectedEstimate(estimate);
+                        actions.confirmDeleteEstimate();
+                      }}
                       disabled={state.isDeleting}
                       className="text-red-600 hover:text-red-700"
                     >

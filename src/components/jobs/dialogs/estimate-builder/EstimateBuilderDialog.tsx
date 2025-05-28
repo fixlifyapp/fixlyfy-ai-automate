@@ -60,12 +60,7 @@ export const EstimateBuilderDialog = ({
     }
   }, [jobs, isLoading, jobId]);
   
-  const estimateBuilder = useEstimateBuilder({
-    estimateId: estimateId || null,
-    open,
-    onSyncToInvoice,
-    jobId
-  });
+  const estimateBuilder = useEstimateBuilder(jobId);
   
   const handleProductSelect = (product: Product) => {
     estimateBuilder.handleAddProduct(product);
@@ -172,6 +167,20 @@ export const EstimateBuilderDialog = ({
     const result = await estimateBuilder.saveEstimateChanges();
     return result !== null;
   };
+
+  // Placeholder functions for missing methods
+  const calculateTotalMargin = () => {
+    return estimateBuilder.lineItems.reduce((total, item) => {
+      const margin = (item.unitPrice - (item.ourPrice || 0)) * item.quantity;
+      return total + margin;
+    }, 0);
+  };
+
+  const calculateMarginPercentage = () => {
+    const subtotal = estimateBuilder.calculateSubtotal();
+    const margin = calculateTotalMargin();
+    return subtotal > 0 ? (margin / subtotal) * 100 : 0;
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,8 +249,8 @@ export const EstimateBuilderDialog = ({
                   calculateSubtotal={estimateBuilder.calculateSubtotal}
                   calculateTotalTax={estimateBuilder.calculateTotalTax}
                   calculateGrandTotal={estimateBuilder.calculateGrandTotal}
-                  calculateTotalMargin={estimateBuilder.calculateTotalMargin}
-                  calculateMarginPercentage={estimateBuilder.calculateMarginPercentage}
+                  calculateTotalMargin={calculateTotalMargin}
+                  calculateMarginPercentage={calculateMarginPercentage}
                   showMargin={false}
                 />
               )}

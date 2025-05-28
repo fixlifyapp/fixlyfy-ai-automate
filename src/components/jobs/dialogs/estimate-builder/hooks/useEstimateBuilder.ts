@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -199,8 +200,10 @@ export const useEstimateBuilder = (jobId: string) => {
         id: estimate.id,
         job_id: estimate.job_id,
         estimate_number: estimate.estimate_number,
+        number: estimate.estimate_number, // Add alias property
         date: estimate.date || estimate.created_at,
         total: estimate.total,
+        amount: estimate.total, // Add alias property
         status: estimate.status,
         notes: estimate.notes,
         created_at: estimate.created_at,

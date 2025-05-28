@@ -4,8 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
-import { useEstimates } from "@/hooks/useEstimates";
-import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
+import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
 
 interface JobEstimatesTabProps {
   jobId: string;
@@ -13,28 +12,14 @@ interface JobEstimatesTabProps {
 }
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
-  const { estimates, isLoading, setEstimates } = useEstimates(jobId);
-  const [isDocumentBuilderOpen, setIsDocumentBuilderOpen] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const handleCreateEstimate = () => {
-    setSelectedEstimate(null);
-    setIsDocumentBuilderOpen(true);
+    setShowCreateForm(true);
   };
 
-  const handleEditEstimate = (estimate: any) => {
-    setSelectedEstimate(estimate);
-    setIsDocumentBuilderOpen(true);
-  };
-
-  const handleEstimateCreated = (estimate: any) => {
-    if (selectedEstimate) {
-      // Update existing estimate
-      setEstimates(estimates.map(est => est.id === estimate.id ? estimate : est));
-    } else {
-      // Add new estimate
-      setEstimates([...estimates, estimate]);
-    }
+  const handleEstimateCreated = () => {
+    setShowCreateForm(false);
   };
 
   return (
@@ -49,22 +34,14 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         </div>
 
         <EstimatesList
-          estimates={estimates}
-          isLoading={isLoading}
-          onEdit={handleEditEstimate}
-          onConvert={() => {}}
-          onAddWarranty={() => {}}
-          onSend={() => {}}
-          onDelete={() => {}}
+          jobId={jobId}
+          onEstimateConverted={onEstimateConverted}
         />
 
-        <UnifiedDocumentBuilder
-          open={isDocumentBuilderOpen}
-          onOpenChange={setIsDocumentBuilderOpen}
-          documentType="estimate"
-          existingDocument={selectedEstimate}
+        <EstimateBuilderDialog
+          open={showCreateForm}
+          onOpenChange={setShowCreateForm}
           jobId={jobId}
-          onDocumentCreated={handleEstimateCreated}
           onSyncToInvoice={onEstimateConverted}
         />
       </CardContent>
