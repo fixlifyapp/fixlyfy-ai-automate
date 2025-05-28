@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneNumber } from "@/types/database";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { AIDispatcherSettings } from "./AIDispatcherSettings";
 
 export const PhoneNumbersList = () => {
@@ -43,7 +43,17 @@ export const PhoneNumbersList = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPhoneNumbers(data || []);
+      
+      // Transform the data to match our PhoneNumber type
+      const transformedData = data?.map(item => ({
+        ...item,
+        capabilities: typeof item.capabilities === 'string' 
+          ? JSON.parse(item.capabilities) 
+          : item.capabilities || { voice: true, sms: true, mms: false },
+        ai_dispatcher_enabled: item.ai_dispatcher_enabled || false
+      })) || [];
+      
+      setPhoneNumbers(transformedData);
     } catch (error) {
       console.error('Error fetching phone numbers:', error);
       toast({
