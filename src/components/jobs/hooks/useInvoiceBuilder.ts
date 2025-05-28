@@ -1,10 +1,10 @@
-
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { Product, LineItem } from "@/components/jobs/builder/types";
+import { generateSimpleNumber } from "@/utils/idGeneration";
 
 interface InvoiceFormData {
   invoiceId?: string;
@@ -22,7 +22,7 @@ interface InvoiceFormData {
 
 export const useInvoiceBuilder = (jobId: string) => {
   const [formData, setFormData] = useState<InvoiceFormData>({
-    invoiceNumber: `INV-${Date.now()}`,
+    invoiceNumber: generateSimpleNumber('invoice'),
     items: [],
     notes: "",
     status: "draft",
@@ -155,7 +155,7 @@ export const useInvoiceBuilder = (jobId: string) => {
 
   const resetForm = useCallback(() => {
     setFormData({
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceNumber: generateSimpleNumber('invoice'),
       items: [],
       notes: "",
       status: "draft",
@@ -176,7 +176,8 @@ export const useInvoiceBuilder = (jobId: string) => {
         invoice_number: formData.invoiceNumber,
         total: calculateGrandTotal(),
         status: formData.status,
-        notes: notes
+        notes: notes,
+        balance: calculateGrandTotal() // Set initial balance to total
       };
 
       let invoice;

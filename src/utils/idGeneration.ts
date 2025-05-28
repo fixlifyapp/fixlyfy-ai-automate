@@ -9,18 +9,26 @@ export const generateNextId = async (entityType: 'job' | 'estimate' | 'invoice' 
 
     if (error) {
       console.error(`Error generating ${entityType} ID:`, error);
-      // Fallback to timestamp-based ID if database function fails
-      const timestamp = Date.now();
-      const prefixes = { job: 'J-', estimate: 'E-', invoice: 'I-', client: 'C-' };
-      return `${prefixes[entityType]}${timestamp}`;
+      // Fallback to simple incremental numbers
+      const fallbackNumber = Math.floor(Math.random() * 9999) + 1;
+      const prefixes = { job: 'J', estimate: 'E', invoice: 'I', client: 'C' };
+      return `${prefixes[entityType]}-${fallbackNumber}`;
     }
 
     return data;
   } catch (error) {
     console.error(`Error generating ${entityType} ID:`, error);
-    // Fallback to timestamp-based ID
-    const timestamp = Date.now();
-    const prefixes = { job: 'J-', estimate: 'E-', invoice: 'I-', client: 'C-' };
-    return `${prefixes[entityType]}${timestamp}`;
+    // Fallback to simple incremental numbers
+    const fallbackNumber = Math.floor(Math.random() * 9999) + 1;
+    const prefixes = { job: 'J', estimate: 'E', invoice: 'I', client: 'C' };
+    return `${prefixes[entityType]}-${fallbackNumber}`;
   }
+};
+
+// Function for simple sequential numbers (used in estimate/invoice builders)
+export const generateSimpleNumber = (entityType: 'estimate' | 'invoice'): string => {
+  const timestamp = Date.now();
+  const shortNumber = timestamp.toString().slice(-4); // Last 4 digits
+  const prefixes = { estimate: 'E', invoice: 'I' };
+  return `${prefixes[entityType]}-${shortNumber}`;
 };
