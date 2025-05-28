@@ -59,7 +59,7 @@ const AiCenterPage = () => {
   
   // Set the active tab based on URL parameters
   useEffect(() => {
-    if (tabParam && ["ai-calls", "ai-monitor", "ai-analytics", "ai-assistant"].includes(tabParam)) {
+    if (tabParam && ["ai-calls", "ai-monitor", "ai-assistant"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -142,10 +142,6 @@ const AiCenterPage = () => {
         // Refresh the monitor view
         window.location.reload();
         break;
-      case "ai-analytics":
-        // Generate a new report or refresh analytics
-        window.location.reload();
-        break;
       case "ai-assistant":
         // Clear chat and start new conversation
         setMessages([{
@@ -163,7 +159,6 @@ const AiCenterPage = () => {
     switch (activeTab) {
       case "ai-calls": return "Configure AI Dispatcher";
       case "ai-monitor": return "Refresh Monitor";
-      case "ai-analytics": return "Refresh Analytics";
       case "ai-assistant": return "New Chat";
       default: return "Configure";
     }
@@ -248,10 +243,10 @@ const AiCenterPage = () => {
       />
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 mb-6">
+        <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="ai-calls" className="flex items-center gap-2">
             <Bot size={16} />
-            <span className="hidden sm:inline">AI Calls</span>
+            <span className="hidden sm:inline">AI Calls & Analytics</span>
             {unreadCounts.aiCalls > 0 && (
               <Badge className="ml-1 bg-blue-600">{unreadCounts.aiCalls}</Badge>
             )}
@@ -259,10 +254,6 @@ const AiCenterPage = () => {
           <TabsTrigger value="ai-monitor" className="flex items-center gap-2">
             <Zap size={16} />
             <span className="hidden sm:inline">AI Monitor</span>
-          </TabsTrigger>
-          <TabsTrigger value="ai-analytics" className="flex items-center gap-2">
-            <BarChart3 size={16} />
-            <span className="hidden sm:inline">AI Analytics</span>
           </TabsTrigger>
           <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
             <Brain size={16} />
@@ -273,15 +264,12 @@ const AiCenterPage = () => {
         <TabsContent value="ai-calls" className="mt-0">
           <div className="space-y-6">
             <ConnectCallsList />
+            <AICallAnalytics />
           </div>
         </TabsContent>
 
         <TabsContent value="ai-monitor" className="mt-0">
           <AIAgentDashboard />
-        </TabsContent>
-
-        <TabsContent value="ai-analytics" className="mt-0">
-          <AICallAnalytics />
         </TabsContent>
 
         <TabsContent value="ai-assistant" className="mt-0">
