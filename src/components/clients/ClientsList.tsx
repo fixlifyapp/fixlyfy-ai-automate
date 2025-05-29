@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -12,13 +13,15 @@ import {
   DollarSign,
   Calendar,
   Building,
-  User
+  User,
+  Trash2
 } from "lucide-react";
 import { useClients } from "@/hooks/useClients";
 import { ClientContactActions } from "./ClientContactActions";
 import { ClientSegmentBadge } from "./ClientSegmentBadge";
 import { useClientStats } from "@/hooks/useClientStats";
 import { formatCurrency } from "@/lib/utils";
+import { useModal } from "@/components/ui/modal-provider";
 
 interface ClientsListProps {
   isGridView?: boolean;
@@ -42,6 +45,8 @@ interface ClientWithStats {
 const ClientCard = ({ client }: { client: ClientWithStats }) => {
   const navigate = useNavigate();
   const { stats, isLoading: statsLoading } = useClientStats(client.id);
+  const { deleteClient } = useClients();
+  const { openModal } = useModal();
 
   const handleClientClick = () => {
     navigate(`/clients/${client.id}`);
@@ -50,6 +55,15 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/clients/${client.id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openModal("deleteConfirm", {
+      title: "Delete Client",
+      description: `Are you sure you want to delete "${client.name}"? This action cannot be undone.`,
+      onConfirm: () => deleteClient(client.id)
+    });
   };
 
   const formatAddress = () => {
@@ -94,14 +108,24 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
                 {client.type || 'Residential'}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleEditClick}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEditClick}
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeleteClick}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Address */}
@@ -141,6 +165,8 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
 const ClientRow = ({ client }: { client: ClientWithStats }) => {
   const navigate = useNavigate();
   const { stats, isLoading: statsLoading } = useClientStats(client.id);
+  const { deleteClient } = useClients();
+  const { openModal } = useModal();
 
   const handleClientClick = () => {
     navigate(`/clients/${client.id}`);
@@ -149,6 +175,15 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/clients/${client.id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openModal("deleteConfirm", {
+      title: "Delete Client",
+      description: `Are you sure you want to delete "${client.name}"? This action cannot be undone.`,
+      onConfirm: () => deleteClient(client.id)
+    });
   };
 
   const formatAddress = () => {
@@ -213,13 +248,23 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
         <ClientContactActions client={client} compact />
       </td>
       <td className="p-4 text-right">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleEditClick}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleEditClick}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeleteClick}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </td>
     </tr>
   );
