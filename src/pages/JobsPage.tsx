@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -155,11 +154,6 @@ const JobsPage = () => {
     setSelectedJobs([]);
   };
 
-  const handleBulkSendReminders = async (jobIds: string[], reminderType: string) => {
-    toast.success(`Sending ${reminderType} reminders to ${jobIds.length} jobs`);
-    setSelectedJobs([]);
-  };
-
   const handleBulkTagJobs = async (jobIds: string[], tags: string[]) => {
     try {
       await Promise.all(jobIds.map(id => {
@@ -239,7 +233,6 @@ const JobsPage = () => {
         onUpdateStatus={handleBulkUpdateStatus}
         onAssignTechnician={handleBulkAssignTechnician}
         onDeleteJobs={handleBulkDelete}
-        onSendReminders={handleBulkSendReminders}
         onTagJobs={handleBulkTagJobs}
         onExport={handleBulkExport}
       />

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { X, CheckCircle, UserPlus, Trash, SendHorizonal, Tag, DollarSign, Download } from 'lucide-react';
+import { X, CheckCircle, UserPlus, Trash, Tag, DollarSign, Download } from 'lucide-react';
 
 export interface BulkActionsBarProps {
   selectedJobs: string[];
@@ -9,7 +9,6 @@ export interface BulkActionsBarProps {
   onUpdateStatus: (jobIds: string[], newStatus: string) => void;
   onAssignTechnician: (jobIds: string[], technicianId: string, technicianName: string) => void;
   onDeleteJobs: (jobIds: string[]) => void;
-  onSendReminders: (jobIds: string[], reminderType: string) => void;
   onTagJobs: (jobIds: string[], tags: string[]) => void;
   onMarkAsPaid?: (jobIds: string[], paymentMethod: string) => void;
   onExport: (jobIds: string[]) => void;
@@ -21,7 +20,6 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
   onUpdateStatus,
   onAssignTechnician,
   onDeleteJobs,
-  onSendReminders,
   onTagJobs,
   onMarkAsPaid,
   onExport
@@ -64,16 +62,6 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
           >
             <UserPlus size={14} />
             Assign
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-1"
-            onClick={() => onSendReminders(selectedJobs, 'sms')}
-          >
-            <SendHorizonal size={14} />
-            Send Reminder
           </Button>
           
           <Button 

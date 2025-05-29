@@ -137,11 +137,6 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     }
   };
 
-  const handleSendReminders = (jobIds: string[], reminderType: string) => {
-    toast.success(`Sent ${reminderType.toUpperCase()} reminders to ${jobIds.length} clients`);
-    setSelectedJobs([]);
-  };
-
   const handleTagJobs = async (jobIds: string[], tags: string[]) => {
     try {
       await Promise.all(jobIds.map(id => {
@@ -279,7 +274,6 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
           onUpdateStatus={handleUpdateJobsStatus}
           onAssignTechnician={handleAssignTechnician}
           onDeleteJobs={handleDeleteJobs}
-          onSendReminders={handleSendReminders}
           onTagJobs={handleTagJobs}
           onMarkAsPaid={handleMarkAsPaid}
           onExport={handleExportJobs}
