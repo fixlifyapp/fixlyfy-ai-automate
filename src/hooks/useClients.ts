@@ -23,8 +23,15 @@ export interface Client {
   updated_at?: string;
 }
 
-export const useClients = () => {
+interface UseClientsOptions {
+  page?: number;
+  pageSize?: number;
+}
+
+export const useClients = (options: UseClientsOptions = {}) => {
+  const { page = 1, pageSize = 10 } = options;
   const [clients, setClients] = useState<Client[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -32,10 +39,19 @@ export const useClients = () => {
     const fetchClients = async () => {
       setIsLoading(true);
       try {
+        // Get total count
+        const { count } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true });
+        
+        setTotalCount(count || 0);
+
+        // Get paginated data
         const { data, error } = await supabase
           .from('clients')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1);
           
         if (error) throw error;
         
@@ -49,7 +65,7 @@ export const useClients = () => {
     };
     
     fetchClients();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, page, pageSize]);
 
   const addClient = async (client: { name: string } & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
     try {
@@ -67,7 +83,12 @@ export const useClients = () => {
         
       if (error) throw error;
       
-      setClients(prev => [data, ...prev]);
+      // If we're on the first page, add the new client to the list
+      if (page === 1) {
+        setClients(prev => [data, ...prev.slice(0, pageSize - 1)]);
+      }
+      setTotalCount(prev => prev + 1);
+      
       toast.success('Client added successfully');
       return data;
     } catch (error) {
@@ -111,6 +132,8 @@ export const useClients = () => {
       if (error) throw error;
       
       setClients(prev => prev.filter(client => client.id !== id));
+      setTotalCount(prev => prev - 1);
+      
       toast.success('Client deleted successfully');
       return true;
     } catch (error) {
@@ -120,9 +143,18 @@ export const useClients = () => {
     }
   };
 
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const hasNextPage = page < totalPages;
+  const hasPreviousPage = page > 1;
+
   return {
     clients,
     isLoading,
+    totalCount,
+    totalPages,
+    currentPage: page,
+    hasNextPage,
+    hasPreviousPage,
     addClient,
     updateClient,
     deleteClient,

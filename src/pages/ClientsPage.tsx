@@ -9,13 +9,35 @@ import { Grid, List, Plus, Users, Target, Heart, TrendingUp } from "lucide-react
 import { ClientsList } from "@/components/clients/ClientsList";
 import { ClientsFilters } from "@/components/clients/ClientsFilters";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useClients } from "@/hooks/useClients";
 
 const ClientsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { refreshClients } = useClients();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 12; // Show 12 clients per page for better grid layout
+  
+  const { 
+    clients, 
+    isLoading, 
+    totalCount, 
+    totalPages, 
+    hasNextPage, 
+    hasPreviousPage,
+    refreshClients 
+  } = useClients({ 
+    page: currentPage, 
+    pageSize 
+  });
   
   // Set up real-time sync for clients table
   useRealtimeSync({
@@ -40,6 +62,10 @@ const ClientsPage = () => {
       window.removeEventListener('clientsRefresh', handleCustomRefresh);
     };
   }, [refreshClients]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
   
   return (
     <PageLayout>
@@ -88,7 +114,74 @@ const ClientsPage = () => {
       </AnimatedContainer>
       
       <AnimatedContainer animation="fade-in" delay={300}>
-        <ClientsList isGridView={isGridView} />
+        <div className="space-y-6">
+          {/* Clients List */}
+          <ClientsList 
+            isGridView={isGridView} 
+            clients={clients}
+            isLoading={isLoading}
+          />
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <ModernCard variant="elevated" className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} clients
+                </div>
+                
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        className={!hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => {
+                        // Show first page, last page, current page, and pages around current
+                        return page === 1 || 
+                               page === totalPages || 
+                               Math.abs(page - currentPage) <= 1;
+                      })
+                      .map((page, index, array) => {
+                        // Add ellipsis if there's a gap
+                        const shouldShowEllipsis = index > 0 && page - array[index - 1] > 1;
+                        
+                        return (
+                          <div key={page} className="flex items-center">
+                            {shouldShowEllipsis && (
+                              <PaginationItem>
+                                <span className="px-2">...</span>
+                              </PaginationItem>
+                            )}
+                            <PaginationItem>
+                              <PaginationLink
+                                onClick={() => handlePageChange(page)}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </div>
+                        );
+                      })}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        className={!hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </ModernCard>
+          )}
+        </div>
       </AnimatedContainer>
       
       <ClientsCreateModal 

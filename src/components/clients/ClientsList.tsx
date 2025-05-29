@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -6,11 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  ExternalLink, 
   Edit, 
-  Star,
   MapPin, 
-  DollarSign,
   Calendar,
   Building,
   User,
@@ -25,6 +21,8 @@ import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDial
 
 interface ClientsListProps {
   isGridView?: boolean;
+  clients?: any[];
+  isLoading?: boolean;
 }
 
 interface ClientWithStats {
@@ -310,10 +308,13 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
   );
 };
 
-export const ClientsList = ({ isGridView = false }: ClientsListProps) => {
-  const { clients, isLoading } = useClients();
+export const ClientsList = ({ isGridView = false, clients, isLoading }: ClientsListProps) => {
+  // Use provided clients or fallback to hook (for backwards compatibility)
+  const hookData = useClients();
+  const clientsData = clients || hookData.clients;
+  const loadingState = isLoading !== undefined ? isLoading : hookData.isLoading;
 
-  if (isLoading) {
+  if (loadingState) {
     return (
       <ModernCard variant="elevated" className="p-8 text-center">
         <div className="flex items-center justify-center">
@@ -324,7 +325,7 @@ export const ClientsList = ({ isGridView = false }: ClientsListProps) => {
     );
   }
 
-  if (clients.length === 0) {
+  if (clientsData.length === 0) {
     return (
       <ModernCard variant="elevated" className="p-12 text-center">
         <div className="text-muted-foreground">
@@ -339,7 +340,7 @@ export const ClientsList = ({ isGridView = false }: ClientsListProps) => {
   if (isGridView) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {clients.map((client) => (
+        {clientsData.map((client) => (
           <ClientCard key={client.id} client={client} />
         ))}
       </div>
@@ -363,7 +364,7 @@ export const ClientsList = ({ isGridView = false }: ClientsListProps) => {
             </tr>
           </thead>
           <tbody>
-            {clients.map((client) => (
+            {clientsData.map((client) => (
               <ClientRow key={client.id} client={client} />
             ))}
           </tbody>
