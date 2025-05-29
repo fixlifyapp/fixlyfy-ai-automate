@@ -2,8 +2,6 @@
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader } from "lucide-react";
 
 interface ClientFormHeaderProps {
   client: any;
@@ -46,18 +44,6 @@ export const ClientFormHeader = ({
             ID: {client.id || 'Unknown'} · {client.type || "Unknown type"}
           </p>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" onClick={onCreateJob}>Create Job</Button>
-        <Button variant="outline" onClick={onCreateInvoice}>Create Invoice</Button>
-        <Button 
-          className="bg-fixlyfy hover:bg-fixlyfy/90" 
-          onClick={onSaveChanges}
-          disabled={isSaving}
-        >
-          {isSaving && <Loader size={18} className="mr-2 animate-spin" />}
-          Save Changes
-        </Button>
       </div>
     </div>
   );

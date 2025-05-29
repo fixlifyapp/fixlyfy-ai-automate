@@ -138,6 +138,8 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
             <ClientDetailsTab 
               formData={formData}
               handleInputChange={handleInputChange}
+              onSaveChanges={saveChanges}
+              isSaving={isSaving}
             />
           </TabsContent>
           

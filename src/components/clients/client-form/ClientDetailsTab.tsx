@@ -2,7 +2,8 @@
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Building, Phone, Mail, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building, Phone, Mail, MapPin, Loader } from "lucide-react";
 
 interface FormData {
   firstName: string;
@@ -19,9 +20,16 @@ interface FormData {
 interface ClientDetailsTabProps {
   formData: FormData;
   handleInputChange: (field: string, value: string) => void;
+  onSaveChanges?: () => void;
+  isSaving?: boolean;
 }
 
-export const ClientDetailsTab = ({ formData, handleInputChange }: ClientDetailsTabProps) => {
+export const ClientDetailsTab = ({ 
+  formData, 
+  handleInputChange, 
+  onSaveChanges, 
+  isSaving 
+}: ClientDetailsTabProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card className="p-6">
@@ -132,6 +140,19 @@ export const ClientDetailsTab = ({ formData, handleInputChange }: ClientDetailsT
               />
             </div>
           </div>
+          
+          {onSaveChanges && (
+            <div className="pt-4 border-t">
+              <Button 
+                className="bg-fixlyfy hover:bg-fixlyfy/90" 
+                onClick={onSaveChanges}
+                disabled={isSaving}
+              >
+                {isSaving && <Loader size={18} className="mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
     </div>
