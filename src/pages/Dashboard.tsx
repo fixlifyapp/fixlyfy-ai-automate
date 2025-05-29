@@ -4,19 +4,17 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { BarChart3, Zap, Bot, Target } from "lucide-react";
 import { TimePeriod } from "@/types/dashboard";
-import {
-  EnhancedKpiCards,
-  DashboardCharts,
-  ModernMetricsGrid,
-  AiInsightsPanel,
-  ClientValuePanel,
-  QuickActionsPanel,
-  RecentJobs,
-  UpcomingJobs,
-  ActivityFeed,
-  AIAgentWidget,
-  DashboardFilterControls
-} from "@/components/dashboard";
+import { EnhancedKpiCards } from "@/components/dashboard/EnhancedKpiCards";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { ModernMetricsGrid } from "@/components/dashboard/ModernMetricsGrid";
+import { AiInsightsPanel } from "@/components/dashboard/AiInsightsPanel";
+import { ClientValuePanel } from "@/components/dashboard/ClientValuePanel";
+import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
+import { RecentJobs } from "@/components/dashboard/RecentJobs";
+import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { AIAgentWidget } from "@/components/dashboard/AIAgentWidget";
+import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterControls";
 
 export type { TimePeriod };
 
