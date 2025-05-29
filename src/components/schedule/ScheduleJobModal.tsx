@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ import { teamMembers } from "@/data/team";
 import { useClients } from "@/hooks/useClients";
 import { useJobTypes, useLeadSources, useTags } from "@/hooks/useConfigItems";
 import { useJobCustomFields } from "@/hooks/useJobCustomFields";
+import { useClientProperties } from "@/hooks/useClientProperties";
 import { toast } from "sonner";
 
 interface ScheduleJobModalProps {
@@ -92,8 +94,7 @@ export const ScheduleJobModal = ({
   const { items: tags, isLoading: tagsLoading } = useTags();
   const { availableFields: customFields, isLoading: customFieldsLoading } = useJobCustomFields();
   
-  // Add client properties hook
-  const { useClientProperties } = require("@/hooks/useClientProperties");
+  // Add client properties hook - Fixed import
   const { properties: clientProperties, isLoading: propertiesLoading } = useClientProperties(formData.client_id);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
