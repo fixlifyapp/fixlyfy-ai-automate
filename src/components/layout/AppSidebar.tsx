@@ -85,12 +85,18 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
+            <h2 className="group-data-[collapsible=icon]:hidden text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
               textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
               filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
             }}>
               Fixlify
             </h2>
+            <div className="hidden group-data-[collapsible=icon]:block text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
+              textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
+              filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
+            }}>
+              F
+            </div>
             <div className="relative">
               <div className="w-8 h-8 bg-gradient-primary rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-300" style={{
                 boxShadow: '0 4px 12px rgba(138, 77, 213, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
@@ -112,31 +118,34 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent>
-        <SidebarMenu className="space-y-1 px-3">
-          {routes.map(route => (
-            <SidebarMenuItem key={route.href}>
-              <TrackingWrapper actionType="navigation" element="sidebar_menu" context={{
-                destination: route.href,
-                label: route.label
-              }}>
-                <SidebarMenuButton 
-                  asChild
-                  isActive={location.pathname === route.href}
-                  className="w-full justify-start text-base font-medium transition-all duration-200 hover:scale-[1.02] data-[active=true]:bg-gradient-primary data-[active=true]:text-white data-[active=true]:shadow-md hover:data-[active=true]:shadow-lg"
-                >
-                  <Button 
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => handleNavigation(route.href)}
+        <div className="mt-6">
+          <SidebarMenu className="space-y-1 px-3">
+            {routes.map(route => (
+              <SidebarMenuItem key={route.href}>
+                <TrackingWrapper actionType="navigation" element="sidebar_menu" context={{
+                  destination: route.href,
+                  label: route.label
+                }}>
+                  <SidebarMenuButton 
+                    asChild
+                    isActive={location.pathname === route.href}
+                    className="w-full justify-start text-base font-medium transition-all duration-200 hover:scale-[1.02] data-[active=true]:bg-gradient-primary data-[active=true]:text-white data-[active=true]:shadow-md hover:data-[active=true]:shadow-lg"
+                    tooltip={route.label}
                   >
-                    <route.icon className="mr-3 h-4 w-4 transition-colors" />
-                    <span className="truncate">{route.label}</span>
-                  </Button>
-                </SidebarMenuButton>
-              </TrackingWrapper>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+                    <Button 
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => handleNavigation(route.href)}
+                    >
+                      <route.icon className="mr-3 h-4 w-4 transition-colors group-data-[collapsible=icon]:mr-0" />
+                      <span className="truncate group-data-[collapsible=icon]:hidden">{route.label}</span>
+                    </Button>
+                  </SidebarMenuButton>
+                </TrackingWrapper>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
