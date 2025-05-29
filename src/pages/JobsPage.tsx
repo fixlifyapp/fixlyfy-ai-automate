@@ -67,25 +67,23 @@ const JobsPage = () => {
             <PageHeader
               title="Job Management"
               subtitle="Manage your jobs efficiently with modern 3D interface"
+              icon={Wrench}
               badges={[
                 { 
                   text: "Active Jobs", 
                   icon: Target, 
-                  variant: "fixlyfy",
-                  customIcon: <ThreeDIcon icon={Target} size="sm" variant="success" />
+                  variant: "fixlyfy"
                 },
                 { 
                   text: "Performance", 
                   icon: TrendingUp, 
-                  variant: "info",
-                  customIcon: <ThreeDIcon icon={TrendingUp} size="sm" variant="info" />
+                  variant: "info"
                 }
               ]}
               actionButton={{
                 text: "Create Job",
                 icon: Plus,
-                onClick: () => setIsCreateJobModalOpen(true),
-                customIcon: <ThreeDIcon icon={Plus} size="sm" variant="primary" animated />
+                onClick: () => setIsCreateJobModalOpen(true)
               }}
             />
           </div>
