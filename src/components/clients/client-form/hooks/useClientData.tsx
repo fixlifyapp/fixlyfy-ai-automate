@@ -18,6 +18,7 @@ export const useClientData = (clientId?: string) => {
     city: "",
     state: "",
     zip: "",
+    status: "active",
   });
   const [showInsights, setShowInsights] = useState(true);
   const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
@@ -58,6 +59,7 @@ export const useClientData = (clientId?: string) => {
             city: data.city || '',
             state: data.state || '',
             zip: data.zip || '',
+            status: data.status || 'active',
           });
           generateClientInsight(data);
         } else {
@@ -133,6 +135,7 @@ export const useClientData = (clientId?: string) => {
         city: formData.city,
         state: formData.state,
         zip: formData.zip,
+        status: formData.status,
         // Convert Date to ISO string for Supabase
         updated_at: new Date().toISOString()
       };

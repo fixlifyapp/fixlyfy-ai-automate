@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building, Phone, Mail, MapPin, Loader } from "lucide-react";
 
 interface FormData {
@@ -15,6 +16,7 @@ interface FormData {
   city: string;
   state: string;
   zip: string;
+  status: string;
 }
 
 interface ClientDetailsTabProps {
@@ -64,6 +66,19 @@ export const ClientDetailsTab = ({
                 onChange={(e) => handleInputChange('company', e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </Card>

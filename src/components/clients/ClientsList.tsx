@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -15,6 +16,7 @@ import {
 import { useClients } from "@/hooks/useClients";
 import { ClientContactActions } from "./ClientContactActions";
 import { ClientSegmentBadge } from "./ClientSegmentBadge";
+import { ClientStatusBadge } from "./ClientStatusBadge";
 import { useClientStats } from "@/hooks/useClientStats";
 import { formatCurrency } from "@/lib/utils";
 import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
@@ -113,6 +115,7 @@ const ClientCard = ({ client, onRefresh }: { client: ClientWithStats; onRefresh?
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-lg">{client.name}</h3>
                   <ClientSegmentBadge stats={stats} />
+                  <ClientStatusBadge status={client.status} />
                 </div>
                 {client.company && (
                   <div className="flex items-center text-sm text-muted-foreground mb-1">
@@ -240,6 +243,7 @@ const ClientRow = ({ client, onRefresh }: { client: ClientWithStats; onRefresh?:
       <tr className="border-b">
         <td className="p-4"><Skeleton className="h-5 w-32" /></td>
         <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+        <td className="p-4"><Skeleton className="h-4 w-16" /></td>
         <td className="p-4"><Skeleton className="h-4 w-40" /></td>
         <td className="p-4"><Skeleton className="h-4 w-16" /></td>
         <td className="p-4"><Skeleton className="h-4 w-20" /></td>
@@ -269,6 +273,9 @@ const ClientRow = ({ client, onRefresh }: { client: ClientWithStats; onRefresh?:
         </td>
         <td className="p-4">
           <Badge variant="outline">{client.type || 'Residential'}</Badge>
+        </td>
+        <td className="p-4">
+          <ClientStatusBadge status={client.status} />
         </td>
         <td className="p-4">
           <div className="text-sm max-w-[200px] truncate">{formatAddress()}</div>
@@ -372,6 +379,7 @@ export const ClientsList = ({ isGridView = false, clients, isLoading, onRefresh 
             <tr className="border-b">
               <th className="text-left p-4 font-semibold">Client</th>
               <th className="text-left p-4 font-semibold">Type</th>
+              <th className="text-left p-4 font-semibold">Status</th>
               <th className="text-left p-4 font-semibold">Address</th>
               <th className="text-left p-4 font-semibold">Jobs</th>
               <th className="text-left p-4 font-semibold">Revenue</th>
