@@ -54,10 +54,10 @@ export const ClientSegmentBadge = ({ stats }: ClientSegmentBadgeProps) => {
       };
     }
 
-    // Inactive clients: Have had service but not recently
+    // Less active clients: Have had service but not recently
     if ((totalRevenue > 0 || totalJobs > 0) && isVeryOld) {
       return {
-        label: "Inactive",
+        label: "Less Active",
         variant: "outline" as const,
         icon: Clock,
         color: "bg-gray-100 text-gray-600 border-gray-300"
