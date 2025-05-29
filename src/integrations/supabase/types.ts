@@ -58,17 +58,21 @@ export type Database = {
           appointment_scheduled: boolean | null
           call_duration: number | null
           call_sid: string | null
+          call_started_at: string | null
           call_status: string
           call_summary: string | null
           client_phone: string
           contact_id: string | null
           created_at: string
+          customer_intent: string | null
+          customer_phone: string | null
           customer_satisfaction_score: number | null
           ended_at: string | null
           id: string
           phone_number_id: string
           resolution_type: string | null
           started_at: string
+          successful_resolution: boolean | null
         }
         Insert: {
           ai_transcript?: string | null
@@ -76,17 +80,21 @@ export type Database = {
           appointment_scheduled?: boolean | null
           call_duration?: number | null
           call_sid?: string | null
+          call_started_at?: string | null
           call_status?: string
           call_summary?: string | null
           client_phone: string
           contact_id?: string | null
           created_at?: string
+          customer_intent?: string | null
+          customer_phone?: string | null
           customer_satisfaction_score?: number | null
           ended_at?: string | null
           id?: string
           phone_number_id: string
           resolution_type?: string | null
           started_at?: string
+          successful_resolution?: boolean | null
         }
         Update: {
           ai_transcript?: string | null
@@ -94,17 +102,21 @@ export type Database = {
           appointment_scheduled?: boolean | null
           call_duration?: number | null
           call_sid?: string | null
+          call_started_at?: string | null
           call_status?: string
           call_summary?: string | null
           client_phone?: string
           contact_id?: string | null
           created_at?: string
+          customer_intent?: string | null
+          customer_phone?: string | null
           customer_satisfaction_score?: number | null
           ended_at?: string | null
           id?: string
           phone_number_id?: string
           resolution_type?: string | null
           started_at?: string
+          successful_resolution?: boolean | null
         }
         Relationships: [
           {
@@ -129,6 +141,7 @@ export type Database = {
           id: string
           phone_number_id: string
           updated_at: string
+          user_id: string | null
           voice_selection: string | null
         }
         Insert: {
@@ -143,6 +156,7 @@ export type Database = {
           id?: string
           phone_number_id: string
           updated_at?: string
+          user_id?: string | null
           voice_selection?: string | null
         }
         Update: {
@@ -157,6 +171,7 @@ export type Database = {
           id?: string
           phone_number_id?: string
           updated_at?: string
+          user_id?: string | null
           voice_selection?: string | null
         }
         Relationships: [
@@ -1919,6 +1934,7 @@ export type Database = {
       phone_numbers: {
         Row: {
           ai_dispatcher_enabled: boolean | null
+          ai_settings: Json | null
           assigned_to: string | null
           capabilities: Json | null
           connect_instance_id: string | null
@@ -1946,6 +1962,7 @@ export type Database = {
         }
         Insert: {
           ai_dispatcher_enabled?: boolean | null
+          ai_settings?: Json | null
           assigned_to?: string | null
           capabilities?: Json | null
           connect_instance_id?: string | null
@@ -1973,6 +1990,7 @@ export type Database = {
         }
         Update: {
           ai_dispatcher_enabled?: boolean | null
+          ai_settings?: Json | null
           assigned_to?: string | null
           capabilities?: Json | null
           connect_instance_id?: string | null
