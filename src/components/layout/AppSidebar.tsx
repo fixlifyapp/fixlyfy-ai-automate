@@ -97,7 +97,7 @@ export function AppSidebar() {
             }}>
               F
             </div>
-            <div className="relative">
+            <div className="relative group-data-[collapsible=icon]:hidden">
               <div className="w-8 h-8 bg-gradient-primary rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-300" style={{
                 boxShadow: '0 4px 12px rgba(138, 77, 213, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
                 background: 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 50%, #8A4DD5 100%)',
