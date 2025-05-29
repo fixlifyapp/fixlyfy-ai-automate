@@ -19,29 +19,54 @@ export const useClientProperties = (clientId?: string) => {
       try {
         setIsLoading(true);
         
-        // In a real application, you would fetch from a properties table
-        // For now, we'll use the client's address as a property
-        const { data, error } = await supabase
-          .from('clients')
-          .select('address, city, state, zip')
-          .eq('id', clientId)
-          .single();
+        // Fetch properties from the client_properties table
+        const { data: propertiesData, error: propertiesError } = await supabase
+          .from('client_properties')
+          .select('*')
+          .eq('client_id', clientId);
           
-        if (error) throw error;
+        if (propertiesError) throw propertiesError;
         
-        // Transform the client address into a property object
-        if (data && data.address) {
-          setProperties([{
-            id: 1,
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            zip: data.zip,
-            type: 'Primary Location',
-            lastService: new Date().toISOString().split('T')[0]
-          }]);
+        if (propertiesData && propertiesData.length > 0) {
+          // Format properties for display
+          const formattedProperties = propertiesData.map(property => ({
+            id: property.id,
+            address: property.address,
+            city: property.city,
+            state: property.state,
+            zip: property.zip,
+            type: property.property_type || 'Property',
+            name: property.property_name,
+            lastService: property.updated_at?.split('T')[0] || 'Not available',
+            isPrimary: property.is_primary
+          }));
+          
+          setProperties(formattedProperties);
         } else {
-          setProperties([]);
+          // If no properties exist, create one from client address as fallback
+          const { data: clientData, error: clientError } = await supabase
+            .from('clients')
+            .select('address, city, state, zip, name')
+            .eq('id', clientId)
+            .single();
+            
+          if (clientError) throw clientError;
+          
+          if (clientData && clientData.address) {
+            setProperties([{
+              id: 'client-address',
+              address: clientData.address,
+              city: clientData.city,
+              state: clientData.state,
+              zip: clientData.zip,
+              type: 'Primary Location',
+              name: `${clientData.name} - Primary`,
+              lastService: 'Not available',
+              isPrimary: true
+            }]);
+          } else {
+            setProperties([]);
+          }
         }
       } catch (error) {
         console.error("Error loading client properties:", error);

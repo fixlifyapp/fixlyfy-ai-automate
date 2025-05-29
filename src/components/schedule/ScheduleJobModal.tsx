@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +46,7 @@ interface ScheduleJobModalProps {
 interface FormData {
   title: string;
   client_id: string;
+  property_id: string; // Add property selection
   description: string;
   job_type: string;
   lead_source: string;
@@ -69,6 +69,7 @@ export const ScheduleJobModal = ({
   const [formData, setFormData] = useState<FormData>({
     title: "",
     client_id: preselectedClientId || "",
+    property_id: "", // Initialize property selection
     description: "",
     job_type: "",
     lead_source: "",
@@ -90,6 +91,10 @@ export const ScheduleJobModal = ({
   const { items: leadSources, isLoading: leadSourcesLoading } = useLeadSources();
   const { items: tags, isLoading: tagsLoading } = useTags();
   const { availableFields: customFields, isLoading: customFieldsLoading } = useJobCustomFields();
+  
+  // Add client properties hook
+  const { useClientProperties } = require("@/hooks/useClientProperties");
+  const { properties: clientProperties, isLoading: propertiesLoading } = useClientProperties(formData.client_id);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -135,6 +140,7 @@ export const ScheduleJobModal = ({
     setFormData({
       title: "",
       client_id: preselectedClientId || "",
+      property_id: "", // Reset property selection
       description: "",
       job_type: "",
       lead_source: "",
@@ -189,6 +195,7 @@ export const ScheduleJobModal = ({
       const jobData = {
         title: formData.title,
         client_id: formData.client_id,
+        property_id: formData.property_id || undefined, // Include property selection
         description: formData.description,
         job_type: formData.job_type || 'General Service',
         lead_source: formData.lead_source,
@@ -350,6 +357,34 @@ export const ScheduleJobModal = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Property Selection - Show only when client has multiple properties */}
+                {formData.client_id && clientProperties.length > 1 && (
+                  <div className="col-span-2">
+                    <Label htmlFor="property_id">Property Location</Label>
+                    <Select onValueChange={handleSelectChange("property_id")} value={formData.property_id}>
+                      <SelectTrigger id="property_id">
+                        <SelectValue placeholder="Select property location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {propertiesLoading ? (
+                          <SelectItem value="" disabled>Loading properties...</SelectItem>
+                        ) : (
+                          clientProperties.map(property => (
+                            <SelectItem key={property.id} value={property.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{property.property_name}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {property.address}, {property.city}, {property.state}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="col-span-2">
                   <Label htmlFor="description">Job Description</Label>
