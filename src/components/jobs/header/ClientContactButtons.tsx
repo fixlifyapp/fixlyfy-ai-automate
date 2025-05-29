@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Phone, MessageSquare, Pencil } from "lucide-react";
 import { useJobDetails } from "../context/JobDetailsContext";
 import { useMessageContext } from "@/contexts/MessageContext";
+import { useNavigate } from "react-router-dom";
 
 interface ClientContactButtonsProps {
   onCallClick: () => void;
@@ -13,6 +14,7 @@ interface ClientContactButtonsProps {
 export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient }: ClientContactButtonsProps) => {
   const { job } = useJobDetails();
   const { openMessageDialog } = useMessageContext();
+  const navigate = useNavigate();
 
   const handleMessageClick = async () => {
     if (job) {
@@ -25,6 +27,14 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
       });
     } else {
       console.error('No job data available');
+    }
+  };
+
+  const handleEditClient = () => {
+    if (job?.clientId) {
+      navigate(`/clients/${job.clientId}`);
+    } else {
+      console.error('No client ID available for editing');
     }
   };
 
@@ -51,7 +61,8 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
         variant="ghost" 
         size="icon" 
         className="h-6 w-6"
-        onClick={onEditClient}
+        onClick={handleEditClient}
+        aria-label="Edit client"
       >
         <Pencil size={12} />
       </Button>
