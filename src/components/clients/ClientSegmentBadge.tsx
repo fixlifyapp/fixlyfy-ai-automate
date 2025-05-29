@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { Crown, Users, TrendingUp } from "lucide-react";
+import { Crown, Users, TrendingUp, Clock } from "lucide-react";
 
 interface ClientSegmentBadgeProps {
   stats: {
@@ -18,6 +18,11 @@ export const ClientSegmentBadge = ({ stats }: ClientSegmentBadgeProps) => {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const isRecent = lastServiceDate && new Date(lastServiceDate) > sixMonthsAgo;
+
+    // Check if client is very old (more than 1 year since last service)
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const isVeryOld = !lastServiceDate || new Date(lastServiceDate) < oneYearAgo;
 
     // VIP clients: High revenue or many jobs
     if (totalRevenue >= 5000 || totalJobs >= 10) {
@@ -39,8 +44,8 @@ export const ClientSegmentBadge = ({ stats }: ClientSegmentBadgeProps) => {
       };
     }
 
-    // New/Potential clients: Low activity but recent
-    if (isRecent) {
+    // New clients: Low activity but recent
+    if (isRecent && (totalRevenue > 0 || totalJobs > 0)) {
       return {
         label: "New Client",
         variant: "outline" as const,
@@ -49,7 +54,17 @@ export const ClientSegmentBadge = ({ stats }: ClientSegmentBadgeProps) => {
       };
     }
 
-    // For clients with no activity or very old activity, don't show a badge
+    // Inactive clients: Have had service but not recently
+    if ((totalRevenue > 0 || totalJobs > 0) && isVeryOld) {
+      return {
+        label: "Inactive",
+        variant: "outline" as const,
+        icon: Clock,
+        color: "bg-gray-100 text-gray-600 border-gray-300"
+      };
+    }
+
+    // For clients with no activity at all, don't show a badge
     return null;
   };
 
