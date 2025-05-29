@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Save, Bot, Shield, Key } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Save, Bot, DollarSign, Brain } from "lucide-react";
 import { useAIAgentConfig } from "@/hooks/useAIAgentConfig";
 import { toast } from "sonner";
 
@@ -21,21 +23,13 @@ const BUSINESS_NICHES = [
   'Home Maintenance'
 ];
 
-const AWS_REGIONS = [
-  'us-east-1',
-  'us-west-2',
-  'eu-west-1',
-  'ap-southeast-2'
-];
-
 export const AIAgentSettings = () => {
   const { 
     config, 
-    awsCredentials, 
     loading, 
     saving, 
-    saveConfig, 
-    saveAWSCredentials 
+    saveConfig,
+    toggleActive
   } = useAIAgentConfig();
 
   const [agentForm, setAgentForm] = useState({
@@ -43,18 +37,8 @@ export const AIAgentSettings = () => {
     diagnostic_price: 75.00,
     emergency_surcharge: 50.00,
     custom_prompt_additions: '',
-    connect_instance_arn: '',
-    aws_region: 'us-east-1',
     is_active: true
   });
-
-  const [awsForm, setAwsForm] = useState({
-    aws_access_key_id: '',
-    aws_secret_access_key: '',
-    aws_region: 'us-east-1'
-  });
-
-  const [showAWSForm, setShowAWSForm] = useState(false);
 
   useEffect(() => {
     if (config) {
@@ -63,8 +47,6 @@ export const AIAgentSettings = () => {
         diagnostic_price: config.diagnostic_price,
         emergency_surcharge: config.emergency_surcharge,
         custom_prompt_additions: config.custom_prompt_additions || '',
-        connect_instance_arn: config.connect_instance_arn || '',
-        aws_region: config.aws_region,
         is_active: config.is_active
       });
     }
@@ -78,20 +60,6 @@ export const AIAgentSettings = () => {
     }
   };
 
-  const handleAWSSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const success = await saveAWSCredentials(awsForm);
-    if (success) {
-      toast.success('AWS credentials saved successfully');
-      setShowAWSForm(false);
-      setAwsForm({
-        aws_access_key_id: '',
-        aws_secret_access_key: '',
-        aws_region: 'us-east-1'
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -102,19 +70,47 @@ export const AIAgentSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* AI Agent Configuration */}
-      <Card className="border-fixlyfy-border">
+      {/* AI Agent Status */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-blue-600" />
+              AI Agent Status
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              <Badge variant={config?.is_active ? "success" : "secondary"}>
+                {config?.is_active ? "Active" : "Inactive"}
+              </Badge>
+              <Switch
+                checked={config?.is_active || false}
+                onCheckedChange={toggleActive}
+                disabled={saving}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Your AI agent is {config?.is_active ? 'currently active and' : 'currently inactive. When active, it will'} automatically handle incoming calls, 
+            understand customer needs, and schedule appointments based on your business configuration.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Business Configuration */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-blue-600" />
-            AI Agent Configuration
+            Business Configuration
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAgentSubmit} className="space-y-4">
+          <form onSubmit={handleAgentSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="business_niche">Business Niche</Label>
+                <Label htmlFor="business_niche">Business Type</Label>
                 <Select 
                   value={agentForm.business_niche} 
                   onValueChange={(value) => setAgentForm(prev => ({ ...prev, business_niche: value }))}
@@ -128,27 +124,18 @@ export const AIAgentSettings = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Helps the AI understand your service industry
+                </p>
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="aws_region">AWS Region</Label>
-                <Select 
-                  value={agentForm.aws_region} 
-                  onValueChange={(value) => setAgentForm(prev => ({ ...prev, aws_region: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AWS_REGIONS.map(region => (
-                      <SelectItem key={region} value={region}>{region}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="diagnostic_price">Diagnostic Price ($)</Label>
+                <Label htmlFor="diagnostic_price" className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Diagnostic Price ($)
+                </Label>
                 <Input
                   id="diagnostic_price"
                   type="number"
@@ -159,6 +146,9 @@ export const AIAgentSettings = () => {
                     diagnostic_price: parseFloat(e.target.value) || 0 
                   }))}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Standard fee the AI will quote for diagnostic visits
+                </p>
               </div>
 
               <div>
@@ -173,27 +163,14 @@ export const AIAgentSettings = () => {
                     emergency_surcharge: parseFloat(e.target.value) || 0 
                   }))}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Additional fee for emergency or after-hours calls
+                </p>
               </div>
             </div>
 
             <div>
-              <Label htmlFor="connect_instance_arn">Amazon Connect Instance ARN</Label>
-              <Input
-                id="connect_instance_arn"
-                value={agentForm.connect_instance_arn}
-                onChange={(e) => setAgentForm(prev => ({ 
-                  ...prev, 
-                  connect_instance_arn: e.target.value 
-                }))}
-                placeholder="arn:aws:connect:region:account:instance/instance-id"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Your Amazon Connect instance ARN from AWS Console
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="custom_prompt_additions">Custom Prompt Additions</Label>
+              <Label htmlFor="custom_prompt_additions">Custom Instructions</Label>
               <Textarea
                 id="custom_prompt_additions"
                 value={agentForm.custom_prompt_additions}
@@ -201,149 +178,74 @@ export const AIAgentSettings = () => {
                   ...prev, 
                   custom_prompt_additions: e.target.value 
                 }))}
-                placeholder="Additional instructions for the AI agent..."
+                placeholder="Add specific instructions for how your AI agent should handle calls..."
                 rows={4}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Custom instructions to personalize your AI agent's behavior
+              <p className="text-xs text-muted-foreground mt-1">
+                Customize how your AI agent communicates with customers
               </p>
             </div>
 
             <Button type="submit" disabled={saving} className="w-full">
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Saving...' : 'Save AI Agent Configuration'}
+              {saving ? 'Saving...' : 'Save Configuration'}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* AWS Credentials */}
-      <Card className="border-fixlyfy-border">
+      {/* How It Works */}
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-green-600" />
-              AWS Credentials
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {awsCredentials && (
-                <span className="text-sm text-green-600 flex items-center gap-1">
-                  <Key className="h-3 w-3" />
-                  Configured
-                </span>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowAWSForm(!showAWSForm)}
-              >
-                {showAWSForm ? 'Cancel' : awsCredentials ? 'Update' : 'Configure'} AWS
-              </Button>
-            </div>
-          </div>
+          <CardTitle>How Your AI Agent Works</CardTitle>
         </CardHeader>
         <CardContent>
-          {!awsCredentials && !showAWSForm && (
-            <div className="text-center py-8 text-gray-500">
-              <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium mb-2">AWS Credentials Required</h3>
-              <p className="text-sm mb-4">
-                Configure your AWS credentials to enable Amazon Connect integration
-              </p>
-              <Button onClick={() => setShowAWSForm(true)}>
-                <Key className="h-4 w-4 mr-2" />
-                Configure AWS Credentials
-              </Button>
-            </div>
-          )}
-
-          {awsCredentials && !showAWSForm && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-green-800">AWS Credentials Configured</p>
-                  <p className="text-sm text-green-600">
-                    Access Key: {awsCredentials.aws_access_key_id.substring(0, 8)}...
-                  </p>
-                  <p className="text-sm text-green-600">
-                    Region: {awsCredentials.aws_region}
-                  </p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowAWSForm(true)}
-                >
-                  Update
-                </Button>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium">
+                1
+              </div>
+              <div>
+                <h4 className="font-medium">Answers Calls</h4>
+                <p className="text-sm text-muted-foreground">
+                  Your AI agent automatically answers incoming customer calls with a professional greeting
+                </p>
               </div>
             </div>
-          )}
-
-          {showAWSForm && (
-            <form onSubmit={handleAWSSubmit} className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium">
+                2
+              </div>
               <div>
-                <Label htmlFor="aws_access_key_id">AWS Access Key ID</Label>
-                <Input
-                  id="aws_access_key_id"
-                  type="password"
-                  value={awsForm.aws_access_key_id}
-                  onChange={(e) => setAwsForm(prev => ({ 
-                    ...prev, 
-                    aws_access_key_id: e.target.value 
-                  }))}
-                  placeholder="AKIAIOSFODNN7EXAMPLE"
-                  required
-                />
+                <h4 className="font-medium">Understands Needs</h4>
+                <p className="text-sm text-muted-foreground">
+                  Uses natural language processing to understand customer service requests and issues
+                </p>
               </div>
-
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium">
+                3
+              </div>
               <div>
-                <Label htmlFor="aws_secret_access_key">AWS Secret Access Key</Label>
-                <Input
-                  id="aws_secret_access_key"
-                  type="password"
-                  value={awsForm.aws_secret_access_key}
-                  onChange={(e) => setAwsForm(prev => ({ 
-                    ...prev, 
-                    aws_secret_access_key: e.target.value 
-                  }))}
-                  placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                  required
-                />
+                <h4 className="font-medium">Provides Quotes</h4>
+                <p className="text-sm text-muted-foreground">
+                  Gives accurate pricing based on your configured rates and service type
+                </p>
               </div>
-
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium">
+                4
+              </div>
               <div>
-                <Label htmlFor="aws_region_form">AWS Region</Label>
-                <Select 
-                  value={awsForm.aws_region} 
-                  onValueChange={(value) => setAwsForm(prev => ({ ...prev, aws_region: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AWS_REGIONS.map(region => (
-                      <SelectItem key={region} value={region}>{region}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <h4 className="font-medium">Schedules Appointments</h4>
+                <p className="text-sm text-muted-foreground">
+                  Books appointments directly into your calendar based on availability
+                </p>
               </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" disabled={saving} className="flex-1">
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Saving...' : 'Save AWS Credentials'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowAWSForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          )}
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
