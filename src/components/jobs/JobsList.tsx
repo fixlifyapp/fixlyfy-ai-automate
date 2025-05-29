@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Job } from "@/hooks/useJobs";
-import { useJobStatuses, useJobTypes } from "@/hooks/useConfigItems";
+import { useJobStatuses, useJobTypes, useTags } from "@/hooks/useConfigItems";
 
 interface JobsListProps {
   jobs: Job[];
@@ -43,6 +43,7 @@ export const JobsList = ({
   // Get configuration data for styling and display
   const { items: jobStatuses } = useJobStatuses();
   const { items: jobTypes } = useJobTypes();
+  const { items: tagItems } = useTags();
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
@@ -87,6 +88,22 @@ export const JobsList = ({
       return { name: job.service, color: null };
     }
     return { name: "Service Job", color: null };
+  };
+
+  // Resolve tag UUIDs to tag names and colors
+  const resolveJobTags = (tags: string[]) => {
+    if (!tags || tags.length === 0) return [];
+    
+    return tags.map(tag => {
+      // If it's a UUID, find the tag by ID
+      if (tag.length === 36 && tag.includes('-')) {
+        const tagItem = tagItems.find(t => t.id === tag);
+        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: null };
+      }
+      // If it's a name, find the tag by name
+      const tagItem = tagItems.find(t => t.name === tag);
+      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: null };
+    });
   };
 
   const getStatusIcon = (status: string) => {
@@ -165,6 +182,7 @@ export const JobsList = ({
             const statusStyle = getStatusBadgeStyle(job.status);
             const jobTypeDisplay = getJobTypeDisplay(job);
             const statusIcon = getStatusIcon(job.status);
+            const resolvedTags = resolveJobTags(job.tags || []);
             
             return (
               <div key={job.id} className="cursor-pointer" onClick={() => handleJobClick(job.id)}>
@@ -235,17 +253,22 @@ export const JobsList = ({
                       </div>
                     )}
                     
-                    {job.tags && job.tags.length > 0 && (
+                    {resolvedTags && resolvedTags.length > 0 && (
                       <div className="flex items-center gap-1 flex-wrap">
                         <Tag className="h-3 w-3 text-muted-foreground" />
-                        {job.tags.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
+                        {resolvedTags.slice(0, 2).map((tag, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                          >
+                            {tag.name}
                           </Badge>
                         ))}
-                        {job.tags.length > 2 && (
+                        {resolvedTags.length > 2 && (
                           <span className="text-xs text-muted-foreground">
-                            +{job.tags.length - 2} more
+                            +{resolvedTags.length - 2} more
                           </span>
                         )}
                       </div>
@@ -297,6 +320,7 @@ export const JobsList = ({
           <tbody>
             {jobs.map((job) => {
               const statusStyle = getStatusBadgeStyle(job.status);
+              const resolvedTags = resolveJobTags(job.tags || []);
               
               return (
                 <tr 
@@ -343,16 +367,21 @@ export const JobsList = ({
                     )}
                   </td>
                   <td className="p-4">
-                    {job.tags && job.tags.length > 0 ? (
+                    {resolvedTags && resolvedTags.length > 0 ? (
                       <div className="flex items-center gap-1 flex-wrap">
-                        {job.tags.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
+                        {resolvedTags.slice(0, 2).map((tag, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                          >
+                            {tag.name}
                           </Badge>
                         ))}
-                        {job.tags.length > 2 && (
+                        {resolvedTags.length > 2 && (
                           <span className="text-xs text-muted-foreground">
-                            +{job.tags.length - 2}
+                            +{resolvedTags.length - 2}
                           </span>
                         )}
                       </div>
