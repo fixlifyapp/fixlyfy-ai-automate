@@ -15,6 +15,7 @@ import { ModernJobEstimatesTab } from "@/components/jobs/overview/ModernJobEstim
 import { ModernJobInvoicesTab } from "@/components/jobs/overview/ModernJobInvoicesTab";
 import { ModernJobPaymentsTab } from "@/components/jobs/overview/ModernJobPaymentsTab";
 import { ModernJobHistoryTab } from "@/components/jobs/overview/ModernJobHistoryTab";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,7 @@ const JobDetailsPage = () => {
   const { hasPermission } = useRBAC();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (location.state && location.state.activeTab) {
@@ -72,14 +74,14 @@ const JobDetailsPage = () => {
   return (
     <PageLayout>
       <JobDetailsProvider jobId={id || ""} key={`${id}-${refreshTrigger}`}>
-        <div className="container mx-auto px-4">
-          <div className="mb-6">
-            <Card className="border-fixlyfy-border shadow-sm">
+        <div className={`container mx-auto ${isMobile ? 'px-2' : 'px-4'}`}>
+          <div className={`mb-6 ${isMobile ? 'mb-4' : 'mb-6'}`}>
+            <Card className={`border-fixlyfy-border shadow-sm ${isMobile ? 'mx-1' : ''}`}>
               <JobDetailsHeader key={`header-${refreshTrigger}`} />
             </Card>
           </div>
           
-          <div className="w-full">
+          <div className={`w-full ${isMobile ? 'px-1' : ''}`}>
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}

@@ -17,8 +17,12 @@ import {
   Download,
   Users
 } from "lucide-react";
+import { useIsMobile, useIsMobileOrTablet } from "@/hooks/use-mobile";
 
 export const ScheduledReports = () => {
+  const isMobile = useIsMobile();
+  const isMobileOrTablet = useIsMobileOrTablet();
+  
   const [reports, setReports] = useState([
     {
       id: 1,
@@ -93,42 +97,46 @@ export const ScheduledReports = () => {
 
   const getFrequencyIcon = (frequency: string) => {
     switch (frequency) {
-      case 'Daily': return <Clock className="h-4 w-4" />;
-      case 'Weekly': return <Calendar className="h-4 w-4" />;
-      case 'Monthly': return <Calendar className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
+      case 'Daily': return <Clock className={isMobile ? "h-3 w-3" : "h-4 w-4"} />;
+      case 'Weekly': return <Calendar className={isMobile ? "h-3 w-3" : "h-4 w-4"} />;
+      case 'Monthly': return <Calendar className={isMobile ? "h-3 w-3" : "h-4 w-4"} />;
+      default: return <Clock className={isMobile ? "h-3 w-3" : "h-4 w-4"} />;
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'}`}>
         <div>
-          <h2 className="text-xl font-semibold">Scheduled Reports</h2>
-          <p className="text-muted-foreground">Automated report generation and distribution</p>
+          <h2 className={`font-semibold ${isMobile ? 'text-lg' : 'text-xl'}`}>Scheduled Reports</h2>
+          <p className={`text-muted-foreground ${isMobile ? 'text-sm' : ''}`}>
+            {isMobile ? "Automated reports" : "Automated report generation and distribution"}
+          </p>
         </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          New Scheduled Report
+        <Button className={`flex items-center gap-2 ${isMobile ? 'w-full justify-center' : ''}`} size={isMobile ? "sm" : "default"}>
+          <Plus className={isMobile ? "h-3 w-3" : "h-4 w-4"} />
+          {isMobile ? "New Report" : "New Scheduled Report"}
         </Button>
       </div>
 
       {/* Active Reports */}
-      <div className="space-y-4">
+      <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'space-y-4'}`}>
         {reports.map((report) => (
           <Card key={report.id}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
+            <CardContent className={isMobile ? "p-4" : "p-6"}>
+              <div className={`flex items-center justify-between mb-4 ${isMobile ? 'mb-3' : 'mb-4'}`}>
                 <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
+                  <FileText className={`text-blue-600 ${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
                   <div>
-                    <h3 className="font-semibold">{report.name}</h3>
-                    <p className="text-sm text-muted-foreground">Template: {report.template}</p>
+                    <h3 className={`font-semibold ${isMobile ? 'text-sm' : ''}`}>{report.name}</h3>
+                    <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                      Template: {report.template}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(report.status)}>
+                  <Badge className={`${getStatusColor(report.status)} ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
                     {report.status}
                   </Badge>
                   <Switch 
@@ -138,41 +146,41 @@ export const ScheduledReports = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className={`grid grid-cols-2 ${isMobileOrTablet ? 'md:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-4'} gap-4 mb-4 ${isMobile ? 'gap-3 mb-3' : 'gap-4 mb-4'}`}>
                 <div className="flex items-center gap-2">
                   {getFrequencyIcon(report.frequency)}
                   <div>
-                    <p className="text-xs text-muted-foreground">Frequency</p>
-                    <p className="text-sm font-medium">{report.frequency}</p>
+                    <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-xs'}`}>Frequency</p>
+                    <p className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>{report.frequency}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
+                  <Clock className={`text-gray-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                   <div>
-                    <p className="text-xs text-muted-foreground">Schedule</p>
-                    <p className="text-sm font-medium">{report.time}</p>
+                    <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-xs'}`}>Schedule</p>
+                    <p className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>{report.time}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-500" />
+                  <Users className={`text-gray-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                   <div>
-                    <p className="text-xs text-muted-foreground">Recipients</p>
-                    <p className="text-sm font-medium">{report.recipients.length} people</p>
+                    <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-xs'}`}>Recipients</p>
+                    <p className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>{report.recipients.length} people</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Download className="h-4 w-4 text-gray-500" />
+                  <Download className={`text-gray-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                   <div>
-                    <p className="text-xs text-muted-foreground">Format</p>
-                    <p className="text-sm font-medium">{report.format}</p>
+                    <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-xs'}`}>Format</p>
+                    <p className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>{report.format}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 ${isMobile ? 'text-xs gap-2 mb-3' : 'text-sm gap-4 mb-4'}`}>
                 <div>
                   <p className="text-muted-foreground">Last Run: <span className="text-foreground">{report.lastRun}</span></p>
                 </div>
@@ -181,25 +189,29 @@ export const ScheduledReports = () => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline">
-                  <Play className="h-3 w-3 mr-1" />
-                  Run Now
+              <div className={`flex ${isMobile ? 'flex-wrap gap-1' : 'flex-wrap gap-2'}`}>
+                <Button size={isMobile ? "xs" : "sm"} variant="outline" className={isMobile ? "text-xs px-2 py-1" : ""}>
+                  <Play className={`mr-1 ${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
+                  {isMobile ? "Run" : "Run Now"}
                 </Button>
-                <Button size="sm" variant="outline">
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit Schedule
+                <Button size={isMobile ? "xs" : "sm"} variant="outline" className={isMobile ? "text-xs px-2 py-1" : ""}>
+                  <Edit className={`mr-1 ${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
+                  {isMobile ? "Edit" : "Edit Schedule"}
                 </Button>
-                <Button size="sm" variant="outline">
-                  <Mail className="h-3 w-3 mr-1" />
-                  Edit Recipients
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Download className="h-3 w-3 mr-1" />
-                  Download Last
-                </Button>
-                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                  <Trash2 className="h-3 w-3 mr-1" />
+                {!isMobile && (
+                  <>
+                    <Button size="sm" variant="outline">
+                      <Mail className="h-3 w-3 mr-1" />
+                      Edit Recipients
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Download className="h-3 w-3 mr-1" />
+                      Download Last
+                    </Button>
+                  </>
+                )}
+                <Button size={isMobile ? "xs" : "sm"} variant="outline" className={`text-red-600 hover:text-red-700 ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
+                  <Trash2 className={`mr-1 ${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
                   Delete
                 </Button>
               </div>
@@ -211,28 +223,28 @@ export const ScheduledReports = () => {
       {/* Schedule Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Schedule Summary</CardTitle>
+          <CardTitle className={isMobile ? "text-base" : ""}>Schedule Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <Calendar className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <h4 className="font-medium text-blue-900">Total Scheduled</h4>
-              <p className="text-2xl font-bold text-blue-600">{reports.length}</p>
+          <div className={`grid grid-cols-1 ${isMobile ? 'gap-4' : 'md:grid-cols-3 gap-6'}`}>
+            <div className={`text-center bg-blue-50 rounded-lg ${isMobile ? 'p-3' : 'p-4'}`}>
+              <Calendar className={`mx-auto mb-2 text-blue-600 ${isMobile ? 'h-6 w-6' : 'h-8 w-8'}`} />
+              <h4 className={`font-medium text-blue-900 ${isMobile ? 'text-sm' : ''}`}>Total Scheduled</h4>
+              <p className={`font-bold text-blue-600 ${isMobile ? 'text-xl' : 'text-2xl'}`}>{reports.length}</p>
             </div>
             
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <Play className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <h4 className="font-medium text-green-900">Active Reports</h4>
-              <p className="text-2xl font-bold text-green-600">
+            <div className={`text-center bg-green-50 rounded-lg ${isMobile ? 'p-3' : 'p-4'}`}>
+              <Play className={`mx-auto mb-2 text-green-600 ${isMobile ? 'h-6 w-6' : 'h-8 w-8'}`} />
+              <h4 className={`font-medium text-green-900 ${isMobile ? 'text-sm' : ''}`}>Active Reports</h4>
+              <p className={`font-bold text-green-600 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
                 {reports.filter(r => r.enabled).length}
               </p>
             </div>
             
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <Mail className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-              <h4 className="font-medium text-purple-900">Total Recipients</h4>
-              <p className="text-2xl font-bold text-purple-600">
+            <div className={`text-center bg-purple-50 rounded-lg ${isMobile ? 'p-3' : 'p-4'}`}>
+              <Mail className={`mx-auto mb-2 text-purple-600 ${isMobile ? 'h-6 w-6' : 'h-8 w-8'}`} />
+              <h4 className={`font-medium text-purple-900 ${isMobile ? 'text-sm' : ''}`}>Total Recipients</h4>
+              <p className={`font-bold text-purple-600 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
                 {new Set(reports.flatMap(r => r.recipients)).size}
               </p>
             </div>
