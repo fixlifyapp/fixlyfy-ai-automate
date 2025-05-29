@@ -27,6 +27,7 @@ interface JobsListProps {
   selectedJobs: string[];
   onSelectJob: (jobId: string, isSelected: boolean) => void;
   onSelectAllJobs: (isSelected: boolean) => void;
+  onRefresh?: () => void;
 }
 
 export const JobsList = ({ 
@@ -34,7 +35,8 @@ export const JobsList = ({
   isGridView = false, 
   selectedJobs, 
   onSelectJob, 
-  onSelectAllJobs 
+  onSelectAllJobs,
+  onRefresh
 }: JobsListProps) => {
   const navigate = useNavigate();
   
@@ -119,7 +121,16 @@ export const JobsList = ({
         <div className="text-muted-foreground">
           <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
-          <p>Start by creating your first job.</p>
+          <p>No jobs match your current filters.</p>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={onRefresh}
+            >
+              Refresh Jobs
+            </Button>
+          )}
         </div>
       </ModernCard>
     );
@@ -138,6 +149,15 @@ export const JobsList = ({
               Select all ({jobs.length})
             </span>
           </div>
+          {onRefresh && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onRefresh}
+            >
+              Refresh
+            </Button>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,7 +260,7 @@ export const JobsList = ({
     );
   }
 
-  // List view (table format) with new columns
+  // List view (table format)
   return (
     <ModernCard variant="elevated">
       <div className="overflow-x-auto">
@@ -259,7 +279,19 @@ export const JobsList = ({
               <th className="text-left p-4 font-semibold">Address</th>
               <th className="text-left p-4 font-semibold">Tags</th>
               <th className="text-left p-4 font-semibold">Revenue</th>
-              <th className="text-right p-4 w-20">Actions</th>
+              <th className="text-right p-4 w-20">
+                Actions
+                {onRefresh && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={onRefresh}
+                    className="ml-2"
+                  >
+                    Refresh
+                  </Button>
+                )}
+              </th>
             </tr>
           </thead>
           <tbody>

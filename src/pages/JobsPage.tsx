@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -10,7 +11,8 @@ import {
   Plus, 
   Wrench, 
   Target, 
-  TrendingUp
+  TrendingUp,
+  RefreshCw
 } from "lucide-react";
 import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
@@ -32,14 +34,28 @@ const JobsPage = () => {
     tags: [] as string[]
   });
   
-  const { jobs, addJob, updateJob, deleteJob } = useJobs();
+  const { jobs, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
   
+  // Clear selected jobs when jobs change
+  useEffect(() => {
+    setSelectedJobs(prev => prev.filter(id => jobs.some(job => job.id === id)));
+  }, [jobs]);
+
   // Filter jobs based on current filters
   const filteredJobs = jobs.filter(job => {
-    // Search filter
-    if (filters.search && !job.client?.name.toLowerCase().includes(filters.search.toLowerCase()) && 
-        !job.id.toLowerCase().includes(filters.search.toLowerCase())) {
-      return false;
+    // Search filter - search in client name, job ID, title, and description
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      const searchableFields = [
+        job.client?.name || '',
+        job.id || '',
+        job.title || '',
+        job.description || ''
+      ];
+      
+      if (!searchableFields.some(field => field.toLowerCase().includes(searchTerm))) {
+        return false;
+      }
     }
     
     // Status filter
@@ -60,9 +76,11 @@ const JobsPage = () => {
       return false;
     }
     
-    // Tags filter
-    if (filters.tags.length > 0 && (!job.tags || !filters.tags.some(tag => job.tags?.includes(tag)))) {
-      return false;
+    // Tags filter - check if job has any of the selected tags
+    if (filters.tags.length > 0) {
+      if (!job.tags || !filters.tags.some(tag => job.tags?.includes(tag))) {
+        return false;
+      }
     }
     
     return true;
@@ -73,6 +91,10 @@ const JobsPage = () => {
       const createdJob = await addJob(jobData);
       if (createdJob) {
         toast.success(`Job ${createdJob.id} created successfully!`);
+        // Force refresh to show new job
+        setTimeout(() => {
+          refreshJobs();
+        }, 100);
         return createdJob;
       }
     } catch (error) {
@@ -94,12 +116,16 @@ const JobsPage = () => {
     setSelectedJobs(select ? filteredJobs.map(job => job.id) : []);
   };
 
-  // Bulk action handlers
+  // Bulk action handlers with proper refresh
   const handleBulkUpdateStatus = async (jobIds: string[], newStatus: string) => {
     try {
       await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
       toast.success(`Updated ${jobIds.length} jobs to ${newStatus}`);
       setSelectedJobs([]);
+      // Force refresh after bulk update
+      setTimeout(() => {
+        refreshJobs();
+      }, 100);
     } catch (error) {
       toast.error('Failed to update job statuses');
     }
@@ -110,6 +136,10 @@ const JobsPage = () => {
       await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
       toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
       setSelectedJobs([]);
+      // Force refresh after bulk assignment
+      setTimeout(() => {
+        refreshJobs();
+      }, 100);
     } catch (error) {
       toast.error('Failed to assign technician');
     }
@@ -120,6 +150,10 @@ const JobsPage = () => {
       await Promise.all(jobIds.map(id => deleteJob(id)));
       toast.success(`Deleted ${jobIds.length} jobs`);
       setSelectedJobs([]);
+      // Force refresh after bulk delete
+      setTimeout(() => {
+        refreshJobs();
+      }, 100);
     } catch (error) {
       toast.error('Failed to delete jobs');
     }
@@ -139,7 +173,7 @@ const JobsPage = () => {
     
     const csv = [
       Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
     ].join('\n');
     
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -164,9 +198,19 @@ const JobsPage = () => {
       }));
       toast.success(`Tagged ${jobIds.length} jobs`);
       setSelectedJobs([]);
+      // Force refresh after tagging
+      setTimeout(() => {
+        refreshJobs();
+      }, 100);
     } catch (error) {
       toast.error('Failed to tag jobs');
     }
+  };
+
+  const handleRefreshJobs = () => {
+    refreshJobs();
+    setSelectedJobs([]);
+    toast.success('Jobs refreshed');
   };
 
   return (
@@ -198,6 +242,14 @@ const JobsPage = () => {
               />
               <div className="flex items-center gap-2">
                 <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshJobs}
+                  className="flex gap-2 rounded-xl"
+                >
+                  <RefreshCw size={18} /> Refresh
+                </Button>
+                <Button
                   variant={isGridView ? "ghost" : "secondary"}
                   size="sm"
                   onClick={() => setIsGridView(false)}
@@ -223,6 +275,7 @@ const JobsPage = () => {
             selectedJobs={selectedJobs}
             onSelectJob={handleSelectJob}
             onSelectAllJobs={handleSelectAllJobs}
+            onRefresh={handleRefreshJobs}
           />
         </div>
       </AnimatedContainer>

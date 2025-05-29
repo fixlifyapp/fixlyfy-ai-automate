@@ -81,11 +81,11 @@ export const JobsFilters = ({ onFiltersChange, filters }: JobsFiltersProps) => {
 
   return (
     <div className="flex flex-wrap items-center gap-4">
-      {/* Search */}
+      {/* Search - Enhanced to search multiple fields */}
       <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search jobs..."
+          placeholder="Search jobs, clients, descriptions..."
           value={filters.search}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-10"
@@ -185,7 +185,7 @@ export const JobsFilters = ({ onFiltersChange, filters }: JobsFiltersProps) => {
         </PopoverContent>
       </Popover>
 
-      {/* Tags Filter */}
+      {/* Tags Filter - Improved functionality */}
       {!tagsLoading && tags.length > 0 && (
         <Popover>
           <PopoverTrigger asChild>
@@ -207,7 +207,7 @@ export const JobsFilters = ({ onFiltersChange, filters }: JobsFiltersProps) => {
                   <Badge
                     key={tag.id}
                     variant={filters.tags.includes(tag.name) ? "default" : "outline"}
-                    className="cursor-pointer"
+                    className="cursor-pointer transition-all hover:scale-105"
                     onClick={() => handleTagToggle(tag.name)}
                     style={tag.color && filters.tags.includes(tag.name) ? 
                       { backgroundColor: tag.color, color: 'white' } : 
@@ -218,22 +218,41 @@ export const JobsFilters = ({ onFiltersChange, filters }: JobsFiltersProps) => {
                   </Badge>
                 ))}
               </div>
+              {filters.tags.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => onFiltersChange({ ...filters, tags: [] })}
+                  className="w-full"
+                >
+                  Clear Tags
+                </Button>
+              )}
             </div>
           </PopoverContent>
         </Popover>
       )}
 
-      {/* Clear Filters */}
+      {/* Clear All Filters */}
       {hasActiveFilters && (
         <Button variant="ghost" onClick={clearFilters} className="gap-2">
           <X className="h-4 w-4" />
-          Clear
+          Clear All
         </Button>
       )}
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2">
+          {filters.search && (
+            <Badge variant="secondary" className="gap-1">
+              Search: "{filters.search}"
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => handleSearchChange("")}
+              />
+            </Badge>
+          )}
           {filters.status !== "all" && (
             <Badge variant="secondary" className="gap-1">
               Status: {filters.status}
