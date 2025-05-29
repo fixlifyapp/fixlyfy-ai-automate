@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -19,9 +18,7 @@ import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
 import { DocumentConversionDialog } from "./unified/DocumentConversionDialog";
 import { SmartTemplateSelector } from "./unified/SmartTemplateSelector";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
-
 export type DocumentType = "estimate" | "invoice";
-
 interface UnifiedDocumentBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,7 +34,6 @@ interface UnifiedDocumentBuilderProps {
   onDocumentCreated?: (document: Estimate | Invoice) => void;
   onSyncToInvoice?: () => void;
 }
-
 export const UnifiedDocumentBuilder = ({
   open,
   onOpenChange,
@@ -57,11 +53,14 @@ export const UnifiedDocumentBuilder = ({
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [showSmartTemplates, setShowSmartTemplates] = useState(false);
   const isMobile = useIsMobile();
-  
+
   // Fetch job data
-  const { jobs, isLoading } = useJobs(jobId);
+  const {
+    jobs,
+    isLoading
+  } = useJobs(jobId);
   const [jobData, setJobData] = useState<any>(null);
-  
+
   // Get the job data when jobs are loaded
   useEffect(() => {
     if (!isLoading && jobs.length > 0) {
@@ -71,7 +70,6 @@ export const UnifiedDocumentBuilder = ({
       }
     }
   }, [jobs, isLoading, jobId]);
-  
   const documentBuilder = useUnifiedDocumentBuilder({
     documentType,
     existingDocument,
@@ -86,12 +84,10 @@ export const UnifiedDocumentBuilder = ({
       setShowSmartTemplates(true);
     }
   }, [open, existingDocument, documentBuilder.lineItems.length, documentBuilder.jobData]);
-  
   const handleProductSelect = (product: Product) => {
     documentBuilder.handleAddProduct(product);
     setIsProductSearchOpen(false);
   };
-
   const handleTemplateSelect = (templateItems: Product[]) => {
     templateItems.forEach(item => {
       documentBuilder.handleAddProduct(item);
@@ -99,7 +95,6 @@ export const UnifiedDocumentBuilder = ({
     setShowSmartTemplates(false);
     toast.success(`Added ${templateItems.length} items from template`);
   };
-  
   const handleCustomLineItemSave = (item: Partial<LineItem>) => {
     const newLineItem: LineItem = {
       id: `item-${Date.now()}`,
@@ -113,12 +108,10 @@ export const UnifiedDocumentBuilder = ({
       price: item.unitPrice || 0,
       total: (item.quantity || 1) * (item.unitPrice || 0)
     };
-    
     const updatedLineItems = [...documentBuilder.lineItems, newLineItem];
     documentBuilder.setLineItems(updatedLineItems);
     setIsCustomLineItemDialogOpen(false);
   };
-
   const handleEditLineItem = (id: string) => {
     const lineItem = documentBuilder.lineItems.find(item => item.id === id);
     if (lineItem) {
@@ -140,7 +133,6 @@ export const UnifiedDocumentBuilder = ({
     }
     return false;
   };
-
   const handleProductUpdate = (updatedProduct: Product) => {
     const updatedLineItems = documentBuilder.lineItems.map(item => {
       if (item.id === updatedProduct.id) {
@@ -158,14 +150,13 @@ export const UnifiedDocumentBuilder = ({
       }
       return item;
     });
-    
     documentBuilder.setLineItems(updatedLineItems);
     setIsProductEditDialogOpen(false);
   };
-  
+
   // Check if document has any line items
   const hasLineItems = documentBuilder.lineItems && documentBuilder.lineItems.length > 0;
-  
+
   // Handle send document with validation
   const handleSendDocument = () => {
     if (!hasLineItems) {
@@ -181,12 +172,10 @@ export const UnifiedDocumentBuilder = ({
       toast.error(`Please add at least one item to the ${documentType} before saving`);
       return;
     }
-    
     const result = await documentBuilder.saveDocumentChanges();
     if (result && onDocumentCreated) {
       onDocumentCreated(result);
     }
-    
     if (result) {
       toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} saved successfully`);
       onOpenChange(false);
@@ -205,7 +194,7 @@ export const UnifiedDocumentBuilder = ({
       }
     }
   };
-  
+
   // Handle adding a warranty product
   const handleAddWarranty = (warranty: Product | null, note: string) => {
     if (warranty) {
@@ -213,7 +202,6 @@ export const UnifiedDocumentBuilder = ({
         ...warranty,
         ourPrice: 0
       });
-      
       if (note) {
         documentBuilder.setNotes(note);
       }
@@ -222,7 +210,9 @@ export const UnifiedDocumentBuilder = ({
 
   // Wrapper function to match the expected signature for forms
   const handleUpdateLineItemWrapper = (id: string, field: string, value: any) => {
-    const updates: Partial<LineItem> = { [field]: value };
+    const updates: Partial<LineItem> = {
+      [field]: value
+    };
     documentBuilder.handleUpdateLineItem(id, updates);
   };
 
@@ -231,26 +221,14 @@ export const UnifiedDocumentBuilder = ({
     const result = await documentBuilder.saveDocumentChanges();
     return result !== null;
   };
-
-  const documentTitle = documentType === 'estimate' 
-    ? (existingDocument ? `Edit Estimate ${documentBuilder.documentNumber}` : 'Create New Estimate')
-    : (existingDocument ? `Edit Invoice ${documentBuilder.documentNumber}` : 'Create New Invoice');
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+  const documentTitle = documentType === 'estimate' ? existingDocument ? `Edit Estimate ${documentBuilder.documentNumber}` : 'Create New Estimate' : existingDocument ? `Edit Invoice ${documentBuilder.documentNumber}` : 'Create New Invoice';
+  return <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="p-6 border-b bg-muted/20">
           <div className="flex items-center gap-2">
-            {isMobile && activeTab !== "form" && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setActiveTab("form")} 
-                className="mr-1"
-              >
+            {isMobile && activeTab !== "form" && <Button variant="ghost" size="icon" onClick={() => setActiveTab("form")} className="mr-1">
                 <ArrowLeft size={18} />
-              </Button>
-            )}
+              </Button>}
             <DialogTitle className="text-xl">
               {documentTitle}
             </DialogTitle>
@@ -258,104 +236,40 @@ export const UnifiedDocumentBuilder = ({
         </DialogHeader>
         
         <div className="flex flex-grow overflow-hidden">
-          {!isMobile && (
-            <div className="w-20 bg-muted/10 border-r flex flex-col items-center pt-8 gap-8">
-              <button 
-                onClick={() => setActiveTab("form")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "form" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
+          {!isMobile && <div className="w-20 bg-muted/10 border-r flex flex-col items-center pt-8 gap-8">
+              <button onClick={() => setActiveTab("form")} className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "form" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}>
                 <ListPlus size={20} />
                 <span>Form</span>
               </button>
               
-              <button 
-                onClick={() => setActiveTab("preview")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "preview" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
+              <button onClick={() => setActiveTab("preview")} className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "preview" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}>
                 <FileText size={20} />
                 <span>Preview</span>
               </button>
 
-              {showSmartTemplates && (
-                <button 
-                  onClick={() => setActiveTab("templates")}
-                  className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "templates" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-                >
-                  <Lightbulb size={20} />
-                  <span>Templates</span>
-                </button>
-              )}
-            </div>
-          )}
+              {showSmartTemplates}
+            </div>}
           
           <div className="flex-grow overflow-hidden flex flex-col">
-            {isMobile && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="border-b">
+            {isMobile && <Tabs value={activeTab} onValueChange={setActiveTab} className="border-b">
                 <TabsList className="w-full bg-background">
                   <TabsTrigger value="form" className="flex-1">Form</TabsTrigger>
                   <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
-                  {showSmartTemplates && (
-                    <TabsTrigger value="templates" className="flex-1">Templates</TabsTrigger>
-                  )}
+                  {showSmartTemplates && <TabsTrigger value="templates" className="flex-1">Templates</TabsTrigger>}
                 </TabsList>
-              </Tabs>
-            )}
+              </Tabs>}
             
             <div className="flex-grow overflow-auto p-6">
-              {activeTab === "form" && (
-                <UnifiedDocumentForm
-                  documentType={documentType}
-                  documentNumber={documentBuilder.documentNumber}
-                  lineItems={documentBuilder.lineItems || []}
-                  onRemoveLineItem={documentBuilder.handleRemoveLineItem}
-                  onUpdateLineItem={handleUpdateLineItemWrapper}
-                  onEditLineItem={handleEditLineItem}
-                  onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
-                  onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
-                  taxRate={documentBuilder.taxRate}
-                  setTaxRate={documentBuilder.setTaxRate}
-                  calculateSubtotal={documentBuilder.calculateSubtotal}
-                  calculateTotalTax={documentBuilder.calculateTotalTax}
-                  calculateGrandTotal={documentBuilder.calculateGrandTotal}
-                  calculateTotalMargin={documentBuilder.calculateTotalMargin}
-                  calculateMarginPercentage={documentBuilder.calculateMarginPercentage}
-                  notes={documentBuilder.notes || ""}
-                  setNotes={documentBuilder.setNotes}
-                  showMargin={documentType === 'estimate'}
-                />
-              )}
+              {activeTab === "form" && <UnifiedDocumentForm documentType={documentType} documentNumber={documentBuilder.documentNumber} lineItems={documentBuilder.lineItems || []} onRemoveLineItem={documentBuilder.handleRemoveLineItem} onUpdateLineItem={handleUpdateLineItemWrapper} onEditLineItem={handleEditLineItem} onAddEmptyLineItem={() => setIsProductSearchOpen(true)} onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)} taxRate={documentBuilder.taxRate} setTaxRate={documentBuilder.setTaxRate} calculateSubtotal={documentBuilder.calculateSubtotal} calculateTotalTax={documentBuilder.calculateTotalTax} calculateGrandTotal={documentBuilder.calculateGrandTotal} calculateTotalMargin={documentBuilder.calculateTotalMargin} calculateMarginPercentage={documentBuilder.calculateMarginPercentage} notes={documentBuilder.notes || ""} setNotes={documentBuilder.setNotes} showMargin={documentType === 'estimate'} />}
               
-              {activeTab === "preview" && (
-                <UnifiedDocumentPreview 
-                  documentType={documentType}
-                  documentNumber={documentBuilder.documentNumber}
-                  lineItems={documentBuilder.lineItems || []}
-                  taxRate={documentBuilder.taxRate}
-                  calculateSubtotal={documentBuilder.calculateSubtotal}
-                  calculateTotalTax={documentBuilder.calculateTotalTax}
-                  calculateGrandTotal={documentBuilder.calculateGrandTotal}
-                  notes={documentBuilder.notes || ""}
-                  clientInfo={clientInfo || jobData?.client}
-                  issueDate={new Date().toLocaleDateString()}
-                  dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                />
-              )}
+              {activeTab === "preview" && <UnifiedDocumentPreview documentType={documentType} documentNumber={documentBuilder.documentNumber} lineItems={documentBuilder.lineItems || []} taxRate={documentBuilder.taxRate} calculateSubtotal={documentBuilder.calculateSubtotal} calculateTotalTax={documentBuilder.calculateTotalTax} calculateGrandTotal={documentBuilder.calculateGrandTotal} notes={documentBuilder.notes || ""} clientInfo={clientInfo || jobData?.client} issueDate={new Date().toLocaleDateString()} dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()} />}
 
-              {activeTab === "templates" && showSmartTemplates && (
-                <div className="space-y-4">
-                  <SmartTemplateSelector
-                    jobData={documentBuilder.jobData}
-                    onSelectTemplate={handleTemplateSelect}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSmartTemplates(false)}
-                    className="w-full"
-                  >
+              {activeTab === "templates" && showSmartTemplates && <div className="space-y-4">
+                  <SmartTemplateSelector jobData={documentBuilder.jobData} onSelectTemplate={handleTemplateSelect} />
+                  <Button variant="outline" onClick={() => setShowSmartTemplates(false)} className="w-full">
                     Skip Templates
                   </Button>
-                </div>
-              )}
+                </div>}
             </div>
             
             <div className="p-4 border-t bg-muted/20 flex justify-between items-center">
@@ -365,31 +279,15 @@ export const UnifiedDocumentBuilder = ({
                 </Button>
                 
                 {/* Convert to Invoice button for estimates */}
-                {documentType === 'estimate' && existingDocument && hasLineItems && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => setIsConversionDialogOpen(true)}
-                    className="gap-2"
-                    disabled={documentBuilder.isSubmitting}
-                  >
+                {documentType === 'estimate' && existingDocument && hasLineItems && <Button variant="outline" onClick={() => setIsConversionDialogOpen(true)} className="gap-2" disabled={documentBuilder.isSubmitting}>
                     <ArrowRight size={16} />
                     Convert to Invoice
-                  </Button>
-                )}
+                  </Button>}
               </div>
 
-              <Button 
-                onClick={documentType === 'estimate' ? handleSendDocument : handleSaveAndSend}
-                className="flex items-center gap-1"
-                disabled={!hasLineItems || documentBuilder.isSubmitting}
-              >
+              <Button onClick={documentType === 'estimate' ? handleSendDocument : handleSaveAndSend} className="flex items-center gap-1" disabled={!hasLineItems || documentBuilder.isSubmitting}>
                 <Send size={16} />
-                {documentBuilder.isSubmitting 
-                  ? 'Saving...' 
-                  : documentType === 'estimate' 
-                    ? 'Send to Client' 
-                    : 'Save & Send'
-                }
+                {documentBuilder.isSubmitting ? 'Saving...' : documentType === 'estimate' ? 'Send to Client' : 'Save & Send'}
               </Button>
             </div>
           </div>
@@ -397,50 +295,18 @@ export const UnifiedDocumentBuilder = ({
       </DialogContent>
       
       {/* Product Search Dialog */}
-      <ProductSearch
-        open={isProductSearchOpen}
-        onOpenChange={setIsProductSearchOpen}
-        onProductSelect={handleProductSelect}
-      />
+      <ProductSearch open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen} onProductSelect={handleProductSelect} />
       
       {/* Custom Line Item Dialog */}
-      <CustomLineItemDialog
-        open={isCustomLineItemDialogOpen}
-        onOpenChange={setIsCustomLineItemDialogOpen}
-        onSave={handleCustomLineItemSave}
-      />
+      <CustomLineItemDialog open={isCustomLineItemDialogOpen} onOpenChange={setIsCustomLineItemDialogOpen} onSave={handleCustomLineItemSave} />
 
       {/* Product Edit Dialog */}
-      <ProductEditInEstimateDialog
-        open={isProductEditDialogOpen}
-        onOpenChange={setIsProductEditDialogOpen}
-        product={selectedProduct}
-        onSave={handleProductUpdate}
-      />
+      <ProductEditInEstimateDialog open={isProductEditDialogOpen} onOpenChange={setIsProductEditDialogOpen} product={selectedProduct} onSave={handleProductUpdate} />
 
       {/* Document Conversion Dialog */}
-      {documentType === 'estimate' && existingDocument && (
-        <DocumentConversionDialog
-          open={isConversionDialogOpen}
-          onOpenChange={setIsConversionDialogOpen}
-          estimate={existingDocument as Estimate}
-          onConvert={handleConvertToInvoice}
-          isConverting={documentBuilder.isSubmitting}
-        />
-      )}
+      {documentType === 'estimate' && existingDocument && <DocumentConversionDialog open={isConversionDialogOpen} onOpenChange={setIsConversionDialogOpen} estimate={existingDocument as Estimate} onConvert={handleConvertToInvoice} isConverting={documentBuilder.isSubmitting} />}
       
       {/* Send Dialog with Warranty Selection (for estimates) */}
-      {documentType === 'estimate' && (
-        <EstimateSendDialog
-          open={isSendDialogOpen}
-          onOpenChange={setIsSendDialogOpen}
-          onSave={handleSaveDocumentWrapper}
-          onAddWarranty={handleAddWarranty}
-          clientInfo={clientInfo || jobData?.client}
-          estimateNumber={documentBuilder.documentNumber}
-          jobId={jobId}
-        />
-      )}
-    </Dialog>
-  );
+      {documentType === 'estimate' && <EstimateSendDialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen} onSave={handleSaveDocumentWrapper} onAddWarranty={handleAddWarranty} clientInfo={clientInfo || jobData?.client} estimateNumber={documentBuilder.documentNumber} jobId={jobId} />}
+    </Dialog>;
 };
