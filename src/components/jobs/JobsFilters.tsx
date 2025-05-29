@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,36 +21,63 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useJobStatuses, useJobTypes, useTags } from "@/hooks/useConfigItems";
 
-export const JobsFilters = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<{start?: Date; end?: Date}>({});
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+interface JobsFiltersProps {
+  onFiltersChange: (filters: any) => void;
+  filters: {
+    search: string;
+    status: string;
+    type: string;
+    technician: string;
+    dateRange: { start: Date | null; end: Date | null };
+    tags: string[];
+  };
+}
+
+export const JobsFilters = ({ onFiltersChange, filters }: JobsFiltersProps) => {
   // Get configuration data dynamically
   const { items: jobStatuses, isLoading: statusesLoading } = useJobStatuses();
   const { items: jobTypes, isLoading: typesLoading } = useJobTypes();
   const { items: tags, isLoading: tagsLoading } = useTags();
 
+  const handleSearchChange = (value: string) => {
+    onFiltersChange({ ...filters, search: value });
+  };
+
+  const handleStatusChange = (value: string) => {
+    onFiltersChange({ ...filters, status: value });
+  };
+
+  const handleTypeChange = (value: string) => {
+    onFiltersChange({ ...filters, type: value });
+  };
+
+  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+    onFiltersChange({ 
+      ...filters, 
+      dateRange: { start: range.from || null, end: range.to || null } 
+    });
+  };
+
   const handleTagToggle = (tagName: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagName)
-        ? prev.filter(t => t !== tagName)
-        : [...prev, tagName]
-    );
+    const newTags = filters.tags.includes(tagName)
+      ? filters.tags.filter(t => t !== tagName)
+      : [...filters.tags, tagName];
+    onFiltersChange({ ...filters, tags: newTags });
   };
 
   const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setTypeFilter("all");
-    setDateRange({});
-    setSelectedTags([]);
+    onFiltersChange({
+      search: "",
+      status: "all",
+      type: "all",
+      technician: "all",
+      dateRange: { start: null, end: null },
+      tags: []
+    });
   };
 
-  const hasActiveFilters = searchTerm || statusFilter !== "all" || typeFilter !== "all" || 
-                          dateRange.start || dateRange.end || selectedTags.length > 0;
+  const hasActiveFilters = filters.search || filters.status !== "all" || filters.type !== "all" || 
+                          filters.dateRange.start || filters.dateRange.end || filters.tags.length > 0;
 
   return (
     <div className="flex flex-wrap items-center gap-4">
@@ -59,14 +86,14 @@ export const JobsFilters = () => {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search jobs..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={filters.search}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-10"
         />
       </div>
 
       {/* Status Filter */}
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <Select value={filters.status} onValueChange={handleStatusChange}>
         <SelectTrigger className="w-[150px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
@@ -95,7 +122,7 @@ export const JobsFilters = () => {
       </Select>
 
       {/* Type Filter */}
-      <Select value={typeFilter} onValueChange={setTypeFilter}>
+      <Select value={filters.type} onValueChange={handleTypeChange}>
         <SelectTrigger className="w-[150px]">
           <SelectValue placeholder="Type" />
         </SelectTrigger>
@@ -128,18 +155,18 @@ export const JobsFilters = () => {
             variant="outline"
             className={cn(
               "w-[200px] justify-start text-left font-normal",
-              !dateRange.start && !dateRange.end && "text-muted-foreground"
+              !filters.dateRange.start && !filters.dateRange.end && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange.start ? (
-              dateRange.end ? (
+            {filters.dateRange.start ? (
+              filters.dateRange.end ? (
                 <>
-                  {format(dateRange.start, "LLL dd")} -{" "}
-                  {format(dateRange.end, "LLL dd, y")}
+                  {format(filters.dateRange.start, "LLL dd")} -{" "}
+                  {format(filters.dateRange.end, "LLL dd, y")}
                 </>
               ) : (
-                format(dateRange.start, "LLL dd, y")
+                format(filters.dateRange.start, "LLL dd, y")
               )
             ) : (
               <span>Pick a date range</span>
@@ -150,11 +177,9 @@ export const JobsFilters = () => {
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={dateRange.start}
-            selected={{ from: dateRange.start, to: dateRange.end }}
-            onSelect={(range) => 
-              setDateRange({ start: range?.from, end: range?.to })
-            }
+            defaultMonth={filters.dateRange.start || undefined}
+            selected={{ from: filters.dateRange.start || undefined, to: filters.dateRange.end || undefined }}
+            onSelect={(range) => handleDateRangeChange(range || {})}
             numberOfMonths={2}
           />
         </PopoverContent>
@@ -167,9 +192,9 @@ export const JobsFilters = () => {
             <Button variant="outline" className="gap-2">
               <Filter className="h-4 w-4" />
               Tags
-              {selectedTags.length > 0 && (
+              {filters.tags.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
-                  {selectedTags.length}
+                  {filters.tags.length}
                 </Badge>
               )}
             </Button>
@@ -181,10 +206,10 @@ export const JobsFilters = () => {
                 {tags.map((tag) => (
                   <Badge
                     key={tag.id}
-                    variant={selectedTags.includes(tag.name) ? "default" : "outline"}
+                    variant={filters.tags.includes(tag.name) ? "default" : "outline"}
                     className="cursor-pointer"
                     onClick={() => handleTagToggle(tag.name)}
-                    style={tag.color && selectedTags.includes(tag.name) ? 
+                    style={tag.color && filters.tags.includes(tag.name) ? 
                       { backgroundColor: tag.color, color: 'white' } : 
                       tag.color ? { borderColor: tag.color, color: tag.color } : {}
                     }
@@ -209,25 +234,25 @@ export const JobsFilters = () => {
       {/* Active Filters Display */}
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2">
-          {statusFilter !== "all" && (
+          {filters.status !== "all" && (
             <Badge variant="secondary" className="gap-1">
-              Status: {statusFilter}
+              Status: {filters.status}
               <X 
                 className="h-3 w-3 cursor-pointer" 
-                onClick={() => setStatusFilter("all")}
+                onClick={() => handleStatusChange("all")}
               />
             </Badge>
           )}
-          {typeFilter !== "all" && (
+          {filters.type !== "all" && (
             <Badge variant="secondary" className="gap-1">
-              Type: {typeFilter}
+              Type: {filters.type}
               <X 
                 className="h-3 w-3 cursor-pointer" 
-                onClick={() => setTypeFilter("all")}
+                onClick={() => handleTypeChange("all")}
               />
             </Badge>
           )}
-          {selectedTags.map((tag) => (
+          {filters.tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="gap-1">
               {tag}
               <X 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { X, CheckCircle, UserPlus, Trash, SendHorizonal, Tag, DollarSign } from 'lucide-react';
+import { X, CheckCircle, UserPlus, Trash, SendHorizonal, Tag, DollarSign, Download } from 'lucide-react';
 
 export interface BulkActionsBarProps {
   selectedJobs: string[];
@@ -12,6 +12,7 @@ export interface BulkActionsBarProps {
   onSendReminders: (jobIds: string[], reminderType: string) => void;
   onTagJobs: (jobIds: string[], tags: string[]) => void;
   onMarkAsPaid?: (jobIds: string[], paymentMethod: string) => void;
+  onExport: (jobIds: string[]) => void;
 }
 
 export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
@@ -22,7 +23,8 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
   onDeleteJobs,
   onSendReminders,
   onTagJobs,
-  onMarkAsPaid
+  onMarkAsPaid,
+  onExport
 }) => {
   if (selectedJobs.length === 0) return null;
 
@@ -82,6 +84,16 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
           >
             <Tag size={14} />
             Tag
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+            onClick={() => onExport(selectedJobs)}
+          >
+            <Download size={14} />
+            Export
           </Button>
           
           {onMarkAsPaid && (
