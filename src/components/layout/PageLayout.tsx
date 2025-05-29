@@ -8,8 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
   SidebarProvider,
-  SidebarInset,
-  SidebarTrigger 
+  SidebarInset
 } from '@/components/ui/sidebar';
 
 interface PageLayoutProps {
@@ -32,7 +31,6 @@ export const PageLayout = ({ children }: PageLayoutProps) => {
           <Header />
           <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center gap-2 mb-4">
-              <SidebarTrigger />
               <Button 
                 variant="outline" 
                 size="sm" 

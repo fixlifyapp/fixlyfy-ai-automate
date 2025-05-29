@@ -8,6 +8,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -82,28 +83,31 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-fixlyfy-border shadow-sm">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
-            textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
-            filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
-          }}>
-            Fixlify
-          </h2>
-          <div className="relative">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-300" style={{
-              boxShadow: '0 4px 12px rgba(138, 77, 213, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-              background: 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 50%, #8A4DD5 100%)',
-              border: '1px solid rgba(255,255,255,0.2)'
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
+              textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
+              filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
             }}>
-              <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold tracking-wider">
-                AI
+              Fixlify
+            </h2>
+            <div className="relative">
+              <div className="w-8 h-8 bg-gradient-primary rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-300" style={{
+                boxShadow: '0 4px 12px rgba(138, 77, 213, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+                background: 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 50%, #8A4DD5 100%)',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}>
+                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold tracking-wider">
+                  AI
+                </div>
               </div>
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-primary rounded-full opacity-60" style={{
+                animation: 'pulse 2s infinite',
+                boxShadow: '0 0 8px rgba(138, 77, 213, 0.6)'
+              }} />
             </div>
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-primary rounded-full opacity-60" style={{
-              animation: 'pulse 2s infinite',
-              boxShadow: '0 0 8px rgba(138, 77, 213, 0.6)'
-            }} />
           </div>
+          <SidebarTrigger />
         </div>
       </SidebarHeader>
       
