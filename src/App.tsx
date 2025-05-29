@@ -9,6 +9,7 @@ import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import ClientsPage from "@/pages/ClientsPage";
+import ClientDetailPage from "@/pages/ClientDetailPage";
 import JobsPage from "@/pages/JobsPage";
 import JobDetailsPage from "@/pages/JobDetailsPage";
 import ConnectCenterPage from "@/pages/ConnectCenterPage";
@@ -48,6 +49,11 @@ const App = () => {
               <Route path="/clients" element={
                 <ProtectedRoute>
                   <ClientsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/clients/:id" element={
+                <ProtectedRoute>
+                  <ClientDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="/jobs" element={
