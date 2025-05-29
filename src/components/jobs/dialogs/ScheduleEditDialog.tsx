@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +39,8 @@ export function ScheduleEditDialog({
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
+  const [startDatePopoverOpen, setStartDatePopoverOpen] = useState(false);
+  const [endDatePopoverOpen, setEndDatePopoverOpen] = useState(false);
 
   useEffect(() => {
     if (initialStartDate) {
@@ -73,6 +74,16 @@ export function ScheduleEditDialog({
     toast.success("Schedule updated successfully");
   };
 
+  const handleStartDateSelect = (date: Date | undefined) => {
+    setStartDate(date);
+    setStartDatePopoverOpen(false);
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    setEndDate(date);
+    setEndDatePopoverOpen(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -84,7 +95,7 @@ export function ScheduleEditDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Popover>
+              <Popover open={startDatePopoverOpen} onOpenChange={setStartDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -101,7 +112,7 @@ export function ScheduleEditDialog({
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={setStartDate}
+                    onSelect={handleStartDateSelect}
                     initialFocus
                   />
                 </PopoverContent>
@@ -110,7 +121,7 @@ export function ScheduleEditDialog({
             
             <div className="space-y-2">
               <Label>End Date</Label>
-              <Popover>
+              <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -127,7 +138,7 @@ export function ScheduleEditDialog({
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={setEndDate}
+                    onSelect={handleEndDateSelect}
                     disabled={(date) => startDate ? date < startDate : false}
                     initialFocus
                   />
