@@ -21,7 +21,7 @@ import { ClientContactActions } from "./ClientContactActions";
 import { ClientSegmentBadge } from "./ClientSegmentBadge";
 import { useClientStats } from "@/hooks/useClientStats";
 import { formatCurrency } from "@/lib/utils";
-import { useModal } from "@/components/ui/modal-provider";
+import { DeleteConfirmDialog } from "@/components/jobs/dialogs/DeleteConfirmDialog";
 
 interface ClientsListProps {
   isGridView?: boolean;
@@ -46,7 +46,8 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
   const navigate = useNavigate();
   const { stats, isLoading: statsLoading } = useClientStats(client.id);
   const { deleteClient } = useClients();
-  const { openModal } = useModal();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleClientClick = () => {
     navigate(`/clients/${client.id}`);
@@ -59,11 +60,19 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openModal("deleteConfirm", {
-      title: "Delete Client",
-      description: `Are you sure you want to delete "${client.name}"? This action cannot be undone.`,
-      onConfirm: () => deleteClient(client.id)
-    });
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteClient(client.id);
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const formatAddress = () => {
@@ -84,81 +93,92 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
   }
 
   return (
-    <div className="cursor-pointer" onClick={handleClientClick}>
-      <ModernCard 
-        variant="elevated" 
-        className="hover:shadow-lg transition-all duration-300 group"
-      >
-        <div className="p-6 space-y-4">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-lg">{client.name}</h3>
-                <ClientSegmentBadge stats={stats} />
-              </div>
-              {client.company && (
-                <div className="flex items-center text-sm text-muted-foreground mb-1">
-                  <Building className="h-4 w-4 mr-1" />
-                  {client.company}
+    <>
+      <div className="cursor-pointer" onClick={handleClientClick}>
+        <ModernCard 
+          variant="elevated" 
+          className="hover:shadow-lg transition-all duration-300 group"
+        >
+          <div className="p-6 space-y-4">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg">{client.name}</h3>
+                  <ClientSegmentBadge stats={stats} />
                 </div>
-              )}
-              <div className="flex items-center text-sm text-muted-foreground">
-                <User className="h-4 w-4 mr-1" />
-                {client.type || 'Residential'}
+                {client.company && (
+                  <div className="flex items-center text-sm text-muted-foreground mb-1">
+                    <Building className="h-4 w-4 mr-1" />
+                    {client.company}
+                  </div>
+                )}
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <User className="h-4 w-4 mr-1" />
+                  {client.type || 'Residential'}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditClick}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteClick}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleEditClick}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDeleteClick}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
 
-          {/* Address */}
-          <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 mr-2" />
-            <span className="truncate">{formatAddress()}</span>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 py-3 border-t border-b">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-blue-600">{stats.totalJobs}</div>
-              <div className="text-xs text-muted-foreground">Jobs</div>
+            {/* Address */}
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 mr-2" />
+              <span className="truncate">{formatAddress()}</span>
             </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-green-600">
-                {formatCurrency(stats.totalRevenue)}
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 py-3 border-t border-b">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-600">{stats.totalJobs}</div>
+                <div className="text-xs text-muted-foreground">Jobs</div>
               </div>
-              <div className="text-xs text-muted-foreground">Revenue</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-purple-600">
-                {formatCurrency(stats.averageJobValue)}
+              <div className="text-center">
+                <div className="text-lg font-semibold text-green-600">
+                  {formatCurrency(stats.totalRevenue)}
+                </div>
+                <div className="text-xs text-muted-foreground">Revenue</div>
               </div>
-              <div className="text-xs text-muted-foreground">Avg Job</div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-purple-600">
+                  {formatCurrency(stats.averageJobValue)}
+                </div>
+                <div className="text-xs text-muted-foreground">Avg Job</div>
+              </div>
             </div>
-          </div>
 
-          {/* Contact Actions */}
-          <ClientContactActions client={client} compact />
-        </div>
-      </ModernCard>
-    </div>
+            {/* Contact Actions */}
+            <ClientContactActions client={client} compact />
+          </div>
+        </ModernCard>
+      </div>
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Client"
+        description={`Are you sure you want to delete "${client.name}"? This action cannot be undone.`}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+    </>
   );
 };
 
@@ -166,7 +186,8 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
   const navigate = useNavigate();
   const { stats, isLoading: statsLoading } = useClientStats(client.id);
   const { deleteClient } = useClients();
-  const { openModal } = useModal();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleClientClick = () => {
     navigate(`/clients/${client.id}`);
@@ -179,11 +200,19 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openModal("deleteConfirm", {
-      title: "Delete Client",
-      description: `Are you sure you want to delete "${client.name}"? This action cannot be undone.`,
-      onConfirm: () => deleteClient(client.id)
-    });
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteClient(client.id);
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const formatAddress = () => {
@@ -207,66 +236,77 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
   }
 
   return (
-    <tr 
-      className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
-      onClick={handleClientClick}
-    >
-      <td className="p-4">
-        <div className="flex items-center gap-2">
-          <div>
-            <div className="font-medium">{client.name}</div>
-            {client.company && (
-              <div className="text-sm text-muted-foreground">{client.company}</div>
-            )}
+    <>
+      <tr 
+        className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+        onClick={handleClientClick}
+      >
+        <td className="p-4">
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="font-medium">{client.name}</div>
+              {client.company && (
+                <div className="text-sm text-muted-foreground">{client.company}</div>
+              )}
+            </div>
+            <ClientSegmentBadge stats={stats} />
           </div>
-          <ClientSegmentBadge stats={stats} />
-        </div>
-      </td>
-      <td className="p-4">
-        <Badge variant="outline">{client.type || 'Residential'}</Badge>
-      </td>
-      <td className="p-4">
-        <div className="text-sm max-w-[200px] truncate">{formatAddress()}</div>
-      </td>
-      <td className="p-4">
-        <div className="text-sm font-medium">{stats.totalJobs}</div>
-      </td>
-      <td className="p-4">
-        <div className="text-sm font-medium text-green-600">
-          {formatCurrency(stats.totalRevenue)}
-        </div>
-      </td>
-      <td className="p-4">
-        <div className="text-sm">
-          {stats.lastServiceDate 
-            ? new Date(stats.lastServiceDate).toLocaleDateString()
-            : '—'
-          }
-        </div>
-      </td>
-      <td className="p-4" onClick={(e) => e.stopPropagation()}>
-        <ClientContactActions client={client} compact />
-      </td>
-      <td className="p-4 text-right">
-        <div className="flex gap-1 justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleEditClick}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDeleteClick}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-    </tr>
+        </td>
+        <td className="p-4">
+          <Badge variant="outline">{client.type || 'Residential'}</Badge>
+        </td>
+        <td className="p-4">
+          <div className="text-sm max-w-[200px] truncate">{formatAddress()}</div>
+        </td>
+        <td className="p-4">
+          <div className="text-sm font-medium">{stats.totalJobs}</div>
+        </td>
+        <td className="p-4">
+          <div className="text-sm font-medium text-green-600">
+            {formatCurrency(stats.totalRevenue)}
+          </div>
+        </td>
+        <td className="p-4">
+          <div className="text-sm">
+            {stats.lastServiceDate 
+              ? new Date(stats.lastServiceDate).toLocaleDateString()
+              : '—'
+            }
+          </div>
+        </td>
+        <td className="p-4" onClick={(e) => e.stopPropagation()}>
+          <ClientContactActions client={client} compact />
+        </td>
+        <td className="p-4 text-right">
+          <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEditClick}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteClick}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Client"
+        description={`Are you sure you want to delete "${client.name}"? This action cannot be undone.`}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+    </>
   );
 };
 
