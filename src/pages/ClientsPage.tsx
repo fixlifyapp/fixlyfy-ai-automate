@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -26,6 +26,20 @@ const ClientsPage = () => {
     },
     enabled: true
   });
+
+  // Listen for custom refresh events
+  useEffect(() => {
+    const handleCustomRefresh = () => {
+      console.log('Custom refresh event triggered');
+      refreshClients();
+    };
+
+    window.addEventListener('clientsRefresh', handleCustomRefresh);
+    
+    return () => {
+      window.removeEventListener('clientsRefresh', handleCustomRefresh);
+    };
+  }, [refreshClients]);
   
   return (
     <PageLayout>
@@ -79,7 +93,13 @@ const ClientsPage = () => {
       
       <ClientsCreateModal 
         open={isCreateModalOpen} 
-        onOpenChange={setIsCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={() => {
+          // Force refresh after successful creation
+          setTimeout(() => {
+            refreshClients();
+          }, 200);
+        }}
       />
     </PageLayout>
   );

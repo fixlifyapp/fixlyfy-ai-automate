@@ -31,7 +31,7 @@ interface ClientsCreateModalProps {
 
 export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCreateModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addClient, refreshClients } = useClients();
+  const { addClient } = useClients();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,9 +65,6 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
       
       const newClient = await addClient(clientData);
       
-      // Refresh the clients list to show the new client immediately
-      refreshClients();
-      
       onOpenChange(false);
       toast.success("Client added successfully");
       
@@ -78,6 +75,11 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
       
       // Reset form
       (e.target as HTMLFormElement).reset();
+      
+      // Force a small delay to ensure database transaction is complete
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('clientsRefresh'));
+      }, 100);
       
     } catch (error) {
       console.error("Error adding client:", error);
