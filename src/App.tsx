@@ -23,6 +23,8 @@ import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
 import { useState } from "react";
+import { AuthProvider } from "@/hooks/use-auth";
+import { AppProviders } from "@/components/ui/AppProviders";
 
 const queryClient = new QueryClient();
 
@@ -34,8 +36,8 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <RBACProvider>
+        <AppProviders>
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={
@@ -115,8 +117,8 @@ const App = () => {
               } />
             </Routes>
             <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
-          </RBACProvider>
-        </BrowserRouter>
+          </BrowserRouter>
+        </AppProviders>
       </TooltipProvider>
     </QueryClientProvider>
   );
