@@ -7,8 +7,6 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { PhoneNumberManagement } from "@/components/settings/PhoneNumberManagement";
-import { AISettings } from "@/components/settings/AISettings";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,45 +48,39 @@ const SettingsPage = () => {
         </Link>
         
         {/* Phone Numbers Card */}
-        <Card 
-          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
-            activeTab === "phone-numbers" ? 'ring-2 ring-fixlyfy' : ''
-          }`}
-          onClick={() => setActiveTab("phone-numbers")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Phone className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">Phone Numbers</h3>
-              <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link to="/phone-numbers">
+          <Card className="h-full hover:shadow-md transition-shadow">
+            <CardContent className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Phone className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Phone Numbers</h3>
+                <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         
         {/* AI Settings Card */}
-        <Card 
-          className={`h-full hover:shadow-md transition-shadow cursor-pointer ${
-            activeTab === "ai-settings" ? 'ring-2 ring-fixlyfy' : ''
-          }`}
-          onClick={() => setActiveTab("ai-settings")}
-        >
-          <CardContent className="flex items-center p-6 space-x-4">
-            <div className="bg-fixlyfy/10 p-3 rounded-full">
-              <Brain className="h-6 w-6 text-fixlyfy" />
-            </div>
-            <div>
-              <h3 className="font-medium">AI Settings</h3>
-              <p className="text-sm text-muted-foreground">Configure AI agent and automation settings</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link to="/ai-settings">
+          <Card className="h-full hover:shadow-md transition-shadow">
+            <CardContent className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Brain className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">AI Settings</h3>
+                <p className="text-sm text-muted-foreground">Configure AI agent and automation settings</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-6 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-4 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -113,18 +105,6 @@ const SettingsPage = () => {
             >
               Integrations
             </TabsTrigger>
-            <TabsTrigger 
-              value="phone-numbers" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Phone Numbers
-            </TabsTrigger>
-            <TabsTrigger 
-              value="ai-settings" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              AI Settings
-            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="general" className="p-6">
@@ -141,14 +121,6 @@ const SettingsPage = () => {
           
           <TabsContent value="integrations" className="p-6">
             <SettingsIntegrations />
-          </TabsContent>
-          
-          <TabsContent value="phone-numbers" className="p-6">
-            <PhoneNumberManagement />
-          </TabsContent>
-          
-          <TabsContent value="ai-settings" className="p-6">
-            <AISettings />
           </TabsContent>
         </Tabs>
       </div>

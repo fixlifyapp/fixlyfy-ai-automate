@@ -1,68 +1,120 @@
 
-import { Suspense, lazy } from 'react';
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AppProviders } from "@/components/ui/AppProviders";
-import { PageLoadingFallback } from "@/components/ui/page-loading";
-
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
-const JobsPage = lazy(() => import("@/pages/JobsPage"));
-const ClientDetailPage = lazy(() => import("@/pages/ClientDetailPage"));
-const JobDetailsPage = lazy(() => import("@/pages/JobDetailsPage"));
-const SchedulePage = lazy(() => import("@/pages/SchedulePage"));
-const ConnectCenterPage = lazy(() => import("@/pages/ConnectCenterPage"));
-const AiCenterPage = lazy(() => import("@/pages/AiCenterPage"));
-const MessagesPage = lazy(() => import("@/pages/MessagesPage"));
-const FinancePage = lazy(() => import("@/pages/FinancePage"));
-const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
-const TeamManagementPage = lazy(() => import("@/pages/TeamManagementPage"));
-const AutomationsPage = lazy(() => import("@/pages/AutomationsPage"));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-const ConfigurationPage = lazy(() => import("@/pages/ConfigurationPage"));
-const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
+import { RBACProvider } from "@/components/auth/RBACProvider";
+import { OnboardingModal } from "@/components/auth/OnboardingModal";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import Dashboard from "@/pages/Dashboard";
+import Clients from "@/pages/Clients";
+import Jobs from "@/pages/Jobs";
+import JobDetailsPage from "@/pages/JobDetailsPage";
+import ConnectPage from "@/pages/ConnectPage";
+import SchedulePage from "@/pages/SchedulePage";
+import FinancePage from "@/pages/FinancePage";
+import AnalyticsPage from "@/pages/AnalyticsPage";
+import SettingsPage from "@/pages/SettingsPage";
+import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
+import AISettingsPage from "@/pages/AISettingsPage";
+import TeamPage from "@/pages/TeamPage";
+import { AutomationsPage } from "@/components/automations/AutomationsPage";
+import AICenterPage from "@/pages/AICenterPage";
+import ConfigurationPage from "@/pages/ConfigurationPage";
 
 const queryClient = new QueryClient();
 
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AppProviders>
-        <TooltipProvider>
-          <Toaster />
-          <BrowserRouter>
-            <div className="min-h-screen bg-gray-50 transition-all duration-300">
-              <Suspense fallback={<PageLoadingFallback />}>
-                <div className="animate-fade-in">
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/clients" element={<ClientsPage />} />
-                    <Route path="/clients/:id" element={<ClientDetailPage />} />
-                    <Route path="/jobs" element={<JobsPage />} />
-                    <Route path="/jobs/:id" element={<JobDetailsPage />} />
-                    <Route path="/schedule" element={<SchedulePage />} />
-                    <Route path="/connect" element={<ConnectCenterPage />} />
-                    <Route path="/ai-center" element={<AiCenterPage />} />
-                    <Route path="/messages" element={<MessagesPage />} />
-                    <Route path="/finance" element={<FinancePage />} />
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/team" element={<TeamManagementPage />} />
-                    <Route path="/automations" element={<AutomationsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/configuration" element={<ConfigurationPage />} />
-                    <Route path="/analytics" element={<AnalyticsPage />} />
-                  </Routes>
-                </div>
-              </Suspense>
-            </div>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AppProviders>
-    </QueryClientProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <RBACProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/clients" element={
+              <ProtectedRoute>
+                <Clients />
+              </ProtectedRoute>
+            } />
+            <Route path="/jobs" element={
+              <ProtectedRoute>
+                <Jobs />
+              </ProtectedRoute>
+            } />
+            <Route path="/jobs/:id" element={
+              <ProtectedRoute>
+                <JobDetailsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/connect" element={
+              <ProtectedRoute>
+                <ConnectPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/schedule" element={
+              <ProtectedRoute>
+                <SchedulePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/finance" element={
+              <ProtectedRoute>
+                <FinancePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/phone-numbers" element={
+              <ProtectedRoute>
+                <PhoneNumbersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-settings" element={
+              <ProtectedRoute>
+                <AISettingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/team" element={
+              <ProtectedRoute>
+                <TeamPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/automations" element={
+              <ProtectedRoute>
+                <AutomationsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-center" element={
+              <ProtectedRoute>
+                <AICenterPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/configuration" element={
+              <ProtectedRoute>
+                <ConfigurationPage />
+              </ProtectedRoute>
+            } />
+          </Routes>
+          <OnboardingModal />
+        </RBACProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
