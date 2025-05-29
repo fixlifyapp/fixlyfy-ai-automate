@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -209,13 +208,37 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
+    console.log('Authorization header present:', !!authHeader);
+    
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+      console.log('Missing authorization header');
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Authentication required. Please log in to continue.' 
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    // Validate the user session
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.log('Invalid authentication:', authError?.message);
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Invalid authentication. Please log in again.' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('Authenticated user:', user.id);
 
     const { action, areaCode, contains, country, phoneNumber }: PhoneNumberRequest = await req.json();
 
@@ -327,12 +350,6 @@ serve(async (req) => {
             connectInstanceId
           );
 
-          // Get user from auth header
-          const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
-          if (authError || !user) {
-            throw new Error('Invalid authentication');
-          }
-
           // Determine locality based on phone number area code
           const areaCode = phoneNumber.substring(2, 5);
           let locality = 'Unknown';
@@ -403,12 +420,6 @@ serve(async (req) => {
         }
 
       case 'list-owned':
-        // Get user from auth header
-        const { data: { user: listUser }, error: listAuthError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
-        if (listAuthError || !listUser) {
-          throw new Error('Invalid authentication');
-        }
-
         const { data: ownedNumbers, error: listError } = await supabaseClient
           .from('phone_numbers')
           .select('*')
