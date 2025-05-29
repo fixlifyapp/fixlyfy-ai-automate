@@ -15,7 +15,7 @@ import { UpcomingJobs } from "@/components/dashboard/UpcomingJobs";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { AIAgentWidget } from "@/components/dashboard/AIAgentWidget";
 import { DashboardFilterControls } from "@/components/dashboard/DashboardFilterControls";
-import { useIsMobile, useIsMobileOrTablet } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export type { TimePeriod };
 
@@ -28,7 +28,6 @@ const Dashboard = () => {
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMobile = useIsMobile();
-  const isMobileOrTablet = useIsMobileOrTablet();
 
   useEffect(() => {
     // Simulate loading data
@@ -83,9 +82,9 @@ const Dashboard = () => {
         </div>
 
         {/* Enhanced Dashboard Grid */}
-        <div className={`grid grid-cols-1 ${isMobileOrTablet ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-4 lg:gap-6`}>
+        <div className={`grid grid-cols-1 ${isMobile ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-4 lg:gap-6`}>
           {/* Charts and Metrics */}
-          <div className={`${isMobileOrTablet ? 'col-span-1' : 'lg:col-span-2'} space-y-4 lg:space-y-6`}>
+          <div className={`${isMobile ? 'col-span-1' : 'lg:col-span-2'} space-y-4 lg:space-y-6`}>
             <DashboardCharts />
             <ModernMetricsGrid />
           </div>

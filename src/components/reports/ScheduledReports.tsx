@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +16,10 @@ import {
   Download,
   Users
 } from "lucide-react";
-import { useIsMobile, useIsMobileOrTablet } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const ScheduledReports = () => {
   const isMobile = useIsMobile();
-  const isMobileOrTablet = useIsMobileOrTablet();
   
   const [reports, setReports] = useState([
     {
@@ -146,7 +144,7 @@ export const ScheduledReports = () => {
                 </div>
               </div>
 
-              <div className={`grid grid-cols-2 ${isMobileOrTablet ? 'md:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-4'} gap-4 mb-4 ${isMobile ? 'gap-3 mb-3' : 'gap-4 mb-4'}`}>
+              <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 ${isMobile ? 'gap-3 mb-3' : 'gap-4 mb-4'}`}>
                 <div className="flex items-center gap-2">
                   {getFrequencyIcon(report.frequency)}
                   <div>
@@ -190,11 +188,11 @@ export const ScheduledReports = () => {
               </div>
 
               <div className={`flex ${isMobile ? 'flex-wrap gap-1' : 'flex-wrap gap-2'}`}>
-                <Button size={isMobile ? "xs" : "sm"} variant="outline" className={isMobile ? "text-xs px-2 py-1" : ""}>
+                <Button size="sm" variant="outline" className={isMobile ? "text-xs px-2 py-1" : ""}>
                   <Play className={`mr-1 ${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
                   {isMobile ? "Run" : "Run Now"}
                 </Button>
-                <Button size={isMobile ? "xs" : "sm"} variant="outline" className={isMobile ? "text-xs px-2 py-1" : ""}>
+                <Button size="sm" variant="outline" className={isMobile ? "text-xs px-2 py-1" : ""}>
                   <Edit className={`mr-1 ${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
                   {isMobile ? "Edit" : "Edit Schedule"}
                 </Button>
@@ -210,7 +208,7 @@ export const ScheduledReports = () => {
                     </Button>
                   </>
                 )}
-                <Button size={isMobile ? "xs" : "sm"} variant="outline" className={`text-red-600 hover:text-red-700 ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
+                <Button size="sm" variant="outline" className={`text-red-600 hover:text-red-700 ${isMobile ? 'text-xs px-2 py-1' : ''}`}>
                   <Trash2 className={`mr-1 ${isMobile ? 'h-2 w-2' : 'h-3 w-3'}`} />
                   Delete
                 </Button>
