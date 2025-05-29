@@ -31,7 +31,7 @@ interface ClientsCreateModalProps {
 
 export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCreateModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addClient } = useClients();
+  const { addClient, refreshClients } = useClients();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +64,10 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
       };
       
       const newClient = await addClient(clientData);
+      
+      // Refresh the clients list to show the new client immediately
+      refreshClients();
+      
       onOpenChange(false);
       toast.success("Client added successfully");
       
@@ -71,6 +75,9 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
       if (onSuccess && newClient) {
         onSuccess(newClient);
       }
+      
+      // Reset form
+      (e.target as HTMLFormElement).reset();
       
     } catch (error) {
       console.error("Error adding client:", error);
@@ -94,8 +101,8 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
           <ScrollArea className="flex-grow px-6" style={{ maxHeight: "calc(80vh - 170px)" }}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="clientType">Client Type</Label>
-                <Select name="clientType" defaultValue="residential">
+                <Label htmlFor="clientType">Client Type *</Label>
+                <Select name="clientType" defaultValue="residential" required>
                   <SelectTrigger id="clientType">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -107,8 +114,8 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select name="status" defaultValue="active">
+                <Label htmlFor="status">Status *</Label>
+                <Select name="status" defaultValue="active" required>
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -120,7 +127,7 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">Name *</Label>
                 <Input id="name" name="name" placeholder="Full name or business name" required />
               </div>
               <div className="space-y-2">
@@ -128,32 +135,32 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
                 <Input id="email" name="email" type="email" placeholder="Email address" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" name="phone" placeholder="Phone number" />
+                <Label htmlFor="phone">Phone *</Label>
+                <Input id="phone" name="phone" placeholder="Phone number" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="altPhone">Alternative Phone</Label>
                 <Input id="altPhone" name="altPhone" placeholder="Alternative phone (optional)" />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" name="address" placeholder="Street address" />
+                <Label htmlFor="address">Address *</Label>
+                <Input id="address" name="address" placeholder="Street address" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input id="city" name="city" placeholder="City" />
+                <Label htmlFor="city">City *</Label>
+                <Input id="city" name="city" placeholder="City" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Input id="state" name="state" placeholder="State/Province" />
+                <Label htmlFor="state">State *</Label>
+                <Input id="state" name="state" placeholder="State/Province" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="zip">ZIP / Postal Code</Label>
-                <Input id="zip" name="zip" placeholder="ZIP / Postal code" />
+                <Label htmlFor="zip">ZIP / Postal Code *</Label>
+                <Input id="zip" name="zip" placeholder="ZIP / Postal code" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input id="country" name="country" placeholder="Country" defaultValue="United States" />
+                <Label htmlFor="country">Country *</Label>
+                <Input id="country" name="country" placeholder="Country" defaultValue="United States" required />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="notes">Notes</Label>

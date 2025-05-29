@@ -9,10 +9,23 @@ import { Grid, List, Plus, Users, Target, Heart, TrendingUp } from "lucide-react
 import { ClientsList } from "@/components/clients/ClientsList";
 import { ClientsFilters } from "@/components/clients/ClientsFilters";
 import { ClientsCreateModal } from "@/components/clients/ClientsCreateModal";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useClients } from "@/hooks/useClients";
 
 const ClientsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { refreshClients } = useClients();
+  
+  // Set up real-time sync for clients table
+  useRealtimeSync({
+    tables: ['clients'],
+    onUpdate: () => {
+      console.log('Clients table updated, refreshing...');
+      refreshClients();
+    },
+    enabled: true
+  });
   
   return (
     <PageLayout>
