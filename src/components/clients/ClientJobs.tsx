@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
@@ -157,6 +158,35 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     setSelectedJobs([]);
   };
 
+  const handleExportJobs = (jobIds: string[]) => {
+    const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
+    const csvData = selectedJobData.map(job => ({
+      'Job ID': job.id,
+      'Title': job.title || '',
+      'Status': job.status,
+      'Type': job.job_type || job.service || '',
+      'Date': job.date ? format(new Date(job.date), 'yyyy-MM-dd') : '',
+      'Revenue': job.revenue || 0,
+      'Address': job.address || ''
+    }));
+    
+    const csv = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `client-jobs-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast.success(`Exported ${jobIds.length} jobs`);
+    setSelectedJobs([]);
+  };
+
   // Get status configuration from database
   const getStatusBadgeStyle = (status: string) => {
     const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
@@ -243,6 +273,7 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
           onSendReminders={handleSendReminders}
           onTagJobs={handleTagJobs}
           onMarkAsPaid={handleMarkAsPaid}
+          onExport={handleExportJobs}
         />
       )}
 
