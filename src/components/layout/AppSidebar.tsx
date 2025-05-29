@@ -82,7 +82,7 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-fixlyfy-border shadow-sm">
       <SidebarHeader className="p-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
           <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
             textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
             filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
