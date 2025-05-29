@@ -116,33 +116,12 @@ export default {
 						transform: 'translateX(0)',
 					}
 				},
-				'float': {
-					'0%, 100%': {
-						transform: 'perspective(1000px) rotateX(10deg) rotateY(-10deg) translateY(0px)',
-					},
-					'50%': {
-						transform: 'perspective(1000px) rotateX(10deg) rotateY(-10deg) translateY(-10px)',
-					}
-				},
-				'rotate-3d': {
-					'0%': {
-						transform: 'perspective(1000px) rotateX(5deg) rotateY(-5deg)',
-					},
-					'50%': {
-						transform: 'perspective(1000px) rotateX(-5deg) rotateY(5deg)',
-					},
-					'100%': {
-						transform: 'perspective(1000px) rotateX(5deg) rotateY(-5deg)',
-					}
-				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-out forwards',
 				'slide-in': 'slide-in 0.3s ease-out forwards',
-				'float': 'float 3s ease-in-out infinite',
-				'rotate-3d': 'rotate-3d 4s ease-in-out infinite',
 			},
 			backgroundImage: {
 				'gradient-primary': 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 100%)',

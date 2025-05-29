@@ -5,8 +5,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ModernCard } from "@/components/ui/modern-card";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { Button } from "@/components/ui/button";
-import { ThreeDIcon } from "@/components/ui/3d-icon";
-import { Floating3DIcon } from "@/components/ui/floating-3d-icon";
 import { 
   Grid, 
   List, 
@@ -56,38 +54,20 @@ const JobsPage = () => {
   return (
     <PageLayout>
       <AnimatedContainer animation="fade-in">
-        <div className="flex items-center gap-4 mb-6">
-          <Floating3DIcon 
-            icon={Wrench} 
-            variant="primary" 
-            size="lg"
-            floating={true}
-          />
-          <div>
-            <PageHeader
-              title="Job Management"
-              subtitle="Manage your jobs efficiently with modern 3D interface"
-              icon={Wrench}
-              badges={[
-                { 
-                  text: "Active Jobs", 
-                  icon: Target, 
-                  variant: "fixlyfy"
-                },
-                { 
-                  text: "Performance", 
-                  icon: TrendingUp, 
-                  variant: "info"
-                }
-              ]}
-              actionButton={{
-                text: "Create Job",
-                icon: Plus,
-                onClick: () => setIsCreateJobModalOpen(true)
-              }}
-            />
-          </div>
-        </div>
+        <PageHeader
+          title="Job Management"
+          subtitle="Manage your jobs efficiently"
+          icon={Wrench}
+          badges={[
+            { text: "Active Jobs", icon: Target, variant: "fixlyfy" },
+            { text: "Performance", icon: TrendingUp, variant: "info" }
+          ]}
+          actionButton={{
+            text: "Create Job",
+            icon: Plus,
+            onClick: () => setIsCreateJobModalOpen(true)
+          }}
+        />
       </AnimatedContainer>
       
       <AnimatedContainer animation="fade-in" delay={200}>
@@ -100,19 +80,17 @@ const JobsPage = () => {
                   variant={isGridView ? "ghost" : "secondary"}
                   size="sm"
                   onClick={() => setIsGridView(false)}
-                  className="flex gap-2 rounded-xl hover:scale-105 transition-transform"
+                  className="flex gap-2 rounded-xl"
                 >
-                  <ThreeDIcon icon={List} size="sm" variant="secondary" />
-                  List
+                  <List size={18} /> List
                 </Button>
                 <Button 
                   variant={isGridView ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setIsGridView(true)}
-                  className="flex gap-2 rounded-xl hover:scale-105 transition-transform"
+                  className="flex gap-2 rounded-xl"
                 >
-                  <ThreeDIcon icon={Grid} size="sm" variant="primary" />
-                  Grid
+                  <Grid size={18} /> Grid
                 </Button>
               </div>
             </div>

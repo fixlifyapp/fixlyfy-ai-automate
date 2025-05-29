@@ -1,25 +1,14 @@
 
 import React from "react";
-import { ThreeDIcon } from "@/components/ui/3d-icon";
 
 interface ApplianceIconProps {
   size?: number;
   className?: string;
-  variant?: "primary" | "secondary" | "success" | "warning" | "error" | "info";
-  is3D?: boolean;
-  animated?: boolean;
   [key: string]: any;
 }
 
-export const DryerIcon: React.FC<ApplianceIconProps> = ({ 
-  size = 24, 
-  className = "", 
-  variant = "primary",
-  is3D = false,
-  animated = false,
-  ...props 
-}) => {
-  const IconComponent = () => (
+export const DryerIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
+  return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size}
@@ -40,29 +29,10 @@ export const DryerIcon: React.FC<ApplianceIconProps> = ({
       <path d="M5 9h1" />
     </svg>
   );
-
-  if (is3D) {
-    return (
-      <ThreeDIcon 
-        icon={IconComponent as any}
-        variant={variant}
-        animated={animated}
-      />
-    );
-  }
-
-  return <IconComponent />;
 };
 
-export const DishwasherIcon: React.FC<ApplianceIconProps> = ({ 
-  size = 24, 
-  className = "", 
-  variant = "primary",
-  is3D = false,
-  animated = false,
-  ...props 
-}) => {
-  const IconComponent = () => (
+export const DishwasherIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
+  return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size}
@@ -83,29 +53,10 @@ export const DishwasherIcon: React.FC<ApplianceIconProps> = ({
       <path d="M16 12h1" />
     </svg>
   );
-
-  if (is3D) {
-    return (
-      <ThreeDIcon 
-        icon={IconComponent as any}
-        variant={variant}
-        animated={animated}
-      />
-    );
-  }
-
-  return <IconComponent />;
 };
 
-export const FridgeIcon: React.FC<ApplianceIconProps> = ({ 
-  size = 24, 
-  className = "", 
-  variant = "primary",
-  is3D = false,
-  animated = false,
-  ...props 
-}) => {
-  const IconComponent = () => (
+export const FridgeIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
+  return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size}
@@ -125,29 +76,10 @@ export const FridgeIcon: React.FC<ApplianceIconProps> = ({
       <path d="M8 14h.01" />
     </svg>
   );
-
-  if (is3D) {
-    return (
-      <ThreeDIcon 
-        icon={IconComponent as any}
-        variant={variant}
-        animated={animated}
-      />
-    );
-  }
-
-  return <IconComponent />;
 };
 
-export const WasherIcon: React.FC<ApplianceIconProps> = ({ 
-  size = 24, 
-  className = "", 
-  variant = "primary",
-  is3D = false,
-  animated = false,
-  ...props 
-}) => {
-  const IconComponent = () => (
+export const WasherIcon: React.FC<ApplianceIconProps> = ({ size = 24, className = "", ...props }) => {
+  return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size}
@@ -168,16 +100,4 @@ export const WasherIcon: React.FC<ApplianceIconProps> = ({
       <path d="M7 4h.01" />
     </svg>
   );
-
-  if (is3D) {
-    return (
-      <ThreeDIcon 
-        icon={IconComponent as any}
-        variant={variant}
-        animated={animated}
-      />
-    );
-  }
-
-  return <IconComponent />;
 };
