@@ -51,9 +51,7 @@ export const PaymentsTab = ({ clientId, onCreateInvoice }: PaymentsTabProps) => 
   if (payments.length === 0) {
     return (
       <EmptyTabContent 
-        message="No payments found for this client."
-        actionLabel="Create First Invoice"
-        onAction={onCreateInvoice}
+        message="No payments found for this client. Payments will automatically sync from completed jobs."
       />
     );
   }
