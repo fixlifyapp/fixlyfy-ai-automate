@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,8 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     isLoading,
     updateJob,
     deleteJob,
-    addJob
+    addJob,
+    refreshJobs
   } = useJobs(clientId);
   
   // Get dynamic configuration data from database
@@ -87,45 +87,54 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteSuccess = () => {
+  const handleDeleteSuccess = async () => {
     setSelectedJobs([]);
     toast.success(`Deleted ${selectedJobs.length} jobs successfully`);
+    
+    // Refresh the jobs list after successful deletion
+    await refreshJobs();
+    
+    // Trigger a custom event to refresh parent components if needed
+    window.dispatchEvent(new CustomEvent('clientsRefresh'));
   };
 
-  const handleUpdateJobsStatus = (jobIds: string[], newStatus: string) => {
-    Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })))
-      .then(() => {
-        toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
-        setSelectedJobs([]);
-      })
-      .catch(error => {
-        console.error("Failed to update jobs status:", error);
-        toast.error("Failed to update job status");
-      });
+  const handleUpdateJobsStatus = async (jobIds: string[], newStatus: string) => {
+    try {
+      await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
+      toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
+      setSelectedJobs([]);
+      await refreshJobs();
+    } catch (error) {
+      console.error("Failed to update jobs status:", error);
+      toast.error("Failed to update job status");
+    }
   };
 
-  const handleAssignTechnician = (jobIds: string[], technicianId: string, technicianName: string) => {
-    Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })))
-      .then(() => {
-        toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
-        setSelectedJobs([]);
-      })
-      .catch(error => {
-        console.error("Failed to assign technician:", error);
-        toast.error("Failed to assign technician");
-      });
+  const handleAssignTechnician = async (jobIds: string[], technicianId: string, technicianName: string) => {
+    try {
+      await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
+      toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
+      setSelectedJobs([]);
+      await refreshJobs();
+    } catch (error) {
+      console.error("Failed to assign technician:", error);
+      toast.error("Failed to assign technician");
+    }
   };
 
-  const handleDeleteJobs = (jobIds: string[]) => {
-    Promise.all(jobIds.map(id => deleteJob(id)))
-      .then(() => {
-        toast.success(`Deleted ${jobIds.length} jobs`);
-        setSelectedJobs([]);
-      })
-      .catch(error => {
-        console.error("Failed to delete jobs:", error);
-        toast.error("Failed to delete jobs");
-      });
+  const handleDeleteJobs = async (jobIds: string[]) => {
+    try {
+      await Promise.all(jobIds.map(id => deleteJob(id)));
+      toast.success(`Deleted ${jobIds.length} jobs`);
+      setSelectedJobs([]);
+      await refreshJobs();
+      
+      // Trigger a custom event to refresh parent components
+      window.dispatchEvent(new CustomEvent('clientsRefresh'));
+    } catch (error) {
+      console.error("Failed to delete jobs:", error);
+      toast.error("Failed to delete jobs");
+    }
   };
 
   const handleSendReminders = (jobIds: string[], reminderType: string) => {
@@ -133,24 +142,24 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     setSelectedJobs([]);
   };
 
-  const handleTagJobs = (jobIds: string[], tags: string[]) => {
-    Promise.all(jobIds.map(id => {
-      const job = jobs.find(j => j.id === id);
-      if (!job) return Promise.resolve(null);
-      
-      const existingTags = job.tags || [];
-      const updatedTags = [...new Set([...existingTags, ...tags])];
-      
-      return updateJob(id, { tags: updatedTags });
-    }))
-      .then(() => {
-        toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
-        setSelectedJobs([]);
-      })
-      .catch(error => {
-        console.error("Failed to tag jobs:", error);
-        toast.error("Failed to tag jobs");
-      });
+  const handleTagJobs = async (jobIds: string[], tags: string[]) => {
+    try {
+      await Promise.all(jobIds.map(id => {
+        const job = jobs.find(j => j.id === id);
+        if (!job) return Promise.resolve(null);
+        
+        const existingTags = job.tags || [];
+        const updatedTags = [...new Set([...existingTags, ...tags])];
+        
+        return updateJob(id, { tags: updatedTags });
+      }));
+      toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
+      setSelectedJobs([]);
+      await refreshJobs();
+    } catch (error) {
+      console.error("Failed to tag jobs:", error);
+      toast.error("Failed to tag jobs");
+    }
   };
 
   const handleMarkAsPaid = (jobIds: string[], paymentMethod: string) => {
