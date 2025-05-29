@@ -66,6 +66,10 @@ const ClientsPage = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const handleRefresh = () => {
+    refreshClients();
+  };
   
   return (
     <PageLayout>
@@ -120,6 +124,7 @@ const ClientsPage = () => {
             isGridView={isGridView} 
             clients={clients}
             isLoading={isLoading}
+            onRefresh={handleRefresh}
           />
           
           {/* Pagination */}

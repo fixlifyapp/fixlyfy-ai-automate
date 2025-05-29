@@ -23,6 +23,7 @@ interface ClientsListProps {
   isGridView?: boolean;
   clients?: any[];
   isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
 interface ClientWithStats {
@@ -40,7 +41,7 @@ interface ClientWithStats {
   created_at?: string;
 }
 
-const ClientCard = ({ client }: { client: ClientWithStats }) => {
+const ClientCard = ({ client, onRefresh }: { client: ClientWithStats; onRefresh?: () => void }) => {
   const navigate = useNavigate();
   const { stats, isLoading: statsLoading } = useClientStats(client.id);
   const { deleteClient } = useClients();
@@ -64,8 +65,16 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
-      await deleteClient(client.id);
-      setShowDeleteDialog(false);
+      const success = await deleteClient(client.id);
+      if (success) {
+        setShowDeleteDialog(false);
+        // Trigger refresh of parent component
+        if (onRefresh) {
+          onRefresh();
+        }
+        // Also trigger global refresh event
+        window.dispatchEvent(new CustomEvent('clientsRefresh'));
+      }
     } catch (error) {
       console.error('Error deleting client:', error);
     } finally {
@@ -180,7 +189,7 @@ const ClientCard = ({ client }: { client: ClientWithStats }) => {
   );
 };
 
-const ClientRow = ({ client }: { client: ClientWithStats }) => {
+const ClientRow = ({ client, onRefresh }: { client: ClientWithStats; onRefresh?: () => void }) => {
   const navigate = useNavigate();
   const { stats, isLoading: statsLoading } = useClientStats(client.id);
   const { deleteClient } = useClients();
@@ -204,8 +213,16 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
-      await deleteClient(client.id);
-      setShowDeleteDialog(false);
+      const success = await deleteClient(client.id);
+      if (success) {
+        setShowDeleteDialog(false);
+        // Trigger refresh of parent component
+        if (onRefresh) {
+          onRefresh();
+        }
+        // Also trigger global refresh event
+        window.dispatchEvent(new CustomEvent('clientsRefresh'));
+      }
     } catch (error) {
       console.error('Error deleting client:', error);
     } finally {
@@ -308,7 +325,7 @@ const ClientRow = ({ client }: { client: ClientWithStats }) => {
   );
 };
 
-export const ClientsList = ({ isGridView = false, clients, isLoading }: ClientsListProps) => {
+export const ClientsList = ({ isGridView = false, clients, isLoading, onRefresh }: ClientsListProps) => {
   // Use provided clients or fallback to hook (for backwards compatibility)
   const hookData = useClients();
   const clientsData = clients || hookData.clients;
@@ -341,7 +358,7 @@ export const ClientsList = ({ isGridView = false, clients, isLoading }: ClientsL
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {clientsData.map((client) => (
-          <ClientCard key={client.id} client={client} />
+          <ClientCard key={client.id} client={client} onRefresh={onRefresh} />
         ))}
       </div>
     );
@@ -365,7 +382,7 @@ export const ClientsList = ({ isGridView = false, clients, isLoading }: ClientsL
           </thead>
           <tbody>
             {clientsData.map((client) => (
-              <ClientRow key={client.id} client={client} />
+              <ClientRow key={client.id} client={client} onRefresh={onRefresh} />
             ))}
           </tbody>
         </table>
