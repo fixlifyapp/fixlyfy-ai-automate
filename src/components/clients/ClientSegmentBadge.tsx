@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { Crown, Users, TrendingUp, Clock } from "lucide-react";
+import { Crown, Users, TrendingUp } from "lucide-react";
 
 interface ClientSegmentBadgeProps {
   stats: {
@@ -49,16 +49,17 @@ export const ClientSegmentBadge = ({ stats }: ClientSegmentBadgeProps) => {
       };
     }
 
-    // Inactive clients: Low activity and old
-    return {
-      label: "Inactive",
-      variant: "outline" as const,
-      icon: Clock,
-      color: "bg-gray-100 text-gray-600 border-gray-300"
-    };
+    // For clients with no activity or very old activity, don't show a badge
+    return null;
   };
 
   const segment = getClientSegment();
+  
+  // Don't render anything if no segment applies
+  if (!segment) {
+    return null;
+  }
+
   const Icon = segment.icon;
 
   return (
