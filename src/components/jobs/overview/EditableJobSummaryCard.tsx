@@ -18,16 +18,27 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
   const [isEditing, setIsEditing] = useState(false);
   const [isLeadSourceDialogOpen, setIsLeadSourceDialogOpen] = useState(false);
   const [isJobTypeDialogOpen, setIsJobTypeDialogOpen] = useState(false);
+  
+  // Use the actual job_type from the database, not service
   const [editValues, setEditValues] = useState({
-    service: job.service || job.job_type || "General Service",
+    service: job.job_type || job.service || "General Service",
     lead_source: job.lead_source || ""
   });
+  
   const { updateJob } = useJobs();
+
+  // Update editValues when job data changes
+  React.useEffect(() => {
+    setEditValues({
+      service: job.job_type || job.service || "General Service",
+      lead_source: job.lead_source || ""
+    });
+  }, [job.job_type, job.service, job.lead_source]);
 
   const handleSave = async () => {
     const result = await updateJob(jobId, {
-      service: editValues.service,
       job_type: editValues.service,
+      service: editValues.service, // Keep both for backwards compatibility
       lead_source: editValues.lead_source
     });
     if (result) {
@@ -38,7 +49,7 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
 
   const handleCancel = () => {
     setEditValues({
-      service: job.service || job.job_type || "General Service",
+      service: job.job_type || job.service || "General Service",
       lead_source: job.lead_source || ""
     });
     setIsEditing(false);
@@ -104,7 +115,7 @@ export const EditableJobSummaryCard = ({ job, jobId }: EditableJobSummaryCardPro
                   {editValues.service || "Select job type..."}
                 </Button>
               ) : (
-                <p className="font-medium">{job.service || job.job_type || "General Service"}</p>
+                <p className="font-medium">{job.job_type || job.service || "General Service"}</p>
               )}
             </div>
             <div>

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,16 +18,32 @@ interface JobTagsCardProps {
 
 export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTagsCardProps) => {
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
+  const [resolvedTags, setResolvedTags] = useState<Array<{name: string, color?: string}>>([]);
   const { updateJob } = useJobs();
   const { items: tagItems } = useTags();
 
-  // Create a map for tag colors
-  const tagColorMap = tagItems.reduce((acc, tag) => {
-    acc[tag.name] = tag.color || '#6366f1';
-    return acc;
-  }, {} as Record<string, string>);
+  // Resolve tag UUIDs to tag names and colors
+  useEffect(() => {
+    if (!tags || tags.length === 0) {
+      setResolvedTags([]);
+      return;
+    }
 
-  if (!tags || tags.length === 0) {
+    const resolved = tags.map(tag => {
+      // If it's a UUID, find the tag by ID
+      if (tag.length === 36 && tag.includes('-')) {
+        const tagItem = tagItems.find(t => t.id === tag);
+        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag };
+      }
+      // If it's a name, find the tag by name
+      const tagItem = tagItems.find(t => t.name === tag);
+      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag };
+    });
+
+    setResolvedTags(resolved);
+  }, [tags, tagItems]);
+
+  if (!resolvedTags || resolvedTags.length === 0) {
     if (!editable) return null;
     
     return (
@@ -62,7 +78,6 @@ export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTags
               const result = await updateJob(jobId, { tags: selectedTags });
               if (result) {
                 toast.success("Tags updated successfully");
-                // Trigger real-time refresh
                 if (onUpdate) {
                   onUpdate();
                 }
@@ -80,7 +95,6 @@ export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTags
     const result = await updateJob(jobId, { tags: selectedTags });
     if (result) {
       toast.success("Tags updated successfully");
-      // Trigger real-time refresh
       if (onUpdate) {
         onUpdate();
       }
@@ -109,19 +123,16 @@ export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTags
         </ModernCardHeader>
         <ModernCardContent>
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag, index) => {
-              const tagColor = tagColorMap[tag];
-              return (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
-                  className="text-xs"
-                  style={tagColor ? { borderColor: tagColor, color: tagColor } : undefined}
-                >
-                  {tag}
-                </Badge>
-              );
-            })}
+            {resolvedTags.map((tag, index) => (
+              <Badge 
+                key={index} 
+                variant="outline" 
+                className="text-xs"
+                style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+              >
+                {tag.name}
+              </Badge>
+            ))}
           </div>
         </ModernCardContent>
       </ModernCard>
@@ -129,7 +140,7 @@ export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTags
       <TagSelectionDialog
         open={isTagDialogOpen}
         onOpenChange={setIsTagDialogOpen}
-        initialTags={tags}
+        initialTags={resolvedTags.map(t => t.name)}
         onSave={handleTagsUpdate}
       />
     </>
