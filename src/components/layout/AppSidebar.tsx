@@ -81,45 +81,38 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-fixlyfy-border shadow-sm">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center justify-between mb-4">
+    <Sidebar collapsible="icon" className="border-r border-gray-200/80 bg-white shadow-sm">
+      <SidebarHeader className="p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="group-data-[collapsible=icon]:hidden text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
-              textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
-              filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
-            }}>
-              Fixlify
-            </h2>
-            <div className="hidden group-data-[collapsible=icon]:block text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
-              textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
-              filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
-            }}>
-              F
-            </div>
-            <div className="relative group-data-[collapsible=icon]:hidden">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-300" style={{
-                boxShadow: '0 4px 12px rgba(138, 77, 213, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-                background: 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 50%, #8A4DD5 100%)',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}>
-                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold tracking-wider">
-                  AI
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                  F
                 </div>
               </div>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-primary rounded-full opacity-60" style={{
-                animation: 'pulse 2s infinite',
-                boxShadow: '0 0 8px rgba(138, 77, 213, 0.6)'
-              }} />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full opacity-80 animate-pulse" />
+            </div>
+            <div className="group-data-[collapsible=icon]:hidden">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Fixlify
+              </h2>
+              <p className="text-xs text-gray-500 -mt-1">Service Management</p>
             </div>
           </div>
-          <SidebarTrigger />
+          <SidebarTrigger className="text-gray-400 hover:text-gray-600" />
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
-        <div className="mt-6">
-          <SidebarMenu className="space-y-1 px-3">
+      <SidebarContent className="px-4 py-6">
+        <div className="space-y-2">
+          <div className="px-3 mb-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+              Main Menu
+            </p>
+          </div>
+          
+          <SidebarMenu className="space-y-1">
             {routes.map(route => (
               <SidebarMenuItem key={route.href}>
                 <TrackingWrapper actionType="navigation" element="sidebar_menu" context={{
@@ -129,22 +122,55 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     asChild
                     isActive={location.pathname === route.href}
-                    className="w-full justify-start text-base font-medium transition-all duration-200 hover:scale-[1.02] data-[active=true]:bg-gradient-primary data-[active=true]:text-white data-[active=true]:shadow-md hover:data-[active=true]:shadow-lg"
+                    className={`
+                      group w-full justify-start px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 
+                      hover:bg-gray-50 hover:scale-[1.02] hover:shadow-sm
+                      data-[active=true]:bg-gradient-to-r data-[active=true]:from-blue-50 data-[active=true]:to-purple-50 
+                      data-[active=true]:text-blue-700 data-[active=true]:border-l-4 data-[active=true]:border-blue-500
+                      data-[active=true]:shadow-md data-[active=true]:ml-0
+                      ${location.pathname === route.href ? 'border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 shadow-md' : 'text-gray-700 hover:text-gray-900'}
+                    `}
                     tooltip={route.label}
                   >
                     <Button 
                       variant="ghost"
-                      className="w-full justify-start"
+                      className="w-full justify-start p-0 h-auto hover:bg-transparent"
                       onClick={() => handleNavigation(route.href)}
                     >
-                      <route.icon className="mr-3 h-4 w-4 transition-colors group-data-[collapsible=icon]:mr-0" />
-                      <span className="truncate group-data-[collapsible=icon]:hidden">{route.label}</span>
+                      <route.icon className={`
+                        mr-3 h-5 w-5 transition-all duration-200 group-data-[collapsible=icon]:mr-0
+                        ${location.pathname === route.href ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}
+                      `} />
+                      <span className="truncate group-data-[collapsible=icon]:hidden font-medium">
+                        {route.label}
+                      </span>
+                      {location.pathname === route.href && (
+                        <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full group-data-[collapsible=icon]:hidden" />
+                      )}
                     </Button>
                   </SidebarMenuButton>
                 </TrackingWrapper>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
+          
+          <div className="pt-6 mt-6 border-t border-gray-100 group-data-[collapsible=icon]:hidden">
+            <div className="px-3 mb-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Quick Stats
+              </p>
+            </div>
+            <div className="px-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Active Jobs</span>
+                <span className="font-semibold text-blue-600">12</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">This Month</span>
+                <span className="font-semibold text-green-600">$45.2k</span>
+              </div>
+            </div>
+          </div>
         </div>
       </SidebarContent>
     </Sidebar>
