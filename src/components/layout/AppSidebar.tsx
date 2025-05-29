@@ -22,57 +22,57 @@ export function AppSidebar() {
     label: 'Dashboard',
     icon: LayoutDashboard,
     href: '/dashboard',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Jobs',
     icon: Briefcase,
     href: '/jobs',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Clients',
     icon: Users,
     href: '/clients',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Schedule',
     icon: Calendar,
     href: '/schedule',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Finance',
     icon: DollarSign,
     href: '/finance',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Connect Center',
     icon: MessageSquare,
     href: '/connect',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'AI Center',
     icon: Bot,
     href: '/ai-center',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Automations',
     icon: Zap,
     href: '/automations',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Analytics',
     icon: BarChart3,
     href: '/analytics',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Team',
     icon: UserCheck,
     href: '/team',
-    color: "text-gray-600"
+    color: "text-fixlyfy"
   }, {
     label: 'Settings',
     icon: Settings,
     href: '/settings',
-    color: "text-gray-600"
+    color: "text-fixlyfy-text-muted"
   }];
 
   const handleNavigation = (href: string) => {
@@ -137,8 +137,8 @@ export function AppSidebar() {
                       className="w-full justify-start"
                       onClick={() => handleNavigation(route.href)}
                     >
-                      <route.icon className={`mr-3 h-4 w-4 transition-colors group-data-[collapsible=icon]:mr-0 ${location.pathname === route.href ? 'text-white' : 'text-gray-600'}`} />
-                      <span className={`truncate group-data-[collapsible=icon]:hidden ${location.pathname === route.href ? 'text-white' : 'text-gray-600'}`}>{route.label}</span>
+                      <route.icon className="mr-3 h-4 w-4 transition-colors group-data-[collapsible=icon]:mr-0" />
+                      <span className="truncate group-data-[collapsible=icon]:hidden">{route.label}</span>
                     </Button>
                   </SidebarMenuButton>
                 </TrackingWrapper>
