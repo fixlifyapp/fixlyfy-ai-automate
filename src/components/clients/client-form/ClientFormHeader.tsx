@@ -43,7 +43,7 @@ export const ClientFormHeader = ({
             </Badge>
           </div>
           <p className="text-fixlyfy-text-secondary">
-            ID: {client.id ? client.id.substring(0, 8) : 'Unknown'} · {client.type || "Unknown type"}
+            ID: {client.id || 'Unknown'} · {client.type || "Unknown type"}
           </p>
         </div>
       </div>
