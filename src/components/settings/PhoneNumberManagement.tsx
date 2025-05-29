@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Plus, Search, MapPin, DollarSign, Calendar, Cloud } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Phone, Plus, Search, MapPin, DollarSign, Calendar, Cloud, Bot, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,6 +30,7 @@ interface OwnedNumber {
   monthly_price: number;
   connect_instance_id?: string;
   connect_phone_number_arn?: string;
+  ai_dispatcher_enabled?: boolean;
 }
 
 export const PhoneNumberManagement = () => {
@@ -36,6 +39,9 @@ export const PhoneNumberManagement = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [updatingAI, setUpdatingAI] = useState<string | null>(null);
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [selectedNumber, setSelectedNumber] = useState<any>(null);
 
   useEffect(() => {
     fetchOwnedNumbers();
@@ -117,6 +123,38 @@ export const PhoneNumberManagement = () => {
     }
   };
 
+  const toggleAIDispatcher = async (phoneNumber: any, enabled: boolean) => {
+    setUpdatingAI(phoneNumber.id);
+    try {
+      const { error } = await supabase
+        .from('phone_numbers')
+        .update({ ai_dispatcher_enabled: enabled })
+        .eq('id', phoneNumber.id);
+
+      if (error) throw error;
+
+      await supabase.functions.invoke('manage-ai-dispatcher', {
+        body: { action: enabled ? 'enable' : 'disable', phoneNumberId: phoneNumber.id }
+      });
+
+      toast.success(`AI Dispatcher ${enabled ? 'enabled' : 'disabled'}`);
+      fetchOwnedNumbers();
+    } catch (error) {
+      toast.error('Failed to update AI Dispatcher');
+    } finally {
+      setUpdatingAI(null);
+    }
+  };
+
+  const openAISettings = (number: any) => {
+    setSelectedNumber(number);
+    setAiSettingsOpen(true);
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    return phone.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -153,9 +191,23 @@ export const PhoneNumberManagement = () => {
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-fixlyfy" />
+                    <div className={`p-2 rounded-full ${number.ai_dispatcher_enabled ? 'bg-blue-100' : 'bg-green-100'}`}>
+                      {number.ai_dispatcher_enabled ? (
+                        <Bot className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <Phone className="h-4 w-4 text-green-600" />
+                      )}
+                    </div>
                     <div>
-                      <div className="font-medium">{number.phone_number}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {formatPhoneNumber(number.phone_number)}
+                        {number.ai_dispatcher_enabled && (
+                          <Badge className="bg-blue-600">
+                            <Bot className="h-3 w-3 mr-1" />
+                            AI Active
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         Purchased: {new Date(number.purchased_at).toLocaleDateString()}
@@ -170,9 +222,24 @@ export const PhoneNumberManagement = () => {
                       )}
                     </div>
                   </div>
-                  <Badge variant={number.status === 'owned' ? 'success' : 'secondary'}>
-                    {number.status}
-                  </Badge>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={number.ai_dispatcher_enabled || false}
+                        onCheckedChange={(enabled) => toggleAIDispatcher(number, enabled)}
+                        disabled={updatingAI === number.id}
+                      />
+                      <Label>AI Dispatcher</Label>
+                    </div>
+                    
+                    {number.ai_dispatcher_enabled && (
+                      <Button size="sm" variant="outline" onClick={() => openAISettings(number)}>
+                        <Settings className="h-4 w-4 mr-1" />
+                        AI Settings
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
