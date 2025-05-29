@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -72,6 +73,7 @@ class AwsV4Signer {
       ...headers,
       'host': host,
       'x-amz-date': isoDateTime,
+      'x-amz-target': headers['x-amz-target'] || ''
     };
 
     // Create canonical request
@@ -120,33 +122,33 @@ class AwsV4Signer {
 
 // Helper function to make Amazon Connect API calls
 const makeConnectApiCall = async (
-  endpoint: string,
-  method: string,
+  action: string,
   payload: any,
   awsAccessKeyId: string,
   awsSecretAccessKey: string,
-  region: string
+  region: string,
+  instanceId: string
 ) => {
   const host = `connect.${region}.amazonaws.com`;
-  const url = `https://${host}${endpoint}`;
+  const url = `https://${host}/`;
   
   const headers = {
     'Content-Type': 'application/x-amz-json-1.1',
+    'X-Amz-Target': `AmazonConnectService.${action}`,
   };
 
   const payloadString = JSON.stringify(payload);
   
   try {
     const signer = new AwsV4Signer(awsAccessKeyId, awsSecretAccessKey, region, 'connect');
-    const signedHeaders = await signer.sign(method, url, headers, payloadString);
+    const signedHeaders = await signer.sign('POST', url, headers, payloadString);
 
-    console.log(`Making Amazon Connect API call to: ${endpoint}`);
+    console.log(`Making Amazon Connect API call: ${action}`);
     console.log('URL:', url);
-    console.log('Method:', method);
     console.log('Payload:', payloadString);
 
     const response = await fetch(url, {
-      method: method,
+      method: 'POST',
       headers: signedHeaders,
       body: payloadString
     });
@@ -252,7 +254,7 @@ serve(async (req) => {
 
           console.log(`Searching for phone numbers in ${countryCode}, area codes: ${searchAreaCodes}`);
 
-          // Use correct Amazon Connect API endpoint for searching available phone numbers
+          // Use correct Amazon Connect API action for searching available phone numbers
           const searchPayload = {
             InstanceId: connectInstanceId,
             PhoneNumberCountryCode: countryCode,
@@ -262,12 +264,12 @@ serve(async (req) => {
           };
 
           const result = await makeConnectApiCall(
-            '/phone-numbers/search-available',
-            'POST',
+            'SearchAvailablePhoneNumbers',
             searchPayload,
             awsAccessKeyId,
             awsSecretAccessKey,
-            awsRegion
+            awsRegion,
+            connectInstanceId
           );
 
           // Transform the Amazon Connect response to our format
@@ -308,7 +310,7 @@ serve(async (req) => {
         }
 
         try {
-          // Use correct Amazon Connect API endpoint for claiming phone numbers
+          // Use correct Amazon Connect API action for claiming phone numbers
           const purchasePayload = {
             InstanceId: connectInstanceId,
             PhoneNumber: phoneNumber,
@@ -317,12 +319,12 @@ serve(async (req) => {
           };
 
           const result = await makeConnectApiCall(
-            '/phone-numbers/claim',
-            'PUT',
+            'ClaimPhoneNumber',
             purchasePayload,
             awsAccessKeyId,
             awsSecretAccessKey,
-            awsRegion
+            awsRegion,
+            connectInstanceId
           );
 
           // Get user from auth header
