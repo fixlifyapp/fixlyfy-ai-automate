@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { usePaymentActions } from "@/hooks/usePaymentActions";
 import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { formatDistanceToNow } from "date-fns";
 import { PaymentMethod } from "@/types/payment";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, roundToCurrency } from "@/lib/utils";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -21,10 +20,6 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const { invoices } = useInvoices(jobId);
   const { addPayment, refundPayment, deletePayment, isProcessing } = usePaymentActions(jobId, refreshPayments);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-  };
 
   const getPaymentMethodBadge = (method: string) => {
     const colors = {
@@ -94,8 +89,8 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
     }
   };
 
-  // Calculate outstanding balance from all invoices
-  const outstandingBalance = invoices.reduce((sum, invoice) => sum + (invoice.balance || 0), 0);
+  // Calculate outstanding balance with proper rounding
+  const outstandingBalance = roundToCurrency(invoices.reduce((sum, invoice) => sum + (invoice.balance || 0), 0));
 
   return (
     <div className="space-y-6">

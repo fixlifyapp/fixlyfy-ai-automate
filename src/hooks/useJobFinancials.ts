@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useInvoices } from './useInvoices';
 import { usePayments } from './usePayments';
 import { supabase } from '@/integrations/supabase/client';
+import { roundToCurrency } from '@/lib/utils';
 
 export const useJobFinancials = (jobId: string) => {
   const { invoices, isLoading: invoicesLoading, refreshInvoices } = useInvoices(jobId);
@@ -66,28 +67,28 @@ export const useJobFinancials = (jobId: string) => {
       console.log('Invoices:', invoices);
       console.log('Payments:', payments);
 
-      // Calculate invoice totals
-      const invoiceTotal = invoices.reduce((sum, invoice) => {
+      // Calculate invoice totals with proper rounding
+      const invoiceTotal = roundToCurrency(invoices.reduce((sum, invoice) => {
         return sum + (invoice.total || 0);
-      }, 0);
+      }, 0));
 
-      // Calculate total paid amount from payments
-      const paidTotal = payments.reduce((sum, payment) => {
+      // Calculate total paid amount from payments with proper rounding
+      const paidTotal = roundToCurrency(payments.reduce((sum, payment) => {
         return sum + (payment.amount || 0);
-      }, 0);
+      }, 0));
 
-      // Calculate balance (remaining amount to be paid)
-      const balanceAmount = invoiceTotal - paidTotal;
+      // Calculate balance with proper rounding to prevent floating-point precision issues
+      const balanceAmount = roundToCurrency(invoiceTotal - paidTotal);
 
-      // Calculate overdue amount (for invoices past due date)
+      // Calculate overdue amount with proper rounding
       const currentDate = new Date();
-      const overdueAmount = invoices
+      const overdueAmount = roundToCurrency(invoices
         .filter(invoice => 
           invoice.due_date && 
           new Date(invoice.due_date) < currentDate && 
           invoice.status !== 'paid'
         )
-        .reduce((sum, invoice) => sum + (invoice.total || 0), 0);
+        .reduce((sum, invoice) => sum + (invoice.total || 0), 0));
 
       // Count paid and unpaid invoices
       const paidInvoices = invoices.filter(invoice => invoice.status === 'paid').length;

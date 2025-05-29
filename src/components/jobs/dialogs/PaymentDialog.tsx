@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -15,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PaymentMethod } from "@/types/payment";
 import { Check, DollarSign, CreditCard, FileText } from "lucide-react";
 import { ToastTimer } from "@/components/ui/toast";
+import { roundToCurrency } from "@/lib/utils";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -24,23 +24,25 @@ interface PaymentDialogProps {
 }
 
 export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed }: PaymentDialogProps) => {
-  const [amount, setAmount] = useState<number>(balance);
+  const [amount, setAmount] = useState<number>(0);
   const [method, setMethod] = useState<PaymentMethod>("credit-card");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update amount when balance changes
+  // Update amount when balance changes, with proper rounding
   useEffect(() => {
-    setAmount(balance);
+    const roundedBalance = roundToCurrency(balance);
+    setAmount(roundedBalance);
   }, [balance]);
 
   const handleSubmit = async () => {
-    if (amount <= 0) return;
+    const roundedAmount = roundToCurrency(amount);
+    if (roundedAmount <= 0) return;
     
     setIsLoading(true);
     try {
-      await onPaymentProcessed(amount, method, reference, notes);
+      await onPaymentProcessed(roundedAmount, method, reference, notes);
       resetForm();
       onOpenChange(false);
     } catch (error) {
@@ -51,7 +53,8 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
   };
 
   const resetForm = () => {
-    setAmount(balance);
+    const roundedBalance = roundToCurrency(balance);
+    setAmount(roundedBalance);
     setMethod("credit-card");
     setReference("");
     setNotes("");
@@ -71,6 +74,8 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
         return <CreditCard size={18} />;
     }
   };
+
+  const remainingBalance = roundToCurrency(balance - amount);
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
@@ -98,12 +103,12 @@ export const PaymentDialog = ({ open, onOpenChange, balance, onPaymentProcessed 
               type="number"
               min="0"
               step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
+              value={amount.toFixed(2)}
+              onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Remaining balance: ${(balance - amount).toFixed(2)}
+              Remaining balance: ${remainingBalance.toFixed(2)}
             </p>
           </div>
           
