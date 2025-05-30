@@ -86,7 +86,10 @@ const JobCard = memo(({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onEdit}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
             className="opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <Edit className="h-4 w-4" />
@@ -164,8 +167,7 @@ export const JobsListOptimized = memo(({
     navigate(`/jobs/${jobId}`);
   };
 
-  const handleEditJob = (e: React.MouseEvent, jobId: string) => {
-    e.stopPropagation();
+  const handleEditJob = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
   };
 
@@ -226,7 +228,7 @@ export const JobsListOptimized = memo(({
                 job={job}
                 isSelected={selectedJobs.includes(job.id)}
                 onSelect={(checked) => onSelectJob(job.id, checked)}
-                onEdit={(e) => handleEditJob(e, job.id)}
+                onEdit={() => handleEditJob(job.id)}
               />
             </div>
           ))}
