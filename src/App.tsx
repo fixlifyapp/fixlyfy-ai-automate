@@ -22,6 +22,7 @@ import IntegrationsPage from "@/pages/IntegrationsPage";
 import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
 import AISettingsPage from "@/pages/AISettingsPage";
 import TeamManagementPage from "@/pages/TeamManagementPage";
+import ProductsPage from "@/pages/ProductsPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
@@ -66,6 +67,11 @@ const App = () => {
               <Route path="/jobs/:id" element={
                 <ProtectedRoute>
                   <JobDetailsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <ProductsPage />
                 </ProtectedRoute>
               } />
               <Route path="/connect" element={
