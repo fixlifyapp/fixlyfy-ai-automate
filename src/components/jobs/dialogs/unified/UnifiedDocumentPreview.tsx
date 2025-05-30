@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { LineItem } from "../../builder/types";
 import { formatCurrency } from "@/lib/utils";
@@ -33,9 +32,10 @@ export const UnifiedDocumentPreview = ({
   dueDate
 }: UnifiedDocumentPreviewProps) => {
   const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [jobAddress, setJobAddress] = useState<string>('');
 
   useEffect(() => {
-    const fetchCompanyInfo = async () => {
+    const fetchCompanyAndJobInfo = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -53,9 +53,23 @@ export const UnifiedDocumentPreview = ({
             city: 'Business City, BC V1V 1V1',
             website: 'www.fixlyfy.com'
           });
+
+          // Fetch job address if we have client info with ID
+          if (clientInfo?.id) {
+            const { data: jobs } = await supabase
+              .from('jobs')
+              .select('address')
+              .eq('client_id', clientInfo.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (jobs && jobs.length > 0 && jobs[0].address) {
+              setJobAddress(jobs[0].address);
+            }
+          }
         }
       } catch (error) {
-        console.error('Error fetching company info:', error);
+        console.error('Error fetching company and job info:', error);
         setCompanyInfo({
           name: 'FixLyfy Services',
           phone: '(555) 123-4567',
@@ -67,8 +81,8 @@ export const UnifiedDocumentPreview = ({
       }
     };
 
-    fetchCompanyInfo();
-  }, []);
+    fetchCompanyAndJobInfo();
+  }, [clientInfo]);
 
   const subtotal = calculateSubtotal();
   const tax = calculateTotalTax();
@@ -125,8 +139,11 @@ export const UnifiedDocumentPreview = ({
               {clientInfo?.company && (
                 <p className="text-gray-700 font-medium mb-1">{clientInfo.company}</p>
               )}
+              
+              {/* Client Address */}
               {clientInfo?.address && (
-                <div className="text-gray-600 mb-2">
+                <div className="text-gray-600 mb-3">
+                  <p className="font-medium text-gray-700 mb-1">Billing Address:</p>
                   <p>{clientInfo.address}</p>
                   {(clientInfo?.city || clientInfo?.state || clientInfo?.zip) && (
                     <p>
@@ -140,16 +157,28 @@ export const UnifiedDocumentPreview = ({
                   )}
                 </div>
               )}
-              {clientInfo?.phone && (
-                <p className="text-gray-600">
-                  <span className="font-medium">Phone:</span> {clientInfo.phone}
-                </p>
+
+              {/* Job Service Address */}
+              {jobAddress && (
+                <div className="text-gray-600 mb-3 pt-2 border-t border-gray-200">
+                  <p className="font-medium text-gray-700 mb-1">Service Address:</p>
+                  <p>{jobAddress}</p>
+                </div>
               )}
-              {clientInfo?.email && (
-                <p className="text-gray-600">
-                  <span className="font-medium">Email:</span> {clientInfo.email}
-                </p>
-              )}
+
+              {/* Contact Information */}
+              <div className="pt-2 border-t border-gray-200">
+                {clientInfo?.phone && (
+                  <p className="text-gray-600 mb-1">
+                    <span className="font-medium">Phone:</span> {clientInfo.phone}
+                  </p>
+                )}
+                {clientInfo?.email && (
+                  <p className="text-gray-600">
+                    <span className="font-medium">Email:</span> {clientInfo.email}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           
