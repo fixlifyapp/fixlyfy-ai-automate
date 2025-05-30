@@ -17,7 +17,7 @@ const AISettingsPage = () => {
         subtitle="Configure AI agent behavior, automation, and advanced settings"
         icon={Brain}
         badges={[
-          { text: "AI Agent", icon: Bot, variant: "fixlify" },
+          { text: "AI Agent", icon: Bot, variant: "fixlyfy" },
           { text: "Automation", icon: Zap, variant: "success" },
           { text: "Advanced", icon: Settings, variant: "info" }
         ]}

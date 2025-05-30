@@ -12,7 +12,7 @@ const InventoryPage = () => {
         subtitle="Manage your parts, equipment, and stock levels"
         icon={Package}
         badges={[
-          { text: "Stock Tracking", icon: BarChart3, variant: "fixlify" },
+          { text: "Stock Tracking", icon: BarChart3, variant: "fixlyfy" },
           { text: "Low Stock Alerts", icon: AlertTriangle, variant: "warning" },
           { text: "Auto Ordering", icon: Zap, variant: "info" }
         ]}

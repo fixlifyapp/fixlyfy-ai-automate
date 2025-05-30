@@ -24,28 +24,28 @@ const demoUsers: User[] = [
   {
     id: "1",
     name: "Admin User",
-    email: "admin@fixlify.com",
+    email: "admin@fixlyfy.com",
     role: "admin",
     avatar: "https://github.com/shadcn.png"
   },
   {
     id: "2",
     name: "Manager User",
-    email: "manager@fixlify.com",
+    email: "manager@fixlyfy.com",
     role: "manager",
     avatar: "https://avatars.githubusercontent.com/u/124599?v=4"
   },
   {
     id: "3",
     name: "Dispatcher User",
-    email: "dispatcher@fixlify.com",
+    email: "dispatcher@fixlyfy.com",
     role: "dispatcher",
     avatar: "https://avatars.githubusercontent.com/u/1500684?v=4"
   },
   {
     id: "4",
     name: "Technician User",
-    email: "tech@fixlify.com",
+    email: "tech@fixlyfy.com",
     role: "technician",
     avatar: "https://avatars.githubusercontent.com/u/810438?v=4"
   }
@@ -65,7 +65,7 @@ export const UserRoleSwitcher = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-fixlify/10">
+          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-fixlyfy/10">
             {currentUser.name.charAt(0)}
           </div>
         </Button>
@@ -97,7 +97,7 @@ export const UserRoleSwitcher = () => {
             onClick={() => handleUserSwitch(user)}
           >
             <div className="flex items-center">
-              <div className="w-4 h-4 rounded-full bg-fixlify/10 flex items-center justify-center text-[10px] mr-2">
+              <div className="w-4 h-4 rounded-full bg-fixlyfy/10 flex items-center justify-center text-[10px] mr-2">
                 {user.name.charAt(0)}
               </div>
               <span>{roleDisplayNames[user.role]}</span>

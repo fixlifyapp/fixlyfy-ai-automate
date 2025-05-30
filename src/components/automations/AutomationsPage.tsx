@@ -33,7 +33,7 @@ export const AutomationsPage = () => {
         subtitle="Intelligent workflows powered by AI insights"
         icon={Zap}
         badges={[
-          { text: "AI-Powered", icon: Brain, variant: "fixlify" },
+          { text: "AI-Powered", icon: Brain, variant: "fixlyfy" },
           { text: "Smart Triggers", icon: Target, variant: "success" },
           { text: "Multi-Channel", icon: MessageSquare, variant: "info" }
         ]}

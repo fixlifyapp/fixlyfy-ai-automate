@@ -30,7 +30,7 @@ const AdvancedDashboard = () => {
         subtitle="Deep insights, predictive analytics, and smart filtering for your business"
         icon={Brain}
         badges={[
-          { text: "AI-Powered", icon: Brain, variant: "fixlify" },
+          { text: "AI-Powered", icon: Brain, variant: "fixlyfy" },
           { text: "Predictive", icon: TrendingUp, variant: "success" },
           { text: "Smart Filters", icon: Filter, variant: "info" }
         ]}

@@ -1,6 +1,8 @@
 
-import { createContext, useContext, ReactNode, useState } from 'react';
-import { User, UserRole } from './types';
+import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import { User, UserRole, DEFAULT_PERMISSIONS } from './types';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RBACContextType {
   currentUser: User | null;
@@ -12,36 +14,137 @@ interface RBACContextType {
   allRoles: UserRole[];
 }
 
+const defaultUser: User = {
+  id: "1",
+  name: "Admin User",
+  email: "admin@fixlyfy.com",
+  role: "admin",
+  avatar: "https://github.com/shadcn.png"
+};
+
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 export const RBACProvider = ({ children }: { children: ReactNode }) => {
-  // Mock admin user with full permissions
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: 'mock-admin-id',
-    name: 'Admin User',
-    email: 'admin@fixlify.com',
-    role: 'admin',
-    avatar: "https://github.com/shadcn.png"
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(defaultUser);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // Fetch the current authenticated user from Supabase
+    const fetchCurrentUser = async () => {
+      try {
+        setLoading(true);
+        
+        // Get the current session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Get user profile data
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.error("Error fetching user profile:", error);
+            // Fall back to default user in dev mode, otherwise null
+            setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+          } else if (profile) {
+            // Set the current user from profile data
+            setCurrentUser({
+              id: profile.id,
+              name: profile.name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email || 'unknown@example.com',
+              role: (profile.role as UserRole) || 'technician',
+              avatar: profile.avatar_url || "https://github.com/shadcn.png"
+            });
+          }
+        } else if (process.env.NODE_ENV === 'development') {
+          // In dev mode, use the default admin user if not logged in
+          setCurrentUser(defaultUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error("Error in RBAC provider:", error);
+        // Fall back to default user in dev mode
+        if (process.env.NODE_ENV === 'development') {
+          setCurrentUser(defaultUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCurrentUser();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        fetchCurrentUser();
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+      }
+    });
+    
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
+  // Enhanced permission check that properly handles wildcards and granular permissions
   const hasPermission = (permission: string): boolean => {
-    // Always return true - full access to everything
-    return true;
+    if (!currentUser) return false;
+    
+    const userRole = currentUser.role;
+    const rolePermissions = DEFAULT_PERMISSIONS[userRole] || [];
+    
+    // Admin has all permissions
+    if (rolePermissions.includes('*')) return true;
+    
+    // Check if the user has the specific permission
+    if (rolePermissions.includes(permission)) return true;
+    
+    // Check for broader permissions (e.g., 'jobs.view.all' covers 'jobs.view.assigned')
+    const permissionParts = permission.split('.');
+    if (permissionParts.length > 2) {
+      const broaderPermission = permissionParts.slice(0, -1).join('.') + '.all';
+      if (rolePermissions.includes(broaderPermission)) return true;
+    }
+    
+    // Check for category-level permissions
+    if (permissionParts.length > 1) {
+      const categoryPermission = permissionParts[0] + '.*';
+      if (rolePermissions.includes(categoryPermission)) return true;
+    }
+    
+    return false;
   };
 
+  // Function to check if user has a specific role or one of multiple roles
   const hasRole = (role: UserRole | UserRole[]): boolean => {
-    // Always return true - user has all roles
-    return true;
+    if (!currentUser) return false;
+    
+    if (Array.isArray(role)) {
+      return role.includes(currentUser.role);
+    }
+    
+    return currentUser.role === role;
   };
 
-  const allRoles: UserRole[] = ['admin', 'manager', 'dispatcher', 'technician'];
+  // Get all available roles from DEFAULT_PERMISSIONS
+  const defaultRoleKeys = Object.keys(DEFAULT_PERMISSIONS) as UserRole[] || [];
+  const allRoles: UserRole[] = defaultRoleKeys;
 
   const value = {
     currentUser,
-    loading: false,
+    loading,
     hasPermission,
     hasRole,
-    userRole: 'admin' as UserRole,
+    userRole: currentUser?.role || null,
     setCurrentUser,
     allRoles,
   };
@@ -63,32 +166,40 @@ export const useRBAC = (): RBACContextType => {
 
 // Helper components for permission-based rendering
 export const PermissionRequired = ({ 
+  permission, 
+  fallback = null,
   children 
 }: { 
   permission: string; 
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }) => {
-  // Always show content - no permission checks
-  return <>{children}</>;
+  const { hasPermission } = useRBAC();
+  
+  return hasPermission(permission) ? <>{children}</> : <>{fallback}</>;
 };
 
 export const RoleRequired = ({ 
+  role, 
+  fallback = null,
   children 
 }: { 
   role: UserRole | UserRole[]; 
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }) => {
-  // Always show content - no role checks
-  return <>{children}</>;
+  const { hasRole } = useRBAC();
+  
+  const hasAccess = hasRole(role);
+  
+  return hasAccess ? <>{children}</> : <>{fallback}</>;
 };
 
-// Security indicator for production
-export const SecurityModeIndicator = () => {
-  return (
-    <div className="fixed bottom-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
-      Full Admin Access
+// Component for testing pre-Supabase functionality
+export const TestModeIndicator = () => {
+  return process.env.NODE_ENV === 'development' ? (
+    <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
+      Test Mode (No Supabase)
     </div>
-  );
+  ) : null;
 };

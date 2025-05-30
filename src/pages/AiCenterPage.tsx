@@ -1,435 +1,414 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConnectCallsList } from "@/components/connect/ConnectCallsList";
+import { AIAgentDashboard } from "@/components/connect/AIAgentDashboard";
+import { AICallAnalytics } from "@/components/connect/AICallAnalytics";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bot, Zap, BarChart3, Settings, Users, Target, Brain, Send, Loader2, DollarSign, Calendar, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Bot, MessageSquare, Zap, Settings, Target, TrendingUp, Phone, Mail, Calendar, Users, FileText, BarChart3, Shield, Lightbulb, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { useAI } from "@/hooks/use-ai";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+type Message = {
+  id: number;
+  content: string;
+  role: "user" | "assistant";
+  timestamp: Date;
+};
 
 const AiCenterPage = () => {
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("ai-calls");
+  const [unreadCounts, setUnreadCounts] = useState({
+    aiCalls: 0
+  });
+  const navigate = useNavigate();
 
-  // Mock AI agents data
-  const aiAgents = [
+  // AI Assistant state
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: 'dispatcher',
-      name: 'AI Dispatcher',
-      description: 'Intelligent call routing and customer service automation',
-      status: 'active',
-      capabilities: ['Call Routing', 'Customer Support', 'Appointment Scheduling'],
-      performance: { accuracy: 95, efficiency: 88, satisfaction: 92 }
-    },
-    {
-      id: 'scheduler',
-      name: 'Smart Scheduler',
-      description: 'Automated scheduling and calendar management',
-      status: 'active',
-      capabilities: ['Auto Scheduling', 'Calendar Sync', 'Conflict Resolution'],
-      performance: { accuracy: 98, efficiency: 94, satisfaction: 89 }
-    },
-    {
-      id: 'estimator',
-      name: 'AI Estimator',
-      description: 'Intelligent cost estimation and pricing optimization',
-      status: 'training',
-      capabilities: ['Cost Analysis', 'Price Optimization', 'Market Intelligence'],
-      performance: { accuracy: 87, efficiency: 91, satisfaction: 85 }
-    },
-    {
-      id: 'analytics',
-      name: 'Business Intelligence',
-      description: 'Advanced analytics and business insights',
-      status: 'active',
-      capabilities: ['Data Analysis', 'Trend Prediction', 'Performance Metrics'],
-      performance: { accuracy: 93, efficiency: 96, satisfaction: 90 }
+      id: 1,
+      content: "Hello! I'm your AI business assistant. I'm connected to your business data. Ask me about your metrics, revenue, clients, or any other business insights.",
+      role: "assistant",
+      timestamp: new Date()
     }
-  ];
+  ]);
+  const [input, setInput] = useState("");
+  const { generateBusinessInsights, businessData, isLoading } = useAI({
+    systemContext: "You are an AI business analyst with access to the company's data. Provide specific, data-backed insights and recommendations based on user questions.",
+    fetchBusinessData: true,
+    mode: "business",
+    forceRefresh: false
+  });
+  const isMobile = useIsMobile();
 
-  // Mock AI insights
-  const aiInsights = [
-    {
-      type: 'optimization',
-      title: 'Schedule Optimization Opportunity',
-      description: 'AI detected 15% efficiency gain possible by adjusting morning routes',
-      impact: 'high',
-      action: 'Review suggested schedule changes'
-    },
-    {
-      type: 'prediction',
-      title: 'Demand Forecast',
-      description: 'Expected 20% increase in HVAC calls next week due to weather patterns',
-      impact: 'medium',
-      action: 'Consider additional technician scheduling'
-    },
-    {
-      type: 'anomaly',
-      title: 'Cost Anomaly Detected',
-      description: 'Parts costs 12% higher than usual for recent jobs',
-      impact: 'medium',
-      action: 'Review supplier pricing'
+  // Read query parameters to handle direct navigation
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const tabParam = searchParams.get("tab") || "ai-calls";
+  
+  // Set the active tab based on URL parameters
+  useEffect(() => {
+    if (tabParam && ["ai-calls", "ai-monitor", "ai-assistant"].includes(tabParam)) {
+      setActiveTab(tabParam);
     }
-  ];
+  }, [tabParam]);
 
-  // Mock automation workflows
-  const automationWorkflows = [
-    {
-      id: 'lead-qualification',
-      name: 'Lead Qualification',
-      description: 'Automatically qualify and route incoming leads',
-      status: 'active',
-      triggers: ['New Lead', 'Form Submission'],
-      actions: ['Score Lead', 'Assign Technician', 'Send Welcome Email']
-    },
-    {
-      id: 'follow-up',
-      name: 'Customer Follow-up',
-      description: 'Automated post-service customer follow-up sequence',
-      status: 'active',
-      triggers: ['Job Completed', '24 Hours Elapsed'],
-      actions: ['Send Survey', 'Request Review', 'Schedule Maintenance']
-    },
-    {
-      id: 'inventory-alert',
-      name: 'Inventory Alerts',
-      description: 'Monitor inventory levels and trigger reorder notifications',
-      status: 'paused',
-      triggers: ['Low Stock', 'Reorder Point'],
-      actions: ['Notify Manager', 'Create Purchase Order', 'Update Forecast']
-    }
-  ];
+  // Fetch unread counts for AI calls
+  useEffect(() => {
+    const fetchUnreadCounts = async () => {
+      try {
+        // Count recent AI calls
+        const { data: aiCalls } = await supabase
+          .from('amazon_connect_calls')
+          .select('id')
+          .gte('started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'training': return 'bg-yellow-100 text-yellow-800';
-      case 'paused': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+        setUnreadCounts({
+          aiCalls: aiCalls?.length || 0
+        });
+      } catch (error) {
+        console.error("Error fetching AI call counts:", error);
+      }
+    };
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'high': return 'text-red-600';
-      case 'medium': return 'text-yellow-600';
-      case 'low': return 'text-green-600';
-      default: return 'text-gray-600';
+    fetchUnreadCounts();
+  }, []);
+
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    // Add user message
+    const userMessage: Message = {
+      id: messages.length + 1,
+      content: input.trim(),
+      role: "user",
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    
+    try {
+      const aiResponse = await generateBusinessInsights(input.trim());
+      
+      if (aiResponse) {
+        const aiMessage: Message = {
+          id: messages.length + 2,
+          content: aiResponse,
+          role: "assistant",
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+      } else {
+        throw new Error("Could not generate a response");
+      }
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      
+      toast.error("Failed to get AI insights", {
+        description: "There was an error processing your request. Please try again."
+      });
+      
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: "I'm sorry, I encountered an error while generating insights. Please try again.",
+        role: "assistant",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case 'optimization': return <TrendingUp className="h-5 w-5" />;
-      case 'prediction': return <Brain className="h-5 w-5" />;
-      case 'anomaly': return <AlertTriangle className="h-5 w-5" />;
-      default: return <Lightbulb className="h-5 w-5" />;
+  const handleNewAction = () => {
+    switch (activeTab) {
+      case "ai-calls":
+        // Navigate to settings for AI configuration
+        navigate("/settings?tab=ai-settings");
+        break;
+      case "ai-monitor":
+        // Refresh the monitor view
+        window.location.reload();
+        break;
+      case "ai-assistant":
+        // Clear chat and start new conversation
+        setMessages([{
+          id: 1,
+          content: "Hello! I'm your AI business assistant. I'm connected to your business data. Ask me about your metrics, revenue, clients, or any other business insights.",
+          role: "assistant",
+          timestamp: new Date()
+        }]);
+        setInput("");
+        break;
     }
+  };
+
+  const getActionButtonText = () => {
+    switch (activeTab) {
+      case "ai-calls": return "Configure AI Dispatcher";
+      case "ai-monitor": return "Refresh Monitor";
+      case "ai-assistant": return "New Chat";
+      default: return "Configure";
+    }
+  };
+
+  const renderBusinessMetrics = () => {
+    if (!businessData) return null;
+    
+    return (
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center flex-wrap gap-2">
+            <BarChart3 className="h-4 w-4 flex-shrink-0" />
+            <span>Current Business Metrics</span>
+            {businessData.lastRefreshed && (
+              <span className="text-xs text-muted-foreground">
+                Last updated: {format(new Date(businessData.lastRefreshed || new Date()), 'MMM d, yyyy')}
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3">
+          <div className="flex items-center">
+            <div className="w-6 h-6 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-2 flex-shrink-0">
+              <Users size={12} className="text-fixlyfy" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-fixlyfy-text-secondary">Clients</p>
+              <p className="text-sm font-medium">{businessData.metrics?.clients?.total || "0"}</p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-6 h-6 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-2 flex-shrink-0">
+              <Briefcase size={12} className="text-fixlyfy" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-fixlyfy-text-secondary">Jobs</p>
+              <p className="text-sm font-medium">{businessData.metrics?.jobs?.total || "0"}</p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-6 h-6 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-2 flex-shrink-0">
+              <DollarSign size={12} className="text-fixlyfy" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-fixlyfy-text-secondary">Revenue</p>
+              <p className="text-sm font-medium">
+                ${businessData.metrics?.revenue?.total?.toLocaleString() || "0"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-6 h-6 rounded-full bg-fixlyfy/10 flex items-center justify-center mr-2 flex-shrink-0">
+              <Calendar size={12} className="text-fixlyfy" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-fixlyfy-text-secondary">Scheduled</p>
+              <p className="text-sm font-medium">{businessData.metrics?.jobs?.scheduled || "0"}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
     <PageLayout>
       <PageHeader
-        title="AI Center"
-        subtitle="Manage AI agents, automation workflows, and intelligent insights"
-        icon={Brain}
+        title="AI Dispatcher Center"
+        subtitle="Monitor and analyze your AI-powered call handling and appointment scheduling"
+        icon={Bot}
         badges={[
-          { text: "AI-Powered", icon: Bot, variant: "fixlify" },
-          { text: "Automation", icon: Zap, variant: "success" },
-          { text: "Intelligence", icon: Target, variant: "info" }
+          { text: "AI-Powered", icon: Bot, variant: "fixlyfy" },
+          { text: "Real-time Monitor", icon: Zap, variant: "success" },
+          { text: "Analytics", icon: Target, variant: "info" }
         ]}
+        actionButton={{
+          text: getActionButtonText(),
+          icon: activeTab === "ai-calls" ? Settings : activeTab === "ai-assistant" ? Brain : BarChart3,
+          onClick: handleNewAction
+        }}
       />
+      
+      <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-3 mb-6">
+          <TabsTrigger value="ai-calls" className="flex items-center gap-2">
+            <Bot size={16} />
+            <span className="hidden sm:inline">AI Calls & Analytics</span>
+            {unreadCounts.aiCalls > 0 && (
+              <Badge className="ml-1 bg-blue-600">{unreadCounts.aiCalls}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="ai-monitor" className="flex items-center gap-2">
+            <Zap size={16} />
+            <span className="hidden sm:inline">AI Monitor</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
+            <Brain size={16} />
+            <span className="hidden sm:inline">AI Assistant</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="ai-calls" className="mt-0">
+          <div className="space-y-6">
+            <ConnectCallsList />
+            <AICallAnalytics />
+          </div>
+        </TabsContent>
 
-      <div className="space-y-6">
-        <Tabs defaultValue="agents" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="agents">AI Agents</TabsTrigger>
-            <TabsTrigger value="insights">AI Insights</TabsTrigger>
-            <TabsTrigger value="automation">Automation</TabsTrigger>
-            <TabsTrigger value="settings">AI Settings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="agents" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bot className="h-5 w-5" />
-                      AI Agents Overview
-                    </CardTitle>
-                    <CardDescription>
-                      Monitor and manage your AI agents' performance and capabilities
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {aiAgents.map((agent) => (
+        <TabsContent value="ai-monitor" className="mt-0">
+          <AIAgentDashboard />
+        </TabsContent>
+
+        <TabsContent value="ai-assistant" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Card className="h-[calc(100vh-300px)] sm:h-[calc(100vh-200px)]">
+                <CardHeader className="pb-4 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="fixlyfy-gradient rounded-full p-2">
+                      <Brain className="h-5 w-5 text-white" />
+                    </div>
+                    <CardTitle className="truncate">Business Insights Assistant</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 flex flex-col h-[calc(100%-70px)]">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={cn(
+                          "flex gap-3 max-w-full",
+                          message.role === "user" ? "justify-end ml-auto" : ""
+                        )}
+                      >
+                        {message.role === "assistant" && (
+                          <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                            <AvatarFallback className="bg-fixlyfy text-white">AI</AvatarFallback>
+                          </Avatar>
+                        )}
                         <div 
-                          key={agent.id}
-                          className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                            selectedAgent === agent.id 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                          onClick={() => setSelectedAgent(agent.id)}
+                          className={cn(
+                            "px-4 py-3 rounded-lg break-words",
+                            message.role === "assistant" 
+                              ? "bg-fixlyfy-bg-interface text-fixlyfy-text border border-fixlyfy/10" 
+                              : "bg-fixlyfy text-white",
+                            isMobile ? "max-w-[85%]" : "max-w-[90%]"
+                          )}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold">{agent.name}</h3>
-                            <Badge className={getStatusColor(agent.status)}>
-                              {agent.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {agent.description}
-                          </p>
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {agent.capabilities.map((capability) => (
-                              <Badge key={capability} variant="outline" className="text-xs">
-                                {capability}
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Accuracy:</span>
-                              <span className="ml-1 font-medium">{agent.performance.accuracy}%</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Efficiency:</span>
-                              <span className="ml-1 font-medium">{agent.performance.efficiency}%</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Satisfaction:</span>
-                              <span className="ml-1 font-medium">{agent.performance.satisfaction}%</span>
-                            </div>
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        </div>
+                        {message.role === "user" && (
+                          <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                            <AvatarImage src="https://github.com/shadcn.png" />
+                            <AvatarFallback>TC</AvatarFallback>
+                          </Avatar>
+                        )}
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-fixlyfy text-white">AI</AvatarFallback>
+                        </Avatar>
+                        <div className="px-4 py-3 rounded-lg bg-fixlyfy-bg-interface border border-fixlyfy/10 text-fixlyfy-text">
+                          <div className="flex space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-fixlyfy animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 rounded-full bg-fixlyfy animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 rounded-full bg-fixlyfy animate-bounce" style={{ animationDelay: '300ms' }}></div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Settings className="h-5 w-5" />
-                      Agent Controls
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedAgent ? (
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Configure settings for the selected AI agent.
-                        </p>
-                        <Button className="w-full" variant="outline">
-                          Configure Agent
-                        </Button>
-                        <Button className="w-full" variant="outline">
-                          View Analytics
-                        </Button>
-                        <Button className="w-full" variant="outline">
-                          Training Data
-                        </Button>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Select an AI agent to view controls and settings.
-                      </p>
                     )}
-                  </CardContent>
-                </Card>
-
-                <Card className="mt-4">
-                  <CardHeader>
-                    <CardTitle>Quick Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Active Agents</span>
-                      <Badge variant="outline">3</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Automation Workflows</span>
-                      <Badge variant="outline">12</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Daily AI Actions</span>
-                      <Badge variant="outline">147</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="insights" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5" />
-                  AI-Generated Insights
-                </CardTitle>
-                <CardDescription>
-                  Intelligent recommendations and predictions based on your business data
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {aiInsights.map((insight, index) => (
-                    <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
-                      <div className={`p-2 rounded-full ${getImpactColor(insight.impact)} bg-current/10`}>
-                        {getInsightIcon(insight.type)}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold mb-1">{insight.title}</h4>
-                        <p className="text-sm text-muted-foreground mb-2">{insight.description}</p>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="outline" 
-                            className={`${getImpactColor(insight.impact)} border-current`}
-                          >
-                            {insight.impact} impact
-                          </Badge>
-                          <Button size="sm" variant="outline">
-                            {insight.action}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="automation" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Automation Workflows
-                </CardTitle>
-                <CardDescription>
-                  Manage automated workflows and business process automation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {automationWorkflows.map((workflow) => (
-                    <div key={workflow.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">{workflow.name}</h4>
-                        <Badge className={getStatusColor(workflow.status)}>
-                          {workflow.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">{workflow.description}</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-muted-foreground">Triggers:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {workflow.triggers.map((trigger) => (
-                              <Badge key={trigger} variant="outline" className="text-xs">
-                                {trigger}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="font-medium text-muted-foreground">Actions:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {workflow.actions.map((action) => (
-                              <Badge key={action} variant="outline" className="text-xs">
-                                {action}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2 mt-4">
-                        <Button size="sm" variant="outline">
-                          Configure
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          View Logs
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          Test Run
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  AI Configuration
-                </CardTitle>
-                <CardDescription>
-                  Global AI settings and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-medium mb-2">General AI Settings</h4>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" defaultChecked />
-                        <span className="text-sm">Enable AI recommendations</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" defaultChecked />
-                        <span className="text-sm">Auto-generate insights</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" />
-                        <span className="text-sm">Advanced analytics mode</span>
-                      </label>
-                    </div>
                   </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">Automation Preferences</h4>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" defaultChecked />
-                        <span className="text-sm">Auto-approve low-risk actions</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" defaultChecked />
-                        <span className="text-sm">Send automation notifications</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" />
-                        <span className="text-sm">Enable predictive scheduling</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <Button className="w-full md:w-auto">
-                      Save AI Settings
+                  
+                  <div className="p-4 border-t flex gap-2 mt-auto">
+                    <Input
+                      placeholder="Ask about your business metrics, revenue, clients..."
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                      className="flex-1 min-w-0"
+                      disabled={isLoading}
+                    />
+                    <Button 
+                      onClick={handleSendMessage} 
+                      className="bg-fixlyfy hover:bg-fixlyfy/90 flex-shrink-0"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="space-y-4">
+              {renderBusinessMetrics()}
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Sample Questions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    onClick={() => {
+                      setInput("What is my total revenue?");
+                      setTimeout(() => handleSendMessage(), 100);
+                    }}
+                  >
+                    <span className="truncate">What is my total revenue?</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    onClick={() => {
+                      setInput("How many clients do I have?");
+                      setTimeout(() => handleSendMessage(), 100);
+                    }}
+                  >
+                    <span className="truncate">How many clients do I have?</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    onClick={() => {
+                      setInput("What are my most profitable services?");
+                      setTimeout(() => handleSendMessage(), 100);
+                    }}
+                  >
+                    <span className="truncate">What are my most profitable services?</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start text-sm"
+                    onClick={() => {
+                      setInput("Show me the performance of my technicians");
+                      setTimeout(() => handleSendMessage(), 100);
+                    }}
+                  >
+                    <span className="truncate">Show me technician performance</span>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </PageLayout>
   );
 };

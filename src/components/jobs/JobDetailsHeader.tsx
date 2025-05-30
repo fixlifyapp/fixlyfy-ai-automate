@@ -1,16 +1,71 @@
 
-import { useState } from "react";
-import { useJobDetails } from "./context/JobDetailsContext";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { JobInfoSection } from "./header/JobInfoSection";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const JobDetailsHeader = () => {
-  const { job, isLoading, updateJobStatus } = useJobDetails();
+  const { id: jobId } = useParams<{ id: string }>();
+  const [job, setJob] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (jobId) {
+      fetchJobDetails();
+    }
+  }, [jobId]);
+
+  const fetchJobDetails = async () => {
+    try {
+      setIsLoading(true);
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .select(`
+          *,
+          client:clients(*)
+        `)
+        .eq('id', jobId)
+        .single();
+
+      if (jobError) throw jobError;
+
+      if (jobData) {
+        const clientData = Array.isArray(jobData.client) ? jobData.client[0] : jobData.client;
+        
+        setJob({
+          id: jobData.id,
+          clientId: clientData?.id || '',
+          client: clientData?.name || 'Unknown Client',
+          service: jobData.service || '',
+          address: clientData?.address || '',
+          phone: clientData?.phone || '',
+          email: clientData?.email || '',
+          total: 0, // This will be calculated by useJobFinancials
+          status: jobData.status || 'scheduled'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching job details:', error);
+      toast.error('Failed to load job details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
+    if (!jobId) return;
+    
     try {
-      await updateJobStatus(newStatus);
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: newStatus })
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      setJob(prev => prev ? { ...prev, status: newStatus } : null);
       toast.success('Job status updated successfully');
     } catch (error) {
       console.error('Error updating job status:', error);
@@ -62,7 +117,7 @@ export const JobDetailsHeader = () => {
     <div className="p-6">
       <JobInfoSection
         job={job}
-        status={job.status || 'scheduled'}
+        status={job.status}
         onStatusChange={handleStatusChange}
         onCallClick={handleCallClick}
         onMessageClick={handleMessageClick}

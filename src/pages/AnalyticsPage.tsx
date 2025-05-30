@@ -21,7 +21,7 @@ const AnalyticsPage = () => {
         subtitle="Advanced analytics, KPI tracking, and business intelligence insights"
         icon={BarChart3}
         badges={[
-          { text: "Real-time Data", icon: TrendingUp, variant: "fixlify" },
+          { text: "Real-time Data", icon: TrendingUp, variant: "fixlyfy" },
           { text: "Predictive AI", icon: Target, variant: "success" },
           { text: "Custom Reports", icon: Calendar, variant: "info" }
         ]}

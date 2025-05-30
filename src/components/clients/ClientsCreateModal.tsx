@@ -181,7 +181,7 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button 
               type="submit" 
-              className="bg-fixlify hover:bg-fixlify/90"
+              className="bg-fixlyfy hover:bg-fixlyfy/90"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : 'Add Client'}

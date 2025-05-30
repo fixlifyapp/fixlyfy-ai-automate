@@ -173,7 +173,7 @@ const ConnectCenterPage = () => {
         subtitle="Manage all client communications and contact channels"
         icon={MessageSquare}
         badges={[
-          { text: "Multi-Channel", icon: Users, variant: "fixlify" },
+          { text: "Multi-Channel", icon: Users, variant: "fixlyfy" },
           { text: "Real-time Sync", icon: Target, variant: "success" },
           { text: "Communication Hub", icon: MessageSquare, variant: "info" }
         ]}

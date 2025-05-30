@@ -283,37 +283,21 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "amazon_connect_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "amazon_connect_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
-      }
-      auth_rate_limits: {
-        Row: {
-          attempt_type: string
-          attempts: number | null
-          blocked_until: string | null
-          created_at: string | null
-          id: string
-          identifier: string
-          updated_at: string | null
-        }
-        Insert: {
-          attempt_type: string
-          attempts?: number | null
-          blocked_until?: string | null
-          created_at?: string | null
-          id?: string
-          identifier: string
-          updated_at?: string | null
-        }
-        Update: {
-          attempt_type?: string
-          attempts?: number | null
-          blocked_until?: string | null
-          created_at?: string | null
-          id?: string
-          identifier?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       automation_actions: {
         Row: {
@@ -632,6 +616,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_portal_sessions: {
@@ -714,6 +712,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_properties: {
@@ -769,6 +781,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -868,75 +894,6 @@ export type Database = {
         }
         Relationships: []
       }
-      company_settings: {
-        Row: {
-          business_type: string | null
-          company_address: string | null
-          company_city: string | null
-          company_country: string | null
-          company_description: string | null
-          company_email: string | null
-          company_logo_url: string | null
-          company_name: string | null
-          company_phone: string | null
-          company_state: string | null
-          company_tagline: string | null
-          company_website: string | null
-          company_zip: string | null
-          created_at: string
-          id: string
-          service_radius: number | null
-          service_zip_codes: string | null
-          tax_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          business_type?: string | null
-          company_address?: string | null
-          company_city?: string | null
-          company_country?: string | null
-          company_description?: string | null
-          company_email?: string | null
-          company_logo_url?: string | null
-          company_name?: string | null
-          company_phone?: string | null
-          company_state?: string | null
-          company_tagline?: string | null
-          company_website?: string | null
-          company_zip?: string | null
-          created_at?: string
-          id?: string
-          service_radius?: number | null
-          service_zip_codes?: string | null
-          tax_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          business_type?: string | null
-          company_address?: string | null
-          company_city?: string | null
-          company_country?: string | null
-          company_description?: string | null
-          company_email?: string | null
-          company_logo_url?: string | null
-          company_name?: string | null
-          company_phone?: string | null
-          company_state?: string | null
-          company_tagline?: string | null
-          company_website?: string | null
-          company_zip?: string | null
-          created_at?: string
-          id?: string
-          service_radius?: number | null
-          service_zip_codes?: string | null
-          tax_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       conversations: {
         Row: {
           client_id: string | null
@@ -972,6 +929,20 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "conversations_job_id_fkey"
@@ -1078,6 +1049,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -1757,6 +1742,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "jobs_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
@@ -2204,83 +2203,6 @@ export type Database = {
         }
         Relationships: []
       }
-      secure_client_sessions: {
-        Row: {
-          client_portal_user_id: string
-          created_at: string | null
-          expires_at: string
-          id: string
-          ip_address: unknown | null
-          is_revoked: boolean | null
-          last_accessed_at: string | null
-          session_token: string
-          user_agent: string | null
-        }
-        Insert: {
-          client_portal_user_id: string
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          ip_address?: unknown | null
-          is_revoked?: boolean | null
-          last_accessed_at?: string | null
-          session_token: string
-          user_agent?: string | null
-        }
-        Update: {
-          client_portal_user_id?: string
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          ip_address?: unknown | null
-          is_revoked?: boolean | null
-          last_accessed_at?: string | null
-          session_token?: string
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "secure_client_sessions_client_portal_user_id_fkey"
-            columns: ["client_portal_user_id"]
-            isOneToOne: false
-            referencedRelation: "client_portal_users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      security_audit_log: {
-        Row: {
-          action: string
-          created_at: string | null
-          details: Json | null
-          id: string
-          ip_address: unknown | null
-          resource: string | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          ip_address?: unknown | null
-          resource?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          ip_address?: unknown | null
-          resource?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       service_areas: {
         Row: {
           created_at: string | null
@@ -2488,96 +2410,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_permissions: {
-        Row: {
-          created_at: string | null
-          granted_by: string | null
-          id: string
-          permission: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          granted_by?: string | null
-          id?: string
-          permission: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          granted_by?: string | null
-          id?: string
-          permission?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      user_settings: {
-        Row: {
-          compact_view: boolean | null
-          created_at: string
-          currency: string | null
-          dark_mode: boolean | null
-          date_format: string | null
-          default_landing_page: string | null
-          email_notifications: boolean | null
-          id: string
-          invoice_alerts: boolean | null
-          job_reminders: boolean | null
-          language: string | null
-          marketing_updates: boolean | null
-          notification_email: string | null
-          push_notifications: boolean | null
-          sms_notifications: boolean | null
-          sound_effects: boolean | null
-          timezone: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          compact_view?: boolean | null
-          created_at?: string
-          currency?: string | null
-          dark_mode?: boolean | null
-          date_format?: string | null
-          default_landing_page?: string | null
-          email_notifications?: boolean | null
-          id?: string
-          invoice_alerts?: boolean | null
-          job_reminders?: boolean | null
-          language?: string | null
-          marketing_updates?: boolean | null
-          notification_email?: string | null
-          push_notifications?: boolean | null
-          sms_notifications?: boolean | null
-          sound_effects?: boolean | null
-          timezone?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          compact_view?: boolean | null
-          created_at?: string
-          currency?: string | null
-          dark_mode?: boolean | null
-          date_format?: string | null
-          default_landing_page?: string | null
-          email_notifications?: boolean | null
-          id?: string
-          invoice_alerts?: boolean | null
-          job_reminders?: boolean | null
-          language?: string | null
-          marketing_updates?: boolean | null
-          notification_email?: string | null
-          push_notifications?: boolean | null
-          sms_notifications?: boolean | null
-          sound_effects?: boolean | null
-          timezone?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       estimate_details_view: {
@@ -2612,13 +2444,6 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
         ]
       }
       fact_jobs: {
@@ -2646,6 +2471,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -2681,26 +2520,10 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Functions: {
-      check_rate_limit: {
-        Args: {
-          p_identifier: string
-          p_attempt_type: string
-          p_max_attempts?: number
-          p_window_minutes?: number
-        }
-        Returns: boolean
-      }
       generate_client_login_token: {
         Args: { p_email: string }
         Returns: string
@@ -2739,15 +2562,6 @@ export type Database = {
       get_user_role: {
         Args: { user_uuid: string }
         Returns: string
-      }
-      log_security_event: {
-        Args: {
-          p_action: string
-          p_resource?: string
-          p_details?: Json
-          p_user_id?: string
-        }
-        Returns: undefined
       }
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }

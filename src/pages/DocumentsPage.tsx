@@ -12,7 +12,7 @@ const DocumentsPage = () => {
         subtitle="Manage contracts, estimates, and other important files"
         icon={FileText}
         badges={[
-          { text: "Secure Storage", icon: Shield, variant: "fixlify" },
+          { text: "Secure Storage", icon: Shield, variant: "fixlyfy" },
           { text: "Smart Search", icon: Search, variant: "success" },
           { text: "Easy Sharing", icon: Share, variant: "info" }
         ]}

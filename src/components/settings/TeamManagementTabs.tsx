@@ -14,7 +14,7 @@ export const TeamManagementTabs = () => {
     <ModernCard variant="elevated">
       <ModernCardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 h-auto p-0 bg-fixlify-bg-interface">
+          <TabsList className="grid grid-cols-3 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="members" 
               className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"

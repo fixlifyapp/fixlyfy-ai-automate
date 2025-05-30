@@ -12,7 +12,7 @@ const ReportBuilderPage = () => {
         subtitle="Create custom reports and analytics dashboards"
         icon={BarChart3}
         badges={[
-          { text: "Custom Analytics", icon: Target, variant: "fixlify" },
+          { text: "Custom Analytics", icon: Target, variant: "fixlyfy" },
           { text: "Real-time Data", icon: Zap, variant: "success" },
           { text: "Business Intelligence", icon: TrendingUp, variant: "info" }
         ]}

@@ -1,106 +1,210 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { InvoiceFormStep } from "./invoice/InvoiceFormStep";
-import { InvoicePreviewStep } from "./invoice/InvoicePreviewStep";
-import { InvoicePaymentStep } from "./invoice/InvoicePaymentStep";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2, Plus, Edit3 } from "lucide-react";
+import { LineItem } from "../builder/types";
+import { formatCurrency } from "@/lib/utils";
+import { InvoicePreview } from "./invoice/InvoicePreview";
 
 interface InvoiceFormProps {
-  jobId: string;
-  onClose: () => void;
+  invoiceNumber: string;
+  lineItems: LineItem[];
+  onRemoveLineItem: (id: string) => void;
+  onUpdateLineItem: (id: string, field: string, value: any) => void;
+  onEditLineItem?: (id: string) => boolean;
+  onAddEmptyLineItem: () => void;
+  onAddCustomLine: () => void;
+  taxRate: number;
+  setTaxRate: (rate: number) => void;
+  calculateSubtotal: () => number;
+  calculateTotalTax: () => number;
+  calculateGrandTotal: () => number;
+  calculateTotalMargin?: () => number;
+  calculateMarginPercentage?: () => number;
+  showMargin?: boolean;
 }
 
-export const InvoiceForm = ({ jobId, onClose }: InvoiceFormProps) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
-    invoiceNumber: `INV-${Date.now()}`,
-    items: [],
-    notes: "",
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  });
-
-  const steps = [
-    { title: "Invoice Details", component: InvoiceFormStep },
-    { title: "Preview", component: InvoicePreviewStep },
-    { title: "Payment", component: InvoicePaymentStep }
-  ];
-
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleFormDataChange = (updates: any) => {
-    setFormData(prev => ({ ...prev, ...updates }));
-  };
-
-  const CurrentStepComponent = steps[currentStep].component;
+export const InvoiceForm = ({
+  invoiceNumber,
+  lineItems,
+  onRemoveLineItem,
+  onUpdateLineItem,
+  onEditLineItem,
+  onAddEmptyLineItem,
+  onAddCustomLine,
+  taxRate,
+  setTaxRate,
+  calculateSubtotal,
+  calculateTotalTax,
+  calculateGrandTotal,
+  calculateTotalMargin,
+  calculateMarginPercentage,
+  showMargin = false
+}: InvoiceFormProps) => {
+  const subtotal = calculateSubtotal();
+  const tax = calculateTotalTax();
+  const total = calculateGrandTotal();
+  const margin = calculateTotalMargin ? calculateTotalMargin() : 0;
+  const marginPercentage = calculateMarginPercentage ? calculateMarginPercentage() : 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Create Invoice</h2>
-        <Button variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
+      {/* Invoice Header */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-lg font-medium mb-2">Invoice {invoiceNumber}</h3>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{steps[currentStep].title}</CardTitle>
-          <Tabs value={currentStep.toString()} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              {steps.map((step, index) => (
-                <TabsTrigger
-                  key={index}
-                  value={index.toString()}
-                  disabled={index > currentStep}
-                  className="text-sm"
-                >
-                  {step.title}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        
-        <CardContent>
-          <CurrentStepComponent
-            formData={formData}
-            onFormDataChange={handleFormDataChange}
-            jobId={jobId}
-          />
-        </CardContent>
-      </Card>
+      {/* Line Items */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h4 className="text-md font-medium">Line Items</h4>
+          <div className="flex gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={onAddEmptyLineItem}
+              className="gap-1"
+            >
+              <Plus size={16} />
+              Add Product
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={onAddCustomLine}
+              className="gap-1"
+            >
+              <Plus size={16} />
+              Custom Line
+            </Button>
+          </div>
+        </div>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentStep === 0}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Previous
-        </Button>
-        
-        <Button
-          onClick={handleNext}
-          disabled={currentStep === steps.length - 1}
-        >
-          Next
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
+        {lineItems.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+            <p>No items added yet. Add products or custom line items to get started.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {lineItems.map((item) => (
+              <div key={item.id} className="border rounded-lg p-4 bg-white">
+                <div className="grid grid-cols-12 gap-4 items-center">
+                  <div className="col-span-5">
+                    <Label className="text-xs text-gray-500">Description</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={item.description || item.name || ""}
+                        onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
+                        placeholder="Item description"
+                        className="text-sm"
+                      />
+                      {onEditLineItem && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditLineItem(item.id)}
+                          className="p-1 h-8 w-8"
+                        >
+                          <Edit3 size={14} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <Label className="text-xs text-gray-500">Quantity</Label>
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => onUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                      min="1"
+                      className="text-sm"
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <Label className="text-xs text-gray-500">Unit Price</Label>
+                    <Input
+                      type="number"
+                      value={item.unitPrice}
+                      onChange={(e) => onUpdateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
+                      min="0"
+                      step="0.01"
+                      className="text-sm"
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <Label className="text-xs text-gray-500">Total</Label>
+                    <div className="text-sm font-medium py-2">
+                      {formatCurrency(item.quantity * item.unitPrice)}
+                    </div>
+                  </div>
+                  
+                  <div className="col-span-1 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveLineItem(item.id)}
+                      className="text-red-500 hover:text-red-700 p-1 h-8 w-8"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tax and Totals */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="tax-rate" className="text-sm font-medium">Tax Rate (%)</Label>
+            <Input
+              id="tax-rate"
+              type="number"
+              value={taxRate}
+              onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+              min="0"
+              max="100"
+              step="0.01"
+              className="w-24"
+            />
+          </div>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax ({taxRate}%):</span>
+              <span>{formatCurrency(tax)}</span>
+            </div>
+            {showMargin && (
+              <>
+                <div className="flex justify-between">
+                  <span>Margin:</span>
+                  <span>{formatCurrency(margin)} ({marginPercentage.toFixed(1)}%)</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between font-semibold text-lg border-t pt-2">
+              <span>Total:</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

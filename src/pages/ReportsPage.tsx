@@ -12,7 +12,7 @@ const ReportsPage = () => {
         subtitle="View comprehensive reports and analytics for your business performance"
         icon={BarChart3}
         badges={[
-          { text: "Real-time Data", icon: TrendingUp, variant: "fixlify" },
+          { text: "Real-time Data", icon: TrendingUp, variant: "fixlyfy" },
           { text: "Custom Reports", icon: Target, variant: "success" },
           { text: "Business Intelligence", icon: Shield, variant: "info" }
         ]}

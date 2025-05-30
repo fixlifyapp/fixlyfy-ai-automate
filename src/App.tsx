@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RBACProvider } from "@/components/auth/RBACProvider";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { SecurityHeaders } from "@/components/security/SecurityHeaders";
 import Dashboard from "@/pages/Dashboard";
 import ClientsPage from "@/pages/ClientsPage";
 import ClientDetailPage from "@/pages/ClientDetailPage";
@@ -18,158 +17,117 @@ import SchedulePage from "@/pages/SchedulePage";
 import FinancePage from "@/pages/FinancePage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import SettingsPage from "@/pages/SettingsPage";
-import ProfileCompanyPage from "@/pages/ProfileCompanyPage";
-import IntegrationsPage from "@/pages/IntegrationsPage";
 import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
 import AISettingsPage from "@/pages/AISettingsPage";
 import TeamManagementPage from "@/pages/TeamManagementPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
-import Index from "@/pages/Index";
-import AuthPage from "@/pages/AuthPage";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppProviders } from "@/components/ui/AppProviders";
-import { useSecureSession } from "@/hooks/useSecureSession";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        // Don't retry auth errors
-        if (error && typeof error === 'object' && 'message' in error) {
-          const message = (error as any).message;
-          if (message?.includes('auth') || message?.includes('unauthorized')) {
-            return false;
-          }
-        }
-        return failureCount < 3;
-      },
-    },
-  },
-});
-
-const SecureApp = () => {
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const { sessionInfo } = useSecureSession();
-
-  return (
-    <>
-      <SecurityHeaders />
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AuthProvider>
-            <AppProviders>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/clients" element={
-                    <ProtectedRoute>
-                      <ClientsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/clients/:id" element={
-                    <ProtectedRoute>
-                      <ClientDetailPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/jobs" element={
-                    <ProtectedRoute>
-                      <JobsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/jobs/:id" element={
-                    <ProtectedRoute>
-                      <JobDetailsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/connect" element={
-                    <ProtectedRoute>
-                      <ConnectCenterPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/schedule" element={
-                    <ProtectedRoute>
-                      <SchedulePage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/finance" element={
-                    <ProtectedRoute>
-                      <FinancePage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/analytics" element={
-                    <ProtectedRoute>
-                      <AnalyticsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/settings" element={
-                    <ProtectedRoute>
-                      <SettingsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/profile-company" element={
-                    <ProtectedRoute>
-                      <ProfileCompanyPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/integrations" element={
-                    <ProtectedRoute>
-                      <IntegrationsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/phone-numbers" element={
-                    <ProtectedRoute>
-                      <PhoneNumbersPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/ai-settings" element={
-                    <ProtectedRoute>
-                      <AISettingsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/team" element={
-                    <ProtectedRoute>
-                      <TeamManagementPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/automations" element={
-                    <ProtectedRoute>
-                      <AutomationsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/ai-center" element={
-                    <ProtectedRoute>
-                      <AiCenterPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/configuration" element={
-                    <ProtectedRoute>
-                      <ConfigurationPage />
-                    </ProtectedRoute>
-                  } />
-                </Routes>
-                <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
-              </BrowserRouter>
-            </AppProviders>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </>
-  );
-};
+const queryClient = new QueryClient();
 
 const App = () => {
-  return <SecureApp />;
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppProviders>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/clients" element={
+                <ProtectedRoute>
+                  <ClientsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/clients/:id" element={
+                <ProtectedRoute>
+                  <ClientDetailPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/jobs" element={
+                <ProtectedRoute>
+                  <JobsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/jobs/:id" element={
+                <ProtectedRoute>
+                  <JobDetailsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/connect" element={
+                <ProtectedRoute>
+                  <ConnectCenterPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/schedule" element={
+                <ProtectedRoute>
+                  <SchedulePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/finance" element={
+                <ProtectedRoute>
+                  <FinancePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/phone-numbers" element={
+                <ProtectedRoute>
+                  <PhoneNumbersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-settings" element={
+                <ProtectedRoute>
+                  <AISettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/team" element={
+                <ProtectedRoute>
+                  <TeamManagementPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/automations" element={
+                <ProtectedRoute>
+                  <AutomationsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-center" element={
+                <ProtectedRoute>
+                  <AiCenterPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/configuration" element={
+                <ProtectedRoute>
+                  <ConfigurationPage />
+                </ProtectedRoute>
+              } />
+            </Routes>
+            <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
+          </BrowserRouter>
+        </AppProviders>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 };
 
 export default App;
