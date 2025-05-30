@@ -8,6 +8,7 @@ import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
 import { TeamManagementSettings } from "@/components/settings/TeamManagementSettings";
+import { TeamManagementTabs } from "@/components/settings/TeamManagementTabs";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +18,30 @@ import { useAuth } from "@/hooks/use-auth";
 const SettingsPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("general");
+  const [showTeamManagement, setShowTeamManagement] = useState(false);
+  
+  if (showTeamManagement) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="Team Management Settings"
+          subtitle="Configure team members, roles, and permissions"
+          icon={Users}
+          badges={[
+            { text: "Security", icon: Shield, variant: "fixlyfy" },
+            { text: "Permissions", icon: Sliders, variant: "success" },
+            { text: "Team Control", icon: User, variant: "info" }
+          ]}
+          actionButton={{
+            text: "Back to Settings",
+            icon: Settings2,
+            onClick: () => setShowTeamManagement(false)
+          }}
+        />
+        <TeamManagementTabs />
+      </PageLayout>
+    );
+  }
   
   return (
     <PageLayout>
@@ -48,21 +73,22 @@ const SettingsPage = () => {
           </Card>
         </Link>
 
-        {/* Team Management Card - Only for Admin/Manager */}
+        {/* Team Management Settings Card - Only for Admin/Manager */}
         <PermissionRequired permission="users.view">
-          <Link to="/admin/team">
-            <Card className="h-full hover:shadow-md transition-shadow">
-              <CardContent className="flex items-center p-6 space-x-4">
-                <div className="bg-fixlyfy/10 p-3 rounded-full">
-                  <Users className="h-6 w-6 text-fixlyfy" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Team Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage team members, roles, and permissions</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          <Card 
+            className="h-full hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => setShowTeamManagement(true)}
+          >
+            <CardContent className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Users className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Team Management</h3>
+                <p className="text-sm text-muted-foreground">Configure team settings, roles, and permissions</p>
+              </div>
+            </CardContent>
+          </Card>
         </PermissionRequired>
         
         {/* Phone Numbers Card */}
