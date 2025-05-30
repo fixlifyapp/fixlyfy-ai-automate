@@ -54,14 +54,16 @@ export const RoleDropdown = ({
     setIsLoading(true);
     
     try {
-      // Update the role in the profiles table in Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
-        
-      if (error) {
-        throw error;
+      if (!testMode) {
+        // Update the role in the profiles table in Supabase
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role: newRole })
+          .eq('id', userId);
+          
+        if (error) {
+          throw error;
+        }
       }
       
       // Update local state
@@ -74,6 +76,10 @@ export const RoleDropdown = ({
       
       // Show success toast
       toast.success(`Role updated to ${newRole}`);
+      
+      if (testMode) {
+        toast.info("Test Mode: Role changed locally only. Will be saved to Supabase after integration.");
+      }
       
     } catch (error) {
       console.error("Error updating role:", error);

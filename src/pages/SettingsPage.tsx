@@ -7,10 +7,11 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
+import { TeamManagementSettings } from "@/components/settings/TeamManagementSettings";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersRound, Settings2, Shield, Sliders, User, Package, Phone, Brain } from "lucide-react";
+import { UsersRound, Settings2, Shield, Sliders, User, Package, Phone, Brain, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -31,7 +32,7 @@ const SettingsPage = () => {
       />
       
       {/* Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Configuration Card */}
         <Link to="/configuration">
           <Card className="h-full hover:shadow-md transition-shadow">
@@ -46,6 +47,23 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
         </Link>
+
+        {/* Team Management Card - Only for Admin/Manager */}
+        <PermissionRequired permission="users.view">
+          <Link to="/admin/team">
+            <Card className="h-full hover:shadow-md transition-shadow">
+              <CardContent className="flex items-center p-6 space-x-4">
+                <div className="bg-fixlyfy/10 p-3 rounded-full">
+                  <Users className="h-6 w-6 text-fixlyfy" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Team Management</h3>
+                  <p className="text-sm text-muted-foreground">Manage team members, roles, and permissions</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </PermissionRequired>
         
         {/* Phone Numbers Card */}
         <Link to="/phone-numbers">
@@ -80,7 +98,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -105,6 +123,14 @@ const SettingsPage = () => {
             >
               Integrations
             </TabsTrigger>
+            <PermissionRequired permission="users.view">
+              <TabsTrigger 
+                value="team" 
+                className="py-4 rounded-none data-[state=active]:bg-white"
+              >
+                Team
+              </TabsTrigger>
+            </PermissionRequired>
           </TabsList>
           
           <TabsContent value="general" className="p-6">
@@ -122,6 +148,12 @@ const SettingsPage = () => {
           <TabsContent value="integrations" className="p-6">
             <SettingsIntegrations />
           </TabsContent>
+          
+          <PermissionRequired permission="users.view">
+            <TabsContent value="team" className="p-6">
+              <TeamManagementSettings />
+            </TabsContent>
+          </PermissionRequired>
         </Tabs>
       </div>
     </PageLayout>

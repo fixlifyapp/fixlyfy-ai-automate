@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { useJobTypes, useJobStatuses } from "@/hooks/useConfigItems";
 import { generateNextId } from "@/utils/idGeneration";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export interface Job {
   id: string;
@@ -46,6 +47,7 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { user } = useAuth();
+  const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
   
   // Get configuration data for validation and consistency
   const { items: jobTypes } = useJobTypes();
@@ -71,9 +73,22 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
           client:clients(id, name, email, phone, address, city, state, zip)
         `);
       
+      // Apply client filter if specified
       if (clientId) {
         query = query.eq('client_id', clientId);
       }
+      
+      // Apply role-based filtering
+      const jobViewScope = getJobViewScope();
+      if (jobViewScope === "assigned" && user?.id) {
+        query = query.eq('technician_id', user.id);
+      } else if (jobViewScope === "none") {
+        // User has no permission to view jobs
+        setJobs([]);
+        setIsLoading(false);
+        return;
+      }
+      // For "all" scope, no additional filtering needed
       
       query = query.order('created_at', { ascending: false });
       
@@ -99,9 +114,8 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     } finally {
       setIsLoading(false);
     }
-  }, [clientId]);
+  }, [clientId, getJobViewScope, user?.id]);
 
-  // Re-add the missing useEffect
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs, refreshTrigger]);
@@ -131,6 +145,11 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   };
 
   const addJob = async (jobData: Partial<Job>) => {
+    if (!canCreateJobs()) {
+      toast.error("You don't have permission to create jobs");
+      return null;
+    }
+
     try {
       // Generate new job ID using the database function
       const jobId = await generateNextId('job');
@@ -191,6 +210,11 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   };
 
   const updateJob = async (jobId: string, updates: Partial<Job>) => {
+    if (!canEditJobs()) {
+      toast.error("You don't have permission to edit jobs");
+      return null;
+    }
+
     try {
       // Validate updates using configuration
       const validatedUpdates = validateJobData({
@@ -218,6 +242,11 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   };
 
   const deleteJob = async (jobId: string) => {
+    if (!canDeleteJobs()) {
+      toast.error("You don't have permission to delete jobs");
+      return false;
+    }
+
     try {
       const { error } = await supabase
         .from('jobs')
@@ -246,6 +275,11 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     addJob,
     updateJob,
     deleteJob,
-    refreshJobs
+    refreshJobs,
+    // Permission flags for UI
+    canCreate: canCreateJobs(),
+    canEdit: canEditJobs(),
+    canDelete: canDeleteJobs(),
+    viewScope: getJobViewScope()
   };
 };

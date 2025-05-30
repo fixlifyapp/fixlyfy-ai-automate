@@ -95,7 +95,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Enhanced permission check that properly handles wildcards
+  // Enhanced permission check that properly handles wildcards and granular permissions
   const hasPermission = (permission: string): boolean => {
     if (!currentUser) return false;
     
@@ -106,7 +106,22 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     if (rolePermissions.includes('*')) return true;
     
     // Check if the user has the specific permission
-    return rolePermissions.includes(permission);
+    if (rolePermissions.includes(permission)) return true;
+    
+    // Check for broader permissions (e.g., 'jobs.view.all' covers 'jobs.view.assigned')
+    const permissionParts = permission.split('.');
+    if (permissionParts.length > 2) {
+      const broaderPermission = permissionParts.slice(0, -1).join('.') + '.all';
+      if (rolePermissions.includes(broaderPermission)) return true;
+    }
+    
+    // Check for category-level permissions
+    if (permissionParts.length > 1) {
+      const categoryPermission = permissionParts[0] + '.*';
+      if (rolePermissions.includes(categoryPermission)) return true;
+    }
+    
+    return false;
   };
 
   // Function to check if user has a specific role or one of multiple roles

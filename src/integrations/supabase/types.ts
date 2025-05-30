@@ -2559,6 +2559,10 @@ export type Database = {
           name: string
         }[]
       }
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: string
+      }
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
