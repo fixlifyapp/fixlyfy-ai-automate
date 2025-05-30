@@ -22,7 +22,7 @@ export const MetricCard = ({
   changeLabel,
   isLoading
 }: MetricCardProps) => (
-  <Card className="shadow-sm">
+  <Card className="shadow-sm hover:shadow-md transition-shadow">
     <CardContent className="pt-6">
       {isLoading ? (
         <div className="flex items-center justify-center h-24">
@@ -31,11 +31,11 @@ export const MetricCard = ({
       ) : (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div className={`p-2 rounded-md ${iconColor}`}>
+            <div className={`p-2 rounded-md ${iconColor} bg-gradient-to-br from-fixlify/10 to-fixlify-light/10`}>
               {icon}
             </div>
             {change !== undefined && (
-              <div className={`flex items-center text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <div className={`flex items-center text-sm ${change >= 0 ? 'text-fixlify-success' : 'text-fixlify-error'}`}>
                 {change >= 0 ? (
                   <ArrowUpIcon className="w-4 h-4 mr-1" />
                 ) : (
@@ -47,7 +47,7 @@ export const MetricCard = ({
           </div>
           <div>
             <h3 className="text-sm text-fixlify-text-secondary">{title}</h3>
-            <p className="text-2xl font-semibold mt-1">{value}</p>
+            <p className="text-2xl font-semibold mt-1 text-fixlify-text">{value}</p>
             {changeLabel && (
               <p className="text-xs text-fixlify-text-secondary mt-1">{changeLabel}</p>
             )}

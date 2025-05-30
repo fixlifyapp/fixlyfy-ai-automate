@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { loadNicheData } from "@/utils/niche-data-loader";
-import { Profile } from "@/types/profile";
 
 const referralSources = [
   { id: "social_media", label: "Social Media" },
@@ -71,7 +70,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
           id: user.id,
           referral_source: referralSource,
           business_niche: businessNiche
-        } as Partial<Profile>, {
+        }, {
           onConflict: 'id'
         });
       

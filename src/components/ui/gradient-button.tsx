@@ -21,11 +21,11 @@ export const GradientButton = ({
     <Button
       className={cn(
         "font-semibold transition-all duration-300 transform hover:scale-105",
-        gradient && variant === "primary" && "bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy/90 hover:to-fixlyfy-light/90 text-white shadow-lg",
-        gradient && variant === "success" && "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg",
-        gradient && variant === "warning" && "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg",
-        gradient && variant === "info" && "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg",
-        !gradient && variant === "primary" && "bg-fixlyfy hover:bg-fixlyfy/90 text-white",
+        gradient && variant === "primary" && "bg-gradient-to-r from-fixlify to-fixlify-light hover:from-fixlify/90 hover:to-fixlify-light/90 text-white shadow-lg",
+        gradient && variant === "success" && "bg-gradient-to-r from-fixlify-success to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg",
+        gradient && variant === "warning" && "bg-gradient-to-r from-fixlify-warning to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg",
+        gradient && variant === "info" && "bg-gradient-to-r from-fixlify-info to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg",
+        !gradient && variant === "primary" && "bg-fixlify hover:bg-fixlify/90 text-white",
         "rounded-xl px-6 py-2.5",
         className
       )}
