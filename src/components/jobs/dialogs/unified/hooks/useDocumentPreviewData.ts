@@ -75,8 +75,9 @@ export const useDocumentPreviewData = ({
           });
         }
 
-        // Multiple strategies to fetch client data
+        // Multiple strategies to fetch client data and property address
         let finalClientInfo = null;
+        let propertyAddress = '';
 
         // Strategy 1: Try to get client data from estimate_details_view or invoice_details_view
         if (documentType === 'estimate') {
@@ -116,9 +117,9 @@ export const useDocumentPreviewData = ({
               }
             }
 
-            // Set job address if available
+            // Fetch property address for the job
             if (estimateDetails.job_id) {
-              setJobAddress(estimateDetails.job_description || '');
+              await fetchJobPropertyAddress(estimateDetails.job_id);
             }
           }
         } else if (documentType === 'invoice') {
@@ -158,9 +159,9 @@ export const useDocumentPreviewData = ({
               }
             }
 
-            // Set job address if available
+            // Fetch property address for the job
             if (invoiceDetails.job_id) {
-              setJobAddress(invoiceDetails.job_description || '');
+              await fetchJobPropertyAddress(invoiceDetails.job_id);
             }
           }
         }
@@ -168,49 +169,8 @@ export const useDocumentPreviewData = ({
         // Strategy 2: If we have a jobId, fetch the job with client data
         if (!finalClientInfo && jobId) {
           console.log('Fetching job data for jobId:', jobId);
-          const { data: jobData, error: jobError } = await supabase
-            .from('jobs')
-            .select(`
-              *,
-              client:clients(*)
-            `)
-            .eq('id', jobId)
-            .maybeSingle();
-
-          console.log('Job data fetched:', jobData);
-          console.log('Job fetch error:', jobError);
-
-          if (jobData && jobData.client) {
-            finalClientInfo = {
-              ...jobData.client,
-              fullAddress: [
-                jobData.client.address,
-                [jobData.client.city, jobData.client.state, jobData.client.zip].filter(Boolean).join(', '),
-                jobData.client.country !== 'USA' ? jobData.client.country : null
-              ].filter(Boolean).join('\n')
-            };
-
-            // Set job address from job data
-            if (jobData.address) {
-              setJobAddress(jobData.address);
-            } else if (jobData.property_id) {
-              // Fetch property address
-              const { data: property } = await supabase
-                .from('client_properties')
-                .select('address, city, state, zip, property_name')
-                .eq('id', jobData.property_id)
-                .maybeSingle();
-              
-              if (property) {
-                const propertyAddress = [
-                  property.property_name ? `${property.property_name}:` : '',
-                  property.address,
-                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
-                ].filter(Boolean).join('\n');
-                setJobAddress(propertyAddress);
-              }
-            }
-          }
+          const result = await fetchJobPropertyAddress(jobId);
+          finalClientInfo = result.clientInfo;
         }
 
         // Strategy 3: Try from the passed clientInfo with enhanced fetching
@@ -256,6 +216,62 @@ export const useDocumentPreviewData = ({
 
         console.log('Final client info being set:', finalClientInfo);
         setEnhancedClientInfo(finalClientInfo);
+
+        // Helper function to fetch job and property address
+        async function fetchJobPropertyAddress(jobId: string) {
+          try {
+            const { data: jobData, error: jobError } = await supabase
+              .from('jobs')
+              .select(`
+                *,
+                client:clients(*)
+              `)
+              .eq('id', jobId)
+              .maybeSingle();
+
+            console.log('Job data fetched:', jobData);
+            console.log('Job fetch error:', jobError);
+
+            let clientInfo = null;
+            let address = '';
+
+            if (jobData && jobData.client) {
+              clientInfo = {
+                ...jobData.client,
+                fullAddress: [
+                  jobData.client.address,
+                  [jobData.client.city, jobData.client.state, jobData.client.zip].filter(Boolean).join(', '),
+                  jobData.client.country !== 'USA' ? jobData.client.country : null
+                ].filter(Boolean).join('\n')
+              };
+            }
+
+            // Get property address - prioritize property over job address
+            if (jobData?.property_id) {
+              const { data: property } = await supabase
+                .from('client_properties')
+                .select('*')
+                .eq('id', jobData.property_id)
+                .maybeSingle();
+              
+              if (property) {
+                address = [
+                  property.property_name ? `${property.property_name}` : '',
+                  property.address,
+                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
+                ].filter(Boolean).join('\n');
+              }
+            } else if (jobData?.address) {
+              address = jobData.address;
+            }
+
+            setJobAddress(address);
+            return { clientInfo, propertyAddress: address };
+          } catch (error) {
+            console.error('Error fetching job property address:', error);
+            return { clientInfo: null, propertyAddress: '' };
+          }
+        }
 
       } catch (error) {
         console.error('Error fetching preview data:', error);

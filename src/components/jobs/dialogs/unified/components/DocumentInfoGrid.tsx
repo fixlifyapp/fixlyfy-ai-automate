@@ -60,7 +60,11 @@ export const DocumentInfoGrid = ({
               {jobAddress && jobAddress !== enhancedClientInfo?.address && (
                 <div className="pt-3 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-500 mb-1">SERVICE ADDRESS</p>
-                  <p className="text-gray-700 whitespace-pre-line leading-relaxed">{jobAddress}</p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-gray-800 whitespace-pre-line leading-relaxed font-medium">
+                      {jobAddress}
+                    </p>
+                  </div>
                 </div>
               )}
 
