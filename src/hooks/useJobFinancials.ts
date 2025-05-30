@@ -1,28 +1,86 @@
 
 import { useState, useEffect } from 'react';
-import { useInvoices } from './useInvoices';
-import { usePayments } from './usePayments';
 import { supabase } from '@/integrations/supabase/client';
-import { roundToCurrency } from '@/lib/utils';
 
 export const useJobFinancials = (jobId: string) => {
-  const { invoices, isLoading: invoicesLoading, refreshInvoices } = useInvoices(jobId);
-  const { payments, isLoading: paymentsLoading, refreshPayments } = usePayments(jobId);
-  const [totals, setTotals] = useState({
-    invoiceAmount: 0,
-    balance: 0,
-    totalPaid: 0,
-    overdueAmount: 0,
-    paidInvoices: 0,
-    unpaidInvoices: 0
-  });
+  const [invoiceAmount, setInvoiceAmount] = useState(0);
+  const [balance, setBalance] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [overdueAmount, setOverdueAmount] = useState(0);
+  const [paidInvoices, setPaidInvoices] = useState(0);
+  const [unpaidInvoices, setUnpaidInvoices] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Set up real-time subscriptions for invoices and payments
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId) {
+      setIsLoading(false);
+      return;
+    }
 
-    const invoicesChannel = supabase
-      .channel('job-invoices-realtime')
+    const fetchFinancials = async () => {
+      try {
+        console.log('Fetching financials for job:', jobId);
+
+        // Fetch invoices for this job
+        const { data: invoices, error: invoicesError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('job_id', jobId);
+
+        if (invoicesError) {
+          console.error('Error fetching invoices:', invoicesError);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('Fetched invoices:', invoices);
+
+        // Calculate totals
+        const totalInvoiced = invoices?.reduce((sum, invoice) => sum + (invoice.total || 0), 0) || 0;
+        const totalPaidAmount = invoices?.reduce((sum, invoice) => sum + (invoice.amount_paid || 0), 0) || 0;
+        const totalBalance = totalInvoiced - totalPaidAmount;
+
+        // Count paid and unpaid invoices
+        const paidCount = invoices?.filter(invoice => invoice.status === 'paid').length || 0;
+        const unpaidCount = invoices?.filter(invoice => invoice.status !== 'paid').length || 0;
+
+        // Calculate overdue amount (simplified - invoices past due date)
+        const now = new Date();
+        const overdueTotal = invoices?.reduce((sum, invoice) => {
+          if (invoice.status !== 'paid' && invoice.due_date && new Date(invoice.due_date) < now) {
+            return sum + ((invoice.total || 0) - (invoice.amount_paid || 0));
+          }
+          return sum;
+        }, 0) || 0;
+
+        setInvoiceAmount(totalInvoiced);
+        setTotalPaid(totalPaidAmount);
+        setBalance(totalBalance);
+        setOverdueAmount(overdueTotal);
+        setPaidInvoices(paidCount);
+        setUnpaidInvoices(unpaidCount);
+
+        console.log('Calculated financials:', {
+          invoiceAmount: totalInvoiced,
+          totalPaid: totalPaidAmount,
+          balance: totalBalance,
+          overdueAmount: overdueTotal,
+          paidInvoices: paidCount,
+          unpaidInvoices: unpaidCount
+        });
+
+      } catch (error) {
+        console.error('Error fetching job financials:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFinancials();
+
+    // Set up real-time updates for invoices and payments
+    const channel = supabase
+      .channel('job-financials')
       .on(
         'postgres_changes',
         {
@@ -32,14 +90,10 @@ export const useJobFinancials = (jobId: string) => {
           filter: `job_id=eq.${jobId}`
         },
         () => {
-          console.log('Invoice update detected, refreshing...');
-          refreshInvoices();
+          console.log('Invoice update detected, refetching financials...');
+          fetchFinancials();
         }
       )
-      .subscribe();
-
-    const paymentsChannel = supabase
-      .channel('job-payments-realtime')
       .on(
         'postgres_changes',
         {
@@ -48,72 +102,24 @@ export const useJobFinancials = (jobId: string) => {
           table: 'payments'
         },
         () => {
-          console.log('Payment update detected, refreshing...');
-          refreshPayments();
+          console.log('Payment update detected, refetching financials...');
+          fetchFinancials();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(invoicesChannel);
-      supabase.removeChannel(paymentsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [jobId, refreshInvoices, refreshPayments]);
-
-  // Calculate totals when data changes
-  useEffect(() => {
-    if (!invoicesLoading && !paymentsLoading) {
-      console.log('Calculating financials for job:', jobId);
-      console.log('Invoices:', invoices);
-      console.log('Payments:', payments);
-
-      // Calculate invoice totals with proper rounding
-      const invoiceTotal = roundToCurrency(invoices.reduce((sum, invoice) => {
-        return sum + (invoice.total || 0);
-      }, 0));
-
-      // Calculate total paid amount from payments with proper rounding
-      const paidTotal = roundToCurrency(payments.reduce((sum, payment) => {
-        return sum + (payment.amount || 0);
-      }, 0));
-
-      // Calculate balance with proper rounding to prevent floating-point precision issues
-      const balanceAmount = roundToCurrency(invoiceTotal - paidTotal);
-
-      // Calculate overdue amount with proper rounding
-      const currentDate = new Date();
-      const overdueAmount = roundToCurrency(invoices
-        .filter(invoice => 
-          invoice.due_date && 
-          new Date(invoice.due_date) < currentDate && 
-          invoice.status !== 'paid'
-        )
-        .reduce((sum, invoice) => sum + (invoice.total || 0), 0));
-
-      // Count paid and unpaid invoices
-      const paidInvoices = invoices.filter(invoice => invoice.status === 'paid').length;
-      const unpaidInvoices = invoices.filter(invoice => invoice.status !== 'paid').length;
-
-      const newTotals = {
-        invoiceAmount: invoiceTotal,
-        totalPaid: paidTotal,
-        balance: Math.max(0, balanceAmount), // Ensure balance is never negative
-        overdueAmount,
-        paidInvoices,
-        unpaidInvoices
-      };
-
-      console.log('Calculated totals:', newTotals);
-      setTotals(newTotals);
-    }
-  }, [invoices, payments, invoicesLoading, paymentsLoading, jobId]);
+  }, [jobId]);
 
   return {
-    ...totals,
-    isLoading: invoicesLoading || paymentsLoading,
-    refresh: () => {
-      refreshInvoices();
-      refreshPayments();
-    }
+    invoiceAmount,
+    balance,
+    totalPaid,
+    overdueAmount,
+    paidInvoices,
+    unpaidInvoices,
+    isLoading
   };
 };

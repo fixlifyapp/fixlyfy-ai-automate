@@ -23,12 +23,12 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
     
     const fetchJobData = async () => {
       try {
-        // Fetch job details from Supabase with remaining fields only
+        // Fetch job details from Supabase with proper client relationship
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
             *,
-            clients!inner(id, name, email, phone, address, city, state, zip, country)
+            clients(*)
           `)
           .eq('id', jobId)
           .maybeSingle();
@@ -86,13 +86,13 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           }
         }
         
-        // Create job info object with remaining fields only
+        // Create job info object
         const jobInfo: JobInfo = {
           id: jobData.id,
           clientId: client.id || "",
           client: client.name || "Unknown Client",
           service: jobData.service || "General Service",
-          address: formattedAddress,
+          address: formattedAddress || jobData.address || "",
           phone: client.phone || "",
           email: client.email || "",
           total: jobData.revenue || 0,
