@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -12,11 +13,10 @@ import {
   TableHead, 
   TableBody
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Plus, Shield, Upload, Loader2, UserPlus, Users, Target, Zap, TrendingUp } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
-import { PermissionRequired, useRBAC } from "@/components/auth/RBACProvider";
+import { useRBAC } from "@/components/auth/RBACProvider";
 import { TeamFilters } from "@/components/team/TeamFilters";
 import { TeamMember } from "@/types/team";
 import { TeamMemberProfile } from "@/types/team-member";
@@ -52,28 +52,34 @@ const TeamManagementPage = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { hasRole } = useRBAC();
+  const { hasRole, hasPermission } = useRBAC();
   
   const isAdmin = hasRole('admin');
+  const canViewUsers = hasPermission('users.view');
   
   // Fetch team members from Supabase on component mount
   useEffect(() => {
     const fetchTeamMembers = async () => {
       try {
         setIsLoading(true);
+        
+        if (!canViewUsers) {
+          setIsLoading(false);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('*');
           
         if (error) {
-          throw error;
-        }
-        
-        if (data) {
+          console.error("Error fetching team members:", error);
+          setTeamMembers([]);
+        } else if (data) {
           const members: TeamMember[] = data.map(profile => ({
             id: profile.id,
-            name: profile.name || 'Unknown',
-            email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
+            name: profile.name || 'Unknown User',
+            email: profile.email || `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
             role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
             status: "active",
             avatar: profile.avatar_url || "https://github.com/shadcn.png",
@@ -81,19 +87,20 @@ const TeamManagementPage = () => {
           }));
           
           setTeamMembers(members);
-          setFilteredMembers(members);
         }
       } catch (error) {
-        console.error("Error fetching team members:", error);
+        console.error("Error in fetchTeamMembers:", error);
         toast.error("Failed to load team members");
+        setTeamMembers([]);
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchTeamMembers();
-  }, []);
+  }, [canViewUsers]);
 
+  // Filter members
   useEffect(() => {
     let result = teamMembers;
     
@@ -157,6 +164,32 @@ const TeamManagementPage = () => {
       setIsImporting(false);
     }
   };
+
+  // Show permission error if user can't view users
+  if (!canViewUsers) {
+    return (
+      <PageLayout>
+        <AnimatedContainer animation="fade-in">
+          <PageHeader
+            title="Team Management"
+            subtitle="Manage your team members and track performance"
+            icon={Users}
+          />
+        </AnimatedContainer>
+        <AnimatedContainer animation="fade-in" delay={100}>
+          <ModernCard variant="glass" className="p-8">
+            <div className="text-center">
+              <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
+              <p className="text-muted-foreground">
+                You don't have permission to view team management.
+              </p>
+            </div>
+          </ModernCard>
+        </AnimatedContainer>
+      </PageLayout>
+    );
+  }
   
   return (
     <PageLayout>
@@ -177,17 +210,6 @@ const TeamManagementPage = () => {
           } : undefined}
         />
       </AnimatedContainer>
-
-      {!isAdmin && (
-        <AnimatedContainer animation="fade-in" delay={100}>
-          <ModernCard variant="glass" className="p-4 mb-6">
-            <div className="flex items-center gap-2 text-fixlyfy-text-secondary text-sm justify-center">
-              <Shield size={16} />
-              <span>Admin access required for team management</span>
-            </div>
-          </ModernCard>
-        </AnimatedContainer>
-      )}
 
       {isAdmin && (
         <AnimatedContainer animation="fade-in" delay={100}>
