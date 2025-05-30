@@ -20,7 +20,7 @@ const AdvancedReportsPage = () => {
         subtitle="Comprehensive reporting system with custom templates, scheduling, and multi-format exports"
         icon={FileText}
         badges={[
-          { text: "Custom Templates", icon: FileText, variant: "fixlyfy" },
+          { text: "Custom Templates", icon: FileText, variant: "fixlify" },
           { text: "Auto Scheduling", icon: Calendar, variant: "success" },
           { text: "Multi-Format Export", icon: Download, variant: "info" }
         ]}

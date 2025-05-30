@@ -45,7 +45,7 @@ const AdminRolesPage = () => {
           subtitle="Manage user roles and permissions across your organization"
           icon={Shield}
           badges={[
-            { text: "Access Control", icon: Shield, variant: "fixlyfy" },
+            { text: "Access Control", icon: Shield, variant: "fixlify" },
             { text: "User Management", icon: Users, variant: "success" },
             { text: "Security", icon: Target, variant: "info" }
           ]}
@@ -68,7 +68,7 @@ const AdminRolesPage = () => {
         subtitle="Manage user roles and permissions across your organization"
         icon={Shield}
         badges={[
-          { text: "Access Control", icon: Shield, variant: "fixlyfy" },
+          { text: "Access Control", icon: Shield, variant: "fixlify" },
           { text: "User Management", icon: Users, variant: "success" },
           { text: "Security", icon: Target, variant: "info" }
         ]}

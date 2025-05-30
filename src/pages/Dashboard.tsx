@@ -57,7 +57,7 @@ const Dashboard = () => {
           subtitle={isMobile ? "Business overview" : "Get an overview of your business performance and key metrics"}
           icon={BarChart3}
           badges={[
-            { text: "Real-time", icon: Zap, variant: "fixlyfy" },
+            { text: "Real-time", icon: Zap, variant: "fixlify" },
             { text: isMobile ? "AI" : "AI Insights", icon: Bot, variant: "success" },
             { text: isMobile ? "Multi" : "Multi-metric", icon: Target, variant: "info" }
           ]}

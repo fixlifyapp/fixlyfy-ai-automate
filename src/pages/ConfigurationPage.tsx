@@ -24,7 +24,7 @@ const ConfigurationPage = () => {
         subtitle="Manage configurable elements of the application like business niche, tags, job types, statuses, and custom fields"
         icon={Cog}
         badges={[
-          { text: "Business Setup", icon: Target, variant: "fixlyfy" },
+          { text: "Business Setup", icon: Target, variant: "fixlify" },
           { text: "Custom Fields", icon: FormInput, variant: "success" },
           { text: "Workflow Optimization", icon: Zap, variant: "info" }
         ]}
