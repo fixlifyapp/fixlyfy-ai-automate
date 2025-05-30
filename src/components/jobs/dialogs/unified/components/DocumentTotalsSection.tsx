@@ -19,24 +19,22 @@ export const DocumentTotalsSection = ({
   taxRate
 }: DocumentTotalsSectionProps) => {
   return (
-    <div className="px-8 py-8 bg-gray-50">
+    <div className="px-8 py-6 bg-gray-50 border-t border-gray-200">
       <div className="flex justify-end">
         <div className="w-80">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-700">Subtotal</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-gray-700">Tax ({taxRate}%)</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
-              </div>
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-fixlyfy">Total</span>
-                  <span className="text-xl font-bold text-fixlyfy">{formatCurrency(total)}</span>
-                </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center py-2">
+              <span className="text-gray-700">Subtotal</span>
+              <span className="text-gray-900 font-medium">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-gray-700">Tax ({taxRate}%)</span>
+              <span className="text-gray-900 font-medium">{formatCurrency(tax)}</span>
+            </div>
+            <div className="border-t border-gray-300 pt-2">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-lg font-semibold text-gray-900">Total</span>
+                <span className="text-lg font-semibold text-fixlyfy">{formatCurrency(total)}</span>
               </div>
             </div>
           </div>

@@ -22,128 +22,98 @@ export const DocumentInfoGrid = ({
   companyInfo
 }: DocumentInfoGridProps) => {
   return (
-    <div className="bg-white px-8 py-8 border-b border-gray-100">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Client Information - Left Side */}
-        <div className="lg:col-span-1">
-          <h3 className="text-lg font-bold text-fixlyfy mb-4 uppercase tracking-wide">
+    <div className="px-8 py-6 border-b border-gray-200">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Client Information */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
             {documentType === 'estimate' ? 'Estimate For' : 'Bill To'}
           </h3>
           
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-1">
-                {enhancedClientInfo?.name || 'Client Name'}
-              </h4>
-              {enhancedClientInfo?.company && (
-                <p className="text-fixlyfy font-medium">{enhancedClientInfo.company}</p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <h4 className="font-semibold text-gray-900">
+              {enhancedClientInfo?.name || 'Client Name'}
+            </h4>
+            {enhancedClientInfo?.company && (
+              <p className="text-gray-600">{enhancedClientInfo.company}</p>
+            )}
             
             {enhancedClientInfo?.fullAddress && (
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Address</p>
-                <p className="text-gray-800 leading-relaxed">
-                  {enhancedClientInfo.fullAddress}
-                </p>
-              </div>
+              <p className="text-gray-600 text-sm">
+                {enhancedClientInfo.fullAddress}
+              </p>
             )}
 
             {jobAddress && jobAddress !== enhancedClientInfo?.address && (
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Service Address</p>
-                <p className="text-gray-800 leading-relaxed font-medium">
-                  {jobAddress}
-                </p>
+              <div className="pt-2">
+                <p className="text-xs font-medium text-gray-500">Service Address:</p>
+                <p className="text-gray-600 text-sm">{jobAddress}</p>
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="pt-2 space-y-1">
               {enhancedClientInfo?.phone && (
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Phone</p>
-                  <p className="text-gray-900 font-medium">{enhancedClientInfo.phone}</p>
-                </div>
+                <p className="text-gray-600 text-sm">{enhancedClientInfo.phone}</p>
               )}
               {enhancedClientInfo?.email && (
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Email</p>
-                  <p className="text-gray-900 font-medium">{enhancedClientInfo.email}</p>
-                </div>
+                <p className="text-gray-600 text-sm">{enhancedClientInfo.email}</p>
               )}
             </div>
           </div>
         </div>
         
-        {/* Company Information - Right Side */}
-        <div className="lg:col-span-1">
-          <h3 className="text-lg font-bold text-fixlyfy mb-4 uppercase tracking-wide">
+        {/* Company Information */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
             From
           </h3>
           
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-1">
-                {companyInfo?.name || 'FixLyfy Services'}
-              </h4>
-              {companyInfo?.businessType && (
-                <p className="text-fixlyfy font-medium">{companyInfo.businessType}</p>
-              )}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-gray-900">
+              {companyInfo?.name || 'FixLyfy Services'}
+            </h4>
+            {companyInfo?.businessType && (
+              <p className="text-gray-600">{companyInfo.businessType}</p>
+            )}
+
+            <div className="text-gray-600 text-sm">
+              <p>{companyInfo?.address}</p>
+              <p>
+                {[companyInfo?.city, companyInfo?.state, companyInfo?.zip].filter(Boolean).join(', ')}
+              </p>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Address</p>
-              <div className="text-gray-800 leading-relaxed">
-                <p>{companyInfo?.address}</p>
-                <p>
-                  {[companyInfo?.city, companyInfo?.state, companyInfo?.zip].filter(Boolean).join(', ')}
-                </p>
-                {companyInfo?.country && companyInfo.country !== 'USA' && (
-                  <p>{companyInfo.country}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Phone</p>
-                <p className="text-fixlyfy font-bold">{companyInfo?.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Email</p>
-                <p className="text-fixlyfy font-bold">{companyInfo?.email}</p>
-              </div>
+            <div className="pt-2 space-y-1">
+              <p className="text-gray-600 text-sm">{companyInfo?.phone}</p>
+              <p className="text-gray-600 text-sm">{companyInfo?.email}</p>
               {companyInfo?.website && (
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Website</p>
-                  <p className="text-fixlyfy font-bold">{companyInfo.website}</p>
-                </div>
+                <p className="text-gray-600 text-sm">{companyInfo.website}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Document Details */}
-        <div className="lg:col-span-1">
-          <h3 className="text-lg font-bold text-fixlyfy mb-4 uppercase tracking-wide">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
             Details
           </h3>
           
-          <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-gray-600 mb-1">
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium text-gray-500">
                 {documentType === 'estimate' ? 'Estimate Date' : 'Issue Date'}
               </p>
-              <p className="text-gray-900 font-semibold">
+              <p className="text-gray-900 font-medium">
                 {issueDate || new Date().toLocaleDateString()}
               </p>
             </div>
             
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-gray-600 mb-1">
+            <div>
+              <p className="text-xs font-medium text-gray-500">
                 {documentType === 'estimate' ? 'Valid Until' : 'Due Date'}
               </p>
-              <p className="text-gray-900 font-semibold">
+              <p className="text-gray-900 font-medium">
                 {documentType === 'estimate' 
                   ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
                   : dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
@@ -151,21 +121,10 @@ export const DocumentInfoGrid = ({
               </p>
             </div>
 
-            <div className="bg-fixlyfy/5 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-fixlyfy font-medium text-sm">Tax Rate</span>
-                <span className="text-gray-900 font-bold">{taxRate}%</span>
-              </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500">Tax Rate</p>
+              <p className="text-gray-900 font-medium">{taxRate}%</p>
             </div>
-
-            {companyInfo?.taxId && companyInfo.taxId !== 'XX-XXXXXXX' && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-medium text-sm">Tax ID</span>
-                  <span className="text-gray-900 font-semibold">{companyInfo.taxId}</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
