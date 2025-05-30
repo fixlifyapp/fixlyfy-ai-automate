@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { loadNicheData } from "@/utils/niche-data-loader";
+import { Profile } from "@/types/profile";
 
 const referralSources = [
   { id: "social_media", label: "Social Media" },
@@ -66,22 +67,17 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       // Update the user's profile with custom fields
       const { error: updateError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
+        .update({
           referral_source: referralSource,
           business_niche: businessNiche
-        }, {
-          onConflict: 'id'
-        });
+        } as Partial<Profile>)
+        .eq('id', user.id);
       
-      if (updateError) {
-        console.error("Profile update error:", updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
       await loadNicheData(businessNiche);
       
-      toast.success("Setup complete! Welcome to Fixlify!");
+      toast.success("Setup complete! Welcome to Fixlyfy!");
       onOpenChange(false);
       navigate("/dashboard");
     } catch (error) {
@@ -90,11 +86,6 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSkip = () => {
-    onOpenChange(false);
-    navigate("/dashboard");
   };
 
   return (
@@ -117,10 +108,7 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
               ))}
             </RadioGroup>
             
-            <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={handleSkip}>
-                Skip
-              </Button>
+            <div className="flex justify-end pt-4">
               <Button onClick={handleNextStep}>Next</Button>
             </div>
           </div>
@@ -135,25 +123,20 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
               ))}
             </RadioGroup>
             
-            <div className="flex justify-between gap-2 pt-4">
+            <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setStep(1)} disabled={isLoading}>
                 Back
               </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleSkip} disabled={isLoading}>
-                  Skip
-                </Button>
-                <Button onClick={handleComplete} disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    "Complete"
-                  )}
-                </Button>
-              </div>
+              <Button onClick={handleComplete} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Complete"
+                )}
+              </Button>
             </div>
           </div>
         )}
