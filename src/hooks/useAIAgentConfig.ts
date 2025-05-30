@@ -1,169 +1,120 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
+import { toast } from 'sonner';
 
-export interface AIAgentConfig {
-  id: string;
-  user_id: string;
+interface AIAgentConfig {
+  id?: string;
   business_niche: string;
   diagnostic_price: number;
   emergency_surcharge: number;
-  custom_prompt_additions: string | null;
-  connect_instance_arn: string | null;
-  aws_region: string;
+  custom_prompt_additions: string;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AWSCredentials {
-  id: string;
-  user_id: string;
-  aws_access_key_id: string;
-  aws_secret_access_key: string;
-  aws_region: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export const useAIAgentConfig = () => {
+  const { user } = useAuth();
   const [config, setConfig] = useState<AIAgentConfig | null>(null);
-  const [awsCredentials, setAwsCredentials] = useState<AWSCredentials | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchConfig();
+    }
+  }, [user]);
 
   const fetchConfig = async () => {
     if (!user) return;
-
+    
     try {
       setLoading(true);
-
-      // Fetch AI Agent config
-      const { data: configData, error: configError } = await supabase
+      const { data, error } = await supabase
         .from('ai_agent_configs')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (configError && configError.code !== 'PGRST116') {
-        console.error('Error fetching AI config:', configError);
-        toast.error('Failed to load AI Agent configuration');
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching AI agent config:', error);
         return;
       }
 
-      if (configData) {
-        setConfig(configData);
+      if (data) {
+        setConfig({
+          id: data.id,
+          business_niche: data.business_niche,
+          diagnostic_price: data.diagnostic_price,
+          emergency_surcharge: data.emergency_surcharge,
+          custom_prompt_additions: data.custom_prompt_additions || '',
+          is_active: data.is_active
+        });
+      } else {
+        // Set default config if none exists
+        setConfig({
+          business_niche: 'General Service',
+          diagnostic_price: 75.00,
+          emergency_surcharge: 50.00,
+          custom_prompt_additions: '',
+          is_active: true
+        });
       }
-
-      // Fetch AWS credentials
-      const { data: credentialsData, error: credentialsError } = await supabase
-        .from('aws_credentials')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
-
-      if (credentialsError && credentialsError.code !== 'PGRST116') {
-        console.error('Error fetching AWS credentials:', credentialsError);
-      }
-
-      if (credentialsData) {
-        setAwsCredentials(credentialsData);
-      }
-
     } catch (error) {
-      console.error('Error fetching AI Agent config:', error);
-      toast.error('Failed to load configuration');
+      console.error('Error fetching AI agent config:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveConfig = async (configData: Partial<AIAgentConfig>) => {
-    if (!user) return false;
+  const saveConfig = async (configData: Omit<AIAgentConfig, 'id'>) => {
+    if (!user) {
+      toast.error('User not authenticated');
+      return false;
+    }
 
+    setSaving(true);
+    
     try {
-      setSaving(true);
+      const dataToSave = {
+        user_id: user.id,
+        business_niche: configData.business_niche,
+        diagnostic_price: configData.diagnostic_price,
+        emergency_surcharge: configData.emergency_surcharge,
+        custom_prompt_additions: configData.custom_prompt_additions || null,
+        is_active: configData.is_active,
+        updated_at: new Date().toISOString()
+      };
 
       if (config?.id) {
         // Update existing config
         const { error } = await supabase
           .from('ai_agent_configs')
-          .update({
-            ...configData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', config.id);
+          .update(dataToSave)
+          .eq('id', config.id)
+          .eq('user_id', user.id);
 
         if (error) throw error;
       } else {
         // Create new config
         const { data, error } = await supabase
           .from('ai_agent_configs')
-          .insert({
-            user_id: user.id,
-            ...configData
-          })
+          .insert(dataToSave)
           .select()
           .single();
 
         if (error) throw error;
-        setConfig(data);
+        
+        setConfig(prev => ({ ...configData, id: data.id }));
       }
 
-      toast.success('AI Agent configuration saved successfully');
-      await fetchConfig(); // Refresh data
+      // Refresh the config
+      await fetchConfig();
       return true;
-
+      
     } catch (error) {
-      console.error('Error saving AI config:', error);
-      toast.error('Failed to save AI Agent configuration');
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveAWSCredentials = async (credentials: { aws_access_key_id: string; aws_secret_access_key: string; aws_region: string }) => {
-    if (!user) return false;
-
-    try {
-      setSaving(true);
-
-      // Deactivate existing credentials first
-      if (awsCredentials?.id) {
-        await supabase
-          .from('aws_credentials')
-          .update({ is_active: false })
-          .eq('user_id', user.id);
-      }
-
-      // Insert new credentials
-      const { data, error } = await supabase
-        .from('aws_credentials')
-        .insert({
-          user_id: user.id,
-          aws_access_key_id: credentials.aws_access_key_id,
-          aws_secret_access_key: credentials.aws_secret_access_key,
-          aws_region: credentials.aws_region,
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setAwsCredentials(data);
-      toast.success('AWS credentials saved successfully');
-      return true;
-
-    } catch (error) {
-      console.error('Error saving AWS credentials:', error);
-      toast.error('Failed to save AWS credentials');
+      console.error('Error saving AI agent config:', error);
+      toast.error(`Failed to save configuration: ${error.message}`);
       return false;
     } finally {
       setSaving(false);
@@ -171,46 +122,43 @@ export const useAIAgentConfig = () => {
   };
 
   const toggleActive = async () => {
-    if (!config) return false;
+    if (!config || !user) return;
 
+    setSaving(true);
+    
     try {
-      setSaving(true);
+      const newActiveState = !config.is_active;
+      
+      if (config.id) {
+        const { error } = await supabase
+          .from('ai_agent_configs')
+          .update({ 
+            is_active: newActiveState,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', config.id)
+          .eq('user_id', user.id);
 
-      const { error } = await supabase
-        .from('ai_agent_configs')
-        .update({
-          is_active: !config.is_active,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', config.id);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
-
-      setConfig(prev => prev ? { ...prev, is_active: !prev.is_active } : null);
-      toast.success(`AI Agent ${config.is_active ? 'deactivated' : 'activated'} successfully`);
-      return true;
-
+      setConfig(prev => prev ? { ...prev, is_active: newActiveState } : null);
+      toast.success(`AI Agent ${newActiveState ? 'activated' : 'deactivated'}`);
+      
     } catch (error) {
-      console.error('Error toggling AI Agent:', error);
-      toast.error('Failed to update AI Agent status');
-      return false;
+      console.error('Error toggling AI agent status:', error);
+      toast.error('Failed to update AI agent status');
     } finally {
       setSaving(false);
     }
   };
 
-  useEffect(() => {
-    fetchConfig();
-  }, [user]);
-
   return {
     config,
-    awsCredentials,
     loading,
     saving,
-    fetchConfig,
     saveConfig,
-    saveAWSCredentials,
-    toggleActive
+    toggleActive,
+    refreshConfig: fetchConfig
   };
 };

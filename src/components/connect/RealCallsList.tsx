@@ -16,7 +16,7 @@ interface ConnectCall {
   started_at: string;
   ended_at?: string;
   client_id?: string;
-  notes?: string;
+  ai_transcript?: string;
   client?: {
     name: string;
     phone: string;

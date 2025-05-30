@@ -72,21 +72,22 @@ export const CallingInterface = () => {
     try {
       setIsCallActive(true);
       
-      // First, record the call in our database
+      // Record the call in Amazon Connect calls table
       const { data: callData, error: callError } = await supabase
-        .from('calls')
+        .from('amazon_connect_calls')
         .insert({
           phone_number: toNumber,
-          direction: 'outgoing',
-          status: 'initiated',
-          notes: `${callType === 'ai' ? 'AI-powered call' : 'Regular call'} initiated from ${selectedFromNumber} via Amazon Connect`
+          instance_id: 'demo-instance',
+          contact_id: `demo-${Date.now()}`,
+          call_status: 'initiated',
+          started_at: new Date().toISOString()
         })
         .select()
         .single();
 
       if (callError) throw callError;
 
-      // Then initiate the actual call through Amazon Connect
+      // Simulate Amazon Connect call initiation
       const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'initiate',
@@ -99,20 +100,20 @@ export const CallingInterface = () => {
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         setCurrentContactId(data.contactId);
         toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated successfully via Amazon Connect`);
         
         // Update the call record with the contact ID
         await supabase
-          .from('calls')
+          .from('amazon_connect_calls')
           .update({ 
-            status: 'in-progress',
-            call_sid: data.contactId 
+            call_status: 'in-progress',
+            contact_id: data.contactId 
           })
           .eq('id', callData.id);
       } else {
-        throw new Error(data.error || "Failed to initiate call");
+        throw new Error(data?.error || "Failed to initiate call");
       }
     } catch (error) {
       console.error('Error initiating call:', error);
@@ -136,12 +137,12 @@ export const CallingInterface = () => {
 
       // Update call record
       await supabase
-        .from('calls')
+        .from('amazon_connect_calls')
         .update({ 
-          status: 'completed',
+          call_status: 'completed',
           ended_at: new Date().toISOString()
         })
-        .eq('call_sid', currentContactId);
+        .eq('contact_id', currentContactId);
 
       setIsCallActive(false);
       setCurrentContactId(null);

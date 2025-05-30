@@ -8,10 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface IncomingCall {
   id: string;
-  call_sid: string | null;
+  contact_id: string | null;
   phone_number: string;
-  direction: "incoming";
-  status: string | null;
+  call_status: string | null;
 }
 
 export const IncomingCallHandler = () => {
@@ -19,36 +18,34 @@ export const IncomingCallHandler = () => {
   const [isRinging, setIsRinging] = useState(false);
 
   useEffect(() => {
-    // Listen for incoming calls via real-time updates
+    // Listen for incoming Amazon Connect calls via real-time updates
     const channel = supabase
-      .channel('incoming-calls')
+      .channel('incoming-amazon-connect-calls')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'calls',
-          filter: 'direction=eq.incoming'
+          table: 'amazon_connect_calls'
         },
         (payload) => {
-          console.log('Incoming call detected:', payload);
+          console.log('Incoming Amazon Connect call detected:', payload);
           const newCall = payload.new as any;
-          if (newCall.status === 'ringing') {
+          if (newCall.call_status === 'initiated') {
             setIncomingCall({
               id: newCall.id,
-              call_sid: newCall.call_sid,
+              contact_id: newCall.contact_id,
               phone_number: newCall.phone_number,
-              direction: 'incoming',
-              status: newCall.status
+              call_status: newCall.call_status
             });
             setIsRinging(true);
             
             // Play notification sound
-            toast.info(`Incoming call from ${newCall.phone_number}`, {
+            toast.info(`Incoming Amazon Connect call from ${newCall.phone_number}`, {
               duration: 15000,
               action: {
                 label: "Answer",
-                onClick: () => answerCall(newCall.call_sid)
+                onClick: () => answerCall(newCall.contact_id)
               }
             });
           }
@@ -59,12 +56,12 @@ export const IncomingCallHandler = () => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'calls'
+          table: 'amazon_connect_calls'
         },
         (payload) => {
           const updatedCall = payload.new as any;
-          if (incomingCall && updatedCall.call_sid === incomingCall.call_sid) {
-            if (updatedCall.status === 'completed' || updatedCall.status === 'failed') {
+          if (incomingCall && updatedCall.contact_id === incomingCall.contact_id) {
+            if (updatedCall.call_status === 'completed' || updatedCall.call_status === 'failed') {
               setIncomingCall(null);
               setIsRinging(false);
             }
@@ -78,26 +75,24 @@ export const IncomingCallHandler = () => {
     };
   }, [incomingCall]);
 
-  const answerCall = async (callSid?: string | null) => {
-    const targetCallSid = callSid || incomingCall?.call_sid;
-    if (!targetCallSid) return;
+  const answerCall = async (contactId?: string | null) => {
+    const targetContactId = contactId || incomingCall?.contact_id;
+    if (!targetContactId) return;
 
     try {
-      // In a real implementation, you would use Twilio's client SDK to actually answer
-      // For now, we'll just update the call status to indicate it was answered
+      // Update the Amazon Connect call status to indicate it was answered
       const { error } = await supabase
-        .from('calls')
+        .from('amazon_connect_calls')
         .update({ 
-          status: 'in-progress',
-          notes: 'Call answered from web interface'
+          call_status: 'in-progress'
         })
-        .eq('call_sid', targetCallSid);
+        .eq('contact_id', targetContactId);
 
       if (error) throw error;
 
       setIsRinging(false);
       setIncomingCall(null);
-      toast.success("Call answered - this would connect to Twilio's voice client");
+      toast.success("Call answered - Amazon Connect interface would handle the actual call");
     } catch (error) {
       console.error('Error answering call:', error);
       toast.error('Failed to answer call');
@@ -108,15 +103,16 @@ export const IncomingCallHandler = () => {
     if (!incomingCall) return;
 
     try {
-      // Hangup the call via Twilio
-      const { error: twilioError } = await supabase.functions.invoke('twilio-calls', {
-        body: {
-          action: 'hangup',
-          callSid: incomingCall.call_sid
-        }
-      });
+      // Update the call status to declined
+      const { error } = await supabase
+        .from('amazon_connect_calls')
+        .update({ 
+          call_status: 'completed',
+          ended_at: new Date().toISOString()
+        })
+        .eq('contact_id', incomingCall.contact_id);
 
-      if (twilioError) throw twilioError;
+      if (error) throw error;
 
       // Update local state
       setIncomingCall(null);
@@ -149,7 +145,7 @@ export const IncomingCallHandler = () => {
             <Volume2 size={48} className="mx-auto text-blue-500 animate-bounce" />
           </div>
           
-          <h3 className="text-xl font-semibold mb-2">Incoming Call</h3>
+          <h3 className="text-xl font-semibold mb-2">Incoming Amazon Connect Call</h3>
           <p className="text-lg mb-6">{formatPhoneNumber(incomingCall.phone_number)}</p>
           
           <div className="flex justify-center space-x-4">
@@ -169,7 +165,7 @@ export const IncomingCallHandler = () => {
           </div>
           
           <p className="text-xs text-gray-500 mt-4">
-            Note: This is a demo interface. In production, this would connect to Twilio's voice client.
+            Note: This is a demo interface. In production, Amazon Connect would handle the actual call routing.
           </p>
         </CardContent>
       </Card>
