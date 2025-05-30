@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +37,7 @@ export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
         {
           event: '*',
           schema: 'public',
-          table: 'job_history',
+          table: 'job_history', // Fixed: use correct table name
           filter: `job_id=eq.${jobId}`
         },
         (payload) => {

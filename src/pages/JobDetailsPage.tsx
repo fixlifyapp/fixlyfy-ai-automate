@@ -46,7 +46,7 @@ const JobDetailsPage = () => {
       'line_items', // Added for estimate/invoice line items
       'estimate_communications', // Added for estimate communications
       'invoice_communications', // Added for invoice communications
-      'jobHistory' // Fixed: Changed from 'job_history' to 'jobHistory'
+      'job_history' // Fixed: use correct table name
     ],
     onUpdate: () => {
       console.log("Real-time update detected");
