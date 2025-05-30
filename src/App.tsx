@@ -17,6 +17,8 @@ import SchedulePage from "@/pages/SchedulePage";
 import FinancePage from "@/pages/FinancePage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import ProfileCompanyPage from "@/pages/ProfileCompanyPage";
+import IntegrationsPage from "@/pages/IntegrationsPage";
 import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
 import AISettingsPage from "@/pages/AISettingsPage";
 import TeamManagementPage from "@/pages/TeamManagementPage";
@@ -89,6 +91,16 @@ const App = () => {
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <SettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile-company" element={
+                <ProtectedRoute>
+                  <ProfileCompanyPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/integrations" element={
+                <ProtectedRoute>
+                  <IntegrationsPage />
                 </ProtectedRoute>
               } />
               <Route path="/phone-numbers" element={

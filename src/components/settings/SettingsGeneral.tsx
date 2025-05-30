@@ -3,10 +3,38 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const SettingsGeneral = () => {
+  const { settings, loading, saving, updateSettings } = useUserSettings();
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-10" />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -15,22 +43,37 @@ export const SettingsGeneral = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="dark-mode">Dark Mode</Label>
-              <Switch id="dark-mode" />
+              <Switch 
+                id="dark-mode" 
+                checked={settings.dark_mode}
+                onCheckedChange={(checked) => updateSettings({ dark_mode: checked })}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="compact-view">Compact View</Label>
-              <Switch id="compact-view" />
+              <Switch 
+                id="compact-view" 
+                checked={settings.compact_view}
+                onCheckedChange={(checked) => updateSettings({ compact_view: checked })}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="sound-effects">Sound Effects</Label>
-              <Switch id="sound-effects" />
+              <Switch 
+                id="sound-effects" 
+                checked={settings.sound_effects}
+                onCheckedChange={(checked) => updateSettings({ sound_effects: checked })}
+              />
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="default-view">Default Landing Page</Label>
-              <Select defaultValue="dashboard">
+              <Select 
+                value={settings.default_landing_page} 
+                onValueChange={(value) => updateSettings({ default_landing_page: value })}
+              >
                 <SelectTrigger id="default-view">
                   <SelectValue placeholder="Select default view" />
                 </SelectTrigger>
@@ -44,7 +87,10 @@ export const SettingsGeneral = () => {
             
             <div className="space-y-2">
               <Label htmlFor="date-format">Date Format</Label>
-              <Select defaultValue="mm-dd-yyyy">
+              <Select 
+                value={settings.date_format} 
+                onValueChange={(value) => updateSettings({ date_format: value })}
+              >
                 <SelectTrigger id="date-format">
                   <SelectValue placeholder="Select date format" />
                 </SelectTrigger>
@@ -67,30 +113,54 @@ export const SettingsGeneral = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="email-notifications">Email Notifications</Label>
-              <Switch id="email-notifications" defaultChecked />
+              <Switch 
+                id="email-notifications" 
+                checked={settings.email_notifications}
+                onCheckedChange={(checked) => updateSettings({ email_notifications: checked })}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="push-notifications">Push Notifications</Label>
-              <Switch id="push-notifications" defaultChecked />
+              <Switch 
+                id="push-notifications" 
+                checked={settings.push_notifications}
+                onCheckedChange={(checked) => updateSettings({ push_notifications: checked })}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="sms-notifications">SMS Notifications</Label>
-              <Switch id="sms-notifications" />
+              <Switch 
+                id="sms-notifications" 
+                checked={settings.sms_notifications}
+                onCheckedChange={(checked) => updateSettings({ sms_notifications: checked })}
+              />
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="job-reminders">Job Reminders</Label>
-              <Switch id="job-reminders" defaultChecked />
+              <Switch 
+                id="job-reminders" 
+                checked={settings.job_reminders}
+                onCheckedChange={(checked) => updateSettings({ job_reminders: checked })}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="invoice-alerts">Invoice Alerts</Label>
-              <Switch id="invoice-alerts" defaultChecked />
+              <Switch 
+                id="invoice-alerts" 
+                checked={settings.invoice_alerts}
+                onCheckedChange={(checked) => updateSettings({ invoice_alerts: checked })}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="marketing-updates">Marketing Updates</Label>
-              <Switch id="marketing-updates" />
+              <Switch 
+                id="marketing-updates" 
+                checked={settings.marketing_updates}
+                onCheckedChange={(checked) => updateSettings({ marketing_updates: checked })}
+              />
             </div>
           </div>
         </div>
@@ -104,7 +174,10 @@ export const SettingsGeneral = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="language">Language</Label>
-              <Select defaultValue="en">
+              <Select 
+                value={settings.language} 
+                onValueChange={(value) => updateSettings({ language: value })}
+              >
                 <SelectTrigger id="language">
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
@@ -118,7 +191,10 @@ export const SettingsGeneral = () => {
             
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
-              <Select defaultValue="utc-7">
+              <Select 
+                value={settings.timezone} 
+                onValueChange={(value) => updateSettings({ timezone: value })}
+              >
                 <SelectTrigger id="timezone">
                   <SelectValue placeholder="Select timezone" />
                 </SelectTrigger>
@@ -136,7 +212,10 @@ export const SettingsGeneral = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
-              <Select defaultValue="usd">
+              <Select 
+                value={settings.currency} 
+                onValueChange={(value) => updateSettings({ currency: value })}
+              >
                 <SelectTrigger id="currency">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
@@ -148,27 +227,17 @@ export const SettingsGeneral = () => {
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="data-retention">Data Retention</Label>
-              <Select defaultValue="1-year">
-                <SelectTrigger id="data-retention">
-                  <SelectValue placeholder="Select retention period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="6-months">6 Months</SelectItem>
-                  <SelectItem value="1-year">1 Year</SelectItem>
-                  <SelectItem value="2-years">2 Years</SelectItem>
-                  <SelectItem value="forever">Forever</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
       </div>
       
       <div className="flex justify-end">
-        <Button className="bg-fixlyfy hover:bg-fixlyfy/90">Save Changes</Button>
+        <Button 
+          className="bg-fixlyfy hover:bg-fixlyfy/90" 
+          disabled={saving}
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
     </div>
   );
