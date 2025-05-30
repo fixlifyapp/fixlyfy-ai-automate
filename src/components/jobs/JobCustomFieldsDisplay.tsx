@@ -1,6 +1,5 @@
 
 import { useJobCustomFields } from "@/hooks/useJobCustomFields";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -26,25 +25,16 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span className="ml-2">Loading custom fields...</span>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-2">Loading custom fields...</span>
+      </div>
     );
   }
 
   if (availableFields.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Additional Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No custom fields configured for jobs.</p>
-        </CardContent>
-      </Card>
+      <div className="text-muted-foreground">No custom fields configured for jobs.</div>
     );
   }
 
@@ -82,34 +72,33 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Additional Information</CardTitle>
-          {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Edit2 className="h-4 w-4 mr-2" />
-              Edit
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium text-gray-500">Custom Fields</div>
+        {!isEditing ? (
+          <Button variant="outline" size="sm" onClick={handleEdit}>
+            <Edit2 className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
             </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 gap-6">
         {availableFields.map((field) => {
           const existingValue = customFieldValues.find(cfv => cfv.custom_field_id === field.id);
           const displayValue = isEditing 
@@ -129,18 +118,18 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
 
           // Display mode
           return (
-            <div key={field.id} className="space-y-1">
+            <div key={field.id} className="space-y-2">
               <div className="text-sm font-medium text-gray-700">
                 {field.name}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </div>
-              <div className="text-sm text-gray-900">
+              <div className="text-sm text-gray-900 p-3 bg-gray-50 rounded-md border">
                 {displayValue || <span className="text-gray-400 italic">Not set</span>}
               </div>
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

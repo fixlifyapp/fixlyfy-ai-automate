@@ -116,10 +116,13 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             jobId={jobId} 
             editable 
           />
-          <AttachmentsCard 
-            jobId={jobId} 
-            editable 
-          />
+          <div className="space-y-6">
+            <AttachmentsCard 
+              jobId={jobId} 
+              editable 
+            />
+            <ConditionalCustomFieldsCard jobId={jobId} />
+          </div>
         </div>
       </div>
 
@@ -138,7 +141,6 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             editable 
           />
         </div>
-        <ConditionalCustomFieldsCard jobId={jobId} />
       </div>
 
       {/* Task Management Dialog */}
