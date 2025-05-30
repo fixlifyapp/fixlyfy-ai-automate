@@ -3,8 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
-import { useCallback } from "react";
-import { debounce } from "lodash";
+import { useState } from "react";
 
 interface CompanyInfoCardProps {
   companySettings: any;
@@ -12,18 +11,17 @@ interface CompanyInfoCardProps {
 }
 
 export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: CompanyInfoCardProps) => {
-  const debouncedUpdate = useCallback(
-    debounce((field: string, value: string) => {
-      updateCompanySettings({ [field]: value });
-    }, 500),
-    [updateCompanySettings]
-  );
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (field: string, value: string) => {
-    // Update immediately for UI responsiveness
-    updateCompanySettings({ [field]: value });
-    // But debounce the actual save
-    debouncedUpdate(field, value);
+  const handleFieldChange = async (field: string, value: string) => {
+    setIsLoading(true);
+    try {
+      await updateCompanySettings({ [field]: value });
+    } catch (error) {
+      console.error('Error updating company settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -39,8 +37,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="company-name" 
               value={companySettings.company_name || ''}
-              onChange={(e) => handleChange('company_name', e.target.value)}
+              onChange={(e) => handleFieldChange('company_name', e.target.value)}
               placeholder="Your Company Name"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -48,8 +47,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="business-type" 
               value={companySettings.business_type || ''}
-              onChange={(e) => handleChange('business_type', e.target.value)}
+              onChange={(e) => handleFieldChange('business_type', e.target.value)}
               placeholder="HVAC, Plumbing, etc."
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -59,8 +59,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
           <Input 
             id="company-address" 
             value={companySettings.company_address || ''}
-            onChange={(e) => handleChange('company_address', e.target.value)}
+            onChange={(e) => handleFieldChange('company_address', e.target.value)}
             placeholder="123 Business Street, Suite 100"
+            disabled={isLoading}
           />
         </div>
         
@@ -70,8 +71,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="company-city" 
               value={companySettings.company_city || ''}
-              onChange={(e) => handleChange('company_city', e.target.value)}
+              onChange={(e) => handleFieldChange('company_city', e.target.value)}
               placeholder="City"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -79,8 +81,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="company-state" 
               value={companySettings.company_state || ''}
-              onChange={(e) => handleChange('company_state', e.target.value)}
+              onChange={(e) => handleFieldChange('company_state', e.target.value)}
               placeholder="State"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -88,8 +91,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="company-zip" 
               value={companySettings.company_zip || ''}
-              onChange={(e) => handleChange('company_zip', e.target.value)}
+              onChange={(e) => handleFieldChange('company_zip', e.target.value)}
               placeholder="12345"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -100,8 +104,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="company-phone" 
               value={companySettings.company_phone || ''}
-              onChange={(e) => handleChange('company_phone', e.target.value)}
+              onChange={(e) => handleFieldChange('company_phone', e.target.value)}
               placeholder="(555) 123-4567"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -110,8 +115,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               id="company-email" 
               type="email"
               value={companySettings.company_email || ''}
-              onChange={(e) => handleChange('company_email', e.target.value)}
+              onChange={(e) => handleFieldChange('company_email', e.target.value)}
               placeholder="contact@company.com"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -122,8 +128,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="company-website" 
               value={companySettings.company_website || ''}
-              onChange={(e) => handleChange('company_website', e.target.value)}
+              onChange={(e) => handleFieldChange('company_website', e.target.value)}
               placeholder="https://www.company.com"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -131,8 +138,9 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             <Input 
               id="tax-id" 
               value={companySettings.tax_id || ''}
-              onChange={(e) => handleChange('tax_id', e.target.value)}
+              onChange={(e) => handleFieldChange('tax_id', e.target.value)}
               placeholder="XX-XXXXXXX"
+              disabled={isLoading}
             />
           </div>
         </div>

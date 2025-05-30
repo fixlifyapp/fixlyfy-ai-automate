@@ -64,7 +64,7 @@ export const useUserSettings = () => {
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching user settings:', error);
@@ -72,10 +72,23 @@ export const useUserSettings = () => {
       }
 
       if (data) {
-        setSettings(data);
+        setSettings({ ...defaultSettings, ...data });
+      } else {
+        // Create default settings if none exist
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: user.id,
+            ...defaultSettings
+          });
+        
+        if (!insertError) {
+          setSettings(defaultSettings);
+        }
       }
     } catch (error) {
       console.error('Error fetching user settings:', error);
+      toast.error('Failed to load user settings');
     } finally {
       setLoading(false);
     }
@@ -99,10 +112,11 @@ export const useUserSettings = () => {
       if (error) throw error;
 
       setSettings(newSettings);
-      toast.success('Settings updated successfully');
+      console.log('User settings updated successfully');
     } catch (error) {
       console.error('Error updating settings:', error);
       toast.error('Failed to update settings');
+      throw error;
     } finally {
       setSaving(false);
     }

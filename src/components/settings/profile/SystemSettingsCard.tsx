@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "lucide-react";
+import { useState } from "react";
 
 interface SystemSettingsCardProps {
   userSettings: any;
@@ -10,6 +11,19 @@ interface SystemSettingsCardProps {
 }
 
 export const SystemSettingsCard = ({ userSettings, updateUserSettings }: SystemSettingsCardProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSettingChange = async (field: string, value: string) => {
+    setIsLoading(true);
+    try {
+      await updateUserSettings({ [field]: value });
+    } catch (error) {
+      console.error('Error updating user settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Card className="fixlyfy-card">
       <CardHeader className="flex flex-row items-center space-y-0 pb-4">
@@ -22,7 +36,8 @@ export const SystemSettingsCard = ({ userSettings, updateUserSettings }: SystemS
             <Label htmlFor="language">Language</Label>
             <Select 
               value={userSettings.language || 'en'} 
-              onValueChange={(value) => updateUserSettings({ language: value })}
+              onValueChange={(value) => handleSettingChange('language', value)}
+              disabled={isLoading}
             >
               <SelectTrigger id="language">
                 <SelectValue placeholder="Select language" />
@@ -40,7 +55,8 @@ export const SystemSettingsCard = ({ userSettings, updateUserSettings }: SystemS
             <Label htmlFor="timezone">Timezone</Label>
             <Select 
               value={userSettings.timezone || 'utc-7'} 
-              onValueChange={(value) => updateUserSettings({ timezone: value })}
+              onValueChange={(value) => handleSettingChange('timezone', value)}
+              disabled={isLoading}
             >
               <SelectTrigger id="timezone">
                 <SelectValue placeholder="Select timezone" />
@@ -62,7 +78,8 @@ export const SystemSettingsCard = ({ userSettings, updateUserSettings }: SystemS
             <Label htmlFor="currency">Currency</Label>
             <Select 
               value={userSettings.currency || 'usd'} 
-              onValueChange={(value) => updateUserSettings({ currency: value })}
+              onValueChange={(value) => handleSettingChange('currency', value)}
+              disabled={isLoading}
             >
               <SelectTrigger id="currency">
                 <SelectValue placeholder="Select currency" />
@@ -80,7 +97,8 @@ export const SystemSettingsCard = ({ userSettings, updateUserSettings }: SystemS
             <Label htmlFor="date-format">Date Format</Label>
             <Select 
               value={userSettings.date_format || 'mm-dd-yyyy'} 
-              onValueChange={(value) => updateUserSettings({ date_format: value })}
+              onValueChange={(value) => handleSettingChange('date_format', value)}
+              disabled={isLoading}
             >
               <SelectTrigger id="date-format">
                 <SelectValue placeholder="Select date format" />

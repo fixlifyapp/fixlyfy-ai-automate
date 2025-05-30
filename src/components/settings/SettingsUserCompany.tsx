@@ -9,17 +9,47 @@ import { CompanyInfoCard } from "./profile/CompanyInfoCard";
 import { BrandingCard } from "./profile/BrandingCard";
 import { SystemSettingsCard } from "./profile/SystemSettingsCard";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const SettingsUserCompany = () => {
   const { settings: companySettings, loading: companyLoading, updateSettings: updateCompanySettings } = useCompanySettings();
   const { settings: userSettings, loading: userLoading, updateSettings: updateUserSettings } = useUserSettings();
   const [isSaving, setIsSaving] = useState(false);
 
+  // Set up real-time subscriptions
+  useEffect(() => {
+    const userSettingsChannel = supabase
+      .channel('user-settings-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_settings'
+      }, (payload) => {
+        console.log('User settings changed:', payload);
+      })
+      .subscribe();
+
+    const companySettingsChannel = supabase
+      .channel('company-settings-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'company_settings'
+      }, (payload) => {
+        console.log('Company settings changed:', payload);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userSettingsChannel);
+      supabase.removeChannel(companySettingsChannel);
+    };
+  }, []);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Force save all settings
       toast.success('Settings saved successfully');
     } catch (error) {
       toast.error('Failed to save settings');

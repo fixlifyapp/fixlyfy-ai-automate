@@ -66,7 +66,7 @@ export const useCompanySettings = () => {
         .from('company_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching company settings:', error);
@@ -74,10 +74,23 @@ export const useCompanySettings = () => {
       }
 
       if (data) {
-        setSettings(data);
+        setSettings({ ...defaultCompanySettings, ...data });
+      } else {
+        // Create default settings if none exist
+        const { error: insertError } = await supabase
+          .from('company_settings')
+          .insert({
+            user_id: user.id,
+            ...defaultCompanySettings
+          });
+        
+        if (!insertError) {
+          setSettings(defaultCompanySettings);
+        }
       }
     } catch (error) {
       console.error('Error fetching company settings:', error);
+      toast.error('Failed to load company settings');
     } finally {
       setLoading(false);
     }
@@ -101,10 +114,11 @@ export const useCompanySettings = () => {
       if (error) throw error;
 
       setSettings(newSettings);
-      toast.success('Company settings updated successfully');
+      console.log('Company settings updated successfully');
     } catch (error) {
       console.error('Error updating company settings:', error);
       toast.error('Failed to update company settings');
+      throw error;
     } finally {
       setSaving(false);
     }

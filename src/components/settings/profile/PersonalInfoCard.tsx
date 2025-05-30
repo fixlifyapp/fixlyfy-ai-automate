@@ -6,10 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Camera } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { debounce } from "lodash";
 
 interface PersonalInfoCardProps {
   userSettings: any;
@@ -24,6 +23,7 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
     phone: '',
     notification_email: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -55,36 +55,34 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
     }
   };
 
-  const debouncedUpdate = useCallback(
-    debounce(async (field: string, value: string) => {
-      if (!user) return;
+  const handleFieldChange = async (field: string, value: string) => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    const updatedProfile = { ...profile, [field]: value };
+    setProfile(updatedProfile);
 
-      try {
-        if (field === 'notification_email') {
-          updateUserSettings({ notification_email: value });
-        } else {
-          const updatedProfile = { ...profile, [field]: value };
-          const { error } = await supabase
-            .from('profiles')
-            .update({
-              name: `${updatedProfile.first_name} ${updatedProfile.last_name}`.trim(),
-              phone: updatedProfile.phone
-            })
-            .eq('id', user.id);
+    try {
+      if (field === 'notification_email') {
+        await updateUserSettings({ notification_email: value });
+      } else {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: `${updatedProfile.first_name} ${updatedProfile.last_name}`.trim(),
+            phone: updatedProfile.phone
+          })
+          .eq('id', user.id);
 
-          if (error) throw error;
-        }
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        toast.error('Failed to update profile');
+        if (error) throw error;
+        toast.success('Profile updated successfully');
       }
-    }, 500),
-    [user, profile, updateUserSettings]
-  );
-
-  const handleChange = (field: string, value: string) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-    debouncedUpdate(field, value);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -106,6 +104,7 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
               size="sm" 
               variant="outline" 
               className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+              disabled={isLoading}
             >
               <Camera className="h-4 w-4" />
             </Button>
@@ -122,7 +121,8 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
             <Input 
               id="first-name" 
               value={profile.first_name}
-              onChange={(e) => handleChange('first_name', e.target.value)}
+              onChange={(e) => handleFieldChange('first_name', e.target.value)}
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -130,7 +130,8 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
             <Input 
               id="last-name" 
               value={profile.last_name}
-              onChange={(e) => handleChange('last_name', e.target.value)}
+              onChange={(e) => handleFieldChange('last_name', e.target.value)}
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -140,8 +141,9 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
           <Input 
             id="phone" 
             value={profile.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
+            onChange={(e) => handleFieldChange('phone', e.target.value)}
             placeholder="+1 (555) 123-4567"
+            disabled={isLoading}
           />
         </div>
         
@@ -151,8 +153,9 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
             id="notification-email" 
             type="email" 
             value={profile.notification_email}
-            onChange={(e) => handleChange('notification_email', e.target.value)}
+            onChange={(e) => handleFieldChange('notification_email', e.target.value)}
             placeholder="notifications@company.com"
+            disabled={isLoading}
           />
         </div>
       </CardContent>
