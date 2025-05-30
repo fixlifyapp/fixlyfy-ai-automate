@@ -188,51 +188,69 @@ const ConnectCenterPage = () => {
         <ConnectSearch onSearchResults={setSearchResults} />
       </div>
       
-      <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 mb-6">
-          <TabsTrigger value="messages" className="flex items-center gap-2">
-            <MessageSquare size={16} />
-            <span className="hidden sm:inline">Messages</span>
-            {unreadCounts.messages > 0 && (
-              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.messages}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="calls" className="flex items-center gap-2">
-            <Phone size={16} />
-            <span className="hidden sm:inline">Calls</span>
-            {unreadCounts.calls > 0 && (
-              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="emails" className="flex items-center gap-2">
-            <Mail size={16} />
-            <span className="hidden sm:inline">Emails</span>
-            {unreadCounts.emails > 0 && (
-              <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
-            <PhoneCall size={16} />
-            <span className="hidden sm:inline">Numbers</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="messages" className="mt-0">
-          <DispatcherMessagesView searchResults={searchResults} />
-        </TabsContent>
-        
-        <TabsContent value="calls" className="mt-0">
-          <RealCallsList />
-        </TabsContent>
-        
-        <TabsContent value="emails" className="mt-0">
-          <RealEmailsList />
-        </TabsContent>
-        
-        <TabsContent value="phone-numbers" className="mt-0">
-          <PhoneNumbersList />
-        </TabsContent>
-      </Tabs>
+      <div className="bg-white rounded-2xl shadow-lg border border-fixlify/20 overflow-hidden">
+        <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
+          <div className="bg-gradient-to-r from-fixlify/5 to-fixlify-light/5 px-6 py-4 border-b border-fixlify/10">
+            <TabsList className="grid grid-cols-4 bg-white/60 backdrop-blur-sm border border-fixlify/20 rounded-xl p-1">
+              <TabsTrigger 
+                value="messages" 
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlify data-[state=active]:to-fixlify-light data-[state=active]:text-white rounded-lg transition-all duration-300"
+              >
+                <MessageSquare size={16} />
+                <span className="hidden sm:inline">Messages</span>
+                {unreadCounts.messages > 0 && (
+                  <Badge className="ml-1 bg-fixlify text-white text-xs px-1.5 py-0.5">{unreadCounts.messages}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="calls" 
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlify data-[state=active]:to-fixlify-light data-[state=active]:text-white rounded-lg transition-all duration-300"
+              >
+                <Phone size={16} />
+                <span className="hidden sm:inline">Calls</span>
+                {unreadCounts.calls > 0 && (
+                  <Badge className="ml-1 bg-fixlify text-white text-xs px-1.5 py-0.5">{unreadCounts.calls}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="emails" 
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlify data-[state=active]:to-fixlify-light data-[state=active]:text-white rounded-lg transition-all duration-300"
+              >
+                <Mail size={16} />
+                <span className="hidden sm:inline">Emails</span>
+                {unreadCounts.emails > 0 && (
+                  <Badge className="ml-1 bg-fixlify text-white text-xs px-1.5 py-0.5">{unreadCounts.emails}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="phone-numbers" 
+                className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-fixlify data-[state=active]:to-fixlify-light data-[state=active]:text-white rounded-lg transition-all duration-300"
+              >
+                <PhoneCall size={16} />
+                <span className="hidden sm:inline">Numbers</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <div className="p-6">
+            <TabsContent value="messages" className="mt-0">
+              <DispatcherMessagesView searchResults={searchResults} />
+            </TabsContent>
+            
+            <TabsContent value="calls" className="mt-0">
+              <RealCallsList />
+            </TabsContent>
+            
+            <TabsContent value="emails" className="mt-0">
+              <RealEmailsList />
+            </TabsContent>
+            
+            <TabsContent value="phone-numbers" className="mt-0">
+              <PhoneNumbersList />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
     </PageLayout>
   );
 };
