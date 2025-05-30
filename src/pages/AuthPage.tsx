@@ -205,14 +205,6 @@ export default function AuthPage() {
     }
   };
 
-  // Auto-fill admin credentials when clicking on email field
-  const handleEmailFocus = () => {
-    if (!email) {
-      setEmail("admin@fixlify.com");
-      setPassword("6475289485Asd@");
-    }
-  };
-
   const validateEmail = (email: string): string | null => {
     if (!email) return "Email is required";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -363,10 +355,9 @@ export default function AuthPage() {
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
                         <input
                           type="email"
-                          placeholder="admin@fixlify.com (click to auto-fill)"
+                          placeholder="your@email.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          onFocus={handleEmailFocus}
                           className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-0"
                           required
                         />
