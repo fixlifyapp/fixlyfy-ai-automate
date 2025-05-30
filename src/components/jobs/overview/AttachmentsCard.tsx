@@ -43,11 +43,23 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
   };
 
   const handleUploadSuccess = () => {
+    console.log("Upload success callback triggered, refreshing attachments");
     setIsUploadDialogOpen(false);
+    
+    // Force refresh the attachments list
     refreshAttachments();
+    
+    // Also trigger any parent update callback
     if (onUpdate) {
+      console.log("Calling parent onUpdate callback");
       onUpdate();
     }
+    
+    // Add a small delay and refresh again to ensure we get the latest data
+    setTimeout(() => {
+      console.log("Secondary refresh triggered");
+      refreshAttachments();
+    }, 1000);
   };
 
   if (isLoading) {
@@ -73,7 +85,7 @@ export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: Attachmen
         <ModernCardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <ModernCardTitle icon={Paperclip}>
-              Attachments
+              Attachments ({attachments.length})
             </ModernCardTitle>
             {editable && (
               <Button

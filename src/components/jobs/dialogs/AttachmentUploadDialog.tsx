@@ -29,7 +29,7 @@ export function AttachmentUploadDialog({
 }: AttachmentUploadDialogProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { uploadAttachments, isUploading } = useJobAttachments();
+  const { uploadAttachments, isUploading } = useJobAttachments(jobId);
   
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -57,13 +57,26 @@ export function AttachmentUploadDialog({
       return;
     }
 
+    console.log("Starting upload for job:", jobId, "Files:", selectedFiles.length);
     const success = await uploadAttachments(selectedFiles);
+    
     if (success) {
+      console.log("Upload successful, clearing files and closing dialog");
       setSelectedFiles([]);
       onOpenChange(false);
+      
+      // Always call onUploadSuccess to trigger refresh
       if (onUploadSuccess) {
+        console.log("Calling onUploadSuccess callback");
         onUploadSuccess();
       }
+      
+      // Add a small delay to ensure the upload is processed
+      setTimeout(() => {
+        console.log("Upload process completed");
+      }, 500);
+    } else {
+      console.error("Upload failed");
     }
   };
 
