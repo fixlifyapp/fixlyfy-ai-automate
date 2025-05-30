@@ -20,9 +20,6 @@ export default function AuthPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
 
-  // Set session expiry to 7 days (in seconds)
-  const SESSION_EXPIRY = 60 * 60 * 24 * 7; // 7 days in seconds
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

@@ -25,6 +25,8 @@ import TeamManagementPage from "@/pages/TeamManagementPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
+import Index from "@/pages/Index";
+import AuthPage from "@/pages/AuthPage";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppProviders } from "@/components/ui/AppProviders";
@@ -39,104 +41,107 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <AppProviders>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients" element={
-                <ProtectedRoute>
-                  <ClientsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients/:id" element={
-                <ProtectedRoute>
-                  <ClientDetailPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs" element={
-                <ProtectedRoute>
-                  <JobsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs/:id" element={
-                <ProtectedRoute>
-                  <JobDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect" element={
-                <ProtectedRoute>
-                  <ConnectCenterPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/schedule" element={
-                <ProtectedRoute>
-                  <SchedulePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/finance" element={
-                <ProtectedRoute>
-                  <FinancePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile-company" element={
-                <ProtectedRoute>
-                  <ProfileCompanyPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/integrations" element={
-                <ProtectedRoute>
-                  <IntegrationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/phone-numbers" element={
-                <ProtectedRoute>
-                  <PhoneNumbersPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-settings" element={
-                <ProtectedRoute>
-                  <AISettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/team" element={
-                <ProtectedRoute>
-                  <TeamManagementPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/automations" element={
-                <ProtectedRoute>
-                  <AutomationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-center" element={
-                <ProtectedRoute>
-                  <AiCenterPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/configuration" element={
-                <ProtectedRoute>
-                  <ConfigurationPage />
-                </ProtectedRoute>
-              } />
-            </Routes>
-            <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
-          </BrowserRouter>
-        </AppProviders>
+        <AuthProvider>
+          <AppProviders>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients" element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients/:id" element={
+                  <ProtectedRoute>
+                    <ClientDetailPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/jobs" element={
+                  <ProtectedRoute>
+                    <JobsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/jobs/:id" element={
+                  <ProtectedRoute>
+                    <JobDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect" element={
+                  <ProtectedRoute>
+                    <ConnectCenterPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/schedule" element={
+                  <ProtectedRoute>
+                    <SchedulePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/finance" element={
+                  <ProtectedRoute>
+                    <FinancePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/analytics" element={
+                  <ProtectedRoute>
+                    <AnalyticsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile-company" element={
+                  <ProtectedRoute>
+                    <ProfileCompanyPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/integrations" element={
+                  <ProtectedRoute>
+                    <IntegrationsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/phone-numbers" element={
+                  <ProtectedRoute>
+                    <PhoneNumbersPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/ai-settings" element={
+                  <ProtectedRoute>
+                    <AISettingsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/team" element={
+                  <ProtectedRoute>
+                    <TeamManagementPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/automations" element={
+                  <ProtectedRoute>
+                    <AutomationsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/ai-center" element={
+                  <ProtectedRoute>
+                    <AiCenterPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/configuration" element={
+                  <ProtectedRoute>
+                    <ConfigurationPage />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+              <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
+            </BrowserRouter>
+          </AppProviders>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
