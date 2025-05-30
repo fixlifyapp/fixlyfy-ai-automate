@@ -63,9 +63,26 @@ export const InvoiceForm = ({ jobId, onClose }: InvoiceFormProps) => {
   };
 
   const renderCurrentStep = () => {
-    const CurrentStepComponent = steps[currentStep].component;
+    if (currentStep === 0) { // Invoice Form Step
+      return (
+        <InvoiceFormStep
+          formData={formData}
+          onFormDataChange={handleFormDataChange}
+          jobId={jobId}
+        />
+      );
+    }
     
-    if (currentStep === 2) { // Payment step
+    if (currentStep === 1) { // Preview Step
+      return (
+        <InvoicePreviewStep
+          formData={formData}
+          jobId={jobId}
+        />
+      );
+    }
+    
+    if (currentStep === 2) { // Payment Step
       const invoiceData = {
         ...formData,
         total: calculateTotal()
@@ -80,13 +97,7 @@ export const InvoiceForm = ({ jobId, onClose }: InvoiceFormProps) => {
       );
     }
     
-    return (
-      <CurrentStepComponent
-        formData={formData}
-        onFormDataChange={handleFormDataChange}
-        jobId={jobId}
-      />
-    );
+    return null;
   };
 
   return (
