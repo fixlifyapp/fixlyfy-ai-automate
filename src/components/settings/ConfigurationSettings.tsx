@@ -45,8 +45,8 @@ export const ConfigurationSettings = () => {
           <Link key={section.title} to={section.href}>
             <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="flex items-center p-6 space-x-4">
-                <div className="bg-fixlyfy/10 p-3 rounded-full">
-                  <section.icon className="h-6 w-6 text-fixlyfy" />
+                <div className="bg-fixlify/10 p-3 rounded-full">
+                  <section.icon className="h-6 w-6 text-fixlify" />
                 </div>
                 <div>
                   <h4 className="font-medium">{section.title}</h4>
@@ -67,7 +67,7 @@ export const ConfigurationSettings = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Link to="/configuration" className="text-fixlyfy hover:underline text-sm">
+            <Link to="/configuration" className="text-fixlify hover:underline text-sm">
               Go to Full Configuration →
             </Link>
           </div>

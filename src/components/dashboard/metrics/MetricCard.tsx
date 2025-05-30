@@ -26,7 +26,7 @@ export const MetricCard = ({
     <CardContent className="pt-6">
       {isLoading ? (
         <div className="flex items-center justify-center h-24">
-          <Loader2 className="h-8 w-8 animate-spin text-fixlyfy" />
+          <Loader2 className="h-8 w-8 animate-spin text-fixlify" />
         </div>
       ) : (
         <div className="space-y-2">
@@ -46,10 +46,10 @@ export const MetricCard = ({
             )}
           </div>
           <div>
-            <h3 className="text-sm text-fixlyfy-text-secondary">{title}</h3>
+            <h3 className="text-sm text-fixlify-text-secondary">{title}</h3>
             <p className="text-2xl font-semibold mt-1">{value}</p>
             {changeLabel && (
-              <p className="text-xs text-fixlyfy-text-secondary mt-1">{changeLabel}</p>
+              <p className="text-xs text-fixlify-text-secondary mt-1">{changeLabel}</p>
             )}
           </div>
         </div>

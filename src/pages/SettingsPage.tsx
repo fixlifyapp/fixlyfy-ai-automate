@@ -15,7 +15,7 @@ const SettingsPage = () => {
         subtitle="Manage your account and application preferences"
         icon={Settings2}
         badges={[
-          { text: "Security", icon: Shield, variant: "fixlyfy" },
+          { text: "Security", icon: Shield, variant: "fixlify" },
           { text: "Customization", icon: Sliders, variant: "success" },
           { text: "Profile Management", icon: User, variant: "info" }
         ]}
@@ -25,10 +25,10 @@ const SettingsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Profile & Company Card */}
         <Link to="/profile-company">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+          <div className="h-full hover:shadow-md transition-shadow fixlify-card cursor-pointer">
             <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <User className="h-6 w-6 text-fixlyfy" />
+              <div className="bg-fixlify/10 p-3 rounded-full">
+                <User className="h-6 w-6 text-fixlify" />
               </div>
               <div>
                 <h3 className="font-medium">Profile & Company</h3>
@@ -40,10 +40,10 @@ const SettingsPage = () => {
 
         {/* Integrations Card */}
         <Link to="/integrations">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+          <div className="h-full hover:shadow-md transition-shadow fixlify-card cursor-pointer">
             <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Plug className="h-6 w-6 text-fixlyfy" />
+              <div className="bg-fixlify/10 p-3 rounded-full">
+                <Plug className="h-6 w-6 text-fixlify" />
               </div>
               <div>
                 <h3 className="font-medium">Integrations</h3>
@@ -55,10 +55,10 @@ const SettingsPage = () => {
         
         {/* Configuration Card */}
         <Link to="/configuration">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+          <div className="h-full hover:shadow-md transition-shadow fixlify-card cursor-pointer">
             <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Settings2 className="h-6 w-6 text-fixlyfy" />
+              <div className="bg-fixlify/10 p-3 rounded-full">
+                <Settings2 className="h-6 w-6 text-fixlify" />
               </div>
               <div>
                 <h3 className="font-medium">Configuration</h3>
@@ -70,10 +70,10 @@ const SettingsPage = () => {
         
         {/* Phone Numbers Card */}
         <Link to="/phone-numbers">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+          <div className="h-full hover:shadow-md transition-shadow fixlify-card cursor-pointer">
             <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Phone className="h-6 w-6 text-fixlyfy" />
+              <div className="bg-fixlify/10 p-3 rounded-full">
+                <Phone className="h-6 w-6 text-fixlify" />
               </div>
               <div>
                 <h3 className="font-medium">Phone Numbers</h3>
@@ -85,10 +85,10 @@ const SettingsPage = () => {
         
         {/* AI Settings Card */}
         <Link to="/ai-settings">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+          <div className="h-full hover:shadow-md transition-shadow fixlify-card cursor-pointer">
             <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Brain className="h-6 w-6 text-fixlyfy" />
+              <div className="bg-fixlify/10 p-3 rounded-full">
+                <Brain className="h-6 w-6 text-fixlify" />
               </div>
               <div>
                 <h3 className="font-medium">AI Settings</h3>
