@@ -1,10 +1,8 @@
-
 import { Badge } from "@/components/ui/badge";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
 import { FileText, CreditCard, CheckCircle, Hash, MapPin } from "lucide-react";
 import { useJobFinancials } from "@/hooks/useJobFinancials";
-
 interface JobInfoSectionProps {
   job: {
     id: string;
@@ -22,7 +20,6 @@ interface JobInfoSectionProps {
   onMessageClick: () => void;
   onEditClient: () => void;
 }
-
 export const JobInfoSection = ({
   job,
   status,
@@ -40,12 +37,9 @@ export const JobInfoSection = ({
     unpaidInvoices,
     isLoading: isLoadingFinancials
   } = useJobFinancials(job.id);
-
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
-
   if (isLoadingFinancials) {
-    return (
-      <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-6 shadow-lg">
+    return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-6 shadow-lg">
         <div className="space-y-4">
           <div className="h-8 w-40 bg-gray-200 rounded animate-pulse" />
           <div className="h-10 w-64 bg-gray-200 rounded animate-pulse" />
@@ -55,12 +49,9 @@ export const JobInfoSection = ({
             <div className="h-20 bg-gray-200 rounded animate-pulse" />
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+  return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex items-start justify-between">
@@ -74,11 +65,7 @@ export const JobInfoSection = ({
                   <span className="text-white text-sm font-medium uppercase tracking-wider">Job Status</span>
                 </div>
                 <div className="mt-2">
-                  <JobStatusBadge 
-                    status={status} 
-                    onStatusChange={onStatusChange}
-                    className="bg-white/90 text-fixlyfy border-white/30 hover:bg-white shadow-lg"
-                  />
+                  <JobStatusBadge status={status} onStatusChange={onStatusChange} className="bg-white/90 text-fixlyfy border-white/30 hover:bg-white shadow-lg" />
                 </div>
               </div>
             </div>
@@ -94,27 +81,18 @@ export const JobInfoSection = ({
                   {job.id}
                 </span>
               </div>
-              {job.service && (
-                <p className="text-gray-700 text-lg font-medium">
-                  {job.service}
-                </p>
-              )}
+              {job.service}
             </div>
           </div>
           
           {/* Contact Actions */}
           <div className="bg-fixlyfy/5 border border-fixlyfy/20 rounded-xl p-3 shadow-sm">
-            <ClientContactButtons
-              onCallClick={onCallClick}
-              onMessageClick={onMessageClick}
-              onEditClient={onEditClient}
-            />
+            <ClientContactButtons onCallClick={onCallClick} onMessageClick={onMessageClick} onEditClient={onEditClient} />
           </div>
         </div>
 
         {/* Job Address */}
-        {job.address && (
-          <div className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-4">
+        {job.address && <div className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-4">
             <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 text-fixlyfy mt-0.5 flex-shrink-0" />
               <div>
@@ -124,8 +102,7 @@ export const JobInfoSection = ({
                 </p>
               </div>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Smaller Financial Cards */}
         <div className="grid grid-cols-3 gap-3">
@@ -143,11 +120,9 @@ export const JobInfoSection = ({
               <div className="text-xl font-bold text-blue-900">
                 {formatCurrency(invoiceAmount)}
               </div>
-              {(paidInvoices > 0 || unpaidInvoices > 0) && (
-                <div className="text-xs text-blue-700 font-medium">
+              {(paidInvoices > 0 || unpaidInvoices > 0) && <div className="text-xs text-blue-700 font-medium">
                   {paidInvoices} paid • {unpaidInvoices} pending
-                </div>
-              )}
+                </div>}
             </div>
           </div>
 
@@ -165,57 +140,36 @@ export const JobInfoSection = ({
               <div className="text-xl font-bold text-green-900">
                 {formatCurrency(totalPaid)}
               </div>
-              {totalPaid > 0 && (
-                <div className="text-xs text-green-700 font-medium">
+              {totalPaid > 0 && <div className="text-xs text-green-700 font-medium">
                   Payment received
-                </div>
-              )}
+                </div>}
             </div>
           </div>
           
           {/* Complete/Balance Card */}
-          <div className={`${
-            balance > 0 
-              ? "bg-amber-50 border-amber-200" 
-              : "bg-emerald-50 border-emerald-200"
-          } border rounded-lg p-3 hover:shadow-md transition-shadow`}>
+          <div className={`${balance > 0 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200"} border rounded-lg p-3 hover:shadow-md transition-shadow`}>
             <div className="flex items-center justify-between mb-2">
-              <div className={`p-1.5 rounded-md ${
-                balance > 0 ? "bg-amber-100" : "bg-emerald-100"
-              }`}>
-                <CheckCircle className={`h-4 w-4 ${
-                  balance > 0 ? "text-amber-600" : "text-emerald-600"
-                }`} />
+              <div className={`p-1.5 rounded-md ${balance > 0 ? "bg-amber-100" : "bg-emerald-100"}`}>
+                <CheckCircle className={`h-4 w-4 ${balance > 0 ? "text-amber-600" : "text-emerald-600"}`} />
               </div>
-              <span className={`text-xs font-semibold uppercase tracking-wider ${
-                balance > 0 ? "text-amber-700" : "text-emerald-700"
-              }`}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${balance > 0 ? "text-amber-700" : "text-emerald-700"}`}>
                 {balance > 0 ? "Outstanding" : "Complete"}
               </span>
             </div>
             <div className="space-y-1">
-              <div className={`text-xl font-bold ${
-                balance > 0 ? "text-amber-900" : "text-emerald-900"
-              }`}>
+              <div className={`text-xl font-bold ${balance > 0 ? "text-amber-900" : "text-emerald-900"}`}>
                 {formatCurrency(balance)}
               </div>
-              {overdueAmount > 0 ? (
-                <div className="text-xs text-red-600 font-medium">
+              {overdueAmount > 0 ? <div className="text-xs text-red-600 font-medium">
                   ${overdueAmount.toFixed(2)} overdue
-                </div>
-              ) : balance === 0 ? (
-                <div className="text-xs text-emerald-700 font-medium">
+                </div> : balance === 0 ? <div className="text-xs text-emerald-700 font-medium">
                   Fully paid
-                </div>
-              ) : (
-                <div className="text-xs text-amber-700 font-medium">
+                </div> : <div className="text-xs text-amber-700 font-medium">
                   Payment pending
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
