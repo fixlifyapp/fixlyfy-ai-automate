@@ -1,20 +1,19 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
-import { EstimateForm } from "./EstimateForm";
-import { UnifiedDocumentPreview } from "../unified/UnifiedDocumentPreview";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 import { CustomLineItemDialog } from "./CustomLineItemDialog";
 import { Product, LineItem } from "@/components/jobs/builder/types";
 import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, FileText, ListPlus, Send } from "lucide-react";
 import { EstimateSendDialog } from "./EstimateSendDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
+import { EstimateBuilderHeader } from "./EstimateBuilderHeader";
+import { EstimateBuilderTabs } from "./EstimateBuilderTabs";
+import { EstimateBuilderContent } from "./EstimateBuilderContent";
+import { EstimateBuilderActions } from "./EstimateBuilderActions";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
@@ -185,106 +184,49 @@ export const EstimateBuilderDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="p-6 border-b bg-muted/20">
-          <div className="flex items-center gap-2">
-            {isMobile && activeTab !== "form" && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setActiveTab("form")} 
-                className="mr-1"
-              >
-                <ArrowLeft size={18} />
-              </Button>
-            )}
-            <DialogTitle className="text-xl">
-              {estimateId ? `Edit Estimate ${estimateBuilder.estimateNumber}` : 'Create New Estimate'}
-            </DialogTitle>
-          </div>
-        </DialogHeader>
+        <EstimateBuilderHeader
+          estimateId={estimateId}
+          estimateNumber={estimateBuilder.estimateNumber}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
         
         <div className="flex flex-grow overflow-hidden">
           {!isMobile && (
-            <div className="w-20 bg-muted/10 border-r flex flex-col items-center pt-8 gap-8">
-              <button 
-                onClick={() => setActiveTab("form")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "form" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
-                <ListPlus size={20} />
-                <span>Form</span>
-              </button>
-              
-              <button 
-                onClick={() => setActiveTab("preview")}
-                className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs transition-colors ${activeTab === "preview" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70"}`}
-              >
-                <FileText size={20} />
-                <span>Preview</span>
-              </button>
-            </div>
+            <EstimateBuilderTabs activeTab={activeTab} setActiveTab={setActiveTab} />
           )}
           
           <div className="flex-grow overflow-hidden flex flex-col">
             {isMobile && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="border-b">
-                <TabsList className="w-full bg-background">
-                  <TabsTrigger value="form" className="flex-1">Form</TabsTrigger>
-                  <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <EstimateBuilderTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             )}
             
-            <div className="flex-grow overflow-auto p-6">
-              {activeTab === "form" && (
-                <EstimateForm
-                  estimateNumber={estimateBuilder.estimateNumber}
-                  lineItems={estimateBuilder.lineItems || []}
-                  onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
-                  onUpdateLineItem={handleUpdateLineItemWrapper}
-                  onEditLineItem={handleEditLineItem}
-                  onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
-                  onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
-                  taxRate={estimateBuilder.taxRate}
-                  setTaxRate={estimateBuilder.setTaxRate}
-                  calculateSubtotal={estimateBuilder.calculateSubtotal}
-                  calculateTotalTax={estimateBuilder.calculateTotalTax}
-                  calculateGrandTotal={estimateBuilder.calculateGrandTotal}
-                  calculateTotalMargin={calculateTotalMargin}
-                  calculateMarginPercentage={calculateMarginPercentage}
-                  showMargin={false}
-                />
-              )}
-              
-              {activeTab === "preview" && (
-                <UnifiedDocumentPreview
-                  documentType="estimate"
-                  documentNumber={estimateBuilder.estimateNumber}
-                  lineItems={estimateBuilder.lineItems || []}
-                  taxRate={estimateBuilder.taxRate}
-                  calculateSubtotal={estimateBuilder.calculateSubtotal}
-                  calculateTotalTax={estimateBuilder.calculateTotalTax}
-                  calculateGrandTotal={estimateBuilder.calculateGrandTotal}
-                  notes={estimateBuilder.notes || ""}
-                  clientInfo={clientInfo || jobData?.client}
-                  issueDate={new Date().toLocaleDateString()}
-                  dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                />
-              )}
-            </div>
+            <EstimateBuilderContent
+              activeTab={activeTab}
+              estimateNumber={estimateBuilder.estimateNumber}
+              lineItems={estimateBuilder.lineItems}
+              onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
+              onUpdateLineItem={handleUpdateLineItemWrapper}
+              onEditLineItem={handleEditLineItem}
+              onAddEmptyLineItem={() => setIsProductSearchOpen(true)}
+              onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)}
+              taxRate={estimateBuilder.taxRate}
+              setTaxRate={estimateBuilder.setTaxRate}
+              calculateSubtotal={estimateBuilder.calculateSubtotal}
+              calculateTotalTax={estimateBuilder.calculateTotalTax}
+              calculateGrandTotal={estimateBuilder.calculateGrandTotal}
+              calculateTotalMargin={calculateTotalMargin}
+              calculateMarginPercentage={calculateMarginPercentage}
+              notes={estimateBuilder.notes || ""}
+              clientInfo={clientInfo}
+              jobData={jobData}
+            />
             
-            <div className="p-4 border-t bg-muted/20 flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSendEstimate}
-                className="flex items-center gap-1"
-                disabled={!hasLineItems}
-              >
-                <Send size={16} />
-                Send to Client
-              </Button>
-            </div>
+            <EstimateBuilderActions
+              hasLineItems={hasLineItems}
+              onCancel={() => onOpenChange(false)}
+              onSendEstimate={handleSendEstimate}
+            />
           </div>
         </div>
       </DialogContent>
