@@ -7,7 +7,6 @@ import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUser } from "@/components/settings/SettingsUser";
 import { SettingsCompany } from "@/components/settings/SettingsCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
-import { TeamManagementTabs } from "@/components/settings/TeamManagementTabs";
 import { Link } from "react-router-dom";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -81,7 +80,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-5 h-auto p-0 bg-fixlyfy-bg-interface">
+          <TabsList className="grid grid-cols-4 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="general" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -106,14 +105,6 @@ const SettingsPage = () => {
             >
               Integrations
             </TabsTrigger>
-            <PermissionRequired permission="users.view">
-              <TabsTrigger 
-                value="team" 
-                className="py-4 rounded-none data-[state=active]:bg-white"
-              >
-                Team Management
-              </TabsTrigger>
-            </PermissionRequired>
           </TabsList>
           
           <TabsContent value="general" className="p-6">
@@ -131,12 +122,6 @@ const SettingsPage = () => {
           <TabsContent value="integrations" className="p-6">
             <SettingsIntegrations />
           </TabsContent>
-          
-          <PermissionRequired permission="users.view">
-            <TabsContent value="team" className="p-0">
-              <TeamManagementTabs />
-            </TabsContent>
-          </PermissionRequired>
         </Tabs>
       </div>
     </PageLayout>

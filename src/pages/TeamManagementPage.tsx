@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ModernCard, ModernCardContent } from "@/components/ui/modern-card";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { GradientButton } from "@/components/ui/gradient-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Table, 
   TableHeader, 
@@ -12,7 +13,7 @@ import {
   TableHead, 
   TableBody
 } from "@/components/ui/table";
-import { Plus, Shield, Upload, Loader2, UserPlus, Users, Target, Zap, TrendingUp } from "lucide-react";
+import { Plus, Shield, Upload, Loader2, UserPlus, Users, Target, Zap, TrendingUp, Settings, Mail } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
 import { useRBAC } from "@/components/auth/RBACProvider";
@@ -23,6 +24,8 @@ import { toast } from "sonner";
 import { generateTestTeamMembers } from "@/utils/test-data";
 import { supabase } from "@/integrations/supabase/client";
 import { TeamInvitations } from "@/components/team/TeamInvitations";
+import { RolesPermissionsTab } from "@/components/settings/team-tabs/RolesPermissionsTab";
+import { InvitationsTab } from "@/components/settings/team-tabs/InvitationsTab";
 
 // Helper function to convert TeamMember to TeamMemberProfile
 const convertToTeamMemberProfile = (member: TeamMember): TeamMemberProfile => {
@@ -50,6 +53,7 @@ const TeamManagementPage = () => {
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("members");
   const navigate = useNavigate();
   const { hasRole, hasPermission } = useRBAC();
   
@@ -78,7 +82,7 @@ const TeamManagementPage = () => {
           const members: TeamMember[] = data.map(profile => ({
             id: profile.id,
             name: profile.name || 'Unknown User',
-            email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`, // Generate email since it's not in profiles
+            email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
             role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
             status: "active",
             avatar: profile.avatar_url || "https://github.com/shadcn.png",
@@ -195,7 +199,7 @@ const TeamManagementPage = () => {
       <AnimatedContainer animation="fade-in">
         <PageHeader
           title="Team Management"
-          subtitle="Manage your team members and track performance"
+          subtitle="Manage your team members, roles, and permissions"
           icon={Users}
           badges={[
             { text: "Performance Tracking", icon: Target, variant: "fixlyfy" },
@@ -210,88 +214,116 @@ const TeamManagementPage = () => {
         />
       </AnimatedContainer>
 
-      {isAdmin && (
-        <AnimatedContainer animation="fade-in" delay={100}>
-          <div className="flex justify-end mb-4">
-            <GradientButton 
-              onClick={handleImportTestData} 
-              variant="info"
-              disabled={isImporting}
-              icon={isImporting ? Loader2 : Upload}
-              gradient={false}
-            >
-              {isImporting ? "Importing..." : "Import Test Data"}
-            </GradientButton>
-          </div>
-        </AnimatedContainer>
-      )}
-
-      {isAdmin && (
-        <AnimatedContainer animation="fade-in" delay={150}>
-          <div className="mb-6">
-            <TeamInvitations />
-          </div>
-        </AnimatedContainer>
-      )}
-        
-      <AnimatedContainer animation="fade-in" delay={200}>
-        <TeamFilters
-          onSearch={handleSearch}
-          onFilterRole={handleFilterRole}
-          onFilterStatus={handleFilterStatus}
-          searchTerm={searchTerm}
-          roleFilter={roleFilter}
-          statusFilter={statusFilter}
-        />
-      </AnimatedContainer>
-        
-      <AnimatedContainer animation="fade-in" delay={300}>
+      <AnimatedContainer animation="fade-in" delay={100}>
         <ModernCard variant="elevated">
           <ModernCardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <td colSpan={6} className="py-10 text-center">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                          <Loader2 size={24} className="animate-spin text-primary" />
-                          <span>Loading team members...</span>
-                        </div>
-                      </td>
-                    </TableRow>
-                  ) : filteredMembers.length === 0 ? (
-                    <TableRow>
-                      <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <UserPlus size={24} className="text-muted-foreground/50" />
-                          {searchTerm || roleFilter || statusFilter ? 
-                            "No team members match your filters" : 
-                            "No team members yet. Click 'Import Test Data' to add some sample data."}
-                        </div>
-                      </td>
-                    </TableRow>
-                  ) : (
-                    filteredMembers.map((member) => (
-                      <UserCardRow 
-                        key={member.id}
-                        user={convertToTeamMemberProfile(member)}
-                      />
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-3 h-auto p-0 bg-fixlyfy-bg-interface">
+                <TabsTrigger 
+                  value="members" 
+                  className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Team Members
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="roles" 
+                  className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"
+                >
+                  <Shield className="h-4 w-4" />
+                  Roles & Permissions
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="invitations" 
+                  className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4" />
+                  Invitations
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="members" className="p-0">
+                {isAdmin && (
+                  <div className="p-6 border-b">
+                    <div className="flex justify-end mb-4">
+                      <GradientButton 
+                        onClick={handleImportTestData} 
+                        variant="info"
+                        disabled={isImporting}
+                        icon={isImporting ? Loader2 : Upload}
+                        gradient={false}
+                      >
+                        {isImporting ? "Importing..." : "Import Test Data"}
+                      </GradientButton>
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-6">
+                  <TeamFilters
+                    onSearch={handleSearch}
+                    onFilterRole={handleFilterRole}
+                    onFilterStatus={handleFilterStatus}
+                    searchTerm={searchTerm}
+                    roleFilter={roleFilter}
+                    statusFilter={statusFilter}
+                  />
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Login</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        <TableRow>
+                          <td colSpan={6} className="py-10 text-center">
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <Loader2 size={24} className="animate-spin text-primary" />
+                              <span>Loading team members...</span>
+                            </div>
+                          </td>
+                        </TableRow>
+                      ) : filteredMembers.length === 0 ? (
+                        <TableRow>
+                          <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <UserPlus size={24} className="text-muted-foreground/50" />
+                              {searchTerm || roleFilter || statusFilter ? 
+                                "No team members match your filters" : 
+                                "No team members yet. Click 'Import Test Data' to add some sample data."}
+                            </div>
+                          </td>
+                        </TableRow>
+                      ) : (
+                        filteredMembers.map((member) => (
+                          <UserCardRow 
+                            key={member.id}
+                            user={convertToTeamMemberProfile(member)}
+                          />
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="roles" className="p-6">
+                <RolesPermissionsTab />
+              </TabsContent>
+              
+              <TabsContent value="invitations" className="p-6">
+                <InvitationsTab />
+              </TabsContent>
+            </Tabs>
           </ModernCardContent>
         </ModernCard>
       </AnimatedContainer>
