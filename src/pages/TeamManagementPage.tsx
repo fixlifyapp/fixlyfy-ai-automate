@@ -1,266 +1,284 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { ModernCard, ModernCardContent } from "@/components/ui/modern-card";
-import { AnimatedContainer } from "@/components/ui/animated-container";
-import { GradientButton } from "@/components/ui/gradient-button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableHeader, TableRow, TableHead, TableBody } from "@/components/ui/table";
-import { Plus, Shield, Upload, Loader2, UserPlus, Users, Target, Zap, TrendingUp, Settings, Mail } from "lucide-react";
-import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
-import { UserCardRow } from "@/components/team/UserCardRow";
-import { useRBAC } from "@/components/auth/RBACProvider";
-import { TeamFilters } from "@/components/team/TeamFilters";
-import { TeamMember } from "@/types/team";
-import { TeamMemberProfile } from "@/types/team-member";
+import { Dialog } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { generateTestTeamMembers } from "@/utils/test-data";
+import { Users, Plus, Shield, Settings, Target, Brain, UserPlus, Edit, Trash2, Eye } from "lucide-react";
+import { TeamMembersList } from "@/components/team/TeamMembersList";
+import { TeamInviteModal } from "@/components/team/TeamInviteModal";
+import { TeamRoleManager } from "@/components/team/TeamRoleManager";
+import { TeamPermissions } from "@/components/team/TeamPermissions";
+import { TeamOverview } from "@/components/team/TeamOverview";
+import { useRBAC } from "@/components/auth/RBACProvider";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { TeamInvitations } from "@/components/team/TeamInvitations";
-import { RolesPermissionsTab } from "@/components/settings/team-tabs/RolesPermissionsTab";
-import { InvitationsTab } from "@/components/settings/team-tabs/InvitationsTab";
 
-// Helper function to convert TeamMember to TeamMemberProfile
-const convertToTeamMemberProfile = (member: TeamMember): TeamMemberProfile => {
-  return {
-    ...member,
-    isPublic: true,
-    availableForJobs: true,
-    twoFactorEnabled: false,
-    callMaskingEnabled: false,
-    laborCostPerHour: 50,
-    skills: [],
-    serviceAreas: [],
-    scheduleColor: "#6366f1",
-    internalNotes: "",
-    usesTwoFactor: false
-  };
-};
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: 'active' | 'inactive' | 'pending';
+  avatar?: string;
+  last_login?: string;
+  phone?: string;
+  created_at: string;
+}
+
 const TeamManagementPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { hasPermission, hasRole } = useRBAC();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("members");
-  const navigate = useNavigate();
-  const {
-    hasRole,
-    hasPermission
-  } = useRBAC();
-  const isAdmin = hasRole('admin');
-  const canViewUsers = hasPermission('users.view');
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
-  // Fetch team members from Supabase on component mount
-  useEffect(() => {
-    const fetchTeamMembers = async () => {
-      try {
-        setIsLoading(true);
-        if (!canViewUsers) {
-          setIsLoading(false);
-          return;
-        }
-        const {
-          data,
-          error
-        } = await supabase.from('profiles').select('*');
-        if (error) {
-          console.error("Error fetching team members:", error);
-          setTeamMembers([]);
-        } else if (data) {
-          const members: TeamMember[] = data.map(profile => ({
-            id: profile.id,
-            name: profile.name || 'Unknown User',
-            email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
-            role: profile.role as "admin" | "manager" | "dispatcher" | "technician" || "technician",
-            status: "active",
-            avatar: profile.avatar_url || "https://github.com/shadcn.png",
-            lastLogin: profile.updated_at
-          }));
-          setTeamMembers(members);
-        }
-      } catch (error) {
-        console.error("Error in fetchTeamMembers:", error);
-        toast.error("Failed to load team members");
-        setTeamMembers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTeamMembers();
-  }, [canViewUsers]);
+  // Check permissions
+  const canViewTeam = hasPermission('users.view') || hasRole('admin');
+  const canManageTeam = hasPermission('users.manage') || hasRole('admin');
+  const canInviteUsers = hasPermission('users.invite') || hasRole('admin');
 
-  // Filter members
   useEffect(() => {
-    let result = teamMembers;
-    if (searchTerm) {
-      const lowercaseTerm = searchTerm.toLowerCase();
-      result = result.filter(member => member.name.toLowerCase().includes(lowercaseTerm) || member.email.toLowerCase().includes(lowercaseTerm));
+    if (canViewTeam) {
+      loadTeamMembers();
     }
-    if (roleFilter) {
-      result = result.filter(member => member.role === roleFilter);
-    }
-    if (statusFilter) {
-      result = result.filter(member => member.status === statusFilter);
-    }
-    setFilteredMembers(result);
-  }, [searchTerm, roleFilter, statusFilter, teamMembers]);
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-  };
-  const handleFilterRole = (role: string | null) => {
-    setRoleFilter(role);
-  };
-  const handleFilterStatus = (status: string | null) => {
-    setStatusFilter(status);
-  };
-  const handleAddNewMember = () => {
-    if (isAdmin) {
-      setIsModalOpen(true);
-    }
-  };
-  const handleViewTeamMember = (id: string) => {
-    navigate(`/admin/team/${id}`);
-  };
-  const handleImportTestData = async () => {
-    setIsImporting(true);
+  }, [canViewTeam]);
+
+  const loadTeamMembers = async () => {
     try {
-      toast.info("Importing test team data...");
-      const newMembers = await generateTestTeamMembers(6);
-      if (newMembers.length > 0) {
-        setTeamMembers(prevMembers => [...prevMembers, ...newMembers]);
-        toast.success(`Successfully imported ${newMembers.length} team members!`);
-      } else {
-        toast.info("No new team members imported");
-      }
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          name,
+          email,
+          avatar_url,
+          status,
+          phone,
+          created_at,
+          last_login,
+          role
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedMembers: TeamMember[] = data?.map(member => ({
+        id: member.id,
+        name: member.name || 'Unknown',
+        email: member.email || '',
+        role: member.role || 'member',
+        status: member.status || 'active',
+        avatar: member.avatar_url,
+        last_login: member.last_login,
+        phone: member.phone,
+        created_at: member.created_at
+      })) || [];
+
+      setTeamMembers(formattedMembers);
     } catch (error) {
-      console.error("Error importing test team data:", error);
-      toast.error("Failed to import test team data");
+      console.error('Error loading team members:', error);
+      toast.error('Failed to load team members');
     } finally {
-      setIsImporting(false);
+      setIsLoading(false);
     }
   };
 
-  // Show permission error if user can't view users
-  if (!canViewUsers) {
-    return <PageLayout>
-        <AnimatedContainer animation="fade-in">
-          <PageHeader title="Team Management" subtitle="Manage your team members and track performance" icon={Users} />
-        </AnimatedContainer>
-        <AnimatedContainer animation="fade-in" delay={100}>
-          <ModernCard variant="glass" className="p-8">
-            <div className="text-center">
-              <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
-              <p className="text-muted-foreground">
-                You don't have permission to view team management.
-              </p>
-            </div>
-          </ModernCard>
-        </AnimatedContainer>
-      </PageLayout>;
+  const handleInviteSuccess = () => {
+    setIsInviteModalOpen(false);
+    loadTeamMembers();
+    toast.success('Team member invited successfully!');
+  };
+
+  const handleEditMember = (memberId: string) => {
+    setSelectedMember(memberId);
+    // Navigate to edit modal or page
+    toast.info('Edit member functionality coming soon');
+  };
+
+  const handleDeleteMember = async (memberId: string) => {
+    if (!canManageTeam) {
+      toast.error('You do not have permission to delete team members');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: 'inactive' })
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast.success('Team member deactivated successfully');
+      loadTeamMembers();
+    } catch (error) {
+      console.error('Error deactivating team member:', error);
+      toast.error('Failed to deactivate team member');
+    }
+  };
+
+  const handleViewMember = (memberId: string) => {
+    // Navigate to member profile
+    window.open(`/admin/team/${memberId}`, '_blank');
+  };
+
+  // Show permission denied if user can't view team
+  if (!canViewTeam) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="Team Management"
+          subtitle="Manage your team members, roles, and permissions"
+          icon={Users}
+          badges={[
+            { text: "Team Coordination", icon: Users, variant: "fixlify" },
+            { text: "Role Management", icon: Shield, variant: "success" },
+            { text: "Access Control", icon: Target, variant: "info" }
+          ]}
+        />
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              You don't have permission to view team management.
+            </p>
+          </CardContent>
+        </Card>
+      </PageLayout>
+    );
   }
-  return <PageLayout>
-      <AnimatedContainer animation="fade-in">
-        <PageHeader title="Team Management" subtitle="Manage your team members, roles, and permissions" icon={Users} badges={[{
-        text: "Performance Tracking",
-        icon: Target,
-        variant: "fixlyfy"
-      }, {
-        text: "Real-time Collaboration",
-        icon: Zap,
-        variant: "success"
-      }, {
-        text: "Growth Analytics",
-        icon: TrendingUp,
-        variant: "info"
-      }]} actionButton={isAdmin ? {
-        text: "Invite Team Member",
-        icon: UserPlus,
-        onClick: handleAddNewMember
-      } : undefined} />
-      </AnimatedContainer>
 
-      <AnimatedContainer animation="fade-in" delay={100}>
-        <ModernCard variant="elevated">
-          <ModernCardContent className="p-0">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-3 h-auto p-0 bg-fixlyfy-bg-interface">
-                <TabsTrigger value="members" className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Team Members
-                </TabsTrigger>
-                <TabsTrigger value="roles" className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Roles & Permissions
-                </TabsTrigger>
-                <TabsTrigger value="invitations" className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Invitations
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="members" className="p-0">
-                {isAdmin && <div className="p-6 border-b">
-                    <div className="flex justify-end mb-4">
-                      
+  return (
+    <PageLayout>
+      <PageHeader
+        title="Team Management"
+        subtitle="Manage your team members, roles, and permissions"
+        icon={Users}
+        badges={[
+          { text: "Team Coordination", icon: Users, variant: "fixlify" },
+          { text: "Role Management", icon: Shield, variant: "success" },
+          { text: "Access Control", icon: Target, variant: "info" }
+        ]}
+        actionButton={canInviteUsers ? {
+          text: "Invite Member",
+          icon: UserPlus,
+          onClick: () => setIsInviteModalOpen(true)
+        } : undefined}
+      />
+
+      <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="members">Team Members</TabsTrigger>
+            <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="space-y-6">
+            <TeamOverview 
+              teamMembers={teamMembers}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+          
+          <TabsContent value="members" className="space-y-6">
+            <TeamMembersList 
+              members={teamMembers}
+              isLoading={isLoading}
+              canEdit={canManageTeam}
+              onEdit={handleEditMember}
+              onDelete={handleDeleteMember}
+              onView={handleViewMember}
+              onRefresh={loadTeamMembers}
+            />
+          </TabsContent>
+          
+          <TabsContent value="roles" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TeamRoleManager />
+              <TeamPermissions />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Team Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure team-wide settings and preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-medium mb-2">General Settings</h4>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input type="checkbox" className="rounded" defaultChecked />
+                        <span className="text-sm">Require two-factor authentication</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input type="checkbox" className="rounded" defaultChecked />
+                        <span className="text-sm">Enable team notifications</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input type="checkbox" className="rounded" />
+                        <span className="text-sm">Auto-assign jobs to available technicians</span>
+                      </label>
                     </div>
-                  </div>}
+                  </div>
 
-                <div className="p-6">
-                  <TeamFilters onSearch={handleSearch} onFilterRole={handleFilterRole} onFilterStatus={handleFilterStatus} searchTerm={searchTerm} roleFilter={roleFilter} statusFilter={statusFilter} />
+                  <div>
+                    <h4 className="font-medium mb-2">Access Control</h4>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input type="checkbox" className="rounded" defaultChecked />
+                        <span className="text-sm">Restrict sensitive data access</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input type="checkbox" className="rounded" />
+                        <span className="text-sm">Enable IP restrictions</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input type="checkbox" className="rounded" />
+                        <span className="text-sm">Audit log all user actions</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button className="w-full md:w-auto">
+                      Save Settings
+                    </Button>
+                  </div>
                 </div>
-                
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Last Login</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? <TableRow>
-                          <td colSpan={6} className="py-10 text-center">
-                            <div className="flex flex-col items-center justify-center gap-3">
-                              <Loader2 size={24} className="animate-spin text-primary" />
-                              <span>Loading team members...</span>
-                            </div>
-                          </td>
-                        </TableRow> : filteredMembers.length === 0 ? <TableRow>
-                          <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                              <UserPlus size={24} className="text-muted-foreground/50" />
-                              {searchTerm || roleFilter || statusFilter ? "No team members match your filters" : "No team members yet. Click 'Import Test Data' to add some sample data."}
-                            </div>
-                          </td>
-                        </TableRow> : filteredMembers.map(member => <UserCardRow key={member.id} user={convertToTeamMemberProfile(member)} />)}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="roles" className="p-6">
-                <RolesPermissionsTab />
-              </TabsContent>
-              
-              <TabsContent value="invitations" className="p-6">
-                <InvitationsTab />
-              </TabsContent>
-            </Tabs>
-          </ModernCardContent>
-        </ModernCard>
-      </AnimatedContainer>
-      
-      <AddTeamMemberModal open={isModalOpen} onOpenChange={setIsModalOpen} />
-    </PageLayout>;
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Team Invite Modal */}
+      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+        <TeamInviteModal 
+          onOpenChange={setIsInviteModalOpen}
+          onSuccess={handleInviteSuccess}
+        />
+      </Dialog>
+    </PageLayout>
+  );
 };
+
 export default TeamManagementPage;
