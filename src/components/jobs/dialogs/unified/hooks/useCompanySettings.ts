@@ -56,7 +56,7 @@ export const useCompanySettings = () => {
             description: companySettings.company_description
           });
         } else {
-          // Fallback company info
+          // Fallback company info with all required properties
           setCompanyInfo({
             name: 'FixLyfy Services',
             businessType: 'Professional Service Solutions',
@@ -68,13 +68,15 @@ export const useCompanySettings = () => {
             phone: '(555) 123-4567',
             email: user.email || 'info@fixlyfy.com',
             website: 'www.fixlyfy.com',
+            taxId: '',
+            logoUrl: '',
             tagline: 'Professional Service You Can Trust',
             description: 'Licensed & Insured Professional Services'
           });
         }
       } catch (error) {
         console.error('Error fetching company settings:', error);
-        // Set fallback data on error
+        // Set fallback data on error with all required properties
         setCompanyInfo({
           name: 'FixLyfy Services',
           businessType: 'Professional Service Solutions',
