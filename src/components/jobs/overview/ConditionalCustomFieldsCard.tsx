@@ -27,10 +27,10 @@ export const ConditionalCustomFieldsCard = ({ jobId }: ConditionalCustomFieldsCa
   if (isLoading) {
     return (
       <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <ModernCardTitle icon={Settings}>
+        <ModernCardHeader className="pb-3">
+          <div className="text-xl font-bold text-gray-900">
             Custom Fields
-          </ModernCardTitle>
+          </div>
         </ModernCardHeader>
         <ModernCardContent>
           <div className="text-sm text-muted-foreground">Loading...</div>
@@ -45,12 +45,12 @@ export const ConditionalCustomFieldsCard = ({ jobId }: ConditionalCustomFieldsCa
 
   return (
     <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-      <ModernCardHeader className="pb-4">
-        <ModernCardTitle icon={Settings}>
+      <ModernCardHeader className="pb-3">
+        <div className="text-xl font-bold text-gray-900">
           Custom Fields
-        </ModernCardTitle>
+        </div>
       </ModernCardHeader>
-      <ModernCardContent>
+      <ModernCardContent className="pt-0">
         <JobCustomFieldsDisplay jobId={jobId} />
       </ModernCardContent>
     </ModernCard>

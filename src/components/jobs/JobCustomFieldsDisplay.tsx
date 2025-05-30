@@ -72,8 +72,8 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-end">
+    <div className="space-y-0">
+      <div className="flex items-center justify-end mb-4">
         {!isEditing ? (
           <Button variant="outline" size="sm" onClick={handleEdit}>
             <Edit2 className="h-4 w-4 mr-2" />
@@ -97,7 +97,7 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
         )}
       </div>
       
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {availableFields.map((field) => {
           const existingValue = customFieldValues.find(cfv => cfv.custom_field_id === field.id);
           const displayValue = isEditing 
@@ -117,7 +117,7 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
 
           // Display mode
           return (
-            <div key={field.id} className="space-y-2">
+            <div key={field.id} className="space-y-1">
               <div className="text-sm font-medium text-gray-700">
                 {field.name}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
