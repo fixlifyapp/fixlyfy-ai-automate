@@ -43,6 +43,14 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
       if (error || !data || data.length === 0) {
         localStorage.removeItem('client_portal_session');
         setUser(null);
+        
+        // Log security event for invalid session
+        await supabase.rpc('log_security_event', {
+          p_action: 'client_portal_invalid_session',
+          p_resource: 'client_portal_session',
+          p_details: { error: error?.message || 'No session data' }
+        });
+        
         setLoading(false);
         return;
       }
@@ -55,10 +63,24 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
         email: sessionData.client_email
       });
 
+      // Log successful session validation
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_session_validated',
+        p_resource: 'client_portal_session',
+        p_details: { client_id: sessionData.client_id }
+      });
+
     } catch (error) {
       console.error('Session check error:', error);
       localStorage.removeItem('client_portal_session');
       setUser(null);
+      
+      // Log security event for session check error
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_session_error',
+        p_resource: 'client_portal_session',
+        p_details: { error: error instanceof Error ? error.message : 'Unknown error' }
+      });
     } finally {
       setLoading(false);
     }
@@ -66,15 +88,45 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
 
   const signIn = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
+      // Check rate limiting first
+      const { data: rateLimitData, error: rateLimitError } = await supabase.rpc('check_rate_limit', {
+        p_identifier: email,
+        p_attempt_type: 'magic_link',
+        p_max_attempts: 3,
+        p_window_minutes: 60
+      });
+
+      if (rateLimitError || !rateLimitData) {
+        await supabase.rpc('log_security_event', {
+          p_action: 'client_portal_rate_limit_exceeded',
+          p_resource: 'client_portal_auth',
+          p_details: { email, type: 'magic_link' }
+        });
+        
+        return { success: false, message: 'Too many login attempts. Please try again later.' };
+      }
+
       const { data, error } = await supabase.rpc('generate_client_login_token', {
         p_email: email
       });
 
       if (error) {
+        await supabase.rpc('log_security_event', {
+          p_action: 'client_portal_login_failed',
+          p_resource: 'client_portal_auth',
+          p_details: { email, error: error.message }
+        });
+        
         return { success: false, message: 'Failed to generate login link' };
       }
 
       if (!data) {
+        await supabase.rpc('log_security_event', {
+          p_action: 'client_portal_login_no_account',
+          p_resource: 'client_portal_auth',
+          p_details: { email }
+        });
+        
         return { success: false, message: 'No account found with this email address' };
       }
 
@@ -98,12 +150,31 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
 
       if (emailError) {
         console.error('Email send error:', emailError);
+        await supabase.rpc('log_security_event', {
+          p_action: 'client_portal_email_failed',
+          p_resource: 'client_portal_auth',
+          p_details: { email, error: emailError.message }
+        });
+        
         return { success: false, message: 'Failed to send login email' };
       }
+
+      // Log successful login attempt
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_login_sent',
+        p_resource: 'client_portal_auth',
+        p_details: { email }
+      });
 
       return { success: true, message: 'Login link sent to your email' };
     } catch (error) {
       console.error('Sign in error:', error);
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_signin_error',
+        p_resource: 'client_portal_auth',
+        p_details: { email, error: error instanceof Error ? error.message : 'Unknown error' }
+      });
+      
       return { success: false, message: 'An error occurred' };
     }
   };
@@ -115,6 +186,12 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
       });
 
       if (error || !data || data.length === 0) {
+        await supabase.rpc('log_security_event', {
+          p_action: 'client_portal_token_invalid',
+          p_resource: 'client_portal_auth',
+          p_details: { error: error?.message || 'Invalid token' }
+        });
+        
         return { success: false, message: 'Invalid or expired login link' };
       }
 
@@ -131,19 +208,42 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
       
       setUser(userData);
       
+      // Log successful token verification
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_token_verified',
+        p_resource: 'client_portal_auth',
+        p_details: { client_id: sessionData.client_id }
+      });
+      
       // Refresh session to get full user data
       await checkSession();
 
       return { success: true, message: 'Successfully logged in' };
     } catch (error) {
       console.error('Token verification error:', error);
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_token_error',
+        p_resource: 'client_portal_auth',
+        p_details: { error: error instanceof Error ? error.message : 'Unknown error' }
+      });
+      
       return { success: false, message: 'Failed to verify login link' };
     }
   };
 
   const signOut = async () => {
+    const currentUser = user;
     localStorage.removeItem('client_portal_session');
     setUser(null);
+    
+    // Log signout event
+    if (currentUser) {
+      await supabase.rpc('log_security_event', {
+        p_action: 'client_portal_signout',
+        p_resource: 'client_portal_auth',
+        p_details: { client_id: currentUser.clientId }
+      });
+    }
   };
 
   const value = {

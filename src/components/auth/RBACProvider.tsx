@@ -14,18 +14,10 @@ interface RBACContextType {
   allRoles: UserRole[];
 }
 
-const defaultUser: User = {
-  id: "1",
-  name: "Admin User",
-  email: "admin@fixlyfy.com",
-  role: "admin",
-  avatar: "https://github.com/shadcn.png"
-};
-
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 export const RBACProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(defaultUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -47,8 +39,13 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
           
           if (error) {
             console.error("Error fetching user profile:", error);
-            // Fall back to default user in dev mode, otherwise null
-            setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+            // Log security event for failed profile fetch
+            await supabase.rpc('log_security_event', {
+              p_action: 'profile_fetch_failed',
+              p_resource: 'user_profile',
+              p_details: { error: error.message, user_id: session.user.id }
+            });
+            setCurrentUser(null);
           } else if (profile) {
             // Set the current user from profile data
             setCurrentUser({
@@ -58,21 +55,28 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
               role: (profile.role as UserRole) || 'technician',
               avatar: profile.avatar_url || "https://github.com/shadcn.png"
             });
+
+            // Log successful authentication
+            await supabase.rpc('log_security_event', {
+              p_action: 'user_authenticated',
+              p_resource: 'auth_session',
+              p_details: { user_id: session.user.id, role: profile.role }
+            });
           }
-        } else if (process.env.NODE_ENV === 'development') {
-          // In dev mode, use the default admin user if not logged in
-          setCurrentUser(defaultUser);
         } else {
           setCurrentUser(null);
         }
       } catch (error) {
         console.error("Error in RBAC provider:", error);
-        // Fall back to default user in dev mode
-        if (process.env.NODE_ENV === 'development') {
-          setCurrentUser(defaultUser);
-        } else {
-          setCurrentUser(null);
+        // Log security event for authentication error
+        if (error instanceof Error) {
+          await supabase.rpc('log_security_event', {
+            p_action: 'auth_error',
+            p_resource: 'rbac_provider',
+            p_details: { error: error.message }
+          });
         }
+        setCurrentUser(null);
       } finally {
         setLoading(false);
       }
@@ -82,10 +86,23 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event);
+      
+      // Log authentication events
+      await supabase.rpc('log_security_event', {
+        p_action: `auth_${event}`,
+        p_resource: 'auth_session',
+        p_details: { 
+          event, 
+          user_id: session?.user?.id || null,
+          timestamp: new Date().toISOString() 
+        }
+      });
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         fetchCurrentUser();
       } else if (event === 'SIGNED_OUT') {
-        setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+        setCurrentUser(null);
       }
     });
     
@@ -195,11 +212,15 @@ export const RoleRequired = ({
   return hasAccess ? <>{children}</> : <>{fallback}</>;
 };
 
-// Component for testing pre-Supabase functionality
-export const TestModeIndicator = () => {
-  return process.env.NODE_ENV === 'development' ? (
-    <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
-      Test Mode (No Supabase)
+// Security indicator for production
+export const SecurityModeIndicator = () => {
+  return process.env.NODE_ENV === 'production' ? (
+    <div className="fixed bottom-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
+      Secure Mode
     </div>
-  ) : null;
+  ) : (
+    <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
+      Development Mode
+    </div>
+  );
 };
