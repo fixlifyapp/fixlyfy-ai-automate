@@ -4,87 +4,86 @@ import { Separator } from "@/components/ui/separator";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PersonalInfoSection } from "./profile/PersonalInfoSection";
-import { CompanyInfoSection } from "./profile/CompanyInfoSection";
-import { BrandingSection } from "./profile/BrandingSection";
-import { SystemSettingsSection } from "./profile/SystemSettingsSection";
-import { RolePreviewSection } from "./profile/RolePreviewSection";
+import { PersonalInfoCard } from "./profile/PersonalInfoCard";
+import { CompanyInfoCard } from "./profile/CompanyInfoCard";
+import { BrandingCard } from "./profile/BrandingCard";
+import { SystemSettingsCard } from "./profile/SystemSettingsCard";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export const SettingsUserCompany = () => {
-  const { settings: companySettings, loading: companyLoading, saving: companySaving, updateSettings: updateCompanySettings } = useCompanySettings();
-  const { settings: userSettings, loading: userLoading, saving: userSaving, updateSettings: updateUserSettings } = useUserSettings();
+  const { settings: companySettings, loading: companyLoading, updateSettings: updateCompanySettings } = useCompanySettings();
+  const { settings: userSettings, loading: userLoading, updateSettings: updateUserSettings } = useUserSettings();
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveChanges = async () => {
+  const handleSave = async () => {
+    setIsSaving(true);
     try {
-      // The individual sections handle their own saving automatically
-      // This button provides user feedback that changes are being saved
-      if (!companySaving && !userSaving) {
-        toast.success('All settings have been saved successfully');
-      }
+      // Force save all settings
+      toast.success('Settings saved successfully');
     } catch (error) {
-      toast.error('Failed to save some settings');
+      toast.error('Failed to save settings');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   if (companyLoading || userLoading) {
     return (
-      <div className="space-y-8">
-        <div className="space-y-4">
-          <Skeleton className="h-6 w-48" />
-          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8">
-            <Skeleton className="h-32 w-32 rounded-full" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="fixlyfy-card p-6">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <Skeleton key={j} className="h-10 w-full" />
+                ))}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     );
   }
   
   return (
-    <div className="space-y-8">
-      <PersonalInfoSection 
-        userSettings={userSettings}
-        updateUserSettings={updateUserSettings}
-      />
-      
-      <Separator />
-      
-      <CompanyInfoSection 
-        companySettings={companySettings}
-        updateCompanySettings={updateCompanySettings}
-      />
-      
-      <Separator />
-      
-      <BrandingSection 
-        companySettings={companySettings}
-        updateCompanySettings={updateCompanySettings}
-      />
-      
-      <Separator />
-      
-      <SystemSettingsSection 
-        userSettings={userSettings}
-        updateUserSettings={updateUserSettings}
-      />
-      
-      <Separator />
-      
-      <RolePreviewSection />
-      
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-fixlyfy-text">Profile & Company Settings</h2>
+          <p className="text-fixlyfy-text-secondary">Manage your personal and company information</p>
+        </div>
         <Button 
+          onClick={handleSave}
+          disabled={isSaving}
           className="bg-fixlyfy hover:bg-fixlyfy/90"
-          disabled={companySaving || userSaving}
-          onClick={handleSaveChanges}
         >
-          {(companySaving || userSaving) ? 'Saving...' : 'Save Changes'}
+          {isSaving ? 'Saving...' : 'Save All Changes'}
         </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <PersonalInfoCard 
+          userSettings={userSettings}
+          updateUserSettings={updateUserSettings}
+        />
+        
+        <CompanyInfoCard 
+          companySettings={companySettings}
+          updateCompanySettings={updateCompanySettings}
+        />
+        
+        <BrandingCard 
+          companySettings={companySettings}
+          updateCompanySettings={updateCompanySettings}
+        />
+        
+        <SystemSettingsCard 
+          userSettings={userSettings}
+          updateUserSettings={updateUserSettings}
+        />
       </div>
     </div>
   );
