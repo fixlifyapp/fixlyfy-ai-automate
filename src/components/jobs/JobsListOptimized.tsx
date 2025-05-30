@@ -5,6 +5,7 @@ import { ModernCard } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Edit, 
   Calendar, 
@@ -13,7 +14,8 @@ import {
   Tag,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
 import { Job } from "@/hooks/useJobs";
@@ -26,6 +28,33 @@ interface JobsListOptimizedProps {
   onSelectAllJobs: (isSelected: boolean) => void;
   onRefresh?: () => void;
 }
+
+// Loading skeleton component
+const JobCardSkeleton = memo(() => (
+  <ModernCard variant="elevated" className="animate-pulse">
+    <div className="p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <Skeleton className="h-8 w-8" />
+      </div>
+      <div>
+        <Skeleton className="h-6 w-3/4 mb-1" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-6 w-20" />
+        <Skeleton className="h-6 w-16" />
+      </div>
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-2/3" />
+    </div>
+  </ModernCard>
+));
+
+JobCardSkeleton.displayName = "JobCardSkeleton";
 
 // Memoized job card component to prevent unnecessary re-renders
 const JobCard = memo(({ 
@@ -176,24 +205,42 @@ export const JobsListOptimized = memo(({
     [jobs, selectedJobs]
   );
 
+  // Show loading skeletons while jobs are being fetched
   if (jobs.length === 0) {
     return (
-      <ModernCard variant="elevated" className="p-12 text-center">
-        <div className="text-gray-500">
-          <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
-          <p>No jobs match your current filters.</p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox disabled />
+            <span className="text-sm text-gray-600">Loading jobs...</span>
+          </div>
           {onRefresh && (
             <Button 
-              variant="outline" 
-              className="mt-4"
+              variant="ghost" 
+              size="sm"
               onClick={onRefresh}
+              disabled
             >
-              Refresh Jobs
+              <RefreshCw className="animate-spin" size={16} />
+              Refresh
             </Button>
           )}
         </div>
-      </ModernCard>
+        
+        {isGridView ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <JobCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <JobCardSkeleton key={index} />
+            ))}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -216,6 +263,7 @@ export const JobsListOptimized = memo(({
               size="sm"
               onClick={onRefresh}
             >
+              <RefreshCw size={16} />
               Refresh
             </Button>
           )}

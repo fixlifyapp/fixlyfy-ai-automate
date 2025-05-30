@@ -17,21 +17,14 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const { user } = useAuth();
   const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
 
-  // Cache duration: 30 seconds
-  const CACHE_DURATION = 30000;
-
-  const fetchJobs = useCallback(async (forceRefresh = false) => {
-    const now = Date.now();
-    if (!forceRefresh && now - lastFetchTime < CACHE_DURATION && jobs.length > 0) {
-      return; // Use cached data
-    }
-
+  const fetchJobs = useCallback(async () => {
     setIsLoading(true);
     try {
+      console.log('Fetching jobs with optimized query...');
+      
       // Optimized query - select only necessary fields initially
       let query = supabase
         .from('jobs')
@@ -69,7 +62,12 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       
       const { data, error, count } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching jobs:', error);
+        throw error;
+      }
+      
+      console.log(`Fetched ${data?.length || 0} jobs successfully`);
       
       // Process jobs efficiently
       const processedJobs = (data || []).map(job => ({
@@ -80,28 +78,27 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       
       setJobs(processedJobs);
       setTotalCount(count || 0);
-      setLastFetchTime(now);
     } catch (error) {
       console.error('Error fetching jobs:', error);
       toast.error('Failed to load jobs');
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, getJobViewScope, user?.id, lastFetchTime, jobs.length]);
+  }, [page, pageSize, getJobViewScope, user?.id]);
 
   // Initial fetch
   useEffect(() => {
     fetchJobs();
-  }, [page, pageSize]);
+  }, [fetchJobs]);
 
-  // Optimized real-time updates (debounced)
+  // Real-time updates
   useEffect(() => {
     if (!enableRealtime) return;
 
-    let timeoutId: NodeJS.Timeout;
+    console.log('Setting up real-time updates for jobs...');
     
     const channel = supabase
-      .channel('jobs-realtime')
+      .channel('jobs-optimized-realtime')
       .on(
         'postgres_changes',
         {
@@ -109,18 +106,16 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           schema: 'public',
           table: 'jobs'
         },
-        () => {
-          // Debounce updates to prevent too frequent refreshes
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            fetchJobs(true);
-          }, 1000);
+        (payload) => {
+          console.log('Real-time job update received:', payload);
+          // Immediate refresh on any job change
+          fetchJobs();
         }
       )
       .subscribe();
 
     return () => {
-      clearTimeout(timeoutId);
+      console.log('Cleaning up real-time job subscription...');
       supabase.removeChannel(channel);
     };
   }, [fetchJobs, enableRealtime]);
@@ -131,7 +126,8 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const hasPreviousPage = useMemo(() => page > 1, [page]);
 
   const refreshJobs = useCallback(() => {
-    fetchJobs(true);
+    console.log('Manual refresh triggered...');
+    fetchJobs();
   }, [fetchJobs]);
 
   return {

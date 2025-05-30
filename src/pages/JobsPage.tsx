@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -14,10 +13,11 @@ import {
   TrendingUp,
   RefreshCw
 } from "lucide-react";
-import { JobsList } from "@/components/jobs/JobsList";
+import { JobsListOptimized } from "@/components/jobs/JobsListOptimized";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
+import { useJobsOptimized } from "@/hooks/useJobsOptimized";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
@@ -34,15 +35,34 @@ const JobsPage = () => {
     tags: [] as string[]
   });
   
-  const { jobs, addJob, updateJob, deleteJob, refreshJobs } = useJobs();
+  // Use optimized hook for display
+  const { 
+    jobs: optimizedJobs, 
+    isLoading: isOptimizedLoading,
+    totalCount,
+    totalPages,
+    hasNextPage,
+    hasPreviousPage,
+    refreshJobs: refreshOptimized,
+    canCreate,
+    canEdit,
+    canDelete
+  } = useJobsOptimized({
+    page: currentPage,
+    pageSize: 50,
+    enableRealtime: true
+  });
+
+  // Keep original hook for mutations only
+  const { addJob, updateJob, deleteJob } = useJobs();
   
   // Clear selected jobs when jobs change
   useEffect(() => {
-    setSelectedJobs(prev => prev.filter(id => jobs.some(job => job.id === id)));
-  }, [jobs]);
+    setSelectedJobs(prev => prev.filter(id => optimizedJobs.some(job => job.id === id)));
+  }, [optimizedJobs]);
 
   // Filter jobs based on current filters
-  const filteredJobs = jobs.filter(job => {
+  const filteredJobs = optimizedJobs.filter(job => {
     // Search filter - search in client name, job ID, title, and description
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
@@ -91,10 +111,8 @@ const JobsPage = () => {
       const createdJob = await addJob(jobData);
       if (createdJob) {
         toast.success(`Job ${createdJob.id} created successfully!`);
-        // Force refresh to show new job
-        setTimeout(() => {
-          refreshJobs();
-        }, 100);
+        // Refresh optimized jobs immediately
+        refreshOptimized();
         return createdJob;
       }
     } catch (error) {
@@ -116,16 +134,13 @@ const JobsPage = () => {
     setSelectedJobs(select ? filteredJobs.map(job => job.id) : []);
   };
 
-  // Bulk action handlers with proper refresh
+  // Bulk action handlers with optimized refresh
   const handleBulkUpdateStatus = async (jobIds: string[], newStatus: string) => {
     try {
       await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
       toast.success(`Updated ${jobIds.length} jobs to ${newStatus}`);
       setSelectedJobs([]);
-      // Force refresh after bulk update
-      setTimeout(() => {
-        refreshJobs();
-      }, 100);
+      refreshOptimized();
     } catch (error) {
       toast.error('Failed to update job statuses');
     }
@@ -136,10 +151,7 @@ const JobsPage = () => {
       await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
       toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
       setSelectedJobs([]);
-      // Force refresh after bulk assignment
-      setTimeout(() => {
-        refreshJobs();
-      }, 100);
+      refreshOptimized();
     } catch (error) {
       toast.error('Failed to assign technician');
     }
@@ -150,10 +162,7 @@ const JobsPage = () => {
       await Promise.all(jobIds.map(id => deleteJob(id)));
       toast.success(`Deleted ${jobIds.length} jobs`);
       setSelectedJobs([]);
-      // Force refresh after bulk delete
-      setTimeout(() => {
-        refreshJobs();
-      }, 100);
+      refreshOptimized();
     } catch (error) {
       toast.error('Failed to delete jobs');
     }
@@ -198,17 +207,14 @@ const JobsPage = () => {
       }));
       toast.success(`Tagged ${jobIds.length} jobs`);
       setSelectedJobs([]);
-      // Force refresh after tagging
-      setTimeout(() => {
-        refreshJobs();
-      }, 100);
+      refreshOptimized();
     } catch (error) {
       toast.error('Failed to tag jobs');
     }
   };
 
   const handleRefreshJobs = () => {
-    refreshJobs();
+    refreshOptimized();
     setSelectedJobs([]);
     toast.success('Jobs refreshed');
   };
@@ -246,8 +252,10 @@ const JobsPage = () => {
                   size="sm"
                   onClick={handleRefreshJobs}
                   className="flex gap-2 rounded-xl"
+                  disabled={isOptimizedLoading}
                 >
-                  <RefreshCw size={18} /> Refresh
+                  <RefreshCw size={18} className={isOptimizedLoading ? "animate-spin" : ""} /> 
+                  Refresh
                 </Button>
                 <Button
                   variant={isGridView ? "ghost" : "secondary"}
@@ -269,7 +277,7 @@ const JobsPage = () => {
             </div>
           </ModernCard>
           
-          <JobsList 
+          <JobsListOptimized 
             isGridView={isGridView}
             jobs={filteredJobs}
             selectedJobs={selectedJobs}
