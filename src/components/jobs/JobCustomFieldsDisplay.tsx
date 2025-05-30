@@ -73,8 +73,7 @@ export const JobCustomFieldsDisplay = ({ jobId }: JobCustomFieldsDisplayProps) =
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-medium text-gray-500">Custom Fields</div>
+      <div className="flex items-center justify-end">
         {!isEditing ? (
           <Button variant="outline" size="sm" onClick={handleEdit}>
             <Edit2 className="h-4 w-4 mr-2" />

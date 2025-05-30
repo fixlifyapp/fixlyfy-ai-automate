@@ -29,7 +29,7 @@ export const ConditionalCustomFieldsCard = ({ jobId }: ConditionalCustomFieldsCa
       <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
         <ModernCardHeader className="pb-4">
           <ModernCardTitle icon={Settings}>
-            Additional Information
+            Custom Fields
           </ModernCardTitle>
         </ModernCardHeader>
         <ModernCardContent>
@@ -47,7 +47,7 @@ export const ConditionalCustomFieldsCard = ({ jobId }: ConditionalCustomFieldsCa
     <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
       <ModernCardHeader className="pb-4">
         <ModernCardTitle icon={Settings}>
-          Additional Information
+          Custom Fields
         </ModernCardTitle>
       </ModernCardHeader>
       <ModernCardContent>
