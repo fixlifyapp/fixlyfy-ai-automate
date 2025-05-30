@@ -2,25 +2,24 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Shield, Eye, EyeOff, Sparkles, Lock, Mail } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AuthPage() {
-  console.log("AuthPage: Component rendering");
-  
   const navigate = useNavigate();
   const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authTab, setAuthTab] = useState("login");
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // If user is already authenticated, redirect immediately
+  // Redirect if already authenticated
   if (user) {
     navigate('/dashboard', { replace: true });
     return null;
@@ -28,62 +27,35 @@ export default function AuthPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("AuthPage: Sign-in form submitted with email:", email);
     
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
     
-    setAuthLoading(true);
+    setLoading(true);
     
     try {
-      console.log("AuthPage: Attempting sign-in...");
-      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: email.trim(),
         password
       });
       
-      console.log("AuthPage: Sign-in response:", { data, error });
-      
       if (error) {
-        console.error("AuthPage: Sign-in error:", error);
-        
-        // Handle specific error cases
-        if (error.message.includes("Invalid login credentials")) {
-          toast.error("Invalid email or password");
-        } else if (error.message.includes("Email not confirmed")) {
-          toast.error("Please check your email and confirm your account");
-        } else if (error.message.includes("Failed to fetch")) {
-          toast.error("Connection error. Please check your internet connection and try again.");
-        } else {
-          toast.error(error.message || "Sign in failed");
-        }
-      } else if (data.user && data.session) {
-        console.log("AuthPage: Sign-in successful for user:", data.user.id);
-        toast.success("Signed in successfully");
+        toast.error(error.message);
+      } else if (data.user) {
+        toast.success("Welcome back!");
         navigate('/dashboard', { replace: true });
-      } else {
-        console.log("AuthPage: Sign-in completed but no user/session");
-        toast.error("Authentication failed. Please try again.");
       }
     } catch (error: any) {
-      console.error("AuthPage: Sign-in unexpected error:", error);
-      
-      if (error.message?.includes("Failed to fetch")) {
-        toast.error("Unable to connect to authentication service. Please try again.");
-      } else {
-        toast.error("An unexpected error occurred. Please try again.");
-      }
+      toast.error("Something went wrong. Please try again.");
     } finally {
-      setAuthLoading(false);
+      setLoading(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("AuthPage: Sign-up form submitted with email:", email);
     
     if (!email || !password) {
       toast.error("Please fill in all fields");
@@ -91,251 +63,170 @@ export default function AuthPage() {
     }
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
+      toast.error("Password must be at least 6 characters");
       return;
     }
     
-    setAuthLoading(true);
+    setLoading(true);
     
     try {
-      console.log("AuthPage: Attempting sign-up...");
-      
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        }
+        email: email.trim(),
+        password
       });
       
-      console.log("AuthPage: Sign-up response:", { data, error });
-      
       if (error) {
-        console.error("AuthPage: Sign-up error:", error);
-        
-        if (error.message.includes("User already registered")) {
-          toast.error("An account with this email already exists. Please sign in instead.");
-          setAuthTab("login");
-        } else if (error.message.includes("Failed to fetch")) {
-          toast.error("Connection error. Please check your internet connection and try again.");
-        } else {
-          toast.error(error.message || "Sign up failed");
-        }
+        toast.error(error.message);
       } else if (data.user) {
-        console.log("AuthPage: Sign-up successful for user:", data.user.id);
-        
         if (data.session) {
-          toast.success("Account created successfully! Welcome!");
+          toast.success("Account created successfully!");
           navigate('/dashboard', { replace: true });
         } else {
-          toast.success("Account created! Please check your email to confirm your account before signing in.");
-          setAuthTab("login");
+          toast.success("Account created! Please check your email to verify your account.");
         }
-      } else {
-        console.log("AuthPage: Sign-up completed but no user");
-        toast.error("Account creation failed. Please try again.");
       }
     } catch (error: any) {
-      console.error("AuthPage: Sign-up unexpected error:", error);
-      
-      if (error.message?.includes("Failed to fetch")) {
-        toast.error("Unable to connect to authentication service. Please try again.");
-      } else {
-        toast.error("An unexpected error occurred. Please try again.");
-      }
+      toast.error("Something went wrong. Please try again.");
     } finally {
-      setAuthLoading(false);
+      setLoading(false);
     }
   };
 
-  console.log("AuthPage: Rendering auth form");
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-      </div>
-
-      {/* Floating particles */}
-      <div className="absolute inset-0">
-        {[...Array(50)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full opacity-20 animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="relative z-10 w-full max-w-md">
-        <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
-          <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-400 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                  F
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold text-gray-900">Welcome to Fixlify</CardTitle>
+          <CardDescription className="text-gray-600">
+            Field service management made simple
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent>
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login" className="space-y-4 mt-6">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-                <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-yellow-400 animate-pulse" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl flex items-center justify-center gap-2 text-white">
-              <Shield className="h-6 w-6 text-green-400" />
-              Fixlify
-            </CardTitle>
-            <CardDescription className="text-gray-300">
-              Field service management simplified
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent>
-            <Tabs value={authTab} onValueChange={setAuthTab} defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/10 backdrop-blur-sm">
-                <TabsTrigger 
-                  value="login" 
-                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-gray-300"
-                >
-                  Sign In
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="register"
-                  className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-gray-300"
-                >
-                  Sign Up
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="login">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
-                      <input
-                        type="email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
-                        required
-                        disabled={authLoading}
-                      />
-                    </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      disabled={loading}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
-                        required
-                        disabled={authLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
-                        disabled={authLoading}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="signup" className="space-y-4 mt-6">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                      disabled={loading}
+                    />
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
-                    disabled={authLoading}
-                  >
-                    {authLoading ? (
-                      <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : "Sign In"}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="register">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
-                      <input
-                        type="email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
-                        required
-                        disabled={authLoading}
-                      />
-                    </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="signup-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Create a password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                      disabled={loading}
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      disabled={loading}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
-                        required
-                        disabled={authLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
-                        disabled={authLoading}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
-                    disabled={authLoading}
-                  >
-                    {authLoading ? (
-                      <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : "Create Account"}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col">
-            <div className="flex items-center justify-center text-xs text-gray-400 mb-2">
-              <Shield className="h-3 w-3 mr-1" />
-              <span>Protected by enterprise-grade security</span>
-            </div>
-            <p className="text-xs text-center text-gray-400">
-              By continuing, you agree to Fixlify's Terms of Service and Privacy Policy.
-            </p>
-          </CardFooter>
-        </Card>
-      </div>
+                  <p className="text-xs text-gray-500">Password must be at least 6 characters long</p>
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
