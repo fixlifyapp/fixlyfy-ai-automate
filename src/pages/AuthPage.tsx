@@ -24,24 +24,39 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    console.log("AuthPage: Component mounted, checking auth state");
+    
     // Check if user is already authenticated
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log("AuthPage: Checking current user session");
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error("AuthPage: Error checking user:", error);
+      }
+      
       if (user) {
+        console.log("AuthPage: User already authenticated, redirecting to dashboard");
         navigate('/dashboard');
+      } else {
+        console.log("AuthPage: No authenticated user found");
       }
     };
     checkUser();
 
     // Check rate limiting
     const checkRateLimit = () => {
+      console.log("AuthPage: Checking rate limits");
       const isAllowed = authRateLimiter.isAllowed('auth_attempt');
       setRateLimitBlocked(!isAllowed);
       
       if (!isAllowed) {
         const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
         const minutes = Math.ceil(remainingTime / (1000 * 60));
+        console.warn("AuthPage: Rate limit exceeded, blocked for", minutes, "minutes");
         toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+      } else {
+        console.log("AuthPage: Rate limit check passed");
       }
     };
 
@@ -49,9 +64,12 @@ export default function AuthPage() {
   }, [navigate]);
 
   const handleGoogleSignIn = async () => {
+    console.log("AuthPage: Google sign-in initiated");
+    
     if (!authRateLimiter.isAllowed('auth_attempt')) {
       const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
       const minutes = Math.ceil(remainingTime / (1000 * 60));
+      console.warn("AuthPage: Google sign-in blocked by rate limiter");
       toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
       return;
     }
@@ -59,8 +77,10 @@ export default function AuthPage() {
     setGoogleLoading(true);
     
     try {
+      console.log("AuthPage: Logging Google sign-in attempt");
       await logSecurityEvent('google_signin_attempt', {});
       
+      console.log("AuthPage: Calling supabase.auth.signInWithOAuth");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -69,20 +89,21 @@ export default function AuthPage() {
       });
       
       if (error) {
+        console.error("AuthPage: Google sign-in error:", error);
         await logSecurityEvent('google_signin_failed', { error: error.message });
         toast.error("Google sign in failed", {
           description: getGenericErrorMessage(error)
         });
-        console.error("Google sign in error:", error);
       } else {
+        console.log("AuthPage: Google sign-in successful, redirecting");
         toast.success("Redirecting to Google...");
       }
     } catch (error: any) {
+      console.error("AuthPage: Google sign-in unexpected error:", error);
       await logSecurityEvent('google_signin_error', { error: error.message });
       toast.error("Unexpected error", {
         description: "Failed to sign in with Google"
       });
-      console.error("Google sign in unexpected error:", error);
     } finally {
       setGoogleLoading(false);
     }
@@ -90,8 +111,10 @@ export default function AuthPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("AuthPage: Sign-in form submitted with email:", email);
     
     if (!email || !password) {
+      console.warn("AuthPage: Sign-in attempted with missing credentials");
       toast.error("Please fill in all fields");
       return;
     }
@@ -99,31 +122,36 @@ export default function AuthPage() {
     if (!authRateLimiter.isAllowed('auth_attempt')) {
       const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
       const minutes = Math.ceil(remainingTime / (1000 * 60));
+      console.warn("AuthPage: Sign-in blocked by rate limiter");
       toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
       return;
     }
     
     setLoading(true);
+    console.log("AuthPage: Starting sign-in process");
     
     try {
       await logSecurityEvent('sign_in_attempt', { email });
       
+      console.log("AuthPage: Calling supabase.auth.signInWithPassword");
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password
       });
       
       if (error) {
+        console.error("AuthPage: Sign-in error:", error);
         await logSecurityEvent('sign_in_failed', { email, error: error.message });
         toast.error("Sign in failed", {
           description: getGenericErrorMessage(error)
         });
-        console.error("Sign in error:", error);
       } else if (data.user && data.session) {
+        console.log("AuthPage: Sign-in successful for user:", data.user.id);
         await logSecurityEvent('sign_in_success', { email });
         toast.success("Signed in successfully");
         
         // Check if user needs onboarding
+        console.log("AuthPage: Checking user profile for onboarding");
         const { data: profile } = await supabase
           .from('profiles')
           .select('business_niche, referral_source')
@@ -131,18 +159,20 @@ export default function AuthPage() {
           .single();
         
         if (!profile?.business_niche || !profile?.referral_source) {
-          setIsNewUser(false); // Existing user but incomplete profile
+          console.log("AuthPage: User needs onboarding");
+          setIsNewUser(false);
           setShowOnboarding(true);
         } else {
+          console.log("AuthPage: User profile complete, navigating to dashboard");
           navigate('/dashboard');
         }
       }
     } catch (error: any) {
+      console.error("AuthPage: Sign-in unexpected error:", error);
       await logSecurityEvent('sign_in_error', { email, error: error.message });
       toast.error("Unexpected error", {
         description: getGenericErrorMessage(error)
       });
-      console.error("Sign in unexpected error:", error);
     } finally {
       setLoading(false);
     }
@@ -150,8 +180,10 @@ export default function AuthPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("AuthPage: Sign-up form submitted with email:", email);
     
     if (!email || !password) {
+      console.warn("AuthPage: Sign-up attempted with missing credentials");
       toast.error("Please fill in all fields");
       return;
     }
@@ -159,6 +191,7 @@ export default function AuthPage() {
     if (!authRateLimiter.isAllowed('auth_attempt')) {
       const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
       const minutes = Math.ceil(remainingTime / (1000 * 60));
+      console.warn("AuthPage: Sign-up blocked by rate limiter");
       toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
       return;
     }
@@ -166,6 +199,7 @@ export default function AuthPage() {
     // Validate password strength
     const { isValid, errors } = validatePasswordStrength(password);
     if (!isValid) {
+      console.warn("AuthPage: Password validation failed:", errors);
       toast.error("Password requirements not met", {
         description: errors[0]
       });
@@ -173,10 +207,12 @@ export default function AuthPage() {
     }
     
     setLoading(true);
+    console.log("AuthPage: Starting sign-up process");
     
     try {
       await logSecurityEvent('sign_up_attempt', { email });
       
+      console.log("AuthPage: Calling supabase.auth.signUp");
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -186,40 +222,52 @@ export default function AuthPage() {
       });
       
       if (error) {
+        console.error("AuthPage: Sign-up error:", error);
         await logSecurityEvent('sign_up_failed', { email, error: error.message });
         toast.error("Sign up failed", {
           description: getGenericErrorMessage(error)
         });
-        console.error("Sign up error:", error);
       } else if (data.user) {
+        console.log("AuthPage: Sign-up successful for user:", data.user.id);
         await logSecurityEvent('sign_up_success', { email });
         
         if (data.session) {
-          // User is automatically signed in
+          console.log("AuthPage: User automatically signed in, showing onboarding");
           toast.success("Account created successfully");
           setIsNewUser(true);
           setShowOnboarding(true);
         } else {
-          // Email confirmation required
+          console.log("AuthPage: Email confirmation required");
           toast.success("Account created! Please check your email to confirm your account.");
           setAuthTab("login");
         }
       }
     } catch (error: any) {
+      console.error("AuthPage: Sign-up unexpected error:", error);
       await logSecurityEvent('sign_up_error', { email, error: error.message });
       toast.error("Unexpected error", {
         description: getGenericErrorMessage(error)
       });
-      console.error("Sign up unexpected error:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleOnboardingComplete = () => {
+    console.log("AuthPage: Onboarding completed, navigating to dashboard");
     setShowOnboarding(false);
     navigate('/dashboard');
   };
+
+  console.log("AuthPage: Rendering with state:", { 
+    loading, 
+    googleLoading, 
+    authTab, 
+    showOnboarding, 
+    rateLimitBlocked,
+    email: email ? "***" : "",
+    password: password ? "***" : ""
+  });
 
   return (
     <>
@@ -291,7 +339,11 @@ export default function AuthPage() {
                     type="button"
                     variant="outline"
                     className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 h-12 text-base font-medium relative z-20"
-                    onClick={handleGoogleSignIn}
+                    onClick={(e) => {
+                      console.log("AuthPage: Google button clicked");
+                      e.preventDefault();
+                      handleGoogleSignIn();
+                    }}
                     disabled={googleLoading || rateLimitBlocked}
                   >
                     {googleLoading ? (
@@ -323,7 +375,10 @@ export default function AuthPage() {
                 </div>
 
                 <TabsContent value="login">
-                  <form onSubmit={handleSignIn} className="space-y-4">
+                  <form onSubmit={(e) => {
+                    console.log("AuthPage: Login form submitted");
+                    handleSignIn(e);
+                  }} className="space-y-4">
                     <div className="space-y-2">
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
@@ -331,9 +386,13 @@ export default function AuthPage() {
                           type="email"
                           placeholder="your@email.com"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            console.log("AuthPage: Email input changed");
+                            setEmail(e.target.value);
+                          }}
                           className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
+                          disabled={loading || googleLoading}
                         />
                       </div>
                     </div>
@@ -345,14 +404,19 @@ export default function AuthPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            console.log("AuthPage: Password input changed");
+                            setPassword(e.target.value);
+                          }}
                           className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
+                          disabled={loading || googleLoading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
+                          disabled={loading || googleLoading}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -362,7 +426,10 @@ export default function AuthPage() {
                     <Button 
                       type="submit" 
                       className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
-                      disabled={loading || rateLimitBlocked}
+                      disabled={loading || rateLimitBlocked || googleLoading}
+                      onClick={(e) => {
+                        console.log("AuthPage: Sign in button clicked");
+                      }}
                     >
                       {loading ? (
                         <>
@@ -375,7 +442,10 @@ export default function AuthPage() {
                 </TabsContent>
                 
                 <TabsContent value="register">
-                  <form onSubmit={handleSignUp} className="space-y-4">
+                  <form onSubmit={(e) => {
+                    console.log("AuthPage: Register form submitted");
+                    handleSignUp(e);
+                  }} className="space-y-4">
                     <div className="space-y-2">
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
@@ -383,9 +453,13 @@ export default function AuthPage() {
                           type="email"
                           placeholder="your@email.com"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            console.log("AuthPage: Email input changed (register)");
+                            setEmail(e.target.value);
+                          }}
                           className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
+                          disabled={loading || googleLoading}
                         />
                       </div>
                     </div>
@@ -397,14 +471,19 @@ export default function AuthPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            console.log("AuthPage: Password input changed (register)");
+                            setPassword(e.target.value);
+                          }}
                           className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
+                          disabled={loading || googleLoading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
+                          disabled={loading || googleLoading}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -415,7 +494,10 @@ export default function AuthPage() {
                     <Button 
                       type="submit" 
                       className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
-                      disabled={loading || rateLimitBlocked}
+                      disabled={loading || rateLimitBlocked || googleLoading}
+                      onClick={(e) => {
+                        console.log("AuthPage: Sign up button clicked");
+                      }}
                     >
                       {loading ? (
                         <>

@@ -18,29 +18,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("AuthProvider: Setting up auth state management");
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth event:', event, 'Session expires at:', session?.expires_at);
+        console.log('AuthProvider: Auth event:', event, 'Session expires at:', session?.expires_at);
+        console.log('AuthProvider: User ID:', session?.user?.id);
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Log auth state changes for debugging
+        if (event === 'SIGNED_IN') {
+          console.log('AuthProvider: User signed in successfully');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('AuthProvider: User signed out');
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('AuthProvider: Token refreshed');
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check, expires at:', session?.expires_at);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('AuthProvider: Error getting session:', error);
+      }
+      
+      console.log('AuthProvider: Initial session check, expires at:', session?.expires_at);
+      console.log('AuthProvider: Initial user ID:', session?.user?.id);
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("AuthProvider: Cleaning up auth subscription");
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    console.log("AuthProvider: Signing out user");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("AuthProvider: Sign out error:", error);
+      } else {
+        console.log("AuthProvider: Sign out successful");
+      }
+    } catch (error) {
+      console.error("AuthProvider: Unexpected sign out error:", error);
+    }
   };
 
   const value = {
@@ -49,6 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signOut,
   };
+
+  console.log("AuthProvider: Current state:", { 
+    hasSession: !!session, 
+    hasUser: !!user, 
+    loading,
+    userId: user?.id 
+  });
 
   return (
     <AuthContext.Provider value={value}>
