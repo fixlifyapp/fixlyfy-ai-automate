@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
@@ -20,8 +19,8 @@ export const SettingsUserCompany = () => {
   const [isSaving, setIsSaving] = useState(false);
   
   // Local state for pending changes
-  const [pendingUserChanges, setPendingUserChanges] = useState({});
-  const [pendingCompanyChanges, setPendingCompanyChanges] = useState({});
+  const [pendingUserChanges, setPendingUserChanges] = useState<any>({});
+  const [pendingCompanyChanges, setPendingCompanyChanges] = useState<any>({});
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -72,11 +71,11 @@ export const SettingsUserCompany = () => {
   };
 
   const updatePendingUserSettings = (updates: any) => {
-    setPendingUserChanges(prev => ({ ...prev, ...updates }));
+    setPendingUserChanges((prev: any) => ({ ...prev, ...updates }));
   };
 
   const updatePendingCompanySettings = (updates: any) => {
-    setPendingCompanyChanges(prev => ({ ...prev, ...updates }));
+    setPendingCompanyChanges((prev: any) => ({ ...prev, ...updates }));
   };
 
   // Merge current settings with pending changes for display
