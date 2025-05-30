@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Shield, Eye, EyeOff, Sparkles, Lock, Mail } from "lucide-react";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
-import { SecureFormInput } from "@/components/ui/secure-form-input";
 import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 import { validatePasswordStrength, authRateLimiter, getGenericErrorMessage, logSecurityEvent } from "@/utils/security";
 
@@ -120,10 +119,23 @@ export default function AuthPage() {
           description: getGenericErrorMessage(error)
         });
         console.error("Sign in error:", error);
-      } else if (data.session) {
+      } else if (data.user && data.session) {
         await logSecurityEvent('sign_in_success', { email });
         toast.success("Signed in successfully");
-        navigate('/dashboard');
+        
+        // Check if user needs onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('business_niche, referral_source')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (!profile?.business_niche || !profile?.referral_source) {
+          setIsNewUser(false); // Existing user but incomplete profile
+          setShowOnboarding(true);
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error: any) {
       await logSecurityEvent('sign_in_error', { email, error: error.message });
@@ -187,7 +199,6 @@ export default function AuthPage() {
           toast.success("Account created successfully");
           setIsNewUser(true);
           setShowOnboarding(true);
-          navigate('/dashboard');
         } else {
           // Email confirmation required
           toast.success("Account created! Please check your email to confirm your account.");
@@ -205,56 +216,19 @@ export default function AuthPage() {
     }
   };
 
-  const validateEmail = (email: string): string | null => {
-    if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
-    return null;
-  };
-
-  const validatePasswordField = (password: string): string | null => {
-    if (!password) return "Password is required";
-    if (authTab === "register") {
-      const { isValid, errors } = validatePasswordStrength(password);
-      if (!isValid) return errors[0];
-    }
-    return null;
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    navigate('/dashboard');
   };
 
   return (
     <>
-      <style>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
-      
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
         {/* 3D Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+          <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
         </div>
 
         {/* Floating particles */}
@@ -316,7 +290,7 @@ export default function AuthPage() {
                   <Button 
                     type="button"
                     variant="outline"
-                    className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 h-12 text-base font-medium"
+                    className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 h-12 text-base font-medium relative z-20"
                     onClick={handleGoogleSignIn}
                     disabled={googleLoading || rateLimitBlocked}
                   >
@@ -352,13 +326,13 @@ export default function AuthPage() {
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
                         <input
                           type="email"
                           placeholder="your@email.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-0"
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
                         />
                       </div>
@@ -366,19 +340,19 @@ export default function AuthPage() {
                     
                     <div className="space-y-2">
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
                         <input
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-0"
+                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 text-gray-400 hover:text-white z-10"
+                          className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -387,7 +361,7 @@ export default function AuthPage() {
                     
                     <Button 
                       type="submit" 
-                      className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-10"
+                      className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
                       disabled={loading || rateLimitBlocked}
                     >
                       {loading ? (
@@ -404,13 +378,13 @@ export default function AuthPage() {
                   <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
                         <input
                           type="email"
                           placeholder="your@email.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-0"
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
                         />
                       </div>
@@ -418,19 +392,19 @@ export default function AuthPage() {
                     
                     <div className="space-y-2">
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
                         <input
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-0"
+                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 text-gray-400 hover:text-white z-10"
+                          className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -440,7 +414,7 @@ export default function AuthPage() {
                     
                     <Button 
                       type="submit" 
-                      className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-10"
+                      className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
                       disabled={loading || rateLimitBlocked}
                     >
                       {loading ? (
@@ -470,7 +444,7 @@ export default function AuthPage() {
         {/* Onboarding Modal for new users */}
         <OnboardingModal 
           open={showOnboarding} 
-          onOpenChange={setShowOnboarding} 
+          onOpenChange={setShowOnboarding}
         />
       </div>
     </>

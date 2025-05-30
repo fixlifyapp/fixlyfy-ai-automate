@@ -67,17 +67,22 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
       // Update the user's profile with custom fields
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           referral_source: referralSource,
           business_niche: businessNiche
-        } as Partial<Profile>)
-        .eq('id', user.id);
+        } as Partial<Profile>, {
+          onConflict: 'id'
+        });
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Profile update error:", updateError);
+        throw updateError;
+      }
 
       await loadNicheData(businessNiche);
       
-      toast.success("Setup complete! Welcome to Fixlyfy!");
+      toast.success("Setup complete! Welcome to Fixlify!");
       onOpenChange(false);
       navigate("/dashboard");
     } catch (error) {
@@ -86,6 +91,11 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSkip = () => {
+    onOpenChange(false);
+    navigate("/dashboard");
   };
 
   return (
@@ -108,7 +118,10 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
               ))}
             </RadioGroup>
             
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={handleSkip}>
+                Skip
+              </Button>
               <Button onClick={handleNextStep}>Next</Button>
             </div>
           </div>
@@ -123,20 +136,25 @@ export function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
               ))}
             </RadioGroup>
             
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-between gap-2 pt-4">
               <Button variant="outline" onClick={() => setStep(1)} disabled={isLoading}>
                 Back
               </Button>
-              <Button onClick={handleComplete} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 size={16} className="mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  "Complete"
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleSkip} disabled={isLoading}>
+                  Skip
+                </Button>
+                <Button onClick={handleComplete} disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Complete"
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}
