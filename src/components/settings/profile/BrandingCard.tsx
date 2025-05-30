@@ -17,19 +17,11 @@ interface BrandingCardProps {
 
 export const BrandingCard = ({ companySettings, updateCompanySettings }: BrandingCardProps) => {
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFieldChange = async (field: string, value: string) => {
-    setIsLoading(true);
-    try {
-      await updateCompanySettings({ [field]: value });
-    } catch (error) {
-      console.error('Error updating company settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleFieldChange = (field: string, value: string) => {
+    updateCompanySettings({ [field]: value });
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +56,7 @@ export const BrandingCard = ({ companySettings, updateCompanySettings }: Brandin
         .from('company-logos')
         .getPublicUrl(fileName);
 
-      await updateCompanySettings({
+      updateCompanySettings({
         company_logo_url: publicUrlData.publicUrl
       });
 
@@ -131,7 +123,6 @@ export const BrandingCard = ({ companySettings, updateCompanySettings }: Brandin
               value={companySettings.company_tagline || ''}
               onChange={(e) => handleFieldChange('company_tagline', e.target.value)}
               placeholder="Your company's tagline"
-              disabled={isLoading}
             />
           </div>
           
@@ -144,7 +135,6 @@ export const BrandingCard = ({ companySettings, updateCompanySettings }: Brandin
               value={companySettings.company_description || ''}
               onChange={(e) => handleFieldChange('company_description', e.target.value)}
               placeholder="Brief description of your company..."
-              disabled={isLoading}
             />
           </div>
         </div>

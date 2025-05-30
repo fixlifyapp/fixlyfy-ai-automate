@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
-import { useState } from "react";
 
 interface CompanyInfoCardProps {
   companySettings: any;
@@ -11,17 +10,8 @@ interface CompanyInfoCardProps {
 }
 
 export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: CompanyInfoCardProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleFieldChange = async (field: string, value: string) => {
-    setIsLoading(true);
-    try {
-      await updateCompanySettings({ [field]: value });
-    } catch (error) {
-      console.error('Error updating company settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleFieldChange = (field: string, value: string) => {
+    updateCompanySettings({ [field]: value });
   };
 
   return (
@@ -39,7 +29,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_name || ''}
               onChange={(e) => handleFieldChange('company_name', e.target.value)}
               placeholder="Your Company Name"
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -49,7 +38,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.business_type || ''}
               onChange={(e) => handleFieldChange('business_type', e.target.value)}
               placeholder="HVAC, Plumbing, etc."
-              disabled={isLoading}
             />
           </div>
         </div>
@@ -61,7 +49,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
             value={companySettings.company_address || ''}
             onChange={(e) => handleFieldChange('company_address', e.target.value)}
             placeholder="123 Business Street, Suite 100"
-            disabled={isLoading}
           />
         </div>
         
@@ -73,7 +60,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_city || ''}
               onChange={(e) => handleFieldChange('company_city', e.target.value)}
               placeholder="City"
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -83,7 +69,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_state || ''}
               onChange={(e) => handleFieldChange('company_state', e.target.value)}
               placeholder="State"
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -93,7 +78,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_zip || ''}
               onChange={(e) => handleFieldChange('company_zip', e.target.value)}
               placeholder="12345"
-              disabled={isLoading}
             />
           </div>
         </div>
@@ -106,7 +90,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_phone || ''}
               onChange={(e) => handleFieldChange('company_phone', e.target.value)}
               placeholder="(555) 123-4567"
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -117,7 +100,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_email || ''}
               onChange={(e) => handleFieldChange('company_email', e.target.value)}
               placeholder="contact@company.com"
-              disabled={isLoading}
             />
           </div>
         </div>
@@ -130,7 +112,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.company_website || ''}
               onChange={(e) => handleFieldChange('company_website', e.target.value)}
               placeholder="https://www.company.com"
-              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -140,7 +121,6 @@ export const CompanyInfoCard = ({ companySettings, updateCompanySettings }: Comp
               value={companySettings.tax_id || ''}
               onChange={(e) => handleFieldChange('tax_id', e.target.value)}
               placeholder="XX-XXXXXXX"
-              disabled={isLoading}
             />
           </div>
         </div>

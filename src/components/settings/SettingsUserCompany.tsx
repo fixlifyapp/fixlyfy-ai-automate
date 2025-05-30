@@ -9,54 +9,52 @@ import { CompanyInfoCard } from "./profile/CompanyInfoCard";
 import { BrandingCard } from "./profile/BrandingCard";
 import { SystemSettingsCard } from "./profile/SystemSettingsCard";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 
 export const SettingsUserCompany = () => {
   const { settings: companySettings, loading: companyLoading, updateSettings: updateCompanySettings } = useCompanySettings();
   const { settings: userSettings, loading: userLoading, updateSettings: updateUserSettings } = useUserSettings();
   const [isSaving, setIsSaving] = useState(false);
-
-  // Set up real-time subscriptions
-  useEffect(() => {
-    const userSettingsChannel = supabase
-      .channel('user-settings-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'user_settings'
-      }, (payload) => {
-        console.log('User settings changed:', payload);
-      })
-      .subscribe();
-
-    const companySettingsChannel = supabase
-      .channel('company-settings-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'company_settings'
-      }, (payload) => {
-        console.log('Company settings changed:', payload);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(userSettingsChannel);
-      supabase.removeChannel(companySettingsChannel);
-    };
-  }, []);
+  
+  // Local state for pending changes
+  const [pendingUserChanges, setPendingUserChanges] = useState({});
+  const [pendingCompanyChanges, setPendingCompanyChanges] = useState({});
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Save user settings changes if any
+      if (Object.keys(pendingUserChanges).length > 0) {
+        await updateUserSettings(pendingUserChanges);
+        setPendingUserChanges({});
+      }
+      
+      // Save company settings changes if any
+      if (Object.keys(pendingCompanyChanges).length > 0) {
+        await updateCompanySettings(pendingCompanyChanges);
+        setPendingCompanyChanges({});
+      }
+      
       toast.success('Settings saved successfully');
     } catch (error) {
+      console.error('Error saving settings:', error);
       toast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
     }
   };
+
+  const updatePendingUserSettings = (updates: any) => {
+    setPendingUserChanges(prev => ({ ...prev, ...updates }));
+  };
+
+  const updatePendingCompanySettings = (updates: any) => {
+    setPendingCompanyChanges(prev => ({ ...prev, ...updates }));
+  };
+
+  // Merge current settings with pending changes for display
+  const currentUserSettings = { ...userSettings, ...pendingUserChanges };
+  const currentCompanySettings = { ...companySettings, ...pendingCompanyChanges };
 
   if (companyLoading || userLoading) {
     return (
@@ -87,7 +85,7 @@ export const SettingsUserCompany = () => {
         </div>
         <Button 
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || (Object.keys(pendingUserChanges).length === 0 && Object.keys(pendingCompanyChanges).length === 0)}
           className="bg-fixlyfy hover:bg-fixlyfy/90"
         >
           {isSaving ? 'Saving...' : 'Save All Changes'}
@@ -96,23 +94,23 @@ export const SettingsUserCompany = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PersonalInfoCard 
-          userSettings={userSettings}
-          updateUserSettings={updateUserSettings}
+          userSettings={currentUserSettings}
+          updateUserSettings={updatePendingUserSettings}
         />
         
         <CompanyInfoCard 
-          companySettings={companySettings}
-          updateCompanySettings={updateCompanySettings}
+          companySettings={currentCompanySettings}
+          updateCompanySettings={updatePendingCompanySettings}
         />
         
         <BrandingCard 
-          companySettings={companySettings}
-          updateCompanySettings={updateCompanySettings}
+          companySettings={currentCompanySettings}
+          updateCompanySettings={updatePendingCompanySettings}
         />
         
         <SystemSettingsCard 
-          userSettings={userSettings}
-          updateUserSettings={updateUserSettings}
+          userSettings={currentUserSettings}
+          updateUserSettings={updatePendingUserSettings}
         />
       </div>
     </div>
