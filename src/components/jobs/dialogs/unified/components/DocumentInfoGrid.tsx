@@ -34,6 +34,7 @@ export const DocumentInfoGrid = ({
           </h3>
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="space-y-4">
+              {/* Client Name and Company */}
               <div>
                 <h4 className="text-lg font-bold text-gray-900">
                   {enhancedClientInfo?.name || 'Client Name'}
@@ -48,6 +49,7 @@ export const DocumentInfoGrid = ({
                 )}
               </div>
               
+              {/* Billing Address - Moved here, right after client name */}
               {enhancedClientInfo?.fullAddress && (
                 <div className="pt-3 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-500 mb-1">BILLING ADDRESS</p>
@@ -57,6 +59,7 @@ export const DocumentInfoGrid = ({
                 </div>
               )}
 
+              {/* Service Address - Now appears after billing address */}
               {jobAddress && jobAddress !== enhancedClientInfo?.address && (
                 <div className="pt-3 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-500 mb-1">SERVICE ADDRESS</p>
@@ -68,6 +71,7 @@ export const DocumentInfoGrid = ({
                 </div>
               )}
 
+              {/* Contact Information */}
               <div className="pt-3 border-t border-gray-100 space-y-2">
                 {enhancedClientInfo?.phone && (
                   <div className="flex justify-between">
