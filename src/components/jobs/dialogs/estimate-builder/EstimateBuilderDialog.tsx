@@ -9,6 +9,7 @@ import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimate
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EstimateSendDialog } from "./EstimateSendDialog";
 import { useJobs } from "@/hooks/useJobs";
+import { useEstimates } from "@/hooks/useEstimates";
 import { toast } from "sonner";
 import { EstimateBuilderHeader } from "./EstimateBuilderHeader";
 import { EstimateBuilderTabs } from "./EstimateBuilderTabs";
@@ -49,6 +50,9 @@ export const EstimateBuilderDialog = ({
   const { jobs, isLoading } = useJobs(jobId);
   const [jobData, setJobData] = useState<any>(null);
   
+  // Fetch estimates data to get the estimate being edited
+  const { estimates } = useEstimates(jobId);
+  
   // Get the job data when jobs are loaded
   useEffect(() => {
     if (!isLoading && jobs.length > 0) {
@@ -60,6 +64,20 @@ export const EstimateBuilderDialog = ({
   }, [jobs, isLoading, jobId]);
   
   const estimateBuilder = useEstimateBuilder(jobId);
+  
+  // Initialize the estimate builder with existing estimate data when editing
+  useEffect(() => {
+    if (open && estimateId && estimates.length > 0) {
+      const existingEstimate = estimates.find(est => est.id === estimateId);
+      if (existingEstimate) {
+        console.log("Loading existing estimate for editing:", existingEstimate);
+        estimateBuilder.initializeFromEstimate(existingEstimate);
+      }
+    } else if (open && !estimateId) {
+      // Reset form when creating new estimate
+      estimateBuilder.resetForm();
+    }
+  }, [open, estimateId, estimates]);
   
   const handleProductSelect = (product: Product) => {
     estimateBuilder.handleAddProduct(product);
