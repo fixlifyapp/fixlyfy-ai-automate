@@ -14,8 +14,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   
+  // DEVELOPER MODE: Bypass auth temporarily
+  const isDeveloperMode = true; // Set this to false to re-enable auth
+  
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isDeveloperMode && !loading && !user) {
       logSecurityEvent('unauthorized_access_attempt', { 
         path: window.location.pathname,
         timestamp: new Date().toISOString()
@@ -27,7 +30,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       });
       navigate('/auth');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isDeveloperMode]);
+  
+  // In developer mode, always show children
+  if (isDeveloperMode) {
+    return <>{children}</>;
+  }
   
   if (loading) {
     return (
