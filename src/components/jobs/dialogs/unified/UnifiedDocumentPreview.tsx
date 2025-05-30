@@ -1,8 +1,9 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { LineItem } from "../../builder/types";
 import { formatCurrency } from "@/lib/utils";
 import { DocumentType } from "../UnifiedDocumentBuilder";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UnifiedDocumentPreviewProps {
   documentType: DocumentType;
@@ -31,124 +32,293 @@ export const UnifiedDocumentPreview = ({
   issueDate,
   dueDate
 }: UnifiedDocumentPreviewProps) => {
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          setCompanyInfo({
+            name: profile?.name || 'FixLyfy Services',
+            phone: profile?.phone || '(555) 123-4567',
+            email: user.email || 'info@fixlyfy.com',
+            address: '456 Professional Ave, Suite 100',
+            city: 'Business City, BC V1V 1V1',
+            website: 'www.fixlyfy.com'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching company info:', error);
+        setCompanyInfo({
+          name: 'FixLyfy Services',
+          phone: '(555) 123-4567',
+          email: 'info@fixlyfy.com',
+          address: '456 Professional Ave, Suite 100',
+          city: 'Business City, BC V1V 1V1',
+          website: 'www.fixlyfy.com'
+        });
+      }
+    };
+
+    fetchCompanyInfo();
+  }, []);
+
   const subtotal = calculateSubtotal();
   const tax = calculateTotalTax();
   const total = calculateGrandTotal();
 
   const documentTitle = documentType === 'estimate' ? 'ESTIMATE' : 'INVOICE';
+  const documentColor = documentType === 'estimate' ? 'text-blue-600' : 'text-purple-600';
+  const documentBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-purple-50';
 
   return (
-    <div className="max-w-4xl mx-auto bg-white p-8 space-y-6">
+    <div className="max-w-4xl mx-auto bg-white shadow-lg">
       {/* Header */}
-      <div className="flex justify-between items-start border-b pb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{documentTitle}</h1>
-          <p className="text-lg text-gray-600 mt-1">#{documentNumber}</p>
-        </div>
-        <div className="text-right space-y-1">
-          <div className="text-2xl font-bold text-primary">FixLyfy</div>
-          <div className="text-sm text-gray-600">Professional Services</div>
+      <div className={`${documentBg} px-8 py-6 border-b-4 ${documentType === 'estimate' ? 'border-blue-600' : 'border-purple-600'}`}>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className={`text-4xl font-bold ${documentColor} mb-2`}>{documentTitle}</h1>
+            <p className="text-xl text-gray-700 font-medium">#{documentNumber}</p>
+          </div>
+          <div className="text-right">
+            <div className={`text-3xl font-bold ${documentColor} mb-2`}>
+              {companyInfo?.name || 'FixLyfy'}
+            </div>
+            <div className="text-sm text-gray-600 leading-relaxed">
+              <p className="font-medium">Professional Service Solutions</p>
+              <p>{companyInfo?.address}</p>
+              <p>{companyInfo?.city}</p>
+              <p className="mt-1">
+                <span className="font-medium">Phone:</span> {companyInfo?.phone}
+              </p>
+              <p>
+                <span className="font-medium">Email:</span> {companyInfo?.email}
+              </p>
+              {companyInfo?.website && (
+                <p>
+                  <span className="font-medium">Web:</span> {companyInfo.website}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Client and Date Information */}
-      <div className="grid grid-cols-2 gap-8">
-        <div>
-          <h3 className="font-semibold text-gray-900 mb-2">
-            {documentType === 'estimate' ? 'Estimate For:' : 'Bill To:'}
-          </h3>
-          <div className="text-gray-700">
-            <p className="font-medium">{clientInfo?.name || 'Client Name'}</p>
-            {clientInfo?.email && <p>{clientInfo.email}</p>}
-            {clientInfo?.phone && <p>{clientInfo.phone}</p>}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="space-y-2">
-            <div>
-              <span className="text-gray-600">{documentType === 'estimate' ? 'Estimate Date:' : 'Issue Date:'}</span>
-              <span className="ml-2 font-medium">{issueDate}</span>
+      {/* Document and Client Information */}
+      <div className="px-8 py-6 bg-gray-50 border-b">
+        <div className="grid grid-cols-2 gap-8">
+          <div>
+            <h3 className={`font-bold text-lg ${documentColor} mb-3`}>
+              {documentType === 'estimate' ? 'Estimate For:' : 'Bill To:'}
+            </h3>
+            <div className="bg-white p-4 rounded-lg border">
+              <p className="font-bold text-lg text-gray-900 mb-2">
+                {clientInfo?.name || 'Client Name'}
+              </p>
+              {clientInfo?.company && (
+                <p className="text-gray-700 font-medium mb-1">{clientInfo.company}</p>
+              )}
+              {clientInfo?.address && (
+                <div className="text-gray-600 mb-2">
+                  <p>{clientInfo.address}</p>
+                  {(clientInfo?.city || clientInfo?.state || clientInfo?.zip) && (
+                    <p>
+                      {[clientInfo.city, clientInfo.state, clientInfo.zip]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  )}
+                  {clientInfo?.country && clientInfo.country !== 'USA' && (
+                    <p>{clientInfo.country}</p>
+                  )}
+                </div>
+              )}
+              {clientInfo?.phone && (
+                <p className="text-gray-600">
+                  <span className="font-medium">Phone:</span> {clientInfo.phone}
+                </p>
+              )}
+              {clientInfo?.email && (
+                <p className="text-gray-600">
+                  <span className="font-medium">Email:</span> {clientInfo.email}
+                </p>
+              )}
             </div>
-            {documentType === 'invoice' && dueDate && (
-              <div>
-                <span className="text-gray-600">Due Date:</span>
-                <span className="ml-2 font-medium">{dueDate}</span>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <h3 className={`font-bold text-lg ${documentColor} mb-3`}>
+                Document Details
+              </h3>
+              <div className="bg-white p-4 rounded-lg border space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">
+                    {documentType === 'estimate' ? 'Estimate Date:' : 'Issue Date:'}
+                  </span>
+                  <span className="font-medium">{issueDate || new Date().toLocaleDateString()}</span>
+                </div>
+                
+                {documentType === 'invoice' && dueDate && (
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Due Date:</span>
+                    <span className="font-medium">{dueDate}</span>
+                  </div>
+                )}
+                
+                {documentType === 'estimate' && (
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Valid Until:</span>
+                    <span className="font-medium">
+                      {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="font-medium text-gray-600">Status:</span>
+                  <span className={`font-bold ${documentColor}`}>
+                    {documentType === 'estimate' ? 'Pending Review' : 'Unpaid'}
+                  </span>
+                </div>
               </div>
-            )}
-            {documentType === 'estimate' && (
-              <div>
-                <span className="text-gray-600">Valid Until:</span>
-                <span className="ml-2 font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Line Items Table */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Description</th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Qty</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Unit Price</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {lineItems.map((item, index) => (
-              <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {item.description || item.name}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                  {item.quantity}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                  {formatCurrency(item.unitPrice)}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                  {formatCurrency(item.quantity * item.unitPrice)}
-                </td>
+      <div className="px-8 py-6">
+        <h3 className={`font-bold text-lg ${documentColor} mb-4`}>
+          {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
+        </h3>
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className={`${documentBg}`}>
+              <tr>
+                <th className="px-4 py-4 text-left text-sm font-bold text-gray-900">Description</th>
+                <th className="px-4 py-4 text-center text-sm font-bold text-gray-900">Qty</th>
+                <th className="px-4 py-4 text-right text-sm font-bold text-gray-900">Unit Price</th>
+                <th className="px-4 py-4 text-right text-sm font-bold text-gray-900">Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {lineItems.map((item, index) => (
+                <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="px-4 py-4">
+                    <div className="font-medium text-gray-900">
+                      {item.description || item.name}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-center text-gray-900 font-medium">
+                    {item.quantity}
+                  </td>
+                  <td className="px-4 py-4 text-right text-gray-900 font-medium">
+                    {formatCurrency(item.unitPrice)}
+                  </td>
+                  <td className="px-4 py-4 text-right text-gray-900 font-bold">
+                    {formatCurrency(item.quantity * item.unitPrice)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Totals */}
-      <div className="flex justify-end">
-        <div className="w-64 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Subtotal:</span>
-            <span className="font-medium">{formatCurrency(subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tax ({taxRate}%):</span>
-            <span className="font-medium">{formatCurrency(tax)}</span>
-          </div>
-          <div className="flex justify-between text-lg font-bold border-t pt-2">
-            <span>Total:</span>
-            <span>{formatCurrency(total)}</span>
+      <div className="px-8 py-6 bg-gray-50">
+        <div className="flex justify-end">
+          <div className="w-80 space-y-3">
+            <div className="flex justify-between text-lg">
+              <span className="font-medium text-gray-700">Subtotal:</span>
+              <span className="font-bold text-gray-900">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-lg">
+              <span className="font-medium text-gray-700">Tax ({taxRate}%):</span>
+              <span className="font-bold text-gray-900">{formatCurrency(tax)}</span>
+            </div>
+            <div className={`flex justify-between text-2xl font-bold border-t-2 pt-3 ${documentColor}`}>
+              <span>Total:</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Notes */}
       {notes && (
-        <div className="border-t pt-6">
-          <h3 className="font-semibold text-gray-900 mb-2">Notes</h3>
-          <p className="text-gray-700 whitespace-pre-wrap">{notes}</p>
+        <div className="px-8 py-6 border-t">
+          <h3 className={`font-bold text-lg ${documentColor} mb-3`}>Notes & Instructions</h3>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{notes}</p>
+          </div>
         </div>
       )}
 
+      {/* Terms & Policies */}
+      <div className="px-8 py-6 bg-gray-50 border-t">
+        <h3 className={`font-bold text-lg ${documentColor} mb-4`}>Terms & Conditions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
+          <div>
+            <h4 className="font-bold text-gray-900 mb-2">Payment Terms</h4>
+            <ul className="space-y-1 leading-relaxed">
+              {documentType === 'estimate' ? (
+                <>
+                  <li>• Estimate valid for 30 days from issue date</li>
+                  <li>• 50% deposit required to commence work</li>
+                  <li>• Final payment due upon completion</li>
+                  <li>• Prices subject to change if work scope increases</li>
+                </>
+              ) : (
+                <>
+                  <li>• Payment due within 30 days of invoice date</li>
+                  <li>• Late payments subject to 1.5% monthly service charge</li>
+                  <li>• Accepted payments: Cash, Check, Credit Card</li>
+                  <li>• NSF checks subject to $35 processing fee</li>
+                </>
+              )}
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="font-bold text-gray-900 mb-2">Service Guarantee</h4>
+            <ul className="space-y-1 leading-relaxed">
+              <li>• All work guaranteed for 90 days</li>
+              <li>• Parts warranty as per manufacturer terms</li>
+              <li>• Emergency service available 24/7</li>
+              <li>• Licensed, bonded & insured technicians</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div className="mt-6 pt-4 border-t border-gray-300">
+          <p className="text-xs text-gray-600 leading-relaxed">
+            <strong>Important:</strong> This {documentType} contains confidential and proprietary information. 
+            Any unauthorized disclosure or use is strictly prohibited. By accepting this {documentType}, 
+            you agree to our terms of service and privacy policy. For questions or concerns, 
+            please contact us at {companyInfo?.phone || '(555) 123-4567'} or {companyInfo?.email || 'info@fixlyfy.com'}.
+          </p>
+        </div>
+      </div>
+
       {/* Footer */}
-      <div className="border-t pt-6 text-center text-sm text-gray-500">
-        <p>Thank you for your business!</p>
-        {documentType === 'estimate' && (
-          <p className="mt-1">This estimate is valid for 30 days from the date issued.</p>
-        )}
+      <div className={`${documentBg} px-8 py-4 border-t-4 ${documentType === 'estimate' ? 'border-blue-600' : 'border-purple-600'}`}>
+        <div className="text-center">
+          <p className={`text-lg font-bold ${documentColor} mb-1`}>
+            Thank you for choosing {companyInfo?.name || 'FixLyfy Services'}!
+          </p>
+          <p className="text-sm text-gray-600">
+            Professional service you can trust • Licensed & Insured • {companyInfo?.website || 'www.fixlyfy.com'}
+          </p>
+        </div>
       </div>
     </div>
   );
