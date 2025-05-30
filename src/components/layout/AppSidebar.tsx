@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -10,7 +9,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck, Package } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { TrackingWrapper } from "@/components/ui/TrackingWrapper";
 
@@ -32,11 +31,6 @@ export function AppSidebar() {
     label: 'Clients',
     icon: Users,
     href: '/clients',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Products',
-    icon: Package,
-    href: '/products',
     color: "text-fixlyfy"
   }, {
     label: 'Schedule',

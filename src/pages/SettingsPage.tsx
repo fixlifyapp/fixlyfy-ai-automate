@@ -2,7 +2,7 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
-import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug } from "lucide-react";
+import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug, Package } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
@@ -33,6 +33,21 @@ const SettingsPage = () => {
               <div>
                 <h3 className="font-medium">Profile & Company</h3>
                 <p className="text-sm text-muted-foreground">Manage personal information and company details</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Products Card */}
+        <Link to="/products">
+          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+            <div className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Package className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Products</h3>
+                <p className="text-sm text-muted-foreground">Manage your product catalog and inventory</p>
               </div>
             </div>
           </div>
