@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, UserPlus, Search, Filter } from "lucide-react";
+import { Users, UserPlus, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export const TeamMembersTab = () => {
@@ -100,7 +100,7 @@ export const TeamMembersTab = () => {
         </CardContent>
       </Card>
 
-      {/* Team Settings */}
+      {/* Essential Team Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Team Settings</CardTitle>
@@ -126,12 +126,12 @@ export const TeamMembersTab = () => {
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Require Approval for Schedule Changes</Label>
+              <Label>Job Notifications</Label>
               <p className="text-sm text-muted-foreground">
-                Team members need approval to modify their schedules
+                Notify team members when jobs are assigned
               </p>
             </div>
-            <Switch />
+            <Switch defaultChecked />
           </div>
         </CardContent>
       </Card>
