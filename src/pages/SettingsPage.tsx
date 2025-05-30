@@ -15,7 +15,7 @@ const SettingsPage = () => {
         subtitle="Manage your account and application preferences"
         icon={Settings2}
         badges={[
-          { text: "Security", icon: Shield, variant: "success" },
+          { text: "Security", icon: Shield, variant: "fixlify" },
           { text: "Customization", icon: Sliders, variant: "success" },
           { text: "Profile Management", icon: User, variant: "info" }
         ]}
