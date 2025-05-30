@@ -17,6 +17,7 @@ interface UnifiedDocumentPreviewProps {
   clientInfo?: any;
   issueDate?: string;
   dueDate?: string;
+  jobId?: string; // Added to fetch job-specific data
 }
 
 export const UnifiedDocumentPreview = ({
@@ -30,7 +31,8 @@ export const UnifiedDocumentPreview = ({
   notes,
   clientInfo,
   issueDate,
-  dueDate
+  dueDate,
+  jobId
 }: UnifiedDocumentPreviewProps) => {
   const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [enhancedClientInfo, setEnhancedClientInfo] = useState<any>(null);
@@ -86,8 +88,56 @@ export const UnifiedDocumentPreview = ({
           });
         }
 
-        // Enhanced client data fetching
-        if (clientInfo?.id) {
+        // Fetch job-specific client data if jobId is provided
+        if (jobId) {
+          console.log('Fetching job data for job ID:', jobId);
+          
+          const { data: jobData, error: jobError } = await supabase
+            .from('jobs')
+            .select(`
+              *,
+              clients!inner(*),
+              client_properties(*)
+            `)
+            .eq('id', jobId)
+            .maybeSingle();
+          
+          if (jobError) {
+            console.error('Error fetching job data:', jobError);
+          }
+          
+          if (jobData) {
+            console.log('Job data fetched:', jobData);
+            
+            // Set enhanced client info from job data
+            const jobClient = jobData.clients;
+            setEnhancedClientInfo({
+              ...jobClient,
+              fullAddress: [
+                jobClient.address,
+                [jobClient.city, jobClient.state, jobClient.zip].filter(Boolean).join(', '),
+                jobClient.country !== 'USA' ? jobClient.country : null
+              ].filter(Boolean).join('\n')
+            });
+
+            // Set job service address
+            if (jobData.address) {
+              setJobAddress(jobData.address);
+            } else if (jobData.property_id) {
+              // Find the property address from the client_properties
+              const property = jobData.client_properties?.find(p => p.id === jobData.property_id);
+              if (property) {
+                const propertyAddress = [
+                  property.property_name ? `${property.property_name}:` : '',
+                  property.address,
+                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
+                ].filter(Boolean).join('\n');
+                setJobAddress(propertyAddress);
+              }
+            }
+          }
+        } else if (clientInfo?.id) {
+          // Fallback to clientInfo if no jobId
           const { data: fullClientData } = await supabase
             .from('clients')
             .select('*')
@@ -105,37 +155,8 @@ export const UnifiedDocumentPreview = ({
               ].filter(Boolean).join('\n')
             });
           }
-
-          // Fetch job address for service location
-          const { data: jobs } = await supabase
-            .from('jobs')
-            .select('address, property_id')
-            .eq('client_id', clientInfo.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-          
-          if (jobs && jobs.length > 0) {
-            if (jobs[0].address) {
-              setJobAddress(jobs[0].address);
-            } else if (jobs[0].property_id) {
-              // Fetch property address if job doesn't have direct address
-              const { data: property } = await supabase
-                .from('client_properties')
-                .select('address, city, state, zip, property_name')
-                .eq('id', jobs[0].property_id)
-                .maybeSingle();
-              
-              if (property) {
-                const propertyAddress = [
-                  property.property_name ? `${property.property_name}:` : '',
-                  property.address,
-                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
-                ].filter(Boolean).join('\n');
-                setJobAddress(propertyAddress);
-              }
-            }
-          }
         } else {
+          // Use clientInfo as is
           setEnhancedClientInfo(clientInfo);
         }
 
@@ -160,7 +181,7 @@ export const UnifiedDocumentPreview = ({
     };
 
     fetchAllData();
-  }, [clientInfo]);
+  }, [clientInfo, jobId]);
 
   if (loading) {
     return (

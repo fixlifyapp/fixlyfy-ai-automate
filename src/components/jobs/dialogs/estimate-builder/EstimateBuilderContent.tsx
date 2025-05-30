@@ -22,6 +22,7 @@ interface EstimateBuilderContentProps {
   notes: string;
   clientInfo?: any;
   jobData?: any;
+  jobId?: string; // Added jobId prop
 }
 
 export const EstimateBuilderContent = ({
@@ -42,7 +43,8 @@ export const EstimateBuilderContent = ({
   calculateMarginPercentage,
   notes,
   clientInfo,
-  jobData
+  jobData,
+  jobId
 }: EstimateBuilderContentProps) => {
   return (
     <div className="flex-grow overflow-auto p-6">
@@ -79,6 +81,7 @@ export const EstimateBuilderContent = ({
           clientInfo={clientInfo || jobData?.client}
           issueDate={new Date().toLocaleDateString()}
           dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+          jobId={jobId}
         />
       )}
     </div>

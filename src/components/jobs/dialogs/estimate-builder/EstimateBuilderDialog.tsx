@@ -220,6 +220,7 @@ export const EstimateBuilderDialog = ({
               notes={estimateBuilder.notes || ""}
               clientInfo={clientInfo}
               jobData={jobData}
+              jobId={jobId}
             />
             
             <EstimateBuilderActions
