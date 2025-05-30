@@ -18,7 +18,17 @@ const JobsPage = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    type: '',
+    technician: '',
+    dateRange: {
+      start: new Date(),
+      end: new Date()
+    },
+    tags: []
+  });
   
   const { 
     jobs, 
@@ -44,6 +54,10 @@ const JobsPage = () => {
         ? [...prev, jobId]
         : prev.filter(id => id !== jobId)
     );
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    setSelectedJobs(isSelected ? jobs.map(job => job.id) : []);
   };
 
   const handleRefresh = () => {
@@ -186,6 +200,7 @@ const JobsPage = () => {
             isGridView={isGridView}
             selectedJobs={selectedJobs}
             onSelectJob={handleJobSelect}
+            onSelectAllJobs={handleSelectAll}
             onRefresh={handleRefresh}
           />
         </div>

@@ -74,7 +74,9 @@ const TeamManagementPage = () => {
         name: member.name || 'Unknown',
         email: '', // Email not available in profiles table
         role: member.role || 'member',
-        status: member.status || 'active',
+        status: (member.status === 'active' || member.status === 'inactive' || member.status === 'pending') 
+          ? member.status as 'active' | 'inactive' | 'pending'
+          : 'active', // Default to 'active' if status doesn't match expected values
         avatar: member.avatar_url,
         last_login: undefined, // Not available in current schema
         phone: member.phone,
