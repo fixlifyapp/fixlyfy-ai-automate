@@ -59,12 +59,10 @@ const TeamManagementPage = () => {
         .select(`
           id,
           name,
-          email,
           avatar_url,
           status,
           phone,
           created_at,
-          last_login,
           role
         `)
         .order('created_at', { ascending: false });
@@ -74,11 +72,11 @@ const TeamManagementPage = () => {
       const formattedMembers: TeamMember[] = data?.map(member => ({
         id: member.id,
         name: member.name || 'Unknown',
-        email: member.email || '',
+        email: '', // Email not available in profiles table
         role: member.role || 'member',
         status: member.status || 'active',
         avatar: member.avatar_url,
-        last_login: member.last_login,
+        last_login: undefined, // Not available in current schema
         phone: member.phone,
         created_at: member.created_at
       })) || [];
