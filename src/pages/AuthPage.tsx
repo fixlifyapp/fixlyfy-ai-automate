@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,12 +9,14 @@ import { Loader2, Shield, Eye, EyeOff, Sparkles, Lock, Mail } from "lucide-react
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 import { validatePasswordStrength, authRateLimiter, getGenericErrorMessage, logSecurityEvent } from "@/utils/security";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { user, session, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authTab, setAuthTab] = useState("login");
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -23,27 +24,22 @@ export default function AuthPage() {
   const [rateLimitBlocked, setRateLimitBlocked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Redirect if already authenticated
   useEffect(() => {
-    console.log("AuthPage: Component mounted, checking auth state");
+    console.log("AuthPage: useEffect - checking auth state", { 
+      user: !!user, 
+      session: !!session, 
+      loading,
+      userId: user?.id 
+    });
     
-    // Check if user is already authenticated
-    const checkUser = async () => {
-      console.log("AuthPage: Checking current user session");
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      if (error) {
-        console.error("AuthPage: Error checking user:", error);
-      }
-      
-      if (user) {
-        console.log("AuthPage: User already authenticated, redirecting to dashboard");
-        navigate('/dashboard');
-      } else {
-        console.log("AuthPage: No authenticated user found");
-      }
-    };
-    checkUser();
+    if (!loading && user && session) {
+      console.log("AuthPage: User is authenticated, redirecting to dashboard");
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, session, loading, navigate]);
 
+  useEffect(() => {
     // Check rate limiting
     const checkRateLimit = () => {
       console.log("AuthPage: Checking rate limits");
@@ -61,7 +57,7 @@ export default function AuthPage() {
     };
 
     checkRateLimit();
-  }, [navigate]);
+  }, []);
 
   const handleGoogleSignIn = async () => {
     console.log("AuthPage: Google sign-in initiated");
@@ -127,7 +123,7 @@ export default function AuthPage() {
       return;
     }
     
-    setLoading(true);
+    setAuthLoading(true);
     console.log("AuthPage: Starting sign-in process");
     
     try {
@@ -150,22 +146,7 @@ export default function AuthPage() {
         await logSecurityEvent('sign_in_success', { email });
         toast.success("Signed in successfully");
         
-        // Check if user needs onboarding
-        console.log("AuthPage: Checking user profile for onboarding");
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('business_niche, referral_source')
-          .eq('id', data.user.id)
-          .single();
-        
-        if (!profile?.business_niche || !profile?.referral_source) {
-          console.log("AuthPage: User needs onboarding");
-          setIsNewUser(false);
-          setShowOnboarding(true);
-        } else {
-          console.log("AuthPage: User profile complete, navigating to dashboard");
-          navigate('/dashboard');
-        }
+        // The useEffect above will handle the redirect once the auth context is updated
       }
     } catch (error: any) {
       console.error("AuthPage: Sign-in unexpected error:", error);
@@ -174,7 +155,7 @@ export default function AuthPage() {
         description: getGenericErrorMessage(error)
       });
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -206,7 +187,7 @@ export default function AuthPage() {
       return;
     }
     
-    setLoading(true);
+    setAuthLoading(true);
     console.log("AuthPage: Starting sign-up process");
     
     try {
@@ -249,7 +230,7 @@ export default function AuthPage() {
         description: getGenericErrorMessage(error)
       });
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -259,8 +240,32 @@ export default function AuthPage() {
     navigate('/dashboard');
   };
 
+  // Show loading spinner while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, show loading while redirecting
+  if (user && session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <p className="text-white">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   console.log("AuthPage: Rendering with state:", { 
-    loading, 
+    authLoading, 
     googleLoading, 
     authTab, 
     showOnboarding, 
@@ -339,12 +344,8 @@ export default function AuthPage() {
                     type="button"
                     variant="outline"
                     className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 h-12 text-base font-medium relative z-20"
-                    onClick={(e) => {
-                      console.log("AuthPage: Google button clicked");
-                      e.preventDefault();
-                      handleGoogleSignIn();
-                    }}
-                    disabled={googleLoading || rateLimitBlocked}
+                    onClick={handleGoogleSignIn}
+                    disabled={googleLoading || rateLimitBlocked || authLoading}
                   >
                     {googleLoading ? (
                       <>
@@ -375,10 +376,7 @@ export default function AuthPage() {
                 </div>
 
                 <TabsContent value="login">
-                  <form onSubmit={(e) => {
-                    console.log("AuthPage: Login form submitted");
-                    handleSignIn(e);
-                  }} className="space-y-4">
+                  <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
@@ -386,13 +384,11 @@ export default function AuthPage() {
                           type="email"
                           placeholder="your@email.com"
                           value={email}
-                          onChange={(e) => {
-                            console.log("AuthPage: Email input changed");
-                            setEmail(e.target.value);
-                          }}
+                          onChange={(e) => setEmail(e.target.value)}
                           className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
-                          disabled={loading || googleLoading}
+                          disabled={authLoading || googleLoading}
+                          aria-label="Email address"
                         />
                       </div>
                     </div>
@@ -404,19 +400,18 @@ export default function AuthPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
-                          onChange={(e) => {
-                            console.log("AuthPage: Password input changed");
-                            setPassword(e.target.value);
-                          }}
+                          onChange={(e) => setPassword(e.target.value)}
                           className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
-                          disabled={loading || googleLoading}
+                          disabled={authLoading || googleLoading}
+                          aria-label="Password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
-                          disabled={loading || googleLoading}
+                          disabled={authLoading || googleLoading}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -426,12 +421,10 @@ export default function AuthPage() {
                     <Button 
                       type="submit" 
                       className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
-                      disabled={loading || rateLimitBlocked || googleLoading}
-                      onClick={(e) => {
-                        console.log("AuthPage: Sign in button clicked");
-                      }}
+                      disabled={authLoading || rateLimitBlocked || googleLoading}
+                      aria-label="Sign in"
                     >
-                      {loading ? (
+                      {authLoading ? (
                         <>
                           <Loader2 size={16} className="mr-2 animate-spin" />
                           Signing in...
@@ -442,10 +435,7 @@ export default function AuthPage() {
                 </TabsContent>
                 
                 <TabsContent value="register">
-                  <form onSubmit={(e) => {
-                    console.log("AuthPage: Register form submitted");
-                    handleSignUp(e);
-                  }} className="space-y-4">
+                  <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-30" />
@@ -453,13 +443,11 @@ export default function AuthPage() {
                           type="email"
                           placeholder="your@email.com"
                           value={email}
-                          onChange={(e) => {
-                            console.log("AuthPage: Email input changed (register)");
-                            setEmail(e.target.value);
-                          }}
+                          onChange={(e) => setEmail(e.target.value)}
                           className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
-                          disabled={loading || googleLoading}
+                          disabled={authLoading || googleLoading}
+                          aria-label="Email address"
                         />
                       </div>
                     </div>
@@ -471,19 +459,18 @@ export default function AuthPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
-                          onChange={(e) => {
-                            console.log("AuthPage: Password input changed (register)");
-                            setPassword(e.target.value);
-                          }}
+                          onChange={(e) => setPassword(e.target.value)}
                           className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm relative z-20"
                           required
-                          disabled={loading || googleLoading}
+                          disabled={authLoading || googleLoading}
+                          aria-label="Password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-3 text-gray-400 hover:text-white z-30"
-                          disabled={loading || googleLoading}
+                          disabled={authLoading || googleLoading}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -494,12 +481,10 @@ export default function AuthPage() {
                     <Button 
                       type="submit" 
                       className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white transform hover:scale-105 transition-all duration-300 shadow-lg h-12 text-base font-medium relative z-20"
-                      disabled={loading || rateLimitBlocked || googleLoading}
-                      onClick={(e) => {
-                        console.log("AuthPage: Sign up button clicked");
-                      }}
+                      disabled={authLoading || rateLimitBlocked || googleLoading}
+                      aria-label="Create account"
                     >
-                      {loading ? (
+                      {authLoading ? (
                         <>
                           <Loader2 size={16} className="mr-2 animate-spin" />
                           Creating account...
