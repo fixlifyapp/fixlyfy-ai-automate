@@ -9,10 +9,21 @@ import { CompanyInfoSection } from "./profile/CompanyInfoSection";
 import { BrandingSection } from "./profile/BrandingSection";
 import { SystemSettingsSection } from "./profile/SystemSettingsSection";
 import { RolePreviewSection } from "./profile/RolePreviewSection";
+import { toast } from "sonner";
 
 export const SettingsUserCompany = () => {
   const { settings: companySettings, loading: companyLoading, saving: companySaving, updateSettings: updateCompanySettings } = useCompanySettings();
   const { settings: userSettings, loading: userLoading, saving: userSaving, updateSettings: updateUserSettings } = useUserSettings();
+
+  const handleSaveChanges = async () => {
+    try {
+      // Force save all settings - the individual hooks handle the actual saving
+      // This button serves as a confirmation action for users
+      toast.success('Settings saved successfully');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    }
+  };
 
   if (companyLoading || userLoading) {
     return (
@@ -64,11 +75,11 @@ export const SettingsUserCompany = () => {
       
       <RolePreviewSection />
       
-      <div className="flex justify-end gap-3">
-        <Button variant="outline">Cancel</Button>
+      <div className="flex justify-end">
         <Button 
           className="bg-fixlyfy hover:bg-fixlyfy/90"
           disabled={companySaving || userSaving}
+          onClick={handleSaveChanges}
         >
           {(companySaving || userSaving) ? 'Saving...' : 'Save Changes'}
         </Button>

@@ -227,24 +227,6 @@ export const SettingsGeneral = () => {
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="data-retention">Data Retention</Label>
-              <Select 
-                value={settings.data_retention} 
-                onValueChange={(value) => updateSettings({ data_retention: value })}
-              >
-                <SelectTrigger id="data-retention">
-                  <SelectValue placeholder="Select retention period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="6-months">6 Months</SelectItem>
-                  <SelectItem value="1-year">1 Year</SelectItem>
-                  <SelectItem value="2-years">2 Years</SelectItem>
-                  <SelectItem value="forever">Forever</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
       </div>
