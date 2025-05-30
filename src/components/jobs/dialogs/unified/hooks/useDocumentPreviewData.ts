@@ -27,7 +27,7 @@ export const useDocumentPreviewData = ({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        console.log('=== UnifiedDocumentPreview Debug ===');
+        console.log('=== useDocumentPreviewData Debug ===');
         console.log('Initial clientInfo:', clientInfo);
         console.log('jobId:', jobId);
         console.log('documentType:', documentType);
@@ -79,104 +79,154 @@ export const useDocumentPreviewData = ({
         let finalClientInfo = null;
         let propertyAddress = '';
 
-        // Strategy 1: Try to get client data from estimate_details_view or invoice_details_view
-        if (documentType === 'estimate') {
-          console.log('Fetching from estimate_details_view for estimate:', documentNumber);
-          const { data: estimateDetails, error: estimateError } = await supabase
-            .from('estimate_details_view')
-            .select('*')
-            .eq('estimate_number', documentNumber)
+        // Strategy 1: If we have a jobId, fetch the job with client data first
+        if (jobId) {
+          console.log('Strategy 1: Fetching job data for jobId:', jobId);
+          const { data: jobData, error: jobError } = await supabase
+            .from('jobs')
+            .select(`
+              *,
+              client:clients(*)
+            `)
+            .eq('id', jobId)
             .maybeSingle();
 
-          console.log('Estimate details from view:', estimateDetails);
-          console.log('Estimate error:', estimateError);
+          console.log('Job data fetched:', jobData);
+          console.log('Job fetch error:', jobError);
 
-          if (estimateDetails && estimateDetails.client_name) {
+          if (jobData && jobData.client) {
             finalClientInfo = {
-              name: estimateDetails.client_name,
-              email: estimateDetails.client_email,
-              phone: estimateDetails.client_phone,
-              company: estimateDetails.client_company,
-              fullAddress: estimateDetails.client_id ? 'Loading address...' : 'No address available'
+              ...jobData.client,
+              name: jobData.client.name,
+              email: jobData.client.email,
+              phone: jobData.client.phone,
+              company: jobData.client.company,
+              fullAddress: [
+                jobData.client.address,
+                [jobData.client.city, jobData.client.state, jobData.client.zip].filter(Boolean).join(', '),
+                jobData.client.country !== 'USA' ? jobData.client.country : null
+              ].filter(Boolean).join('\n')
             };
-            
-            // Try to get full client address
-            if (estimateDetails.client_id) {
-              const { data: fullClient } = await supabase
-                .from('clients')
-                .select('address, city, state, zip, country')
-                .eq('id', estimateDetails.client_id)
+
+            // Get property address - prioritize property over job address
+            if (jobData.property_id) {
+              const { data: property } = await supabase
+                .from('client_properties')
+                .select('*')
+                .eq('id', jobData.property_id)
                 .maybeSingle();
               
-              if (fullClient) {
-                finalClientInfo.fullAddress = [
-                  fullClient.address,
-                  [fullClient.city, fullClient.state, fullClient.zip].filter(Boolean).join(', '),
-                  fullClient.country !== 'USA' ? fullClient.country : null
+              if (property) {
+                propertyAddress = [
+                  property.property_name ? `${property.property_name}` : '',
+                  property.address,
+                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
                 ].filter(Boolean).join('\n');
               }
+            } else if (jobData.address) {
+              propertyAddress = jobData.address;
             }
 
-            // Fetch property address for the job
-            if (estimateDetails.job_id) {
-              await fetchJobPropertyAddress(estimateDetails.job_id);
-            }
-          }
-        } else if (documentType === 'invoice') {
-          console.log('Fetching from invoice_details_view for invoice:', documentNumber);
-          const { data: invoiceDetails, error: invoiceError } = await supabase
-            .from('invoice_details_view')
-            .select('*')
-            .eq('invoice_number', documentNumber)
-            .maybeSingle();
-
-          console.log('Invoice details from view:', invoiceDetails);
-          console.log('Invoice error:', invoiceError);
-
-          if (invoiceDetails && invoiceDetails.client_name) {
-            finalClientInfo = {
-              name: invoiceDetails.client_name,
-              email: invoiceDetails.client_email,
-              phone: invoiceDetails.client_phone,
-              company: invoiceDetails.client_company,
-              fullAddress: invoiceDetails.client_id ? 'Loading address...' : 'No address available'
-            };
-            
-            // Try to get full client address
-            if (invoiceDetails.client_id) {
-              const { data: fullClient } = await supabase
-                .from('clients')
-                .select('address, city, state, zip, country')
-                .eq('id', invoiceDetails.client_id)
-                .maybeSingle();
-              
-              if (fullClient) {
-                finalClientInfo.fullAddress = [
-                  fullClient.address,
-                  [fullClient.city, fullClient.state, fullClient.zip].filter(Boolean).join(', '),
-                  fullClient.country !== 'USA' ? fullClient.country : null
-                ].filter(Boolean).join('\n');
-              }
-            }
-
-            // Fetch property address for the job
-            if (invoiceDetails.job_id) {
-              await fetchJobPropertyAddress(invoiceDetails.job_id);
-            }
+            console.log('Final client info from job:', finalClientInfo);
+            console.log('Property address:', propertyAddress);
           }
         }
 
-        // Strategy 2: If we have a jobId, fetch the job with client data
-        if (!finalClientInfo && jobId) {
-          console.log('Fetching job data for jobId:', jobId);
-          const result = await fetchJobPropertyAddress(jobId);
-          finalClientInfo = result.clientInfo;
+        // Strategy 2: Try to get client data from estimate_details_view or invoice_details_view
+        if (!finalClientInfo) {
+          if (documentType === 'estimate') {
+            console.log('Strategy 2a: Fetching from estimate_details_view for estimate:', documentNumber);
+            const { data: estimateDetails, error: estimateError } = await supabase
+              .from('estimate_details_view')
+              .select('*')
+              .eq('estimate_number', documentNumber)
+              .maybeSingle();
+
+            console.log('Estimate details from view:', estimateDetails);
+            console.log('Estimate error:', estimateError);
+
+            if (estimateDetails && estimateDetails.client_name) {
+              finalClientInfo = {
+                name: estimateDetails.client_name,
+                email: estimateDetails.client_email,
+                phone: estimateDetails.client_phone,
+                company: estimateDetails.client_company,
+                fullAddress: 'Loading address...'
+              };
+              
+              // Try to get full client address
+              if (estimateDetails.client_id) {
+                const { data: fullClient } = await supabase
+                  .from('clients')
+                  .select('address, city, state, zip, country')
+                  .eq('id', estimateDetails.client_id)
+                  .maybeSingle();
+                
+                if (fullClient) {
+                  finalClientInfo.fullAddress = [
+                    fullClient.address,
+                    [fullClient.city, fullClient.state, fullClient.zip].filter(Boolean).join(', '),
+                    fullClient.country !== 'USA' ? fullClient.country : null
+                  ].filter(Boolean).join('\n');
+                }
+              }
+
+              // Fetch property address for the job
+              if (estimateDetails.job_id && !propertyAddress) {
+                const result = await fetchJobPropertyAddress(estimateDetails.job_id);
+                propertyAddress = result.propertyAddress;
+              }
+            }
+          } else if (documentType === 'invoice') {
+            console.log('Strategy 2b: Fetching from invoice_details_view for invoice:', documentNumber);
+            const { data: invoiceDetails, error: invoiceError } = await supabase
+              .from('invoice_details_view')
+              .select('*')
+              .eq('invoice_number', documentNumber)
+              .maybeSingle();
+
+            console.log('Invoice details from view:', invoiceDetails);
+            console.log('Invoice error:', invoiceError);
+
+            if (invoiceDetails && invoiceDetails.client_name) {
+              finalClientInfo = {
+                name: invoiceDetails.client_name,
+                email: invoiceDetails.client_email,
+                phone: invoiceDetails.client_phone,
+                company: invoiceDetails.client_company,
+                fullAddress: 'Loading address...'
+              };
+              
+              // Try to get full client address
+              if (invoiceDetails.client_id) {
+                const { data: fullClient } = await supabase
+                  .from('clients')
+                  .select('address, city, state, zip, country')
+                  .eq('id', invoiceDetails.client_id)
+                  .maybeSingle();
+                
+                if (fullClient) {
+                  finalClientInfo.fullAddress = [
+                    fullClient.address,
+                    [fullClient.city, fullClient.state, fullClient.zip].filter(Boolean).join(', '),
+                    fullClient.country !== 'USA' ? fullClient.country : null
+                  ].filter(Boolean).join('\n');
+                }
+              }
+
+              // Fetch property address for the job
+              if (invoiceDetails.job_id && !propertyAddress) {
+                const result = await fetchJobPropertyAddress(invoiceDetails.job_id);
+                propertyAddress = result.propertyAddress;
+              }
+            }
+          }
         }
 
         // Strategy 3: Try from the passed clientInfo with enhanced fetching
         if (!finalClientInfo && (clientInfo?.id || clientInfo?.client_id)) {
           const clientId = clientInfo.id || clientInfo.client_id;
-          console.log('Fetching client by ID:', clientId);
+          console.log('Strategy 3: Fetching client by ID:', clientId);
           
           const { data: fullClientData, error: clientError } = await supabase
             .from('clients')
@@ -203,7 +253,7 @@ export const useDocumentPreviewData = ({
 
         // Final fallback - use whatever clientInfo we have or a default
         if (!finalClientInfo) {
-          console.log('Using fallback client info. Passed clientInfo:', clientInfo);
+          console.log('Strategy 4: Using fallback client info. Passed clientInfo:', clientInfo);
           finalClientInfo = {
             name: clientInfo?.name || clientInfo?.client_name || 'Client Name Not Available',
             email: clientInfo?.email || clientInfo?.client_email || '',
@@ -216,6 +266,7 @@ export const useDocumentPreviewData = ({
 
         console.log('Final client info being set:', finalClientInfo);
         setEnhancedClientInfo(finalClientInfo);
+        setJobAddress(propertyAddress);
 
         // Helper function to fetch job and property address
         async function fetchJobPropertyAddress(jobId: string) {
@@ -229,8 +280,8 @@ export const useDocumentPreviewData = ({
               .eq('id', jobId)
               .maybeSingle();
 
-            console.log('Job data fetched:', jobData);
-            console.log('Job fetch error:', jobError);
+            console.log('Helper: Job data fetched:', jobData);
+            console.log('Helper: Job fetch error:', jobError);
 
             let clientInfo = null;
             let address = '';
@@ -265,7 +316,6 @@ export const useDocumentPreviewData = ({
               address = jobData.address;
             }
 
-            setJobAddress(address);
             return { clientInfo, propertyAddress: address };
           } catch (error) {
             console.error('Error fetching job property address:', error);

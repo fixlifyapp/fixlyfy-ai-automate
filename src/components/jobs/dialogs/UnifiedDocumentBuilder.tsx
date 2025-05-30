@@ -67,9 +67,13 @@ export const UnifiedDocumentBuilder = ({
       const foundJob = jobs.find(job => job.id === jobId);
       if (foundJob) {
         setJobData(foundJob);
+        console.log('=== UnifiedDocumentBuilder Debug ===');
+        console.log('Found job data:', foundJob);
+        console.log('Job client info:', foundJob.client);
+        console.log('Passed clientInfo prop:', clientInfo);
       }
     }
-  }, [jobs, isLoading, jobId]);
+  }, [jobs, isLoading, jobId, clientInfo]);
   const documentBuilder = useUnifiedDocumentBuilder({
     documentType,
     existingDocument,
@@ -262,7 +266,7 @@ export const UnifiedDocumentBuilder = ({
             <div className="flex-grow overflow-auto p-6">
               {activeTab === "form" && <UnifiedDocumentForm documentType={documentType} documentNumber={documentBuilder.documentNumber} lineItems={documentBuilder.lineItems || []} onRemoveLineItem={documentBuilder.handleRemoveLineItem} onUpdateLineItem={handleUpdateLineItemWrapper} onEditLineItem={handleEditLineItem} onAddEmptyLineItem={() => setIsProductSearchOpen(true)} onAddCustomLine={() => setIsCustomLineItemDialogOpen(true)} taxRate={documentBuilder.taxRate} setTaxRate={documentBuilder.setTaxRate} calculateSubtotal={documentBuilder.calculateSubtotal} calculateTotalTax={documentBuilder.calculateTotalTax} calculateGrandTotal={documentBuilder.calculateGrandTotal} calculateTotalMargin={documentBuilder.calculateTotalMargin} calculateMarginPercentage={documentBuilder.calculateMarginPercentage} notes={documentBuilder.notes || ""} setNotes={documentBuilder.setNotes} showMargin={documentType === 'estimate'} />}
               
-              {activeTab === "preview" && <UnifiedDocumentPreview documentType={documentType} documentNumber={documentBuilder.documentNumber} lineItems={documentBuilder.lineItems || []} taxRate={documentBuilder.taxRate} calculateSubtotal={documentBuilder.calculateSubtotal} calculateTotalTax={documentBuilder.calculateTotalTax} calculateGrandTotal={documentBuilder.calculateGrandTotal} notes={documentBuilder.notes || ""} clientInfo={clientInfo || jobData?.client} issueDate={new Date().toLocaleDateString()} dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()} />}
+              {activeTab === "preview" && <UnifiedDocumentPreview documentType={documentType} documentNumber={documentBuilder.documentNumber} lineItems={documentBuilder.lineItems || []} taxRate={documentBuilder.taxRate} calculateSubtotal={documentBuilder.calculateSubtotal} calculateTotalTax={documentBuilder.calculateTotalTax} calculateGrandTotal={documentBuilder.calculateGrandTotal} notes={documentBuilder.notes || ""} clientInfo={clientInfo || jobData?.client} jobId={jobId} issueDate={new Date().toLocaleDateString()} dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()} />}
 
               {activeTab === "templates" && showSmartTemplates && <div className="space-y-4">
                   <SmartTemplateSelector jobData={documentBuilder.jobData} onSelectTemplate={handleTemplateSelect} />
