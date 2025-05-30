@@ -12,7 +12,7 @@ const ProfileCompanyPage = () => {
         subtitle="Manage your personal and company information"
         icon={User}
         badges={[
-          { text: "Personal", icon: User, variant: "fixlyfy" },
+          { text: "Personal", icon: User, variant: "success" },
           { text: "Company", icon: Building2, variant: "success" }
         ]}
       />
