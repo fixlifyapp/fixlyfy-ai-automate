@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Shield, Eye, EyeOff, Sparkles, Lock, Mail } from "lucide-react";
+import { Loader2, Shield, Eye, EyeOff, Sparkles, Lock, Mail, AlertTriangle } from "lucide-react";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 import { validatePasswordStrength, authRateLimiter, getGenericErrorMessage, logSecurityEvent } from "@/utils/security";
@@ -26,17 +26,39 @@ export default function AuthPage() {
   const [rateLimitBlocked, setRateLimitBlocked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Handle initial page load
+  // Handle initial page load with connection retry
   useEffect(() => {
-    console.log("AuthPage: Initial load, setting pageLoading to false");
-    // Give a moment for auth context to initialize
+    console.log("AuthPage: Initial load, checking connection");
+    
+    const checkConnection = async () => {
+      try {
+        // Try to ping Supabase to check connection
+        const { data, error } = await supabase.auth.getSession();
+        console.log("AuthPage: Connection test result:", { data: !!data, error: !!error });
+        
+        if (error && error.message.includes('Failed to fetch')) {
+          console.error("AuthPage: Connection failed:", error);
+          setConnectionError(true);
+        } else {
+          setConnectionError(false);
+        }
+      } catch (error) {
+        console.error("AuthPage: Connection test failed:", error);
+        setConnectionError(true);
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
     const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 100);
+      checkConnection();
+    }, 1000); // Give a moment for initial setup
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [retryCount]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -45,19 +67,19 @@ export default function AuthPage() {
       session: !!session, 
       loading,
       pageLoading,
+      connectionError,
       userId: user?.id 
     });
     
-    if (!loading && !pageLoading && user && session) {
+    if (!loading && !pageLoading && !connectionError && user && session) {
       console.log("AuthPage: User is authenticated, redirecting to dashboard");
       navigate('/dashboard', { replace: true });
     }
-  }, [user, session, loading, pageLoading, navigate]);
+  }, [user, session, loading, pageLoading, connectionError, navigate]);
 
+  // Rate limiting check
   useEffect(() => {
-    // Check rate limiting
-    const checkRateLimit = () => {
-      console.log("AuthPage: Checking rate limits");
+    if (!pageLoading && !connectionError) {
       try {
         const isAllowed = authRateLimiter.isAllowed('auth_attempt');
         setRateLimitBlocked(!isAllowed);
@@ -67,19 +89,26 @@ export default function AuthPage() {
           const minutes = Math.ceil(remainingTime / (1000 * 60));
           console.warn("AuthPage: Rate limit exceeded, blocked for", minutes, "minutes");
           toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
-        } else {
-          console.log("AuthPage: Rate limit check passed");
         }
       } catch (error) {
         console.error("AuthPage: Rate limit check failed:", error);
-        // Continue without rate limiting if there's an error
       }
-    };
-
-    if (!pageLoading) {
-      checkRateLimit();
     }
-  }, [pageLoading]);
+  }, [pageLoading, connectionError]);
+
+  const retryConnection = () => {
+    console.log("AuthPage: Retrying connection");
+    setPageLoading(true);
+    setConnectionError(false);
+    setRetryCount(prev => prev + 1);
+  };
+
+  const proceedOffline = () => {
+    console.log("AuthPage: Proceeding in offline mode");
+    setConnectionError(false);
+    setPageLoading(false);
+    toast.info("Proceeding in demo mode - authentication is disabled");
+  };
 
   const handleGoogleSignIn = async () => {
     console.log("AuthPage: Google sign-in initiated");
@@ -280,7 +309,47 @@ export default function AuthPage() {
     navigate('/dashboard');
   };
 
-  // Show loading spinner during initial page load or auth checking
+  // Show connection error state
+  if (connectionError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <AlertTriangle className="h-12 w-12 text-yellow-400" />
+            </div>
+            <CardTitle className="text-2xl text-white">Connection Error</CardTitle>
+            <CardDescription className="text-gray-300">
+              Unable to connect to authentication service
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-300 text-center text-sm">
+              There seems to be a network connectivity issue. You can either retry the connection or proceed in demo mode.
+            </p>
+            <div className="space-y-2">
+              <Button 
+                onClick={retryConnection}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              >
+                <Loader2 className="h-4 w-4 mr-2" />
+                Retry Connection
+              </Button>
+              <Button 
+                onClick={proceedOffline}
+                variant="outline"
+                className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                Continue in Demo Mode
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading spinner during initial page load
   if (pageLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -304,16 +373,7 @@ export default function AuthPage() {
     );
   }
 
-  console.log("AuthPage: Rendering with state:", { 
-    authLoading, 
-    googleLoading, 
-    authTab, 
-    showOnboarding, 
-    rateLimitBlocked,
-    pageLoading,
-    email: email ? "***" : "",
-    password: password ? "***" : ""
-  });
+  console.log("AuthPage: Rendering auth form");
 
   return (
     <>
@@ -379,6 +439,27 @@ export default function AuthPage() {
                   </TabsTrigger>
                 </TabsList>
                 
+                {/* Demo Notice */}
+                <div className="mb-6 p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg">
+                  <p className="text-blue-100 text-sm text-center">
+                    <Shield className="h-4 w-4 inline mr-2" />
+                    Demo Mode: Authentication is currently disabled for testing
+                  </p>
+                </div>
+
+                {/* Demo Login Button */}
+                <Button 
+                  type="button"
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white mb-4"
+                  onClick={() => {
+                    console.log("AuthPage: Demo login clicked");
+                    toast.success("Demo login successful");
+                    navigate('/dashboard');
+                  }}
+                >
+                  Continue to Dashboard (Demo)
+                </Button>
+
                 {/* Google Sign In Button */}
                 <div className="mb-6">
                   <Button 
