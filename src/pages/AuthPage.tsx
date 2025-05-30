@@ -38,26 +38,44 @@ export default function AuthPage() {
     setAuthLoading(true);
     
     try {
+      console.log("AuthPage: Attempting sign-in...");
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password
       });
       
+      console.log("AuthPage: Sign-in response:", { data, error });
+      
       if (error) {
         console.error("AuthPage: Sign-in error:", error);
-        toast.error("Sign in failed", {
-          description: error.message
-        });
+        
+        // Handle specific error cases
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("Invalid email or password");
+        } else if (error.message.includes("Email not confirmed")) {
+          toast.error("Please check your email and confirm your account");
+        } else if (error.message.includes("Failed to fetch")) {
+          toast.error("Connection error. Please check your internet connection and try again.");
+        } else {
+          toast.error(error.message || "Sign in failed");
+        }
       } else if (data.user && data.session) {
         console.log("AuthPage: Sign-in successful for user:", data.user.id);
         toast.success("Signed in successfully");
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
+      } else {
+        console.log("AuthPage: Sign-in completed but no user/session");
+        toast.error("Authentication failed. Please try again.");
       }
     } catch (error: any) {
       console.error("AuthPage: Sign-in unexpected error:", error);
-      toast.error("Unexpected error", {
-        description: "Failed to sign in"
-      });
+      
+      if (error.message?.includes("Failed to fetch")) {
+        toast.error("Unable to connect to authentication service. Please try again.");
+      } else {
+        toast.error("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -80,6 +98,8 @@ export default function AuthPage() {
     setAuthLoading(true);
     
     try {
+      console.log("AuthPage: Attempting sign-up...");
+      
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -88,27 +108,41 @@ export default function AuthPage() {
         }
       });
       
+      console.log("AuthPage: Sign-up response:", { data, error });
+      
       if (error) {
         console.error("AuthPage: Sign-up error:", error);
-        toast.error("Sign up failed", {
-          description: error.message
-        });
+        
+        if (error.message.includes("User already registered")) {
+          toast.error("An account with this email already exists. Please sign in instead.");
+          setAuthTab("login");
+        } else if (error.message.includes("Failed to fetch")) {
+          toast.error("Connection error. Please check your internet connection and try again.");
+        } else {
+          toast.error(error.message || "Sign up failed");
+        }
       } else if (data.user) {
         console.log("AuthPage: Sign-up successful for user:", data.user.id);
         
         if (data.session) {
-          toast.success("Account created successfully");
-          navigate('/dashboard');
+          toast.success("Account created successfully! Welcome!");
+          navigate('/dashboard', { replace: true });
         } else {
-          toast.success("Account created! Please check your email to confirm your account.");
+          toast.success("Account created! Please check your email to confirm your account before signing in.");
           setAuthTab("login");
         }
+      } else {
+        console.log("AuthPage: Sign-up completed but no user");
+        toast.error("Account creation failed. Please try again.");
       }
     } catch (error: any) {
       console.error("AuthPage: Sign-up unexpected error:", error);
-      toast.error("Unexpected error", {
-        description: "Failed to create account"
-      });
+      
+      if (error.message?.includes("Failed to fetch")) {
+        toast.error("Unable to connect to authentication service. Please try again.");
+      } else {
+        toast.error("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setAuthLoading(false);
     }
