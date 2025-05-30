@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { LineItem } from "../../builder/types";
 import { formatCurrency } from "@/lib/utils";
@@ -16,7 +17,7 @@ interface UnifiedDocumentPreviewProps {
   clientInfo?: any;
   issueDate?: string;
   dueDate?: string;
-  jobId?: string; // Add jobId prop to fetch client data directly
+  jobId?: string;
 }
 
 export const UnifiedDocumentPreview = ({
@@ -45,8 +46,11 @@ export const UnifiedDocumentPreview = ({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        console.log('UnifiedDocumentPreview - Initial clientInfo:', clientInfo);
-        console.log('UnifiedDocumentPreview - jobId:', jobId);
+        console.log('=== UnifiedDocumentPreview Debug ===');
+        console.log('Initial clientInfo:', clientInfo);
+        console.log('jobId:', jobId);
+        console.log('documentType:', documentType);
+        console.log('documentNumber:', documentNumber);
 
         // Fetch company settings
         const { data: companySettings } = await supabase
@@ -90,11 +94,98 @@ export const UnifiedDocumentPreview = ({
           });
         }
 
-        // Fetch client data - try multiple approaches
+        // Multiple strategies to fetch client data
         let finalClientInfo = null;
 
-        // First, if we have a jobId, fetch the job with client data
-        if (jobId) {
+        // Strategy 1: Try to get client data from estimate_details_view or invoice_details_view
+        if (documentType === 'estimate') {
+          console.log('Fetching from estimate_details_view for estimate:', documentNumber);
+          const { data: estimateDetails, error: estimateError } = await supabase
+            .from('estimate_details_view')
+            .select('*')
+            .eq('estimate_number', documentNumber)
+            .maybeSingle();
+
+          console.log('Estimate details from view:', estimateDetails);
+          console.log('Estimate error:', estimateError);
+
+          if (estimateDetails && estimateDetails.client_name) {
+            finalClientInfo = {
+              name: estimateDetails.client_name,
+              email: estimateDetails.client_email,
+              phone: estimateDetails.client_phone,
+              company: estimateDetails.client_company,
+              fullAddress: estimateDetails.client_id ? 'Loading address...' : 'No address available'
+            };
+            
+            // Try to get full client address
+            if (estimateDetails.client_id) {
+              const { data: fullClient } = await supabase
+                .from('clients')
+                .select('address, city, state, zip, country')
+                .eq('id', estimateDetails.client_id)
+                .maybeSingle();
+              
+              if (fullClient) {
+                finalClientInfo.fullAddress = [
+                  fullClient.address,
+                  [fullClient.city, fullClient.state, fullClient.zip].filter(Boolean).join(', '),
+                  fullClient.country !== 'USA' ? fullClient.country : null
+                ].filter(Boolean).join('\n');
+              }
+            }
+
+            // Set job address if available
+            if (estimateDetails.job_id) {
+              setJobAddress(estimateDetails.job_description || '');
+            }
+          }
+        } else if (documentType === 'invoice') {
+          console.log('Fetching from invoice_details_view for invoice:', documentNumber);
+          const { data: invoiceDetails, error: invoiceError } = await supabase
+            .from('invoice_details_view')
+            .select('*')
+            .eq('invoice_number', documentNumber)
+            .maybeSingle();
+
+          console.log('Invoice details from view:', invoiceDetails);
+          console.log('Invoice error:', invoiceError);
+
+          if (invoiceDetails && invoiceDetails.client_name) {
+            finalClientInfo = {
+              name: invoiceDetails.client_name,
+              email: invoiceDetails.client_email,
+              phone: invoiceDetails.client_phone,
+              company: invoiceDetails.client_company,
+              fullAddress: invoiceDetails.client_id ? 'Loading address...' : 'No address available'
+            };
+            
+            // Try to get full client address
+            if (invoiceDetails.client_id) {
+              const { data: fullClient } = await supabase
+                .from('clients')
+                .select('address, city, state, zip, country')
+                .eq('id', invoiceDetails.client_id)
+                .maybeSingle();
+              
+              if (fullClient) {
+                finalClientInfo.fullAddress = [
+                  fullClient.address,
+                  [fullClient.city, fullClient.state, fullClient.zip].filter(Boolean).join(', '),
+                  fullClient.country !== 'USA' ? fullClient.country : null
+                ].filter(Boolean).join('\n');
+              }
+            }
+
+            // Set job address if available
+            if (invoiceDetails.job_id) {
+              setJobAddress(invoiceDetails.job_description || '');
+            }
+          }
+        }
+
+        // Strategy 2: If we have a jobId, fetch the job with client data
+        if (!finalClientInfo && jobId) {
           console.log('Fetching job data for jobId:', jobId);
           const { data: jobData, error: jobError } = await supabase
             .from('jobs')
@@ -109,7 +200,6 @@ export const UnifiedDocumentPreview = ({
           console.log('Job fetch error:', jobError);
 
           if (jobData && jobData.client) {
-            console.log('Found client from job:', jobData.client);
             finalClientInfo = {
               ...jobData.client,
               fullAddress: [
@@ -142,7 +232,7 @@ export const UnifiedDocumentPreview = ({
           }
         }
 
-        // If we still don't have client info, try from the passed clientInfo
+        // Strategy 3: Try from the passed clientInfo with enhanced fetching
         if (!finalClientInfo && (clientInfo?.id || clientInfo?.client_id)) {
           const clientId = clientInfo.id || clientInfo.client_id;
           console.log('Fetching client by ID:', clientId);
@@ -170,20 +260,20 @@ export const UnifiedDocumentPreview = ({
           }
         }
 
-        // Final fallback - use whatever clientInfo we have
+        // Final fallback - use whatever clientInfo we have or a default
         if (!finalClientInfo) {
-          console.log('Using fallback client info:', clientInfo);
+          console.log('Using fallback client info. Passed clientInfo:', clientInfo);
           finalClientInfo = {
-            name: clientInfo?.name || 'Client Name Not Found',
-            email: clientInfo?.email || '',
-            phone: clientInfo?.phone || '',
-            company: clientInfo?.company || '',
+            name: clientInfo?.name || clientInfo?.client_name || 'Client Name Not Available',
+            email: clientInfo?.email || clientInfo?.client_email || '',
+            phone: clientInfo?.phone || clientInfo?.client_phone || '',
+            company: clientInfo?.company || clientInfo?.client_company || '',
             type: clientInfo?.type || '',
-            fullAddress: clientInfo?.address || ''
+            fullAddress: clientInfo?.address || clientInfo?.fullAddress || 'Address not available'
           };
         }
 
-        console.log('Final client info set:', finalClientInfo);
+        console.log('Final client info being set:', finalClientInfo);
         setEnhancedClientInfo(finalClientInfo);
 
       } catch (error) {
@@ -201,11 +291,11 @@ export const UnifiedDocumentPreview = ({
           website: 'www.fixlyfy.com'
         });
         setEnhancedClientInfo({
-          name: clientInfo?.name || 'Client Name',
-          email: clientInfo?.email || '',
-          phone: clientInfo?.phone || '',
-          company: clientInfo?.company || '',
-          fullAddress: clientInfo?.address || ''
+          name: clientInfo?.name || clientInfo?.client_name || 'Error Loading Client',
+          email: clientInfo?.email || clientInfo?.client_email || '',
+          phone: clientInfo?.phone || clientInfo?.client_phone || '',
+          company: clientInfo?.company || clientInfo?.client_company || '',
+          fullAddress: clientInfo?.address || clientInfo?.fullAddress || 'Address not available'
         });
       } finally {
         setLoading(false);
@@ -213,7 +303,7 @@ export const UnifiedDocumentPreview = ({
     };
 
     fetchAllData();
-  }, [clientInfo, jobId]);
+  }, [clientInfo, jobId, documentNumber, documentType]);
 
   if (loading) {
     return (
