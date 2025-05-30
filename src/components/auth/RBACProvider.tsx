@@ -16,7 +16,7 @@ const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 export const RBACProvider = ({ children }: { children: ReactNode }) => {
   // Mock admin user with full permissions
-  const [currentUser] = useState<User>({
+  const [currentUser, setCurrentUser] = useState<User>({
     id: 'mock-admin-id',
     name: 'Admin User',
     email: 'admin@fixlify.com',
@@ -42,7 +42,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
     hasPermission,
     hasRole,
     userRole: 'admin' as UserRole,
-    setCurrentUser: () => {},
+    setCurrentUser,
     allRoles,
   };
 
@@ -87,8 +87,8 @@ export const RoleRequired = ({
 // Security indicator for production
 export const SecurityModeIndicator = () => {
   return (
-    <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
-      No Auth Mode
+    <div className="fixed bottom-0 right-0 bg-green-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
+      Full Admin Access
     </div>
   );
 };
