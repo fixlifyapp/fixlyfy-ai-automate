@@ -94,9 +94,12 @@ export const AIAgentDashboard = () => {
   });
 
   const handleToggleAgent = async () => {
-    const success = await toggleActive();
-    if (success) {
+    try {
+      await toggleActive();
       toast.success(`AI Agent ${config?.is_active ? 'deactivated' : 'activated'} successfully`);
+    } catch (error) {
+      console.error('Error toggling AI agent:', error);
+      toast.error('Failed to toggle AI agent status');
     }
   };
 
