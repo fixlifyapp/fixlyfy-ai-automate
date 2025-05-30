@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { useJobs } from "@/hooks/useJobs";
@@ -107,6 +106,12 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             jobId={jobId} 
             editable 
           />
+          <TasksCard 
+            tasks={job.tasks || []} 
+            jobId={jobId} 
+            editable 
+            onManageTasks={() => setIsTaskDialogOpen(true)}
+          />
         </div>
         
         <div className="space-y-6">
@@ -116,25 +121,17 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
             jobId={jobId} 
             editable 
           />
-          <div className="space-y-6">
-            <AttachmentsCard 
-              jobId={jobId} 
-              editable 
-            />
-            <ConditionalCustomFieldsCard jobId={jobId} />
-          </div>
+          <AttachmentsCard 
+            jobId={jobId} 
+            editable 
+          />
+          <ConditionalCustomFieldsCard jobId={jobId} />
         </div>
       </div>
 
       {/* Secondary Information Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
-          <TasksCard 
-            tasks={job.tasks || []} 
-            jobId={jobId} 
-            editable 
-            onManageTasks={() => setIsTaskDialogOpen(true)}
-          />
           <JobTagsCard 
             tags={job.tags || []} 
             jobId={jobId} 
