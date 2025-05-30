@@ -3,13 +3,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
+import { SecureFormInput } from "@/components/ui/secure-form-input";
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
+import { validatePasswordStrength, authRateLimiter, getGenericErrorMessage, logSecurityEvent } from "@/utils/security";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -19,29 +20,59 @@ export default function AuthPage() {
   const [authTab, setAuthTab] = useState("login");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [rateLimitBlocked, setRateLimitBlocked] = useState(false);
+
+  useEffect(() => {
+    // Check if user is rate limited on component mount
+    const checkRateLimit = () => {
+      const isAllowed = authRateLimiter.isAllowed('auth_attempt');
+      setRateLimitBlocked(!isAllowed);
+      
+      if (!isAllowed) {
+        const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+        const minutes = Math.ceil(remainingTime / (1000 * 60));
+        toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+      }
+    };
+
+    checkRateLimit();
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!authRateLimiter.isAllowed('auth_attempt')) {
+      const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+      const minutes = Math.ceil(remainingTime / (1000 * 60));
+      toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+      return;
+    }
+    
     setLoading(true);
     
     try {
+      await logSecurityEvent('sign_in_attempt', { email });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password
       });
       
       if (error) {
+        await logSecurityEvent('sign_in_failed', { email, error: error.message });
         toast.error("Sign in failed", {
-          description: error.message
+          description: getGenericErrorMessage(error)
         });
         console.error("Sign in error:", error);
       } else if (data.session) {
+        await logSecurityEvent('sign_in_success', { email });
         toast.success("Signed in successfully");
         navigate('/dashboard');
       }
     } catch (error: any) {
+      await logSecurityEvent('sign_in_error', { email, error: error.message });
       toast.error("Unexpected error", {
-        description: "Please try again later"
+        description: getGenericErrorMessage(error)
       });
       console.error("Sign in unexpected error:", error);
     } finally {
@@ -51,11 +82,30 @@ export default function AuthPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!authRateLimiter.isAllowed('auth_attempt')) {
+      const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+      const minutes = Math.ceil(remainingTime / (1000 * 60));
+      toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+      return;
+    }
+
+    // Validate password strength
+    const { isValid, errors } = validatePasswordStrength(password);
+    if (!isValid) {
+      toast.error("Password requirements not met", {
+        description: errors[0]
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
+      await logSecurityEvent('sign_up_attempt', { email });
+      
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
@@ -66,14 +116,17 @@ export default function AuthPage() {
       });
       
       if (error) {
+        await logSecurityEvent('sign_up_failed', { email, error: error.message });
         toast.error("Sign up failed", {
-          description: error.message
+          description: getGenericErrorMessage(error)
         });
         console.error("Sign up error:", error);
       } else if (data.user) {
+        await logSecurityEvent('sign_up_success', { email });
+        
         // Automatically sign in after sign up
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password
         });
         
@@ -89,13 +142,30 @@ export default function AuthPage() {
         }
       }
     } catch (error: any) {
+      await logSecurityEvent('sign_up_error', { email, error: error.message });
       toast.error("Unexpected error", {
-        description: "Please try again later"
+        description: getGenericErrorMessage(error)
       });
       console.error("Sign up unexpected error:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const validateEmail = (email: string): string | null => {
+    if (!email) return "Email is required";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "Please enter a valid email address";
+    return null;
+  };
+
+  const validatePasswordField = (password: string): string | null => {
+    if (!password) return "Password is required";
+    if (authTab === "register") {
+      const { isValid, errors } = validatePasswordStrength(password);
+      if (!isValid) return errors[0];
+    }
+    return null;
   };
 
   return (
@@ -107,9 +177,12 @@ export default function AuthPage() {
               F
             </div>
           </div>
-          <CardTitle className="text-2xl">Fixlyfy</CardTitle>
+          <CardTitle className="text-2xl flex items-center justify-center gap-2">
+            <Shield className="h-5 w-5 text-green-600" />
+            Fixlyfy
+          </CardTitle>
           <CardDescription>
-            Field service management simplified
+            Field service management simplified - Secure Login
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -120,32 +193,32 @@ export default function AuthPage() {
             </TabsList>
             <TabsContent value="login">
               <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="your@email.com" 
-                    required 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    required 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
+                <SecureFormInput
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={setEmail}
+                  required
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  customValidation={validateEmail}
+                />
+                <SecureFormInput
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={setPassword}
+                  required
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  showValidation={false}
+                />
                 <Button 
                   type="submit" 
                   className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={loading}
+                  disabled={loading || rateLimitBlocked}
                 >
                   {loading ? (
                     <>
@@ -158,35 +231,35 @@ export default function AuthPage() {
             </TabsContent>
             <TabsContent value="register">
               <form onSubmit={handleSignUp} className="space-y-4">
+                <SecureFormInput
+                  label="Email"
+                  name="signup-email"
+                  type="email"
+                  value={email}
+                  onChange={setEmail}
+                  required
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  customValidation={validateEmail}
+                />
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input 
-                    id="signup-email" 
-                    type="email" 
-                    placeholder="your@email.com" 
-                    required 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input 
-                    id="signup-password" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    required 
+                  <SecureFormInput
+                    label="Password"
+                    name="signup-password"
+                    type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={setPassword}
+                    required
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    customValidation={validatePasswordField}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Password must be at least 6 characters
-                  </p>
+                  <PasswordStrengthIndicator password={password} />
                 </div>
                 <Button 
                   type="submit" 
                   className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={loading}
+                  disabled={loading || rateLimitBlocked}
                 >
                   {loading ? (
                     <>
@@ -200,7 +273,11 @@ export default function AuthPage() {
           </Tabs>
         </CardContent>
         <CardFooter className="flex flex-col">
-          <p className="mt-2 text-xs text-center text-muted-foreground">
+          <div className="flex items-center justify-center text-xs text-muted-foreground mb-2">
+            <Shield className="h-3 w-3 mr-1" />
+            <span>Protected by enterprise-grade security</span>
+          </div>
+          <p className="text-xs text-center text-muted-foreground">
             By continuing, you agree to Fixlyfy's Terms of Service and Privacy Policy.
           </p>
         </CardFooter>
