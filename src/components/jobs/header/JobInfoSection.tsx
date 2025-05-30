@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
@@ -39,8 +40,8 @@ export const JobInfoSection = ({
   } = useJobFinancials(job.id);
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
   if (isLoadingFinancials) {
-    return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-6 shadow-lg">
-        <div className="space-y-4">
+    return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-4 shadow-lg">
+        <div className="space-y-3">
           <div className="h-8 w-40 bg-gray-200 rounded animate-pulse" />
           <div className="h-10 w-64 bg-gray-200 rounded animate-pulse" />
           <div className="grid grid-cols-3 gap-3">
@@ -51,53 +52,59 @@ export const JobInfoSection = ({
         </div>
       </div>;
   }
-  return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-      <div className="space-y-6">
+  return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="space-y-4">
         {/* Header Section */}
         <div className="flex items-start justify-between">
-          <div className="space-y-3">
-            {/* 3D Status Badge Section */}
+          <div className="space-y-2">
+            {/* Compact Status Badge Section */}
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-xl blur-sm opacity-30 transform translate-y-1"></div>
-              <div className="relative bg-gradient-to-r from-fixlyfy to-fixlyfy-light p-4 rounded-xl shadow-2xl border border-white/20 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  <span className="text-white text-sm font-medium uppercase tracking-wider">Job Status</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-lg blur-sm opacity-30 transform translate-y-0.5"></div>
+              <div className="relative bg-gradient-to-r from-fixlyfy to-fixlyfy-light p-2 rounded-lg shadow-lg border border-white/20 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-white text-xs font-medium uppercase tracking-wide">Status</span>
                 </div>
-                <div className="mt-2">
-                  <JobStatusBadge status={status} onStatusChange={onStatusChange} className="bg-white/90 text-fixlyfy border-white/30 hover:bg-white shadow-lg" />
+                <div className="mt-1">
+                  <JobStatusBadge status={status} onStatusChange={onStatusChange} className="bg-white/90 text-fixlyfy border-white/30 hover:bg-white shadow-md text-xs h-6" />
                 </div>
               </div>
             </div>
             
-            {/* Client Name and Job Number */}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900 leading-tight">
-                {job.client}
-              </h1>
-              <div className="flex items-center gap-2 text-fixlyfy">
-                <Hash size={16} />
-                <span className="text-lg font-semibold">
-                  {job.id}
-                </span>
+            {/* Client Name, Job Number and Contact Actions */}
+            <div className="flex items-center gap-4">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+                  {job.client}
+                </h1>
+                <div className="flex items-center gap-2 text-fixlyfy">
+                  <Hash size={14} />
+                  <span className="text-base font-semibold">
+                    {job.id}
+                  </span>
+                </div>
               </div>
+              
+              {/* Contact Actions - moved closer to name */}
+              <div className="bg-fixlyfy/5 border border-fixlyfy/20 rounded-lg p-2 shadow-sm">
+                <ClientContactButtons onCallClick={onCallClick} onMessageClick={onMessageClick} onEditClient={onEditClient} />
+              </div>
+            </div>
+            
+            {/* Service info */}
+            <div className="text-sm text-gray-600">
               {job.service}
             </div>
-          </div>
-          
-          {/* Contact Actions */}
-          <div className="bg-fixlyfy/5 border border-fixlyfy/20 rounded-xl p-3 shadow-sm">
-            <ClientContactButtons onCallClick={onCallClick} onMessageClick={onMessageClick} onEditClient={onEditClient} />
           </div>
         </div>
 
         {/* Job Address */}
-        {job.address && <div className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-4">
+        {job.address && <div className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-3">
             <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-fixlyfy mt-0.5 flex-shrink-0" />
+              <MapPin className="h-4 w-4 text-fixlyfy mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-fixlyfy mb-1">Service Address</p>
-                <p className="text-fixlyfy/80 font-medium leading-relaxed">
+                <p className="text-xs font-medium text-fixlyfy mb-1">Service Address</p>
+                <p className="text-fixlyfy/80 font-medium leading-relaxed text-sm">
                   {job.address}
                 </p>
               </div>
