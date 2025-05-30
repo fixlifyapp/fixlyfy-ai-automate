@@ -1,12 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useRBAC, PermissionRequired } from "@/components/auth/RBACProvider";
-import { useState } from "react";
-import { UserRole } from "@/components/auth/types";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,24 +12,12 @@ import { CompanyInfoSection } from "./profile/CompanyInfoSection";
 import { ContactInfoSection } from "./profile/ContactInfoSection";
 import { BrandingSection } from "./profile/BrandingSection";
 import { ServiceAreasSection } from "./profile/ServiceAreasSection";
+import { SystemSettingsSection } from "./profile/SystemSettingsSection";
 import { RolePreviewSection } from "./profile/RolePreviewSection";
 
 export const SettingsUserCompany = () => {
-  const { currentUser, setCurrentUser } = useRBAC();
   const { settings: companySettings, loading: companyLoading, saving: companySaving, updateSettings: updateCompanySettings } = useCompanySettings();
   const { settings: userSettings, loading: userLoading, saving: userSaving, updateSettings: updateUserSettings } = useUserSettings();
-  const [selectedRole, setSelectedRole] = useState<UserRole>(currentUser?.role || 'technician');
-  
-  const handleRoleChange = (value: UserRole) => {
-    setSelectedRole(value);
-    
-    if (currentUser) {
-      setCurrentUser({
-        ...currentUser,
-        role: value
-      });
-    }
-  };
 
   if (companyLoading || userLoading) {
     return (
@@ -85,6 +70,13 @@ export const SettingsUserCompany = () => {
       <ServiceAreasSection 
         companySettings={companySettings}
         updateCompanySettings={updateCompanySettings}
+      />
+      
+      <Separator />
+      
+      <SystemSettingsSection 
+        userSettings={userSettings}
+        updateUserSettings={updateUserSettings}
       />
       
       <Separator />

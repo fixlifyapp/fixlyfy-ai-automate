@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { SettingsGeneral } from "@/components/settings/SettingsGeneral";
 import { SettingsUserCompany } from "@/components/settings/SettingsUserCompany";
 import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
 import { Link } from "react-router-dom";
@@ -12,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("profile");
   
   return (
     <PageLayout>
@@ -77,13 +76,7 @@ const SettingsPage = () => {
       
       <div className="fixlyfy-card overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 h-auto p-0 bg-fixlyfy-bg-interface">
-            <TabsTrigger 
-              value="general" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              General
-            </TabsTrigger>
+          <TabsList className="grid grid-cols-2 h-auto p-0 bg-fixlyfy-bg-interface">
             <TabsTrigger 
               value="profile" 
               className="py-4 rounded-none data-[state=active]:bg-white"
@@ -97,10 +90,6 @@ const SettingsPage = () => {
               Integrations
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="general" className="p-6">
-            <SettingsGeneral />
-          </TabsContent>
           
           <TabsContent value="profile" className="p-6">
             <SettingsUserCompany />
