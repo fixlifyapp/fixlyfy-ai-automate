@@ -1,11 +1,9 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from '@supabase/supabase-js';
+import { createContext, useContext, ReactNode } from 'react';
 
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
+  session: any;
+  user: any;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -13,40 +11,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Mock user data for full access
+  const mockUser = {
+    id: 'mock-user-id',
+    email: 'admin@fixlify.com',
+    role: 'admin'
+  };
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth event:', event, 'Session expires at:', session?.expires_at);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check, expires at:', session?.expires_at);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const mockSession = {
+    user: mockUser,
+    access_token: 'mock-token'
+  };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // No-op for now
   };
 
   const value = {
-    session,
-    user,
-    loading,
+    session: mockSession,
+    user: mockUser,
+    loading: false,
     signOut,
   };
 
