@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,7 +14,7 @@ import {
   TrendingUp,
   RefreshCw
 } from "lucide-react";
-import { JobsListOptimized } from "@/components/jobs/JobsListOptimized";
+import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
@@ -277,7 +278,7 @@ const JobsPage = () => {
             </div>
           </ModernCard>
           
-          <JobsListOptimized 
+          <JobsList 
             isGridView={isGridView}
             jobs={filteredJobs}
             selectedJobs={selectedJobs}
