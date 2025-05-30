@@ -2383,12 +2383,10 @@ export type Database = {
       }
       user_settings: {
         Row: {
-          calendar_integration: string | null
           compact_view: boolean | null
           created_at: string
           currency: string | null
           dark_mode: boolean | null
-          data_retention: string | null
           date_format: string | null
           default_landing_page: string | null
           email_notifications: boolean | null
@@ -2406,12 +2404,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          calendar_integration?: string | null
           compact_view?: boolean | null
           created_at?: string
           currency?: string | null
           dark_mode?: boolean | null
-          data_retention?: string | null
           date_format?: string | null
           default_landing_page?: string | null
           email_notifications?: boolean | null
@@ -2429,12 +2425,10 @@ export type Database = {
           user_id: string
         }
         Update: {
-          calendar_integration?: string | null
           compact_view?: boolean | null
           created_at?: string
           currency?: string | null
           dark_mode?: boolean | null
-          data_retention?: string | null
           date_format?: string | null
           default_landing_page?: string | null
           email_notifications?: boolean | null

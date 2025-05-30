@@ -23,10 +23,8 @@ export interface UserSettings {
   language: string;
   timezone: string;
   currency: string;
-  data_retention: string;
   // Personal preferences
   notification_email?: string;
-  calendar_integration: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -45,9 +43,7 @@ const defaultSettings: UserSettings = {
   marketing_updates: false,
   language: 'en',
   timezone: 'utc-7',
-  currency: 'usd',
-  data_retention: '1-year',
-  calendar_integration: 'none'
+  currency: 'usd'
 };
 
 export const useUserSettings = () => {

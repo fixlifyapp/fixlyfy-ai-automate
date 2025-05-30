@@ -76,6 +76,43 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
             disabled={!isEditing}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="company-website">Website</Label>
+          <Input 
+            id="company-website" 
+            value={companySettings.company_website}
+            onChange={(e) => updateCompanySettings({ company_website: e.target.value })}
+            disabled={!isEditing}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="company-email">Main Business Email</Label>
+          <Input 
+            id="company-email" 
+            type="email"
+            value={companySettings.company_email}
+            onChange={(e) => updateCompanySettings({ company_email: e.target.value })}
+            disabled={!isEditing}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tax-id">Tax ID / EIN</Label>
+          <Input 
+            id="tax-id" 
+            value={companySettings.tax_id}
+            onChange={(e) => updateCompanySettings({ tax_id: e.target.value })}
+            disabled={!isEditing}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="company-phone">Business Phone Number</Label>
+          <Input 
+            id="company-phone" 
+            value={companySettings.company_phone}
+            onChange={(e) => updateCompanySettings({ company_phone: e.target.value })}
+            disabled={!isEditing}
+          />
+        </div>
       </div>
     </div>
   );

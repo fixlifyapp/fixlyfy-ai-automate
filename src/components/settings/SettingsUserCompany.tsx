@@ -1,17 +1,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useRBAC, PermissionRequired } from "@/components/auth/RBACProvider";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PersonalInfoSection } from "./profile/PersonalInfoSection";
 import { CompanyInfoSection } from "./profile/CompanyInfoSection";
-import { ContactInfoSection } from "./profile/ContactInfoSection";
 import { BrandingSection } from "./profile/BrandingSection";
-import { ServiceAreasSection } from "./profile/ServiceAreasSection";
 import { SystemSettingsSection } from "./profile/SystemSettingsSection";
 import { RolePreviewSection } from "./profile/RolePreviewSection";
 
@@ -53,21 +48,7 @@ export const SettingsUserCompany = () => {
       
       <Separator />
       
-      <ContactInfoSection 
-        companySettings={companySettings}
-        updateCompanySettings={updateCompanySettings}
-      />
-      
-      <Separator />
-      
       <BrandingSection 
-        companySettings={companySettings}
-        updateCompanySettings={updateCompanySettings}
-      />
-      
-      <Separator />
-      
-      <ServiceAreasSection 
         companySettings={companySettings}
         updateCompanySettings={updateCompanySettings}
       />
@@ -78,33 +59,6 @@ export const SettingsUserCompany = () => {
         userSettings={userSettings}
         updateUserSettings={updateUserSettings}
       />
-      
-      <Separator />
-      
-      <PermissionRequired permission="settings.view">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Personal Preferences</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="calendar-sync">Calendar Integration</Label>
-              <Select 
-                value={userSettings.calendar_integration} 
-                onValueChange={(value) => updateUserSettings({ calendar_integration: value })}
-              >
-                <SelectTrigger id="calendar-sync">
-                  <SelectValue placeholder="Select calendar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="google">Google Calendar</SelectItem>
-                  <SelectItem value="outlook">Outlook Calendar</SelectItem>
-                  <SelectItem value="apple">Apple Calendar</SelectItem>
-                  <SelectItem value="none">None</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </PermissionRequired>
       
       <Separator />
       
