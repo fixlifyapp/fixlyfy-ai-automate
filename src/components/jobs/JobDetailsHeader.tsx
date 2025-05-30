@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { JobInfoSection } from "./header/JobInfoSection";
-import { PropertyInfoSection } from "./header/PropertyInfoSection";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -39,15 +38,11 @@ export const JobDetailsHeader = () => {
   if (isLoading) {
     return (
       <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 border-b border-slate-200/60">
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
             <div className="space-y-4">
               <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-24 w-full rounded-2xl" />
-            </div>
-            <div className="space-y-4">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-24 w-full rounded-2xl" />
+              <Skeleton className="h-32 w-full rounded-2xl" />
             </div>
           </div>
         </div>
@@ -58,9 +53,11 @@ export const JobDetailsHeader = () => {
   if (!job) {
     return (
       <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 border-b border-slate-200/60">
-        <div className="p-6">
-          <div className="text-center text-slate-500">
-            Job not found
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center text-slate-500">
+              Job not found
+            </div>
           </div>
         </div>
       </div>
@@ -68,9 +65,9 @@ export const JobDetailsHeader = () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 border-b border-slate-200/60">
-      <div className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-700 border-b border-white/20 shadow-2xl">
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto">
           <JobInfoSection
             job={job}
             status={job.status || 'scheduled'}
@@ -79,8 +76,6 @@ export const JobDetailsHeader = () => {
             onMessageClick={handleMessageClick}
             onEditClient={handleEditClient}
           />
-
-          <PropertyInfoSection job={job} />
         </div>
       </div>
     </div>
