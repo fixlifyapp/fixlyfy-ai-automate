@@ -28,7 +28,7 @@ export const useJobData = (jobId?: string) => {
       try {
         console.log('=== Fetching job data for jobId:', jobId);
 
-        // First fetch the job data
+        // First fetch the job data - jobId is a string, not UUID
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select('*')
@@ -54,7 +54,7 @@ export const useJobData = (jobId?: string) => {
         }
 
         if (!jobData) {
-          console.log('No job data found');
+          console.log('No job data found for ID:', jobId);
           setClientInfo({
             id: '',
             name: 'Job Not Found',

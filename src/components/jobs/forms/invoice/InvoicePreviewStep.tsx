@@ -15,6 +15,10 @@ interface InvoicePreviewStepProps {
 }
 
 export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps) => {
+  console.log('=== InvoicePreviewStep Debug ===');
+  console.log('JobId received:', jobId);
+  console.log('Form data:', formData);
+
   const calculateSubtotal = () => {
     return formData.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
   };

@@ -38,12 +38,20 @@ export const UnifiedDocumentPreview = ({
   dueDate,
   jobId
 }: UnifiedDocumentPreviewProps) => {
+  console.log('=== UnifiedDocumentPreview Debug ===');
+  console.log('JobId prop received:', jobId);
+  console.log('ClientInfo prop received:', clientInfo);
+  console.log('Document type:', documentType);
+
   const { companyInfo, enhancedClientInfo, jobAddress, loading } = useDocumentPreviewData({
     clientInfo,
     jobId,
     documentNumber,
     documentType
   });
+
+  console.log('Enhanced client info from hook:', enhancedClientInfo);
+  console.log('Job address from hook:', jobAddress);
 
   if (loading) {
     return (
