@@ -10,8 +10,11 @@ import { BrandingCard } from "./profile/BrandingCard";
 import { SystemSettingsCard } from "./profile/SystemSettingsCard";
 import { toast } from "sonner";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const SettingsUserCompany = () => {
+  const { user } = useAuth();
   const { settings: companySettings, loading: companyLoading, updateSettings: updateCompanySettings } = useCompanySettings();
   const { settings: userSettings, loading: userLoading, updateSettings: updateUserSettings } = useUserSettings();
   const [isSaving, setIsSaving] = useState(false);
@@ -25,7 +28,31 @@ export const SettingsUserCompany = () => {
     try {
       // Save user settings changes if any
       if (Object.keys(pendingUserChanges).length > 0) {
-        await updateUserSettings(pendingUserChanges);
+        // Handle profile changes separately
+        if (pendingUserChanges.profile_changes) {
+          const profileChanges = pendingUserChanges.profile_changes;
+          
+          // Update profiles table
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              name: `${profileChanges.first_name} ${profileChanges.last_name}`.trim(),
+              phone: profileChanges.phone,
+              ...(profileChanges.avatar_url && { avatar_url: profileChanges.avatar_url })
+            })
+            .eq('id', user?.id);
+
+          if (profileError) throw profileError;
+          
+          // Remove profile_changes from user settings updates
+          const { profile_changes, ...userSettingsUpdates } = pendingUserChanges;
+          
+          if (Object.keys(userSettingsUpdates).length > 0) {
+            await updateUserSettings(userSettingsUpdates);
+          }
+        } else {
+          await updateUserSettings(pendingUserChanges);
+        }
         setPendingUserChanges({});
       }
       
@@ -56,6 +83,9 @@ export const SettingsUserCompany = () => {
   const currentUserSettings = { ...userSettings, ...pendingUserChanges };
   const currentCompanySettings = { ...companySettings, ...pendingCompanyChanges };
 
+  // Check if there are any changes to save
+  const hasChanges = Object.keys(pendingUserChanges).length > 0 || Object.keys(pendingCompanyChanges).length > 0;
+
   if (companyLoading || userLoading) {
     return (
       <div className="space-y-6">
@@ -85,7 +115,7 @@ export const SettingsUserCompany = () => {
         </div>
         <Button 
           onClick={handleSave}
-          disabled={isSaving || (Object.keys(pendingUserChanges).length === 0 && Object.keys(pendingCompanyChanges).length === 0)}
+          disabled={isSaving || !hasChanges}
           className="bg-fixlyfy hover:bg-fixlyfy/90"
         >
           {isSaving ? 'Saving...' : 'Save All Changes'}

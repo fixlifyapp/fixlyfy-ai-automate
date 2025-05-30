@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Camera } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface PersonalInfoCardProps {
   userSettings: any;
@@ -20,8 +21,11 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
     first_name: '',
     last_name: '',
     phone: '',
-    notification_email: ''
+    notification_email: '',
+    avatar_url: ''
   });
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -35,7 +39,7 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('name, phone')
+        .select('name, phone, avatar_url')
         .eq('id', user.id)
         .single();
 
@@ -45,7 +49,8 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
           first_name: nameParts[0] || '',
           last_name: nameParts.slice(1).join(' ') || '',
           phone: data.phone || '',
-          notification_email: userSettings.notification_email || user.email || ''
+          notification_email: userSettings.notification_email || user.email || '',
+          avatar_url: data.avatar_url || ''
         });
       }
     } catch (error) {
@@ -59,8 +64,99 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
 
     if (field === 'notification_email') {
       updateUserSettings({ notification_email: value });
+    } else {
+      // Update user settings with profile changes to trigger save button
+      updateUserSettings({ 
+        profile_changes: {
+          first_name: updatedProfile.first_name,
+          last_name: updatedProfile.last_name,
+          phone: updatedProfile.phone
+        }
+      });
     }
-    // Note: Profile name and phone changes will be handled in the save operation
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, GIF, etc.)');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (file.size > maxSize) {
+      toast.error('Image size must be less than 2MB. Please resize your image and try again.');
+      return;
+    }
+
+    // Validate image dimensions (optional - max 1024x1024)
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = async () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      if (img.width > 1024 || img.height > 1024) {
+        toast.error('Image dimensions must be 1024x1024 pixels or smaller. Current size: ' + img.width + 'x' + img.height);
+        return;
+      }
+
+      await uploadAvatar(file);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      toast.error('Invalid image file. Please try a different image.');
+    };
+
+    img.src = objectUrl;
+  };
+
+  const uploadAvatar = async (file: File) => {
+    setIsUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user!.id}/avatar.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          upsert: true,
+          contentType: file.type
+        });
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      const newAvatarUrl = publicUrlData.publicUrl;
+      
+      // Update local state
+      setProfile(prev => ({ ...prev, avatar_url: newAvatarUrl }));
+      
+      // Trigger save button by updating user settings
+      updateUserSettings({ 
+        profile_changes: {
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          phone: profile.phone,
+          avatar_url: newAvatarUrl
+        }
+      });
+
+      toast.success('Avatar uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   return (
@@ -73,15 +169,24 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
         <div className="flex items-center space-x-4 mb-6">
           <div className="relative">
             <Avatar className="h-20 w-20">
-              <AvatarImage src="https://github.com/shadcn.png" />
+              <AvatarImage src={profile.avatar_url || "https://github.com/shadcn.png"} />
               <AvatarFallback className="text-lg">
                 {profile.first_name?.[0]}{profile.last_name?.[0]}
               </AvatarFallback>
             </Avatar>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarUpload}
+              accept="image/*"
+              className="hidden"
+            />
             <Button 
               size="sm" 
               variant="outline" 
               className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
             >
               <Camera className="h-4 w-4" />
             </Button>
@@ -89,6 +194,9 @@ export const PersonalInfoCard = ({ userSettings, updateUserSettings }: PersonalI
           <div>
             <h3 className="font-medium">{profile.first_name} {profile.last_name}</h3>
             <p className="text-sm text-fixlyfy-text-secondary">{user?.email}</p>
+            <p className="text-xs text-fixlyfy-text-secondary mt-1">
+              Avatar: Max 2MB, 1024x1024px, JPG/PNG/GIF
+            </p>
           </div>
         </div>
         
