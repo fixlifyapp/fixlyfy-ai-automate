@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
@@ -92,9 +91,7 @@ export const JobInfoSection = ({
             </div>
             
             {/* Service info */}
-            <div className="text-sm text-gray-600">
-              {job.service}
-            </div>
+            
           </div>
         </div>
 
