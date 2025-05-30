@@ -107,7 +107,7 @@ export const SecureFormInput: React.FC<SecureFormInputProps> = ({
     autoComplete,
     maxLength,
     pattern,
-    'aria-invalid': error ? 'true' : 'false',
+    'aria-invalid': error ? true : false,
     'aria-describedby': error ? `${name}-error` : undefined,
     className: cn(
       className,
