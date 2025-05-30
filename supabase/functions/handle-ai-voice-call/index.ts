@@ -11,7 +11,18 @@ interface VoiceCallRequest {
   ForwardedFrom?: string;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  console.log(`Incoming request: ${req.method} ${req.url}`)
+  
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -19,6 +30,7 @@ serve(async (req) => {
     )
 
     if (req.method !== 'POST') {
+      console.log('Method not allowed:', req.method)
       return new Response('Method not allowed', { status: 405 })
     }
 
@@ -32,73 +44,103 @@ serve(async (req) => {
       ForwardedFrom: formData.get('ForwardedFrom') as string || undefined,
     }
 
-    console.log('Incoming voice call:', callData)
+    console.log('Incoming voice call data:', JSON.stringify(callData, null, 2))
 
-    // Find the phone number configuration
-    const { data: phoneNumber, error: phoneError } = await supabaseClient
-      .from('phone_numbers')
-      .select('*, ai_dispatcher_configs(*)')
-      .eq('phone_number', callData.To)
-      .eq('ai_dispatcher_enabled', true)
-      .single()
+    // Find the phone number configuration - check both formats
+    const phoneToCheck = callData.To
+    console.log('Looking for phone number:', phoneToCheck)
+    
+    // First, try to find any active AI config for any user (for testing)
+    const { data: aiConfigs, error: configError } = await supabaseClient
+      .from('ai_agent_configs')
+      .select('*')
+      .eq('is_active', true)
+      .limit(1)
 
-    if (phoneError || !phoneNumber) {
-      console.log('No AI-enabled phone number found, forwarding to human')
-      return new Response(generateTwiMLResponse('Sorry, this number is not configured for AI assistance. Please try again later.'), {
-        headers: { 'Content-Type': 'text/xml' }
-      })
+    if (configError) {
+      console.error('Error fetching AI configs:', configError)
     }
 
-    const aiConfig = phoneNumber.ai_dispatcher_configs?.[0]
+    let aiConfig = aiConfigs?.[0]
+    console.log('Found AI config:', aiConfig ? 'Yes' : 'No', aiConfig?.id)
+
     if (!aiConfig) {
-      console.log('No AI config found')
-      return new Response(generateTwiMLResponse('AI service is temporarily unavailable.'), {
-        headers: { 'Content-Type': 'text/xml' }
-      })
+      console.log('No active AI config found, using default settings')
+      aiConfig = {
+        business_niche: 'General Service',
+        diagnostic_price: 75,
+        emergency_surcharge: 50,
+        custom_prompt_additions: '',
+        is_active: true
+      }
     }
 
     // Log the incoming call
-    await supabaseClient
-      .from('ai_dispatcher_call_logs')
-      .insert({
-        phone_number_id: phoneNumber.id,
-        contact_id: callData.CallSid,
-        customer_phone: callData.From,
-        call_started_at: new Date().toISOString(),
-        customer_intent: 'initial_call'
-      })
+    try {
+      const { error: logError } = await supabaseClient
+        .from('ai_dispatcher_call_logs')
+        .insert({
+          phone_number_id: '00000000-0000-0000-0000-000000000000', // Placeholder for test
+          contact_id: callData.CallSid,
+          customer_phone: callData.From,
+          client_phone: callData.From,
+          call_started_at: new Date().toISOString(),
+          customer_intent: 'initial_call',
+          call_status: callData.CallStatus
+        })
+      
+      if (logError) {
+        console.error('Error logging call:', logError)
+      } else {
+        console.log('Call logged successfully')
+      }
+    } catch (logErr) {
+      console.error('Failed to log call:', logErr)
+    }
 
     // Generate AI greeting based on configuration
-    const greeting = aiConfig.business_greeting || 
-      `Hello! Thanks for calling ${aiConfig.business_name || 'our service'}. I'm your AI assistant and I'm here to help with your ${aiConfig.business_type || 'service'} needs. How can I assist you today?`
+    const businessType = aiConfig.business_niche || 'service'
+    const greeting = `Hello! Thanks for calling our ${businessType} company. I'm your AI assistant and I'm here to help with your service needs. How can I assist you today?`
+
+    console.log('Generated greeting:', greeting)
 
     // Create TwiML response for AI voice interaction
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${aiConfig.voice_selection || 'nova'}">${greeting}</Say>
-    <Gather input="speech" action="/functions/v1/process-ai-speech" method="POST" speechTimeout="3" timeout="10">
-        <Say voice="${aiConfig.voice_selection || 'nova'}">Please tell me what you need help with.</Say>
+    <Say voice="alice">${greeting}</Say>
+    <Gather input="speech" action="${Deno.env.get('SUPABASE_URL')}/functions/v1/process-ai-speech" method="POST" speechTimeout="3" timeout="10">
+        <Say voice="alice">Please tell me what you need help with.</Say>
     </Gather>
-    <Say voice="${aiConfig.voice_selection || 'nova'}">I didn't hear anything. Let me transfer you to a team member.</Say>
-    <Dial>${Deno.env.get('BACKUP_PHONE_NUMBER') || '+1234567890'}</Dial>
+    <Say voice="alice">I didn't hear anything. Please hold while I connect you to a team member.</Say>
+    <Pause length="2"/>
+    <Say voice="alice">Thank you for calling. Goodbye.</Say>
+    <Hangup/>
 </Response>`
 
+    console.log('Generated TwiML:', twiml)
+
     return new Response(twiml, {
-      headers: { 'Content-Type': 'text/xml' }
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/xml' 
+      }
     })
 
   } catch (error) {
     console.error('Error handling voice call:', error)
-    return new Response(generateTwiMLResponse('Sorry, there was an error. Please try again.'), {
-      headers: { 'Content-Type': 'text/xml' },
+    
+    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">Thank you for calling. I'm sorry, but I'm having technical difficulties right now. Please try calling again in a few minutes or contact us through our website.</Say>
+    <Hangup/>
+</Response>`
+
+    return new Response(errorTwiml, {
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/xml' 
+      },
       status: 500
     })
   }
 })
-
-function generateTwiMLResponse(message: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="nova">${message}</Say>
-</Response>`
-}

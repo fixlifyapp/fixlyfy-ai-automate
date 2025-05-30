@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Save, AlertCircle } from "lucide-react";
+import { Brain, Save, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,21 +32,27 @@ export const AISettings = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchAIConfig();
-  }, []);
+  }, [user]);
 
   const fetchAIConfig = async () => {
+    if (!user) return;
+    
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('ai_agent_configs')
         .select('*')
-        .limit(1)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        throw error;
+        console.error('Error fetching AI config:', error);
+        toast.error('Failed to load AI configuration');
+        return;
       }
 
       if (data) {
@@ -58,6 +64,7 @@ export const AISettings = () => {
           custom_prompt_additions: data.custom_prompt_additions || '',
           is_active: data.is_active ?? true
         });
+        console.log('Loaded AI config:', data);
       }
     } catch (error) {
       console.error('Error fetching AI config:', error);
@@ -74,43 +81,70 @@ export const AISettings = () => {
     }
 
     setIsSaving(true);
+    console.log('Saving AI config:', config);
+    
     try {
       const configData = {
+        user_id: user.id,
         business_niche: config.business_niche,
-        diagnostic_price: config.diagnostic_price,
-        emergency_surcharge: config.emergency_surcharge,
-        custom_prompt_additions: config.custom_prompt_additions,
-        is_active: config.is_active
+        diagnostic_price: Number(config.diagnostic_price),
+        emergency_surcharge: Number(config.emergency_surcharge),
+        custom_prompt_additions: config.custom_prompt_additions || null,
+        is_active: config.is_active,
+        updated_at: new Date().toISOString()
       };
 
-      if (config.id) {
-        const { error } = await supabase
-          .from('ai_agent_configs')
-          .update(configData)
-          .eq('id', config.id);
+      console.log('Config data to save:', configData);
 
-        if (error) throw error;
-      } else {
+      if (config.id) {
+        // Update existing config
         const { data, error } = await supabase
           .from('ai_agent_configs')
-          .insert({
-            ...configData,
-            user_id: user.id
-          })
+          .update(configData)
+          .eq('id', config.id)
+          .eq('user_id', user.id)
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
+        
+        console.log('Updated config:', data);
+      } else {
+        // Create new config
+        const { data, error } = await supabase
+          .from('ai_agent_configs')
+          .insert(configData)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
+        
+        console.log('Created config:', data);
         setConfig(prev => ({ ...prev, id: data.id }));
       }
 
+      setLastSaved(new Date());
       toast.success('AI configuration saved successfully');
+      
+      // Refresh the data to ensure consistency
+      await fetchAIConfig();
+      
     } catch (error) {
       console.error('Error saving AI config:', error);
-      toast.error('Failed to save AI configuration');
+      toast.error(`Failed to save AI configuration: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleInputChange = (field: keyof AIConfig, value: any) => {
+    setConfig(prev => ({ ...prev, [field]: value }));
   };
 
   if (isLoading) {
@@ -128,6 +162,12 @@ export const AISettings = () => {
         <p className="text-gray-600">
           Configure your AI dispatcher that will handle incoming calls and schedule appointments automatically.
         </p>
+        {lastSaved && (
+          <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+            <CheckCircle className="h-4 w-4" />
+            Last saved: {lastSaved.toLocaleString()}
+          </div>
+        )}
       </div>
 
       <Card>
@@ -149,7 +189,7 @@ export const AISettings = () => {
             <div className="flex items-center gap-2">
               <Switch
                 checked={config.is_active}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, is_active: checked }))}
+                onCheckedChange={(checked) => handleInputChange('is_active', checked)}
               />
               <Badge variant={config.is_active ? 'success' : 'secondary'}>
                 {config.is_active ? 'Active' : 'Inactive'}
@@ -164,7 +204,7 @@ export const AISettings = () => {
               <Input
                 id="business_niche"
                 value={config.business_niche}
-                onChange={(e) => setConfig(prev => ({ ...prev, business_niche: e.target.value }))}
+                onChange={(e) => handleInputChange('business_niche', e.target.value)}
                 placeholder="e.g., HVAC, Plumbing, Electrical, General Repair"
               />
               <p className="text-xs text-muted-foreground">
@@ -178,8 +218,9 @@ export const AISettings = () => {
                 id="diagnostic_price"
                 type="number"
                 step="0.01"
+                min="0"
                 value={config.diagnostic_price}
-                onChange={(e) => setConfig(prev => ({ ...prev, diagnostic_price: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => handleInputChange('diagnostic_price', parseFloat(e.target.value) || 0)}
               />
               <p className="text-xs text-muted-foreground">
                 Standard diagnostic fee the AI will quote to customers
@@ -192,8 +233,9 @@ export const AISettings = () => {
                 id="emergency_surcharge"
                 type="number"
                 step="0.01"
+                min="0"
                 value={config.emergency_surcharge}
-                onChange={(e) => setConfig(prev => ({ ...prev, emergency_surcharge: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => handleInputChange('emergency_surcharge', parseFloat(e.target.value) || 0)}
               />
               <p className="text-xs text-muted-foreground">
                 Additional fee for emergency or after-hours service calls
@@ -207,7 +249,7 @@ export const AISettings = () => {
             <Textarea
               id="custom_prompt"
               value={config.custom_prompt_additions}
-              onChange={(e) => setConfig(prev => ({ ...prev, custom_prompt_additions: e.target.value }))}
+              onChange={(e) => handleInputChange('custom_prompt_additions', e.target.value)}
               placeholder="Add specific instructions for how your AI dispatcher should handle calls..."
               rows={4}
             />
@@ -216,16 +258,16 @@ export const AISettings = () => {
             </p>
           </div>
 
-          {/* Information Panel */}
+          {/* Phone Number Info */}
           <div className="flex items-start gap-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-blue-800">How it works:</p>
+              <p className="font-medium text-blue-800">Test Phone Number: +1 833-574-3145</p>
               <ul className="mt-1 text-blue-700 list-disc list-inside space-y-1">
-                <li>Customers call your purchased phone number</li>
-                <li>AI dispatcher answers and understands their needs</li>
-                <li>AI quotes appropriate pricing and schedules appointments</li>
-                <li>All appointments appear in your schedule automatically</li>
+                <li>Call this number to test your AI dispatcher</li>
+                <li>Make sure to save your configuration first</li>
+                <li>The AI will use the settings configured above</li>
+                <li>Check the edge function logs if you encounter issues</li>
               </ul>
             </div>
           </div>
