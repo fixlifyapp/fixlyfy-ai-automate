@@ -86,11 +86,11 @@ const ConnectCenterPage = () => {
           unreadMessages += unreadInConv;
         });
 
-        // Count missed calls
+        // Count missed calls (using amazon_connect_calls)
         const { data: missedCalls } = await supabase
-          .from('calls')
+          .from('amazon_connect_calls')
           .select('id')
-          .eq('direction', 'missed');
+          .eq('call_status', 'failed');
 
         // Count unread emails
         const { data: unreadEmails } = await supabase
@@ -118,7 +118,7 @@ const ConnectCenterPage = () => {
 
     const callsChannel = supabase
       .channel('unread-counts-calls')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'calls' }, fetchUnreadCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'amazon_connect_calls' }, fetchUnreadCounts)
       .subscribe();
 
     const emailsChannel = supabase

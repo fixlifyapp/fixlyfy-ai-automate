@@ -35,7 +35,8 @@ export const AmazonConnectSettings = () => {
     emergency_surcharge: config?.emergency_surcharge || 50,
     custom_prompt_additions: config?.custom_prompt_additions || '',
     connect_instance_arn: config?.connect_instance_arn || '',
-    aws_region: config?.aws_region || 'us-east-1'
+    aws_region: config?.aws_region || 'us-east-1',
+    is_active: config?.is_active || false
   });
 
   const [awsForm, setAwsForm] = useState({
@@ -54,7 +55,8 @@ export const AmazonConnectSettings = () => {
         emergency_surcharge: config.emergency_surcharge,
         custom_prompt_additions: config.custom_prompt_additions || '',
         connect_instance_arn: config.connect_instance_arn || '',
-        aws_region: config.aws_region
+        aws_region: config.aws_region || 'us-east-1',
+        is_active: config.is_active
       });
     }
   }, [config]);
