@@ -1,8 +1,10 @@
+
 import { Badge } from "@/components/ui/badge";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
 import { FileText, CreditCard, CheckCircle, Hash, MapPin } from "lucide-react";
 import { useJobFinancials } from "@/hooks/useJobFinancials";
+
 interface JobInfoSectionProps {
   job: {
     id: string;
@@ -20,6 +22,7 @@ interface JobInfoSectionProps {
   onMessageClick: () => void;
   onEditClient: () => void;
 }
+
 export const JobInfoSection = ({
   job,
   status,
@@ -37,7 +40,17 @@ export const JobInfoSection = ({
     unpaidInvoices,
     isLoading: isLoadingFinancials
   } = useJobFinancials(job.id);
+
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+
+  const handleAddressClick = () => {
+    if (job.address) {
+      const encodedAddress = encodeURIComponent(job.address);
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      window.open(googleMapsUrl, '_blank');
+    }
+  };
+
   if (isLoadingFinancials) {
     return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-4 shadow-lg">
         <div className="space-y-3">
@@ -51,6 +64,7 @@ export const JobInfoSection = ({
         </div>
       </div>;
   }
+
   return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="space-y-4">
         {/* Header Section */}
@@ -95,14 +109,28 @@ export const JobInfoSection = ({
           </div>
         </div>
 
-        {/* Job Address */}
-        {job.address && <div className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-3">
+        {/* Job Address - Made clickable */}
+        {job.address && <div 
+            className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-3 cursor-pointer hover:bg-fixlyfy/15 transition-colors duration-200 group"
+            onClick={handleAddressClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleAddressClick();
+              }
+            }}
+          >
             <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-fixlyfy mt-0.5 flex-shrink-0" />
+              <MapPin className="h-4 w-4 text-fixlyfy mt-0.5 flex-shrink-0 group-hover:text-fixlyfy-dark transition-colors" />
               <div>
-                <p className="text-xs font-medium text-fixlyfy mb-1">Service Address</p>
-                <p className="text-fixlyfy/80 font-medium leading-relaxed text-sm">
+                <p className="text-xs font-medium text-fixlyfy mb-1 group-hover:text-fixlyfy-dark transition-colors">Service Address</p>
+                <p className="text-fixlyfy/80 font-medium leading-relaxed text-sm group-hover:text-fixlyfy-dark transition-colors">
                   {job.address}
+                </p>
+                <p className="text-xs text-fixlyfy/60 mt-1 group-hover:text-fixlyfy-dark transition-colors">
+                  Click to open in Google Maps
                 </p>
               </div>
             </div>
