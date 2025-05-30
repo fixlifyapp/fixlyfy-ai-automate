@@ -3,11 +3,12 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 interface SpeechProcessRequest {
-  CallSid: string;
-  From: string;
-  To: string;
-  SpeechResult: string;
-  Confidence: string;
+  contactId: string;
+  customerNumber: string;
+  instanceId: string;
+  speechResult: string;
+  confidence: number;
+  attributes?: Record<string, string>;
 }
 
 const corsHeaders = {
@@ -16,7 +17,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log(`Speech processing request: ${req.method} ${req.url}`)
+  console.log(`Amazon Connect speech processing: ${req.method} ${req.url}`)
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -32,16 +33,8 @@ serve(async (req) => {
       return new Response('Method not allowed', { status: 405 })
     }
 
-    const formData = await req.formData()
-    const speechData: SpeechProcessRequest = {
-      CallSid: formData.get('CallSid') as string,
-      From: formData.get('From') as string,
-      To: formData.get('To') as string,
-      SpeechResult: formData.get('SpeechResult') as string,
-      Confidence: formData.get('Confidence') as string,
-    }
-
-    console.log('Processing speech data:', JSON.stringify(speechData, null, 2))
+    const speechData: SpeechProcessRequest = await req.json()
+    console.log('Processing Amazon Connect speech data:', JSON.stringify(speechData, null, 2))
 
     // Get AI config
     const { data: aiConfigs } = await supabaseClient
@@ -60,16 +53,19 @@ serve(async (req) => {
     console.log('Using AI config for speech processing')
 
     // Simple keyword-based response for testing
-    const speech = speechData.SpeechResult?.toLowerCase() || ''
+    const speech = speechData.speechResult?.toLowerCase() || ''
     let responseText = ''
     let isEmergency = false
+    let nextAction = 'CONTINUE_CONVERSATION'
 
     // Check for emergency keywords
     if (speech.includes('emergency') || speech.includes('urgent') || speech.includes('flooding') || speech.includes('no heat') || speech.includes('broken')) {
       isEmergency = true
+      nextAction = 'TRANSFER_TO_AGENT'
       responseText = `I understand this is an emergency. Our emergency service fee is $${aiConfig.emergency_surcharge} plus our standard diagnostic fee of $${aiConfig.diagnostic_price}. Let me connect you to our emergency dispatch right away.`
     } else if (speech.includes('appointment') || speech.includes('schedule') || speech.includes('book')) {
       responseText = `I'd be happy to help you schedule an appointment. Our diagnostic fee is $${aiConfig.diagnostic_price}. Let me transfer you to our scheduling team who can check availability and book your appointment.`
+      nextAction = 'TRANSFER_TO_AGENT'
     } else if (speech.includes('price') || speech.includes('cost') || speech.includes('quote')) {
       responseText = `Our standard diagnostic fee is $${aiConfig.diagnostic_price}. For emergency services, there's an additional surcharge of $${aiConfig.emergency_surcharge}. Would you like to schedule a diagnostic visit?`
     } else if (speech.includes('hello') || speech.includes('hi') || speech.includes('help')) {
@@ -121,76 +117,72 @@ serve(async (req) => {
           } else {
             console.error('OpenAI API error:', openaiResponse.status)
             responseText = 'I understand your request. Let me transfer you to a team member who can help you with that.'
+            nextAction = 'TRANSFER_TO_AGENT'
           }
         } catch (error) {
           console.error('Error calling OpenAI:', error)
           responseText = 'I understand. Let me connect you with a team member who can help you.'
+          nextAction = 'TRANSFER_TO_AGENT'
         }
       } else {
         responseText = 'Thank you for calling. Let me transfer you to a team member who can assist you with your request.'
+        nextAction = 'TRANSFER_TO_AGENT'
       }
     }
 
-    // Update call log with customer intent
+    // Update Amazon Connect call log with customer intent
     try {
       await supabaseClient
-        .from('ai_dispatcher_call_logs')
+        .from('amazon_connect_calls')
         .update({
-          customer_intent: isEmergency ? 'emergency' : 'general_inquiry',
-          successful_resolution: !isEmergency,
-          ai_transcript: `Customer said: "${speechData.SpeechResult}" | AI responded: "${responseText}"`
+          appointment_scheduled: !isEmergency && (speech.includes('appointment') || speech.includes('schedule')),
+          ai_transcript: `Customer said: "${speechData.speechResult}" | AI responded: "${responseText}"`,
+          call_status: isEmergency ? 'emergency_transfer' : 'ai_handled',
+          ended_at: nextAction === 'TRANSFER_TO_AGENT' ? new Date().toISOString() : undefined
         })
-        .eq('contact_id', speechData.CallSid)
+        .eq('contact_id', speechData.contactId)
     } catch (updateError) {
-      console.error('Error updating call log:', updateError)
+      console.error('Error updating Amazon Connect call log:', updateError)
     }
 
-    let twiml: string
-
-    if (isEmergency) {
-      // Transfer immediately for emergencies
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">${responseText}</Say>
-    <Pause length="1"/>
-    <Say voice="alice">Please hold while I connect you now.</Say>
-    <Hangup/>
-</Response>`
-    } else {
-      // Continue AI conversation
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">${responseText}</Say>
-    <Gather input="speech" action="${Deno.env.get('SUPABASE_URL')}/functions/v1/process-ai-speech" method="POST" speechTimeout="3" timeout="8">
-        <Say voice="alice">Is there anything else I can help you with?</Say>
-    </Gather>
-    <Say voice="alice">Thank you for calling. Have a great day!</Say>
-    <Hangup/>
-</Response>`
+    const connectResponse = {
+      statusCode: 200,
+      body: JSON.stringify({
+        response: responseText,
+        nextAction: nextAction,
+        isEmergency: isEmergency,
+        speechConfig: nextAction === 'CONTINUE_CONVERSATION' ? {
+          timeout: 8,
+          endSilenceTimeout: 3,
+          maxSpeechDuration: 30
+        } : undefined
+      })
     }
 
-    console.log('Generated response TwiML:', twiml)
+    console.log('Generated Amazon Connect response:', connectResponse)
 
-    return new Response(twiml, {
+    return new Response(JSON.stringify(connectResponse), {
       headers: { 
         ...corsHeaders,
-        'Content-Type': 'application/xml' 
+        'Content-Type': 'application/json' 
       }
     })
 
   } catch (error) {
-    console.error('Error processing speech:', error)
+    console.error('Error processing Amazon Connect speech:', error)
     
-    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">I'm having trouble processing your request. Let me transfer you to a team member.</Say>
-    <Hangup/>
-</Response>`
+    const errorResponse = {
+      statusCode: 500,
+      body: JSON.stringify({
+        response: 'I apologize, but I\'m having technical difficulties. Let me transfer you to a team member.',
+        nextAction: 'TRANSFER_TO_AGENT'
+      })
+    }
 
-    return new Response(errorTwiml, {
+    return new Response(JSON.stringify(errorResponse), {
       headers: { 
         ...corsHeaders,
-        'Content-Type': 'application/xml' 
+        'Content-Type': 'application/json' 
       }
     })
   }

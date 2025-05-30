@@ -79,16 +79,16 @@ export const ConnectCallsList = () => {
     
     const statusColors: Record<string, string> = {
       'initiated': 'bg-blue-100 text-blue-800',
-      'ringing': 'bg-yellow-100 text-yellow-800',
-      'in-progress': 'bg-green-100 text-green-800',
+      'ai_handled': 'bg-green-100 text-green-800',
+      'emergency_transfer': 'bg-red-100 text-red-800',
       'completed': 'bg-gray-100 text-gray-800',
       'failed': 'bg-red-100 text-red-800',
-      'no-answer': 'bg-orange-100 text-orange-800'
+      'in-progress': 'bg-yellow-100 text-yellow-800'
     };
 
     return (
       <Badge className={statusColors[status] || 'bg-gray-100 text-gray-800'}>
-        {status.replace('-', ' ').toUpperCase()}
+        {status.replace('_', ' ').toUpperCase()}
       </Badge>
     );
   };
@@ -125,7 +125,7 @@ export const ConnectCallsList = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-medium">
-                        {call.clients?.name || "AI Call"}
+                        {call.clients?.name || "Amazon Connect AI Call"}
                       </h3>
                       <p className="text-sm text-gray-600">{call.phone_number}</p>
                       <div className="flex items-center gap-2 mt-2">

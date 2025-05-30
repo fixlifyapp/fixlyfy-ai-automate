@@ -57,11 +57,12 @@ export type Database = {
           appointment_data: Json | null
           appointment_scheduled: boolean | null
           call_duration: number | null
-          call_sid: string | null
           call_started_at: string | null
           call_status: string
           call_summary: string | null
           client_phone: string
+          connect_contact_id: string | null
+          connect_instance_id: string | null
           contact_id: string | null
           created_at: string
           customer_intent: string | null
@@ -79,11 +80,12 @@ export type Database = {
           appointment_data?: Json | null
           appointment_scheduled?: boolean | null
           call_duration?: number | null
-          call_sid?: string | null
           call_started_at?: string | null
           call_status?: string
           call_summary?: string | null
           client_phone: string
+          connect_contact_id?: string | null
+          connect_instance_id?: string | null
           contact_id?: string | null
           created_at?: string
           customer_intent?: string | null
@@ -101,11 +103,12 @@ export type Database = {
           appointment_data?: Json | null
           appointment_scheduled?: boolean | null
           call_duration?: number | null
-          call_sid?: string | null
           call_started_at?: string | null
           call_status?: string
           call_summary?: string | null
           client_phone?: string
+          connect_contact_id?: string | null
+          connect_instance_id?: string | null
           contact_id?: string | null
           created_at?: string
           customer_intent?: string | null
@@ -225,7 +228,6 @@ export type Database = {
       }
       amazon_connect_calls: {
         Row: {
-          ai_agent_config_id: string | null
           ai_transcript: string | null
           appointment_data: Json | null
           appointment_scheduled: boolean | null
@@ -239,9 +241,9 @@ export type Database = {
           instance_id: string
           phone_number: string
           started_at: string
+          user_id: string | null
         }
         Insert: {
-          ai_agent_config_id?: string | null
           ai_transcript?: string | null
           appointment_data?: Json | null
           appointment_scheduled?: boolean | null
@@ -255,9 +257,9 @@ export type Database = {
           instance_id: string
           phone_number: string
           started_at?: string
+          user_id?: string | null
         }
         Update: {
-          ai_agent_config_id?: string | null
           ai_transcript?: string | null
           appointment_data?: Json | null
           appointment_scheduled?: boolean | null
@@ -271,15 +273,9 @@ export type Database = {
           instance_id?: string
           phone_number?: string
           started_at?: string
+          user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "amazon_connect_calls_ai_agent_config_id_fkey"
-            columns: ["ai_agent_config_id"]
-            isOneToOne: false
-            referencedRelation: "ai_agent_configs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "amazon_connect_calls_client_id_fkey"
             columns: ["client_id"]
@@ -577,73 +573,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      calls: {
-        Row: {
-          call_sid: string | null
-          client_id: string | null
-          created_at: string
-          direction: string
-          duration: string | null
-          ended_at: string | null
-          id: string
-          notes: string | null
-          phone_number: string
-          started_at: string
-          status: string | null
-          updated_at: string
-        }
-        Insert: {
-          call_sid?: string | null
-          client_id?: string | null
-          created_at?: string
-          direction: string
-          duration?: string | null
-          ended_at?: string | null
-          id?: string
-          notes?: string | null
-          phone_number: string
-          started_at?: string
-          status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          call_sid?: string | null
-          client_id?: string | null
-          created_at?: string
-          direction?: string
-          duration?: string | null
-          ended_at?: string | null
-          id?: string
-          notes?: string | null
-          phone_number?: string
-          started_at?: string
-          status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "invoice_details_view"
-            referencedColumns: ["client_id"]
-          },
-        ]
       }
       client_notifications: {
         Row: {
@@ -1993,64 +1922,16 @@ export type Database = {
           },
         ]
       }
-      phone_number_purchases: {
-        Row: {
-          created_at: string
-          id: string
-          monthly_cost: number
-          notes: string | null
-          phone_number_id: string
-          purchase_date: string
-          purchase_price: number
-          status: string | null
-          twilio_account_sid: string | null
-          twilio_phone_number_sid: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          monthly_cost: number
-          notes?: string | null
-          phone_number_id: string
-          purchase_date?: string
-          purchase_price: number
-          status?: string | null
-          twilio_account_sid?: string | null
-          twilio_phone_number_sid?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          monthly_cost?: number
-          notes?: string | null
-          phone_number_id?: string
-          purchase_date?: string
-          purchase_price?: number
-          status?: string | null
-          twilio_account_sid?: string | null
-          twilio_phone_number_sid?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "phone_number_purchases_phone_number_id_fkey"
-            columns: ["phone_number_id"]
-            isOneToOne: false
-            referencedRelation: "phone_numbers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       phone_numbers: {
         Row: {
           ai_dispatcher_enabled: boolean | null
           ai_settings: Json | null
           assigned_to: string | null
           capabilities: Json | null
+          connect_contact_flow_id: string | null
           connect_instance_id: string | null
           connect_phone_number_arn: string | null
+          connect_queue_id: string | null
           country_code: string
           created_at: string
           friendly_name: string | null
@@ -2068,17 +1949,17 @@ export type Database = {
           rate_center: string | null
           region: string | null
           status: string | null
-          twilio_sid: string | null
           updated_at: string
-          webhook_url: string | null
         }
         Insert: {
           ai_dispatcher_enabled?: boolean | null
           ai_settings?: Json | null
           assigned_to?: string | null
           capabilities?: Json | null
+          connect_contact_flow_id?: string | null
           connect_instance_id?: string | null
           connect_phone_number_arn?: string | null
+          connect_queue_id?: string | null
           country_code?: string
           created_at?: string
           friendly_name?: string | null
@@ -2096,17 +1977,17 @@ export type Database = {
           rate_center?: string | null
           region?: string | null
           status?: string | null
-          twilio_sid?: string | null
           updated_at?: string
-          webhook_url?: string | null
         }
         Update: {
           ai_dispatcher_enabled?: boolean | null
           ai_settings?: Json | null
           assigned_to?: string | null
           capabilities?: Json | null
+          connect_contact_flow_id?: string | null
           connect_instance_id?: string | null
           connect_phone_number_arn?: string | null
+          connect_queue_id?: string | null
           country_code?: string
           created_at?: string
           friendly_name?: string | null
@@ -2124,9 +2005,7 @@ export type Database = {
           rate_center?: string | null
           region?: string | null
           status?: string | null
-          twilio_sid?: string | null
           updated_at?: string
-          webhook_url?: string | null
         }
         Relationships: []
       }
