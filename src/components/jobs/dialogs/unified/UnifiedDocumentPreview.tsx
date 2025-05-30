@@ -39,20 +39,40 @@ export const UnifiedDocumentPreview = ({
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Fetch company settings from database
+          const { data: companySettings } = await supabase
+            .from('company_settings')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          
+          // Fetch user profile for additional info
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
           
-          setCompanyInfo({
-            name: profile?.name || 'FixLyfy Services',
-            phone: profile?.phone || '(555) 123-4567',
-            email: user.email || 'info@fixlyfy.com',
-            address: '456 Professional Ave, Suite 100',
-            city: 'Business City, BC V1V 1V1',
-            website: 'www.fixlyfy.com'
-          });
+          if (companySettings) {
+            setCompanyInfo({
+              name: companySettings.company_name,
+              phone: companySettings.company_phone,
+              email: companySettings.company_email,
+              address: companySettings.company_address,
+              city: `${companySettings.company_city}, ${companySettings.company_state} ${companySettings.company_zip}`,
+              website: companySettings.company_website
+            });
+          } else {
+            // Fallback to default values
+            setCompanyInfo({
+              name: 'FixLyfy Services',
+              phone: '(555) 123-4567',
+              email: user.email || 'info@fixlyfy.com',
+              address: '456 Professional Ave, Suite 100',
+              city: 'Business City, BC V1V 1V1',
+              website: 'www.fixlyfy.com'
+            });
+          }
 
           // Fetch job address if we have client info with ID
           if (clientInfo?.id) {

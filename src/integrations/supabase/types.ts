@@ -838,6 +838,75 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          business_type: string | null
+          company_address: string | null
+          company_city: string | null
+          company_country: string | null
+          company_description: string | null
+          company_email: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_phone: string | null
+          company_state: string | null
+          company_tagline: string | null
+          company_website: string | null
+          company_zip: string | null
+          created_at: string
+          id: string
+          service_radius: number | null
+          service_zip_codes: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_type?: string | null
+          company_address?: string | null
+          company_city?: string | null
+          company_country?: string | null
+          company_description?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_state?: string | null
+          company_tagline?: string | null
+          company_website?: string | null
+          company_zip?: string | null
+          created_at?: string
+          id?: string
+          service_radius?: number | null
+          service_zip_codes?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_type?: string | null
+          company_address?: string | null
+          company_city?: string | null
+          company_country?: string | null
+          company_description?: string | null
+          company_email?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_state?: string | null
+          company_tagline?: string | null
+          company_website?: string | null
+          company_zip?: string | null
+          created_at?: string
+          id?: string
+          service_radius?: number | null
+          service_zip_codes?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           client_id: string | null
@@ -2307,6 +2376,78 @@ export type Database = {
           id?: string
           preference_key?: string
           preference_value?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          calendar_integration: string | null
+          compact_view: boolean | null
+          created_at: string
+          currency: string | null
+          dark_mode: boolean | null
+          data_retention: string | null
+          date_format: string | null
+          default_landing_page: string | null
+          email_notifications: boolean | null
+          id: string
+          invoice_alerts: boolean | null
+          job_reminders: boolean | null
+          language: string | null
+          marketing_updates: boolean | null
+          notification_email: string | null
+          push_notifications: boolean | null
+          sms_notifications: boolean | null
+          sound_effects: boolean | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calendar_integration?: string | null
+          compact_view?: boolean | null
+          created_at?: string
+          currency?: string | null
+          dark_mode?: boolean | null
+          data_retention?: string | null
+          date_format?: string | null
+          default_landing_page?: string | null
+          email_notifications?: boolean | null
+          id?: string
+          invoice_alerts?: boolean | null
+          job_reminders?: boolean | null
+          language?: string | null
+          marketing_updates?: boolean | null
+          notification_email?: string | null
+          push_notifications?: boolean | null
+          sms_notifications?: boolean | null
+          sound_effects?: boolean | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calendar_integration?: string | null
+          compact_view?: boolean | null
+          created_at?: string
+          currency?: string | null
+          dark_mode?: boolean | null
+          data_retention?: string | null
+          date_format?: string | null
+          default_landing_page?: string | null
+          email_notifications?: boolean | null
+          id?: string
+          invoice_alerts?: boolean | null
+          job_reminders?: boolean | null
+          language?: string | null
+          marketing_updates?: boolean | null
+          notification_email?: string | null
+          push_notifications?: boolean | null
+          sms_notifications?: boolean | null
+          sound_effects?: boolean | null
+          timezone?: string | null
           updated_at?: string
           user_id?: string
         }
