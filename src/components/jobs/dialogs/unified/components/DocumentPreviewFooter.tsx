@@ -11,33 +11,30 @@ export const DocumentPreviewFooter = ({
   documentType,
   companyInfo
 }: DocumentPreviewFooterProps) => {
-  const documentColor = documentType === 'estimate' ? 'text-blue-700' : 'text-purple-700';
-  const documentBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-purple-50';
-  const accentColor = documentType === 'estimate' ? 'border-blue-700' : 'border-purple-700';
-
   return (
-    <div className={`${documentBg} px-8 py-8 border-t-4 ${accentColor}`}>
+    <div className="bg-gray-100 px-8 py-8 border-t">
       <div className="text-center space-y-4">
-        <h4 className={`text-2xl font-bold ${documentColor}`}>
+        <h4 className="text-xl font-bold text-fixlyfy">
           Thank you for choosing {companyInfo?.name || 'FixLyfy Services'}!
         </h4>
-        <p className="text-gray-700 text-lg">
+        <p className="text-gray-700">
           {companyInfo?.description || 'Professional service you can trust'}
         </p>
-        <div className="flex justify-center items-center space-x-8 text-sm text-gray-600">
-          <span>Licensed & Insured</span>
+        
+        <div className="flex justify-center items-center space-x-6 text-sm text-gray-600">
+          <span className="font-medium">Licensed & Insured</span>
           <span>•</span>
-          <span>24/7 Emergency Service</span>
+          <span className="font-medium">Professional Service</span>
           <span>•</span>
-          <span>{companyInfo?.website || 'www.fixlyfy.com'}</span>
+          <span className="font-medium">{companyInfo?.website || 'www.fixlyfy.com'}</span>
         </div>
         
-        <div className="pt-4 border-t border-gray-300 text-xs text-gray-600 leading-relaxed">
+        <div className="pt-4 border-t border-gray-300 text-xs text-gray-600 max-w-2xl mx-auto">
           <p>
-            This {documentType} is valid and contains confidential information. 
+            This {documentType} contains confidential information. 
             For questions, contact us at {companyInfo?.phone || '(555) 123-4567'} or {companyInfo?.email || 'info@fixlyfy.com'}.
-            {documentType === 'estimate' && ' Estimate valid for 30 days from issue date.'}
-            {documentType === 'invoice' && ' Payment due within 30 days.'}
+            {documentType === 'estimate' && ' This estimate is valid for 30 days from the issue date.'}
+            {documentType === 'invoice' && ' Payment is due within 30 days of the invoice date.'}
           </p>
         </div>
       </div>

@@ -18,26 +18,24 @@ export const DocumentTotalsSection = ({
   total,
   taxRate
 }: DocumentTotalsSectionProps) => {
-  const documentColor = documentType === 'estimate' ? 'text-blue-700' : 'text-purple-700';
-
   return (
-    <div className="px-8 py-8 bg-gray-50 border-t">
+    <div className="px-8 py-8 bg-gray-50">
       <div className="flex justify-end">
-        <div className="w-96">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium text-gray-700">Subtotal:</span>
+        <div className="w-80">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Subtotal</span>
                 <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
               </div>
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium text-gray-700">Tax ({taxRate}%):</span>
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Tax ({taxRate}%)</span>
                 <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
               </div>
-              <div className="border-t-2 border-gray-200 pt-4">
-                <div className={`flex justify-between items-center text-2xl font-bold ${documentColor}`}>
-                  <span>Total:</span>
-                  <span>{formatCurrency(total)}</span>
+              <div className="border-t pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xl font-bold text-fixlyfy">Total</span>
+                  <span className="text-xl font-bold text-fixlyfy">{formatCurrency(total)}</span>
                 </div>
               </div>
             </div>
