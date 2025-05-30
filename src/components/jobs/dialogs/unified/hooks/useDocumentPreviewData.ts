@@ -78,64 +78,81 @@ export const useDocumentPreviewData = ({
         if (jobId) {
           console.log('Fetching job data for jobId:', jobId);
           
-          // First, get the job with client info
+          // Get the job data first
           const { data: jobData, error: jobError } = await supabase
             .from('jobs')
-            .select(`
-              *,
-              clients(*)
-            `)
+            .select('*')
             .eq('id', jobId)
             .maybeSingle();
 
           console.log('Job data fetched:', jobData);
           console.log('Job fetch error:', jobError);
 
-          if (jobData?.clients) {
-            const client = jobData.clients;
-            const finalClientInfo = {
-              id: client.id,
-              name: client.name,
-              email: client.email,
-              phone: client.phone,
-              company: client.company,
-              type: client.type,
-              fullAddress: [
-                client.address,
-                [client.city, client.state, client.zip].filter(Boolean).join(', '),
-                client.country !== 'USA' ? client.country : null
-              ].filter(Boolean).join('\n')
-            };
+          if (jobData && jobData.client_id) {
+            // Fetch client data separately using client_id
+            const { data: clientData, error: clientError } = await supabase
+              .from('clients')
+              .select('*')
+              .eq('id', jobData.client_id)
+              .maybeSingle();
 
-            console.log('Setting client info:', finalClientInfo);
-            setEnhancedClientInfo(finalClientInfo);
+            console.log('Client data fetched:', clientData);
+            console.log('Client fetch error:', clientError);
 
-            // Get property address if property_id exists
-            let propertyAddress = '';
-            if (jobData.property_id) {
-              const { data: propertyData } = await supabase
-                .from('client_properties')
-                .select('*')
-                .eq('id', jobData.property_id)
-                .maybeSingle();
+            if (clientData) {
+              const finalClientInfo = {
+                id: clientData.id,
+                name: clientData.name,
+                email: clientData.email,
+                phone: clientData.phone,
+                company: clientData.company,
+                type: clientData.type,
+                fullAddress: [
+                  clientData.address,
+                  [clientData.city, clientData.state, clientData.zip].filter(Boolean).join(', '),
+                  clientData.country !== 'USA' ? clientData.country : null
+                ].filter(Boolean).join('\n')
+              };
 
-              if (propertyData) {
-                propertyAddress = [
-                  propertyData.property_name ? `${propertyData.property_name}` : '',
-                  propertyData.address,
-                  [propertyData.city, propertyData.state, propertyData.zip].filter(Boolean).join(', ')
-                ].filter(Boolean).join('\n');
+              console.log('Setting client info:', finalClientInfo);
+              setEnhancedClientInfo(finalClientInfo);
+
+              // Get property address if property_id exists
+              let propertyAddress = '';
+              if (jobData.property_id) {
+                const { data: propertyData } = await supabase
+                  .from('client_properties')
+                  .select('*')
+                  .eq('id', jobData.property_id)
+                  .maybeSingle();
+
+                if (propertyData) {
+                  propertyAddress = [
+                    propertyData.property_name ? `${propertyData.property_name}` : '',
+                    propertyData.address,
+                    [propertyData.city, propertyData.state, propertyData.zip].filter(Boolean).join(', ')
+                  ].filter(Boolean).join('\n');
+                }
+              } else if (jobData.address) {
+                // Use job address if no property is specified
+                propertyAddress = jobData.address;
               }
-            } else if (jobData.address) {
-              // Use job address if no property is specified
-              propertyAddress = jobData.address;
-            }
 
-            setJobAddress(propertyAddress);
+              setJobAddress(propertyAddress);
+            } else {
+              console.log('No client data found for client_id:', jobData.client_id);
+              setEnhancedClientInfo({
+                name: 'Client Name Not Found',
+                email: '',
+                phone: '',
+                company: '',
+                fullAddress: 'Address not available'
+              });
+            }
           } else {
-            console.log('No client data found in job, using fallback');
+            console.log('No job data found or missing client_id');
             setEnhancedClientInfo({
-              name: 'Client Name',
+              name: 'Job Not Found',
               email: '',
               phone: '',
               company: '',
