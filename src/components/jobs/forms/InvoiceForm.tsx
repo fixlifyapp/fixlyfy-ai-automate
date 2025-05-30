@@ -45,7 +45,49 @@ export const InvoiceForm = ({ jobId, onClose }: InvoiceFormProps) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  const CurrentStepComponent = steps[currentStep].component;
+  const handlePayment = async (amount: number, method: string, reference?: string, notes?: string) => {
+    // Handle payment recording logic here
+    console.log("Recording payment:", { amount, method, reference, notes });
+    // You would typically call an API to record the payment
+  };
+
+  const handleSendInvoice = () => {
+    // Handle invoice sending logic here
+    console.log("Sending invoice:", formData);
+    // You would typically call an API to send the invoice
+  };
+
+  // Calculate invoice total for the payment step
+  const calculateTotal = () => {
+    return formData.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+  };
+
+  const renderCurrentStep = () => {
+    const CurrentStepComponent = steps[currentStep].component;
+    
+    if (currentStep === 2) { // Payment step
+      const invoiceData = {
+        ...formData,
+        total: calculateTotal()
+      };
+      
+      return (
+        <InvoicePaymentStep
+          invoice={invoiceData}
+          onPayment={handlePayment}
+          onSendInvoice={handleSendInvoice}
+        />
+      );
+    }
+    
+    return (
+      <CurrentStepComponent
+        formData={formData}
+        onFormDataChange={handleFormDataChange}
+        jobId={jobId}
+      />
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -76,11 +118,7 @@ export const InvoiceForm = ({ jobId, onClose }: InvoiceFormProps) => {
         </CardHeader>
         
         <CardContent>
-          <CurrentStepComponent
-            formData={formData}
-            onFormDataChange={handleFormDataChange}
-            jobId={jobId}
-          />
+          {renderCurrentStep()}
         </CardContent>
       </Card>
 
