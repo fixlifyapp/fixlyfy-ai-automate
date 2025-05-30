@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { LineItem } from "../../builder/types";
 import { formatCurrency } from "@/lib/utils";
@@ -86,31 +85,40 @@ export const UnifiedDocumentPreview = ({
           });
         }
 
-        // Enhanced client data fetching
-        if (clientInfo?.id) {
+        // Enhanced client data fetching - ensure we always have client info
+        if (clientInfo?.id || clientInfo?.client_id) {
+          const clientId = clientInfo.id || clientInfo.client_id;
           const { data: fullClientData } = await supabase
             .from('clients')
             .select('*')
-            .eq('id', clientInfo.id)
+            .eq('id', clientId)
             .maybeSingle();
           
           if (fullClientData) {
             setEnhancedClientInfo({
               ...clientInfo,
               ...fullClientData,
+              name: fullClientData.name || clientInfo.name,
               fullAddress: [
                 fullClientData.address,
                 [fullClientData.city, fullClientData.state, fullClientData.zip].filter(Boolean).join(', '),
                 fullClientData.country !== 'USA' ? fullClientData.country : null
               ].filter(Boolean).join('\n')
             });
+          } else {
+            // If no full client data found, use what we have
+            setEnhancedClientInfo({
+              ...clientInfo,
+              name: clientInfo.name || 'Client Name',
+              fullAddress: clientInfo.address || ''
+            });
           }
 
           // Fetch job address for service location
           const { data: jobs } = await supabase
             .from('jobs')
-            .select('address, property_id')
-            .eq('client_id', clientInfo.id)
+            .select('address, property_id, client_id')
+            .eq('client_id', clientId)
             .order('created_at', { ascending: false })
             .limit(1);
           
@@ -136,7 +144,15 @@ export const UnifiedDocumentPreview = ({
             }
           }
         } else {
-          setEnhancedClientInfo(clientInfo);
+          // Fallback if no clientInfo provided
+          setEnhancedClientInfo({
+            name: clientInfo?.name || 'Client Name',
+            email: clientInfo?.email || '',
+            phone: clientInfo?.phone || '',
+            company: clientInfo?.company || '',
+            type: clientInfo?.type || '',
+            fullAddress: clientInfo?.address || ''
+          });
         }
 
       } catch (error) {
@@ -153,7 +169,13 @@ export const UnifiedDocumentPreview = ({
           zip: 'V1V 1V1',
           website: 'www.fixlyfy.com'
         });
-        setEnhancedClientInfo(clientInfo);
+        setEnhancedClientInfo({
+          name: clientInfo?.name || 'Client Name',
+          email: clientInfo?.email || '',
+          phone: clientInfo?.phone || '',
+          company: clientInfo?.company || '',
+          fullAddress: clientInfo?.address || ''
+        });
       } finally {
         setLoading(false);
       }
