@@ -22,57 +22,57 @@ export function AppSidebar() {
     label: 'Dashboard',
     icon: LayoutDashboard,
     href: '/dashboard',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Jobs',
     icon: Briefcase,
     href: '/jobs',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Clients',
     icon: Users,
     href: '/clients',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Schedule',
     icon: Calendar,
     href: '/schedule',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Finance',
     icon: DollarSign,
     href: '/finance',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Connect Center',
     icon: MessageSquare,
     href: '/connect',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'AI Center',
     icon: Bot,
     href: '/ai-center',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Automations',
     icon: Zap,
     href: '/automations',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Analytics',
     icon: BarChart3,
     href: '/analytics',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Team',
     icon: UserCheck,
     href: '/team',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Settings',
     icon: Settings,
     href: '/settings',
-    color: "text-fixlyfy-text-muted"
+    color: "text-fixlify-text-muted"
   }];
 
   const handleNavigation = (href: string) => {
@@ -81,7 +81,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-fixlyfy-border shadow-sm">
+    <Sidebar collapsible="icon" className="border-r border-fixlify-border shadow-sm">
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">

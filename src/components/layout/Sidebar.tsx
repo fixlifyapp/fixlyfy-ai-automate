@@ -19,57 +19,57 @@ export function Sidebar({
     label: 'Dashboard',
     icon: LayoutDashboard,
     href: '/dashboard',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Jobs',
     icon: Briefcase,
     href: '/jobs',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Clients',
     icon: Users,
     href: '/clients',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Schedule',
     icon: Calendar,
     href: '/schedule',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Finance',
     icon: DollarSign,
     href: '/finance',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Connect Center',
     icon: MessageSquare,
     href: '/connect',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'AI Center',
     icon: Bot,
     href: '/ai-center',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Automations',
     icon: Zap,
     href: '/automations',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Analytics',
     icon: BarChart3,
     href: '/analytics',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Team',
     icon: UserCheck,
     href: '/team',
-    color: "text-fixlyfy"
+    color: "text-fixlify"
   }, {
     label: 'Settings',
     icon: Settings,
     href: '/settings',
-    color: "text-fixlyfy-text-muted"
+    color: "text-fixlify-text-muted"
   }];
 
   const handleNavigation = (href: string) => {
@@ -78,7 +78,7 @@ export function Sidebar({
   };
 
   return (
-    <div className={cn("pb-12 w-64 bg-white border-r border-fixlyfy-border shadow-sm", className)}>
+    <div className={cn("pb-12 w-64 bg-white border-r border-fixlify-border shadow-sm", className)}>
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <div className="mb-6 px-4 py-2">
@@ -119,7 +119,7 @@ export function Sidebar({
                       "w-full justify-start text-base font-medium transition-all duration-200 hover:scale-[1.02]", 
                       location.pathname === route.href 
                         ? "bg-gradient-primary text-white shadow-md hover:shadow-lg" 
-                        : "text-fixlyfy-text hover:bg-fixlyfy/10 hover:text-fixlyfy"
+                        : "text-fixlify-text hover:bg-fixlify/10 hover:text-fixlify"
                     )} 
                     onClick={() => handleNavigation(route.href)}
                   >

@@ -66,7 +66,7 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				fixlyfy: {
+				fixlify: {
 					DEFAULT: '#8A4DD5',
 					light: '#B084F9',
 					success: '#10B981',

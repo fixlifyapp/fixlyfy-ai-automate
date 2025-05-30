@@ -31,15 +31,15 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-fixlyfy-bg">
+      <div className="flex min-h-screen items-center justify-center bg-fixlify-bg">
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center space-x-2">
-            <Shield className="h-8 w-8 text-fixlyfy" />
-            <Loader2 size={40} className="animate-spin text-fixlyfy" />
+            <Shield className="h-8 w-8 text-fixlify" />
+            <Loader2 size={40} className="animate-spin text-fixlify" />
           </div>
           <div className="space-y-2">
-            <p className="text-lg font-medium text-fixlyfy">Verifying Access</p>
-            <p className="text-fixlyfy-text-secondary">Checking authentication...</p>
+            <p className="text-lg font-medium text-fixlify">Verifying Access</p>
+            <p className="text-fixlify-text-secondary">Checking authentication...</p>
           </div>
         </div>
       </div>
