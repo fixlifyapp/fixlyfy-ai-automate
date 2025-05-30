@@ -6,13 +6,7 @@ import { ModernCard, ModernCardContent } from "@/components/ui/modern-card";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Table, 
-  TableHeader, 
-  TableRow, 
-  TableHead, 
-  TableBody
-} from "@/components/ui/table";
+import { Table, TableHeader, TableRow, TableHead, TableBody } from "@/components/ui/table";
 import { Plus, Shield, Upload, Loader2, UserPlus, Users, Target, Zap, TrendingUp, Settings, Mail } from "lucide-react";
 import { AddTeamMemberModal } from "@/components/team/AddTeamMemberModal";
 import { UserCardRow } from "@/components/team/UserCardRow";
@@ -43,7 +37,6 @@ const convertToTeamMemberProfile = (member: TeamMember): TeamMemberProfile => {
     usesTwoFactor: false
   };
 };
-
 const TeamManagementPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,26 +48,26 @@ const TeamManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("members");
   const navigate = useNavigate();
-  const { hasRole, hasPermission } = useRBAC();
-  
+  const {
+    hasRole,
+    hasPermission
+  } = useRBAC();
   const isAdmin = hasRole('admin');
   const canViewUsers = hasPermission('users.view');
-  
+
   // Fetch team members from Supabase on component mount
   useEffect(() => {
     const fetchTeamMembers = async () => {
       try {
         setIsLoading(true);
-        
         if (!canViewUsers) {
           setIsLoading(false);
           return;
         }
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*');
-          
+        const {
+          data,
+          error
+        } = await supabase.from('profiles').select('*');
         if (error) {
           console.error("Error fetching team members:", error);
           setTeamMembers([]);
@@ -83,12 +76,11 @@ const TeamManagementPage = () => {
             id: profile.id,
             name: profile.name || 'Unknown User',
             email: `user-${profile.id.substring(0, 8)}@fixlyfy.com`,
-            role: (profile.role as "admin" | "manager" | "dispatcher" | "technician") || "technician",
+            role: profile.role as "admin" | "manager" | "dispatcher" | "technician" || "technician",
             status: "active",
             avatar: profile.avatar_url || "https://github.com/shadcn.png",
-            lastLogin: profile.updated_at,
+            lastLogin: profile.updated_at
           }));
-          
           setTeamMembers(members);
         }
       } catch (error) {
@@ -99,56 +91,41 @@ const TeamManagementPage = () => {
         setIsLoading(false);
       }
     };
-    
     fetchTeamMembers();
   }, [canViewUsers]);
 
   // Filter members
   useEffect(() => {
     let result = teamMembers;
-    
     if (searchTerm) {
       const lowercaseTerm = searchTerm.toLowerCase();
-      result = result.filter(
-        member => 
-          member.name.toLowerCase().includes(lowercaseTerm) || 
-          member.email.toLowerCase().includes(lowercaseTerm)
-      );
+      result = result.filter(member => member.name.toLowerCase().includes(lowercaseTerm) || member.email.toLowerCase().includes(lowercaseTerm));
     }
-    
     if (roleFilter) {
       result = result.filter(member => member.role === roleFilter);
     }
-    
     if (statusFilter) {
       result = result.filter(member => member.status === statusFilter);
     }
-    
     setFilteredMembers(result);
   }, [searchTerm, roleFilter, statusFilter, teamMembers]);
-
   const handleSearch = (term: string) => {
     setSearchTerm(term);
   };
-  
   const handleFilterRole = (role: string | null) => {
     setRoleFilter(role);
   };
-  
   const handleFilterStatus = (status: string | null) => {
     setStatusFilter(status);
   };
-  
   const handleAddNewMember = () => {
     if (isAdmin) {
       setIsModalOpen(true);
     }
   };
-  
   const handleViewTeamMember = (id: string) => {
     navigate(`/admin/team/${id}`);
   };
-  
   const handleImportTestData = async () => {
     setIsImporting(true);
     try {
@@ -170,14 +147,9 @@ const TeamManagementPage = () => {
 
   // Show permission error if user can't view users
   if (!canViewUsers) {
-    return (
-      <PageLayout>
+    return <PageLayout>
         <AnimatedContainer animation="fade-in">
-          <PageHeader
-            title="Team Management"
-            subtitle="Manage your team members and track performance"
-            icon={Users}
-          />
+          <PageHeader title="Team Management" subtitle="Manage your team members and track performance" icon={Users} />
         </AnimatedContainer>
         <AnimatedContainer animation="fade-in" delay={100}>
           <ModernCard variant="glass" className="p-8">
@@ -190,28 +162,27 @@ const TeamManagementPage = () => {
             </div>
           </ModernCard>
         </AnimatedContainer>
-      </PageLayout>
-    );
+      </PageLayout>;
   }
-  
-  return (
-    <PageLayout>
+  return <PageLayout>
       <AnimatedContainer animation="fade-in">
-        <PageHeader
-          title="Team Management"
-          subtitle="Manage your team members, roles, and permissions"
-          icon={Users}
-          badges={[
-            { text: "Performance Tracking", icon: Target, variant: "fixlyfy" },
-            { text: "Real-time Collaboration", icon: Zap, variant: "success" },
-            { text: "Growth Analytics", icon: TrendingUp, variant: "info" }
-          ]}
-          actionButton={isAdmin ? {
-            text: "Invite Team Member",
-            icon: UserPlus,
-            onClick: handleAddNewMember
-          } : undefined}
-        />
+        <PageHeader title="Team Management" subtitle="Manage your team members, roles, and permissions" icon={Users} badges={[{
+        text: "Performance Tracking",
+        icon: Target,
+        variant: "fixlyfy"
+      }, {
+        text: "Real-time Collaboration",
+        icon: Zap,
+        variant: "success"
+      }, {
+        text: "Growth Analytics",
+        icon: TrendingUp,
+        variant: "info"
+      }]} actionButton={isAdmin ? {
+        text: "Invite Team Member",
+        icon: UserPlus,
+        onClick: handleAddNewMember
+      } : undefined} />
       </AnimatedContainer>
 
       <AnimatedContainer animation="fade-in" delay={100}>
@@ -219,55 +190,29 @@ const TeamManagementPage = () => {
           <ModernCardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid grid-cols-3 h-auto p-0 bg-fixlyfy-bg-interface">
-                <TabsTrigger 
-                  value="members" 
-                  className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"
-                >
+                <TabsTrigger value="members" className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   Team Members
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="roles" 
-                  className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"
-                >
+                <TabsTrigger value="roles" className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2">
                   <Shield className="h-4 w-4" />
                   Roles & Permissions
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="invitations" 
-                  className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2"
-                >
+                <TabsTrigger value="invitations" className="py-4 rounded-none data-[state=active]:bg-white flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   Invitations
                 </TabsTrigger>
               </TabsList>
               
               <TabsContent value="members" className="p-0">
-                {isAdmin && (
-                  <div className="p-6 border-b">
+                {isAdmin && <div className="p-6 border-b">
                     <div className="flex justify-end mb-4">
-                      <GradientButton 
-                        onClick={handleImportTestData} 
-                        variant="info"
-                        disabled={isImporting}
-                        icon={isImporting ? Loader2 : Upload}
-                        gradient={false}
-                      >
-                        {isImporting ? "Importing..." : "Import Test Data"}
-                      </GradientButton>
+                      
                     </div>
-                  </div>
-                )}
+                  </div>}
 
                 <div className="p-6">
-                  <TeamFilters
-                    onSearch={handleSearch}
-                    onFilterRole={handleFilterRole}
-                    onFilterStatus={handleFilterStatus}
-                    searchTerm={searchTerm}
-                    roleFilter={roleFilter}
-                    statusFilter={statusFilter}
-                  />
+                  <TeamFilters onSearch={handleSearch} onFilterRole={handleFilterRole} onFilterStatus={handleFilterStatus} searchTerm={searchTerm} roleFilter={roleFilter} statusFilter={statusFilter} />
                 </div>
                 
                 <div className="overflow-x-auto">
@@ -283,34 +228,21 @@ const TeamManagementPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? (
-                        <TableRow>
+                      {isLoading ? <TableRow>
                           <td colSpan={6} className="py-10 text-center">
                             <div className="flex flex-col items-center justify-center gap-3">
                               <Loader2 size={24} className="animate-spin text-primary" />
                               <span>Loading team members...</span>
                             </div>
                           </td>
-                        </TableRow>
-                      ) : filteredMembers.length === 0 ? (
-                        <TableRow>
+                        </TableRow> : filteredMembers.length === 0 ? <TableRow>
                           <td colSpan={6} className="py-10 text-center text-muted-foreground">
                             <div className="flex flex-col items-center justify-center gap-2">
                               <UserPlus size={24} className="text-muted-foreground/50" />
-                              {searchTerm || roleFilter || statusFilter ? 
-                                "No team members match your filters" : 
-                                "No team members yet. Click 'Import Test Data' to add some sample data."}
+                              {searchTerm || roleFilter || statusFilter ? "No team members match your filters" : "No team members yet. Click 'Import Test Data' to add some sample data."}
                             </div>
                           </td>
-                        </TableRow>
-                      ) : (
-                        filteredMembers.map((member) => (
-                          <UserCardRow 
-                            key={member.id}
-                            user={convertToTeamMemberProfile(member)}
-                          />
-                        ))
-                      )}
+                        </TableRow> : filteredMembers.map(member => <UserCardRow key={member.id} user={convertToTeamMemberProfile(member)} />)}
                     </TableBody>
                   </Table>
                 </div>
@@ -328,12 +260,7 @@ const TeamManagementPage = () => {
         </ModernCard>
       </AnimatedContainer>
       
-      <AddTeamMemberModal 
-        open={isModalOpen} 
-        onOpenChange={setIsModalOpen}
-      />
-    </PageLayout>
-  );
+      <AddTeamMemberModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+    </PageLayout>;
 };
-
 export default TeamManagementPage;
