@@ -68,7 +68,6 @@ export const EstimateBuilderContent = ({
         calculateGrandTotal={calculateGrandTotal}
         calculateTotalMargin={calculateTotalMargin}
         calculateMarginPercentage={calculateMarginPercentage}
-        notes={notes}
       />
     );
   }
