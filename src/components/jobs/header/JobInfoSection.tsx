@@ -1,10 +1,8 @@
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
-import { FileText, CreditCard, CheckCircle, Hash } from "lucide-react";
+import { FileText, CreditCard, CheckCircle, Hash, MapPin } from "lucide-react";
 import { useJobFinancials } from "@/hooks/useJobFinancials";
 
 interface JobInfoSectionProps {
@@ -47,26 +45,14 @@ export const JobInfoSection = ({
 
   if (isLoadingFinancials) {
     return (
-      <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl">
-        <div className="space-y-6">
-          <div className="flex flex-col gap-4">
-            <Skeleton className="h-8 w-40 bg-white/20" />
-            <div className="flex items-center justify-between">
-              <div className="space-y-3">
-                <Skeleton className="h-10 w-64 bg-white/20" />
-                <Skeleton className="h-6 w-32 bg-white/20" />
-              </div>
-              <div className="flex gap-3">
-                <Skeleton className="h-12 w-12 rounded-2xl bg-white/20" />
-                <Skeleton className="h-12 w-12 rounded-2xl bg-white/20" />
-                <Skeleton className="h-12 w-12 rounded-2xl bg-white/20" />
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-6">
-            <Skeleton className="h-28 rounded-2xl bg-white/20" />
-            <Skeleton className="h-28 rounded-2xl bg-white/20" />
-            <Skeleton className="h-28 rounded-2xl bg-white/20" />
+      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 shadow-lg">
+        <div className="space-y-4">
+          <div className="h-8 w-40 bg-gray-200 rounded animate-pulse" />
+          <div className="h-10 w-64 bg-gray-200 rounded animate-pulse" />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="h-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-24 bg-gray-200 rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -74,27 +60,27 @@ export const JobInfoSection = ({
   }
 
   return (
-    <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl transform transition-all duration-300 hover:shadow-3xl hover:scale-[1.02]">
-      <div className="space-y-8">
-        {/* Header Section with Client Info and Actions */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-4">
+    <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-3">
             {/* Status Badge */}
             <JobStatusBadge status={status} onStatusChange={onStatusChange} />
             
             {/* Client Name and Job Number */}
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-white drop-shadow-lg leading-tight">
+              <h1 className="text-3xl font-bold text-gray-900 leading-tight">
                 {job.client}
               </h1>
-              <div className="flex items-center gap-2 text-white/80">
-                <Hash size={16} className="drop-shadow" />
-                <span className="text-lg font-semibold tracking-wide drop-shadow">
+              <div className="flex items-center gap-2 text-blue-600">
+                <Hash size={16} />
+                <span className="text-lg font-semibold">
                   {job.id}
                 </span>
               </div>
               {job.service && (
-                <p className="text-white/90 text-lg font-medium drop-shadow">
+                <p className="text-gray-700 text-lg font-medium">
                   {job.service}
                 </p>
               )}
@@ -102,103 +88,115 @@ export const JobInfoSection = ({
           </div>
           
           {/* Contact Actions */}
-          <div className="flex items-center gap-4">
-            <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl p-3 shadow-lg">
-              <ClientContactButtons
-                onCallClick={onCallClick}
-                onMessageClick={onMessageClick}
-                onEditClient={onEditClient}
-              />
-            </div>
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
+            <ClientContactButtons
+              onCallClick={onCallClick}
+              onMessageClick={onMessageClick}
+              onEditClient={onEditClient}
+            />
           </div>
         </div>
 
-        {/* Financial Cards - 3D Enhanced */}
-        <div className="grid grid-cols-3 gap-6">
+        {/* Job Address */}
+        {job.address && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-900 mb-1">Service Address</p>
+                <p className="text-blue-800 font-medium leading-relaxed">
+                  {job.address}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Financial Cards - Simplified Design */}
+        <div className="grid grid-cols-3 gap-4">
           {/* Invoice Card */}
-          <div className="group relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative backdrop-blur-lg bg-white/20 border border-white/30 rounded-2xl p-6 shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <FileText className="h-6 w-6 text-white drop-shadow" />
-                </div>
-                <span className="text-xs font-bold text-white/90 uppercase tracking-wider drop-shadow">
-                  Invoice
-                </span>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
               </div>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-white drop-shadow-lg">
-                  {formatCurrency(invoiceAmount)}
-                </div>
-                {(paidInvoices > 0 || unpaidInvoices > 0) && (
-                  <div className="text-sm text-white/80 font-medium drop-shadow">
-                    {paidInvoices} paid • {unpaidInvoices} pending
-                  </div>
-                )}
+              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                Invoice
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-blue-900">
+                {formatCurrency(invoiceAmount)}
               </div>
+              {(paidInvoices > 0 || unpaidInvoices > 0) && (
+                <div className="text-sm text-blue-700 font-medium">
+                  {paidInvoices} paid • {unpaidInvoices} pending
+                </div>
+              )}
             </div>
           </div>
 
           {/* Received Card */}
-          <div className="group relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative backdrop-blur-lg bg-white/20 border border-white/30 rounded-2xl p-6 shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <CreditCard className="h-6 w-6 text-white drop-shadow" />
-                </div>
-                <span className="text-xs font-bold text-white/90 uppercase tracking-wider drop-shadow">
-                  Received
-                </span>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CreditCard className="h-5 w-5 text-green-600" />
               </div>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-white drop-shadow-lg">
-                  {formatCurrency(totalPaid)}
-                </div>
-                {totalPaid > 0 && (
-                  <div className="text-sm text-white/80 font-medium drop-shadow">
-                    Payment received
-                  </div>
-                )}
+              <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">
+                Received
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-green-900">
+                {formatCurrency(totalPaid)}
               </div>
+              {totalPaid > 0 && (
+                <div className="text-sm text-green-700 font-medium">
+                  Payment received
+                </div>
+              )}
             </div>
           </div>
           
           {/* Complete/Balance Card */}
-          <div className="group relative">
-            <div className={`absolute inset-0 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity ${
-              balance > 0 
-                ? "bg-gradient-to-br from-amber-400 to-amber-600" 
-                : "bg-gradient-to-br from-green-400 to-green-600"
-            }`}></div>
-            <div className="relative backdrop-blur-lg bg-white/20 border border-white/30 rounded-2xl p-6 shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <CheckCircle className="h-6 w-6 text-white drop-shadow" />
-                </div>
-                <span className="text-xs font-bold text-white/90 uppercase tracking-wider drop-shadow">
-                  {balance > 0 ? "Outstanding" : "Complete"}
-                </span>
+          <div className={`${
+            balance > 0 
+              ? "bg-amber-50 border-amber-200" 
+              : "bg-emerald-50 border-emerald-200"
+          } border rounded-xl p-4 hover:shadow-md transition-shadow`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`p-2 rounded-lg ${
+                balance > 0 ? "bg-amber-100" : "bg-emerald-100"
+              }`}>
+                <CheckCircle className={`h-5 w-5 ${
+                  balance > 0 ? "text-amber-600" : "text-emerald-600"
+                }`} />
               </div>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-white drop-shadow-lg">
-                  {formatCurrency(balance)}
-                </div>
-                {overdueAmount > 0 ? (
-                  <div className="text-sm text-red-200 font-medium drop-shadow">
-                    ${overdueAmount.toFixed(2)} overdue
-                  </div>
-                ) : balance === 0 ? (
-                  <div className="text-sm text-white/80 font-medium drop-shadow">
-                    Fully paid
-                  </div>
-                ) : (
-                  <div className="text-sm text-white/80 font-medium drop-shadow">
-                    Payment pending
-                  </div>
-                )}
+              <span className={`text-xs font-semibold uppercase tracking-wider ${
+                balance > 0 ? "text-amber-700" : "text-emerald-700"
+              }`}>
+                {balance > 0 ? "Outstanding" : "Complete"}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div className={`text-2xl font-bold ${
+                balance > 0 ? "text-amber-900" : "text-emerald-900"
+              }`}>
+                {formatCurrency(balance)}
               </div>
+              {overdueAmount > 0 ? (
+                <div className="text-sm text-red-600 font-medium">
+                  ${overdueAmount.toFixed(2)} overdue
+                </div>
+              ) : balance === 0 ? (
+                <div className="text-sm text-emerald-700 font-medium">
+                  Fully paid
+                </div>
+              ) : (
+                <div className="text-sm text-amber-700 font-medium">
+                  Payment pending
+                </div>
+              )}
             </div>
           </div>
         </div>

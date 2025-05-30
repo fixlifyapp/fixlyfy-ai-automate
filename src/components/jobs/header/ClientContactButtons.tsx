@@ -39,50 +39,41 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       {/* Call Button */}
-      <div className="group relative">
-        <div className="absolute inset-0 bg-green-400 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-12 w-12 backdrop-blur-sm bg-white/20 border border-white/30 text-white hover:bg-white/30 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-110"
-          onClick={onCallClick}
-          title="Call Client"
-        >
-          <Phone size={20} className="drop-shadow" />
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-10 w-10 p-0 border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300 rounded-lg shadow-sm transition-all duration-200"
+        onClick={onCallClick}
+        title="Call Client"
+      >
+        <Phone size={18} />
+      </Button>
 
       {/* Message Button */}
-      <div className="group relative">
-        <div className="absolute inset-0 bg-blue-400 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-12 w-12 backdrop-blur-sm bg-white/20 border border-white/30 text-white hover:bg-white/30 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-110"
-          onClick={handleMessageClick}
-          title="Send Message"
-          aria-label="Send message"
-        >
-          <MessageSquare size={20} className="drop-shadow" />
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-10 w-10 p-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 rounded-lg shadow-sm transition-all duration-200"
+        onClick={handleMessageClick}
+        title="Send Message"
+        aria-label="Send message"
+      >
+        <MessageSquare size={18} />
+      </Button>
 
       {/* Edit Button */}
-      <div className="group relative">
-        <div className="absolute inset-0 bg-purple-400 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative h-12 w-12 backdrop-blur-sm bg-white/20 border border-white/30 text-white hover:bg-white/30 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-110"
-          onClick={handleEditClient}
-          title="Edit Client"
-          aria-label="Edit client"
-        >
-          <Pencil size={20} className="drop-shadow" />
-        </Button>
-      </div>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="h-10 w-10 p-0 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 rounded-lg shadow-sm transition-all duration-200"
+        onClick={handleEditClient}
+        title="Edit Client"
+        aria-label="Edit client"
+      >
+        <Pencil size={18} />
+      </Button>
     </div>
   );
 };
