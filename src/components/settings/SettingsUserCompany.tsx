@@ -17,11 +17,13 @@ export const SettingsUserCompany = () => {
 
   const handleSaveChanges = async () => {
     try {
-      // Force save all settings - the individual hooks handle the actual saving
-      // This button serves as a confirmation action for users
-      toast.success('Settings saved successfully');
+      // The individual sections handle their own saving automatically
+      // This button provides user feedback that changes are being saved
+      if (!companySaving && !userSaving) {
+        toast.success('All settings have been saved successfully');
+      }
     } catch (error) {
-      toast.error('Failed to save settings');
+      toast.error('Failed to save some settings');
     }
   };
 
