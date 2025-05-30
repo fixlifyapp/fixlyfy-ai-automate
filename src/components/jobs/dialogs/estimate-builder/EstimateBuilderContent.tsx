@@ -1,4 +1,3 @@
-
 import { EstimateForm } from "./EstimateForm";
 import { UnifiedDocumentPreview } from "../unified/UnifiedDocumentPreview";
 import { LineItem } from "@/components/jobs/builder/types";
@@ -44,9 +43,9 @@ export const EstimateBuilderContent = ({
   clientInfo,
   jobData
 }: EstimateBuilderContentProps) => {
-  return (
-    <div className="flex-grow overflow-auto p-6">
-      {activeTab === "form" && (
+  if (activeTab === "form") {
+    return (
+      <div className="flex-grow overflow-auto p-6">
         <EstimateForm
           estimateNumber={estimateNumber}
           lineItems={lineItems || []}
@@ -64,23 +63,26 @@ export const EstimateBuilderContent = ({
           calculateMarginPercentage={calculateMarginPercentage}
           showMargin={false}
         />
-      )}
-      
-      {activeTab === "preview" && (
+      </div>
+    );
+  }
+
+  if (activeTab === "preview") {
+    return (
+      <div className="flex-grow overflow-auto p-6">
         <UnifiedDocumentPreview
           documentType="estimate"
           documentNumber={estimateNumber}
-          lineItems={lineItems || []}
+          lineItems={lineItems}
           taxRate={taxRate}
           calculateSubtotal={calculateSubtotal}
           calculateTotalTax={calculateTotalTax}
           calculateGrandTotal={calculateGrandTotal}
-          notes={notes || ""}
+          notes={notes}
           clientInfo={clientInfo || jobData?.client}
-          issueDate={new Date().toLocaleDateString()}
-          dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+          jobId={jobData?.id}
         />
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
 };

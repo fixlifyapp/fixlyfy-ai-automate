@@ -44,6 +44,7 @@ export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps)
       notes={formData.notes}
       issueDate={formData.issueDate}
       dueDate={formData.dueDate}
+      jobId={jobId}
     />
   );
 };

@@ -16,6 +16,7 @@ interface UnifiedDocumentPreviewProps {
   clientInfo?: any;
   issueDate?: string;
   dueDate?: string;
+  jobId?: string; // Add jobId prop to fetch client data directly
 }
 
 export const UnifiedDocumentPreview = ({
@@ -29,7 +30,8 @@ export const UnifiedDocumentPreview = ({
   notes,
   clientInfo,
   issueDate,
-  dueDate
+  dueDate,
+  jobId
 }: UnifiedDocumentPreviewProps) => {
   const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [enhancedClientInfo, setEnhancedClientInfo] = useState<any>(null);
@@ -42,6 +44,9 @@ export const UnifiedDocumentPreview = ({
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+
+        console.log('UnifiedDocumentPreview - Initial clientInfo:', clientInfo);
+        console.log('UnifiedDocumentPreview - jobId:', jobId);
 
         // Fetch company settings
         const { data: companySettings } = await supabase
@@ -85,52 +90,44 @@ export const UnifiedDocumentPreview = ({
           });
         }
 
-        // Enhanced client data fetching - ensure we always have client info
-        if (clientInfo?.id || clientInfo?.client_id) {
-          const clientId = clientInfo.id || clientInfo.client_id;
-          const { data: fullClientData } = await supabase
-            .from('clients')
-            .select('*')
-            .eq('id', clientId)
-            .maybeSingle();
-          
-          if (fullClientData) {
-            setEnhancedClientInfo({
-              ...clientInfo,
-              ...fullClientData,
-              name: fullClientData.name || clientInfo.name,
-              fullAddress: [
-                fullClientData.address,
-                [fullClientData.city, fullClientData.state, fullClientData.zip].filter(Boolean).join(', '),
-                fullClientData.country !== 'USA' ? fullClientData.country : null
-              ].filter(Boolean).join('\n')
-            });
-          } else {
-            // If no full client data found, use what we have
-            setEnhancedClientInfo({
-              ...clientInfo,
-              name: clientInfo.name || 'Client Name',
-              fullAddress: clientInfo.address || ''
-            });
-          }
+        // Fetch client data - try multiple approaches
+        let finalClientInfo = null;
 
-          // Fetch job address for service location
-          const { data: jobs } = await supabase
+        // First, if we have a jobId, fetch the job with client data
+        if (jobId) {
+          console.log('Fetching job data for jobId:', jobId);
+          const { data: jobData, error: jobError } = await supabase
             .from('jobs')
-            .select('address, property_id, client_id')
-            .eq('client_id', clientId)
-            .order('created_at', { ascending: false })
-            .limit(1);
-          
-          if (jobs && jobs.length > 0) {
-            if (jobs[0].address) {
-              setJobAddress(jobs[0].address);
-            } else if (jobs[0].property_id) {
-              // Fetch property address if job doesn't have direct address
+            .select(`
+              *,
+              client:clients(*)
+            `)
+            .eq('id', jobId)
+            .maybeSingle();
+
+          console.log('Job data fetched:', jobData);
+          console.log('Job fetch error:', jobError);
+
+          if (jobData && jobData.client) {
+            console.log('Found client from job:', jobData.client);
+            finalClientInfo = {
+              ...jobData.client,
+              fullAddress: [
+                jobData.client.address,
+                [jobData.client.city, jobData.client.state, jobData.client.zip].filter(Boolean).join(', '),
+                jobData.client.country !== 'USA' ? jobData.client.country : null
+              ].filter(Boolean).join('\n')
+            };
+
+            // Set job address from job data
+            if (jobData.address) {
+              setJobAddress(jobData.address);
+            } else if (jobData.property_id) {
+              // Fetch property address
               const { data: property } = await supabase
                 .from('client_properties')
                 .select('address, city, state, zip, property_name')
-                .eq('id', jobs[0].property_id)
+                .eq('id', jobData.property_id)
                 .maybeSingle();
               
               if (property) {
@@ -143,17 +140,51 @@ export const UnifiedDocumentPreview = ({
               }
             }
           }
-        } else {
-          // Fallback if no clientInfo provided
-          setEnhancedClientInfo({
-            name: clientInfo?.name || 'Client Name',
+        }
+
+        // If we still don't have client info, try from the passed clientInfo
+        if (!finalClientInfo && (clientInfo?.id || clientInfo?.client_id)) {
+          const clientId = clientInfo.id || clientInfo.client_id;
+          console.log('Fetching client by ID:', clientId);
+          
+          const { data: fullClientData, error: clientError } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('id', clientId)
+            .maybeSingle();
+
+          console.log('Client data fetched:', fullClientData);
+          console.log('Client fetch error:', clientError);
+          
+          if (fullClientData) {
+            finalClientInfo = {
+              ...clientInfo,
+              ...fullClientData,
+              name: fullClientData.name || clientInfo.name,
+              fullAddress: [
+                fullClientData.address,
+                [fullClientData.city, fullClientData.state, fullClientData.zip].filter(Boolean).join(', '),
+                fullClientData.country !== 'USA' ? fullClientData.country : null
+              ].filter(Boolean).join('\n')
+            };
+          }
+        }
+
+        // Final fallback - use whatever clientInfo we have
+        if (!finalClientInfo) {
+          console.log('Using fallback client info:', clientInfo);
+          finalClientInfo = {
+            name: clientInfo?.name || 'Client Name Not Found',
             email: clientInfo?.email || '',
             phone: clientInfo?.phone || '',
             company: clientInfo?.company || '',
             type: clientInfo?.type || '',
             fullAddress: clientInfo?.address || ''
-          });
+          };
         }
+
+        console.log('Final client info set:', finalClientInfo);
+        setEnhancedClientInfo(finalClientInfo);
 
       } catch (error) {
         console.error('Error fetching preview data:', error);
@@ -182,7 +213,7 @@ export const UnifiedDocumentPreview = ({
     };
 
     fetchAllData();
-  }, [clientInfo]);
+  }, [clientInfo, jobId]);
 
   if (loading) {
     return (
