@@ -15,45 +15,45 @@ export const DocumentLineItemsTable = ({
 }: DocumentLineItemsTableProps) => {
   return (
     <div className="px-8 py-6">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+      <h3 className="text-lg font-semibold text-gray-900 mb-6">
         {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
       </h3>
       
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Description</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Qty</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Unit Price</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Total</th>
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Description</th>
+              <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 w-20">Qty</th>
+              <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 w-28">Rate</th>
+              <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 w-28">Amount</th>
             </tr>
           </thead>
           <tbody>
             {lineItems.map((item, index) => (
-              <tr key={item.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
-                <td className="px-4 py-3">
+              <tr key={item.id} className="border-t border-gray-200">
+                <td className="px-6 py-4">
                   <div>
-                    <p className="text-gray-900 font-medium">
+                    <p className="font-medium text-gray-900">
                       {item.description || item.name}
                     </p>
                     {item.taxable && (
-                      <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded mt-1">
+                      <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full mt-2">
                         Taxable
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-6 py-4 text-center">
                   <span className="text-gray-900">{item.quantity}</span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-6 py-4 text-right">
                   <span className="text-gray-900">
                     {formatCurrency(item.unitPrice)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-gray-900 font-medium">
+                <td className="px-6 py-4 text-right">
+                  <span className="font-semibold text-gray-900">
                     {formatCurrency(item.quantity * item.unitPrice)}
                   </span>
                 </td>
