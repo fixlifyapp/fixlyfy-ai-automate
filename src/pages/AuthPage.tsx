@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,20 +13,18 @@ export default function AuthPage() {
   console.log("AuthPage: Component rendering");
   
   const navigate = useNavigate();
-  const { user, session, loading } = useAuth();
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authTab, setAuthTab] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!loading && user && session) {
-      console.log("AuthPage: User is authenticated, redirecting to dashboard");
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, session, loading, navigate]);
+  // If user is already authenticated, redirect immediately
+  if (user) {
+    navigate('/dashboard', { replace: true });
+    return null;
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,30 +113,6 @@ export default function AuthPage() {
       setAuthLoading(false);
     }
   };
-
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-white" />
-          <p className="text-white">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If user is authenticated, show loading while redirecting
-  if (user && session) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-white" />
-          <p className="text-white">Redirecting to dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   console.log("AuthPage: Rendering auth form");
 

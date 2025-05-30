@@ -20,43 +20,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     console.log("AuthProvider: Setting up auth state management");
     
-    // Set up auth state listener FIRST
+    // Set initial loading timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log("AuthProvider: Timeout reached, stopping loading state");
+      setLoading(false);
+    }, 5000);
+    
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('AuthProvider: Auth event:', event, 'Session expires at:', session?.expires_at);
-        console.log('AuthProvider: User ID:', session?.user?.id);
+        console.log('AuthProvider: Auth event:', event);
+        console.log('AuthProvider: Session:', session ? 'exists' : 'null');
         
+        clearTimeout(timeoutId);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
-        // Log auth state changes for debugging
-        if (event === 'SIGNED_IN') {
-          console.log('AuthProvider: User signed in successfully');
-        } else if (event === 'SIGNED_OUT') {
-          console.log('AuthProvider: User signed out');
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('AuthProvider: Token refreshed');
-        }
       }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error('AuthProvider: Error getting session:', error);
       }
       
-      console.log('AuthProvider: Initial session check, expires at:', session?.expires_at);
-      console.log('AuthProvider: Initial user ID:', session?.user?.id);
+      console.log('AuthProvider: Initial session check:', session ? 'exists' : 'null');
       
+      clearTimeout(timeoutId);
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false);
+    }).catch((error) => {
+      console.error('AuthProvider: Session check failed:', error);
+      clearTimeout(timeoutId);
       setLoading(false);
     });
 
     return () => {
-      console.log("AuthProvider: Cleaning up auth subscription");
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
