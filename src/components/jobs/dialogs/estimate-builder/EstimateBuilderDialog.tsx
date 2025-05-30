@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
 import { EstimateForm } from "./EstimateForm";
-import { EstimatePreview } from "./EstimatePreview";
+import { UnifiedDocumentPreview } from "../unified/UnifiedDocumentPreview";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 import { CustomLineItemDialog } from "./CustomLineItemDialog";
@@ -256,16 +256,18 @@ export const EstimateBuilderDialog = ({
               )}
               
               {activeTab === "preview" && (
-                <EstimatePreview 
-                  estimateNumber={estimateBuilder.estimateNumber}
+                <UnifiedDocumentPreview
+                  documentType="estimate"
+                  documentNumber={estimateBuilder.estimateNumber}
                   lineItems={estimateBuilder.lineItems || []}
                   taxRate={estimateBuilder.taxRate}
                   calculateSubtotal={estimateBuilder.calculateSubtotal}
                   calculateTotalTax={estimateBuilder.calculateTotalTax}
                   calculateGrandTotal={estimateBuilder.calculateGrandTotal}
                   notes={estimateBuilder.notes || ""}
-                  jobId={jobId}
                   clientInfo={clientInfo || jobData?.client}
+                  issueDate={new Date().toLocaleDateString()}
+                  dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
                 />
               )}
             </div>
