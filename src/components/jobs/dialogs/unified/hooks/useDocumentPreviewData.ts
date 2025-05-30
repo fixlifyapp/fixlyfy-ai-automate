@@ -74,15 +74,16 @@ export const useDocumentPreviewData = ({
           });
         }
 
-        // Fetch job and client data directly
+        // Fetch job and client data if jobId is provided
         if (jobId) {
           console.log('Fetching job data for jobId:', jobId);
+          
+          // First, get the job with client info
           const { data: jobData, error: jobError } = await supabase
             .from('jobs')
             .select(`
               *,
-              clients(*),
-              client_properties(*)
+              clients(*)
             `)
             .eq('id', jobId)
             .maybeSingle();
@@ -90,7 +91,7 @@ export const useDocumentPreviewData = ({
           console.log('Job data fetched:', jobData);
           console.log('Job fetch error:', jobError);
 
-          if (jobData && jobData.clients) {
+          if (jobData?.clients) {
             const client = jobData.clients;
             const finalClientInfo = {
               id: client.id,
@@ -109,25 +110,30 @@ export const useDocumentPreviewData = ({
             console.log('Setting client info:', finalClientInfo);
             setEnhancedClientInfo(finalClientInfo);
 
-            // Get property address
+            // Get property address if property_id exists
             let propertyAddress = '';
-            if (jobData.property_id && jobData.client_properties && jobData.client_properties.length > 0) {
-              const property = jobData.client_properties.find(p => p.id === jobData.property_id) || jobData.client_properties[0];
-              if (property) {
+            if (jobData.property_id) {
+              const { data: propertyData } = await supabase
+                .from('client_properties')
+                .select('*')
+                .eq('id', jobData.property_id)
+                .maybeSingle();
+
+              if (propertyData) {
                 propertyAddress = [
-                  property.property_name ? `${property.property_name}` : '',
-                  property.address,
-                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
+                  propertyData.property_name ? `${propertyData.property_name}` : '',
+                  propertyData.address,
+                  [propertyData.city, propertyData.state, propertyData.zip].filter(Boolean).join(', ')
                 ].filter(Boolean).join('\n');
               }
             } else if (jobData.address) {
+              // Use job address if no property is specified
               propertyAddress = jobData.address;
             }
 
             setJobAddress(propertyAddress);
           } else {
-            // Fallback if no job data
-            console.log('No job data found, using fallback');
+            console.log('No client data found in job, using fallback');
             setEnhancedClientInfo({
               name: 'Client Name',
               email: '',
@@ -136,15 +142,25 @@ export const useDocumentPreviewData = ({
               fullAddress: 'Address not available'
             });
           }
-        } else {
-          // Fallback if no jobId
-          console.log('No jobId provided, using fallback');
+        } else if (clientInfo) {
+          // Use provided clientInfo if no jobId
+          console.log('Using provided clientInfo:', clientInfo);
           setEnhancedClientInfo({
-            name: clientInfo?.name || 'Client Name',
-            email: clientInfo?.email || '',
-            phone: clientInfo?.phone || '',
-            company: clientInfo?.company || '',
-            fullAddress: clientInfo?.address || 'Address not available'
+            name: clientInfo.name || 'Client Name',
+            email: clientInfo.email || '',
+            phone: clientInfo.phone || '',
+            company: clientInfo.company || '',
+            fullAddress: clientInfo.address || 'Address not available'
+          });
+        } else {
+          // Complete fallback
+          console.log('No jobId or clientInfo provided, using complete fallback');
+          setEnhancedClientInfo({
+            name: 'Client Name',
+            email: '',
+            phone: '',
+            company: '',
+            fullAddress: 'Address not available'
           });
         }
 
