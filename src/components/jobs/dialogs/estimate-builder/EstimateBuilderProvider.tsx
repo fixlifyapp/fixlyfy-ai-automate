@@ -44,7 +44,10 @@ export const EstimateBuilderProvider = ({
   const [activeTab, setActiveTab] = useState("form");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  // Fetch job data
+  console.log('=== EstimateBuilderProvider Debug ===');
+  console.log('JobId received in provider:', jobId);
+  
+  // Fetch job data - Note: useJobs expects a single jobId but returns an array
   const { jobs, isLoading } = useJobs(jobId);
   const [jobData, setJobData] = useState<any>(null);
   
@@ -53,10 +56,19 @@ export const EstimateBuilderProvider = ({
   
   // Get the job data when jobs are loaded
   useEffect(() => {
+    console.log('=== EstimateBuilderProvider Effect Debug ===');
+    console.log('Jobs loading:', isLoading);
+    console.log('Jobs data:', jobs);
+    console.log('Looking for job with ID:', jobId);
+    
     if (!isLoading && jobs.length > 0) {
       const foundJob = jobs.find(job => job.id === jobId);
+      console.log('Found job:', foundJob);
       if (foundJob) {
         setJobData(foundJob);
+      } else {
+        console.warn('Job not found in jobs array for ID:', jobId);
+        console.log('Available job IDs:', jobs.map(j => j.id));
       }
     }
   }, [jobs, isLoading, jobId]);

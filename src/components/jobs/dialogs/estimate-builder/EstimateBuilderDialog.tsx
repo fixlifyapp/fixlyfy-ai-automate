@@ -37,6 +37,10 @@ const EstimateBuilderDialogContent = ({
 }: Omit<EstimateBuilderDialogProps, 'open'>) => {
   const isMobile = useIsMobile();
   
+  console.log('=== EstimateBuilderDialogContent Debug ===');
+  console.log('JobId prop received in dialog:', jobId);
+  console.log('ClientInfo prop received in dialog:', clientInfo);
+  
   const {
     estimateBuilder,
     jobData,
@@ -55,6 +59,9 @@ const EstimateBuilderDialogContent = ({
     calculateMarginPercentage,
     hasLineItems
   } = useEstimateBuilderContext();
+
+  console.log('JobData from context:', jobData);
+  console.log('JobData ID from context:', jobData?.id);
 
   const {
     isProductSearchOpen,
@@ -181,6 +188,9 @@ const EstimateBuilderDialogContent = ({
 
 export const EstimateBuilderDialog = (props: EstimateBuilderDialogProps) => {
   const { open, jobId, estimateId, ...restProps } = props;
+
+  console.log('=== EstimateBuilderDialog Main Debug ===');
+  console.log('JobId prop in main dialog:', jobId);
 
   return (
     <Dialog open={open} onOpenChange={props.onOpenChange}>

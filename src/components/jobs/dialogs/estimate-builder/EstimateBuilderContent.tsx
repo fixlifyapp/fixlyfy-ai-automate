@@ -1,6 +1,8 @@
-import { EstimateForm } from "./EstimateForm";
-import { UnifiedDocumentPreview } from "../unified/UnifiedDocumentPreview";
+
+import React from "react";
 import { LineItem } from "@/components/jobs/builder/types";
+import { UnifiedDocumentPreview } from "../unified/UnifiedDocumentPreview";
+import { EstimateForm } from "./EstimateForm";
 
 interface EstimateBuilderContentProps {
   activeTab: string;
@@ -43,46 +45,52 @@ export const EstimateBuilderContent = ({
   clientInfo,
   jobData
 }: EstimateBuilderContentProps) => {
+  console.log('=== EstimateBuilderContent Debug ===');
+  console.log('Active tab:', activeTab);
+  console.log('Client info passed to content:', clientInfo);
+  console.log('Job data passed to content:', jobData);
+  console.log('Job ID from jobData:', jobData?.id);
+
   if (activeTab === "form") {
     return (
-      <div className="flex-grow overflow-auto p-6">
-        <EstimateForm
-          estimateNumber={estimateNumber}
-          lineItems={lineItems || []}
-          onRemoveLineItem={onRemoveLineItem}
-          onUpdateLineItem={onUpdateLineItem}
-          onEditLineItem={onEditLineItem}
-          onAddEmptyLineItem={onAddEmptyLineItem}
-          onAddCustomLine={onAddCustomLine}
-          taxRate={taxRate}
-          setTaxRate={setTaxRate}
-          calculateSubtotal={calculateSubtotal}
-          calculateTotalTax={calculateTotalTax}
-          calculateGrandTotal={calculateGrandTotal}
-          calculateTotalMargin={calculateTotalMargin}
-          calculateMarginPercentage={calculateMarginPercentage}
-          showMargin={false}
-        />
-      </div>
+      <EstimateForm
+        estimateNumber={estimateNumber}
+        lineItems={lineItems}
+        onRemoveLineItem={onRemoveLineItem}
+        onUpdateLineItem={onUpdateLineItem}
+        onEditLineItem={onEditLineItem}
+        onAddEmptyLineItem={onAddEmptyLineItem}
+        onAddCustomLine={onAddCustomLine}
+        taxRate={taxRate}
+        setTaxRate={setTaxRate}
+        calculateSubtotal={calculateSubtotal}
+        calculateTotalTax={calculateTotalTax}
+        calculateGrandTotal={calculateGrandTotal}
+        calculateTotalMargin={calculateTotalMargin}
+        calculateMarginPercentage={calculateMarginPercentage}
+        notes={notes}
+      />
     );
   }
 
   if (activeTab === "preview") {
     return (
-      <div className="flex-grow overflow-auto p-6">
-        <UnifiedDocumentPreview
-          documentType="estimate"
-          documentNumber={estimateNumber}
-          lineItems={lineItems}
-          taxRate={taxRate}
-          calculateSubtotal={calculateSubtotal}
-          calculateTotalTax={calculateTotalTax}
-          calculateGrandTotal={calculateGrandTotal}
-          notes={notes}
-          clientInfo={clientInfo || jobData?.client}
-          jobId={jobData?.id}
-        />
-      </div>
+      <UnifiedDocumentPreview
+        documentType="estimate"
+        documentNumber={estimateNumber}
+        lineItems={lineItems}
+        taxRate={taxRate}
+        calculateSubtotal={calculateSubtotal}
+        calculateTotalTax={calculateTotalTax}
+        calculateGrandTotal={calculateGrandTotal}
+        notes={notes}
+        clientInfo={clientInfo}
+        jobId={jobData?.id}
+        issueDate={new Date().toLocaleDateString()}
+        dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+      />
     );
   }
+
+  return null;
 };
