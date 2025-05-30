@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { LineItem } from "../../builder/types";
 import { formatCurrency } from "@/lib/utils";
@@ -32,77 +33,146 @@ export const UnifiedDocumentPreview = ({
   dueDate
 }: UnifiedDocumentPreviewProps) => {
   const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [enhancedClientInfo, setEnhancedClientInfo] = useState<any>(null);
   const [jobAddress, setJobAddress] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCompanyAndJobInfo = async () => {
+    const fetchAllData = async () => {
       try {
+        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Fetch company settings from database
-          const { data: companySettings } = await supabase
-            .from('company_settings')
+        if (!user) return;
+
+        // Fetch company settings
+        const { data: companySettings } = await supabase
+          .from('company_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (companySettings) {
+          setCompanyInfo({
+            name: companySettings.company_name,
+            businessType: companySettings.business_type,
+            address: companySettings.company_address,
+            city: companySettings.company_city,
+            state: companySettings.company_state,
+            zip: companySettings.company_zip,
+            country: companySettings.company_country,
+            phone: companySettings.company_phone,
+            email: companySettings.company_email,
+            website: companySettings.company_website,
+            taxId: companySettings.tax_id,
+            logoUrl: companySettings.company_logo_url,
+            tagline: companySettings.company_tagline,
+            description: companySettings.company_description
+          });
+        } else {
+          // Fallback company info
+          setCompanyInfo({
+            name: 'FixLyfy Services',
+            businessType: 'Professional Service Solutions',
+            address: '456 Professional Ave, Suite 100',
+            city: 'Business City',
+            state: 'BC',
+            zip: 'V1V 1V1',
+            country: 'Canada',
+            phone: '(555) 123-4567',
+            email: user.email || 'info@fixlyfy.com',
+            website: 'www.fixlyfy.com',
+            tagline: 'Professional Service You Can Trust',
+            description: 'Licensed & Insured Professional Services'
+          });
+        }
+
+        // Enhanced client data fetching
+        if (clientInfo?.id) {
+          const { data: fullClientData } = await supabase
+            .from('clients')
             .select('*')
-            .eq('user_id', user.id)
-            .single();
+            .eq('id', clientInfo.id)
+            .maybeSingle();
           
-          // Fetch user profile for additional info
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          
-          if (companySettings) {
-            setCompanyInfo({
-              name: companySettings.company_name,
-              phone: companySettings.company_phone,
-              email: companySettings.company_email,
-              address: companySettings.company_address,
-              city: `${companySettings.company_city}, ${companySettings.company_state} ${companySettings.company_zip}`,
-              website: companySettings.company_website
-            });
-          } else {
-            // Fallback to default values
-            setCompanyInfo({
-              name: 'FixLyfy Services',
-              phone: '(555) 123-4567',
-              email: user.email || 'info@fixlyfy.com',
-              address: '456 Professional Ave, Suite 100',
-              city: 'Business City, BC V1V 1V1',
-              website: 'www.fixlyfy.com'
+          if (fullClientData) {
+            setEnhancedClientInfo({
+              ...clientInfo,
+              ...fullClientData,
+              fullAddress: [
+                fullClientData.address,
+                [fullClientData.city, fullClientData.state, fullClientData.zip].filter(Boolean).join(', '),
+                fullClientData.country !== 'USA' ? fullClientData.country : null
+              ].filter(Boolean).join('\n')
             });
           }
 
-          // Fetch job address if we have client info with ID
-          if (clientInfo?.id) {
-            const { data: jobs } = await supabase
-              .from('jobs')
-              .select('address')
-              .eq('client_id', clientInfo.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            
-            if (jobs && jobs.length > 0 && jobs[0].address) {
+          // Fetch job address for service location
+          const { data: jobs } = await supabase
+            .from('jobs')
+            .select('address, property_id')
+            .eq('client_id', clientInfo.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          
+          if (jobs && jobs.length > 0) {
+            if (jobs[0].address) {
               setJobAddress(jobs[0].address);
+            } else if (jobs[0].property_id) {
+              // Fetch property address if job doesn't have direct address
+              const { data: property } = await supabase
+                .from('client_properties')
+                .select('address, city, state, zip, property_name')
+                .eq('id', jobs[0].property_id)
+                .maybeSingle();
+              
+              if (property) {
+                const propertyAddress = [
+                  property.property_name ? `${property.property_name}:` : '',
+                  property.address,
+                  [property.city, property.state, property.zip].filter(Boolean).join(', ')
+                ].filter(Boolean).join('\n');
+                setJobAddress(propertyAddress);
+              }
             }
           }
+        } else {
+          setEnhancedClientInfo(clientInfo);
         }
+
       } catch (error) {
-        console.error('Error fetching company and job info:', error);
+        console.error('Error fetching preview data:', error);
+        // Set fallback data on error
         setCompanyInfo({
           name: 'FixLyfy Services',
+          businessType: 'Professional Service Solutions',
           phone: '(555) 123-4567',
           email: 'info@fixlyfy.com',
           address: '456 Professional Ave, Suite 100',
-          city: 'Business City, BC V1V 1V1',
+          city: 'Business City',
+          state: 'BC',
+          zip: 'V1V 1V1',
           website: 'www.fixlyfy.com'
         });
+        setEnhancedClientInfo(clientInfo);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchCompanyAndJobInfo();
+    fetchAllData();
   }, [clientInfo]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto bg-white shadow-lg p-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-48 bg-gray-200 rounded"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   const subtotal = calculateSubtotal();
   const tax = calculateTotalTax();
@@ -126,9 +196,12 @@ export const UnifiedDocumentPreview = ({
               {companyInfo?.name || 'FixLyfy'}
             </div>
             <div className="text-sm text-gray-600 leading-relaxed">
-              <p className="font-medium">Professional Service Solutions</p>
+              <p className="font-medium">{companyInfo?.businessType || companyInfo?.tagline}</p>
               <p>{companyInfo?.address}</p>
-              <p>{companyInfo?.city}</p>
+              <p>{[companyInfo?.city, companyInfo?.state, companyInfo?.zip].filter(Boolean).join(', ')}</p>
+              {companyInfo?.country && companyInfo.country !== 'USA' && (
+                <p>{companyInfo.country}</p>
+              )}
               <p className="mt-1">
                 <span className="font-medium">Phone:</span> {companyInfo?.phone}
               </p>
@@ -138,6 +211,11 @@ export const UnifiedDocumentPreview = ({
               {companyInfo?.website && (
                 <p>
                   <span className="font-medium">Web:</span> {companyInfo.website}
+                </p>
+              )}
+              {companyInfo?.taxId && companyInfo.taxId !== 'XX-XXXXXXX' && (
+                <p className="text-xs mt-1">
+                  <span className="font-medium">Tax ID:</span> {companyInfo.taxId}
                 </p>
               )}
             </div>
@@ -154,48 +232,46 @@ export const UnifiedDocumentPreview = ({
             </h3>
             <div className="bg-white p-4 rounded-lg border">
               <p className="font-bold text-lg text-gray-900 mb-2">
-                {clientInfo?.name || 'Client Name'}
+                {enhancedClientInfo?.name || 'Client Name'}
               </p>
-              {clientInfo?.company && (
-                <p className="text-gray-700 font-medium mb-1">{clientInfo.company}</p>
+              {enhancedClientInfo?.company && (
+                <p className="text-gray-700 font-medium mb-1">{enhancedClientInfo.company}</p>
+              )}
+              {enhancedClientInfo?.type && (
+                <p className="text-xs text-gray-500 mb-2">{enhancedClientInfo.type} Client</p>
               )}
               
-              {/* Client Address */}
-              {clientInfo?.address && (
+              {/* Client Billing Address */}
+              {enhancedClientInfo?.fullAddress && (
                 <div className="text-gray-600 mb-3">
                   <p className="font-medium text-gray-700 mb-1">Billing Address:</p>
-                  <p>{clientInfo.address}</p>
-                  {(clientInfo?.city || clientInfo?.state || clientInfo?.zip) && (
-                    <p>
-                      {[clientInfo.city, clientInfo.state, clientInfo.zip]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  )}
-                  {clientInfo?.country && clientInfo.country !== 'USA' && (
-                    <p>{clientInfo.country}</p>
-                  )}
+                  <p className="whitespace-pre-line">{enhancedClientInfo.fullAddress}</p>
                 </div>
               )}
 
               {/* Job Service Address */}
-              {jobAddress && (
+              {jobAddress && jobAddress !== enhancedClientInfo?.address && (
                 <div className="text-gray-600 mb-3 pt-2 border-t border-gray-200">
                   <p className="font-medium text-gray-700 mb-1">Service Address:</p>
-                  <p>{jobAddress}</p>
+                  <p className="whitespace-pre-line">{jobAddress}</p>
                 </div>
               )}
 
               {/* Contact Information */}
               <div className="pt-2 border-t border-gray-200">
-                {clientInfo?.phone && (
+                {enhancedClientInfo?.phone && (
                   <p className="text-gray-600 mb-1">
-                    <span className="font-medium">Phone:</span> {clientInfo.phone}
+                    <span className="font-medium">Phone:</span> {enhancedClientInfo.phone}
                   </p>
                 )}
-                {clientInfo?.email && (
-                  <p className="text-gray-600">
-                    <span className="font-medium">Email:</span> {clientInfo.email}
+                {enhancedClientInfo?.email && (
+                  <p className="text-gray-600 mb-1">
+                    <span className="font-medium">Email:</span> {enhancedClientInfo.email}
+                  </p>
+                )}
+                {enhancedClientInfo?.status && (
+                  <p className="text-xs text-gray-500">
+                    Status: <span className="capitalize">{enhancedClientInfo.status}</span>
                   </p>
                 )}
               </div>
@@ -237,6 +313,12 @@ export const UnifiedDocumentPreview = ({
                     {documentType === 'estimate' ? 'Pending Review' : 'Unpaid'}
                   </span>
                 </div>
+
+                {/* Tax Information */}
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Tax Rate:</span>
+                  <span className="font-medium">{taxRate}%</span>
+                </div>
               </div>
             </div>
           </div>
@@ -265,6 +347,9 @@ export const UnifiedDocumentPreview = ({
                     <div className="font-medium text-gray-900">
                       {item.description || item.name}
                     </div>
+                    {item.taxable && (
+                      <div className="text-xs text-gray-500">Taxable</div>
+                    )}
                   </td>
                   <td className="px-4 py-4 text-center text-gray-900 font-medium">
                     {item.quantity}
@@ -365,7 +450,7 @@ export const UnifiedDocumentPreview = ({
             Thank you for choosing {companyInfo?.name || 'FixLyfy Services'}!
           </p>
           <p className="text-sm text-gray-600">
-            Professional service you can trust • Licensed & Insured • {companyInfo?.website || 'www.fixlyfy.com'}
+            {companyInfo?.description || 'Professional service you can trust'} • Licensed & Insured • {companyInfo?.website || 'www.fixlyfy.com'}
           </p>
         </div>
       </div>
