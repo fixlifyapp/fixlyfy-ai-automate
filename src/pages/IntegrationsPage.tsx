@@ -12,7 +12,7 @@ const IntegrationsPage = () => {
         subtitle="Connect your favorite tools and services"
         icon={Plug}
         badges={[
-          { text: "Third Party", icon: Cloud, variant: "fixlyfy" },
+          { text: "Third Party", icon: Cloud, variant: "fixlify" },
           { text: "Automation", icon: Zap, variant: "success" }
         ]}
       />

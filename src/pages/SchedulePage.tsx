@@ -116,7 +116,7 @@ const SchedulePage = () => {
         subtitle="Manage your team's schedule and appointments efficiently"
         icon={Calendar}
         badges={[
-          { text: "Smart Scheduling", icon: Clock, variant: "fixlyfy" },
+          { text: "Smart Scheduling", icon: Clock, variant: "fixlify" },
           { text: "Team Coordination", icon: Users, variant: "success" },
           { text: "AI Optimization", icon: CheckCircle, variant: "info" }
         ]}

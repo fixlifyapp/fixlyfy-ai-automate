@@ -15,7 +15,7 @@ const TeamCollaborationPage = () => {
         subtitle="Advanced team collaboration tools, workflow management, and knowledge sharing"
         icon={Users}
         badges={[
-          { text: "Real-time", icon: MessageSquare, variant: "fixlyfy" },
+          { text: "Real-time", icon: MessageSquare, variant: "fixlify" },
           { text: "Workflows", icon: Workflow, variant: "success" },
           { text: "Knowledge", icon: BookOpen, variant: "info" }
         ]}

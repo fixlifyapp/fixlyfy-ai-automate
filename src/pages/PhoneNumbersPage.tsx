@@ -17,7 +17,7 @@ const PhoneNumbersPage = () => {
         subtitle="Purchase and manage your business phone numbers with AI dispatcher"
         icon={Phone}
         badges={[
-          { text: "AI Powered", icon: Zap, variant: "fixlyfy" },
+          { text: "AI Powered", icon: Zap, variant: "fixlify" },
           { text: "Secure", icon: Shield, variant: "success" }
         ]}
       />

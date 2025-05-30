@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -182,7 +183,7 @@ export default function FinancePage() {
           icon={DollarSign}
           badges={[
             { text: "Revenue Tracking", icon: TrendingUp, variant: "success" },
-            { text: "Smart Invoicing", icon: FileText, variant: "fixlyfy" },
+            { text: "Smart Invoicing", icon: FileText, variant: "fixlify" },
             { text: "Payment Analytics", icon: BarChart3, variant: "info" }
           ]}
         />

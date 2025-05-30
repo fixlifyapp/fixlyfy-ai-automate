@@ -13,7 +13,7 @@ const EstimatesPage = () => {
         subtitle="Manage and track all your project estimates"
         icon={Calculator}
         badges={[
-          { text: "Quick Generation", icon: Target, variant: "fixlyfy" },
+          { text: "Quick Generation", icon: Target, variant: "fixlify" },
           { text: "Conversion Tracking", icon: TrendingUp, variant: "success" },
           { text: "AI Pricing", icon: CheckCircle, variant: "info" }
         ]}

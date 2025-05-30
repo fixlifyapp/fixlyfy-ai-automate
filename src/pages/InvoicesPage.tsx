@@ -12,7 +12,7 @@ const InvoicesPage = () => {
         subtitle="Manage your invoices and payment tracking"
         icon={Receipt}
         badges={[
-          { text: "Payment Tracking", icon: DollarSign, variant: "fixlyfy" },
+          { text: "Payment Tracking", icon: DollarSign, variant: "fixlify" },
           { text: "Auto Reminders", icon: Target, variant: "success" },
           { text: "Cash Flow", icon: TrendingUp, variant: "info" }
         ]}

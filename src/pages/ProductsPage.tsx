@@ -75,7 +75,7 @@ const ProductsPage = () => {
         subtitle="Manage your product catalog and inventory"
         icon={Package}
         badges={[
-          { text: "Inventory Tracking", icon: BarChart3, variant: "fixlyfy" },
+          { text: "Inventory Tracking", icon: BarChart3, variant: "fixlify" },
           { text: "Smart Pricing", icon: Target, variant: "success" },
           { text: "Quick Import", icon: Zap, variant: "info" }
         ]}

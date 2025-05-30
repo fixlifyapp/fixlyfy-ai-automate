@@ -221,7 +221,7 @@ const JobsPage = () => {
           subtitle="Manage your jobs efficiently"
           icon={Wrench}
           badges={[
-            { text: "Active Jobs", icon: Target, variant: "fixlyfy" },
+            { text: "Active Jobs", icon: Target, variant: "fixlify" },
             { text: "Performance", icon: TrendingUp, variant: "info" }
           ]}
           actionButton={{
@@ -242,12 +242,13 @@ const JobsPage = () => {
               />
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={handleRefreshJobs}
-                  className="flex gap-2 rounded-xl"
+                  className="flex items-center gap-2"
                 >
-                  <RefreshCw size={18} /> Refresh
+                  <RefreshCw size={16} />
+                  Refresh
                 </Button>
                 <Button
                   variant={isGridView ? "ghost" : "secondary"}
@@ -268,33 +269,39 @@ const JobsPage = () => {
               </div>
             </div>
           </ModernCard>
-          
+
+          {/* Bulk Actions Bar */}
+          {selectedJobs.length > 0 && (
+            <BulkActionsBar
+              selectedCount={selectedJobs.length}
+              onUpdateStatus={handleBulkUpdateStatus}
+              onAssignTechnician={handleBulkAssignTechnician}
+              onDelete={handleBulkDelete}
+              onExport={handleBulkExport}
+              onTagJobs={handleBulkTagJobs}
+              onClearSelection={() => setSelectedJobs([])}
+              selectedJobIds={selectedJobs}
+            />
+          )}
+
+          {/* Jobs List */}
           <JobsList 
-            isGridView={isGridView}
             jobs={filteredJobs}
+            isGridView={isGridView}
             selectedJobs={selectedJobs}
             onSelectJob={handleSelectJob}
-            onSelectAllJobs={handleSelectAllJobs}
-            onRefresh={handleRefreshJobs}
+            onSelectAll={handleSelectAllJobs}
           />
         </div>
       </AnimatedContainer>
-      
-      <BulkActionsBar
-        selectedJobs={selectedJobs}
-        onClearSelection={() => setSelectedJobs([])}
-        onUpdateStatus={handleBulkUpdateStatus}
-        onAssignTechnician={handleBulkAssignTechnician}
-        onDeleteJobs={handleBulkDelete}
-        onTagJobs={handleBulkTagJobs}
-        onExport={handleBulkExport}
-      />
       
       <ScheduleJobModal 
         open={isCreateJobModalOpen} 
         onOpenChange={setIsCreateJobModalOpen}
         onJobCreated={handleJobCreated}
-        onSuccess={(job) => toast.success(`Job ${job.id} created successfully!`)}
+        onSuccess={(job) => {
+          toast.success(`Job ${job.id} created successfully!`);
+        }}
       />
     </PageLayout>
   );

@@ -79,7 +79,7 @@ const ClientsPage = () => {
           subtitle="Manage your customer database and track interactions"
           icon={Users}
           badges={[
-            { text: "Relationship Building", icon: Heart, variant: "fixlyfy" },
+            { text: "Relationship Building", icon: Heart, variant: "fixlify" },
             { text: "Growth Tracking", icon: TrendingUp, variant: "success" },
             { text: "Smart Insights", icon: Target, variant: "info" }
           ]}
