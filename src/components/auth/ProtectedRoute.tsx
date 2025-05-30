@@ -15,7 +15,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   
   // DEVELOPER MODE: Bypass auth temporarily
-  const isDeveloperMode = true; // Set this to false to re-enable auth
+  const isDeveloperMode = false; // Set this to false to re-enable auth
   
   useEffect(() => {
     if (!isDeveloperMode && !loading && !user) {

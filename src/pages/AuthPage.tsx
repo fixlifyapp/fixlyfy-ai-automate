@@ -12,6 +12,8 @@ import { validatePasswordStrength, authRateLimiter, getGenericErrorMessage, logS
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AuthPage() {
+  console.log("AuthPage: Component rendering");
+  
   const navigate = useNavigate();
   const { user, session, loading } = useAuth();
   const [email, setEmail] = useState("");
@@ -23,6 +25,18 @@ export default function AuthPage() {
   const [isNewUser, setIsNewUser] = useState(false);
   const [rateLimitBlocked, setRateLimitBlocked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+
+  // Handle initial page load
+  useEffect(() => {
+    console.log("AuthPage: Initial load, setting pageLoading to false");
+    // Give a moment for auth context to initialize
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -30,44 +44,56 @@ export default function AuthPage() {
       user: !!user, 
       session: !!session, 
       loading,
+      pageLoading,
       userId: user?.id 
     });
     
-    if (!loading && user && session) {
+    if (!loading && !pageLoading && user && session) {
       console.log("AuthPage: User is authenticated, redirecting to dashboard");
       navigate('/dashboard', { replace: true });
     }
-  }, [user, session, loading, navigate]);
+  }, [user, session, loading, pageLoading, navigate]);
 
   useEffect(() => {
     // Check rate limiting
     const checkRateLimit = () => {
       console.log("AuthPage: Checking rate limits");
-      const isAllowed = authRateLimiter.isAllowed('auth_attempt');
-      setRateLimitBlocked(!isAllowed);
-      
-      if (!isAllowed) {
-        const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
-        const minutes = Math.ceil(remainingTime / (1000 * 60));
-        console.warn("AuthPage: Rate limit exceeded, blocked for", minutes, "minutes");
-        toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
-      } else {
-        console.log("AuthPage: Rate limit check passed");
+      try {
+        const isAllowed = authRateLimiter.isAllowed('auth_attempt');
+        setRateLimitBlocked(!isAllowed);
+        
+        if (!isAllowed) {
+          const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+          const minutes = Math.ceil(remainingTime / (1000 * 60));
+          console.warn("AuthPage: Rate limit exceeded, blocked for", minutes, "minutes");
+          toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+        } else {
+          console.log("AuthPage: Rate limit check passed");
+        }
+      } catch (error) {
+        console.error("AuthPage: Rate limit check failed:", error);
+        // Continue without rate limiting if there's an error
       }
     };
 
-    checkRateLimit();
-  }, []);
+    if (!pageLoading) {
+      checkRateLimit();
+    }
+  }, [pageLoading]);
 
   const handleGoogleSignIn = async () => {
     console.log("AuthPage: Google sign-in initiated");
     
-    if (!authRateLimiter.isAllowed('auth_attempt')) {
-      const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
-      const minutes = Math.ceil(remainingTime / (1000 * 60));
-      console.warn("AuthPage: Google sign-in blocked by rate limiter");
-      toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
-      return;
+    try {
+      if (!authRateLimiter.isAllowed('auth_attempt')) {
+        const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+        const minutes = Math.ceil(remainingTime / (1000 * 60));
+        console.warn("AuthPage: Google sign-in blocked by rate limiter");
+        toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+        return;
+      }
+    } catch (error) {
+      console.error("AuthPage: Rate limiter error:", error);
     }
 
     setGoogleLoading(true);
@@ -115,12 +141,16 @@ export default function AuthPage() {
       return;
     }
     
-    if (!authRateLimiter.isAllowed('auth_attempt')) {
-      const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
-      const minutes = Math.ceil(remainingTime / (1000 * 60));
-      console.warn("AuthPage: Sign-in blocked by rate limiter");
-      toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
-      return;
+    try {
+      if (!authRateLimiter.isAllowed('auth_attempt')) {
+        const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+        const minutes = Math.ceil(remainingTime / (1000 * 60));
+        console.warn("AuthPage: Sign-in blocked by rate limiter");
+        toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+        return;
+      }
+    } catch (error) {
+      console.error("AuthPage: Rate limiter error:", error);
     }
     
     setAuthLoading(true);
@@ -169,21 +199,31 @@ export default function AuthPage() {
       return;
     }
     
-    if (!authRateLimiter.isAllowed('auth_attempt')) {
-      const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
-      const minutes = Math.ceil(remainingTime / (1000 * 60));
-      console.warn("AuthPage: Sign-up blocked by rate limiter");
-      toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
-      return;
+    try {
+      if (!authRateLimiter.isAllowed('auth_attempt')) {
+        const remainingTime = authRateLimiter.getRemainingTime('auth_attempt');
+        const minutes = Math.ceil(remainingTime / (1000 * 60));
+        console.warn("AuthPage: Sign-up blocked by rate limiter");
+        toast.error(`Too many attempts. Please try again in ${minutes} minutes.`);
+        return;
+      }
+    } catch (error) {
+      console.error("AuthPage: Rate limiter error:", error);
     }
 
     // Validate password strength
-    const { isValid, errors } = validatePasswordStrength(password);
-    if (!isValid) {
-      console.warn("AuthPage: Password validation failed:", errors);
-      toast.error("Password requirements not met", {
-        description: errors[0]
-      });
+    try {
+      const { isValid, errors } = validatePasswordStrength(password);
+      if (!isValid) {
+        console.warn("AuthPage: Password validation failed:", errors);
+        toast.error("Password requirements not met", {
+          description: errors[0]
+        });
+        return;
+      }
+    } catch (error) {
+      console.error("AuthPage: Password validation error:", error);
+      toast.error("Password validation failed");
       return;
     }
     
@@ -240,13 +280,13 @@ export default function AuthPage() {
     navigate('/dashboard');
   };
 
-  // Show loading spinner while checking auth state
-  if (loading) {
+  // Show loading spinner during initial page load or auth checking
+  if (pageLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
-          <p className="text-white">Loading...</p>
+          <p className="text-white">Loading authentication...</p>
         </div>
       </div>
     );
@@ -270,6 +310,7 @@ export default function AuthPage() {
     authTab, 
     showOnboarding, 
     rateLimitBlocked,
+    pageLoading,
     email: email ? "***" : "",
     password: password ? "***" : ""
   });
