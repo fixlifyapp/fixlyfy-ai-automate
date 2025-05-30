@@ -1,17 +1,12 @@
 
-import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { SettingsUserCompany } from "@/components/settings/SettingsUserCompany";
-import { SettingsIntegrations } from "@/components/settings/SettingsIntegrations";
 import { Link } from "react-router-dom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings2, Shield, Sliders, User, Phone, Brain } from "lucide-react";
+import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 const SettingsPage = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("profile");
   
   return (
     <PageLayout>
@@ -26,8 +21,38 @@ const SettingsPage = () => {
         ]}
       />
       
-      {/* Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      {/* Main Settings Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Profile & Company Card */}
+        <Link to="/profile-company">
+          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+            <div className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <User className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Profile & Company</h3>
+                <p className="text-sm text-muted-foreground">Manage personal information and company details</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Integrations Card */}
+        <Link to="/integrations">
+          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+            <div className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Plug className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Integrations</h3>
+                <p className="text-sm text-muted-foreground">Connect with third-party services and tools</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+        
         {/* Configuration Card */}
         <Link to="/configuration">
           <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
@@ -72,33 +97,6 @@ const SettingsPage = () => {
             </div>
           </div>
         </Link>
-      </div>
-      
-      <div className="fixlyfy-card overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 h-auto p-0 bg-fixlyfy-bg-interface">
-            <TabsTrigger 
-              value="profile" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Profile & Company
-            </TabsTrigger>
-            <TabsTrigger 
-              value="integrations" 
-              className="py-4 rounded-none data-[state=active]:bg-white"
-            >
-              Integrations
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile" className="p-6">
-            <SettingsUserCompany />
-          </TabsContent>
-          
-          <TabsContent value="integrations" className="p-6">
-            <SettingsIntegrations />
-          </TabsContent>
-        </Tabs>
       </div>
     </PageLayout>
   );

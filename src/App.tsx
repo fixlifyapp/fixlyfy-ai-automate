@@ -91,6 +91,16 @@ const App = () => {
                   <SettingsPage />
                 </ProtectedRoute>
               } />
+              <Route path="/profile-company" element={
+                <ProtectedRoute>
+                  <ProfileCompanyPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/integrations" element={
+                <ProtectedRoute>
+                  <IntegrationsPage />
+                </ProtectedRoute>
+              } />
               <Route path="/phone-numbers" element={
                 <ProtectedRoute>
                   <PhoneNumbersPage />
