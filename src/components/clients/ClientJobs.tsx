@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, ExternalLink, Edit, Trash2 } from "lucide-react";
@@ -44,14 +44,13 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   
   const navigate = useNavigate();
 
-  const handleJobCreated = async (jobData: any) => {
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleJobCreated = useCallback(async (jobData: any) => {
     try {
-      console.log('Creating job with data:', jobData);
       const createdJob = await addJob(jobData);
       if (createdJob) {
-        console.log('Job created successfully:', createdJob);
         toast.success(`Job ${createdJob.id} created successfully!`);
-        await refreshJobs(); // Refresh the jobs list
+        await refreshJobs();
         return createdJob;
       }
     } catch (error) {
@@ -59,60 +58,83 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       toast.error('Failed to create job');
       throw error;
     }
-  };
+  }, [addJob, refreshJobs]);
 
-  const handleJobSuccess = (job: any) => {
-    console.log('Job success callback:', job);
+  const handleJobSuccess = useCallback((job: any) => {
     toast.success("Job created successfully!");
-    refreshJobs(); // Refresh the jobs list
-  };
+    refreshJobs();
+  }, [refreshJobs]);
 
-  const handleViewJob = (jobId: string) => {
-    console.log('Viewing job:', jobId);
+  const handleViewJob = useCallback((jobId: string) => {
     navigate(`/jobs/${jobId}`);
-  };
+  }, [navigate]);
 
-  const handleEditJob = (jobId: string) => {
-    console.log('Editing job:', jobId);
+  const handleEditJob = useCallback((jobId: string) => {
     navigate(`/jobs/${jobId}`);
-  };
+  }, [navigate]);
 
-  const handleSelectJob = (jobId: string, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedJobs(prev => [...prev, jobId]);
-    } else {
-      setSelectedJobs(prev => prev.filter(id => id !== jobId));
-    }
-  };
+  const handleSelectJob = useCallback((jobId: string, isSelected: boolean) => {
+    setSelectedJobs(prev => 
+      isSelected 
+        ? [...prev, jobId]
+        : prev.filter(id => id !== jobId)
+    );
+  }, []);
 
-  const handleSelectAllJobs = (isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedJobs(jobs.map(job => job.id));
-    } else {
-      setSelectedJobs([]);
-    }
-  };
+  const handleSelectAllJobs = useCallback((isSelected: boolean) => {
+    setSelectedJobs(isSelected ? jobs.map(job => job.id) : []);
+  }, [jobs]);
 
-  const handleClearSelection = () => {
+  const handleClearSelection = useCallback(() => {
     setSelectedJobs([]);
-  };
+  }, []);
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = useCallback(() => {
     setIsDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const handleDeleteSuccess = async () => {
+  const handleDeleteSuccess = useCallback(async () => {
     setSelectedJobs([]);
     toast.success(`Deleted ${selectedJobs.length} jobs successfully`);
-    
-    // Refresh the jobs list after successful deletion
     await refreshJobs();
-    
-    // Trigger a custom event to refresh parent components if needed
     window.dispatchEvent(new CustomEvent('clientsRefresh'));
-  };
+  }, [selectedJobs.length, refreshJobs]);
 
-  const handleUpdateJobsStatus = async (jobIds: string[], newStatus: string) => {
+  // Memoize expensive calculations
+  const getStatusBadgeStyle = useMemo(() => {
+    return (status: string) => {
+      const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
+      if (statusConfig?.color) {
+        return { backgroundColor: `${statusConfig.color}20`, color: statusConfig.color };
+      }
+      
+      const statusStyles: Record<string, string> = {
+        "completed": "bg-green-100 text-green-800",
+        "in-progress": "bg-blue-100 text-blue-800", 
+        "scheduled": "bg-yellow-100 text-yellow-800",
+        "cancelled": "bg-red-100 text-red-800",
+        "canceled": "bg-red-100 text-red-800"
+      };
+      
+      return statusStyles[status.toLowerCase()] || "bg-gray-100 text-gray-800";
+    };
+  }, [jobStatuses]);
+
+  const getJobTypeDisplay = useMemo(() => {
+    return (job: any) => {
+      if (job.job_type) {
+        const jobTypeConfig = jobTypes?.find(jt => jt.name === job.job_type);
+        return jobTypeConfig?.name || job.job_type;
+      }
+      if (job.service) {
+        return job.service;
+      }
+      return "Service Job";
+    };
+  }, [jobTypes]);
+
+  // Memoize other handlers
+  const handleUpdateJobsStatus = useCallback(async (jobIds: string[], newStatus: string) => {
     try {
       await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
       toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
@@ -122,9 +144,9 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       console.error("Failed to update jobs status:", error);
       toast.error("Failed to update job status");
     }
-  };
+  }, [updateJob, refreshJobs]);
 
-  const handleAssignTechnician = async (jobIds: string[], technicianId: string, technicianName: string) => {
+  const handleAssignTechnician = useCallback(async (jobIds: string[], technicianId: string, technicianName: string) => {
     try {
       await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
       toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
@@ -134,24 +156,22 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       console.error("Failed to assign technician:", error);
       toast.error("Failed to assign technician");
     }
-  };
+  }, [updateJob, refreshJobs]);
 
-  const handleDeleteJobs = async (jobIds: string[]) => {
+  const handleDeleteJobs = useCallback(async (jobIds: string[]) => {
     try {
       await Promise.all(jobIds.map(id => deleteJob(id)));
       toast.success(`Deleted ${jobIds.length} jobs`);
       setSelectedJobs([]);
       await refreshJobs();
-      
-      // Trigger a custom event to refresh parent components
       window.dispatchEvent(new CustomEvent('clientsRefresh'));
     } catch (error) {
       console.error("Failed to delete jobs:", error);
       toast.error("Failed to delete jobs");
     }
-  };
+  }, [deleteJob, refreshJobs]);
 
-  const handleTagJobs = async (jobIds: string[], tags: string[]) => {
+  const handleTagJobs = useCallback(async (jobIds: string[], tags: string[]) => {
     try {
       await Promise.all(jobIds.map(id => {
         const job = jobs.find(j => j.id === id);
@@ -169,14 +189,14 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       console.error("Failed to tag jobs:", error);
       toast.error("Failed to tag jobs");
     }
-  };
+  }, [updateJob, jobs]);
 
-  const handleMarkAsPaid = (jobIds: string[], paymentMethod: string) => {
+  const handleMarkAsPaid = useCallback((jobIds: string[], paymentMethod: string) => {
     toast.success(`Marked ${jobIds.length} jobs as paid via ${paymentMethod}`);
     setSelectedJobs([]);
-  };
+  }, []);
 
-  const handleExportJobs = (jobIds: string[]) => {
+  const handleExportJobs = useCallback((jobIds: string[]) => {
     const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
     const csvData = selectedJobData.map(job => ({
       'Job ID': job.id,
@@ -203,40 +223,12 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     
     toast.success(`Exported ${jobIds.length} jobs`);
     setSelectedJobs([]);
-  };
+  }, [jobs]);
 
-  // Get status configuration from database
-  const getStatusBadgeStyle = (status: string) => {
-    const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
-    if (statusConfig?.color) {
-      return { backgroundColor: `${statusConfig.color}20`, color: statusConfig.color };
-    }
-    
-    // Fallback styles if no database config found
-    const statusStyles: Record<string, string> = {
-      "completed": "bg-green-100 text-green-800",
-      "in-progress": "bg-blue-100 text-blue-800", 
-      "scheduled": "bg-yellow-100 text-yellow-800",
-      "cancelled": "bg-red-100 text-red-800",
-      "canceled": "bg-red-100 text-red-800"
-    };
-    
-    return statusStyles[status.toLowerCase()] || "bg-gray-100 text-gray-800";
-  };
-
-  // Get service/job type from database
-  const getJobTypeDisplay = (job: any) => {
-    if (job.job_type) {
-      const jobTypeConfig = jobTypes?.find(jt => jt.name === job.job_type);
-      return jobTypeConfig?.name || job.job_type;
-    }
-    if (job.service) {
-      return job.service;
-    }
-    return "Service Job"; // Dynamic fallback instead of hardcoded "General"
-  };
-
-  const areAllJobsSelected = jobs.length > 0 && selectedJobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
+  const areAllJobsSelected = useMemo(() => 
+    jobs.length > 0 && selectedJobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id)),
+    [jobs, selectedJobs]
+  );
 
   if (isLoading) {
     return (
@@ -274,7 +266,7 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
               <Button 
                 variant="outline"
                 size="sm"
-                onClick={() => handleClearSelection()}
+                onClick={handleClearSelection}
               >
                 Clear ({selectedJobs.length})
               </Button>
@@ -303,11 +295,80 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
           selectedJobs={selectedJobs} 
           onClearSelection={handleClearSelection} 
           onUpdateStatus={handleUpdateJobsStatus}
-          onAssignTechnician={handleAssignTechnician}
-          onDeleteJobs={handleDeleteJobs}
-          onTagJobs={handleTagJobs}
-          onMarkAsPaid={handleMarkAsPaid}
-          onExport={handleExportJobs}
+          onAssignTechnician={async (jobIds: string[], technicianId: string, technicianName: string) => {
+            try {
+              await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
+              toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
+              setSelectedJobs([]);
+              await refreshJobs();
+            } catch (error) {
+              console.error("Failed to assign technician:", error);
+              toast.error("Failed to assign technician");
+            }
+          }}
+          onDeleteJobs={async (jobIds: string[]) => {
+            try {
+              await Promise.all(jobIds.map(id => deleteJob(id)));
+              toast.success(`Deleted ${jobIds.length} jobs`);
+              setSelectedJobs([]);
+              await refreshJobs();
+              window.dispatchEvent(new CustomEvent('clientsRefresh'));
+            } catch (error) {
+              console.error("Failed to delete jobs:", error);
+              toast.error("Failed to delete jobs");
+            }
+          }}
+          onTagJobs={async (jobIds: string[], tags: string[]) => {
+            try {
+              await Promise.all(jobIds.map(id => {
+                const job = jobs.find(j => j.id === id);
+                if (!job) return Promise.resolve(null);
+                
+                const existingTags = job.tags || [];
+                const updatedTags = [...new Set([...existingTags, ...tags])];
+                
+                return updateJob(id, { tags: updatedTags });
+              }));
+              toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
+              setSelectedJobs([]);
+              await refreshJobs();
+            } catch (error) {
+              console.error("Failed to tag jobs:", error);
+              toast.error("Failed to tag jobs");
+            }
+          }}
+          onMarkAsPaid={(jobIds: string[], paymentMethod: string) => {
+            toast.success(`Marked ${jobIds.length} jobs as paid via ${paymentMethod}`);
+            setSelectedJobs([]);
+          }}
+          onExport={(jobIds: string[]) => {
+            const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
+            const csvData = selectedJobData.map(job => ({
+              'Job ID': job.id,
+              'Title': job.title || '',
+              'Status': job.status,
+              'Type': job.job_type || job.service || '',
+              'Date': job.date ? format(new Date(job.date), 'yyyy-MM-dd') : '',
+              'Revenue': job.revenue || 0,
+              'Address': job.address || ''
+            }));
+            
+            const csv = [
+              Object.keys(csvData[0]).join(','),
+              ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `client-jobs-export-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            toast.success(`Exported ${jobIds.length} jobs`);
+            setSelectedJobs([]);
+          }}
         />
       )}
 

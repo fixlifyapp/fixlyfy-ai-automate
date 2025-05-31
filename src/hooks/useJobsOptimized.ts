@@ -5,27 +5,44 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Job } from "@/hooks/useJobs";
+import { cacheConfig, localStorageCache } from "@/utils/cacheConfig";
 
 interface UseJobsOptimizedOptions {
   page?: number;
   pageSize?: number;
   enableRealtime?: boolean;
+  clientId?: string;
 }
 
 export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
-  const { page = 1, pageSize = 50, enableRealtime = true } = options;
+  const { page = 1, pageSize = 50, enableRealtime = true, clientId } = options;
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const { user } = useAuth();
   const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
 
-  const fetchJobs = useCallback(async () => {
+  // Cache key for localStorage
+  const cacheKey = useMemo(() => 
+    `jobs_${clientId || 'all'}_${page}_${pageSize}_${user?.id}`,
+    [clientId, page, pageSize, user?.id]
+  );
+
+  const fetchJobs = useCallback(async (useCache = true) => {
+    // Try to get from cache first
+    if (useCache) {
+      const cachedJobs = localStorageCache.get(cacheKey);
+      if (cachedJobs) {
+        setJobs(cachedJobs.jobs);
+        setTotalCount(cachedJobs.totalCount);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
-      console.log('Fetching jobs with optimized query...');
-      
-      // Optimized query - select only necessary fields initially
+      // Optimized query - select only necessary fields
       let query = supabase
         .from('jobs')
         .select(`
@@ -43,6 +60,11 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           created_at,
           client:clients(id, name, email, phone)
         `, { count: 'exact' });
+      
+      // Apply client filter if specified
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
       
       // Apply role-based filtering
       const jobViewScope = getJobViewScope();
@@ -62,12 +84,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       
       const { data, error, count } = await query;
       
-      if (error) {
-        console.error('Error fetching jobs:', error);
-        throw error;
-      }
-      
-      console.log(`Fetched ${data?.length || 0} jobs successfully`);
+      if (error) throw error;
       
       // Process jobs efficiently
       const processedJobs = (data || []).map(job => ({
@@ -78,24 +95,33 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       
       setJobs(processedJobs);
       setTotalCount(count || 0);
+      
+      // Cache the results
+      if (useCache) {
+        localStorageCache.set(cacheKey, {
+          jobs: processedJobs,
+          totalCount: count || 0
+        }, 5); // Cache for 5 minutes
+      }
+      
     } catch (error) {
       console.error('Error fetching jobs:', error);
       toast.error('Failed to load jobs');
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, getJobViewScope, user?.id]);
+  }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize]);
 
   // Initial fetch
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Real-time updates
+  // Real-time updates with debouncing
   useEffect(() => {
     if (!enableRealtime) return;
 
-    console.log('Setting up real-time updates for jobs...');
+    let debounceTimer: NodeJS.Timeout;
     
     const channel = supabase
       .channel('jobs-optimized-realtime')
@@ -106,19 +132,23 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           schema: 'public',
           table: 'jobs'
         },
-        (payload) => {
-          console.log('Real-time job update received:', payload);
-          // Immediate refresh on any job change
-          fetchJobs();
+        () => {
+          // Debounce real-time updates to prevent flickering
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            // Clear cache and refresh
+            localStorageCache.remove(cacheKey);
+            fetchJobs(false);
+          }, 500); // 500ms debounce
         }
       )
       .subscribe();
 
     return () => {
-      console.log('Cleaning up real-time job subscription...');
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
-  }, [fetchJobs, enableRealtime]);
+  }, [fetchJobs, enableRealtime, cacheKey]);
 
   // Memoized computed values
   const totalPages = useMemo(() => Math.ceil(totalCount / pageSize), [totalCount, pageSize]);
@@ -126,9 +156,9 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const hasPreviousPage = useMemo(() => page > 1, [page]);
 
   const refreshJobs = useCallback(() => {
-    console.log('Manual refresh triggered...');
-    fetchJobs();
-  }, [fetchJobs]);
+    localStorageCache.remove(cacheKey);
+    fetchJobs(false);
+  }, [fetchJobs, cacheKey]);
 
   return {
     jobs,
