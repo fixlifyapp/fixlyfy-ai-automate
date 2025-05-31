@@ -61,17 +61,13 @@ export const NotificationsBell = () => {
     try {
       setLoading(true);
       
-      // Use SQL query to access the new table directly
+      // Fetch real notifications from the database
       const { data: userNotifications, error } = await supabase
-        .rpc('exec_sql', {
-          sql: `
-            SELECT id, title, message, type, created_at, is_read, data
-            FROM user_notifications 
-            WHERE user_id = '${user.id}'
-            ORDER BY created_at DESC 
-            LIMIT 20
-          `
-        });
+        .from('user_notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
       if (error) {
         console.error('Error fetching notifications:', error);
@@ -81,9 +77,18 @@ export const NotificationsBell = () => {
         return;
       }
 
-      const notifications: Notification[] = userNotifications?.data || [];
-      setNotifications(notifications);
-      setUnreadCount(notifications.filter(n => !n.is_read).length);
+      const formattedNotifications: Notification[] = (userNotifications || []).map(notif => ({
+        id: notif.id,
+        title: notif.title,
+        message: notif.message,
+        type: notif.type as 'info' | 'warning' | 'success' | 'error',
+        created_at: notif.created_at || '',
+        is_read: notif.is_read || false,
+        data: notif.data
+      }));
+
+      setNotifications(formattedNotifications);
+      setUnreadCount(formattedNotifications.filter(n => !n.is_read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       // Fallback to empty notifications
@@ -98,13 +103,15 @@ export const NotificationsBell = () => {
     if (!user) return;
     
     try {
-      const { error } = await supabase.rpc('exec_sql', {
-        sql: `
-          UPDATE user_notifications 
-          SET is_read = true, read_at = now(), updated_at = now()
-          WHERE id = '${notificationId}' AND user_id = '${user.id}'
-        `
-      });
+      const { error } = await supabase
+        .from('user_notifications')
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error marking notification as read:', error);
@@ -126,13 +133,15 @@ export const NotificationsBell = () => {
     if (!user) return;
     
     try {
-      const { error } = await supabase.rpc('exec_sql', {
-        sql: `
-          UPDATE user_notifications 
-          SET is_read = true, read_at = now(), updated_at = now()
-          WHERE user_id = '${user.id}' AND is_read = false
-        `
-      });
+      const { error } = await supabase
+        .from('user_notifications')
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
 
       if (error) {
         console.error('Error marking all notifications as read:', error);
