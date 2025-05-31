@@ -32,18 +32,20 @@ interface EstimateBuilderDialogProps {
 const EstimateBuilderDialogContent = ({
   onOpenChange,
   estimateId,
-  clientInfo,
+  clientInfo: providedClientInfo,
   jobId
 }: Omit<EstimateBuilderDialogProps, 'open'>) => {
   const isMobile = useIsMobile();
   
   console.log('=== EstimateBuilderDialogContent Debug ===');
   console.log('JobId prop received in dialog:', jobId);
-  console.log('ClientInfo prop received in dialog:', clientInfo);
+  console.log('ClientInfo prop received in dialog:', providedClientInfo);
   
   const {
     estimateBuilder,
     jobData,
+    clientInfo,
+    jobAddress,
     activeTab,
     setActiveTab,
     selectedProduct,
@@ -61,7 +63,8 @@ const EstimateBuilderDialogContent = ({
   } = useEstimateBuilderContext();
 
   console.log('JobData from context:', jobData);
-  console.log('JobData ID from context:', jobData?.id);
+  console.log('ClientInfo from context:', clientInfo);
+  console.log('JobAddress from context:', jobAddress);
 
   const {
     isProductSearchOpen,
@@ -178,7 +181,7 @@ const EstimateBuilderDialogContent = ({
         onOpenChange={setIsSendDialogOpen}
         onSave={handleSaveEstimateWrapper}
         onAddWarranty={handleAddWarranty}
-        clientInfo={clientInfo || jobData?.client}
+        clientInfo={clientInfo || providedClientInfo}
         estimateNumber={estimateBuilder.estimateNumber}
         jobId={jobId}
       />

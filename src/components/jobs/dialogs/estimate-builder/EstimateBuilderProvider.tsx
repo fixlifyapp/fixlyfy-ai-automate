@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
-import { useJobs } from "@/hooks/useJobs";
+import { useJobData } from "../unified/hooks/useJobData";
 import { useEstimates } from "@/hooks/useEstimates";
 import { Product, LineItem } from "@/components/jobs/builder/types";
 import { toast } from "sonner";
@@ -9,6 +9,8 @@ import { toast } from "sonner";
 interface EstimateBuilderContextType {
   estimateBuilder: ReturnType<typeof useEstimateBuilder>;
   jobData: any;
+  clientInfo: any;
+  jobAddress: string;
   isLoading: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -47,31 +49,22 @@ export const EstimateBuilderProvider = ({
   console.log('=== EstimateBuilderProvider Debug ===');
   console.log('JobId received in provider:', jobId);
   
-  // Fetch job data - Note: useJobs expects a single jobId but returns an array
-  const { jobs, isLoading } = useJobs(jobId);
-  const [jobData, setJobData] = useState<any>(null);
+  // Use the unified job data hook for consistent data fetching
+  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId);
+  
+  console.log('Client info from useJobData:', clientInfo);
+  console.log('Job address from useJobData:', jobAddress);
+  console.log('Job data loading:', jobDataLoading);
+  
+  // Create a jobData object for compatibility
+  const jobData = {
+    id: jobId,
+    client: clientInfo,
+    address: jobAddress
+  };
   
   // Fetch estimates data to get the estimate being edited
   const { estimates } = useEstimates(jobId);
-  
-  // Get the job data when jobs are loaded
-  useEffect(() => {
-    console.log('=== EstimateBuilderProvider Effect Debug ===');
-    console.log('Jobs loading:', isLoading);
-    console.log('Jobs data:', jobs);
-    console.log('Looking for job with ID:', jobId);
-    
-    if (!isLoading && jobs.length > 0) {
-      const foundJob = jobs.find(job => job.id === jobId);
-      console.log('Found job:', foundJob);
-      if (foundJob) {
-        setJobData(foundJob);
-      } else {
-        console.warn('Job not found in jobs array for ID:', jobId);
-        console.log('Available job IDs:', jobs.map(j => j.id));
-      }
-    }
-  }, [jobs, isLoading, jobId]);
   
   const estimateBuilder = useEstimateBuilder(jobId);
   
@@ -199,7 +192,9 @@ export const EstimateBuilderProvider = ({
   const value = {
     estimateBuilder,
     jobData,
-    isLoading,
+    clientInfo,
+    jobAddress,
+    isLoading: jobDataLoading,
     activeTab,
     setActiveTab,
     selectedProduct,
