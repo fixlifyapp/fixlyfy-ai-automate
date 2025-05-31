@@ -1,17 +1,15 @@
 import { useState, useCallback, useMemo } from "react";
-import { useJobs } from "@/hooks/useJobs";
+import { useJobsOptimized } from "@/hooks/useJobsOptimized";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, ExternalLink, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { ScheduleJobModal } from "../schedule/ScheduleJobModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
 import { DeleteJobsDialog } from "../jobs/dialogs/DeleteJobsDialog";
 import { BulkActionsBar } from "../jobs/BulkActionsBar";
-import { useJobStatuses, useJobTypes } from "@/hooks/useConfigItems";
+import { JobsListOptimized } from "../jobs/JobsListOptimized";
+import { useJobs } from "@/hooks/useJobs";
 
 interface ClientJobsProps {
   clientId?: string;
@@ -22,25 +20,22 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  console.log('=== ClientJobs Debug ===');
-  console.log('ClientId received:', clientId);
-  
   const {
-    jobs,
-    isLoading,
-    updateJob,
-    deleteJob,
-    addJob,
-    refreshJobs
-  } = useJobs(clientId);
-  
-  console.log('Jobs fetched:', jobs);
-  console.log('Jobs loading:', isLoading);
-  console.log('Number of jobs:', jobs?.length || 0);
-  
-  // Get dynamic configuration data from database
-  const { items: jobStatuses } = useJobStatuses();
-  const { items: jobTypes } = useJobTypes();
+    jobs: optimizedJobs,
+    isLoading: isOptimizedLoading,
+    refreshJobs: refreshOptimized,
+    canCreate,
+    canEdit,
+    canDelete
+  } = useJobsOptimized({
+    clientId,
+    page: 1,
+    pageSize: 100,
+    enableRealtime: true
+  });
+
+  // Keep original hook for mutations only
+  const { addJob, updateJob, deleteJob } = useJobs();
   
   const navigate = useNavigate();
 
@@ -50,7 +45,7 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       const createdJob = await addJob(jobData);
       if (createdJob) {
         toast.success(`Job ${createdJob.id} created successfully!`);
-        await refreshJobs();
+        refreshOptimized();
         return createdJob;
       }
     } catch (error) {
@@ -58,20 +53,12 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       toast.error('Failed to create job');
       throw error;
     }
-  }, [addJob, refreshJobs]);
+  }, [addJob, refreshOptimized]);
 
   const handleJobSuccess = useCallback((job: any) => {
     toast.success("Job created successfully!");
-    refreshJobs();
-  }, [refreshJobs]);
-
-  const handleViewJob = useCallback((jobId: string) => {
-    navigate(`/jobs/${jobId}`);
-  }, [navigate]);
-
-  const handleEditJob = useCallback((jobId: string) => {
-    navigate(`/jobs/${jobId}`);
-  }, [navigate]);
+    refreshOptimized();
+  }, [refreshOptimized]);
 
   const handleSelectJob = useCallback((jobId: string, isSelected: boolean) => {
     setSelectedJobs(prev => 
@@ -82,8 +69,8 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   }, []);
 
   const handleSelectAllJobs = useCallback((isSelected: boolean) => {
-    setSelectedJobs(isSelected ? jobs.map(job => job.id) : []);
-  }, [jobs]);
+    setSelectedJobs(isSelected ? optimizedJobs.map(job => job.id) : []);
+  }, [optimizedJobs]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedJobs([]);
@@ -96,85 +83,52 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   const handleDeleteSuccess = useCallback(async () => {
     setSelectedJobs([]);
     toast.success(`Deleted ${selectedJobs.length} jobs successfully`);
-    await refreshJobs();
+    refreshOptimized();
     window.dispatchEvent(new CustomEvent('clientsRefresh'));
-  }, [selectedJobs.length, refreshJobs]);
+  }, [selectedJobs.length, refreshOptimized]);
 
-  // Memoize expensive calculations
-  const getStatusBadgeStyle = useMemo(() => {
-    return (status: string) => {
-      const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
-      if (statusConfig?.color) {
-        return { backgroundColor: `${statusConfig.color}20`, color: statusConfig.color };
-      }
-      
-      const statusStyles: Record<string, string> = {
-        "completed": "bg-green-100 text-green-800",
-        "in-progress": "bg-blue-100 text-blue-800", 
-        "scheduled": "bg-yellow-100 text-yellow-800",
-        "cancelled": "bg-red-100 text-red-800",
-        "canceled": "bg-red-100 text-red-800"
-      };
-      
-      return statusStyles[status.toLowerCase()] || "bg-gray-100 text-gray-800";
-    };
-  }, [jobStatuses]);
-
-  const getJobTypeDisplay = useMemo(() => {
-    return (job: any) => {
-      if (job.job_type) {
-        const jobTypeConfig = jobTypes?.find(jt => jt.name === job.job_type);
-        return jobTypeConfig?.name || job.job_type;
-      }
-      if (job.service) {
-        return job.service;
-      }
-      return "Service Job";
-    };
-  }, [jobTypes]);
-
-  // Memoize other handlers
+  // Bulk action handlers with optimized refresh
   const handleUpdateJobsStatus = useCallback(async (jobIds: string[], newStatus: string) => {
     try {
       await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
       toast.success(`Updated ${jobIds.length} jobs to "${newStatus}"`);
       setSelectedJobs([]);
-      await refreshJobs();
+      refreshOptimized();
     } catch (error) {
       console.error("Failed to update jobs status:", error);
       toast.error("Failed to update job status");
     }
-  }, [updateJob, refreshJobs]);
+  }, [updateJob, refreshOptimized]);
 
   const handleAssignTechnician = useCallback(async (jobIds: string[], technicianId: string, technicianName: string) => {
     try {
       await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
       toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
       setSelectedJobs([]);
-      await refreshJobs();
+      refreshOptimized();
     } catch (error) {
       console.error("Failed to assign technician:", error);
       toast.error("Failed to assign technician");
     }
-  }, [updateJob, refreshJobs]);
+  }, [updateJob, refreshOptimized]);
 
   const handleDeleteJobs = useCallback(async (jobIds: string[]) => {
     try {
       await Promise.all(jobIds.map(id => deleteJob(id)));
       toast.success(`Deleted ${jobIds.length} jobs`);
       setSelectedJobs([]);
-      await refreshJobs();
+      refreshOptimized();
       window.dispatchEvent(new CustomEvent('clientsRefresh'));
     } catch (error) {
       console.error("Failed to delete jobs:", error);
       toast.error("Failed to delete jobs");
     }
-  }, [deleteJob, refreshJobs]);
+  }, [deleteJob, refreshOptimized]);
 
   const handleTagJobs = useCallback(async (jobIds: string[], tags: string[]) => {
     try {
       await Promise.all(jobIds.map(id => {
-        const job = jobs.find(j => j.id === id);
+        const job = optimizedJobs.find(j => j.id === id);
         if (!job) return Promise.resolve(null);
         
         const existingTags = job.tags || [];
@@ -184,12 +138,12 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
       }));
       toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
       setSelectedJobs([]);
-      await refreshJobs();
+      refreshOptimized();
     } catch (error) {
       console.error("Failed to tag jobs:", error);
       toast.error("Failed to tag jobs");
     }
-  }, [updateJob, jobs]);
+  }, [updateJob, optimizedJobs, refreshOptimized]);
 
   const handleMarkAsPaid = useCallback((jobIds: string[], paymentMethod: string) => {
     toast.success(`Marked ${jobIds.length} jobs as paid via ${paymentMethod}`);
@@ -197,13 +151,13 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   }, []);
 
   const handleExportJobs = useCallback((jobIds: string[]) => {
-    const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
+    const selectedJobData = optimizedJobs.filter(job => jobIds.includes(job.id));
     const csvData = selectedJobData.map(job => ({
       'Job ID': job.id,
       'Title': job.title || '',
       'Status': job.status,
       'Type': job.job_type || job.service || '',
-      'Date': job.date ? format(new Date(job.date), 'yyyy-MM-dd') : '',
+      'Date': job.date ? new Date(job.date).toLocaleDateString() : '',
       'Revenue': job.revenue || 0,
       'Address': job.address || ''
     }));
@@ -223,35 +177,13 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     
     toast.success(`Exported ${jobIds.length} jobs`);
     setSelectedJobs([]);
-  }, [jobs]);
+  }, [optimizedJobs]);
 
-  const areAllJobsSelected = useMemo(() => 
-    jobs.length > 0 && selectedJobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id)),
-    [jobs, selectedJobs]
-  );
-
-  if (isLoading) {
+  if (isOptimizedLoading) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 size={32} className="animate-spin mr-2" />
         <span>Loading jobs...</span>
-      </div>
-    );
-  }
-
-  // Handle case where jobs is null or undefined
-  if (!jobs) {
-    console.error('Jobs data is null or undefined');
-    return (
-      <div className="text-center py-8 bg-muted/40 rounded-lg border border-border">
-        <p className="text-muted-foreground">Error loading jobs data.</p>
-        <Button 
-          variant="outline" 
-          className="mt-4"
-          onClick={() => refreshJobs()}
-        >
-          Retry Loading Jobs
-        </Button>
       </div>
     );
   }
@@ -295,84 +227,15 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
           selectedJobs={selectedJobs} 
           onClearSelection={handleClearSelection} 
           onUpdateStatus={handleUpdateJobsStatus}
-          onAssignTechnician={async (jobIds: string[], technicianId: string, technicianName: string) => {
-            try {
-              await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
-              toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
-              setSelectedJobs([]);
-              await refreshJobs();
-            } catch (error) {
-              console.error("Failed to assign technician:", error);
-              toast.error("Failed to assign technician");
-            }
-          }}
-          onDeleteJobs={async (jobIds: string[]) => {
-            try {
-              await Promise.all(jobIds.map(id => deleteJob(id)));
-              toast.success(`Deleted ${jobIds.length} jobs`);
-              setSelectedJobs([]);
-              await refreshJobs();
-              window.dispatchEvent(new CustomEvent('clientsRefresh'));
-            } catch (error) {
-              console.error("Failed to delete jobs:", error);
-              toast.error("Failed to delete jobs");
-            }
-          }}
-          onTagJobs={async (jobIds: string[], tags: string[]) => {
-            try {
-              await Promise.all(jobIds.map(id => {
-                const job = jobs.find(j => j.id === id);
-                if (!job) return Promise.resolve(null);
-                
-                const existingTags = job.tags || [];
-                const updatedTags = [...new Set([...existingTags, ...tags])];
-                
-                return updateJob(id, { tags: updatedTags });
-              }));
-              toast.success(`Tagged ${jobIds.length} jobs with ${tags.length} tags`);
-              setSelectedJobs([]);
-              await refreshJobs();
-            } catch (error) {
-              console.error("Failed to tag jobs:", error);
-              toast.error("Failed to tag jobs");
-            }
-          }}
-          onMarkAsPaid={(jobIds: string[], paymentMethod: string) => {
-            toast.success(`Marked ${jobIds.length} jobs as paid via ${paymentMethod}`);
-            setSelectedJobs([]);
-          }}
-          onExport={(jobIds: string[]) => {
-            const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
-            const csvData = selectedJobData.map(job => ({
-              'Job ID': job.id,
-              'Title': job.title || '',
-              'Status': job.status,
-              'Type': job.job_type || job.service || '',
-              'Date': job.date ? format(new Date(job.date), 'yyyy-MM-dd') : '',
-              'Revenue': job.revenue || 0,
-              'Address': job.address || ''
-            }));
-            
-            const csv = [
-              Object.keys(csvData[0]).join(','),
-              ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
-            ].join('\n');
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `client-jobs-export-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            toast.success(`Exported ${jobIds.length} jobs`);
-            setSelectedJobs([]);
-          }}
+          onAssignTechnician={handleAssignTechnician}
+          onDeleteJobs={handleDeleteJobs}
+          onTagJobs={handleTagJobs}
+          onMarkAsPaid={handleMarkAsPaid}
+          onExport={handleExportJobs}
         />
       )}
 
-      {jobs.length === 0 ? (
+      {optimizedJobs.length === 0 ? (
         <div className="text-center py-8 bg-muted/40 rounded-lg border border-border">
           <p className="text-muted-foreground">No jobs found for this client.</p>
           <Button 
@@ -385,90 +248,14 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
           </Button>
         </div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox 
-                    checked={areAllJobsSelected}
-                    onCheckedChange={handleSelectAllJobs}
-                  />
-                </TableHead>
-                <TableHead>Job ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {jobs.map(job => {
-                const statusStyle = getStatusBadgeStyle(job.status);
-                const isStyleObject = typeof statusStyle === 'object';
-                
-                return (
-                  <TableRow key={job.id}>
-                    <TableCell>
-                      <Checkbox 
-                        checked={selectedJobs.includes(job.id)}
-                        onCheckedChange={(checked) => handleSelectJob(job.id, !!checked)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{job.id}</TableCell>
-                    <TableCell>{job.title || `${job.client?.name || 'Service'} - ${getJobTypeDisplay(job)}`}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={isStyleObject ? "" : statusStyle}
-                        style={isStyleObject ? statusStyle : undefined}
-                      >
-                        {job.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {job.date ? format(new Date(job.date), "MMM dd, yyyy") : "N/A"}
-                    </TableCell>
-                    <TableCell>{getJobTypeDisplay(job)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditJob(job.id)}
-                          title="Edit Job"
-                        >
-                          <Edit size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleViewJob(job.id)}
-                          title="View Job"
-                        >
-                          <ExternalLink size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedJobs([job.id]);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete Job"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        <JobsListOptimized
+          jobs={optimizedJobs}
+          isGridView={true}
+          selectedJobs={selectedJobs}
+          onSelectJob={handleSelectJob}
+          onSelectAllJobs={handleSelectAllJobs}
+          onRefresh={refreshOptimized}
+        />
       )}
 
       <ScheduleJobModal 
