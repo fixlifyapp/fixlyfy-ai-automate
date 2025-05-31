@@ -188,30 +188,10 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         }
       });
 
-    // Set up real-time subscription for job updates - single subscription
-    const channel = supabase
-      .channel(`job-updates-${jobId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'jobs',
-          filter: `id=eq.${jobId}`
-        },
-        () => {
-          if (isMountedRef.current) {
-            console.log('Real-time job update detected, triggering refresh...');
-            // Clear cache and trigger refresh by incrementing trigger
-            jobRequestCache.delete(cacheKey);
-            setRefreshTrigger(prev => prev + 1);
-          }
-        }
-      )
-      .subscribe();
+    // Real-time subscription is now handled in JobDetailsContext
+    // Remove the subscription from here to prevent duplicates
 
     return () => {
-      supabase.removeChannel(channel);
       jobRequestCache.delete(cacheKey);
     };
   }, [jobId, refreshTrigger]);

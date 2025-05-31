@@ -53,7 +53,7 @@ export const registerServiceWorker = () => {
 
 // Enhanced local storage cache utilities with better memory management
 export const localStorageCache = {
-  set: (key: string, data: any, expirationMinutes = 60) => {
+  set: function(key: string, data: any, expirationMinutes = 60) {
     try {
       const expiration = new Date().getTime() + (expirationMinutes * 60 * 1000);
       const cacheData = {
@@ -64,13 +64,13 @@ export const localStorageCache = {
       localStorage.setItem(key, JSON.stringify(cacheData));
       
       // Clean up old cache entries periodically
-      this.cleanup();
+      localStorageCache.cleanup();
     } catch (error) {
       console.warn('Failed to cache data:', error);
     }
   },
   
-  get: (key: string) => {
+  get: function(key: string) {
     try {
       const cached = localStorage.getItem(key);
       if (!cached) return null;
@@ -88,7 +88,7 @@ export const localStorageCache = {
     }
   },
   
-  remove: (key: string) => {
+  remove: function(key: string) {
     try {
       localStorage.removeItem(key);
     } catch (error) {
@@ -96,7 +96,7 @@ export const localStorageCache = {
     }
   },
   
-  clear: () => {
+  clear: function() {
     try {
       localStorage.clear();
     } catch (error) {
@@ -105,7 +105,7 @@ export const localStorageCache = {
   },
   
   // Clean up expired cache entries
-  cleanup: () => {
+  cleanup: function() {
     try {
       const now = new Date().getTime();
       const keys = Object.keys(localStorage);
