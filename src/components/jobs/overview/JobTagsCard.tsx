@@ -8,6 +8,7 @@ import { useJobs } from "@/hooks/useJobs";
 import { useTags } from "@/hooks/useConfigItems";
 import { toast } from "sonner";
 import { TagSelectionDialog } from "../dialogs/TagSelectionDialog";
+import { getTagColor } from "@/data/tags";
 
 interface JobTagsCardProps {
   tags: string[];
@@ -31,13 +32,13 @@ export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTags
 
     const resolved = tags.map(tag => {
       // If it's a UUID, find the tag by ID
-      if (tag.length === 36 && tag.includes('-')) {
+      if (typeof tag === 'string' && tag.length === 36 && tag.includes('-')) {
         const tagItem = tagItems.find(t => t.id === tag);
-        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag };
+        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: getTagColor(tag) };
       }
       // If it's a name, find the tag by name
       const tagItem = tagItems.find(t => t.name === tag);
-      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag };
+      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: String(tag), color: getTagColor(String(tag)) };
     });
 
     setResolvedTags(resolved);

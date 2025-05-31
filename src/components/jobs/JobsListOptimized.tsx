@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Job } from "@/hooks/useJobs";
+import { useTags } from "@/hooks/useConfigItems";
+import { getTagColor } from "@/data/tags";
 
 interface JobsListOptimizedProps {
   jobs: Job[];
@@ -61,12 +63,14 @@ const JobCard = memo(({
   job, 
   isSelected, 
   onSelect, 
-  onEdit 
+  onEdit,
+  tagItems 
 }: { 
   job: Job; 
   isSelected: boolean; 
   onSelect: (checked: boolean) => void; 
   onEdit: () => void;
+  tagItems: Array<{id: string, name: string, color?: string}>;
 }) => {
   const getStatusBadgeStyle = (status: string) => {
     const statusStyles: Record<string, any> = {
@@ -99,6 +103,22 @@ const JobCard = memo(({
     }
     return "TBD";
   };
+
+  // Resolve tags to get proper names and colors
+  const resolvedTags = useMemo(() => {
+    if (!job.tags || job.tags.length === 0) return [];
+    
+    return job.tags.map(tag => {
+      // If it's a UUID, find the tag by ID
+      if (typeof tag === 'string' && tag.length === 36 && tag.includes('-')) {
+        const tagItem = tagItems.find(t => t.id === tag);
+        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: getTagColor(tag) };
+      }
+      // If it's a name, find the tag by name for color
+      const tagItem = tagItems.find(t => t.name === tag);
+      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: String(tag), color: getTagColor(String(tag)) };
+    });
+  }, [job.tags, tagItems]);
 
   return (
     <ModernCard variant="elevated" className="hover:shadow-lg transition-shadow duration-200 group cursor-pointer">
@@ -160,17 +180,22 @@ const JobCard = memo(({
           </div>
         )}
         
-        {job.tags && job.tags.length > 0 && (
+        {resolvedTags && resolvedTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">
             <Tag className="h-3 w-3 text-gray-500" />
-            {job.tags.slice(0, 2).map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs">
-                {typeof tag === 'string' ? tag : String(tag)}
+            {resolvedTags.slice(0, 2).map((tag, index) => (
+              <Badge 
+                key={index} 
+                variant="outline" 
+                className="text-xs"
+                style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+              >
+                {tag.name}
               </Badge>
             ))}
-            {job.tags.length > 2 && (
+            {resolvedTags.length > 2 && (
               <span className="text-xs text-gray-500">
-                +{job.tags.length - 2} more
+                +{resolvedTags.length - 2} more
               </span>
             )}
           </div>
@@ -191,6 +216,7 @@ export const JobsListOptimized = memo(({
   onRefresh
 }: JobsListOptimizedProps) => {
   const navigate = useNavigate();
+  const { items: tagItems } = useTags();
 
   const handleJobClick = (jobId: string) => {
     navigate(`/jobs/${jobId}`);
@@ -277,6 +303,7 @@ export const JobsListOptimized = memo(({
                 isSelected={selectedJobs.includes(job.id)}
                 onSelect={(checked) => onSelectJob(job.id, checked)}
                 onEdit={() => handleEditJob(job.id)}
+                tagItems={tagItems}
               />
             </div>
           ))}
