@@ -64,13 +64,13 @@ serve(async (req) => {
     }
 
     if (!existingNumber) {
-      // Insert the phone number with full configuration
+      // Insert the phone number with full configuration using 'available' status
       const { error: insertError } = await supabaseClient
         .from('phone_numbers')
         .insert({
           phone_number: phoneNumber,
           friendly_name: 'AI Dispatcher Test Number',
-          status: 'owned',
+          status: 'available', // Changed from 'owned' to 'available'
           purchased_by: user.id,
           purchased_at: new Date().toISOString(),
           capabilities: {
@@ -110,7 +110,7 @@ serve(async (req) => {
         .from('phone_numbers')
         .update({
           ai_dispatcher_enabled: true,
-          status: 'owned',
+          status: 'available', // Changed from 'owned' to 'available'
           purchased_by: user.id,
           connect_instance_id: connectInstanceId,
           connect_phone_number_arn: `arn:aws:connect:${awsRegion}:${connectInstanceId?.split('/')[0]}:phone-number/${phoneNumber.replace('+', '')}`,
