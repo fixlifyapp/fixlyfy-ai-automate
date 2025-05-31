@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +20,15 @@ interface PhoneNumberConfig {
   ai_dispatcher_enabled: boolean;
   connect_instance_id: string;
   ai_settings: any;
+}
+
+interface AISettings {
+  webhook_url?: string;
+  business_name?: string;
+  business_type?: string;
+  greeting?: string;
+  voice_selection?: string;
+  emergency_detection_enabled?: boolean;
 }
 
 export const ConnectTestStatus = () => {
@@ -69,7 +77,20 @@ export const ConnectTestStatus = () => {
 
       if (phoneData) {
         setPhoneConfig(phoneData);
-        setWebhookUrl(phoneData.ai_settings?.webhook_url || "");
+        
+        // Safely parse ai_settings JSON
+        let aiSettings: AISettings = {};
+        try {
+          if (phoneData.ai_settings && typeof phoneData.ai_settings === 'object') {
+            aiSettings = phoneData.ai_settings as AISettings;
+          } else if (typeof phoneData.ai_settings === 'string') {
+            aiSettings = JSON.parse(phoneData.ai_settings);
+          }
+        } catch (error) {
+          console.error('Error parsing ai_settings:', error);
+        }
+        
+        setWebhookUrl(aiSettings.webhook_url || "");
       }
 
       setStatus({
@@ -78,7 +99,7 @@ export const ConnectTestStatus = () => {
         connect: phoneConfigured && phoneData?.connect_instance_id != null,
         database: true, // Database is always available
         phoneNumber: phoneConfigured,
-        connectFlow: phoneData?.ai_settings?.webhook_url != null
+        connectFlow: webhookUrl != ""
       });
     } catch (error) {
       console.error('Error checking system status:', error);
