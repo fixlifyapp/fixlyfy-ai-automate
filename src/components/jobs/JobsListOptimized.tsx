@@ -31,7 +31,7 @@ interface JobsListOptimizedProps {
   onRefresh?: () => void;
 }
 
-// Loading skeleton component
+// Loading skeleton component - optimized
 const JobCardSkeleton = memo(() => (
   <ModernCard variant="elevated" className="animate-pulse">
     <div className="p-4 space-y-3">
@@ -58,7 +58,7 @@ const JobCardSkeleton = memo(() => (
 
 JobCardSkeleton.displayName = "JobCardSkeleton";
 
-// Memoized job card component to prevent unnecessary re-renders
+// Memoized job card component with better performance
 const JobCard = memo(({ 
   job, 
   isSelected, 
@@ -72,7 +72,7 @@ const JobCard = memo(({
   onEdit: () => void;
   tagItems: Array<{id: string, name: string, color?: string}>;
 }) => {
-  const getStatusBadgeStyle = (status: string) => {
+  const getStatusBadgeStyle = useMemo(() => (status: string) => {
     const statusStyles: Record<string, any> = {
       "completed": "bg-green-100 text-green-700 border-green-200",
       "in-progress": "bg-blue-100 text-blue-700 border-blue-200", 
@@ -81,9 +81,9 @@ const JobCard = memo(({
       "canceled": "bg-red-100 text-red-700 border-red-200"
     };
     return statusStyles[status.toLowerCase()] || "bg-gray-100 text-gray-700 border-gray-200";
-  };
+  }, []);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useMemo(() => (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'in-progress': return <Clock className="h-4 w-4" />;
@@ -92,9 +92,9 @@ const JobCard = memo(({
       case 'canceled': return <AlertCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
     }
-  };
+  }, []);
 
-  const formatTime = () => {
+  const formatTime = useMemo(() => {
     if (job.schedule_start) {
       return format(new Date(job.schedule_start), "HH:mm");
     }
@@ -102,9 +102,9 @@ const JobCard = memo(({
       return format(new Date(job.date), "HH:mm");
     }
     return "TBD";
-  };
+  }, [job.schedule_start, job.date]);
 
-  // Resolve tags to get proper names and colors
+  // Resolve tags to get proper names and colors - memoized
   const resolvedTags = useMemo(() => {
     if (!job.tags || job.tags.length === 0) return [];
     
@@ -147,7 +147,7 @@ const JobCard = memo(({
         
         <div>
           <h3 className="font-semibold text-lg mb-1">{job.client?.name || 'Unknown Client'}</h3>
-          <p className="text-sm text-gray-600">{formatTime()}</p>
+          <p className="text-sm text-gray-600">{formatTime}</p>
         </div>
         
         <div className="flex items-center justify-between">
@@ -168,7 +168,7 @@ const JobCard = memo(({
         
         {job.address && (
           <div className="flex items-center text-sm text-gray-600">
-            <MapPin className="h-4 w-4 mr-2" />
+            <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="truncate">{job.address}</span>
           </div>
         )}
@@ -182,7 +182,7 @@ const JobCard = memo(({
         
         {resolvedTags && resolvedTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">
-            <Tag className="h-3 w-3 text-gray-500" />
+            <Tag className="h-3 w-3 text-gray-500 flex-shrink-0" />
             {resolvedTags.slice(0, 2).map((tag, index) => (
               <Badge 
                 key={index} 
@@ -218,13 +218,13 @@ export const JobsListOptimized = memo(({
   const navigate = useNavigate();
   const { items: tagItems } = useTags();
 
-  const handleJobClick = (jobId: string) => {
+  const handleJobClick = useMemo(() => (jobId: string) => {
     navigate(`/jobs/${jobId}`);
-  };
+  }, [navigate]);
 
-  const handleEditJob = (jobId: string) => {
+  const handleEditJob = useMemo(() => (jobId: string) => {
     navigate(`/jobs/${jobId}`);
-  };
+  }, [navigate]);
 
   const areAllJobsSelected = useMemo(() => 
     jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id)),
@@ -312,7 +312,7 @@ export const JobsListOptimized = memo(({
     );
   }
 
-  // List view implementation would go here...
+  // List view implementation
   return (
     <div className="space-y-4">
       <p className="text-gray-600">List view - {jobs.length} jobs loaded</p>

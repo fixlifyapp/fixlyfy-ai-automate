@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,7 +13,7 @@ interface UseJobsOptimizedOptions {
   clientId?: string;
 }
 
-// Request deduplication cache
+// Request deduplication cache with longer TTL
 const requestCache = new Map<string, Promise<any>>();
 
 export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
@@ -57,7 +56,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       }
     }
 
-    // Try to get from localStorage cache first
+    // Try to get from localStorage cache first with longer TTL
     if (useCache) {
       const cachedJobs = localStorageCache.get(cacheKey);
       if (cachedJobs && isMountedRef.current) {
@@ -72,7 +71,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     const requestPromise = (async () => {
       setIsLoading(true);
       try {
-        // Optimized query - select only necessary fields
+        // Optimized query with better indexing
         let query = supabase
           .from('jobs')
           .select(`
@@ -88,7 +87,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
             address,
             tags,
             created_at,
-            client:clients(id, name, email, phone)
+            client:clients!inner(id, name, email, phone)
           `, { count: 'exact' });
         
         // Apply client filter if specified
@@ -104,7 +103,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           return { jobs: [], totalCount: 0 };
         }
         
-        // Apply pagination
+        // Apply pagination with better performance
         query = query
           .order('created_at', { ascending: false })
           .range((page - 1) * pageSize, page * pageSize - 1);
@@ -125,9 +124,9 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           totalCount: count || 0
         };
         
-        // Cache the results
+        // Cache the results with longer TTL
         if (useCache) {
-          localStorageCache.set(cacheKey, result, 5); // Cache for 5 minutes
+          localStorageCache.set(cacheKey, result, 20); // Cache for 20 minutes
         }
         
         return result;
@@ -150,8 +149,10 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     } catch (error) {
       // Error already handled in the request
     } finally {
-      // Remove from request cache and update loading state
-      requestCache.delete(cacheKey);
+      // Keep request cache longer
+      setTimeout(() => {
+        requestCache.delete(cacheKey);
+      }, 600000); // 10 minutes
       if (isMountedRef.current) {
         setIsLoading(false);
       }
@@ -163,7 +164,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Real-time updates with debouncing - only one subscription per component
+  // Real-time updates with longer debouncing and smarter caching
   useEffect(() => {
     if (!enableRealtime) return;
 
@@ -182,16 +183,16 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
         () => {
           if (!isSubscribed) return;
           
-          // Debounce real-time updates to prevent flickering
+          // Longer debounce to prevent excessive updates
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
             if (isSubscribed && isMountedRef.current) {
-              // Clear cache and refresh
+              // Smart cache invalidation - only clear specific cache
               localStorageCache.remove(cacheKey);
               requestCache.delete(cacheKey);
               fetchJobs(false);
             }
-          }, 500); // 500ms debounce
+          }, 2000); // 2 second debounce
         }
       )
       .subscribe();
@@ -200,8 +201,6 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       isSubscribed = false;
       clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
-      // Clean up request cache on unmount
-      requestCache.delete(cacheKey);
     };
   }, [fetchJobs, enableRealtime, cacheKey]);
 

@@ -26,6 +26,7 @@ const JobDetailsPage = () => {
   useEffect(() => {
     if (location.state && location.state.activeTab) {
       setActiveTab(location.state.activeTab);
+      // Clean up location state to prevent memory leaks
       window.history.replaceState({}, document.title);
     }
   }, [location]);
@@ -35,10 +36,23 @@ const JobDetailsPage = () => {
     toast.success('Estimate converted to invoice successfully');
   };
   
+  // Early return if no job ID
+  if (!id) {
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-4">
+          <div className="text-center py-8">
+            <h1 className="text-2xl font-bold text-red-600">Job not found</h1>
+            <p className="text-muted-foreground mt-2">Invalid job ID provided.</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+  
   return (
     <PageLayout>
-      {/* Remove the dynamic key that was causing re-mounting */}
-      <JobDetailsProvider jobId={id || ""}>
+      <JobDetailsProvider jobId={id}>
         <div className={`container mx-auto ${isMobile ? 'px-2' : 'px-4'}`}>
           <div className={`mb-6 ${isMobile ? 'mb-4' : 'mb-6'}`}>
             <Card className={`border-fixlyfy-border shadow-sm ${isMobile ? 'mx-1' : ''}`}>
@@ -52,22 +66,22 @@ const JobDetailsPage = () => {
               onTabChange={setActiveTab}
             >
               <TabsContent value="overview">
-                <JobOverview jobId={id || ""} />
+                <JobOverview jobId={id} />
               </TabsContent>
               <TabsContent value="estimates">
                 <ModernJobEstimatesTab 
-                  jobId={id || ""} 
+                  jobId={id} 
                   onEstimateConverted={handleEstimateConverted}
                 />
               </TabsContent>
               <TabsContent value="invoices">
-                <ModernJobInvoicesTab jobId={id || ""} />
+                <ModernJobInvoicesTab jobId={id} />
               </TabsContent>
               <TabsContent value="payments">
-                <ModernJobPaymentsTab jobId={id || ""} />
+                <ModernJobPaymentsTab jobId={id} />
               </TabsContent>
               <TabsContent value="history">
-                <ModernJobHistoryTab jobId={id || ""} />
+                <ModernJobHistoryTab jobId={id} />
               </TabsContent>
             </JobDetailsTabs>
           </div>

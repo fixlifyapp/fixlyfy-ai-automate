@@ -1,38 +1,34 @@
 
-// Cache configuration for React Query
+// Enhanced cache configuration with improved performance
 export const cacheConfig = {
   queries: {
-    // Default cache time for all queries (5 minutes)
-    staleTime: 1000 * 60 * 5,
-    // Keep data in cache for 10 minutes after component unmounts
-    cacheTime: 1000 * 60 * 10,
-    // Refetch on window focus
+    // Longer cache times for better performance
+    staleTime: 1000 * 60 * 15, // 15 minutes
+    cacheTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false,
-    // Retry failed requests
     retry: 1,
-    // Refetch interval for real-time data
-    refetchInterval: 1000 * 60 * 2, // 2 minutes
+    refetchInterval: false, // Disable automatic refetching
   },
   
   // Specific cache settings for different data types
   jobs: {
-    staleTime: 1000 * 60 * 2, // 2 minutes (jobs change frequently)
-    cacheTime: 1000 * 60 * 5,
-  },
-  
-  clients: {
-    staleTime: 1000 * 60 * 10, // 10 minutes (clients change less frequently)
+    staleTime: 1000 * 60 * 10, // 10 minutes for jobs
     cacheTime: 1000 * 60 * 20,
   },
   
-  products: {
-    staleTime: 1000 * 60 * 30, // 30 minutes (products rarely change)
+  clients: {
+    staleTime: 1000 * 60 * 30, // 30 minutes for clients
     cacheTime: 1000 * 60 * 60,
   },
   
-  configItems: {
-    staleTime: 1000 * 60 * 60, // 1 hour (config rarely changes)
+  products: {
+    staleTime: 1000 * 60 * 60, // 1 hour for products
     cacheTime: 1000 * 60 * 120,
+  },
+  
+  configItems: {
+    staleTime: 1000 * 60 * 120, // 2 hours for config
+    cacheTime: 1000 * 60 * 240,
   }
 };
 
@@ -42,18 +38,18 @@ export const registerServiceWorker = () => {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          // Removed console.log
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          console.error('SW registration failed: ', registrationError);
         });
     });
   }
 };
 
-// Enhanced local storage cache utilities with better memory management
+// Enhanced local storage cache utilities with smarter cleanup
 export const localStorageCache = {
-  set: function(key: string, data: any, expirationMinutes = 60) {
+  set: function(key: string, data: any, expirationMinutes = 120) { // Longer default expiration
     try {
       const expiration = new Date().getTime() + (expirationMinutes * 60 * 1000);
       const cacheData = {
@@ -63,8 +59,10 @@ export const localStorageCache = {
       };
       localStorage.setItem(key, JSON.stringify(cacheData));
       
-      // Clean up old cache entries periodically
-      localStorageCache.cleanup();
+      // Less frequent cleanup
+      if (Math.random() < 0.1) { // Only 10% chance of cleanup
+        localStorageCache.cleanup();
+      }
     } catch (error) {
       console.warn('Failed to cache data:', error);
     }
@@ -104,33 +102,43 @@ export const localStorageCache = {
     }
   },
   
-  // Clean up expired cache entries
+  // Smart cleanup with better performance
   cleanup: function() {
     try {
       const now = new Date().getTime();
       const keys = Object.keys(localStorage);
+      let cleaned = 0;
       
       keys.forEach(key => {
         try {
           const cached = localStorage.getItem(key);
-          if (cached) {
+          if (cached && key.startsWith('jobs_') || key.startsWith('clients_')) {
             const parsed = JSON.parse(cached);
             if (parsed.expiration && now > parsed.expiration) {
               localStorage.removeItem(key);
+              cleaned++;
             }
           }
         } catch {
           // Invalid JSON, remove it
           localStorage.removeItem(key);
+          cleaned++;
         }
       });
+      
+      if (cleaned > 0) {
+        // Removed console.log
+      }
     } catch (error) {
       console.warn('Failed to cleanup cache:', error);
     }
   }
 };
 
-// Run cleanup on initialization
+// Smart cleanup on initialization
 if (typeof window !== 'undefined') {
-  localStorageCache.cleanup();
+  // Delayed cleanup to not block initial load
+  setTimeout(() => {
+    localStorageCache.cleanup();
+  }, 5000);
 }

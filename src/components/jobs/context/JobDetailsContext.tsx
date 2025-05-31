@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { JobDetailsContextType } from "./types";
 import { useJobData } from "./useJobData";
 import { useJobStatusUpdate } from "./useJobStatusUpdate";
+import { supabase } from "@/integrations/supabase/client";
 
 const JobDetailsContext = createContext<JobDetailsContextType | undefined>(undefined);
 
@@ -23,6 +24,7 @@ export const JobDetailsProvider = ({
 }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const isMountedRef = useRef(true);
+  const subscriptionRef = useRef<any>(null);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -33,7 +35,6 @@ export const JobDetailsProvider = ({
   
   const refreshJob = () => {
     if (isMountedRef.current) {
-      console.log('Refreshing job data for jobId:', jobId);
       setRefreshTrigger(prev => prev + 1);
     }
   };
@@ -51,13 +52,61 @@ export const JobDetailsProvider = ({
   // Handle status updates
   const { updateJobStatus: handleUpdateJobStatus } = useJobStatusUpdate(jobId, refreshJob);
   
+  // Single real-time subscription with smart debouncing
+  useEffect(() => {
+    if (!jobId) return;
+
+    // Clean up previous subscription
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+    }
+
+    let debounceTimer: NodeJS.Timeout;
+    let isSubscribed = true;
+    
+    const channel = supabase
+      .channel(`job-details-realtime-${jobId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs',
+          filter: `id=eq.${jobId}`
+        },
+        () => {
+          if (!isSubscribed || !isMountedRef.current) return;
+          
+          // Smart debouncing with longer delay
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            if (isSubscribed && isMountedRef.current) {
+              refreshJob();
+            }
+          }, 1500); // 1.5 second debounce
+        }
+      )
+      .subscribe();
+
+    subscriptionRef.current = channel;
+
+    return () => {
+      isSubscribed = false;
+      clearTimeout(debounceTimer);
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [jobId]);
+  
   const updateJobStatus = async (newStatus: string) => {
     // Optimistic update - update UI immediately
     setCurrentStatus(newStatus);
     
     try {
       await handleUpdateJobStatus(newStatus);
-      // Don't trigger manual refresh - real-time will handle it
+      // Don't trigger manual refresh - real-time will handle it with debounce
     } catch (error) {
       // Revert optimistic update on error
       setCurrentStatus(currentStatus);

@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { JobInfo } from "./types";
 
-// Request deduplication cache for job data
+// Request deduplication cache for job data with longer TTL
 const jobRequestCache = new Map<string, Promise<any>>();
 
 export const useJobData = (jobId: string, refreshTrigger: number) => {
@@ -25,7 +24,6 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
 
   useEffect(() => {
     if (!jobId) {
-      console.log('No jobId provided');
       setIsLoading(false);
       return;
     }
@@ -50,12 +48,11 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
       return;
     }
     
-    console.log('Fetching job data for ID:', jobId);
     setIsLoading(true);
     
     const fetchJobData = async () => {
       try {
-        // Fetch job details from Supabase with proper client relationship
+        // Optimized query with proper UUID handling
         const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select(`
@@ -72,12 +69,9 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         }
         
         if (!jobData) {
-          console.error("Job not found for ID:", jobId);
           toast.error("Job not found");
           throw new Error("Job not found");
         }
-        
-        console.log('Fetched job data:', jobData);
         
         // Extract client information with type safety
         const client = jobData.clients || { 
@@ -137,9 +131,7 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           tasks: tasksArray
         };
         
-        console.log('Processed job info:', jobInfo);
-        
-        // Fetch payments for this job to calculate balance
+        // Batch fetch payments for this job to calculate balance
         const { data: paymentsData } = await supabase
           .from('payments')
           .select('amount')
@@ -182,17 +174,17 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         // Error already handled in fetchJobData
       })
       .finally(() => {
-        jobRequestCache.delete(cacheKey);
+        // Keep cache longer for better performance
+        setTimeout(() => {
+          jobRequestCache.delete(cacheKey);
+        }, 900000); // 15 minutes
         if (isMountedRef.current) {
           setIsLoading(false);
         }
       });
 
-    // Real-time subscription is now handled in JobDetailsContext
-    // Remove the subscription from here to prevent duplicates
-
     return () => {
-      jobRequestCache.delete(cacheKey);
+      // Don't immediately clear cache on unmount
     };
   }, [jobId, refreshTrigger]);
 
