@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneOff, Volume2, VolumeX, Mic, MicOff, Bot, Cloud } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Bot, Cloud } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,6 +38,7 @@ export const CallingInterface = () => {
         .from('phone_numbers')
         .select('*')
         .eq('status', 'owned')
+        .not('connect_instance_id', 'is', null) // Only show Connect-enabled numbers
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -48,7 +49,7 @@ export const CallingInterface = () => {
       }
     } catch (error) {
       console.error('Error loading phone numbers:', error);
-      toast.error('Failed to load your phone numbers');
+      toast.error('Failed to load Amazon Connect phone numbers');
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ export const CallingInterface = () => {
 
       if (callError) throw callError;
 
-      // Simulate Amazon Connect call initiation
+      // Initiate call via Amazon Connect
       const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
         body: {
           action: 'initiate',
@@ -102,7 +103,7 @@ export const CallingInterface = () => {
 
       if (data?.success) {
         setCurrentContactId(data.contactId);
-        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated successfully via Amazon Connect`);
+        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated via Amazon Connect`);
         
         // Update the call record with the contact ID
         await supabase
@@ -117,7 +118,7 @@ export const CallingInterface = () => {
       }
     } catch (error) {
       console.error('Error initiating call:', error);
-      toast.error('Failed to initiate call');
+      toast.error('Failed to initiate call via Amazon Connect');
       setIsCallActive(false);
     }
   };
@@ -164,7 +165,7 @@ export const CallingInterface = () => {
       <Card className="border-fixlyfy-border">
         <CardContent className="p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy mx-auto"></div>
-          <p className="text-sm text-gray-500 mt-2">Loading phone numbers...</p>
+          <p className="text-sm text-gray-500 mt-2">Loading Amazon Connect phone numbers...</p>
         </CardContent>
       </Card>
     );
@@ -175,19 +176,19 @@ export const CallingInterface = () => {
       <Card className="border-fixlyfy-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Make a Call
+            <Cloud className="h-5 w-5 text-blue-600" />
+            Amazon Connect Calling
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <Phone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Phone Numbers</h3>
+            <Cloud className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Amazon Connect Numbers</h3>
             <p className="text-gray-500 mb-4">
-              You need to purchase a phone number before you can make calls.
+              You need to configure Amazon Connect phone numbers before you can make calls.
             </p>
             <Button onClick={() => window.location.href = '/connect?tab=phone-numbers'}>
-              Get Phone Number
+              Configure Amazon Connect
             </Button>
           </div>
         </CardContent>
@@ -199,11 +200,11 @@ export const CallingInterface = () => {
     <Card className="border-fixlyfy-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Phone className="h-5 w-5" />
-          Make a Call
+          <Cloud className="h-5 w-5 text-blue-600" />
+          Amazon Connect Calling
           <Badge variant="outline" className="ml-auto text-blue-600 border-blue-200">
             <Cloud className="h-3 w-3 mr-1" />
-            Amazon Connect
+            Connect Enabled
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -234,20 +235,18 @@ export const CallingInterface = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">From Number</label>
+              <label className="text-sm font-medium mb-2 block">From Number (Amazon Connect)</label>
               <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select your phone number" />
+                  <SelectValue placeholder="Select your Connect phone number" />
                 </SelectTrigger>
                 <SelectContent>
                   {ownedNumbers.map((number) => (
                     <SelectItem key={number.id} value={number.phone_number}>
                       <div className="flex items-center gap-2">
+                        <Cloud size={14} className="text-blue-600" />
                         {formatPhoneNumber(number.phone_number)}
                         {number.friendly_name && ` (${number.friendly_name})`}
-                        {number.connect_instance_id && (
-                          <span className="text-xs text-blue-600">Connect</span>
-                        )}
                       </div>
                     </SelectItem>
                   ))}
@@ -268,35 +267,35 @@ export const CallingInterface = () => {
             <Button 
               onClick={initiateCall}
               disabled={!selectedFromNumber || !toNumber}
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-blue-600 hover:bg-blue-700"
             >
               {callType === "ai" ? (
                 <>
                   <Bot size={16} className="mr-2" />
-                  Start AI Call
+                  Start AI Call via Connect
                 </>
               ) : (
                 <>
-                  <Phone size={16} className="mr-2" />
-                  Call
+                  <Cloud size={16} className="mr-2" />
+                  Call via Amazon Connect
                 </>
               )}
             </Button>
           </>
         ) : (
           <div className="text-center space-y-4">
-            <div className="p-6 bg-green-50 rounded-lg">
+            <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-center gap-2 mb-2">
                 {callType === "ai" && <Bot size={20} className="text-blue-600" />}
                 <Cloud size={16} className="text-blue-600" />
-                <div className="text-lg font-semibold">
+                <div className="text-lg font-semibold text-blue-900">
                   {callType === "ai" ? "AI Call Active" : "Call Active"}
                 </div>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-blue-700">
                 From: {formatPhoneNumber(selectedFromNumber)}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-blue-700">
                 To: {formatPhoneNumber(toNumber)}
               </div>
               {callType === "ai" && (
@@ -304,7 +303,7 @@ export const CallingInterface = () => {
                   AI Assistant is handling this call
                 </div>
               )}
-              <div className="text-xs text-blue-600 mt-1">
+              <div className="text-xs text-blue-600 mt-1 font-medium">
                 Powered by Amazon Connect
               </div>
             </div>
@@ -313,7 +312,7 @@ export const CallingInterface = () => {
               <Button
                 variant="outline"
                 onClick={toggleMute}
-                className={isMuted ? "bg-red-50" : ""}
+                className={isMuted ? "bg-red-50 border-red-200" : ""}
               >
                 {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
               </Button>

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAIAgentConfig } from "@/hooks/useAIAgentConfig";
-import { Loader2, Phone, MessageSquare, Settings, Brain, DollarSign, ShieldX } from "lucide-react";
+import { Loader2, Cloud, MessageSquare, Settings, Brain, DollarSign, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionRequired } from "@/components/auth/RBACProvider";
@@ -72,7 +72,7 @@ export const AmazonConnectSettings = () => {
 
     const success = await saveConfig(formData);
     if (success) {
-      toast.success('Configuration saved successfully');
+      toast.success('Amazon Connect AI configuration saved successfully');
     }
   };
 
@@ -112,7 +112,7 @@ export const AmazonConnectSettings = () => {
       <Card>
         <CardContent className="p-8 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span>Loading AI Agent configuration...</span>
+          <span>Loading Amazon Connect AI configuration...</span>
         </CardContent>
       </Card>
     );
@@ -126,7 +126,7 @@ export const AmazonConnectSettings = () => {
           <ShieldX className="h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">Access Restricted</h3>
           <p className="text-gray-600 mb-4">
-            AI Agent configuration is restricted to administrators and managers only.
+            Amazon Connect AI configuration is restricted to administrators and managers only.
           </p>
           <p className="text-sm text-gray-500">
             Contact your system administrator if you need access to these settings.
@@ -139,17 +139,17 @@ export const AmazonConnectSettings = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-gray-50">
+      <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-white">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                <Brain className="h-6 w-6 text-white" />
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
+                <Cloud className="h-6 w-6 text-white" />
               </div>
               <div>
                 <CardTitle className="text-xl">Amazon Connect AI Agent</CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  Configure your intelligent phone assistant for automated appointment scheduling
+                  Configure your intelligent phone assistant with Amazon Connect, Lambda, and OpenAI TTS
                 </p>
               </div>
             </div>
@@ -181,7 +181,7 @@ export const AmazonConnectSettings = () => {
               <div>
                 <p className="font-medium">AWS Credentials</p>
                 <p className="text-sm text-gray-600">
-                  {awsCredentials ? 'Credentials configured' : 'No credentials configured'}
+                  {awsCredentials ? 'Credentials configured for Amazon Connect' : 'No credentials configured'}
                 </p>
               </div>
               <Button
@@ -250,7 +250,7 @@ export const AmazonConnectSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            AI Agent Configuration
+            Amazon Connect AI Configuration
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -355,7 +355,7 @@ export const AmazonConnectSettings = () => {
               disabled={!isAdminOrManager()}
             />
             <p className="text-xs text-gray-600 mt-1">
-              Additional instructions to customize how the AI agent handles calls for your business
+              Additional instructions to customize how the AI agent handles calls via Amazon Connect
             </p>
           </div>
 
@@ -365,52 +365,8 @@ export const AmazonConnectSettings = () => {
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Save Configuration
               </Button>
-              <Button variant="outline" onClick={handleToggleActive} disabled={saving}>
-                {config?.is_active ? 'Deactivate' : 'Activate'} AI Agent
-              </Button>
             </div>
           </PermissionRequired>
-        </CardContent>
-      </Card>
-
-      {/* Integration Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Integration Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Phone className="h-4 w-4 text-blue-600" />
-                <span className="font-medium">Amazon Connect</span>
-              </div>
-              <Badge variant={formData.connect_instance_arn ? "success" : "secondary"}>
-                {formData.connect_instance_arn ? "Configured" : "Not Configured"}
-              </Badge>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-green-600" />
-                <span className="font-medium">Amazon SNS</span>
-              </div>
-              <Badge variant={awsCredentials ? "success" : "secondary"}>
-                {awsCredentials ? "Ready" : "Needs Setup"}
-              </Badge>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Brain className="h-4 w-4 text-purple-600" />
-                <span className="font-medium">AI Agent</span>
-              </div>
-              <Badge variant={config?.is_active ? "success" : "secondary"}>
-                {config?.is_active ? "Active" : "Inactive"}
-              </Badge>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

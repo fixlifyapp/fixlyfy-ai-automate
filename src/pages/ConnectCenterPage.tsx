@@ -86,7 +86,7 @@ const ConnectCenterPage = () => {
           unreadMessages += unreadInConv;
         });
 
-        // Count missed calls (using amazon_connect_calls)
+        // Count missed calls from Amazon Connect
         const { data: missedCalls } = await supabase
           .from('amazon_connect_calls')
           .select('id')
@@ -140,16 +140,16 @@ const ConnectCenterPage = () => {
         break;
       case "calls":
         if (ownedNumbers.length === 0) {
-          toast.error("Please purchase a phone number first to make calls");
+          toast.error("Please configure Amazon Connect phone numbers first");
         } else {
-          toast.info("Use the calling interface below to make calls");
+          toast.info("Use the Amazon Connect calling interface below to make calls");
         }
         break;
       case "emails":
         toast.info("New email feature coming soon");
         break;
       case "phone-numbers":
-        toast.info("Use the search above to find and purchase phone numbers");
+        toast.info("Use the search above to find and configure Amazon Connect numbers");
         break;
     }
   };
@@ -170,12 +170,12 @@ const ConnectCenterPage = () => {
       
       <PageHeader
         title="Connect Center"
-        subtitle="Manage all client communications and contact channels"
+        subtitle="Amazon Connect, AI Dispatcher, and communication hub"
         icon={MessageSquare}
         badges={[
-          { text: "Multi-Channel", icon: Users, variant: "fixlyfy" },
-          { text: "Real-time Sync", icon: Target, variant: "success" },
-          { text: "Communication Hub", icon: MessageSquare, variant: "info" }
+          { text: "Amazon Connect", icon: Phone, variant: "fixlyfy" },
+          { text: "AI Dispatcher", icon: Target, variant: "success" },
+          { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
           text: getActionButtonText(),

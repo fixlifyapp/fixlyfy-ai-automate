@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Phone, Bot } from "lucide-react";
+import { Phone, Bot, Cloud } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CallDialogProps {
@@ -66,7 +66,7 @@ export const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
       }
     } catch (error) {
       console.error("Error initiating call:", error);
-      toast.error("Failed to initiate call");
+      toast.error("Failed to initiate call via Amazon Connect");
       setCallStatus("idle");
     }
   };
@@ -118,17 +118,20 @@ export const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Call {client.name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Cloud className="h-5 w-5 text-blue-600" />
+            Call {client.name} via Amazon Connect
+          </DialogTitle>
         </DialogHeader>
         
         <div className="py-6">
           <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-20 h-20 rounded-full bg-fixlyfy/10 flex items-center justify-center mb-2">
-              <span className="text-2xl font-semibold">{client.name.charAt(0)}</span>
+            <div className="w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center mb-2">
+              <span className="text-2xl font-semibold text-blue-900">{client.name.charAt(0)}</span>
             </div>
             
             <h3 className="text-xl font-semibold">{client.name}</h3>
-            <p className="text-fixlyfy-text-secondary">{client.phone || "No phone number available"}</p>
+            <p className="text-gray-600">{client.phone || "No phone number available"}</p>
             
             {callStatus === "idle" && (
               <div className="w-full">
@@ -152,34 +155,44 @@ export const CallDialog = ({ open, onOpenChange, client }: CallDialogProps) => {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-blue-600 mt-1">Powered by Amazon Connect</p>
               </div>
             )}
             
             {callStatus === "connected" && (
-              <p className="text-green-500 animate-pulse">
-                {callType === "ai" ? "AI Call in progress" : "Call in progress"} - {formatDuration(callDuration)}
-              </p>
+              <div className="text-center">
+                <p className="text-green-500 animate-pulse">
+                  {callType === "ai" ? "AI Call in progress" : "Call in progress"} - {formatDuration(callDuration)}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">via Amazon Connect</p>
+              </div>
             )}
             
             {callStatus === "calling" && (
-              <p className="text-amber-500 animate-pulse">
-                {callType === "ai" ? "Initiating AI call..." : "Calling..."}
-              </p>
+              <div className="text-center">
+                <p className="text-amber-500 animate-pulse">
+                  {callType === "ai" ? "Initiating AI call..." : "Calling..."}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">via Amazon Connect</p>
+              </div>
             )}
             
             {callStatus === "ended" && (
-              <p className="text-red-500">
-                Call ended - {formatDuration(callDuration)}
-              </p>
+              <div className="text-center">
+                <p className="text-red-500">
+                  Call ended - {formatDuration(callDuration)}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">via Amazon Connect</p>
+              </div>
             )}
           </div>
         </div>
         
         <div className="flex justify-center gap-4">
           {callStatus === "idle" && (
-            <Button onClick={handleCall} className="bg-green-500 hover:bg-green-600 gap-2">
-              {callType === "ai" ? <Bot size={16} /> : <Phone size={16} />}
-              {callType === "ai" ? "Start AI Call" : "Call"}
+            <Button onClick={handleCall} className="bg-blue-600 hover:bg-blue-700 gap-2">
+              {callType === "ai" ? <Bot size={16} /> : <Cloud size={16} />}
+              {callType === "ai" ? "Start AI Call" : "Call via Connect"}
             </Button>
           )}
           
