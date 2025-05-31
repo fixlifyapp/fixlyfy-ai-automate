@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { toast } from 'sonner';
 
 interface Notification {
@@ -16,26 +17,31 @@ interface Notification {
   type: 'info' | 'warning' | 'success' | 'error';
   created_at: string;
   is_read: boolean;
+  data?: any;
 }
 
 export const NotificationsBell = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { settings } = useUserSettings();
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
+      
       // Set up real-time subscription for new notifications
       const channel = supabase
-        .channel('notifications')
+        .channel('user_notifications')
         .on(
           'postgres_changes',
           {
             event: '*',
             schema: 'public',
-            table: 'client_notifications'
+            table: 'user_notifications',
+            filter: `user_id=eq.${user.id}`
           },
           () => {
             fetchNotifications();
@@ -50,45 +56,58 @@ export const NotificationsBell = () => {
   }, [user]);
 
   const fetchNotifications = async () => {
+    if (!user) return;
+    
     try {
-      // For demo purposes, we'll create some sample notifications
-      // In a real app, you'd fetch from your notifications table
-      const sampleNotifications: Notification[] = [
-        {
-          id: '1',
-          title: 'New Job Assigned',
-          message: 'You have been assigned to Job #12345 - HVAC Repair',
-          type: 'info',
-          created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
-          is_read: false
-        },
-        {
-          id: '2',
-          title: 'Payment Received',
-          message: 'Payment of $450 received for Invoice #INV-001',
-          type: 'success',
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          is_read: false
-        },
-        {
-          id: '3',
-          title: 'Appointment Reminder',
-          message: 'Upcoming appointment tomorrow at 2:00 PM',
-          type: 'warning',
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          is_read: true
-        }
-      ];
+      setLoading(true);
+      
+      // Fetch real notifications from the database
+      const { data: userNotifications, error } = await supabase
+        .from('user_notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-      setNotifications(sampleNotifications);
-      setUnreadCount(sampleNotifications.filter(n => !n.is_read).length);
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
+      }
+
+      const formattedNotifications: Notification[] = (userNotifications || []).map(notif => ({
+        id: notif.id,
+        title: notif.title,
+        message: notif.message,
+        type: notif.type as 'info' | 'warning' | 'success' | 'error',
+        created_at: notif.created_at,
+        is_read: notif.is_read,
+        data: notif.data
+      }));
+
+      setNotifications(formattedNotifications);
+      setUnreadCount(formattedNotifications.filter(n => !n.is_read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const markAsRead = async (notificationId: string) => {
+    if (!user) return;
+    
     try {
+      const { error } = await supabase
+        .from('user_notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        return;
+      }
+
       setNotifications(prev => 
         prev.map(n => 
           n.id === notificationId ? { ...n, is_read: true } : n
@@ -101,12 +120,26 @@ export const NotificationsBell = () => {
   };
 
   const markAllAsRead = async () => {
+    if (!user) return;
+    
     try {
+      const { error } = await supabase
+        .from('user_notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+        return;
+      }
+
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
       toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+      toast.error('Failed to mark notifications as read');
     }
   };
 
@@ -136,6 +169,11 @@ export const NotificationsBell = () => {
       return `${Math.floor(diffInMinutes / 1440)}d ago`;
     }
   };
+
+  // Don't show notifications if user has disabled them in settings
+  if (!settings.push_notifications) {
+    return null;
+  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -169,7 +207,11 @@ export const NotificationsBell = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0 max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center p-4">
+                <div className="h-4 w-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                 <p>No notifications</p>
