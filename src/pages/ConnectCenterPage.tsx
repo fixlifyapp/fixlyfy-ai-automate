@@ -8,6 +8,9 @@ import { RealCallsList } from "@/components/connect/RealCallsList";
 import { RealEmailsList } from "@/components/connect/RealEmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
+import { ConnectTestStatus } from "@/components/connect/ConnectTestStatus";
+import { SetupAIDispatcher } from "@/components/connect/SetupAIDispatcher";
+import { CallMonitoring } from "@/components/connect/CallMonitoring";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
@@ -18,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMessageContext } from "@/contexts/MessageContext";
 
 const ConnectCenterPage = () => {
-  const [activeTab, setActiveTab] = useState("messages");
+  const [activeTab, setActiveTab] = useState("setup");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [unreadCounts, setUnreadCounts] = useState({
     messages: 0,
@@ -34,10 +37,10 @@ const ConnectCenterPage = () => {
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const clientPhone = searchParams.get("clientPhone");
-  const tabParam = searchParams.get("tab") || "messages";
+  const tabParam = searchParams.get("tab") || "setup";
   
   useEffect(() => {
-    if (tabParam && ["messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["setup", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -189,7 +192,15 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 mb-6">
+        <TabsList className="grid grid-cols-6 mb-6">
+          <TabsTrigger value="setup" className="flex items-center gap-2">
+            <Target size={16} />
+            <span className="hidden sm:inline">Setup</span>
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex items-center gap-2">
+            <Phone size={16} />
+            <span className="hidden sm:inline">Monitor</span>
+          </TabsTrigger>
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare size={16} />
             <span className="hidden sm:inline">Messages</span>
@@ -216,6 +227,15 @@ const ConnectCenterPage = () => {
             <span className="hidden sm:inline">Numbers</span>
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="setup" className="mt-0 space-y-6">
+          <SetupAIDispatcher />
+          <ConnectTestStatus />
+        </TabsContent>
+        
+        <TabsContent value="monitoring" className="mt-0">
+          <CallMonitoring />
+        </TabsContent>
         
         <TabsContent value="messages" className="mt-0">
           <DispatcherMessagesView searchResults={searchResults} />
