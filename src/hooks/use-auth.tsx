@@ -1,4 +1,5 @@
 
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from '@supabase/supabase-js';
@@ -21,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth event:', event, 'Session expires at:', session?.expires_at);
+        console.log('Auth event:', event, 'Session:', session ? 'exists' : 'null');
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -29,8 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check, expires at:', session?.expires_at);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+      }
+      console.log('Initial session check:', session ? 'exists' : 'null');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -41,7 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
+    console.log('Signing out...');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    } else {
+      console.log('Signed out successfully');
+    }
     setLoading(false);
   };
 
@@ -66,3 +76,4 @@ export function useAuth() {
   }
   return context;
 }
+

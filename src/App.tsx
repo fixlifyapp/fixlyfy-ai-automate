@@ -3,10 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RBACProvider } from "@/components/auth/RBACProvider";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import Index from "@/pages/Index";
+import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import ClientsPage from "@/pages/ClientsPage";
 import ClientDetailPage from "@/pages/ClientDetailPage";
@@ -26,6 +28,7 @@ import ProductsPage from "@/pages/ProductsPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
+import PortalLoginPage from "@/pages/portal/PortalLoginPage";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppProviders } from "@/components/ui/AppProviders";
@@ -43,7 +46,9 @@ const App = () => {
         <AppProviders>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/portal/login" element={<PortalLoginPage />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />

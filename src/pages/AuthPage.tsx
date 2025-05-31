@@ -10,28 +10,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [authTab, setAuthTab] = useState("login");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
 
-  // Set session expiry to 7 days (in seconds)
-  const SESSION_EXPIRY = 60 * 60 * 24 * 7; // 7 days in seconds
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      console.log("User is authenticated, redirecting to dashboard");
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    console.log("Attempting sign in with email:", email);
+    setAuthLoading(true);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
+      
+      console.log("Sign in response:", { data, error });
       
       if (error) {
         toast.error("Sign in failed", {
@@ -40,6 +50,7 @@ export default function AuthPage() {
         console.error("Sign in error:", error);
       } else if (data.session) {
         toast.success("Signed in successfully");
+        console.log("Sign in successful, session:", data.session);
         navigate('/dashboard');
       }
     } catch (error: any) {
@@ -48,13 +59,14 @@ export default function AuthPage() {
       });
       console.error("Sign in unexpected error:", error);
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    console.log("Attempting sign up with email:", email);
+    setAuthLoading(true);
     
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -68,27 +80,26 @@ export default function AuthPage() {
         }
       });
       
+      console.log("Sign up response:", { data, error });
+      
       if (error) {
         toast.error("Sign up failed", {
           description: error.message
         });
         console.error("Sign up error:", error);
       } else if (data.user) {
-        // Automatically sign in after sign up
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (signInError) {
-          toast.error("Auto sign in failed", {
-            description: "Account created, but we couldn't sign you in automatically. Please sign in manually."
-          });
-          setAuthTab("login");
-        } else {
-          toast.success("Account created successfully");
+        // Check if email confirmation is required
+        if (data.session) {
+          toast.success("Account created and signed in successfully");
+          console.log("Sign up and auto sign in successful");
           setIsNewUser(true);
           setShowOnboarding(true);
+        } else {
+          toast.success("Account created successfully", {
+            description: "Please check your email to confirm your account"
+          });
+          console.log("Sign up successful, email confirmation required");
+          setAuthTab("login");
         }
       }
     } catch (error: any) {
@@ -97,9 +108,21 @@ export default function AuthPage() {
       });
       console.error("Sign up unexpected error:", error);
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
+
+  // Show loading if auth is still loading
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
+        <div className="text-center">
+          <Loader2 size={40} className="mx-auto animate-spin text-fixlyfy mb-4" />
+          <p className="text-fixlyfy-text-secondary">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-fixlyfy-bg">
@@ -132,6 +155,7 @@ export default function AuthPage() {
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={authLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -143,14 +167,15 @@ export default function AuthPage() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={authLoading}
                   />
                 </div>
                 <Button 
                   type="submit" 
                   className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={loading}
+                  disabled={authLoading || !email || !password}
                 >
-                  {loading ? (
+                  {authLoading ? (
                     <>
                       <Loader2 size={16} className="mr-2 animate-spin" />
                       Signing in...
@@ -170,6 +195,7 @@ export default function AuthPage() {
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={authLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -181,6 +207,7 @@ export default function AuthPage() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={authLoading}
                   />
                   <p className="text-xs text-muted-foreground">
                     Password must be at least 6 characters
@@ -189,9 +216,9 @@ export default function AuthPage() {
                 <Button 
                   type="submit" 
                   className="w-full bg-fixlyfy hover:bg-fixlyfy/90"
-                  disabled={loading}
+                  disabled={authLoading || !email || !password}
                 >
-                  {loading ? (
+                  {authLoading ? (
                     <>
                       <Loader2 size={16} className="mr-2 animate-spin" />
                       Creating account...
