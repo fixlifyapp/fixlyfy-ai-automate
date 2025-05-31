@@ -1,6 +1,5 @@
 
-import { createContext, useContext, useState } from "react";
-import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { JobDetailsContextType } from "./types";
 import { useJobData } from "./useJobData";
 import { useJobStatusUpdate } from "./useJobStatusUpdate";
@@ -23,20 +22,23 @@ export const JobDetailsProvider = ({
   children: React.ReactNode;
 }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   const refreshJob = () => {
-    console.log('Refreshing job data for jobId:', jobId);
-    setRefreshTrigger(prev => prev + 1);
+    if (isMountedRef.current) {
+      console.log('Refreshing job data for jobId:', jobId);
+      setRefreshTrigger(prev => prev + 1);
+    }
   };
   
-  // Use unified realtime for all related data with automatic refresh
-  useUnifiedRealtime({
-    tables: ['jobs', 'clients', 'payments', 'invoices', 'job_custom_field_values', 'tags', 'job_types', 'job_statuses', 'custom_fields', 'lead_sources'],
-    onUpdate: refreshJob,
-    enabled: !!jobId
-  });
-  
-  // Load job data
+  // Load job data with stable refresh trigger
   const {
     job,
     isLoading,
@@ -55,7 +57,7 @@ export const JobDetailsProvider = ({
     
     try {
       await handleUpdateJobStatus(newStatus);
-      // Real-time will handle the refresh automatically
+      // Don't trigger manual refresh - real-time will handle it
     } catch (error) {
       // Revert optimistic update on error
       setCurrentStatus(currentStatus);

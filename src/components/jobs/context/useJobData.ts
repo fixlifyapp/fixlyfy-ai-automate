@@ -1,8 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { JobInfo } from "./types";
+
+// Request deduplication cache for job data
+const jobRequestCache = new Map<string, Promise<any>>();
 
 export const useJobData = (jobId: string, refreshTrigger: number) => {
   const [job, setJob] = useState<JobInfo | null>(null);
@@ -10,11 +13,40 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
   const [currentStatus, setCurrentStatus] = useState<string>("scheduled");
   const [invoiceAmount, setInvoiceAmount] = useState(0);
   const [balance, setBalance] = useState(0);
+  
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!jobId) {
       console.log('No jobId provided');
       setIsLoading(false);
+      return;
+    }
+    
+    const cacheKey = `job_${jobId}_${refreshTrigger}`;
+    
+    // Check if request is already in flight
+    if (jobRequestCache.has(cacheKey)) {
+      jobRequestCache.get(cacheKey)?.then((result) => {
+        if (isMountedRef.current && result) {
+          setJob(result.jobInfo);
+          setCurrentStatus(result.status);
+          setInvoiceAmount(result.invoiceAmount);
+          setBalance(result.balance);
+          setIsLoading(false);
+        }
+      }).catch(() => {
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
+      });
       return;
     }
     
@@ -36,15 +68,13 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         if (jobError) {
           console.error("Error fetching job:", jobError);
           toast.error("Error loading job details");
-          setIsLoading(false);
-          return;
+          throw jobError;
         }
         
         if (!jobData) {
           console.error("Job not found for ID:", jobId);
           toast.error("Job not found");
-          setIsLoading(false);
-          return;
+          throw new Error("Job not found");
         }
         
         console.log('Fetched job data:', jobData);
@@ -109,12 +139,6 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         
         console.log('Processed job info:', jobInfo);
         
-        setJob(jobInfo);
-        setCurrentStatus(jobData.status || "scheduled");
-        
-        // Set invoice amount from job total
-        setInvoiceAmount(jobData.revenue || 0);
-        
         // Fetch payments for this job to calculate balance
         const { data: paymentsData } = await supabase
           .from('payments')
@@ -124,22 +148,49 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
         const totalPayments = paymentsData 
           ? paymentsData.reduce((sum, payment) => sum + (payment.amount || 0), 0) 
           : 0;
-          
-        setBalance((jobData.revenue || 0) - totalPayments);
+        
+        const result = {
+          jobInfo,
+          status: jobData.status || "scheduled",
+          invoiceAmount: jobData.revenue || 0,
+          balance: (jobData.revenue || 0) - totalPayments
+        };
+        
+        return result;
         
       } catch (error) {
         console.error("Error in fetching job details:", error);
         toast.error("Error loading job details");
-      } finally {
-        setIsLoading(false);
+        throw error;
       }
     };
     
-    fetchJobData();
+    // Cache and execute the request
+    const requestPromise = fetchJobData();
+    jobRequestCache.set(cacheKey, requestPromise);
+    
+    requestPromise
+      .then((result) => {
+        if (isMountedRef.current) {
+          setJob(result.jobInfo);
+          setCurrentStatus(result.status);
+          setInvoiceAmount(result.invoiceAmount);
+          setBalance(result.balance);
+        }
+      })
+      .catch(() => {
+        // Error already handled in fetchJobData
+      })
+      .finally(() => {
+        jobRequestCache.delete(cacheKey);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
+      });
 
-    // Set up real-time subscription for job updates
+    // Set up real-time subscription for job updates - single subscription
     const channel = supabase
-      .channel('job-updates')
+      .channel(`job-updates-${jobId}`)
       .on(
         'postgres_changes',
         {
@@ -149,14 +200,19 @@ export const useJobData = (jobId: string, refreshTrigger: number) => {
           filter: `id=eq.${jobId}`
         },
         () => {
-          console.log('Real-time job update detected, refetching...');
-          fetchJobData();
+          if (isMountedRef.current) {
+            console.log('Real-time job update detected, triggering refresh...');
+            // Clear cache and trigger refresh by incrementing trigger
+            jobRequestCache.delete(cacheKey);
+            setRefreshTrigger(prev => prev + 1);
+          }
         }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+      jobRequestCache.delete(cacheKey);
     };
   }, [jobId, refreshTrigger]);
 

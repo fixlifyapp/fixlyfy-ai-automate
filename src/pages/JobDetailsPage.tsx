@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
 import { TabsContent } from "@/components/ui/tabs";
 import { useRBAC } from "@/components/auth/RBACProvider";
-import { useUnifiedRealtime } from "@/hooks/useUnifiedRealtime";
 import { toast } from "sonner";
 import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
 import { JobOverview } from "@/components/jobs/JobOverview";
@@ -22,8 +21,6 @@ const JobDetailsPage = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>("overview");
   const { hasPermission } = useRBAC();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -33,51 +30,19 @@ const JobDetailsPage = () => {
     }
   }, [location]);
   
-  // Enhanced real-time refresh with more comprehensive table monitoring
-  useUnifiedRealtime({
-    tables: [
-      'jobs', 
-      'invoices', 
-      'payments', 
-      'estimates', 
-      'messages', 
-      'clients', 
-      'job_custom_field_values',
-      'line_items', // Added for estimate/invoice line items
-      'estimate_communications', // Added for estimate communications
-      'invoice_communications', // Added for invoice communications
-      'job_history' // Fixed: use correct table name
-    ],
-    onUpdate: () => {
-      console.log("Real-time update detected");
-      const now = Date.now();
-      
-      // Throttle updates to prevent excessive refreshes (max once per 500ms)
-      if (now - lastRefresh > 500) {
-        console.log("Triggering unified realtime refresh for job details");
-        setRefreshTrigger(prev => prev + 1);
-        setLastRefresh(now);
-        
-        // Show success toast for real-time updates
-        toast.success('Data updated successfully');
-      }
-    },
-    enabled: !!id
-  });
-  
   const handleEstimateConverted = () => {
     setActiveTab("invoices");
-    // Force an additional refresh when estimate is converted
-    setRefreshTrigger(prev => prev + 1);
+    toast.success('Estimate converted to invoice successfully');
   };
   
   return (
     <PageLayout>
-      <JobDetailsProvider jobId={id || ""} key={`${id}-${refreshTrigger}`}>
+      {/* Remove the dynamic key that was causing re-mounting */}
+      <JobDetailsProvider jobId={id || ""}>
         <div className={`container mx-auto ${isMobile ? 'px-2' : 'px-4'}`}>
           <div className={`mb-6 ${isMobile ? 'mb-4' : 'mb-6'}`}>
             <Card className={`border-fixlyfy-border shadow-sm ${isMobile ? 'mx-1' : ''}`}>
-              <JobDetailsHeader key={`header-${refreshTrigger}`} />
+              <JobDetailsHeader />
             </Card>
           </div>
           
@@ -87,32 +52,22 @@ const JobDetailsPage = () => {
               onTabChange={setActiveTab}
             >
               <TabsContent value="overview">
-                <JobOverview jobId={id || ""} key={`overview-${refreshTrigger}`} />
+                <JobOverview jobId={id || ""} />
               </TabsContent>
               <TabsContent value="estimates">
                 <ModernJobEstimatesTab 
                   jobId={id || ""} 
                   onEstimateConverted={handleEstimateConverted}
-                  key={`estimates-${refreshTrigger}`}
                 />
               </TabsContent>
               <TabsContent value="invoices">
-                <ModernJobInvoicesTab 
-                  jobId={id || ""} 
-                  key={`invoices-${refreshTrigger}`}
-                />
+                <ModernJobInvoicesTab jobId={id || ""} />
               </TabsContent>
               <TabsContent value="payments">
-                <ModernJobPaymentsTab 
-                  jobId={id || ""} 
-                  key={`payments-${refreshTrigger}`}
-                />
+                <ModernJobPaymentsTab jobId={id || ""} />
               </TabsContent>
               <TabsContent value="history">
-                <ModernJobHistoryTab 
-                  jobId={id || ""} 
-                  key={`history-${refreshTrigger}`}
-                />
+                <ModernJobHistoryTab jobId={id || ""} />
               </TabsContent>
             </JobDetailsTabs>
           </div>

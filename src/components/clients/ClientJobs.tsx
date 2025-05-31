@@ -5,7 +5,6 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { ScheduleJobModal } from "../schedule/ScheduleJobModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteJobsDialog } from "../jobs/dialogs/DeleteJobsDialog";
 import { BulkActionsBar } from "../jobs/BulkActionsBar";
 import { JobsListOptimized } from "../jobs/JobsListOptimized";
@@ -20,6 +19,7 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  // Use optimized hook with request deduplication
   const {
     jobs: optimizedJobs,
     isLoading: isOptimizedLoading,

@@ -1,3 +1,4 @@
+
 // Cache configuration for React Query
 export const cacheConfig = {
   queries: {
@@ -50,22 +51,30 @@ export const registerServiceWorker = () => {
   }
 };
 
-// Local storage cache utilities
+// Enhanced local storage cache utilities with better memory management
 export const localStorageCache = {
   set: (key: string, data: any, expirationMinutes = 60) => {
-    const expiration = new Date().getTime() + (expirationMinutes * 60 * 1000);
-    const cacheData = {
-      data,
-      expiration
-    };
-    localStorage.setItem(key, JSON.stringify(cacheData));
+    try {
+      const expiration = new Date().getTime() + (expirationMinutes * 60 * 1000);
+      const cacheData = {
+        data,
+        expiration,
+        timestamp: new Date().getTime()
+      };
+      localStorage.setItem(key, JSON.stringify(cacheData));
+      
+      // Clean up old cache entries periodically
+      this.cleanup();
+    } catch (error) {
+      console.warn('Failed to cache data:', error);
+    }
   },
   
   get: (key: string) => {
-    const cached = localStorage.getItem(key);
-    if (!cached) return null;
-    
     try {
+      const cached = localStorage.getItem(key);
+      if (!cached) return null;
+      
       const { data, expiration } = JSON.parse(cached);
       if (new Date().getTime() > expiration) {
         localStorage.removeItem(key);
@@ -73,16 +82,55 @@ export const localStorageCache = {
       }
       return data;
     } catch (error) {
+      console.warn('Failed to retrieve cached data:', error);
       localStorage.removeItem(key);
       return null;
     }
   },
   
   remove: (key: string) => {
-    localStorage.removeItem(key);
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn('Failed to remove cached data:', error);
+    }
   },
   
   clear: () => {
-    localStorage.clear();
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.warn('Failed to clear cache:', error);
+    }
+  },
+  
+  // Clean up expired cache entries
+  cleanup: () => {
+    try {
+      const now = new Date().getTime();
+      const keys = Object.keys(localStorage);
+      
+      keys.forEach(key => {
+        try {
+          const cached = localStorage.getItem(key);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed.expiration && now > parsed.expiration) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch {
+          // Invalid JSON, remove it
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to cleanup cache:', error);
+    }
   }
 };
+
+// Run cleanup on initialization
+if (typeof window !== 'undefined') {
+  localStorageCache.cleanup();
+}

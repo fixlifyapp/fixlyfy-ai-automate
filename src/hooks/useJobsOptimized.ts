@@ -1,11 +1,11 @@
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Job } from "@/hooks/useJobs";
-import { cacheConfig, localStorageCache } from "@/utils/cacheConfig";
+import { localStorageCache } from "@/utils/cacheConfig";
 
 interface UseJobsOptimizedOptions {
   page?: number;
@@ -14,6 +14,9 @@ interface UseJobsOptimizedOptions {
   clientId?: string;
 }
 
+// Request deduplication cache
+const requestCache = new Map<string, Promise<any>>();
+
 export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const { page = 1, pageSize = 50, enableRealtime = true, clientId } = options;
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -21,18 +24,43 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const [totalCount, setTotalCount] = useState(0);
   const { user } = useAuth();
   const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
+  
+  // Use ref to track if component is mounted
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  // Cache key for localStorage
+  // Cache key for localStorage and request deduplication
   const cacheKey = useMemo(() => 
     `jobs_${clientId || 'all'}_${page}_${pageSize}_${user?.id}`,
     [clientId, page, pageSize, user?.id]
   );
 
   const fetchJobs = useCallback(async (useCache = true) => {
-    // Try to get from cache first
+    // Check if request is already in flight
+    if (requestCache.has(cacheKey)) {
+      try {
+        const cachedRequest = await requestCache.get(cacheKey);
+        if (isMountedRef.current && cachedRequest) {
+          setJobs(cachedRequest.jobs);
+          setTotalCount(cachedRequest.totalCount);
+          setIsLoading(false);
+        }
+        return;
+      } catch (error) {
+        // Continue with fresh request if cached request failed
+      }
+    }
+
+    // Try to get from localStorage cache first
     if (useCache) {
       const cachedJobs = localStorageCache.get(cacheKey);
-      if (cachedJobs) {
+      if (cachedJobs && isMountedRef.current) {
         setJobs(cachedJobs.jobs);
         setTotalCount(cachedJobs.totalCount);
         setIsLoading(false);
@@ -40,75 +68,93 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
       }
     }
 
-    setIsLoading(true);
-    try {
-      // Optimized query - select only necessary fields
-      let query = supabase
-        .from('jobs')
-        .select(`
-          id,
-          title,
-          client_id,
-          status,
-          job_type,
-          service,
-          date,
-          schedule_start,
-          revenue,
-          address,
-          tags,
-          created_at,
-          client:clients(id, name, email, phone)
-        `, { count: 'exact' });
-      
-      // Apply client filter if specified
-      if (clientId) {
-        query = query.eq('client_id', clientId);
-      }
-      
-      // Apply role-based filtering
-      const jobViewScope = getJobViewScope();
-      if (jobViewScope === "assigned" && user?.id) {
-        query = query.eq('technician_id', user.id);
-      } else if (jobViewScope === "none") {
-        setJobs([]);
-        setTotalCount(0);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Apply pagination
-      query = query
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1);
-      
-      const { data, error, count } = await query;
-      
-      if (error) throw error;
-      
-      // Process jobs efficiently
-      const processedJobs = (data || []).map(job => ({
-        ...job,
-        tags: Array.isArray(job.tags) ? job.tags : [],
-        title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
-      }));
-      
-      setJobs(processedJobs);
-      setTotalCount(count || 0);
-      
-      // Cache the results
-      if (useCache) {
-        localStorageCache.set(cacheKey, {
+    // Create and cache the request promise
+    const requestPromise = (async () => {
+      setIsLoading(true);
+      try {
+        // Optimized query - select only necessary fields
+        let query = supabase
+          .from('jobs')
+          .select(`
+            id,
+            title,
+            client_id,
+            status,
+            job_type,
+            service,
+            date,
+            schedule_start,
+            revenue,
+            address,
+            tags,
+            created_at,
+            client:clients(id, name, email, phone)
+          `, { count: 'exact' });
+        
+        // Apply client filter if specified
+        if (clientId) {
+          query = query.eq('client_id', clientId);
+        }
+        
+        // Apply role-based filtering
+        const jobViewScope = getJobViewScope();
+        if (jobViewScope === "assigned" && user?.id) {
+          query = query.eq('technician_id', user.id);
+        } else if (jobViewScope === "none") {
+          return { jobs: [], totalCount: 0 };
+        }
+        
+        // Apply pagination
+        query = query
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1);
+        
+        const { data, error, count } = await query;
+        
+        if (error) throw error;
+        
+        // Process jobs efficiently
+        const processedJobs = (data || []).map(job => ({
+          ...job,
+          tags: Array.isArray(job.tags) ? job.tags : [],
+          title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
+        }));
+        
+        const result = {
           jobs: processedJobs,
           totalCount: count || 0
-        }, 5); // Cache for 5 minutes
+        };
+        
+        // Cache the results
+        if (useCache) {
+          localStorageCache.set(cacheKey, result, 5); // Cache for 5 minutes
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+        toast.error('Failed to load jobs');
+        throw error;
       }
-      
+    })();
+
+    // Cache the request promise
+    requestCache.set(cacheKey, requestPromise);
+
+    try {
+      const result = await requestPromise;
+      if (isMountedRef.current && result) {
+        setJobs(result.jobs);
+        setTotalCount(result.totalCount);
+      }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
-      toast.error('Failed to load jobs');
+      // Error already handled in the request
     } finally {
-      setIsLoading(false);
+      // Remove from request cache and update loading state
+      requestCache.delete(cacheKey);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize]);
 
@@ -117,14 +163,15 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Real-time updates with debouncing
+  // Real-time updates with debouncing - only one subscription per component
   useEffect(() => {
     if (!enableRealtime) return;
 
     let debounceTimer: NodeJS.Timeout;
+    let isSubscribed = true;
     
     const channel = supabase
-      .channel('jobs-optimized-realtime')
+      .channel(`jobs-optimized-realtime-${cacheKey}`)
       .on(
         'postgres_changes',
         {
@@ -133,20 +180,28 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           table: 'jobs'
         },
         () => {
+          if (!isSubscribed) return;
+          
           // Debounce real-time updates to prevent flickering
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            // Clear cache and refresh
-            localStorageCache.remove(cacheKey);
-            fetchJobs(false);
+            if (isSubscribed && isMountedRef.current) {
+              // Clear cache and refresh
+              localStorageCache.remove(cacheKey);
+              requestCache.delete(cacheKey);
+              fetchJobs(false);
+            }
           }, 500); // 500ms debounce
         }
       )
       .subscribe();
 
     return () => {
+      isSubscribed = false;
       clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
+      // Clean up request cache on unmount
+      requestCache.delete(cacheKey);
     };
   }, [fetchJobs, enableRealtime, cacheKey]);
 
@@ -157,6 +212,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
 
   const refreshJobs = useCallback(() => {
     localStorageCache.remove(cacheKey);
+    requestCache.delete(cacheKey);
     fetchJobs(false);
   }, [fetchJobs, cacheKey]);
 
