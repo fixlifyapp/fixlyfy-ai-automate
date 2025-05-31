@@ -22,6 +22,9 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  console.log('=== ClientJobs Debug ===');
+  console.log('ClientId received:', clientId);
+  
   const {
     jobs,
     isLoading,
@@ -31,6 +34,10 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     refreshJobs
   } = useJobs(clientId);
   
+  console.log('Jobs fetched:', jobs);
+  console.log('Jobs loading:', isLoading);
+  console.log('Number of jobs:', jobs?.length || 0);
+  
   // Get dynamic configuration data from database
   const { items: jobStatuses } = useJobStatuses();
   const { items: jobTypes } = useJobTypes();
@@ -39,9 +46,12 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
 
   const handleJobCreated = async (jobData: any) => {
     try {
+      console.log('Creating job with data:', jobData);
       const createdJob = await addJob(jobData);
       if (createdJob) {
+        console.log('Job created successfully:', createdJob);
         toast.success(`Job ${createdJob.id} created successfully!`);
+        await refreshJobs(); // Refresh the jobs list
         return createdJob;
       }
     } catch (error) {
@@ -52,14 +62,18 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
   };
 
   const handleJobSuccess = (job: any) => {
+    console.log('Job success callback:', job);
     toast.success("Job created successfully!");
+    refreshJobs(); // Refresh the jobs list
   };
 
   const handleViewJob = (jobId: string) => {
+    console.log('Viewing job:', jobId);
     navigate(`/jobs/${jobId}`);
   };
 
   const handleEditJob = (jobId: string) => {
+    console.log('Editing job:', jobId);
     navigate(`/jobs/${jobId}`);
   };
 
@@ -233,6 +247,23 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
     );
   }
 
+  // Handle case where jobs is null or undefined
+  if (!jobs) {
+    console.error('Jobs data is null or undefined');
+    return (
+      <div className="text-center py-8 bg-muted/40 rounded-lg border border-border">
+        <p className="text-muted-foreground">Error loading jobs data.</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => refreshJobs()}
+        >
+          Retry Loading Jobs
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -325,7 +356,7 @@ export const ClientJobs = ({ clientId }: ClientJobsProps) => {
                       />
                     </TableCell>
                     <TableCell className="font-medium">{job.id}</TableCell>
-                    <TableCell>{job.title}</TableCell>
+                    <TableCell>{job.title || `${job.client?.name || 'Service'} - ${getJobTypeDisplay(job)}`}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
