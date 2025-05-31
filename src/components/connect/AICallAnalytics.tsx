@@ -77,14 +77,53 @@ export const AICallAnalytics = () => {
         body: { timeframe }
       });
 
-      if (error) throw error;
-      setAnalytics(data.analytics);
+      if (error) {
+        console.error('Analytics error:', error);
+        // Set default empty analytics instead of throwing
+        setAnalytics({
+          totalCalls: 0,
+          resolvedCalls: 0,
+          transferredCalls: 0,
+          successRate: 0,
+          averageCallDuration: 0,
+          appointmentsScheduled: 0,
+          customerSatisfactionAverage: 0,
+          recentCalls: []
+        });
+        toast({
+          title: "Analytics Unavailable",
+          description: "AI call analytics are currently unavailable. Data will be displayed when available.",
+          variant: "default"
+        });
+      } else {
+        setAnalytics(data?.analytics || {
+          totalCalls: 0,
+          resolvedCalls: 0,
+          transferredCalls: 0,
+          successRate: 0,
+          averageCallDuration: 0,
+          appointmentsScheduled: 0,
+          customerSatisfactionAverage: 0,
+          recentCalls: []
+        });
+      }
     } catch (error) {
       console.error('Error fetching AI analytics:', error);
+      // Set default empty analytics
+      setAnalytics({
+        totalCalls: 0,
+        resolvedCalls: 0,
+        transferredCalls: 0,
+        successRate: 0,
+        averageCallDuration: 0,
+        appointmentsScheduled: 0,
+        customerSatisfactionAverage: 0,
+        recentCalls: []
+      });
       toast({
-        title: "Analytics Error",
-        description: "Failed to load AI call analytics. Please check your connection and try again.",
-        variant: "destructive"
+        title: "Analytics Unavailable",
+        description: "AI call analytics are currently unavailable. Please try again later.",
+        variant: "default"
       });
     } finally {
       setIsLoading(false);
@@ -261,7 +300,7 @@ export const AICallAnalytics = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${getSuccessRateColor(analytics.successRate)}`}>
+              <div className={`text-2xl font-bold ${analytics.successRate >= 80 ? 'text-green-600' : analytics.successRate >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
                 {analytics.successRate}%
               </div>
               <div className="text-xs text-muted-foreground">
@@ -281,7 +320,7 @@ export const AICallAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">
-                {formatDuration(analytics.averageCallDuration)}
+                {Math.floor(analytics.averageCallDuration / 60)}:{(analytics.averageCallDuration % 60).toString().padStart(2, '0')}
               </div>
               <div className="text-xs text-muted-foreground">
                 Average call length
@@ -386,9 +425,11 @@ export const AICallAnalytics = () => {
                       <div>
                         <div className="flex items-center gap-3 mb-1">
                           <span className="font-medium text-gray-900">
-                            {formatPhoneNumber(call.clientPhone)}
+                            {call.clientPhone.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')}
                           </span>
-                          {getResolutionBadge(call.resolutionType)}
+                          <Badge className={call.resolutionType === 'resolved' ? "bg-green-100 text-green-800 border-green-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"}>
+                            {call.resolutionType === 'resolved' ? 'Resolved' : 'Transferred'}
+                          </Badge>
                           {call.appointmentScheduled && (
                             <Badge className="bg-purple-100 text-purple-800 border-purple-200">
                               <Calendar className="h-3 w-3 mr-1" />
@@ -399,7 +440,7 @@ export const AICallAnalytics = () => {
                         <div className="text-sm text-muted-foreground flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {formatDuration(call.duration)}
+                            {Math.floor(call.duration / 60)}:{(call.duration % 60).toString().padStart(2, '0')}
                           </span>
                           <span>{formatDistanceToNow(new Date(call.startedAt), { addSuffix: true })}</span>
                           {call.customerSatisfaction && (

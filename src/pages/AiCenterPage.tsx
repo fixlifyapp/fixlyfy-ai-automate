@@ -68,17 +68,18 @@ const AiCenterPage = () => {
   useEffect(() => {
     const fetchUnreadCounts = async () => {
       try {
-        // Count recent AI calls
+        // Count recent AI calls from dispatcher call logs instead of Amazon Connect
         const { data: aiCalls } = await supabase
-          .from('amazon_connect_calls')
+          .from('ai_dispatcher_call_logs')
           .select('id')
-          .gte('started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+          .gte('call_started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
         setUnreadCounts({
           aiCalls: aiCalls?.length || 0
         });
       } catch (error) {
         console.error("Error fetching AI call counts:", error);
+        setUnreadCounts({ aiCalls: 0 });
       }
     };
 
