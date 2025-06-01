@@ -1,12 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
-
-interface BusinessHours {
-  [key: string]: { open: string; close: string; enabled: boolean };
-}
+import { BusinessHours, DEFAULT_BUSINESS_HOURS } from '@/types/businessHours';
 
 interface AIAgentConfig {
   id?: string;
@@ -79,15 +75,7 @@ export const useAIAgentConfig = () => {
           greeting_template: data.greeting_template || 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
           company_name: data.company_name || 'our company',
           service_areas: Array.isArray(data.service_areas) ? data.service_areas.filter((item): item is string => typeof item === 'string') : [],
-          business_hours: (data.business_hours as BusinessHours) || {
-            monday: { open: '08:00', close: '17:00', enabled: true },
-            tuesday: { open: '08:00', close: '17:00', enabled: true },
-            wednesday: { open: '08:00', close: '17:00', enabled: true },
-            thursday: { open: '08:00', close: '17:00', enabled: true },
-            friday: { open: '08:00', close: '17:00', enabled: true },
-            saturday: { open: '09:00', close: '15:00', enabled: true },
-            sunday: { open: '10:00', close: '14:00', enabled: false }
-          },
+          business_hours: (data.business_hours as BusinessHours) || DEFAULT_BUSINESS_HOURS,
           service_types: Array.isArray(data.service_types) ? data.service_types.filter((item): item is string => typeof item === 'string') : ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       } else {
@@ -105,15 +93,7 @@ export const useAIAgentConfig = () => {
           greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
           company_name: 'our company',
           service_areas: [],
-          business_hours: {
-            monday: { open: '08:00', close: '17:00', enabled: true },
-            tuesday: { open: '08:00', close: '17:00', enabled: true },
-            wednesday: { open: '08:00', close: '17:00', enabled: true },
-            thursday: { open: '08:00', close: '17:00', enabled: true },
-            friday: { open: '08:00', close: '17:00', enabled: true },
-            saturday: { open: '09:00', close: '15:00', enabled: true },
-            sunday: { open: '10:00', close: '14:00', enabled: false }
-          },
+          business_hours: DEFAULT_BUSINESS_HOURS,
           service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       }

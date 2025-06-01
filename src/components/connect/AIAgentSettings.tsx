@@ -10,7 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Save, Bot, DollarSign, Brain } from "lucide-react";
 import { useAIAgentConfig } from "@/hooks/useAIAgentConfig";
+import { BusinessHoursEditor } from "./BusinessHoursEditor";
 import { toast } from "sonner";
+import { BusinessHours, DEFAULT_BUSINESS_HOURS } from "@/types/businessHours";
 
 const BUSINESS_NICHES = [
   'General Service',
@@ -43,15 +45,7 @@ export const AIAgentSettings = () => {
     greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
     company_name: 'our company',
     service_areas: [] as string[],
-    business_hours: {
-      monday: { open: '08:00', close: '17:00', enabled: true },
-      tuesday: { open: '08:00', close: '17:00', enabled: true },
-      wednesday: { open: '08:00', close: '17:00', enabled: true },
-      thursday: { open: '08:00', close: '17:00', enabled: true },
-      friday: { open: '08:00', close: '17:00', enabled: true },
-      saturday: { open: '09:00', close: '15:00', enabled: true },
-      sunday: { open: '10:00', close: '14:00', enabled: false }
-    },
+    business_hours: DEFAULT_BUSINESS_HOURS,
     service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'] as string[]
   });
 
@@ -189,6 +183,18 @@ export const AIAgentSettings = () => {
                   Additional fee for emergency or after-hours calls
                 </p>
               </div>
+            </div>
+
+            {/* Business Hours Section */}
+            <div>
+              <Label className="text-base font-medium">Business Hours</Label>
+              <p className="text-xs text-muted-foreground mb-4">
+                Set your business hours for AI agent scheduling
+              </p>
+              <BusinessHoursEditor
+                businessHours={agentForm.business_hours}
+                onBusinessHoursChange={(hours) => setAgentForm(prev => ({ ...prev, business_hours: hours }))}
+              />
             </div>
 
             <div>

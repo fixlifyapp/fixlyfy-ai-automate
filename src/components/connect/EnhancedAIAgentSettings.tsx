@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { VoiceSelector } from "./VoiceSelector";
 import { GreetingTemplateEditor } from "./GreetingTemplateEditor";
 import { BusinessHoursEditor } from "./BusinessHoursEditor";
 import { toast } from "sonner";
+import { BusinessHours, DEFAULT_BUSINESS_HOURS } from "@/types/businessHours";
 
 const BUSINESS_NICHES = [
   'General Service',
@@ -61,15 +61,7 @@ export const EnhancedAIAgentSettings = () => {
     greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
     company_name: 'our company',
     service_areas: [] as string[],
-    business_hours: {
-      monday: { open: '08:00', close: '17:00', enabled: true },
-      tuesday: { open: '08:00', close: '17:00', enabled: true },
-      wednesday: { open: '08:00', close: '17:00', enabled: true },
-      thursday: { open: '08:00', close: '17:00', enabled: true },
-      friday: { open: '08:00', close: '17:00', enabled: true },
-      saturday: { open: '09:00', close: '15:00', enabled: true },
-      sunday: { open: '10:00', close: '14:00', enabled: false }
-    } as BusinessHours,
+    business_hours: DEFAULT_BUSINESS_HOURS,
     service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'] as string[]
   });
 
