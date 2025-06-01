@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,8 +39,6 @@ const SERVICE_TYPES = [
   'Maintenance',
   'Emergency Services'
 ];
-
-type BusinessHours = Record<string, { open: string; close: string; enabled: boolean }>;
 
 export const EnhancedAIAgentSettings = () => {
   const { 
