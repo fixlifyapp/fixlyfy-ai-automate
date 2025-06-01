@@ -5,13 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 
 interface BusinessHours {
-  monday: { open: string; close: string; enabled: boolean };
-  tuesday: { open: string; close: string; enabled: boolean };
-  wednesday: { open: string; close: string; enabled: boolean };
-  thursday: { open: string; close: string; enabled: boolean };
-  friday: { open: string; close: string; enabled: boolean };
-  saturday: { open: string; close: string; enabled: boolean };
-  sunday: { open: string; close: string; enabled: boolean };
+  [key: string]: { open: string; close: string; enabled: boolean };
 }
 
 interface AIAgentConfig {
@@ -84,7 +78,7 @@ export const useAIAgentConfig = () => {
           voice_id: data.voice_id || 'alloy',
           greeting_template: data.greeting_template || 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
           company_name: data.company_name || 'our company',
-          service_areas: Array.isArray(data.service_areas) ? data.service_areas : [],
+          service_areas: Array.isArray(data.service_areas) ? data.service_areas.filter((item): item is string => typeof item === 'string') : [],
           business_hours: (data.business_hours as BusinessHours) || {
             monday: { open: '08:00', close: '17:00', enabled: true },
             tuesday: { open: '08:00', close: '17:00', enabled: true },
@@ -94,7 +88,7 @@ export const useAIAgentConfig = () => {
             saturday: { open: '09:00', close: '15:00', enabled: true },
             sunday: { open: '10:00', close: '14:00', enabled: false }
           },
-          service_types: Array.isArray(data.service_types) ? data.service_types : ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
+          service_types: Array.isArray(data.service_types) ? data.service_types.filter((item): item is string => typeof item === 'string') : ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       } else {
         // Set default config if none exists
@@ -176,9 +170,9 @@ export const useAIAgentConfig = () => {
         voice_id: configData.voice_id,
         greeting_template: configData.greeting_template,
         company_name: configData.company_name,
-        service_areas: configData.service_areas,
-        business_hours: configData.business_hours,
-        service_types: configData.service_types,
+        service_areas: JSON.stringify(configData.service_areas),
+        business_hours: JSON.stringify(configData.business_hours),
+        service_types: JSON.stringify(configData.service_types),
         updated_at: new Date().toISOString()
       };
 

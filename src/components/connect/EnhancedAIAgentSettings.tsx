@@ -39,15 +39,7 @@ const SERVICE_TYPES = [
   'Emergency Services'
 ];
 
-interface BusinessHours {
-  monday: { open: string; close: string; enabled: boolean };
-  tuesday: { open: string; close: string; enabled: boolean };
-  wednesday: { open: string; close: string; enabled: boolean };
-  thursday: { open: string; close: string; enabled: boolean };
-  friday: { open: string; close: string; enabled: boolean };
-  saturday: { open: string; close: string; enabled: boolean };
-  sunday: { open: string; close: string; enabled: boolean };
-}
+type BusinessHours = Record<string, { open: string; close: string; enabled: boolean }>;
 
 export const EnhancedAIAgentSettings = () => {
   const { 
@@ -300,7 +292,7 @@ export const EnhancedAIAgentSettings = () => {
               <TabsContent value="schedule">
                 <BusinessHoursEditor
                   businessHours={agentForm.business_hours}
-                  onBusinessHoursChange={(hours) => setAgentForm(prev => ({ ...prev, business_hours: hours as BusinessHours }))}
+                  onBusinessHoursChange={(hours) => setAgentForm(prev => ({ ...prev, business_hours: hours }))}
                 />
               </TabsContent>
 
