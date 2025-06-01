@@ -121,7 +121,7 @@ serve(async (req) => {
 
     console.log('Generated personalized greeting:', greeting)
 
-    // Enhanced AI configuration for more intelligent responses
+    // Enhanced AI configuration for Amazon Connect integration
     const enhancedAIConfig = {
       businessNiche: aiConfig.business_niche,
       diagnosticPrice: aiConfig.diagnostic_price,
@@ -134,36 +134,47 @@ serve(async (req) => {
       serviceTypes: aiConfig.service_types,
       businessHours: aiConfig.business_hours,
       isBusinessHours: isBusinessHours,
-      currentTimeOfDay: timeOfDay
+      currentTimeOfDay: timeOfDay,
+      mediaStreamConfig: {
+        enabled: true,
+        streamName: 'ai-realtime-stream',
+        destination: 'wss://mqppvcrlvsgrsqelglod.functions.supabase.co/amazon-connect-media-bridge',
+        audioFormat: 'pcm16',
+        sampleRate: 8000
+      }
     }
 
-    // Return Amazon Connect response format for enhanced AI interaction
+    // Return Amazon Connect response format for media streaming integration
     const connectResponse = {
       statusCode: 200,
       body: JSON.stringify({
         greeting: greeting,
-        nextAction: 'CAPTURE_SPEECH',
-        speechConfig: {
-          timeout: 10,
-          endSilenceTimeout: 3,
-          maxSpeechDuration: 30
+        nextAction: 'START_MEDIA_STREAMING',
+        mediaStreamConfig: {
+          streamName: 'ai-realtime-stream',
+          destination: 'wss://mqppvcrlvsgrsqelglod.functions.supabase.co/amazon-connect-media-bridge',
+          audioFormat: 'pcm16',
+          sampleRate: 8000,
+          enable: true
         },
         voiceConfig: {
           voiceId: aiConfig.voice_id || 'alloy',
-          speed: 1.0,
-          pitch: 1.0
+          engine: 'neural',
+          speed: '100%',
+          pitch: 'medium'
         },
         aiConfig: enhancedAIConfig,
         conversationContext: {
           isFirstInteraction: true,
           customerPhone: callData.customerNumber,
           callStartTime: new Date().toISOString(),
-          sessionId: callData.contactId
+          sessionId: callData.contactId,
+          useMediaStreaming: true
         }
       })
     }
 
-    console.log('Generated enhanced Amazon Connect response:', connectResponse)
+    console.log('Generated enhanced Amazon Connect response with media streaming:', connectResponse)
 
     return new Response(JSON.stringify(connectResponse), {
       headers: { 
@@ -180,7 +191,10 @@ serve(async (req) => {
       body: JSON.stringify({
         error: 'AI assistant temporarily unavailable',
         nextAction: 'TRANSFER_TO_AGENT',
-        fallbackGreeting: 'Hello, I\'m having technical difficulties. Let me transfer you to a human agent.'
+        fallbackGreeting: 'Hello, I\'m having technical difficulties. Let me transfer you to a human agent.',
+        mediaStreamConfig: {
+          enabled: false
+        }
       })
     }
 

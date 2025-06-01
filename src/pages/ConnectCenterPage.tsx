@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,8 +12,9 @@ import { ConnectTestStatus } from "@/components/connect/ConnectTestStatus";
 import { SetupAIDispatcher } from "@/components/connect/SetupAIDispatcher";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
 import { EnhancedAIAgentSettings } from "@/components/connect/EnhancedAIAgentSettings";
+import { AmazonConnectFlowInstructions } from "@/components/connect/AmazonConnectFlowInstructions";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target, Bot } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target, Bot, Workflow } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
@@ -41,7 +43,7 @@ const ConnectCenterPage = () => {
   const tabParam = searchParams.get("tab") || "setup";
   
   useEffect(() => {
-    if (tabParam && ["setup", "ai-settings", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["setup", "flow-setup", "ai-settings", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -165,6 +167,7 @@ const ConnectCenterPage = () => {
       case "emails": return "New Email";
       case "phone-numbers": return "Search Numbers";
       case "ai-settings": return "Test AI Voice";
+      case "flow-setup": return "View Flow Docs";
       default: return "New Action";
     }
   };
@@ -175,12 +178,12 @@ const ConnectCenterPage = () => {
       
       <PageHeader
         title="Enhanced Connect Center"
-        subtitle="Amazon Connect, AI Dispatcher with voice selection, and communication hub"
+        subtitle="Amazon Connect, AI Dispatcher with media streaming, and communication hub"
         icon={MessageSquare}
         badges={[
           { text: "Amazon Connect", icon: Phone, variant: "fixlyfy" },
-          { text: "Enhanced AI Dispatcher", icon: Bot, variant: "success" },
-          { text: "Voice & Greetings", icon: Target, variant: "info" },
+          { text: "Media Streaming", icon: Workflow, variant: "success" },
+          { text: "AI Voice Integration", icon: Bot, variant: "info" },
           { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
@@ -195,10 +198,14 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-8 mb-6">
+        <TabsList className="grid grid-cols-9 mb-6">
           <TabsTrigger value="setup" className="flex items-center gap-2">
             <Target size={16} />
             <span className="hidden sm:inline">Setup</span>
+          </TabsTrigger>
+          <TabsTrigger value="flow-setup" className="flex items-center gap-2">
+            <Workflow size={16} />
+            <span className="hidden sm:inline">Flow Setup</span>
           </TabsTrigger>
           <TabsTrigger value="voice-dispatch" className="flex items-center gap-2">
             <Phone size={16} />
@@ -242,6 +249,10 @@ const ConnectCenterPage = () => {
         <TabsContent value="setup" className="mt-0 space-y-6">
           <SetupAIDispatcher />
           <ConnectTestStatus />
+        </TabsContent>
+        
+        <TabsContent value="flow-setup" className="mt-0">
+          <AmazonConnectFlowInstructions />
         </TabsContent>
         
         <TabsContent value="voice-dispatch" className="mt-0">
