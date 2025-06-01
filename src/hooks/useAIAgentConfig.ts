@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -30,6 +29,49 @@ interface AWSCredentials {
   aws_region: string;
   is_active: boolean;
 }
+
+// Helper function to safely parse business hours
+const parseBusinessHours = (data: any): BusinessHours => {
+  if (!data) return DEFAULT_BUSINESS_HOURS;
+  
+  // If it's already an object, return it
+  if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+    return data as BusinessHours;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data) as BusinessHours;
+    } catch {
+      return DEFAULT_BUSINESS_HOURS;
+    }
+  }
+  
+  return DEFAULT_BUSINESS_HOURS;
+};
+
+// Helper function to safely parse string arrays
+const parseStringArray = (data: any): string[] => {
+  if (!data) return [];
+  
+  if (Array.isArray(data)) {
+    return data.filter((item): item is string => typeof item === 'string');
+  }
+  
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string');
+      }
+    } catch {
+      return [];
+    }
+  }
+  
+  return [];
+};
 
 export const useAIAgentConfig = () => {
   const { user } = useAuth();
@@ -75,9 +117,9 @@ export const useAIAgentConfig = () => {
           voice_id: data.voice_id || 'alloy',
           greeting_template: data.greeting_template || 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
           company_name: data.company_name || 'our company',
-          service_areas: Array.isArray(data.service_areas) ? data.service_areas.filter((item): item is string => typeof item === 'string') : [],
-          business_hours: (data.business_hours as BusinessHours) || DEFAULT_BUSINESS_HOURS,
-          service_types: Array.isArray(data.service_types) ? data.service_types.filter((item): item is string => typeof item === 'string') : ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
+          service_areas: parseStringArray(data.service_areas),
+          business_hours: parseBusinessHours(data.business_hours),
+          service_types: parseStringArray(data.service_types) || ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       } else {
         // Try to get company name from company_settings
@@ -101,7 +143,7 @@ export const useAIAgentConfig = () => {
           greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
           company_name: companyData?.company_name || 'our company',
           service_areas: [],
-          business_hours: companyData?.business_hours || DEFAULT_BUSINESS_HOURS,
+          business_hours: parseBusinessHours(companyData?.business_hours) || DEFAULT_BUSINESS_HOURS,
           service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       }
