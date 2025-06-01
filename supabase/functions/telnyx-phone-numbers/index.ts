@@ -33,18 +33,6 @@ serve(async (req) => {
       throw new Error('TELNYX_API_KEY not configured')
     }
 
-    // Get user from token
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token)
-    if (userError || !userData.user) {
-      throw new Error('Invalid token')
-    }
-
     const { action, area_code, country_code, phone_number, webhook_url }: TelnyxPhoneNumberRequest = await req.json()
 
     // Поиск доступных номеров
@@ -117,8 +105,7 @@ serve(async (req) => {
           order_id: purchaseData.data.id,
           status: 'pending',
           country_code: country_code || 'US',
-          purchased_at: new Date().toISOString(),
-          user_id: userData.user.id
+          purchased_at: new Date().toISOString()
         })
 
       if (insertError) {
@@ -140,7 +127,6 @@ serve(async (req) => {
       const { data: localNumbers } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
-        .eq('user_id', userData.user.id)
         .order('purchased_at', { ascending: false })
 
       // Также получаем актуальный статус из Telnyx
@@ -211,7 +197,6 @@ serve(async (req) => {
           configured_at: new Date().toISOString()
         })
         .eq('phone_number', phone_number)
-        .eq('user_id', userData.user.id)
 
       return new Response(JSON.stringify({
         success: true,

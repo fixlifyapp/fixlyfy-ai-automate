@@ -1,11 +1,29 @@
 
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import App from "./App";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.tsx";
 import "./index.css";
+import { registerServiceWorker } from "./utils/cacheConfig";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+// Register service worker for caching
+registerServiceWorker();
+
+// Preload critical resources
+const preloadResources = () => {
+  // Preload fonts
+  const fontLink = document.createElement('link');
+  fontLink.rel = 'preload';
+  fontLink.as = 'font';
+  fontLink.type = 'font/woff2';
+  fontLink.crossOrigin = 'anonymous';
+  document.head.appendChild(fontLink);
+};
+
+// Initialize app
+preloadResources();
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
     <App />
-  </StrictMode>
+  </React.StrictMode>,
 );

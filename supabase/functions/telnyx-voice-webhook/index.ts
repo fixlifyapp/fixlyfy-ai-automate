@@ -56,21 +56,11 @@ serve(async (req) => {
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
       console.log('Входящий звонок от:', payload.from, 'на номер:', payload.to)
 
-      // Находим пользователя по номеру телефона
-      const { data: phoneNumberData } = await supabaseClient
-        .from('telnyx_phone_numbers')
-        .select('user_id')
-        .eq('phone_number', payload.to)
-        .single()
-
-      const userId = phoneNumberData?.user_id || '00000000-0000-0000-0000-000000000000'
-
       // Находим активную AI конфигурацию
       const { data: aiConfigs } = await supabaseClient
         .from('ai_agent_configs')
         .select('*')
         .eq('is_active', true)
-        .eq('user_id', userId)
         .limit(1)
 
       let aiConfig = aiConfigs?.[0]
@@ -90,7 +80,7 @@ serve(async (req) => {
         }
       }
 
-      // Логируем звонок в новую таблицу
+      // Логируем звонок в базу
       const { error: logError } = await supabaseClient
         .from('telnyx_calls')
         .insert({
@@ -101,7 +91,7 @@ serve(async (req) => {
           call_status: 'initiated',
           direction: 'incoming',
           started_at: new Date().toISOString(),
-          user_id: userId
+          user_id: aiConfig.user_id || '00000000-0000-0000-0000-000000000000'
         })
 
       if (logError) {
