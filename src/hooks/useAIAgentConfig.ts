@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -79,9 +80,16 @@ export const useAIAgentConfig = () => {
           service_types: Array.isArray(data.service_types) ? data.service_types.filter((item): item is string => typeof item === 'string') : ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       } else {
+        // Try to get company name from company_settings
+        const { data: companyData } = await supabase
+          .from('company_settings')
+          .select('company_name, business_type, business_hours')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
         // Set default config if none exists
         setConfig({
-          business_niche: 'General Service',
+          business_niche: companyData?.business_type || 'General Service',
           diagnostic_price: 75.00,
           emergency_surcharge: 50.00,
           custom_prompt_additions: '',
@@ -91,9 +99,9 @@ export const useAIAgentConfig = () => {
           agent_name: 'AI Assistant',
           voice_id: 'alloy',
           greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
-          company_name: 'our company',
+          company_name: companyData?.company_name || 'our company',
           service_areas: [],
-          business_hours: DEFAULT_BUSINESS_HOURS,
+          business_hours: companyData?.business_hours || DEFAULT_BUSINESS_HOURS,
           service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       }
@@ -150,9 +158,9 @@ export const useAIAgentConfig = () => {
         voice_id: configData.voice_id,
         greeting_template: configData.greeting_template,
         company_name: configData.company_name,
-        service_areas: JSON.stringify(configData.service_areas),
-        business_hours: JSON.stringify(configData.business_hours),
-        service_types: JSON.stringify(configData.service_types),
+        service_areas: configData.service_areas,
+        business_hours: configData.business_hours,
+        service_types: configData.service_types,
         updated_at: new Date().toISOString()
       };
 

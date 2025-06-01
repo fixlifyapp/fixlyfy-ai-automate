@@ -132,6 +132,11 @@ export const useCompanySettings = () => {
 
       if (error) throw error;
 
+      // Sync business hours with AI agent config if it exists
+      if (updates.business_hours) {
+        await syncBusinessHoursWithAIAgent(user.id, updates.business_hours);
+      }
+
       setSettings(newSettings);
       console.log('Company settings updated successfully');
     } catch (error) {
@@ -140,6 +145,33 @@ export const useCompanySettings = () => {
       throw error;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const syncBusinessHoursWithAIAgent = async (userId: string, businessHours: BusinessHours) => {
+    try {
+      // Check if AI agent config exists
+      const { data: aiConfig } = await supabase
+        .from('ai_agent_configs')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (aiConfig) {
+        // Update existing AI agent config with new business hours
+        await supabase
+          .from('ai_agent_configs')
+          .update({
+            business_hours: businessHours,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+        
+        console.log('AI agent business hours synced with company settings');
+      }
+    } catch (error) {
+      console.error('Error syncing business hours with AI agent:', error);
+      // Don't throw error here as this is a secondary operation
     }
   };
 
