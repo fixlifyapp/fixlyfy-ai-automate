@@ -74,12 +74,12 @@ export const JobMessageList = ({ messages, isLoading, clientName = "Client" }: J
                 <p className="text-base break-words">{message.body}</p>
               </div>
               <span className="text-sm text-muted-foreground mt-1">
-                {senderName} • {new Date(message.created_at).toLocaleString('ru-RU', {
+                {senderName} • {new Date(message.created_at).toLocaleString('en-US', {
                   month: 'short',
                   day: 'numeric',
                   hour: 'numeric',
                   minute: 'numeric',
-                  hour12: false
+                  hour12: true
                 })}
               </span>
             </div>

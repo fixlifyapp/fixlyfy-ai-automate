@@ -35,7 +35,7 @@ serve(async (req) => {
 
     const { action, area_code, country_code, phone_number, webhook_url }: TelnyxPhoneNumberRequest = await req.json()
 
-    // Поиск доступных номеров
+    // Search available numbers
     if (action === 'search') {
       const searchParams = new URLSearchParams({
         'filter[country_code]': country_code || 'US',
@@ -74,7 +74,7 @@ serve(async (req) => {
       })
     }
 
-    // Покупка номера
+    // Purchase number
     else if (action === 'purchase') {
       if (!phone_number) {
         throw new Error('Phone number is required for purchase')
@@ -97,7 +97,7 @@ serve(async (req) => {
         throw new Error(`Purchase failed: ${JSON.stringify(purchaseData)}`)
       }
 
-      // Сохраняем в нашу базу
+      // Save to our database
       const { error: insertError } = await supabaseClient
         .from('telnyx_phone_numbers')
         .insert({
@@ -114,7 +114,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         success: true,
-        message: 'Номер заказан успешно',
+        message: 'Number ordered successfully',
         order_id: purchaseData.data.id,
         phone_number: phone_number
       }), {
@@ -122,14 +122,14 @@ serve(async (req) => {
       })
     }
 
-    // Список наших номеров
+    // List our numbers
     else if (action === 'list') {
       const { data: localNumbers } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .order('purchased_at', { ascending: false })
 
-      // Также получаем актуальный статус из Telnyx
+      // Also get current status from Telnyx
       const telnyxResponse = await fetch('https://api.telnyx.com/v2/phone_numbers', {
         headers: {
           'Authorization': `Bearer ${telnyxApiKey}`,
@@ -140,7 +140,7 @@ serve(async (req) => {
       const telnyxData = await telnyxResponse.json()
       const telnyxNumbers = telnyxData.data || []
 
-      // Объединяем данные
+      // Combine data
       const combinedNumbers = localNumbers?.map(localNum => {
         const telnyxNum = telnyxNumbers.find((tn: any) => tn.phone_number === localNum.phone_number)
         return {
@@ -159,7 +159,7 @@ serve(async (req) => {
       })
     }
 
-    // Настройка номера для webhooks
+    // Configure number for webhooks
     else if (action === 'configure') {
       if (!phone_number) {
         throw new Error('Phone number is required for configuration')
@@ -169,7 +169,7 @@ serve(async (req) => {
       const voiceWebhookUrl = webhook_url || `${baseUrl}/functions/v1/telnyx-voice-webhook`
       const smsWebhookUrl = `${baseUrl}/functions/v1/telnyx-sms`
 
-      // Настраиваем номер для голосовых вызовов и SMS
+      // Configure number for voice calls and SMS
       const configResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phone_number}`, {
         method: 'PATCH',
         headers: {
@@ -188,7 +188,7 @@ serve(async (req) => {
         console.error('Configuration error:', errorData)
       }
 
-      // Обновляем статус в базе
+      // Update status in database
       await supabaseClient
         .from('telnyx_phone_numbers')
         .update({
@@ -200,7 +200,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         success: true,
-        message: 'Номер настроен для AI звонков',
+        message: 'Number configured for AI calls',
         voice_webhook: voiceWebhookUrl,
         sms_webhook: smsWebhookUrl
       }), {
@@ -213,7 +213,7 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Ошибка в telnyx-phone-numbers:', error)
+    console.error('Error in telnyx-phone-numbers:', error)
     
     return new Response(JSON.stringify({
       success: false,

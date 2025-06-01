@@ -52,11 +52,11 @@ serve(async (req) => {
 
     const { event_type, payload } = webhookEvent.data
 
-    // Обработка входящего звонка
+    // Handle incoming call
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
-      console.log('Входящий звонок от:', payload.from, 'на номер:', payload.to)
+      console.log('Incoming call from:', payload.from, 'to number:', payload.to)
 
-      // Находим активную AI конфигурацию
+      // Find active AI configuration
       const { data: aiConfigs } = await supabaseClient
         .from('ai_agent_configs')
         .select('*')
@@ -65,22 +65,22 @@ serve(async (req) => {
 
       let aiConfig = aiConfigs?.[0]
       if (!aiConfig) {
-        console.log('Используем стандартную AI конфигурацию')
+        console.log('Using default AI configuration')
         aiConfig = {
           business_niche: 'General Service',
           diagnostic_price: 75,
           emergency_surcharge: 50,
           agent_name: 'AI Assistant',
           voice_id: 'alloy',
-          greeting_template: 'Привет! Меня зовут {agent_name}. Я AI помощник компании {company_name}. Как дела?',
-          company_name: 'наша компания',
+          greeting_template: 'Hello! My name is {agent_name}. I am an AI assistant for {company_name}. How can I help you today?',
+          company_name: 'our company',
           service_areas: [],
           business_hours: {},
           service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         }
       }
 
-      // Логируем звонок в базу
+      // Log call to database
       const { error: logError } = await supabaseClient
         .from('telnyx_calls')
         .insert({
@@ -95,10 +95,10 @@ serve(async (req) => {
         })
 
       if (logError) {
-        console.error('Ошибка логирования звонка:', logError)
+        console.error('Error logging call:', logError)
       }
 
-      // Отвечаем на звонок
+      // Answer the call
       const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
         method: 'POST',
         headers: {
@@ -112,31 +112,31 @@ serve(async (req) => {
       })
 
       if (!answerResponse.ok) {
-        console.error('Ошибка ответа на звонок:', await answerResponse.text())
+        console.error('Error answering call:', await answerResponse.text())
         throw new Error('Failed to answer call')
       }
 
-      console.log('Звонок принят, ожидаем подключения для старта AI')
+      console.log('Call answered, waiting for connection to start AI')
     }
 
-    // Когда звонок подключен, запускаем AI
+    // When call is connected, start AI
     else if (event_type === 'call.answered') {
-      console.log('Звонок подключен, запускаем AI диалог')
+      console.log('Call connected, starting AI dialog')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
 
-      // Генерируем приветствие
+      // Generate greeting
       const currentHour = new Date().getHours()
-      const timeOfDay = currentHour < 12 ? 'утро' : currentHour < 17 ? 'день' : 'вечер'
+      const timeOfDay = currentHour < 12 ? 'morning' : currentHour < 17 ? 'afternoon' : 'evening'
       
-      let greeting = aiConfig.greeting_template || 'Привет! Меня зовут {agent_name}. Я AI помощник. Как дела?'
+      let greeting = aiConfig.greeting_template || 'Hello! My name is {agent_name}. I am an AI assistant. How can I help you?'
       greeting = greeting
         .replace(/{agent_name}/g, aiConfig.agent_name || 'AI Assistant')
-        .replace(/{company_name}/g, aiConfig.company_name || 'наша компания')
+        .replace(/{company_name}/g, aiConfig.company_name || 'our company')
         .replace(/{time_of_day}/g, timeOfDay)
 
-      // Говорим приветствие через Telnyx TTS
+      // Speak greeting through Telnyx TTS
       const speakResponse = await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
         method: 'POST',
         headers: {
@@ -147,15 +147,15 @@ serve(async (req) => {
           call_control_id: payload.call_control_id,
           payload: greeting,
           voice: 'female',
-          language: 'ru'
+          language: 'en'
         })
       })
 
       if (!speakResponse.ok) {
-        console.error('Ошибка TTS:', await speakResponse.text())
+        console.error('TTS error:', await speakResponse.text())
       }
 
-      // Запускаем прослушивание после приветствия
+      // Start listening after greeting
       setTimeout(async () => {
         await fetch('https://api.telnyx.com/v2/calls/actions/gather_using_audio', {
           method: 'POST',
@@ -175,11 +175,11 @@ serve(async (req) => {
       }, 5000)
     }
 
-    // Обработка завершения звонка
+    // Handle call hangup
     else if (event_type === 'call.hangup') {
-      console.log('Звонок завершен')
+      console.log('Call ended')
       
-      // Обновляем статус в базе
+      // Update status in database
       await supabaseClient
         .from('telnyx_calls')
         .update({
@@ -197,7 +197,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('Ошибка обработки Telnyx webhook:', error)
+    console.error('Error processing Telnyx webhook:', error)
     
     return new Response(JSON.stringify({
       error: 'Webhook processing failed',
