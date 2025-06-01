@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,8 +10,9 @@ import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { ConnectTestStatus } from "@/components/connect/ConnectTestStatus";
 import { SetupAIDispatcher } from "@/components/connect/SetupAIDispatcher";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
+import { EnhancedAIAgentSettings } from "@/components/connect/EnhancedAIAgentSettings";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target, Bot } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
@@ -40,7 +40,7 @@ const ConnectCenterPage = () => {
   const tabParam = searchParams.get("tab") || "setup";
   
   useEffect(() => {
-    if (tabParam && ["setup", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["setup", "ai-settings", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -163,6 +163,7 @@ const ConnectCenterPage = () => {
       case "calls": return "New Call";
       case "emails": return "New Email";
       case "phone-numbers": return "Search Numbers";
+      case "ai-settings": return "Test AI Voice";
       default: return "New Action";
     }
   };
@@ -172,13 +173,14 @@ const ConnectCenterPage = () => {
       <IncomingCallHandler />
       
       <PageHeader
-        title="Connect Center"
-        subtitle="Amazon Connect, AI Dispatcher, and communication hub"
+        title="Enhanced Connect Center"
+        subtitle="Amazon Connect, AI Dispatcher with voice selection, and communication hub"
         icon={MessageSquare}
         badges={[
           { text: "Amazon Connect", icon: Phone, variant: "fixlyfy" },
-          { text: "AI Dispatcher", icon: Target, variant: "success" },
-          { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
+          { text: "Enhanced AI Dispatcher", icon: Bot, variant: "success" },
+          { text: "Voice & Greetings", icon: Target, variant: "info" },
+          { text: "Real-time Sync", icon: MessageSquare, variant: "secondary" }
         ]}
         actionButton={{
           text: getActionButtonText(),
@@ -192,10 +194,14 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-6 mb-6">
+        <TabsList className="grid grid-cols-7 mb-6">
           <TabsTrigger value="setup" className="flex items-center gap-2">
             <Target size={16} />
             <span className="hidden sm:inline">Setup</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai-settings" className="flex items-center gap-2">
+            <Bot size={16} />
+            <span className="hidden sm:inline">AI Settings</span>
           </TabsTrigger>
           <TabsTrigger value="monitoring" className="flex items-center gap-2">
             <Phone size={16} />
@@ -231,6 +237,10 @@ const ConnectCenterPage = () => {
         <TabsContent value="setup" className="mt-0 space-y-6">
           <SetupAIDispatcher />
           <ConnectTestStatus />
+        </TabsContent>
+        
+        <TabsContent value="ai-settings" className="mt-0">
+          <EnhancedAIAgentSettings />
         </TabsContent>
         
         <TabsContent value="monitoring" className="mt-0">

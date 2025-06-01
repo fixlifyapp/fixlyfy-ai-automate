@@ -13,6 +13,13 @@ interface AIAgentConfig {
   is_active: boolean;
   connect_instance_arn?: string;
   aws_region?: string;
+  agent_name: string;
+  voice_id: string;
+  greeting_template: string;
+  company_name: string;
+  service_areas: string[];
+  business_hours: Record<string, { open: string; close: string; enabled: boolean }>;
+  service_types: string[];
 }
 
 interface AWSCredentials {
@@ -62,7 +69,22 @@ export const useAIAgentConfig = () => {
           custom_prompt_additions: data.custom_prompt_additions || '',
           is_active: data.is_active,
           connect_instance_arn: data.connect_instance_arn || '',
-          aws_region: data.aws_region || 'us-east-1'
+          aws_region: data.aws_region || 'us-east-1',
+          agent_name: data.agent_name || 'AI Assistant',
+          voice_id: data.voice_id || 'alloy',
+          greeting_template: data.greeting_template || 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
+          company_name: data.company_name || 'our company',
+          service_areas: data.service_areas || [],
+          business_hours: data.business_hours || {
+            monday: { open: '08:00', close: '17:00', enabled: true },
+            tuesday: { open: '08:00', close: '17:00', enabled: true },
+            wednesday: { open: '08:00', close: '17:00', enabled: true },
+            thursday: { open: '08:00', close: '17:00', enabled: true },
+            friday: { open: '08:00', close: '17:00', enabled: true },
+            saturday: { open: '09:00', close: '15:00', enabled: true },
+            sunday: { open: '10:00', close: '14:00', enabled: false }
+          },
+          service_types: data.service_types || ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       } else {
         // Set default config if none exists
@@ -73,7 +95,22 @@ export const useAIAgentConfig = () => {
           custom_prompt_additions: '',
           is_active: true,
           connect_instance_arn: '',
-          aws_region: 'us-east-1'
+          aws_region: 'us-east-1',
+          agent_name: 'AI Assistant',
+          voice_id: 'alloy',
+          greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
+          company_name: 'our company',
+          service_areas: [],
+          business_hours: {
+            monday: { open: '08:00', close: '17:00', enabled: true },
+            tuesday: { open: '08:00', close: '17:00', enabled: true },
+            wednesday: { open: '08:00', close: '17:00', enabled: true },
+            thursday: { open: '08:00', close: '17:00', enabled: true },
+            friday: { open: '08:00', close: '17:00', enabled: true },
+            saturday: { open: '09:00', close: '15:00', enabled: true },
+            sunday: { open: '10:00', close: '14:00', enabled: false }
+          },
+          service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       }
     } catch (error) {
@@ -125,6 +162,13 @@ export const useAIAgentConfig = () => {
         is_active: configData.is_active,
         connect_instance_arn: configData.connect_instance_arn || null,
         aws_region: configData.aws_region || 'us-east-1',
+        agent_name: configData.agent_name,
+        voice_id: configData.voice_id,
+        greeting_template: configData.greeting_template,
+        company_name: configData.company_name,
+        service_areas: configData.service_areas,
+        business_hours: configData.business_hours,
+        service_types: configData.service_types,
         updated_at: new Date().toISOString()
       };
 

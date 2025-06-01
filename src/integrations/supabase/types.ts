@@ -11,43 +11,64 @@ export type Database = {
     Tables: {
       ai_agent_configs: {
         Row: {
+          agent_name: string | null
           aws_region: string | null
+          business_hours: Json | null
           business_niche: string
+          company_name: string | null
           connect_instance_arn: string | null
           created_at: string
           custom_prompt_additions: string | null
           diagnostic_price: number
           emergency_surcharge: number
+          greeting_template: string | null
           id: string
           is_active: boolean | null
+          service_areas: Json | null
+          service_types: Json | null
           updated_at: string
           user_id: string
+          voice_id: string | null
         }
         Insert: {
+          agent_name?: string | null
           aws_region?: string | null
+          business_hours?: Json | null
           business_niche?: string
+          company_name?: string | null
           connect_instance_arn?: string | null
           created_at?: string
           custom_prompt_additions?: string | null
           diagnostic_price?: number
           emergency_surcharge?: number
+          greeting_template?: string | null
           id?: string
           is_active?: boolean | null
+          service_areas?: Json | null
+          service_types?: Json | null
           updated_at?: string
           user_id: string
+          voice_id?: string | null
         }
         Update: {
+          agent_name?: string | null
           aws_region?: string | null
+          business_hours?: Json | null
           business_niche?: string
+          company_name?: string | null
           connect_instance_arn?: string | null
           created_at?: string
           custom_prompt_additions?: string | null
           diagnostic_price?: number
           emergency_surcharge?: number
+          greeting_template?: string | null
           id?: string
           is_active?: boolean | null
+          service_areas?: Json | null
+          service_types?: Json | null
           updated_at?: string
           user_id?: string
+          voice_id?: string | null
         }
         Relationships: []
       }
