@@ -1,151 +1,117 @@
-import React from "react";
+
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import {
+  Calendar,
+  Users,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  DollarSign,
+  Briefcase,
+  Home,
+  Phone,
+  Zap,
+  MessageSquare,
+  Bot,
+  Workflow,
+  PhoneCall,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { TrackingWrapper } from "@/components/ui/TrackingWrapper";
+import { Badge } from "@/components/ui/badge";
 
-export function AppSidebar() {
+const sidebarItems = [
+  { icon: Home, label: "Dashboard", href: "/dashboard" },
+  { icon: Briefcase, label: "Jobs", href: "/jobs" },
+  { icon: Users, label: "Clients", href: "/clients" },
+  { icon: Calendar, label: "Schedule", href: "/schedule" },
+  { icon: DollarSign, label: "Finance", href: "/finance" },
+  { icon: BarChart3, label: "Reports", href: "/reports" },
+  { 
+    icon: MessageSquare, 
+    label: "Connect Center", 
+    href: "/connect-center",
+    badge: "Amazon"
+  },
+  { 
+    icon: PhoneCall, 
+    label: "Telnyx", 
+    href: "/telnyx",
+    badge: "Simple",
+    badgeVariant: "fixlyfy" as const
+  },
+  { icon: Phone, label: "Phone Numbers", href: "/phone-numbers" },
+  { icon: Bot, label: "AI Settings", href: "/ai-settings" },
+  { icon: Workflow, label: "Automations", href: "/automations" },
+  { icon: Users, label: "Team", href: "/team" },
+  { icon: Settings, label: "Settings", href: "/settings" },
+];
+
+export const AppSidebar = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-
-  const routes = [{
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    href: '/dashboard',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Jobs',
-    icon: Briefcase,
-    href: '/jobs',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Clients',
-    icon: Users,
-    href: '/clients',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Schedule',
-    icon: Calendar,
-    href: '/schedule',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Finance',
-    icon: DollarSign,
-    href: '/finance',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Connect Center',
-    icon: MessageSquare,
-    href: '/connect',
-    color: "text-fixlyfy"
-  }, {
-    label: 'AI Center',
-    icon: Bot,
-    href: '/ai-center',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Automations',
-    icon: Zap,
-    href: '/automations',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Analytics',
-    icon: BarChart3,
-    href: '/analytics',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Team',
-    icon: UserCheck,
-    href: '/team',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Settings',
-    icon: Settings,
-    href: '/settings',
-    color: "text-fixlyfy-text-muted"
-  }];
-
-  const handleNavigation = (href: string) => {
-    console.log(`Navigating to: ${href}`);
-    navigate(href);
-  };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-fixlyfy-border shadow-sm">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h2 className="group-data-[collapsible=icon]:hidden text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
-              textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
-              filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
-            }}>
-              Fixlify
-            </h2>
-            <div className="hidden group-data-[collapsible=icon]:block text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight transform hover:scale-105 transition-transform duration-300" style={{
-              textShadow: '2px 2px 4px rgba(138, 77, 213, 0.3)',
-              filter: 'drop-shadow(0 4px 8px rgba(138, 77, 213, 0.25))'
-            }}>
-              F
-            </div>
-            <div className="relative group-data-[collapsible=icon]:hidden">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-300" style={{
-                boxShadow: '0 4px 12px rgba(138, 77, 213, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
-                background: 'linear-gradient(135deg, #8A4DD5 0%, #B084F9 50%, #8A4DD5 100%)',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}>
-                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold tracking-wider">
-                  AI
-                </div>
-              </div>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-primary rounded-full opacity-60" style={{
-                animation: 'pulse 2s infinite',
-                boxShadow: '0 0 8px rgba(138, 77, 213, 0.6)'
-              }} />
-            </div>
+    <div className={cn(
+      "bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-full",
+      collapsed ? "w-16" : "w-64"
+    )}>
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        {!collapsed && (
+          <div className="flex items-center gap-2">
+            <Zap className="h-6 w-6 text-fixlyfy" />
+            <span className="font-bold text-lg">Fixlyfy</span>
           </div>
-          <SidebarTrigger />
-        </div>
-      </SidebarHeader>
-      
-      <SidebarContent>
-        <div className="mt-6">
-          <SidebarMenu className="space-y-1 px-3">
-            {routes.map(route => (
-              <SidebarMenuItem key={route.href}>
-                <TrackingWrapper actionType="navigation" element="sidebar_menu" context={{
-                  destination: route.href,
-                  label: route.label
-                }}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={location.pathname === route.href}
-                    className="w-full justify-start text-base font-medium transition-all duration-200 hover:scale-[1.02] data-[active=true]:bg-gradient-primary data-[active=true]:text-white data-[active=true]:shadow-md hover:data-[active=true]:shadow-lg"
-                    tooltip={route.label}
-                  >
-                    <Button 
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => handleNavigation(route.href)}
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setCollapsed(!collapsed)}
+          className="h-8 w-8 p-0"
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-2">
+        {sidebarItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.href;
+          
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-fixlyfy text-white"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                collapsed && "justify-center"
+              )}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <Badge 
+                      variant={item.badgeVariant || "info"} 
+                      className="text-xs"
                     >
-                      <route.icon className="mr-3 h-4 w-4 transition-colors group-data-[collapsible=icon]:mr-0" />
-                      <span className="truncate group-data-[collapsible=icon]:hidden">{route.label}</span>
-                    </Button>
-                  </SidebarMenuButton>
-                </TrackingWrapper>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </div>
-      </SidebarContent>
-    </Sidebar>
+                      {item.badge}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
-}
+};
