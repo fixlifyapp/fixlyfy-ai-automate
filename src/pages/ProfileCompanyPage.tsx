@@ -38,15 +38,15 @@ const ProfileCompanyPage = () => {
       
       <div className="space-y-6">
         <CompanyInfoSection 
-          settings={settings}
-          saving={saving}
-          onUpdateSettings={updateSettings}
+          companySettings={settings}
+          updateCompanySettings={updateSettings}
+          isEditing={!saving}
         />
         
         <BrandingSection 
-          settings={settings}
-          saving={saving}
-          onUpdateSettings={updateSettings}
+          companySettings={settings}
+          updateCompanySettings={updateSettings}
+          isEditing={!saving}
         />
 
         <BusinessHoursCard
