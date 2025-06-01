@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { BusinessHours, DEFAULT_BUSINESS_HOURS } from '@/types/businessHours';
 
 export interface CompanySettings {
   id?: string;
@@ -26,6 +27,8 @@ export interface CompanySettings {
   // Service areas
   service_radius: number;
   service_zip_codes: string;
+  // Business hours
+  business_hours: BusinessHours;
   created_at?: string;
   updated_at?: string;
 }
@@ -45,7 +48,8 @@ const defaultCompanySettings: CompanySettings = {
   company_tagline: 'Smart Solutions for Field Service Businesses',
   company_description: 'Fixlyfy Services provides professional HVAC, plumbing and electrical services to residential and commercial customers throughout the Bay Area. Our team of skilled technicians is available 24/7 for all your service needs.',
   service_radius: 50,
-  service_zip_codes: '94103, 94104, 94105, 94107, 94108, 94109, 94110, 94111, 94112, 94114, 94115, 94116, 94117, 94118, 94121, 94122, 94123, 94124, 94127, 94129, 94130, 94131, 94132, 94133, 94134, 94158'
+  service_zip_codes: '94103, 94104, 94105, 94107, 94108, 94109, 94110, 94111, 94112, 94114, 94115, 94116, 94117, 94118, 94121, 94122, 94123, 94124, 94127, 94129, 94130, 94131, 94132, 94133, 94134, 94158',
+  business_hours: DEFAULT_BUSINESS_HOURS
 };
 
 export const useCompanySettings = () => {
@@ -74,14 +78,23 @@ export const useCompanySettings = () => {
       }
 
       if (data) {
-        setSettings({ ...defaultCompanySettings, ...data });
+        const businessHours = data.business_hours ? 
+          (typeof data.business_hours === 'string' ? JSON.parse(data.business_hours) : data.business_hours) :
+          DEFAULT_BUSINESS_HOURS;
+          
+        setSettings({ 
+          ...defaultCompanySettings, 
+          ...data,
+          business_hours: businessHours
+        });
       } else {
         // Create default settings if none exist
         const { error: insertError } = await supabase
           .from('company_settings')
           .insert({
             user_id: user.id,
-            ...defaultCompanySettings
+            ...defaultCompanySettings,
+            business_hours: JSON.stringify(DEFAULT_BUSINESS_HOURS)
           });
         
         if (!insertError) {
@@ -104,11 +117,17 @@ export const useCompanySettings = () => {
 
       const newSettings = { ...settings, ...updates };
       
+      // Prepare data for database
+      const dataToUpdate = {
+        ...newSettings,
+        business_hours: JSON.stringify(newSettings.business_hours)
+      };
+      
       const { error } = await supabase
         .from('company_settings')
         .upsert({
           user_id: user.id,
-          ...newSettings
+          ...dataToUpdate
         });
 
       if (error) throw error;
