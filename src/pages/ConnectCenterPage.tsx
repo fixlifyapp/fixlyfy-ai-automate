@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,23 +7,19 @@ import { RealCallsList } from "@/components/connect/RealCallsList";
 import { RealEmailsList } from "@/components/connect/RealEmailsList";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
-import { ConnectTestStatus } from "@/components/connect/ConnectTestStatus";
-import { SetupAIDispatcher } from "@/components/connect/SetupAIDispatcher";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
-import { EnhancedAIAgentSettings } from "@/components/connect/EnhancedAIAgentSettings";
 import { AmazonConnectFlowInstructions } from "@/components/connect/AmazonConnectFlowInstructions";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Target, Bot, Workflow } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Workflow } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useMessageContext } from "@/contexts/MessageContext";
-import { VoiceDispatchInterface } from "@/components/voice/VoiceDispatchInterface";
 
 const ConnectCenterPage = () => {
-  const [activeTab, setActiveTab] = useState("setup");
+  const [activeTab, setActiveTab] = useState("flow-setup");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [unreadCounts, setUnreadCounts] = useState({
     messages: 0,
@@ -40,10 +35,10 @@ const ConnectCenterPage = () => {
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const clientPhone = searchParams.get("clientPhone");
-  const tabParam = searchParams.get("tab") || "setup";
+  const tabParam = searchParams.get("tab") || "flow-setup";
   
   useEffect(() => {
-    if (tabParam && ["setup", "flow-setup", "ai-settings", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["flow-setup", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -166,7 +161,6 @@ const ConnectCenterPage = () => {
       case "calls": return "New Call";
       case "emails": return "New Email";
       case "phone-numbers": return "Search Numbers";
-      case "ai-settings": return "Test AI Voice";
       case "flow-setup": return "View Flow Docs";
       default: return "New Action";
     }
@@ -177,13 +171,12 @@ const ConnectCenterPage = () => {
       <IncomingCallHandler />
       
       <PageHeader
-        title="Enhanced Connect Center"
-        subtitle="Amazon Connect, AI Dispatcher with media streaming, and communication hub"
+        title="Connect Center"
+        subtitle="Amazon Connect communication hub and call monitoring"
         icon={MessageSquare}
         badges={[
           { text: "Amazon Connect", icon: Phone, variant: "fixlyfy" },
           { text: "Media Streaming", icon: Workflow, variant: "success" },
-          { text: "AI Voice Integration", icon: Bot, variant: "info" },
           { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
@@ -198,22 +191,10 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-9 mb-6">
-          <TabsTrigger value="setup" className="flex items-center gap-2">
-            <Target size={16} />
-            <span className="hidden sm:inline">Setup</span>
-          </TabsTrigger>
+        <TabsList className="grid grid-cols-6 mb-6">
           <TabsTrigger value="flow-setup" className="flex items-center gap-2">
             <Workflow size={16} />
             <span className="hidden sm:inline">Flow Setup</span>
-          </TabsTrigger>
-          <TabsTrigger value="voice-dispatch" className="flex items-center gap-2">
-            <Phone size={16} />
-            <span className="hidden sm:inline">Voice AI</span>
-          </TabsTrigger>
-          <TabsTrigger value="ai-settings" className="flex items-center gap-2">
-            <Bot size={16} />
-            <span className="hidden sm:inline">AI Settings</span>
           </TabsTrigger>
           <TabsTrigger value="monitoring" className="flex items-center gap-2">
             <Phone size={16} />
@@ -246,21 +227,8 @@ const ConnectCenterPage = () => {
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="setup" className="mt-0 space-y-6">
-          <SetupAIDispatcher />
-          <ConnectTestStatus />
-        </TabsContent>
-        
         <TabsContent value="flow-setup" className="mt-0">
           <AmazonConnectFlowInstructions />
-        </TabsContent>
-        
-        <TabsContent value="voice-dispatch" className="mt-0">
-          <VoiceDispatchInterface />
-        </TabsContent>
-        
-        <TabsContent value="ai-settings" className="mt-0">
-          <EnhancedAIAgentSettings />
         </TabsContent>
         
         <TabsContent value="monitoring" className="mt-0">
