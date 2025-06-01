@@ -39,6 +39,16 @@ const SERVICE_TYPES = [
   'Emergency Services'
 ];
 
+interface BusinessHours {
+  monday: { open: string; close: string; enabled: boolean };
+  tuesday: { open: string; close: string; enabled: boolean };
+  wednesday: { open: string; close: string; enabled: boolean };
+  thursday: { open: string; close: string; enabled: boolean };
+  friday: { open: string; close: string; enabled: boolean };
+  saturday: { open: string; close: string; enabled: boolean };
+  sunday: { open: string; close: string; enabled: boolean };
+}
+
 export const EnhancedAIAgentSettings = () => {
   const { 
     config, 
@@ -67,7 +77,7 @@ export const EnhancedAIAgentSettings = () => {
       friday: { open: '08:00', close: '17:00', enabled: true },
       saturday: { open: '09:00', close: '15:00', enabled: true },
       sunday: { open: '10:00', close: '14:00', enabled: false }
-    },
+    } as BusinessHours,
     service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'] as string[]
   });
 
@@ -145,7 +155,7 @@ export const EnhancedAIAgentSettings = () => {
               Enhanced AI Agent Status
             </CardTitle>
             <div className="flex items-center gap-3">
-              <Badge variant={config?.is_active ? "success" : "secondary"}>
+              <Badge variant={config?.is_active ? "success" : "info"}>
                 {config?.is_active ? "Active" : "Inactive"}
               </Badge>
               <Switch
@@ -290,7 +300,7 @@ export const EnhancedAIAgentSettings = () => {
               <TabsContent value="schedule">
                 <BusinessHoursEditor
                   businessHours={agentForm.business_hours}
-                  onBusinessHoursChange={(hours) => setAgentForm(prev => ({ ...prev, business_hours: hours }))}
+                  onBusinessHoursChange={(hours) => setAgentForm(prev => ({ ...prev, business_hours: hours as BusinessHours }))}
                 />
               </TabsContent>
 
@@ -343,7 +353,7 @@ export const EnhancedAIAgentSettings = () => {
                       {agentForm.service_areas.map((area) => (
                         <Badge
                           key={area}
-                          variant="secondary"
+                          variant="info"
                           className="cursor-pointer"
                           onClick={() => removeServiceArea(area)}
                         >

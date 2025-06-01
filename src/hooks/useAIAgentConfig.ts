@@ -4,6 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 
+interface BusinessHours {
+  monday: { open: string; close: string; enabled: boolean };
+  tuesday: { open: string; close: string; enabled: boolean };
+  wednesday: { open: string; close: string; enabled: boolean };
+  thursday: { open: string; close: string; enabled: boolean };
+  friday: { open: string; close: string; enabled: boolean };
+  saturday: { open: string; close: string; enabled: boolean };
+  sunday: { open: string; close: string; enabled: boolean };
+}
+
 interface AIAgentConfig {
   id?: string;
   business_niche: string;
@@ -18,7 +28,7 @@ interface AIAgentConfig {
   greeting_template: string;
   company_name: string;
   service_areas: string[];
-  business_hours: Record<string, { open: string; close: string; enabled: boolean }>;
+  business_hours: BusinessHours;
   service_types: string[];
 }
 
@@ -74,8 +84,8 @@ export const useAIAgentConfig = () => {
           voice_id: data.voice_id || 'alloy',
           greeting_template: data.greeting_template || 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
           company_name: data.company_name || 'our company',
-          service_areas: data.service_areas || [],
-          business_hours: data.business_hours || {
+          service_areas: Array.isArray(data.service_areas) ? data.service_areas : [],
+          business_hours: (data.business_hours as BusinessHours) || {
             monday: { open: '08:00', close: '17:00', enabled: true },
             tuesday: { open: '08:00', close: '17:00', enabled: true },
             wednesday: { open: '08:00', close: '17:00', enabled: true },
@@ -84,7 +94,7 @@ export const useAIAgentConfig = () => {
             saturday: { open: '09:00', close: '15:00', enabled: true },
             sunday: { open: '10:00', close: '14:00', enabled: false }
           },
-          service_types: data.service_types || ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
+          service_types: Array.isArray(data.service_types) ? data.service_types : ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
         });
       } else {
         // Set default config if none exists

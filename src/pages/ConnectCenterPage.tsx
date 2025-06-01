@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -180,7 +181,7 @@ const ConnectCenterPage = () => {
           { text: "Amazon Connect", icon: Phone, variant: "fixlyfy" },
           { text: "Enhanced AI Dispatcher", icon: Bot, variant: "success" },
           { text: "Voice & Greetings", icon: Target, variant: "info" },
-          { text: "Real-time Sync", icon: MessageSquare, variant: "secondary" }
+          { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
           text: getActionButtonText(),

@@ -39,7 +39,22 @@ export const AmazonConnectSettings = () => {
     custom_prompt_additions: config?.custom_prompt_additions || '',
     connect_instance_arn: config?.connect_instance_arn || '',
     aws_region: config?.aws_region || 'us-east-1',
-    is_active: config?.is_active || false
+    is_active: config?.is_active || false,
+    agent_name: config?.agent_name || 'AI Assistant',
+    voice_id: config?.voice_id || 'alloy',
+    greeting_template: config?.greeting_template || 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
+    company_name: config?.company_name || 'our company',
+    service_areas: config?.service_areas || [],
+    business_hours: config?.business_hours || {
+      monday: { open: '08:00', close: '17:00', enabled: true },
+      tuesday: { open: '08:00', close: '17:00', enabled: true },
+      wednesday: { open: '08:00', close: '17:00', enabled: true },
+      thursday: { open: '08:00', close: '17:00', enabled: true },
+      friday: { open: '08:00', close: '17:00', enabled: true },
+      saturday: { open: '09:00', close: '15:00', enabled: true },
+      sunday: { open: '10:00', close: '14:00', enabled: false }
+    },
+    service_types: config?.service_types || ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
   });
 
   const [awsForm, setAwsForm] = useState({
@@ -59,7 +74,14 @@ export const AmazonConnectSettings = () => {
         custom_prompt_additions: config.custom_prompt_additions || '',
         connect_instance_arn: config.connect_instance_arn || '',
         aws_region: config.aws_region || 'us-east-1',
-        is_active: config.is_active
+        is_active: config.is_active,
+        agent_name: config.agent_name,
+        voice_id: config.voice_id,
+        greeting_template: config.greeting_template,
+        company_name: config.company_name,
+        service_areas: config.service_areas,
+        business_hours: config.business_hours,
+        service_types: config.service_types
       });
     }
   }, [config]);
@@ -154,7 +176,7 @@ export const AmazonConnectSettings = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Badge variant={config?.is_active ? "success" : "secondary"}>
+              <Badge variant={config?.is_active ? "success" : "info"}>
                 {config?.is_active ? "Active" : "Inactive"}
               </Badge>
               <Switch

@@ -37,7 +37,22 @@ export const AIAgentSettings = () => {
     diagnostic_price: 75.00,
     emergency_surcharge: 50.00,
     custom_prompt_additions: '',
-    is_active: true
+    is_active: true,
+    agent_name: 'AI Assistant',
+    voice_id: 'alloy',
+    greeting_template: 'Hello, my name is {agent_name}. I\'m an AI assistant for {company_name}. How can I help you today?',
+    company_name: 'our company',
+    service_areas: [] as string[],
+    business_hours: {
+      monday: { open: '08:00', close: '17:00', enabled: true },
+      tuesday: { open: '08:00', close: '17:00', enabled: true },
+      wednesday: { open: '08:00', close: '17:00', enabled: true },
+      thursday: { open: '08:00', close: '17:00', enabled: true },
+      friday: { open: '08:00', close: '17:00', enabled: true },
+      saturday: { open: '09:00', close: '15:00', enabled: true },
+      sunday: { open: '10:00', close: '14:00', enabled: false }
+    },
+    service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'] as string[]
   });
 
   useEffect(() => {
@@ -47,7 +62,14 @@ export const AIAgentSettings = () => {
         diagnostic_price: config.diagnostic_price,
         emergency_surcharge: config.emergency_surcharge,
         custom_prompt_additions: config.custom_prompt_additions || '',
-        is_active: config.is_active
+        is_active: config.is_active,
+        agent_name: config.agent_name,
+        voice_id: config.voice_id,
+        greeting_template: config.greeting_template,
+        company_name: config.company_name,
+        service_areas: config.service_areas,
+        business_hours: config.business_hours,
+        service_types: config.service_types
       });
     }
   }, [config]);
@@ -79,7 +101,7 @@ export const AIAgentSettings = () => {
               AI Agent Status
             </CardTitle>
             <div className="flex items-center gap-3">
-              <Badge variant={config?.is_active ? "success" : "secondary"}>
+              <Badge variant={config?.is_active ? "success" : "info"}>
                 {config?.is_active ? "Active" : "Inactive"}
               </Badge>
               <Switch
