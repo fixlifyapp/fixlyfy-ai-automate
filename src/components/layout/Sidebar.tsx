@@ -1,4 +1,3 @@
-
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,6 +43,11 @@ export function Sidebar({
     label: 'Connect Center',
     icon: MessageSquare,
     href: '/connect',
+    color: "text-fixlyfy"
+  }, {
+    label: 'Telnyx',
+    icon: Phone,
+    href: '/telnyx',
     color: "text-fixlyfy"
   }, {
     label: 'AI Center',

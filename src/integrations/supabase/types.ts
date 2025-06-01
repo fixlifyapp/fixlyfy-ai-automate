@@ -2452,6 +2452,93 @@ export type Database = {
         }
         Relationships: []
       }
+      telnyx_calls: {
+        Row: {
+          ai_transcript: string | null
+          call_control_id: string | null
+          call_session_id: string | null
+          call_status: string | null
+          created_at: string | null
+          direction: string | null
+          duration: number | null
+          ended_at: string | null
+          id: string
+          phone_number: string | null
+          started_at: string | null
+          to_number: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_transcript?: string | null
+          call_control_id?: string | null
+          call_session_id?: string | null
+          call_status?: string | null
+          created_at?: string | null
+          direction?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          id?: string
+          phone_number?: string | null
+          started_at?: string | null
+          to_number?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_transcript?: string | null
+          call_control_id?: string | null
+          call_session_id?: string | null
+          call_status?: string | null
+          created_at?: string | null
+          direction?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          id?: string
+          phone_number?: string | null
+          started_at?: string | null
+          to_number?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      telnyx_phone_numbers: {
+        Row: {
+          configured_at: string | null
+          country_code: string | null
+          created_at: string | null
+          id: string
+          order_id: string | null
+          phone_number: string
+          purchased_at: string | null
+          status: string | null
+          user_id: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          configured_at?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          order_id?: string | null
+          phone_number: string
+          purchased_at?: string | null
+          status?: string | null
+          user_id?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          configured_at?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          order_id?: string | null
+          phone_number?: string
+          purchased_at?: string | null
+          status?: string | null
+          user_id?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       user_actions: {
         Row: {
           action_type: string

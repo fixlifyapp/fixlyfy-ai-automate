@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck, Phone } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { TrackingWrapper } from "@/components/ui/TrackingWrapper";
 
@@ -46,6 +46,11 @@ export function AppSidebar() {
     label: 'Connect Center',
     icon: MessageSquare,
     href: '/connect',
+    color: "text-fixlyfy"
+  }, {
+    label: 'Telnyx',
+    icon: Phone,
+    href: '/telnyx',
     color: "text-fixlyfy"
   }, {
     label: 'AI Center',

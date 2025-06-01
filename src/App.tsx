@@ -29,6 +29,7 @@ import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
 import PortalLoginPage from "@/pages/portal/PortalLoginPage";
+import TelnyxPage from "@/pages/TelnyxPage";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppProviders } from "@/components/ui/AppProviders";
@@ -142,6 +143,11 @@ const App = () => {
               <Route path="/configuration" element={
                 <ProtectedRoute>
                   <ConfigurationPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/telnyx" element={
+                <ProtectedRoute>
+                  <TelnyxPage />
                 </ProtectedRoute>
               } />
             </Routes>
