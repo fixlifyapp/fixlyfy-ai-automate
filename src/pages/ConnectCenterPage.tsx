@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -20,6 +19,7 @@ import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { supabase } from "@/integrations/supabase/client";
 import { useMessageContext } from "@/contexts/MessageContext";
+import { VoiceDispatchInterface } from "@/components/voice/VoiceDispatchInterface";
 
 const ConnectCenterPage = () => {
   const [activeTab, setActiveTab] = useState("setup");
@@ -195,10 +195,14 @@ const ConnectCenterPage = () => {
       </div>
       
       <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 mb-6">
+        <TabsList className="grid grid-cols-8 mb-6">
           <TabsTrigger value="setup" className="flex items-center gap-2">
             <Target size={16} />
             <span className="hidden sm:inline">Setup</span>
+          </TabsTrigger>
+          <TabsTrigger value="voice-dispatch" className="flex items-center gap-2">
+            <Phone size={16} />
+            <span className="hidden sm:inline">Voice AI</span>
           </TabsTrigger>
           <TabsTrigger value="ai-settings" className="flex items-center gap-2">
             <Bot size={16} />
@@ -238,6 +242,10 @@ const ConnectCenterPage = () => {
         <TabsContent value="setup" className="mt-0 space-y-6">
           <SetupAIDispatcher />
           <ConnectTestStatus />
+        </TabsContent>
+        
+        <TabsContent value="voice-dispatch" className="mt-0">
+          <VoiceDispatchInterface />
         </TabsContent>
         
         <TabsContent value="ai-settings" className="mt-0">
