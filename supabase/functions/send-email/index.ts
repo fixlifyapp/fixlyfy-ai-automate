@@ -41,7 +41,10 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) {
       console.error('User authentication error:', userError);
-      throw new Error('Authentication failed');
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 401,
+      });
     }
 
     const { 
@@ -86,13 +89,17 @@ serve(async (req) => {
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
-      console.error('Mailgun API key not found');
-      throw new Error('Mailgun API key not configured');
+      console.error('Mailgun API key not found in environment variables');
+      return new Response(JSON.stringify({ error: 'Mailgun API key not configured' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 500,
+      });
     }
 
     console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
     console.log(`From: ${fromEmail}`);
     console.log(`To: ${to}`);
+    console.log('API Key length:', mailgunApiKey.length);
 
     // Send email via Mailgun using the main domain
     const formData = new FormData();
@@ -110,21 +117,37 @@ serve(async (req) => {
     const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
     console.log('Mailgun URL:', mailgunUrl);
 
+    // Create basic auth header - Mailgun uses 'api' as username and API key as password
+    const basicAuth = btoa(`api:${mailgunApiKey}`);
+    console.log('Basic auth header created (length):', basicAuth.length);
+
     const mailgunResponse = await fetch(mailgunUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
+        'Authorization': `Basic ${basicAuth}`
       },
       body: formData
     });
 
     const responseText = await mailgunResponse.text();
     console.log('Mailgun response status:', mailgunResponse.status);
-    console.log('Mailgun response:', responseText);
+    console.log('Mailgun response headers:', Object.fromEntries(mailgunResponse.headers.entries()));
+    console.log('Mailgun response body:', responseText);
 
     if (!mailgunResponse.ok) {
       console.error("Mailgun error response:", responseText);
-      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${responseText}`);
+      return new Response(JSON.stringify({ 
+        error: `Mailgun API error: ${mailgunResponse.status} - ${responseText}`,
+        details: {
+          status: mailgunResponse.status,
+          response: responseText,
+          url: mailgunUrl,
+          domain: mailgunDomain
+        }
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 500,
+      });
     }
 
     let mailgunResult;
@@ -132,7 +155,10 @@ serve(async (req) => {
       mailgunResult = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Error parsing Mailgun response:', parseError);
-      throw new Error('Invalid response from Mailgun API');
+      return new Response(JSON.stringify({ error: 'Invalid response from Mailgun API' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 500,
+      });
     }
 
     console.log('Email sent successfully via Mailgun:', mailgunResult);
@@ -182,7 +208,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to send email' 
+        error: error.message || 'Failed to send email',
+        details: error.stack || 'No stack trace available'
       }),
       {
         status: 500,
