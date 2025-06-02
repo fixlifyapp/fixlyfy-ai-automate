@@ -34,7 +34,10 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log(`Telnyx TeXML Webhook: ${req.method} ${req.url}`)
+  console.log(`=== Telnyx TeXML Webhook START ===`)
+  console.log(`Method: ${req.method}`)
+  console.log(`URL: ${req.url}`)
+  console.log(`Headers:`, Object.fromEntries(req.headers.entries()))
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -54,6 +57,7 @@ serve(async (req) => {
     }
 
     if (req.method !== 'POST') {
+      console.log('Method not allowed:', req.method)
       return new Response('Method not allowed', { status: 405 })
     }
 
@@ -61,11 +65,14 @@ serve(async (req) => {
     const formData = await req.formData()
     const webhookData: TelnyxWebhookData = {}
     
+    console.log('=== RAW FORM DATA ===')
     for (const [key, value] of formData.entries()) {
       webhookData[key as keyof TelnyxWebhookData] = value as string
+      console.log(`${key}: ${value}`)
     }
     
-    console.log('Telnyx TeXML webhook data:', JSON.stringify(webhookData, null, 2))
+    console.log('=== PARSED WEBHOOK DATA ===')
+    console.log(JSON.stringify(webhookData, null, 2))
 
     const callSid = webhookData.CallSid
     const from = webhookData.From
@@ -80,8 +87,16 @@ serve(async (req) => {
       return new Response('Missing CallSid', { status: 400 })
     }
 
+    console.log(`=== PROCESSING CALL ${callSid} ===`)
+    console.log(`Status: ${callStatus}`)
+    console.log(`From: ${from} -> To: ${to}`)
+    console.log(`Recording URL: ${recordingUrl}`)
+    console.log(`Speech Result: ${speechResult}`)
+    console.log(`Recording Status: ${recordingStatus}`)
+
     // Handle new incoming call
     if (callStatus === 'ringing' || (!callStatus && from && to)) {
+      console.log('=== NEW INCOMING CALL ===')
       console.log('Processing new incoming call from:', from, 'to:', to)
 
       // Find or create phone number entry
@@ -97,8 +112,13 @@ serve(async (req) => {
       const greeting = `Hello! This is ${businessConfig.agent_name} from ${businessConfig.company_name}. How can I help you today?`
       
       console.log('Returning TeXML greeting with company name:', businessConfig.company_name)
+      console.log('Greeting:', greeting)
       
-      return new Response(createGreetingTeXML(greeting), {
+      const texmlResponse = createGreetingTeXML(greeting)
+      console.log('=== TEXML RESPONSE ===')
+      console.log(texmlResponse)
+      
+      return new Response(texmlResponse, {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/xml' 
@@ -108,19 +128,26 @@ serve(async (req) => {
 
     // Handle recording completion or transcription
     if (recordingUrl || speechResult || recordingStatus === 'completed') {
-      console.log('Processing recording/speech:', { recordingUrl, speechResult, recordingStatus })
+      console.log('=== PROCESSING RECORDING/SPEECH ===')
+      console.log('Recording URL:', recordingUrl)
+      console.log('Speech Result:', speechResult)
+      console.log('Recording Status:', recordingStatus)
 
       let userMessage = speechResult || ''
       
       // If we have recording URL but no speech result, transcribe it with OpenAI
       if (recordingUrl && !speechResult) {
+        console.log('=== TRANSCRIBING WITH OPENAI WHISPER ===')
         userMessage = await transcribeAudio(recordingUrl, openaiApiKey)
+        console.log('Transcribed message:', userMessage)
       }
 
       // Handle empty or unclear input
       if (!userMessage || userMessage.trim().length < 3) {
-        console.log('No clear input received, asking again')
-        return new Response(createClarificationTeXML(), {
+        console.log('=== NO CLEAR INPUT, ASKING AGAIN ===')
+        const clarificationResponse = createClarificationTeXML()
+        console.log('Clarification TeXML:', clarificationResponse)
+        return new Response(clarificationResponse, {
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/xml' 
@@ -132,7 +159,9 @@ serve(async (req) => {
       const businessConfig = await getBusinessConfig(supabaseClient)
 
       // Generate AI response using GPT
+      console.log('=== GENERATING AI RESPONSE ===')
       const aiResponse = await generateAIResponse(userMessage, businessConfig, openaiApiKey)
+      console.log('AI Response:', aiResponse)
 
       // Update call record with conversation
       await updateCallStatus(supabaseClient, callSid, 'connected', {
@@ -141,8 +170,10 @@ serve(async (req) => {
 
       // Check if user wants to schedule appointment
       const wantsToSchedule = checkForSchedulingIntent(userMessage, aiResponse)
+      console.log('Wants to schedule?', wantsToSchedule)
 
       if (wantsToSchedule) {
+        console.log('=== SCHEDULING FLOW ===')
         // Mark as appointment in progress
         await updateCallStatus(supabaseClient, callSid, 'connected', {
           appointment_scheduled: true,
@@ -154,15 +185,20 @@ serve(async (req) => {
           }
         })
 
-        return new Response(createAppointmentTeXML(aiResponse), {
+        const appointmentResponse = createAppointmentTeXML(aiResponse)
+        console.log('Appointment TeXML:', appointmentResponse)
+        return new Response(appointmentResponse, {
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/xml' 
           }
         })
       } else {
+        console.log('=== CONTINUING CONVERSATION ===')
         // Continue conversation
-        return new Response(createResponseTeXML(aiResponse), {
+        const conversationResponse = createResponseTeXML(aiResponse)
+        console.log('Conversation TeXML:', conversationResponse)
+        return new Response(conversationResponse, {
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/xml' 
@@ -173,6 +209,7 @@ serve(async (req) => {
 
     // Handle call completion
     if (callStatus === 'completed' || callStatus === 'hangup') {
+      console.log('=== CALL COMPLETED ===')
       console.log('Call completed:', callSid)
       
       await updateCallStatus(supabaseClient, callSid, 'completed')
@@ -183,17 +220,24 @@ serve(async (req) => {
     }
 
     // Default response for unhandled events
-    console.log('Unhandled webhook event:', webhookData)
+    console.log('=== UNHANDLED WEBHOOK EVENT ===')
+    console.log('Unhandled webhook data:', webhookData)
     return new Response('OK', {
       headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
     })
 
   } catch (error) {
+    console.error('=== ERROR IN WEBHOOK ===')
     console.error('Error processing Telnyx TeXML webhook:', error)
     
-    return new Response(createErrorTeXML(), {
+    const errorResponse = createErrorTeXML()
+    console.log('Error TeXML:', errorResponse)
+    
+    return new Response(errorResponse, {
       headers: { ...corsHeaders, 'Content-Type': 'application/xml' },
       status: 200 // Always return 200 for TeXML
     })
+  } finally {
+    console.log(`=== Telnyx TeXML Webhook END ===`)
   }
 })

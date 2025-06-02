@@ -6,10 +6,9 @@ export const createGreetingTeXML = (greeting: string): string => {
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
+        maxLength="30"
+        timeout="5"
+        playBeep="true"
     />
 </Response>`
 }
@@ -21,10 +20,9 @@ export const createResponseTeXML = (message: string): string => {
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
+        maxLength="30"
+        timeout="5"
+        playBeep="true"
     />
 </Response>`
 }
@@ -36,10 +34,9 @@ export const createClarificationTeXML = (): string => {
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
+        maxLength="30"
+        timeout="5"
+        playBeep="true"
     />
 </Response>`
 }
@@ -59,10 +56,9 @@ export const createAppointmentTeXML = (aiResponse: string): string => {
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
+        maxLength="30"
+        timeout="5"
+        playBeep="true"
     />
 </Response>`
 }
