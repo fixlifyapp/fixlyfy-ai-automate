@@ -77,14 +77,39 @@ serve(async (req) => {
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
       console.log('Processing incoming call from:', payload.from, 'to:', payload.to)
 
-      // Find the phone number owner
-      const { data: phoneNumberData } = await supabaseClient
+      // Find or create the phone number entry
+      let phoneNumberData
+      const { data: existingNumber } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .eq('phone_number', payload.to)
         .single()
 
-      console.log('Phone number data:', phoneNumberData)
+      if (existingNumber) {
+        phoneNumberData = existingNumber
+        console.log('Found existing phone number data:', phoneNumberData)
+      } else {
+        // Create the phone number entry if it doesn't exist
+        console.log('Phone number not found, creating entry for:', payload.to)
+        const { data: newNumber, error: createError } = await supabaseClient
+          .from('telnyx_phone_numbers')
+          .insert({
+            phone_number: payload.to,
+            status: 'active',
+            country_code: 'US',
+            configured_at: new Date().toISOString(),
+            webhook_url: 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('Error creating phone number entry:', createError)
+        } else {
+          phoneNumberData = newNumber
+          console.log('Created new phone number entry:', phoneNumberData)
+        }
+      }
 
       // Find active AI configuration
       const { data: aiConfigs } = await supabaseClient
@@ -147,8 +172,11 @@ serve(async (req) => {
         }
       }
 
-      // Answer the call and start streaming to OpenAI
-      console.log('Attempting to answer call and start AI conversation...')
+      // Add a small delay before attempting to answer
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // Answer the call
+      console.log('Attempting to answer call...')
       const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
         method: 'POST',
         headers: {
@@ -175,15 +203,39 @@ serve(async (req) => {
           .update({ call_status: 'failed' })
           .eq('call_control_id', callControlId)
         
-        throw new Error(`Failed to answer call: ${answerResult}`)
+        // Try to play a simple greeting even if answer failed
+        console.log('Attempting fallback greeting...')
+        await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${telnyxApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            call_control_id: callControlId,
+            payload: `Hello! Thank you for calling ${aiConfig.company_name}. We're experiencing technical difficulties but will call you back shortly.`,
+            voice: 'female',
+            language: 'en'
+          })
+        })
+
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: 'Call answered with fallback greeting' 
+        }), {
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          }
+        })
       }
 
-      console.log('Call answered successfully, will start streaming when answered...')
+      console.log('Call answered successfully!')
     }
 
     // When call is answered, start streaming to OpenAI
     else if (event_type === 'call.answered') {
-      console.log('Call connected, starting OpenAI streaming...')
+      console.log('Call connected, starting AI conversation...')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
@@ -194,32 +246,9 @@ serve(async (req) => {
         .update({ call_status: 'answered' })
         .eq('call_control_id', callControlId)
 
-      // Build AI prompt with business context
-      const businessContext = `
-You are ${aiConfig.agent_name || 'AI Assistant'}, an AI assistant for ${aiConfig.company_name || 'our company'}.
-
-Business Information:
-- Services: ${aiConfig.service_types?.join(', ') || 'General services'}
-- Service Areas: ${aiConfig.service_areas?.join(', ') || 'Local area'}
-- Diagnostic Fee: $${aiConfig.diagnostic_price || 75}
-- Emergency Surcharge: $${aiConfig.emergency_surcharge || 50}
-
-Your role:
-1. Answer calls professionally and understand customer needs
-2. Ask about their specific problem and location
-3. Check if they're in our service area
-4. Provide pricing for diagnostic visits
-5. Schedule appointments if requested
-6. Handle emergency situations with appropriate urgency
-
-Custom Instructions: ${aiConfig.custom_prompt_additions || 'Provide excellent customer service.'}
-
-Be helpful, professional, and efficient. Always confirm appointment details.
-`
-
-      // Start streaming audio to OpenAI via Telnyx
-      console.log('Starting media streaming to OpenAI...')
-      const streamResponse = await fetch('https://api.telnyx.com/v2/calls/actions/streaming_start', {
+      // Play a simple greeting for now
+      console.log('Playing AI greeting...')
+      await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${telnyxApiKey}`,
@@ -227,39 +256,11 @@ Be helpful, professional, and efficient. Always confirm appointment details.
         },
         body: JSON.stringify({
           call_control_id: callControlId,
-          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`,
-          stream_track: 'inbound_track',
-          client_state: JSON.stringify({
-            openai_api_key: openaiApiKey,
-            system_prompt: businessContext,
-            call_control_id: callControlId,
-            telnyx_api_key: telnyxApiKey
-          })
+          payload: `Hello! My name is ${aiConfig.agent_name || 'AI Assistant'} from ${aiConfig.company_name || 'our company'}. How can I help you today?`,
+          voice: 'female',
+          language: 'en'
         })
       })
-
-      const streamResult = await streamResponse.text()
-      console.log('Streaming start response:', streamResponse.status, streamResult)
-
-      if (!streamResponse.ok) {
-        console.error('Error starting stream:', streamResult)
-        // Fallback to basic greeting
-        await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${telnyxApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            call_control_id: callControlId,
-            payload: `Hello! I'm ${aiConfig.agent_name || 'an AI assistant'} for ${aiConfig.company_name || 'our company'}. How can I help you today?`,
-            voice: 'female',
-            language: 'en'
-          })
-        })
-      } else {
-        console.log('Successfully started AI conversation streaming')
-      }
     }
 
     // Handle call hangup/completion
@@ -285,15 +286,7 @@ Be helpful, professional, and efficient. Always confirm appointment details.
       console.log('Call completion recorded successfully')
     }
 
-    // Handle streaming events
-    else if (event_type === 'call.streaming.started') {
-      console.log('Audio streaming started successfully')
-    }
-
-    else if (event_type === 'call.streaming.stopped') {
-      console.log('Audio streaming stopped')
-    }
-
+    // Handle other events
     else {
       console.log('Unhandled event type:', event_type)
     }
