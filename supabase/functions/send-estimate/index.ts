@@ -2,322 +2,163 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
-const sendGridApiKey = Deno.env.get('SENDGRID_API_KEY');
-
-console.log("=== EDGE FUNCTION ENVIRONMENT CHECK ===");
-console.log("Twilio Account SID:", twilioAccountSid ? "SET" : "MISSING");
-console.log("Twilio Auth Token:", twilioAuthToken ? "SET" : "MISSING");
-console.log("Twilio Phone Number:", twilioPhoneNumber ? "SET" : "MISSING");
-console.log("SendGrid API Key:", sendGridApiKey ? "SET" : "MISSING");
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 interface SendEstimateRequest {
-  method: 'email' | 'sms';
-  recipient: string;
-  estimateNumber: string;
-  estimateData: {
-    lineItems: any[];
-    total: number;
-    taxRate: number;
-    notes?: string;
-    viewUrl?: string;
-    portalLoginLink?: string;
-  };
-  clientName?: string;
-  communicationId?: string;
+  estimateId: string;
+  recipientEmail: string;
+  message?: string;
+  subject?: string;
 }
 
-const generateEstimateEmailHTML = (estimateNumber: string, clientName: string, estimateData: any) => {
-  const { lineItems, total, taxRate, notes, viewUrl, portalLoginLink } = estimateData;
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const taxAmount = subtotal * (taxRate / 100);
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Estimate ${estimateNumber}</title>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .estimate-number { color: #007bff; font-size: 24px; font-weight: bold; }
-            .line-items { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .line-items th, .line-items td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            .line-items th { background: #f8f9fa; font-weight: bold; }
-            .totals { text-align: right; margin: 20px 0; }
-            .total-row { font-weight: bold; font-size: 18px; color: #007bff; }
-            .view-button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .notes { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .portal-section { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>Estimate <span class="estimate-number">${estimateNumber}</span></h1>
-            <p>Dear ${clientName},</p>
-            <p>Please find your estimate details below. We appreciate the opportunity to serve you!</p>
-        </div>
-
-        <table class="line-items">
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${lineItems.map(item => `
-                    <tr>
-                        <td>${item.description}</td>
-                        <td>${item.quantity}</td>
-                        <td>$${item.unitPrice.toFixed(2)}</td>
-                        <td>$${(item.quantity * item.unitPrice).toFixed(2)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-
-        <div class="totals">
-            <p>Subtotal: $${subtotal.toFixed(2)}</p>
-            <p>Tax (${taxRate}%): $${taxAmount.toFixed(2)}</p>
-            <p class="total-row">Total: $${total.toFixed(2)}</p>
-        </div>
-
-        ${notes ? `<div class="notes"><strong>Notes:</strong><br>${notes}</div>` : ''}
-
-        ${viewUrl ? `<a href="${viewUrl}" class="view-button">View Full Estimate Online</a>` : ''}
-
-        ${portalLoginLink ? `
-        <div class="portal-section">
-            <h3>🔐 Secure Client Portal Access</h3>
-            <p>You can view, approve, or reject this estimate securely through our client portal:</p>
-            <a href="${portalLoginLink}" class="view-button" style="background: #28a745;">Access Your Portal</a>
-            <p><small>This secure link will log you in automatically and is valid for 30 minutes.</small></p>
-        </div>
-        ` : ''}
-
-        <p>If you have any questions about this estimate, please don't hesitate to contact us.</p>
-        
-        <p>Thank you for your business!</p>
-    </body>
-    </html>
-  `;
-};
-
 serve(async (req) => {
-  console.log("=== ESTIMATE SEND REQUEST RECEIVED ===");
-  console.log("Method:", req.method);
-  console.log("URL:", req.url);
-
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log("Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const requestBody = await req.text();
-    console.log("Raw request body:", requestBody);
-    
-    const parsedBody = JSON.parse(requestBody);
-    console.log("Parsed request body:", parsedBody);
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    const { 
-      method, 
-      recipient, 
-      estimateNumber, 
-      estimateData, 
-      clientName,
-      communicationId 
-    }: SendEstimateRequest = parsedBody;
-
-    console.log(`Processing request: method=${method}, recipient=${recipient}, estimate=${estimateNumber}`);
-
-    // Create Supabase client for database operations
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase configuration');
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 401,
+      });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    let result;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError) {
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 401,
+      });
+    }
 
-    if (method === 'email') {
-      console.log("=== PROCESSING EMAIL SEND ===");
-      
-      if (!sendGridApiKey) {
-        throw new Error('SendGrid API key not configured');
+    const { estimateId, recipientEmail, message, subject }: SendEstimateRequest = await req.json();
+
+    // Get estimate details
+    const { data: estimate, error: estimateError } = await supabaseClient
+      .from('estimates')
+      .select(`
+        *,
+        jobs:job_id(
+          title,
+          clients:client_id(name, email)
+        )
+      `)
+      .eq('id', estimateId)
+      .single();
+
+    if (estimateError || !estimate) {
+      return new Response(JSON.stringify({ error: 'Estimate not found' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 404,
+      });
+    }
+
+    // Get company settings
+    const { data: companySettings } = await supabaseClient
+      .from('company_settings')
+      .select('company_name, custom_domain_name')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    const companyName = companySettings?.company_name || 'Your Company';
+    const clientName = estimate.jobs?.clients?.name || 'Valued Customer';
+
+    // Create email content
+    const emailSubject = subject || `Estimate ${estimate.estimate_number} from ${companyName}`;
+    const emailHtml = `
+      <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #2563eb;">Estimate from ${companyName}</h2>
+            <p>Dear ${clientName},</p>
+            <p>Please find your estimate attached below:</p>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin: 0 0 10px 0;">Estimate #${estimate.estimate_number}</h3>
+              <p><strong>Job:</strong> ${estimate.jobs?.title || 'Service Request'}</p>
+              <p><strong>Total Amount:</strong> $${estimate.total}</p>
+              <p><strong>Valid Until:</strong> ${estimate.valid_until ? new Date(estimate.valid_until).toLocaleDateString() : 'N/A'}</p>
+            </div>
+            
+            ${message ? `<p><strong>Message:</strong><br>${message}</p>` : ''}
+            
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p>Best regards,<br>${companyName}</p>
+            
+            <!-- Tracking pixel -->
+            <img src="${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?type=estimate&id=${estimateId}" width="1" height="1" style="display:none;" />
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Call the send-email function
+    const { data: emailResult, error: emailError } = await supabaseClient.functions.invoke('send-email', {
+      body: {
+        to: recipientEmail,
+        subject: emailSubject,
+        html: emailHtml,
+        text: `Estimate ${estimate.estimate_number} from ${companyName}\n\nTotal: $${estimate.total}\n\n${message || ''}`,
+        companyId: userData.user.id,
+        conversationId: estimateId
       }
+    });
 
-      const subject = `Estimate ${estimateNumber} - $${estimateData.total.toFixed(2)}`;
-      const html = generateEstimateEmailHTML(estimateNumber, clientName || 'Valued Customer', estimateData);
-      
-      console.log("Email details:");
-      console.log("- To:", recipient);
-      console.log("- Subject:", subject);
-      console.log("- Has portal link:", !!estimateData.portalLoginLink);
+    if (emailError) {
+      throw emailError;
+    }
 
-      // Call our send-email function
-      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: recipient,
-          subject: subject,
-          html: html,
-          text: `Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}. ${estimateData.viewUrl ? `View online: ${estimateData.viewUrl}` : ''} ${estimateData.portalLoginLink ? `Secure portal access: ${estimateData.portalLoginLink}` : ''}`
-        })
+    // Update estimate status and log communication
+    await supabaseClient
+      .from('estimates')
+      .update({ 
+        status: 'sent',
+        sent_at: new Date().toISOString()
+      })
+      .eq('id', estimateId);
+
+    // Log the communication
+    await supabaseClient
+      .from('estimate_communications')
+      .insert({
+        estimate_id: estimateId,
+        communication_type: 'email',
+        recipient: recipientEmail,
+        subject: emailSubject,
+        content: message || '',
+        status: 'sent',
+        tracking_id: emailResult.messageId
       });
 
-      const emailData = await emailResponse.json();
-      console.log("Email response:", emailData);
-
-      if (!emailResponse.ok || !emailData.success) {
-        console.error("Email sending failed:", emailData);
-        throw new Error(`Email sending failed: ${emailData.error || 'Unknown error'}`);
-      }
-
-      console.log('Email sent successfully');
-
-      // Update communication record
-      if (communicationId) {
-        const updateResult = await supabase
-          .from('estimate_communications')
-          .update({
-            status: 'delivered',
-            delivered_at: new Date().toISOString()
-          })
-          .eq('id', communicationId);
-        
-        console.log("Communication update result:", updateResult);
-      }
-
-      result = {
-        success: true,
-        message: 'Estimate sent via email successfully'
-      };
-
-    } else if (method === 'sms') {
-      console.log("=== PROCESSING SMS SEND ===");
-      
-      if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-        console.error("Missing Twilio credentials");
-        throw new Error('Missing Twilio credentials');
-      }
-
-      const formattedTo = recipient.startsWith('+') ? recipient : `+1${recipient.replace(/\D/g, '')}`;
-      
-      let message = `Hi ${clientName || 'there'}! Your estimate ${estimateNumber} is ready. Total: $${estimateData.total.toFixed(2)}.`;
-      
-      if (estimateData.viewUrl) {
-        message += ` View estimate: ${estimateData.viewUrl}`;
-      }
-      
-      if (estimateData.portalLoginLink) {
-        message += ` Secure portal (approve/reject): ${estimateData.portalLoginLink}`;
-      }
-
-      console.log("SMS details:");
-      console.log("- To:", formattedTo);
-      console.log("- From:", twilioPhoneNumber);
-      console.log("- Message length:", message.length);
-      console.log("- Has portal link:", !!estimateData.portalLoginLink);
-
-      const twilioResponse = await fetch(
-        `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
-          },
-          body: new URLSearchParams({
-            To: formattedTo,
-            From: twilioPhoneNumber,
-            Body: message,
-          }).toString(),
-        }
-      );
-
-      const twilioData = await twilioResponse.json();
-      console.log("Twilio response:", twilioData);
-
-      if (!twilioResponse.ok) {
-        console.error("Twilio API error:", twilioData);
-        throw new Error(`Twilio API error: ${twilioData.message || JSON.stringify(twilioData)}`);
-      }
-
-      console.log('SMS sent successfully with SID:', twilioData.sid);
-
-      // Update communication record
-      if (communicationId) {
-        const updateResult = await supabase
-          .from('estimate_communications')
-          .update({
-            status: 'delivered',
-            delivered_at: new Date().toISOString(),
-            provider_message_id: twilioData.sid
-          })
-          .eq('id', communicationId);
-        
-        console.log("Communication update result:", updateResult);
-      }
-
-      result = {
-        success: true,
-        message: 'Estimate sent via SMS successfully',
-        sid: twilioData.sid,
-      };
-    } else {
-      throw new Error('Invalid send method');
-    }
-
-    console.log("=== ESTIMATE SEND COMPLETED SUCCESSFULLY ===");
-    console.log("Final result:", result);
-
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({ 
+        success: true, 
+        message: 'Estimate sent successfully',
+        messageId: emailResult.messageId
+      }),
       {
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
 
   } catch (error) {
-    console.error('=== ERROR IN SEND-ESTIMATE FUNCTION ===');
-    console.error('Error details:', error);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
+    console.error('Error in send-estimate function:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Failed to send estimate' 
-      }),
+      JSON.stringify({ error: error.message || 'Failed to send estimate' }),
       {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   }
