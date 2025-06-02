@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, Brain, DollarSign, MapPin, Wrench, Clock, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,6 +35,47 @@ const BUSINESS_HOURS = [
   { day: 'Saturday', key: 'saturday' },
   { day: 'Sunday', key: 'sunday' }
 ];
+
+// Helper function to safely parse string arrays from JSON
+const parseStringArray = (value: any): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter(item => typeof item === 'string');
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(item => typeof item === 'string');
+      }
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+// Helper function to safely parse business hours
+const parseBusinessHours = (value: any): Record<string, { open: string; close: string; closed: boolean }> => {
+  if (!value) return {};
+  
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, { open: string; close: string; closed: boolean }>;
+  }
+  
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      return {};
+    }
+  }
+  
+  return {};
+};
 
 export const SimplifiedAISettings = () => {
   const { user } = useAuth();
@@ -79,9 +119,9 @@ export const SimplifiedAISettings = () => {
           is_active: data.is_active ?? true,
           diagnostic_price: data.diagnostic_price || 75.00,
           emergency_surcharge: data.emergency_surcharge || 50.00,
-          service_areas: data.service_areas || [],
-          appliance_types: data.service_types || [],
-          business_hours: data.business_hours || {},
+          service_areas: parseStringArray(data.service_areas),
+          appliance_types: parseStringArray(data.service_types),
+          business_hours: parseBusinessHours(data.business_hours),
           custom_instructions: data.custom_prompt_additions || '',
           company_name: data.company_name || 'Your Company',
           agent_name: data.agent_name || 'AI Assistant'
