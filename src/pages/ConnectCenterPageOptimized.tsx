@@ -6,12 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { DispatcherMessagesView } from "@/components/connect/DispatcherMessagesView";
 import { RealCallsList } from "@/components/connect/RealCallsList";
-import { RealEmailsList } from "@/components/connect/RealEmailsList";
+import { EmailManagement } from "@/components/connect/EmailManagement";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
 import { AmazonConnectFlowInstructions } from "@/components/connect/AmazonConnectFlowInstructions";
+import { EmailComposer } from "@/components/connect/EmailComposer";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Workflow } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
@@ -23,6 +25,7 @@ import { toast } from "sonner";
 const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("flow-setup");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   
   const { openMessageDialog } = useMessageContext();
   const { unreadCounts, ownedNumbers, isLoading, refreshData } = useConnectCenterData();
@@ -32,6 +35,7 @@ const ConnectCenterPageOptimized = () => {
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const clientPhone = searchParams.get("clientPhone");
+  const clientEmail = searchParams.get("clientEmail");
   const tabParam = searchParams.get("tab") || "flow-setup";
   
   useEffect(() => {
@@ -42,13 +46,17 @@ const ConnectCenterPageOptimized = () => {
   
   useEffect(() => {
     if (clientId && clientName) {
-      openMessageDialog({
-        id: clientId,
-        name: clientName,
-        phone: clientPhone || ""
-      });
+      if (activeTab === "emails" && clientEmail) {
+        setEmailComposerOpen(true);
+      } else {
+        openMessageDialog({
+          id: clientId,
+          name: clientName,
+          phone: clientPhone || ""
+        });
+      }
     }
-  }, [clientId, clientName, clientPhone, openMessageDialog]);
+  }, [clientId, clientName, clientPhone, clientEmail, activeTab, openMessageDialog]);
 
   const handleNewCommunication = () => {
     switch (activeTab) {
@@ -63,7 +71,7 @@ const ConnectCenterPageOptimized = () => {
         }
         break;
       case "emails":
-        toast.info("New email feature coming soon");
+        setEmailComposerOpen(true);
         break;
       case "phone-numbers":
         toast.info("Use the search above to find and configure Amazon Connect numbers");
@@ -163,7 +171,7 @@ const ConnectCenterPageOptimized = () => {
           </TabsContent>
           
           <TabsContent value="emails" className="mt-0">
-            <RealEmailsList />
+            <EmailManagement />
           </TabsContent>
           
           <TabsContent value="phone-numbers" className="mt-0">
@@ -171,6 +179,24 @@ const ConnectCenterPageOptimized = () => {
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Email Composer Dialog */}
+      <Dialog open={emailComposerOpen} onOpenChange={setEmailComposerOpen}>
+        <DialogContent className="max-w-3xl">
+          <EmailComposer 
+            recipient={clientId && clientName && clientEmail ? {
+              id: clientId,
+              name: clientName,
+              email: clientEmail
+            } : undefined}
+            onClose={() => setEmailComposerOpen(false)}
+            onSent={() => {
+              refreshData();
+              setEmailComposerOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 };

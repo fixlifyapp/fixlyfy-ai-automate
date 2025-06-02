@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Send, CheckCircle, AlertCircle, Globe } from 'lucide-react';
+import { Send, CheckCircle, AlertCircle, Globe, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCompanyEmailSettings } from '@/hooks/useCompanyEmailSettings';
 
 export const MailgunTestPanel = () => {
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const { settings } = useCompanyEmailSettings();
+  
   const [formData, setFormData] = useState({
     to: '',
     subject: 'Test Email from Fixlyfy',
@@ -52,8 +55,27 @@ export const MailgunTestPanel = () => {
     }
   };
 
+  const isCustomDomainVerified = settings.domain_verification_status === 'verified';
+
   return (
     <div className="space-y-4">
+      {!isCustomDomainVerified && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800">Sandbox Mode Active</h4>
+              <p className="text-sm text-amber-700 mt-1">
+                You're currently using the Mailgun sandbox domain. To send emails to any address, please configure a custom domain in the Company Email Settings tab above.
+              </p>
+              <p className="text-sm text-amber-700 mt-1">
+                For now, you can only send test emails to authorized recipients (usually your account email).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="test-to">To Email *</Label>
@@ -65,7 +87,10 @@ export const MailgunTestPanel = () => {
             type="email"
           />
           <p className="text-xs text-muted-foreground">
-            Enter any valid email address to test delivery
+            {isCustomDomainVerified 
+              ? 'Enter any valid email address' 
+              : 'Enter only authorized recipient emails (sandbox mode)'
+            }
           </p>
         </div>
         
@@ -110,10 +135,25 @@ export const MailgunTestPanel = () => {
       {testResult && (
         <div className="mt-4 p-4 rounded-lg border">
           {testResult.error ? (
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              <span className="font-medium">Error:</span>
-              <span>{testResult.error}</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-medium">Error:</span>
+              </div>
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                {testResult.error}
+              </div>
+              {testResult.error.includes('Sandbox subdomains are for test purposes only') && (
+                <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded">
+                  <p className="font-medium mb-2">How to fix this:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Go to the "Company Email Settings" tab above</li>
+                    <li>Add your custom domain (e.g., "yourcompany" for yourcompany@fixlyfy.app)</li>
+                    <li>Complete domain verification</li>
+                    <li>Or use an authorized email address for testing</li>
+                  </ol>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -149,14 +189,6 @@ export const MailgunTestPanel = () => {
           )}
         </div>
       )}
-
-      <div className="text-xs text-muted-foreground p-3 bg-blue-50 rounded">
-        <p className="font-medium mb-1">📧 Email Testing Info:</p>
-        <p>• If you have a verified custom domain, emails will be sent from your domain</p>
-        <p>• Otherwise, emails will be sent from the Mailgun sandbox domain</p>
-        <p>• Sandbox domains can only send to authorized recipients (usually the account owner)</p>
-        <p>• Custom domains can send to any email address</p>
-      </div>
     </div>
   );
 };

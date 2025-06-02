@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, CheckCircle, Mail, Globe, Copy } from 'lucide-react';
+import { AlertCircle, CheckCircle, Mail, Globe, Copy, Info } from 'lucide-react';
 import { useCompanyEmailSettings } from '@/hooks/useCompanyEmailSettings';
 import { MailgunTestPanel } from '@/components/connect/MailgunTestPanel';
 import { toast } from 'sonner';
@@ -17,7 +18,13 @@ export const CompanyEmailSettings = () => {
 
   const handleAddDomain = async () => {
     if (!newDomain) {
-      toast.error('Please enter a domain name');
+      toast.error('Please enter a company name');
+      return;
+    }
+
+    // Validate company name (letters, numbers, hyphens only)
+    if (!/^[a-zA-Z0-9-]+$/.test(newDomain)) {
+      toast.error('Company name can only contain letters, numbers, and hyphens');
       return;
     }
 
@@ -25,6 +32,7 @@ export const CompanyEmailSettings = () => {
       const result = await addDomain(newDomain);
       setDnsRecords(result.dns_records || []);
       setNewDomain('');
+      toast.success(`Domain ${newDomain}@fixlyfy.app has been configured!`);
     } catch (error) {
       // Error handling in hook
     }
@@ -68,7 +76,7 @@ export const CompanyEmailSettings = () => {
           Email Configuration
         </h3>
         <p className="text-muted-foreground">
-          Set up custom email domains to send emails from your own domain (e.g., noreply@yourcompany.com)
+          Configure your company email domain to send professional emails from your own domain
         </p>
       </div>
 
@@ -77,27 +85,48 @@ export const CompanyEmailSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
-            Custom Domain Setup
+            Custom Email Domain Setup
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!settings.custom_domain ? (
             <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-800">How Email Domains Work</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Set up your company email to send from <strong>yourcompany@fixlyfy.app</strong>
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      Example: If you enter "acmeplumbing", emails will be sent from <strong>acmeplumbing@fixlyfy.app</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="domain">Domain Name</Label>
+                <Label htmlFor="domain">Company Name</Label>
                 <div className="flex gap-2">
-                  <Input
-                    id="domain"
-                    placeholder="yourcompany.com"
-                    value={newDomain}
-                    onChange={(e) => setNewDomain(e.target.value)}
-                  />
-                  <Button onClick={handleAddDomain} disabled={saving}>
-                    {saving ? 'Adding...' : 'Add Domain'}
+                  <div className="flex-1 flex">
+                    <Input
+                      id="domain"
+                      placeholder="yourcompany"
+                      value={newDomain}
+                      onChange={(e) => setNewDomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                      className="rounded-r-none"
+                    />
+                    <div className="bg-gray-100 border border-l-0 px-3 py-2 rounded-r-md text-sm text-gray-600 flex items-center">
+                      @fixlyfy.app
+                    </div>
+                  </div>
+                  <Button onClick={handleAddDomain} disabled={saving || !newDomain}>
+                    {saving ? 'Setting up...' : 'Setup Domain'}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter your domain name (without http:// or www)
+                  Enter your company name (letters, numbers, and hyphens only)
                 </p>
               </div>
             </div>
@@ -105,9 +134,9 @@ export const CompanyEmailSettings = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-medium">{settings.custom_domain}</div>
+                  <div className="font-medium text-lg">{settings.custom_domain}@fixlyfy.app</div>
                   <div className="text-sm text-muted-foreground">
-                    Email from: {settings.email_from_address}
+                    Email from: {settings.email_from_address || `noreply@${settings.custom_domain}.fixlyfy.app`}
                   </div>
                 </div>
                 {getStatusBadge(settings.domain_verification_status)}
@@ -115,45 +144,27 @@ export const CompanyEmailSettings = () => {
 
               {settings.domain_verification_status !== 'verified' && (
                 <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-700">
+                      <strong>Almost ready!</strong> Click verify to activate your custom domain. This is a demo environment, so verification will complete immediately.
+                    </p>
+                  </div>
+                  
                   <Button onClick={handleVerifyDomain} disabled={saving}>
                     {saving ? 'Verifying...' : 'Verify Domain'}
                   </Button>
-                  
-                  {dnsRecords.length > 0 && (
-                    <div className="p-4 bg-yellow-50 rounded-md">
-                      <h4 className="font-medium mb-2">Required DNS Records</h4>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Add these DNS records to your domain registrar:
-                      </p>
-                      <div className="space-y-2">
-                        {dnsRecords.map((record, index) => (
-                          <div key={index} className="bg-white p-3 rounded border">
-                            <div className="grid grid-cols-4 gap-2 text-sm">
-                              <div>
-                                <strong>Type:</strong> {record.record_type}
-                              </div>
-                              <div>
-                                <strong>Name:</strong> {record.name}
-                              </div>
-                              <div className="col-span-2 flex items-center gap-2">
-                                <strong>Value:</strong> 
-                                <code className="bg-gray-100 px-1 rounded text-xs flex-1">
-                                  {record.value}
-                                </code>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => copyToClipboard(record.value)}
-                                >
-                                  <Copy size={12} />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                </div>
+              )}
+
+              {settings.domain_verification_status === 'verified' && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="font-medium">Domain verified successfully!</span>
+                  </div>
+                  <p className="text-sm text-green-600 mt-1">
+                    You can now send emails from your custom domain to any email address.
+                  </p>
                 </div>
               )}
             </div>
@@ -185,7 +196,7 @@ export const CompanyEmailSettings = () => {
                   id="from-email"
                   value={settings.email_from_address || ''}
                   onChange={(e) => updateEmailSettings({ email_from_address: e.target.value })}
-                  placeholder={`noreply@${settings.custom_domain}`}
+                  placeholder={`noreply@${settings.custom_domain}.fixlyfy.app`}
                 />
               </div>
             )}
@@ -193,20 +204,13 @@ export const CompanyEmailSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Email Templates */}
+      {/* Email Testing */}
       <Card>
         <CardHeader>
-          <CardTitle>Email Templates</CardTitle>
+          <CardTitle>Test Email Configuration</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            Email templates management will be available once your domain is verified.
-          </p>
-          {settings.domain_verification_status === 'verified' && (
-            <Button variant="outline" className="mt-4">
-              Manage Templates
-            </Button>
-          )}
+          <MailgunTestPanel />
         </CardContent>
       </Card>
     </div>
