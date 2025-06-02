@@ -6,14 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { DispatcherMessagesView } from "@/components/connect/DispatcherMessagesView";
 import { EmailManagement } from "@/components/connect/EmailManagement";
-import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
-import { AmazonConnectFlowInstructions } from "@/components/connect/AmazonConnectFlowInstructions";
 import { EmailComposer } from "@/components/connect/EmailComposer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Workflow } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
@@ -23,7 +21,7 @@ import { toast } from "sonner";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 
 const ConnectCenterPageOptimized = () => {
-  const [activeTab, setActiveTab] = useState("flow-setup");
+  const [activeTab, setActiveTab] = useState("monitoring");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   
@@ -36,10 +34,10 @@ const ConnectCenterPageOptimized = () => {
   const clientName = searchParams.get("clientName");
   const clientPhone = searchParams.get("clientPhone");
   const clientEmail = searchParams.get("clientEmail");
-  const tabParam = searchParams.get("tab") || "flow-setup";
+  const tabParam = searchParams.get("tab") || "monitoring";
   
   useEffect(() => {
-    if (tabParam && ["flow-setup", "monitoring", "messages", "calls", "emails", "phone-numbers"].includes(tabParam)) {
+    if (tabParam && ["monitoring", "messages", "calls", "emails"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -73,9 +71,6 @@ const ConnectCenterPageOptimized = () => {
       case "emails":
         setEmailComposerOpen(true);
         break;
-      case "phone-numbers":
-        toast.info("Use the search above to find and configure numbers");
-        break;
     }
   };
 
@@ -84,8 +79,7 @@ const ConnectCenterPageOptimized = () => {
       case "messages": return "New Message";
       case "calls": return "New Call";
       case "emails": return "New Email";
-      case "phone-numbers": return "Search Numbers";
-      case "flow-setup": return "View Flow Docs";
+      case "monitoring": return "Monitor Calls";
       default: return "New Action";
     }
   };
@@ -100,7 +94,6 @@ const ConnectCenterPageOptimized = () => {
         icon={MessageSquare}
         badges={[
           { text: "Telnyx", icon: Phone, variant: "fixlyfy" },
-          { text: "AI Powered", icon: Workflow, variant: "success" },
           { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
@@ -118,11 +111,7 @@ const ConnectCenterPageOptimized = () => {
         <LoadingSkeleton type="connect-tabs" />
       ) : (
         <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-6 mb-6">
-            <TabsTrigger value="flow-setup" className="flex items-center gap-2">
-              <Workflow size={16} />
-              <span className="hidden sm:inline">Flow Setup</span>
-            </TabsTrigger>
+          <TabsList className="grid grid-cols-4 mb-6">
             <TabsTrigger value="monitoring" className="flex items-center gap-2">
               <Phone size={16} />
               <span className="hidden sm:inline">Monitor</span>
@@ -148,15 +137,7 @@ const ConnectCenterPageOptimized = () => {
                 <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
-              <PhoneCall size={16} />
-              <span className="hidden sm:inline">Numbers</span>
-            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="flow-setup" className="mt-0">
-            <AmazonConnectFlowInstructions />
-          </TabsContent>
           
           <TabsContent value="monitoring" className="mt-0">
             <CallMonitoring />
@@ -172,10 +153,6 @@ const ConnectCenterPageOptimized = () => {
           
           <TabsContent value="emails" className="mt-0">
             <EmailManagement />
-          </TabsContent>
-          
-          <TabsContent value="phone-numbers" className="mt-0">
-            <PhoneNumbersList />
           </TabsContent>
         </Tabs>
       )}
