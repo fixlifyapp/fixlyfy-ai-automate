@@ -1,205 +1,120 @@
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { EstimateBuilderProvider, useEstimateBuilderContext } from "./EstimateBuilderProvider";
-import { EstimateBuilderDialogs } from "./EstimateBuilderDialogs";
-import { EstimateBuilderHeader } from "./EstimateBuilderHeader";
-import { EstimateBuilderTabs } from "./EstimateBuilderTabs";
-import { EstimateBuilderContent } from "./EstimateBuilderContent";
-import { EstimateBuilderActions } from "./EstimateBuilderActions";
-import { useEstimateBuilderActions } from "./hooks/useEstimateBuilderActions";
-import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
-import { CustomLineItemDialog } from "./CustomLineItemDialog";
-import { ProductEditInEstimateDialog } from "../../dialogs/ProductEditInEstimateDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EstimateLineItems } from "./EstimateLineItems";
+import { EstimateDetails } from "./EstimateDetails";
 import { EstimateSendDialog } from "./EstimateSendDialog";
-import { toast } from "sonner";
+import { useEstimateBuilder } from "./hooks/useEstimateBuilder";
+import { Job } from "@/hooks/useJobs";
 
 interface EstimateBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  job: Job;
   estimateId?: string;
-  jobId: string;
-  clientInfo?: {
-    id?: string;
-    name?: string;
-    email?: string;
-    phone?: string;
-  } | null;
-  onSyncToInvoice?: () => void;
+  onSuccess?: () => void;
 }
 
-const EstimateBuilderDialogContent = ({
-  onOpenChange,
+export const EstimateBuilderDialog = ({ 
+  open, 
+  onOpenChange, 
+  job, 
   estimateId,
-  clientInfo: providedClientInfo,
-  jobId
-}: Omit<EstimateBuilderDialogProps, 'open'>) => {
-  const isMobile = useIsMobile();
-  
-  console.log('=== EstimateBuilderDialogContent Debug ===');
-  console.log('JobId prop received in dialog:', jobId);
-  console.log('ClientInfo prop received in dialog:', providedClientInfo);
-  
+  onSuccess 
+}: EstimateBuilderDialogProps) => {
+  const [showSendDialog, setShowSendDialog] = useState(false);
   const {
-    estimateBuilder,
-    jobData,
-    clientInfo,
-    jobAddress,
-    activeTab,
-    setActiveTab,
-    selectedProduct,
-    setSelectedProduct,
-    handleProductSelect,
-    handleCustomLineItemSave,
-    handleEditLineItem,
-    handleProductUpdate,
-    handleAddWarranty,
-    handleUpdateLineItemWrapper,
-    handleSaveEstimateWrapper,
-    calculateTotalMargin,
-    calculateMarginPercentage,
-    hasLineItems
-  } = useEstimateBuilderContext();
+    lineItems,
+    estimateDetails,
+    isLoading,
+    addLineItem,
+    updateLineItem,
+    removeLineItem,
+    updateEstimateDetails,
+    saveEstimate,
+    total
+  } = useEstimateBuilder(job.id, estimateId);
 
-  console.log('JobData from context:', jobData);
-  console.log('ClientInfo from context:', clientInfo);
-  console.log('JobAddress from context:', jobAddress);
-
-  const {
-    isProductSearchOpen,
-    setIsProductSearchOpen,
-    isCustomLineItemDialogOpen,
-    setIsCustomLineItemDialogOpen,
-    isProductEditDialogOpen,
-    setIsProductEditDialogOpen,
-    isSendDialogOpen,
-    setIsSendDialogOpen,
-    openProductSearch,
-    openCustomLineItemDialog,
-    handleSendEstimate
-  } = useEstimateBuilderActions(hasLineItems);
-
-  const handleProductSelectAndClose = (product: any) => {
-    handleProductSelect(product);
-    setIsProductSearchOpen(false);
-  };
-
-  const handleCustomLineItemSaveAndClose = (item: any) => {
-    handleCustomLineItemSave(item);
-    setIsCustomLineItemDialogOpen(false);
-  };
-
-  const handleEditLineItemClick = (id: string) => {
-    const success = handleEditLineItem(id);
+  const handleSaveAndSend = async () => {
+    console.log("=== SAVE AND SEND CLICKED ===");
+    console.log("Line items:", lineItems);
+    console.log("Estimate details:", estimateDetails);
+    
+    const success = await saveEstimate();
     if (success) {
-      setIsProductEditDialogOpen(true);
+      console.log("Estimate saved successfully, opening send dialog");
+      setShowSendDialog(true);
+    } else {
+      console.error("Failed to save estimate");
     }
-    return success;
   };
 
-  const handleProductUpdateAndClose = (updatedProduct: any) => {
-    handleProductUpdate(updatedProduct);
-    setIsProductEditDialogOpen(false);
+  const handleSendSuccess = () => {
+    console.log("Send successful, closing dialogs");
+    setShowSendDialog(false);
+    onOpenChange(false);
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
+
+  const handleSendCancel = () => {
+    console.log("Send cancelled, keeping estimate dialog open");
+    setShowSendDialog(false);
   };
 
   return (
     <>
-      <DialogContent className="max-w-5xl p-0 h-[90vh] overflow-hidden flex flex-col">
-        <EstimateBuilderHeader
-          estimateId={estimateId}
-          estimateNumber={estimateBuilder.estimateNumber}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
-        
-        <div className="flex flex-grow overflow-hidden">
-          {!isMobile && (
-            <EstimateBuilderTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          )}
+      <Dialog open={open && !showSendDialog} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {estimateId ? 'Edit Estimate' : 'Create Estimate'} - {job.title}
+            </DialogTitle>
+          </DialogHeader>
           
-          <div className="flex-grow overflow-hidden flex flex-col">
-            {isMobile && (
-              <EstimateBuilderTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-            )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <EstimateLineItems
+                lineItems={lineItems}
+                onAddItem={addLineItem}
+                onUpdateItem={updateLineItem}
+                onRemoveItem={removeLineItem}
+                isLoading={isLoading}
+              />
+            </div>
             
-            <EstimateBuilderContent
-              activeTab={activeTab}
-              estimateNumber={estimateBuilder.estimateNumber}
-              lineItems={estimateBuilder.lineItems}
-              onRemoveLineItem={estimateBuilder.handleRemoveLineItem}
-              onUpdateLineItem={handleUpdateLineItemWrapper}
-              onEditLineItem={handleEditLineItemClick}
-              onAddEmptyLineItem={openProductSearch}
-              onAddCustomLine={openCustomLineItemDialog}
-              taxRate={estimateBuilder.taxRate}
-              setTaxRate={estimateBuilder.setTaxRate}
-              calculateSubtotal={estimateBuilder.calculateSubtotal}
-              calculateTotalTax={estimateBuilder.calculateTotalTax}
-              calculateGrandTotal={estimateBuilder.calculateGrandTotal}
-              calculateTotalMargin={calculateTotalMargin}
-              calculateMarginPercentage={calculateMarginPercentage}
-              notes={estimateBuilder.notes || ""}
-              clientInfo={clientInfo}
-              jobData={jobData}
-            />
-            
-            <EstimateBuilderActions
-              hasLineItems={hasLineItems}
-              onCancel={() => onOpenChange(false)}
-              onSendEstimate={handleSendEstimate}
-            />
+            <div>
+              <EstimateDetails
+                details={estimateDetails}
+                onUpdateDetails={updateEstimateDetails}
+                onSave={saveEstimate}
+                onSaveAndSend={handleSaveAndSend}
+                total={total}
+                isLoading={isLoading}
+                job={job}
+              />
+            </div>
           </div>
-        </div>
-      </DialogContent>
-      
-      {/* Product Search Dialog */}
-      <ProductSearch
-        open={isProductSearchOpen}
-        onOpenChange={setIsProductSearchOpen}
-        onProductSelect={handleProductSelectAndClose}
-      />
-      
-      {/* Custom Line Item Dialog */}
-      <CustomLineItemDialog
-        open={isCustomLineItemDialogOpen}
-        onOpenChange={setIsCustomLineItemDialogOpen}
-        onSave={handleCustomLineItemSaveAndClose}
-      />
+        </DialogContent>
+      </Dialog>
 
-      {/* Product Edit Dialog */}
-      <ProductEditInEstimateDialog
-        open={isProductEditDialogOpen}
-        onOpenChange={setIsProductEditDialogOpen}
-        product={selectedProduct}
-        onSave={handleProductUpdateAndClose}
-      />
-      
-      {/* Estimate Send Dialog with Warranty Selection */}
       <EstimateSendDialog
-        open={isSendDialogOpen}
-        onOpenChange={setIsSendDialogOpen}
-        onSave={handleSaveEstimateWrapper}
-        onAddWarranty={handleAddWarranty}
-        clientInfo={clientInfo || providedClientInfo}
-        estimateNumber={estimateBuilder.estimateNumber}
-        jobId={jobId}
+        open={showSendDialog}
+        onOpenChange={setShowSendDialog}
+        estimateNumber={estimateDetails.estimate_number}
+        estimateDetails={estimateDetails}
+        lineItems={lineItems}
+        contactInfo={{
+          name: job.client?.name || '',
+          email: job.client?.email || '',
+          phone: job.client?.phone || ''
+        }}
+        jobId={job.id}
+        onSuccess={handleSendSuccess}
+        onCancel={handleSendCancel}
+        onSave={saveEstimate}
       />
     </>
-  );
-};
-
-export const EstimateBuilderDialog = (props: EstimateBuilderDialogProps) => {
-  const { open, jobId, estimateId, ...restProps } = props;
-
-  console.log('=== EstimateBuilderDialog Main Debug ===');
-  console.log('JobId prop in main dialog:', jobId);
-
-  return (
-    <Dialog open={open} onOpenChange={props.onOpenChange}>
-      <EstimateBuilderProvider jobId={jobId} estimateId={estimateId} open={open}>
-        <EstimateBuilderDialogContent {...restProps} jobId={jobId} estimateId={estimateId} />
-      </EstimateBuilderProvider>
-    </Dialog>
   );
 };

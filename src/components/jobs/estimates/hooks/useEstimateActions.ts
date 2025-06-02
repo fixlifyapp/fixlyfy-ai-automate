@@ -38,25 +38,76 @@ export const useEstimateActions = (
   const handleSendEstimate = async (estimateId: string): Promise<boolean> => {
     setIsSending(true);
     try {
-      // Update estimate status to 'sent' in database
-      const { error } = await supabase
+      console.log('Starting estimate send process for ID:', estimateId);
+      
+      // Get estimate details with job and client info
+      const { data: estimateData, error: estimateError } = await supabase
         .from('estimates')
-        .update({ status: 'sent' })
-        .eq('id', estimateId);
+        .select(`
+          *,
+          jobs:job_id (
+            id,
+            title,
+            client_id,
+            clients:client_id (
+              id,
+              name,
+              email,
+              phone,
+              company
+            )
+          )
+        `)
+        .eq('id', estimateId)
+        .single();
 
-      if (error) throw error;
+      if (estimateError || !estimateData) {
+        throw new Error('Failed to fetch estimate details');
+      }
 
-      // Update local state
+      console.log('Estimate data:', estimateData);
+
+      // Get line items
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('line_items')
+        .select('*')
+        .eq('parent_type', 'estimate')
+        .eq('parent_id', estimateId);
+
+      if (lineItemsError) {
+        throw new Error('Failed to fetch line items');
+      }
+
+      console.log('Line items:', lineItems);
+
+      // Call send-estimate function with complete data
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          estimateId: estimateId,
+          sendMethod: 'email', // Default to email for quick send
+          recipientEmail: estimateData.jobs?.clients?.email,
+          subject: `Estimate ${estimateData.estimate_number}`,
+          message: `Please find your estimate ${estimateData.estimate_number}. Total: $${estimateData.total.toFixed(2)}.`
+        }
+      });
+
+      if (sendError || !sendData?.success) {
+        throw new Error(sendData?.error || 'Failed to send estimate');
+      }
+
+      console.log('Estimate sent successfully');
+
+      // Update local state to reflect sent status
       const updatedEstimates = estimates.map(est => 
         est.id === estimateId ? { ...est, status: 'sent' } : est
       );
       setEstimates(updatedEstimates);
       
-      toast.success('Estimate marked as sent');
+      toast.success('Estimate sent successfully');
       return true;
     } catch (error: any) {
-      console.error('Error updating estimate status:', error);
-      toast.error('Failed to update estimate status');
+      console.error('Error sending estimate:', error);
+      toast.error('Failed to send estimate: ' + error.message);
       return false;
     } finally {
       setIsSending(false);
