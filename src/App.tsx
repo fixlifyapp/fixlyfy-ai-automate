@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,9 +11,9 @@ import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import ClientsPage from "@/pages/ClientsPage";
 import ClientDetailPage from "@/pages/ClientDetailPage";
-import JobsPage from "@/pages/JobsPage";
+import JobsPageOptimized from "@/pages/JobsPageOptimized";
 import JobDetailsPage from "@/pages/JobDetailsPage";
-import ConnectCenterPage from "@/pages/ConnectCenterPage";
+import ConnectCenterPageOptimized from "@/pages/ConnectCenterPageOptimized";
 import SchedulePage from "@/pages/SchedulePage";
 import FinancePage from "@/pages/FinancePage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
@@ -67,7 +66,7 @@ const App = () => {
               } />
               <Route path="/jobs" element={
                 <ProtectedRoute>
-                  <JobsPage />
+                  <JobsPageOptimized />
                 </ProtectedRoute>
               } />
               <Route path="/jobs/:id" element={
@@ -82,7 +81,7 @@ const App = () => {
               } />
               <Route path="/connect" element={
                 <ProtectedRoute>
-                  <ConnectCenterPage />
+                  <ConnectCenterPageOptimized />
                 </ProtectedRoute>
               } />
               <Route path="/schedule" element={
