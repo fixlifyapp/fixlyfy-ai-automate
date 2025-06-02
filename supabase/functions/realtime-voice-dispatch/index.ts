@@ -1,7 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
-import { getBusinessConfig } from '../telnyx-voice-webhook/utils/businessConfig.ts'
+import { getBusinessConfig } from './utils/businessConfig.ts'
 
 interface TelnyxStreamMessage {
   event: string;
