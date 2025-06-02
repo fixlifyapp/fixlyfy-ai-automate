@@ -39,7 +39,10 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw userError;
+    if (userError) {
+      console.error('User authentication error:', userError);
+      throw new Error('Authentication failed');
+    }
 
     const { 
       to, 
@@ -52,12 +55,18 @@ serve(async (req) => {
       conversationId 
     }: SendEmailRequest = await req.json();
 
+    console.log('Sending email request:', { to, subject, from });
+
     // Get company settings to determine email configuration
-    const { data: companySettings } = await supabaseClient
+    const { data: companySettings, error: settingsError } = await supabaseClient
       .from('company_settings')
       .select('*')
       .eq('user_id', userData.user.id)
-      .single();
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error('Error fetching company settings:', settingsError);
+    }
 
     let fromEmail = from;
     let mailgunDomain = 'sandbox79a9a7a7640e4819b2c0a73e5e68e825.mailgun.org'; // Default sandbox
@@ -75,6 +84,7 @@ serve(async (req) => {
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
+      console.error('Mailgun API key not found');
       throw new Error('Mailgun API key not configured');
     }
 
@@ -95,7 +105,10 @@ serve(async (req) => {
     formData.append('o:tracking-clicks', 'yes');
     formData.append('o:tracking-opens', 'yes');
 
-    const mailgunResponse = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+    const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
+    console.log('Mailgun URL:', mailgunUrl);
+
+    const mailgunResponse = await fetch(mailgunUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
@@ -103,18 +116,28 @@ serve(async (req) => {
       body: formData
     });
 
+    const responseText = await mailgunResponse.text();
+    console.log('Mailgun response status:', mailgunResponse.status);
+    console.log('Mailgun response:', responseText);
+
     if (!mailgunResponse.ok) {
-      const errorData = await mailgunResponse.text();
-      console.error("Mailgun error response:", errorData);
-      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${errorData}`);
+      console.error("Mailgun error response:", responseText);
+      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${responseText}`);
     }
 
-    const mailgunResult = await mailgunResponse.json();
+    let mailgunResult;
+    try {
+      mailgunResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Error parsing Mailgun response:', parseError);
+      throw new Error('Invalid response from Mailgun API');
+    }
+
     console.log('Email sent successfully via Mailgun:', mailgunResult);
 
     // Store email in database for tracking if conversation ID provided
     if (conversationId) {
-      await supabaseClient
+      const { error: insertError } = await supabaseClient
         .from('email_messages')
         .insert({
           conversation_id: conversationId,
@@ -127,6 +150,11 @@ serve(async (req) => {
           body_text: text,
           delivery_status: 'sent'
         });
+
+      if (insertError) {
+        console.error('Error storing email message:', insertError);
+        // Don't fail the entire request if database insert fails
+      }
     }
 
     return new Response(
