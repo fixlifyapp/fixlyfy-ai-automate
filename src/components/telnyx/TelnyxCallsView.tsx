@@ -21,29 +21,37 @@ interface TelnyxCall {
 }
 
 export function TelnyxCallsView() {
-  const { data: calls = [], isLoading } = useQuery({
+  const { data: calls = [], isLoading, error } = useQuery({
     queryKey: ['telnyx-calls'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('telnyx_calls')
-        .select(`
-          id,
-          phone_number,
-          to_number,
-          call_status,
-          direction,
-          ai_transcript,
-          appointment_scheduled,
-          appointment_data,
-          started_at,
-          ended_at,
-          call_duration
-        `)
-        .order('started_at', { ascending: false })
-        .limit(50);
+      try {
+        const { data, error } = await supabase
+          .from('telnyx_calls')
+          .select(`
+            id,
+            phone_number,
+            to_number,
+            call_status,
+            direction,
+            ai_transcript,
+            appointment_scheduled,
+            appointment_data,
+            started_at,
+            ended_at,
+            call_duration
+          `)
+          .order('started_at', { ascending: false })
+          .limit(50);
 
-      if (error) throw error;
-      return data || [];
+        if (error) {
+          console.error('Error fetching Telnyx calls:', error);
+          return [];
+        }
+        return data || [];
+      } catch (err) {
+        console.error('Error in Telnyx calls query:', err);
+        return [];
+      }
     }
   });
 
@@ -65,6 +73,30 @@ export function TelnyxCallsView() {
 
   if (isLoading) {
     return <div>Loading calls...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Recent AI Calls
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Unable to load calls</h3>
+              <p className="text-muted-foreground">
+                There was an issue loading your call history. Please make sure your Telnyx integration is properly configured.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
