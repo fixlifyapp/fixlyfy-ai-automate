@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -97,6 +98,7 @@ export const EstimateSendDialog = ({
     try {
       console.log("Fetching estimate details for estimate number:", estimateNumber);
       
+      // First try the view
       const { data: details, error: detailsError } = await supabase
         .from('estimate_details_view')
         .select('*')
@@ -124,68 +126,89 @@ export const EstimateSendDialog = ({
           phone: details.client_phone
         });
       } else {
-        console.log("No data from view, trying direct fetch");
+        console.log("No data from view, trying direct fetch with order by created_at desc");
         
+        // Get the most recent estimate with this number
         const { data: estimate, error: estimateError } = await supabase
           .from('estimates')
           .select('*')
           .eq('estimate_number', estimateNumber)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (estimateError) {
           console.error('Error fetching estimate directly:', estimateError);
+          toast.error('Failed to fetch estimate details');
+          setIsLoading(false);
+          return;
         }
 
-        if (jobId || estimate?.job_id) {
-          const targetJobId = jobId || estimate?.job_id;
-          
-          const { data: job, error: jobError } = await supabase
-            .from('jobs')
-            .select(`
-              *,
-              client:clients(*)
-            `)
-            .eq('id', targetJobId)
-            .single();
-
-          if (!jobError && job?.client) {
-            const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
-            
-            setClientInfo({
-              id: clientData.id,
-              name: clientData.name,
-              email: clientData.email,
-              phone: clientData.phone
-            });
-            
-            console.log("Client info fetched from job:", clientData);
-          }
-        }
+        console.log("Found estimate:", estimate);
 
         if (estimate) {
-          const fallbackDetails: EstimateDetails = {
-            estimate_id: estimate.id,
-            estimate_number: estimate.estimate_number,
-            total: estimate.total || 0,
-            status: estimate.status || 'draft',
-            notes: estimate.notes,
-            job_id: estimate.job_id || '',
-            job_title: '',
-            job_description: '',
-            client_id: clientInfo?.id || '',
-            client_name: clientInfo?.name || 'Unknown Client',
-            client_email: clientInfo?.email,
-            client_phone: clientInfo?.phone,
-            client_company: ''
-          };
+          // Get job and client details
+          if (jobId || estimate.job_id) {
+            const targetJobId = jobId || estimate.job_id;
+            
+            const { data: job, error: jobError } = await supabase
+              .from('jobs')
+              .select(`
+                *,
+                client:clients(*)
+              `)
+              .eq('id', targetJobId)
+              .single();
 
-          setEstimateDetails(fallbackDetails);
-          console.log("Using fallback estimate details:", fallbackDetails);
+            if (!jobError && job?.client) {
+              const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
+              
+              setClientInfo({
+                id: clientData.id,
+                name: clientData.name,
+                email: clientData.email,
+                phone: clientData.phone
+              });
+              
+              console.log("Client info fetched from job:", clientData);
+              
+              // Build estimate details
+              const estimateDetailsData: EstimateDetails = {
+                estimate_id: estimate.id,
+                estimate_number: estimate.estimate_number,
+                total: estimate.total || 0,
+                status: estimate.status || 'draft',
+                notes: estimate.notes,
+                job_id: estimate.job_id || '',
+                job_title: job.title || '',
+                job_description: job.description || '',
+                client_id: clientData.id || '',
+                client_name: clientData.name || 'Unknown Client',
+                client_email: clientData.email,
+                client_phone: clientData.phone,
+                client_company: clientData.company || ''
+              };
+
+              setEstimateDetails(estimateDetailsData);
+              console.log("Estimate details built:", estimateDetailsData);
+            } else {
+              console.error("Error fetching job:", jobError);
+              toast.error('Failed to fetch job details');
+            }
+          } else {
+            console.error("No job ID found for estimate");
+            toast.error('No job associated with this estimate');
+          }
+        } else {
+          console.error("No estimate found with number:", estimateNumber);
+          toast.error('Estimate not found');
         }
       }
 
+      // Fetch line items if we have an estimate ID
       const estimateId = details?.estimate_id || estimateDetails?.estimate_id;
       if (estimateId) {
+        console.log("Fetching line items for estimate ID:", estimateId);
         const { data: items, error: itemsError } = await supabase
           .from('line_items')
           .select('*')
