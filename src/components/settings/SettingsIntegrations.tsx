@@ -22,7 +22,7 @@ export const SettingsIntegrations = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="phone" className="flex items-center gap-2">
             <Phone className="h-4 w-4" />
-            Phone & AI
+            Telnyx AI Phone
           </TabsTrigger>
           <TabsTrigger value="email" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
@@ -35,6 +35,49 @@ export const SettingsIntegrations = () => {
         </TabsList>
 
         <TabsContent value="phone" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                Telnyx AI Phone System
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">AI Dispatcher</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Intelligent call handling with AI-powered conversation and appointment scheduling
+                    </p>
+                  </div>
+                  <Badge variant="default">
+                    <Zap className="h-3 w-3 mr-1" />
+                    Active
+                  </Badge>
+                </div>
+                
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h5 className="font-medium mb-2">Telnyx Features Available</h5>
+                  <ul className="text-sm space-y-1">
+                    <li>• AI-powered call answering and routing</li>
+                    <li>• Automatic appointment scheduling</li>
+                    <li>• Voice transcription and call logging</li>
+                    <li>• SMS integration for follow-ups</li>
+                    <li>• Real-time call monitoring</li>
+                  </ul>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Telnyx Dashboard
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
           <PhoneNumberManagement />
         </TabsContent>
 

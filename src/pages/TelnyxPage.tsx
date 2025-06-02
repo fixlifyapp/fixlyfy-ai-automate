@@ -5,16 +5,16 @@ import { TelnyxSettings } from '@/components/telnyx/TelnyxSettings';
 import { TelnyxPhoneNumbersPage } from '@/components/telnyx/TelnyxPhoneNumbersPage';
 import { TelnyxCallsView } from '@/components/telnyx/TelnyxCallsView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Phone, Settings, History } from 'lucide-react';
+import { Phone, Settings, History, Bot } from 'lucide-react';
 
 const TelnyxPage = () => {
   return (
     <PageLayout>
       <div className="container mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">Telnyx AI Dispatcher</h1>
+          <h1 className="text-3xl font-bold">AI Phone System</h1>
           <p className="text-muted-foreground">
-            Manage your AI phone system with Telnyx - Purchase numbers, configure AI, and track calls
+            Complete AI-powered phone system with Telnyx - Manage numbers, configure AI, and track calls
           </p>
         </div>
 
@@ -29,7 +29,7 @@ const TelnyxPage = () => {
               Call History
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings size={16} />
+              <Bot size={16} />
               AI Settings
             </TabsTrigger>
           </TabsList>
