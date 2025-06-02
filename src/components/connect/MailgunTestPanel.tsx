@@ -117,7 +117,7 @@ export const MailgunTestPanel = () => {
               <Checkbox 
                 id="sandbox"
                 checked={useSandbox}
-                onCheckedChange={setUseSandbox}
+                onCheckedChange={(checked) => setUseSandbox(checked === true)}
               />
               <Label htmlFor="sandbox" className="text-sm">
                 Use Mailgun sandbox domain for testing
