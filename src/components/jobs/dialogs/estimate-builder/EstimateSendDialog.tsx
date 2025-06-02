@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { CheckCircle, Mail, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
 
 interface EstimateSendDialogProps {
   open: boolean;
@@ -56,29 +57,6 @@ interface LineItem {
 }
 
 type SendStep = "warranty" | "send-method" | "confirmation";
-
-// Utility function to format phone number for Twilio
-const formatPhoneForTwilio = (phoneNumber: string): string => {
-  if (!phoneNumber) return "";
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  if (cleaned.startsWith('1') && cleaned.length === 11) {
-    return `+${cleaned}`;
-  }
-  if (cleaned.length === 10) {
-    return `+1${cleaned}`;
-  }
-  if (cleaned.length > 10) {
-    return `+${cleaned}`;
-  }
-  console.warn("Invalid phone number format:", phoneNumber);
-  return phoneNumber;
-};
-
-const isValidPhoneNumber = (phoneNumber: string): boolean => {
-  if (!phoneNumber) return false;
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  return cleaned.length >= 10;
-};
 
 const isValidEmail = (email: string): boolean => {
   if (!email) return false;
@@ -255,7 +233,7 @@ export const EstimateSendDialog = ({
       if (hasValidEmail && sendMethod === "email") {
         setSendTo(contactInfo.email);
       } else if (hasValidPhone && sendMethod === "sms") {
-        const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+        const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
         setSendTo(formattedPhone);
         console.log("Auto-filled phone number:", formattedPhone);
       } else if (hasValidEmail && !hasValidPhone) {
@@ -263,7 +241,7 @@ export const EstimateSendDialog = ({
         setSendTo(contactInfo.email);
       } else if (hasValidPhone && !hasValidEmail) {
         setSendMethod("sms");
-        const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+        const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
         setSendTo(formattedPhone);
       }
     }
@@ -332,7 +310,7 @@ export const EstimateSendDialog = ({
     if (value === "email" && hasValidEmail) {
       setSendTo(contactInfo.email);
     } else if (value === "sms" && hasValidPhone) {
-      const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+      const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
       setSendTo(formattedPhone);
     } else {
       setSendTo("");
@@ -409,8 +387,8 @@ export const EstimateSendDialog = ({
 
       let finalRecipient = sendTo;
       if (sendMethod === "sms") {
-        finalRecipient = formatPhoneForTwilio(sendTo);
-        console.log("Formatted phone number:", finalRecipient);
+        finalRecipient = formatPhoneForTelnyx(sendTo);
+        console.log("Formatted phone number for Telnyx:", finalRecipient);
         
         if (!isValidPhoneNumber(finalRecipient)) {
           const error = "Invalid phone number format";
@@ -431,7 +409,7 @@ export const EstimateSendDialog = ({
           recipient: finalRecipient,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}.`
+            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`
             : `Please find your estimate ${estimateNumber} attached. Total: $${estimateTotal.toFixed(2)}.`,
           status: 'pending',
           estimate_number: estimateNumber,
@@ -451,119 +429,141 @@ export const EstimateSendDialog = ({
 
       console.log("Step 5: Communication record created:", commData);
 
-      // Generate client portal login token
-      let portalLoginLink = '';
-      if (contactInfo.email) {
-        try {
-          console.log("Step 6: Generating portal login token...");
-          const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
-            p_email: contactInfo.email
-          });
-
-          if (!tokenError && tokenData) {
-            portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
-            console.log("Portal login link generated");
-          } else {
-            console.warn("Failed to generate portal login token:", tokenError);
+      if (sendMethod === 'sms') {
+        // Send SMS via Telnyx
+        console.log("Step 6: Sending SMS via Telnyx...");
+        const smsContent = `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateTotal.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`;
+        
+        const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
+          body: {
+            to: finalRecipient,
+            body: smsContent,
+            client_id: contactInfo.id || estimateDetails?.client_id,
+            job_id: jobId || estimateDetails?.job_id
           }
-        } catch (error) {
-          console.error('Error generating portal login token:', error);
-        }
-      }
+        });
 
-      const estimateData = {
-        lineItems: lineItems.map(item => ({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: Number(item.unit_price),
-          taxable: item.taxable,
-          total: item.quantity * Number(item.unit_price)
-        })),
-        total: estimateTotal,
-        taxRate: 13,
-        notes: customNote || estimateNotes,
-        viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`,
-        portalLoginLink: portalLoginLink
-      };
-
-      console.log("Step 7: Calling send-estimate edge function...");
-      console.log("Request payload:", {
-        method: sendMethod,
-        recipient: finalRecipient,
-        estimateNumber: estimateNumber,
-        estimateData: estimateData,
-        clientName: contactInfo.name,
-        communicationId: commData.id
-      });
-
-      const { data, error } = await supabase.functions.invoke('send-estimate', {
-        body: {
-          method: sendMethod,
-          recipient: finalRecipient,
-          estimateNumber: estimateNumber,
-          estimateData: estimateData,
-          clientName: contactInfo.name,
-          communicationId: commData.id
-        }
-      });
-      
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(error.message);
-      }
-      
-      console.log("Step 8: Edge function response:", data);
-      
-      if (data?.success) {
-        const method = sendMethod === "email" ? "email" : "text message";
-        toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
-        console.log("SUCCESS: Estimate sent successfully");
-        
-        if (estimateDetails?.client_id) {
+        if (smsError || !smsData?.success) {
+          console.error("SMS sending failed:", smsError || smsData);
           await supabase
-            .from('client_notifications')
-            .insert({
-              client_id: estimateDetails.client_id,
-              type: 'estimate_sent',
-              title: 'New Estimate Available',
-              message: `Estimate ${estimateNumber} has been sent to you. Total: $${estimateTotal.toFixed(2)}`,
-              data: { 
-                estimate_id: estimateId, 
-                estimate_number: estimateNumber,
-                portal_link: portalLoginLink 
-              }
-            });
+            .from('estimate_communications')
+            .update({
+              status: 'failed',
+              error_message: smsError?.message || smsData?.error || 'SMS sending failed'
+            })
+            .eq('id', commData.id);
+          
+          toast.error(`Failed to send SMS: ${smsError?.message || smsData?.error || 'Unknown error'}`);
+          setIsProcessing(false);
+          return;
         }
 
-        // Update estimate status to 'sent'
-        await supabase
-          .from('estimates')
-          .update({ status: 'sent' })
-          .eq('id', estimateId);
+        console.log("SMS sent successfully:", smsData);
         
-        // Close dialog and trigger refresh
-        onOpenChange(false);
-        
-        // Navigate back to job details with estimates tab active
-        const currentPath = window.location.pathname;
-        if (currentPath.includes('/jobs/')) {
-          const jobId = currentPath.split('/').pop();
-          navigate(`/jobs/${jobId}`, { state: { activeTab: "estimates" }, replace: true });
-        }
-        
-      } else {
-        console.error("Edge function returned error:", data);
+        // Update communication record
         await supabase
           .from('estimate_communications')
           .update({
-            status: 'failed',
-            error_message: data?.error || 'Unknown error'
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            provider_message_id: smsData.id
           })
           .eq('id', commData.id);
+
+      } else {
+        // Send Email
+        console.log("Step 6: Sending email...");
         
-        toast.error(`Failed to send estimate: ${data?.error || 'Unknown error'}`);
-        setIsProcessing(false);
+        // Generate client portal login token
+        let portalLoginLink = '';
+        if (contactInfo.email) {
+          try {
+            const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
+              p_email: contactInfo.email
+            });
+
+            if (!tokenError && tokenData) {
+              portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
+              console.log("Portal login link generated");
+            } else {
+              console.warn("Failed to generate portal login token:", tokenError);
+            }
+          } catch (error) {
+            console.error('Error generating portal login token:', error);
+          }
+        }
+
+        const estimateData = {
+          lineItems: lineItems.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: Number(item.unit_price),
+            taxable: item.taxable,
+            total: item.quantity * Number(item.unit_price)
+          })),
+          total: estimateTotal,
+          taxRate: 13,
+          notes: customNote || estimateNotes,
+          viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`,
+          portalLoginLink: portalLoginLink
+        };
+
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-estimate', {
+          body: {
+            method: sendMethod,
+            recipient: finalRecipient,
+            estimateNumber: estimateNumber,
+            estimateData: estimateData,
+            clientName: contactInfo.name,
+            communicationId: commData.id
+          }
+        });
+        
+        if (emailError || !emailData?.success) {
+          console.error("Email sending failed:", emailError || emailData);
+          await supabase
+            .from('estimate_communications')
+            .update({
+              status: 'failed',
+              error_message: emailError?.message || emailData?.error || 'Email sending failed'
+            })
+            .eq('id', commData.id);
+          
+          toast.error(`Failed to send email: ${emailError?.message || emailData?.error || 'Unknown error'}`);
+          setIsProcessing(false);
+          return;
+        }
+
+        console.log("Email sent successfully:", emailData);
       }
+
+      const method = sendMethod === "email" ? "email" : "text message";
+      toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
+      console.log("SUCCESS: Estimate sent successfully");
+      
+      if (estimateDetails?.client_id) {
+        await supabase
+          .from('client_notifications')
+          .insert({
+            client_id: estimateDetails.client_id,
+            type: 'estimate_sent',
+            title: 'New Estimate Available',
+            message: `Estimate ${estimateNumber} has been sent to you. Total: $${estimateTotal.toFixed(2)}`,
+            data: { 
+              estimate_id: estimateId, 
+              estimate_number: estimateNumber
+            }
+          });
+      }
+
+      // Update estimate status to 'sent'
+      await supabase
+        .from('estimates')
+        .update({ status: 'sent' })
+        .eq('id', estimateId);
+      
+      setCurrentStep("confirmation");
+        
     } catch (error: any) {
       console.error("CRITICAL ERROR in send estimate process:", error);
       toast.error(`An error occurred while sending the estimate: ${error.message}`);
@@ -680,7 +680,7 @@ export const EstimateSendDialog = ({
                 )}
                 {sendMethod === "sms" && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Phone numbers will be automatically formatted for SMS delivery
+                    Phone numbers will be automatically formatted for Telnyx delivery
                   </p>
                 )}
               </div>
