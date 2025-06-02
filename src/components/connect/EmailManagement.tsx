@@ -72,7 +72,16 @@ export const EmailManagement = () => {
 
       if (error) throw error;
 
-      setConversations(conversationsData || []);
+      // Transform the data to match our interface
+      const transformedConversations: EmailConversation[] = (conversationsData || []).map(conv => ({
+        id: conv.id,
+        subject: conv.subject,
+        last_message_at: conv.last_message_at,
+        status: conv.status,
+        messages: conv.email_messages || []
+      }));
+
+      setConversations(transformedConversations);
     } catch (error) {
       console.error('Error fetching email conversations:', error);
       toast.error('Failed to load email conversations');

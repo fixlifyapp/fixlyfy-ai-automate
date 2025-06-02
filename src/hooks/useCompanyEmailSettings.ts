@@ -35,7 +35,13 @@ export const useCompanyEmailSettings = () => {
       }
 
       if (data) {
-        setSettings(data);
+        // Ensure domain_verification_status matches our type
+        const verificationStatus = data.domain_verification_status as 'pending' | 'verified' | 'failed' || 'pending';
+        
+        setSettings({
+          ...data,
+          domain_verification_status: verificationStatus
+        });
       }
     } catch (error) {
       console.error('Error fetching email settings:', error);
