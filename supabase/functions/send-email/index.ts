@@ -74,7 +74,7 @@ serve(async (req) => {
     }
 
     let fromEmail = from;
-    let mailgunDomain = 'fixlify.app'; // Corrected domain name
+    let mailgunDomain = 'fixlify.app';
     
     // Use sandbox domain for testing if requested
     if (useSandbox) {
@@ -108,51 +108,12 @@ serve(async (req) => {
       });
     }
 
-    // Enhanced API key validation - remove the strict "key-" requirement for now
-    console.log('API Key details:');
-    console.log('- Length:', mailgunApiKey.length);
-    console.log('- First 10 chars:', mailgunApiKey.substring(0, 10));
-
+    console.log('API Key configured, proceeding with email send');
     console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
     console.log(`From: ${fromEmail}`);
     console.log(`To: ${to}`);
 
-    // Test API key with a simple domain check first
-    const domainCheckUrl = `https://api.mailgun.net/v3/domains/${mailgunDomain}`;
-    const basicAuth = btoa(`api:${mailgunApiKey}`);
-    
-    console.log('Testing API key with domain check...');
-    const domainCheckResponse = await fetch(domainCheckUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${basicAuth}`
-      }
-    });
-    
-    console.log('Domain check response status:', domainCheckResponse.status);
-    const domainCheckText = await domainCheckResponse.text();
-    console.log('Domain check response:', domainCheckText);
-    
-    if (!domainCheckResponse.ok) {
-      return new Response(JSON.stringify({ 
-        error: `Domain access failed: ${domainCheckResponse.status}`,
-        details: {
-          status: domainCheckResponse.status,
-          response: domainCheckText,
-          domain: mailgunDomain,
-          suggestion: domainCheckResponse.status === 401 ? 
-            'API key authentication failed. Please verify your Mailgun API key has the correct permissions.' :
-            domainCheckResponse.status === 404 ?
-            'Domain not found. Please verify the domain is added to your Mailgun account.' :
-            'Unknown error occurred during domain verification.'
-        }
-      }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        status: 500,
-      });
-    }
-
-    // If domain check passes, proceed with sending email
+    // Prepare email data
     const formData = new FormData();
     formData.append('from', fromEmail);
     formData.append('to', to);
@@ -166,6 +127,8 @@ serve(async (req) => {
     formData.append('o:tracking-opens', 'yes');
 
     const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
+    const basicAuth = btoa(`api:${mailgunApiKey}`);
+    
     console.log('Mailgun send URL:', mailgunUrl);
 
     const mailgunResponse = await fetch(mailgunUrl, {
