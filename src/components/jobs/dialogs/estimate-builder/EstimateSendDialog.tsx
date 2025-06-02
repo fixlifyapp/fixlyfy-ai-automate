@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,15 +44,17 @@ export const EstimateSendDialog = ({
   const { sendEstimate, isProcessing } = useEstimateSending();
 
   // Set default recipient when dialog opens
-  useState(() => {
-    if (open) {
-      setSendTo(sendMethod === "email" ? contactInfo.email : contactInfo.phone);
+  useEffect(() => {
+    if (open && contactInfo) {
+      setSendTo(sendMethod === "email" ? (contactInfo.email || "") : (contactInfo.phone || ""));
     }
-  });
+  }, [open, sendMethod, contactInfo]);
 
   const handleSendMethodChange = (value: "email" | "sms") => {
     setSendMethod(value);
-    setSendTo(value === "email" ? contactInfo.email : contactInfo.phone);
+    if (contactInfo) {
+      setSendTo(value === "email" ? (contactInfo.email || "") : (contactInfo.phone || ""));
+    }
   };
 
   const handleSend = async () => {
