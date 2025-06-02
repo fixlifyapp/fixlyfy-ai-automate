@@ -48,6 +48,15 @@ export const SimplifiedAISettings = () => {
     
     try {
       setIsLoading(true);
+
+      // First, fetch company settings to get real company data
+      const { data: companyData } = await supabase
+        .from('company_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      // Then fetch AI agent config
       const { data, error } = await supabase
         .from('ai_agent_configs')
         .select('*')
@@ -59,6 +68,10 @@ export const SimplifiedAISettings = () => {
         return;
       }
 
+      // Use company data as primary source, fallback to AI config, then defaults
+      const companyName = companyData?.company_name || data?.company_name || 'Your Company';
+      const businessType = companyData?.business_type || data?.business_niche || 'General Service';
+
       if (data) {
         setConfig({
           is_active: data.is_active ?? true,
@@ -68,8 +81,21 @@ export const SimplifiedAISettings = () => {
           appliance_types: parseStringArray(data.service_types),
           business_hours: parseBusinessHours(data.business_hours),
           custom_instructions: data.custom_prompt_additions || '',
-          company_name: data.company_name || 'Your Company',
+          company_name: companyName,
           agent_name: data.agent_name || 'AI Assistant'
+        });
+      } else {
+        // Create default config with company data if available
+        setConfig({
+          is_active: true,
+          diagnostic_price: 75.00,
+          emergency_surcharge: 50.00,
+          service_areas: [],
+          appliance_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
+          business_hours: parseBusinessHours(companyData?.business_hours) || config.business_hours,
+          custom_instructions: '',
+          company_name: companyName,
+          agent_name: 'AI Assistant'
         });
       }
     } catch (error) {
@@ -97,7 +123,7 @@ export const SimplifiedAISettings = () => {
         agent_name: config.agent_name,
         business_niche: 'Service Business',
         voice_id: 'alloy',
-        greeting_template: `Hello! My name is ${config.agent_name}. I'm an AI assistant for ${config.company_name}. How can I help you today?`,
+        greeting_template: `Hello! This is ${config.agent_name} from ${config.company_name}. How can I help you today?`,
         updated_at: new Date().toISOString()
       };
 

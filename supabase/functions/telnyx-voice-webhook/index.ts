@@ -66,6 +66,49 @@ serve(async (req) => {
       return new Response('Missing CallSid', { status: 400 })
     }
 
+    // Get company and AI configuration
+    const getBusinessConfig = async () => {
+      // First try to get company settings
+      const { data: companySettings } = await supabaseClient
+        .from('company_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle()
+
+      // Then get AI agent config
+      const { data: aiConfigs } = await supabaseClient
+        .from('ai_agent_configs')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1)
+
+      let aiConfig = aiConfigs?.[0]
+      
+      // Create enhanced config with company data
+      const businessConfig = {
+        // Company info (prioritize company_settings, fallback to ai_agent_configs)
+        company_name: companySettings?.company_name || aiConfig?.company_name || 'our company',
+        business_type: companySettings?.business_type || aiConfig?.business_niche || 'General Service',
+        company_phone: companySettings?.company_phone || '(555) 123-4567',
+        company_address: companySettings?.company_address || null,
+        company_city: companySettings?.company_city || null,
+        company_state: companySettings?.company_state || null,
+        service_zip_codes: companySettings?.service_zip_codes || null,
+        
+        // AI config
+        agent_name: aiConfig?.agent_name || 'AI Assistant',
+        diagnostic_price: aiConfig?.diagnostic_price || 75,
+        emergency_surcharge: aiConfig?.emergency_surcharge || 50,
+        service_areas: aiConfig?.service_areas || [],
+        service_types: aiConfig?.service_types || ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
+        business_hours: aiConfig?.business_hours || {},
+        custom_prompt_additions: aiConfig?.custom_prompt_additions || ''
+      }
+
+      console.log('Business config loaded:', JSON.stringify(businessConfig, null, 2))
+      return businessConfig
+    }
+
     // Handle new incoming call
     if (callStatus === 'ringing' || (!callStatus && from && to)) {
       console.log('Processing new incoming call from:', from, 'to:', to)
@@ -103,28 +146,8 @@ serve(async (req) => {
         }
       }
 
-      // Get AI configuration
-      const { data: aiConfigs } = await supabaseClient
-        .from('ai_agent_configs')
-        .select('*')
-        .eq('is_active', true)
-        .limit(1)
-
-      let aiConfig = aiConfigs?.[0]
-      if (!aiConfig) {
-        console.log('No active AI config found, using default')
-        aiConfig = {
-          business_niche: 'General Service',
-          diagnostic_price: 75,
-          emergency_surcharge: 50,
-          agent_name: 'AI Assistant',
-          company_name: 'our company',
-          service_areas: [],
-          business_hours: {},
-          service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
-          custom_prompt_additions: ''
-        }
-      }
+      // Get business configuration
+      const businessConfig = await getBusinessConfig()
 
       // Log the call in database
       const { data: newCallRecord, error: logError } = await supabaseClient
@@ -151,7 +174,7 @@ serve(async (req) => {
       }
 
       // Return TeXML to answer call and start conversation
-      const greeting = `Hello! This is ${aiConfig.agent_name} from ${aiConfig.company_name}. How can I help you today?`
+      const greeting = `Hello! This is ${businessConfig.agent_name} from ${businessConfig.company_name}. How can I help you today?`
       
       const texml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -167,7 +190,7 @@ serve(async (req) => {
     />
 </Response>`
 
-      console.log('Returning TeXML greeting:', texml)
+      console.log('Returning TeXML greeting with company name:', businessConfig.company_name)
       
       return new Response(texml, {
         headers: { 
@@ -244,30 +267,25 @@ serve(async (req) => {
         })
       }
 
-      // Get AI config for this call
-      const { data: aiConfigs } = await supabaseClient
-        .from('ai_agent_configs')
-        .select('*')
-        .eq('is_active', true)
-        .limit(1)
+      // Get business configuration for AI response
+      const businessConfig = await getBusinessConfig()
 
-      let aiConfig = aiConfigs?.[0]
-      if (!aiConfig) {
-        aiConfig = {
-          business_niche: 'General Service',
-          diagnostic_price: 75,
-          emergency_surcharge: 50,
-          agent_name: 'AI Assistant',
-          company_name: 'our company',
-          service_areas: [],
-          business_hours: {},
-          service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
-          custom_prompt_additions: ''
-        }
-      }
+      // Generate enhanced AI response using GPT
+      const systemPrompt = `You are ${businessConfig.agent_name} for ${businessConfig.company_name}, a ${businessConfig.business_type} business.
 
-      // Generate AI response using GPT
-      const systemPrompt = `You are ${aiConfig.agent_name} for ${aiConfig.company_name}, a ${aiConfig.business_niche} business.
+COMPANY INFORMATION:
+- Company: ${businessConfig.company_name}
+- Business Type: ${businessConfig.business_type}
+- Phone: ${businessConfig.company_phone}
+${businessConfig.company_address ? `- Address: ${businessConfig.company_address}, ${businessConfig.company_city}, ${businessConfig.company_state}` : ''}
+${businessConfig.service_zip_codes ? `- Service Areas: ${businessConfig.service_zip_codes}` : ''}
+
+PRICING:
+- Diagnostic service: $${businessConfig.diagnostic_price}
+- Emergency surcharge: $${businessConfig.emergency_surcharge} (for after-hours calls)
+
+SERVICES OFFERED:
+${businessConfig.service_types?.join(', ') || 'HVAC, Plumbing, Electrical, General Repair'}
 
 IMPORTANT INSTRUCTIONS:
 1. Be helpful, professional, and conversational
@@ -276,12 +294,9 @@ IMPORTANT INSTRUCTIONS:
 4. Keep responses under 100 words for phone conversation
 5. If they want to schedule, say you'll transfer them to book the appointment
 
-Your diagnostic service costs $${aiConfig.diagnostic_price} with a $${aiConfig.emergency_surcharge} emergency surcharge for after-hours calls.
+${businessConfig.custom_prompt_additions || ''}
 
-Service areas: ${aiConfig.service_areas?.join(', ') || 'All areas'}
-Services offered: ${aiConfig.service_types?.join(', ') || 'HVAC, Plumbing, Electrical, General Repair'}
-
-${aiConfig.custom_prompt_additions || ''}`
+Remember: You represent ${businessConfig.company_name} and should always mention the company name when introducing yourself.`
 
       try {
         const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -306,7 +321,7 @@ ${aiConfig.custom_prompt_additions || ''}`
         if (gptResponse.ok) {
           const gptData = await gptResponse.json()
           aiResponse = gptData.choices[0]?.message?.content || aiResponse
-          console.log('AI Response:', aiResponse)
+          console.log('AI Response generated for', businessConfig.company_name, ':', aiResponse)
         } else {
           console.error('GPT API error:', await gptResponse.text())
         }
@@ -330,7 +345,7 @@ ${aiConfig.custom_prompt_additions || ''}`
           // End call with scheduling message
           const texml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">${aiResponse} Please hold while I connect you to our scheduling system. Thank you for calling!</Say>
+    <Say voice="alice">${aiResponse} Please hold while I connect you to our scheduling system. Thank you for calling ${businessConfig.company_name}!</Say>
     <Hangup/>
 </Response>`
 
@@ -339,7 +354,11 @@ ${aiConfig.custom_prompt_additions || ''}`
             .from('telnyx_calls')
             .update({
               appointment_scheduled: true,
-              appointment_data: { needs_scheduling: true, user_message: userMessage },
+              appointment_data: { 
+                needs_scheduling: true, 
+                user_message: userMessage,
+                company_name: businessConfig.company_name
+              },
               call_status: 'completed'
             })
             .eq('call_control_id', callSid)
