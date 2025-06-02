@@ -1,4 +1,6 @@
 
+import { BusinessHours } from "@/types/businessHours";
+
 // Helper function to safely parse string arrays from JSON
 export const parseStringArray = (value: any): string[] => {
   if (!value) return [];
@@ -19,25 +21,59 @@ export const parseStringArray = (value: any): string[] => {
 };
 
 // Helper function to safely parse business hours
-export const parseBusinessHours = (value: any): Record<string, { open: string; close: string; closed: boolean }> => {
-  if (!value) return {};
+export const parseBusinessHours = (value: any): BusinessHours => {
+  if (!value) {
+    return {
+      monday: { open: '08:00', close: '17:00', enabled: true },
+      tuesday: { open: '08:00', close: '17:00', enabled: true },
+      wednesday: { open: '08:00', close: '17:00', enabled: true },
+      thursday: { open: '08:00', close: '17:00', enabled: true },
+      friday: { open: '08:00', close: '17:00', enabled: true },
+      saturday: { open: '09:00', close: '15:00', enabled: true },
+      sunday: { open: '10:00', close: '14:00', enabled: false }
+    };
+  }
   
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    return value as Record<string, { open: string; close: string; closed: boolean }>;
+    // Convert any 'closed' properties to 'enabled' (inverted)
+    const converted: BusinessHours = {
+      monday: { open: '08:00', close: '17:00', enabled: true },
+      tuesday: { open: '08:00', close: '17:00', enabled: true },
+      wednesday: { open: '08:00', close: '17:00', enabled: true },
+      thursday: { open: '08:00', close: '17:00', enabled: true },
+      friday: { open: '08:00', close: '17:00', enabled: true },
+      saturday: { open: '09:00', close: '15:00', enabled: true },
+      sunday: { open: '10:00', close: '14:00', enabled: false }
+    };
+    
+    // Copy over existing values, handling both 'enabled' and 'closed' properties
+    Object.keys(converted).forEach(day => {
+      if (value[day]) {
+        converted[day] = {
+          open: value[day].open || converted[day].open,
+          close: value[day].close || converted[day].close,
+          enabled: value[day].hasOwnProperty('enabled') 
+            ? value[day].enabled 
+            : value[day].hasOwnProperty('closed') 
+            ? !value[day].closed 
+            : converted[day].enabled
+        };
+      }
+    });
+    
+    return converted;
   }
   
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        return parsed;
-      }
+      return parseBusinessHours(parsed);
     } catch {
-      return {};
+      return parseBusinessHours(null);
     }
   }
   
-  return {};
+  return parseBusinessHours(null);
 };
 
 export const APPLIANCE_TYPES = [

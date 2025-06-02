@@ -13,6 +13,7 @@ import { ServiceAreasCard } from "./components/ServiceAreasCard";
 import { ApplianceTypesCard } from "./components/ApplianceTypesCard";
 import { BusinessHoursEditor } from "../connect/BusinessHoursEditor";
 import { CustomInstructionsCard } from "./components/CustomInstructionsCard";
+import { BusinessHours } from "@/types/businessHours";
 
 export const SimplifiedAISettings = () => {
   const { user } = useAuth();
@@ -22,7 +23,15 @@ export const SimplifiedAISettings = () => {
     emergency_surcharge: 50.00,
     service_areas: [] as string[],
     appliance_types: [] as string[],
-    business_hours: {} as Record<string, { open: string; close: string; enabled: boolean }>,
+    business_hours: {
+      monday: { open: '08:00', close: '17:00', enabled: true },
+      tuesday: { open: '08:00', close: '17:00', enabled: true },
+      wednesday: { open: '08:00', close: '17:00', enabled: true },
+      thursday: { open: '08:00', close: '17:00', enabled: true },
+      friday: { open: '08:00', close: '17:00', enabled: true },
+      saturday: { open: '09:00', close: '15:00', enabled: true },
+      sunday: { open: '10:00', close: '14:00', enabled: false }
+    } as BusinessHours,
     custom_instructions: '',
     company_name: 'Your Company',
     agent_name: 'AI Assistant'
