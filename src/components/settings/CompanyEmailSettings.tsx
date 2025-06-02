@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, CheckCircle, Mail, Globe, Copy } from 'lucide-react';
 import { useCompanyEmailSettings } from '@/hooks/useCompanyEmailSettings';
+import { MailgunTestPanel } from '@/components/connect/MailgunTestPanel';
 import { toast } from 'sonner';
 
 export const CompanyEmailSettings = () => {
@@ -190,6 +191,19 @@ export const CompanyEmailSettings = () => {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Testing */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Email Testing</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-4">
+            Test your email configuration by sending a test email. This will use your custom domain if verified, otherwise the Mailgun sandbox domain.
+          </p>
+          <MailgunTestPanel />
         </CardContent>
       </Card>
 
