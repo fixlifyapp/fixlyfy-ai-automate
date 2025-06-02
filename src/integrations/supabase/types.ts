@@ -304,6 +304,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "amazon_connect_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "amazon_connect_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       auth_rate_limits: {
@@ -653,6 +667,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_portal_sessions: {
@@ -735,6 +763,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_properties: {
@@ -790,6 +832,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -1022,11 +1078,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
             foreignKeyName: "conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "conversations_job_id_fkey"
@@ -1122,6 +1206,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "email_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "email_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "email_conversations_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -1132,8 +1230,22 @@ export type Database = {
             foreignKeyName: "email_conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "email_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "email_conversations_job_id_fkey"
@@ -1304,6 +1416,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       estimate_communications: {
@@ -1420,8 +1546,22 @@ export type Database = {
             foreignKeyName: "estimates_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "estimates_job_id_fkey"
@@ -1602,8 +1742,22 @@ export type Database = {
             foreignKeyName: "invoices_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "invoices_job_id_fkey"
@@ -1650,8 +1804,22 @@ export type Database = {
             foreignKeyName: "job_attachments_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_attachments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_attachments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_attachments_job_id_fkey"
@@ -1757,8 +1925,22 @@ export type Database = {
             foreignKeyName: "job_history_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_history_job_id_fkey"
@@ -1771,8 +1953,22 @@ export type Database = {
             foreignKeyName: "job_history_job_id_idx"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_idx"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_idx"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_history_job_id_idx"
@@ -1828,8 +2024,22 @@ export type Database = {
             foreignKeyName: "job_overview_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_overview_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_overview_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_overview_job_id_fkey"
@@ -1980,6 +2190,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "jobs_property_id_fkey"
@@ -2954,29 +3178,7 @@ export type Database = {
           status: string | null
           total: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "estimates_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "fact_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "estimates_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       fact_jobs: {
         Row: {
@@ -3004,6 +3206,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       invoice_details_view: {
@@ -3023,29 +3239,7 @@ export type Database = {
           status: string | null
           total: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "fact_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
