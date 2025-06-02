@@ -20,6 +20,7 @@ interface TelnyxWebhookEvent {
       end_time?: string;
       hangup_cause?: string;
       hangup_source?: string;
+      stream_url?: string;
     };
   };
 }
@@ -89,7 +90,6 @@ serve(async (req) => {
         phoneNumberData = existingNumber
         console.log('Found existing phone number data:', phoneNumberData)
       } else {
-        // Create the phone number entry if it doesn't exist
         console.log('Phone number not found, creating entry for:', payload.to)
         const { data: newNumber, error: createError } = await supabaseClient
           .from('telnyx_phone_numbers')
@@ -143,10 +143,9 @@ serve(async (req) => {
 
       let callRecord
       if (existingCall) {
-        console.log('Call record already exists, skipping insert')
+        console.log('Call record already exists, updating status')
         callRecord = existingCall
       } else {
-        // Log call to database
         const { data: newCallRecord, error: logError } = await supabaseClient
           .from('telnyx_calls')
           .insert({
@@ -172,11 +171,10 @@ serve(async (req) => {
         }
       }
 
-      // Wait a bit longer before attempting to answer
-      console.log('Waiting 2 seconds before answering call...')
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      console.log('Waiting 1 second before answering call...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Answer the call with proper error handling
+      // Answer the call
       console.log('Attempting to answer call with control ID:', callControlId)
       try {
         const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
@@ -202,46 +200,23 @@ serve(async (req) => {
         if (!answerResponse.ok) {
           console.error('Failed to answer call. Status:', answerResponse.status, 'Response:', answerResult)
           
-          // Update call status to failed
           await supabaseClient
             .from('telnyx_calls')
             .update({ call_status: 'failed' })
             .eq('call_control_id', callControlId)
-
-          // Try to hang up the call gracefully
-          try {
-            console.log('Attempting to hang up call due to answer failure...')
-            await fetch('https://api.telnyx.com/v2/calls/actions/hangup', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${telnyxApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                call_control_id: callControlId,
-                hangup_cause: 'CALL_REJECTED'
-              })
-            })
-          } catch (hangupError) {
-            console.error('Error hanging up call:', hangupError)
-          }
 
           return new Response(JSON.stringify({ 
             success: false, 
             error: 'Failed to answer call',
             details: answerResult
           }), {
-            headers: { 
-              ...corsHeaders,
-              'Content-Type': 'application/json' 
-            },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500
           })
         }
 
         console.log('Call answered successfully!')
         
-        // Update call status to answered
         await supabaseClient
           .from('telnyx_calls')
           .update({ call_status: 'answered' })
@@ -250,7 +225,6 @@ serve(async (req) => {
       } catch (answerError) {
         console.error('Exception while answering call:', answerError)
         
-        // Update call status to failed
         await supabaseClient
           .from('telnyx_calls')
           .update({ call_status: 'failed' })
@@ -261,35 +235,27 @@ serve(async (req) => {
           error: 'Exception while answering call',
           details: answerError.message
         }), {
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json' 
-          },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500
         })
       }
     }
 
-    // When call is answered, start AI conversation
+    // When call is answered, start media streaming
     else if (event_type === 'call.answered') {
-      console.log('Call connected, starting AI conversation...')
+      console.log('Call connected, starting media streaming...')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
 
-      // Update call status to connected
       await supabaseClient
         .from('telnyx_calls')
         .update({ call_status: 'connected' })
         .eq('call_control_id', callControlId)
 
-      // Wait a moment before speaking
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Play AI greeting
-      console.log('Playing AI greeting...')
+      // Start media streaming to connect with OpenAI Realtime API
       try {
-        const speakResponse = await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+        const streamResponse = await fetch('https://api.telnyx.com/v2/calls/actions/streaming_start', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${telnyxApiKey}`,
@@ -297,23 +263,72 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             call_control_id: callControlId,
-            payload: `Hello! My name is ${aiConfig.agent_name || 'AI Assistant'} from ${aiConfig.company_name || 'our company'}. How can I help you today?`,
-            voice: 'female',
-            language: 'en'
+            stream_url: `wss://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/realtime-voice-dispatch`,
+            stream_track: 'both_tracks',
+            enable_dialogflow_es: false,
+            client_state: JSON.stringify({
+              ai_config: aiConfig,
+              call_record_id: clientState.call_record_id
+            })
           })
         })
 
-        const speakResult = await speakResponse.text()
-        console.log('Speak response status:', speakResponse.status)
-        console.log('Speak response body:', speakResult)
+        const streamResult = await streamResponse.text()
+        console.log('Media streaming response status:', streamResponse.status)
+        console.log('Media streaming response body:', streamResult)
 
-        if (!speakResponse.ok) {
-          console.error('Failed to play greeting:', speakResult)
+        if (!streamResponse.ok) {
+          console.error('Failed to start media streaming:', streamResult)
+          
+          // Fallback to basic greeting
+          await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${telnyxApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              call_control_id: callControlId,
+              payload: `Hello! My name is ${aiConfig.agent_name || 'AI Assistant'} from ${aiConfig.company_name || 'our company'}. I'm having trouble connecting to our AI system. Please call back in a few minutes.`,
+              voice: 'female',
+              language: 'en'
+            })
+          })
+        } else {
+          console.log('Media streaming started successfully')
         }
 
-      } catch (speakError) {
-        console.error('Exception while playing greeting:', speakError)
+      } catch (streamError) {
+        console.error('Exception while starting media streaming:', streamError)
+        
+        // Fallback greeting
+        try {
+          await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${telnyxApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              call_control_id: callControlId,
+              payload: `Hello! My name is ${aiConfig.agent_name || 'AI Assistant'} from ${aiConfig.company_name || 'our company'}. How can I help you today?`,
+              voice: 'female',
+              language: 'en'
+            })
+          })
+        } catch (fallbackError) {
+          console.error('Fallback greeting also failed:', fallbackError)
+        }
       }
+    }
+
+    // Handle media streaming events
+    else if (event_type === 'call.streaming.started') {
+      console.log('Media streaming started for call:', callControlId)
+    }
+
+    else if (event_type === 'call.streaming.stopped') {
+      console.log('Media streaming stopped for call:', callControlId)
     }
 
     // Handle call hangup/completion
@@ -348,10 +363,7 @@ serve(async (req) => {
       success: true, 
       message: `Processed ${event_type} event successfully` 
     }), {
-      headers: { 
-        ...corsHeaders,
-        'Content-Type': 'application/json' 
-      }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
@@ -362,10 +374,7 @@ serve(async (req) => {
       message: error.message,
       stack: error.stack
     }), {
-      headers: { 
-        ...corsHeaders,
-        'Content-Type': 'application/json' 
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     })
   }

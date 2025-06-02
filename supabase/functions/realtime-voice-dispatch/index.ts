@@ -22,6 +22,8 @@ serve(async (req) => {
   const { socket, response } = Deno.upgradeWebSocket(req);
   
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+  const TELNYX_API_KEY = Deno.env.get('TELNYX_API_KEY');
+  
   if (!OPENAI_API_KEY) {
     console.error('OpenAI API key not found');
     return new Response('OpenAI API key not configured', { status: 500 });
@@ -35,8 +37,18 @@ serve(async (req) => {
   let clientData: any = null;
   let aiConfig: any = null;
   let sessionCreated = false;
+  let callRecordId: string | null = null;
+  let conversation: string[] = [];
+  let isTelnyxStream = false;
 
-  // Initialize OpenAI Realtime connection
+  // Check if this is a Telnyx media stream by looking at headers or URL params
+  const url = new URL(req.url);
+  const userAgent = headers.get("user-agent") || "";
+  if (userAgent.includes("Telnyx") || url.searchParams.has("telnyx")) {
+    isTelnyxStream = true;
+    console.log('Detected Telnyx media stream connection');
+  }
+
   const initOpenAI = () => {
     console.log('Connecting to OpenAI Realtime API...');
     openAISocket = new WebSocket(
@@ -62,10 +74,20 @@ serve(async (req) => {
         await sendSessionUpdate();
       } else if (data.type === 'response.function_call_arguments.done') {
         await handleFunctionCall(data);
+      } else if (data.type === 'conversation.item.input_audio_transcription.completed') {
+        conversation.push(`User: ${data.transcript}`);
+        console.log('User said:', data.transcript);
+      } else if (data.type === 'response.audio_transcript.done') {
+        if (data.transcript) {
+          conversation.push(`AI: ${data.transcript}`);
+          console.log('AI said:', data.transcript);
+        }
       }
 
-      // Forward all messages to client
-      socket.send(event.data);
+      // Forward appropriate messages to client
+      if (!isTelnyxStream || (data.type.includes('audio') || data.type.includes('transcript'))) {
+        socket.send(event.data);
+      }
     };
 
     openAISocket.onerror = (error) => {
@@ -100,11 +122,15 @@ serve(async (req) => {
 IMPORTANT INSTRUCTIONS:
 1. Always greet callers warmly and ask how you can help them
 2. Use the lookup_client function to check if they're an existing client
-3. If they're a new client, use the schedule_appointment function to book them
+3. If they need service, use the schedule_appointment function to book them
 4. Be helpful, professional, and gather necessary information for scheduling
-5. Confirm appointment details clearly
+5. Confirm appointment details clearly before ending the call
+6. Keep responses conversational and natural
 
 Your diagnostic service costs $${aiConfig?.diagnostic_price || 75} with a $${aiConfig?.emergency_surcharge || 50} emergency surcharge for after-hours calls.
+
+Service areas: ${aiConfig?.service_areas?.join(', ') || 'All areas'}
+Services offered: ${aiConfig?.service_types?.join(', ') || 'HVAC, Plumbing, Electrical, General Repair'}
 
 ${aiConfig?.custom_prompt_additions || ''}`;
 
@@ -280,6 +306,17 @@ ${aiConfig?.custom_prompt_additions || ''}`;
                 is_emergency: args.is_emergency
               }
             };
+
+            // Update call record with appointment info
+            if (callRecordId) {
+              await supabase
+                .from('telnyx_calls')
+                .update({
+                  appointment_scheduled: true,
+                  appointment_data: result.appointment
+                })
+                .eq('id', callRecordId);
+            }
           }
         }
       }
@@ -319,14 +356,61 @@ ${aiConfig?.custom_prompt_additions || ''}`;
   };
 
   socket.onmessage = (event) => {
-    // Forward client messages to OpenAI
-    if (openAISocket?.readyState === WebSocket.OPEN) {
-      openAISocket.send(event.data);
+    try {
+      const message = JSON.parse(event.data);
+      
+      // Handle Telnyx media stream metadata
+      if (message.event === 'start' && message.media) {
+        console.log('Telnyx media stream started');
+        callRecordId = message.custom_parameters?.call_record_id;
+        return;
+      }
+      
+      // Handle Telnyx audio data
+      if (message.event === 'media' && message.media?.payload) {
+        // Forward Telnyx audio to OpenAI
+        if (openAISocket?.readyState === WebSocket.OPEN) {
+          openAISocket.send(JSON.stringify({
+            type: 'input_audio_buffer.append',
+            audio: message.media.payload
+          }));
+        }
+        return;
+      }
+
+      // Forward other client messages to OpenAI
+      if (openAISocket?.readyState === WebSocket.OPEN) {
+        openAISocket.send(event.data);
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+      
+      // Fallback: forward raw data to OpenAI
+      if (openAISocket?.readyState === WebSocket.OPEN) {
+        openAISocket.send(event.data);
+      }
     }
   };
 
-  socket.onclose = () => {
+  socket.onclose = async () => {
     console.log('Client WebSocket disconnected');
+    
+    // Save conversation transcript if we have one
+    if (conversation.length > 0 && callRecordId) {
+      try {
+        await supabase
+          .from('telnyx_calls')
+          .update({
+            ai_transcript: conversation.join('\n')
+          })
+          .eq('id', callRecordId);
+        
+        console.log('Saved conversation transcript to database');
+      } catch (error) {
+        console.error('Error saving conversation transcript:', error);
+      }
+    }
+    
     if (openAISocket) {
       openAISocket.close();
     }

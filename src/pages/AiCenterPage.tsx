@@ -4,16 +4,20 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Brain, MessageSquare, Phone, Zap, TrendingUp, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Brain, MessageSquare, Phone, Zap, TrendingUp, Clock, Play, Square } from "lucide-react";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
+import { VoiceDispatchInterface } from "@/components/voice/VoiceDispatchInterface";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const AiCenterPage = () => {
   const [activeTab, setActiveTab] = useState("calls");
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
 
-  // Fetch real Telnyx calls data
-  const { data: callsData = [], isLoading: callsLoading } = useQuery({
+  // Fetch real Telnyx calls data with real-time updates
+  const { data: callsData = [], isLoading: callsLoading, refetch } = useQuery({
     queryKey: ['ai-center-calls'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -23,8 +27,32 @@ const AiCenterPage = () => {
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    refetchInterval: 5000 // Refresh every 5 seconds
   });
+
+  // Subscribe to real-time call updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('telnyx-calls-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'telnyx_calls'
+        },
+        () => {
+          console.log('Telnyx call updated, refetching...');
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   // Fetch AI analytics data
   const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
@@ -66,14 +94,38 @@ const AiCenterPage = () => {
 
   const appointmentsScheduled = callsData.filter(call => call.appointment_scheduled).length;
 
+  const handleVoiceTest = () => {
+    if (isTestingVoice) {
+      setIsTestingVoice(false);
+      toast.info("Voice test ended");
+    } else {
+      setIsTestingVoice(true);
+      toast.success("Voice test started - try speaking!");
+    }
+  };
+
   return (
     <PageLayout>
       <div className="container mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">AI Center</h1>
-          <p className="text-muted-foreground">
-            Monitor and manage all AI-powered features and interactions
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">AI Center</h1>
+              <p className="text-muted-foreground">
+                Monitor and manage all AI-powered features and interactions
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleVoiceTest}
+                variant={isTestingVoice ? "destructive" : "default"}
+                className="flex items-center gap-2"
+              >
+                {isTestingVoice ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {isTestingVoice ? "Stop Test" : "Test Voice AI"}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* AI Overview Cards with Real Data */}
@@ -134,6 +186,19 @@ const AiCenterPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Voice Test Interface */}
+        {isTestingVoice && (
+          <div className="mb-6">
+            <VoiceDispatchInterface 
+              onCallStart={() => toast.success("Voice test connected")}
+              onCallEnd={() => {
+                setIsTestingVoice(false);
+                toast.info("Voice test ended");
+              }}
+            />
+          </div>
+        )}
 
         <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2 mb-6">
