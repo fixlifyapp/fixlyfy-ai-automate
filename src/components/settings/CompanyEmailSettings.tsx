@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -191,19 +190,6 @@ export const CompanyEmailSettings = () => {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Email Testing */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Testing</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">
-            Test your email configuration by sending a test email. This will use your custom domain if verified, otherwise the Mailgun sandbox domain.
-          </p>
-          <MailgunTestPanel />
         </CardContent>
       </Card>
 

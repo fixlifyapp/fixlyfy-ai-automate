@@ -2,8 +2,10 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
-import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug, Package } from "lucide-react";
+import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug, Package, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { MailgunTestPanel } from "@/components/connect/MailgunTestPanel";
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -22,7 +24,7 @@ const SettingsPage = () => {
       />
       
       {/* Main Settings Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {/* Profile & Company Card */}
         <Link to="/profile-company">
           <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
@@ -112,6 +114,31 @@ const SettingsPage = () => {
             </div>
           </div>
         </Link>
+      </div>
+
+      {/* Email Testing Section */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Quick Email Testing</h2>
+          <p className="text-muted-foreground">
+            Test your email configuration by sending a test email using the Mailgun integration
+          </p>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Testing Panel
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Send test emails to verify your Mailgun configuration. This uses the sandbox domain for testing.
+            </p>
+            <MailgunTestPanel />
+          </CardContent>
+        </Card>
       </div>
     </PageLayout>
   );
