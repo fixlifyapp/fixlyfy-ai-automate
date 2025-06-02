@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, CheckCircle, Mail, Globe, Copy, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle, Mail, Globe, Copy, Info, ExternalLink, Loader2 } from 'lucide-react';
 import { useCompanyEmailSettings } from '@/hooks/useCompanyEmailSettings';
 import { MailgunTestPanel } from '@/components/connect/MailgunTestPanel';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ export const CompanyEmailSettings = () => {
   const { settings, loading, saving, addDomain, verifyDomain, updateEmailSettings } = useCompanyEmailSettings();
   const [newDomain, setNewDomain] = useState('');
   const [dnsRecords, setDnsRecords] = useState<any[]>([]);
+  const [verifying, setVerifying] = useState(false);
 
   const handleAddDomain = async () => {
     if (!newDomain) {
@@ -30,21 +31,31 @@ export const CompanyEmailSettings = () => {
 
     try {
       const result = await addDomain(newDomain);
-      setDnsRecords(result.dns_records || []);
+      if (result.dns_records) {
+        setDnsRecords(result.dns_records);
+      }
       setNewDomain('');
-      toast.success(`Domain ${newDomain}@fixlyfy.app has been configured!`);
+      toast.success(`Domain ${newDomain}@fixlyfy.app has been added to Mailgun!`);
     } catch (error) {
-      // Error handling in hook
+      console.error('Error adding domain:', error);
     }
   };
 
   const handleVerifyDomain = async () => {
     if (!settings.custom_domain) return;
 
+    setVerifying(true);
     try {
-      await verifyDomain(settings.custom_domain);
+      const result = await verifyDomain(settings.custom_domain);
+      if (result.verified) {
+        toast.success('Domain verified successfully!');
+      } else {
+        toast.error('Domain verification failed. Please check your DNS records.');
+      }
     } catch (error) {
-      // Error handling in hook
+      console.error('Error verifying domain:', error);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -65,7 +76,12 @@ export const CompanyEmailSettings = () => {
   };
 
   if (loading) {
-    return <div>Loading email settings...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading email settings...</span>
+      </div>
+    );
   }
 
   return (
@@ -76,7 +92,7 @@ export const CompanyEmailSettings = () => {
           Email Configuration
         </h3>
         <p className="text-muted-foreground">
-          Configure your company email domain to send professional emails from your own domain
+          Configure your company email domain to send professional emails from your own domain using Mailgun
         </p>
       </div>
 
@@ -95,12 +111,12 @@ export const CompanyEmailSettings = () => {
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div>
-                    <h4 className="font-medium text-blue-800">How Email Domains Work</h4>
+                    <h4 className="font-medium text-blue-800">Professional Email Setup</h4>
                     <p className="text-sm text-blue-700 mt-1">
                       Set up your company email to send from <strong>yourcompany@fixlyfy.app</strong>
                     </p>
                     <p className="text-sm text-blue-700">
-                      Example: If you enter "acmeplumbing", emails will be sent from <strong>acmeplumbing@fixlyfy.app</strong>
+                      This will create a real Mailgun domain that you can verify and use for production emails.
                     </p>
                   </div>
                 </div>
@@ -122,7 +138,14 @@ export const CompanyEmailSettings = () => {
                     </div>
                   </div>
                   <Button onClick={handleAddDomain} disabled={saving || !newDomain}>
-                    {saving ? 'Setting up...' : 'Setup Domain'}
+                    {saving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Adding...
+                      </>
+                    ) : (
+                      'Add Domain'
+                    )}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -136,7 +159,7 @@ export const CompanyEmailSettings = () => {
                 <div>
                   <div className="font-medium text-lg">{settings.custom_domain}@fixlyfy.app</div>
                   <div className="text-sm text-muted-foreground">
-                    Email from: {settings.email_from_address || `noreply@${settings.custom_domain}.fixlyfy.app`}
+                    Mailgun Domain: {settings.mailgun_domain}
                   </div>
                 </div>
                 {getStatusBadge(settings.domain_verification_status)}
@@ -145,14 +168,72 @@ export const CompanyEmailSettings = () => {
               {settings.domain_verification_status !== 'verified' && (
                 <div className="space-y-4">
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-700">
-                      <strong>Almost ready!</strong> Click verify to activate your custom domain. This is a demo environment, so verification will complete immediately.
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-amber-800">Domain Verification Required</h4>
+                        <p className="text-sm text-amber-700 mt-1">
+                          Your domain has been added to Mailgun but needs DNS verification.
+                        </p>
+                        <p className="text-sm text-amber-700">
+                          Please configure the DNS records below, then click verify.
+                        </p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* DNS Records Display */}
+                  {dnsRecords.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium">DNS Records to Configure:</h4>
+                      <div className="space-y-2">
+                        {dnsRecords.map((record, index) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-lg border">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
+                              <div>
+                                <span className="font-medium">Type:</span> {record.record_type}
+                              </div>
+                              <div className="md:col-span-2">
+                                <span className="font-medium">Name:</span> {record.name}
+                              </div>
+                              <div className="flex justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(record.value)}
+                                >
+                                  <Copy className="h-3 w-3 mr-1" />
+                                  Copy Value
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="mt-2 text-xs text-gray-600 break-all">
+                              <span className="font-medium">Value:</span> {record.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
-                  <Button onClick={handleVerifyDomain} disabled={saving}>
-                    {saving ? 'Verifying...' : 'Verify Domain'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleVerifyDomain} disabled={verifying}>
+                      {verifying ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Verifying...
+                        </>
+                      ) : (
+                        'Verify Domain'
+                      )}
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <a href="https://app.mailgun.com/mg/domains" target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Mailgun Dashboard
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -196,7 +277,7 @@ export const CompanyEmailSettings = () => {
                   id="from-email"
                   value={settings.email_from_address || ''}
                   onChange={(e) => updateEmailSettings({ email_from_address: e.target.value })}
-                  placeholder={`noreply@${settings.custom_domain}.fixlyfy.app`}
+                  placeholder={`noreply@${settings.mailgun_domain}`}
                 />
               </div>
             )}

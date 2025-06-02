@@ -77,9 +77,11 @@ serve(async (req) => {
       const fromName = companySettings.email_from_name || 'Support Team';
       const fromAddress = companySettings.email_from_address || `noreply@${mailgunDomain}`;
       fromEmail = `${fromName} <${fromAddress}>`;
+      console.log('Using verified custom domain:', mailgunDomain);
     } else {
       // Use sandbox domain for testing
       fromEmail = from || "Mailgun Sandbox <postmaster@sandbox79a9a7a7640e4819b2c0a73e5e68e825.mailgun.org>";
+      console.log('Using sandbox domain for testing');
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
