@@ -18,6 +18,9 @@ interface TelnyxCall {
   started_at: string;
   ended_at?: string;
   call_duration?: number;
+  call_control_id?: string;
+  call_session_id?: string;
+  user_id?: string;
 }
 
 export function TelnyxCallsView() {
@@ -38,7 +41,10 @@ export function TelnyxCallsView() {
             appointment_data,
             started_at,
             ended_at,
-            call_duration
+            call_duration,
+            call_control_id,
+            call_session_id,
+            user_id
           `)
           .order('started_at', { ascending: false })
           .limit(50);
@@ -153,6 +159,13 @@ export function TelnyxCallsView() {
                         AI Transcript
                       </h4>
                       <p className="text-sm whitespace-pre-wrap">{call.ai_transcript}</p>
+                    </div>
+                  )}
+
+                  {call.appointment_data && (
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <h4 className="font-medium text-sm mb-1">Appointment Details</h4>
+                      <pre className="text-sm text-green-700">{JSON.stringify(call.appointment_data, null, 2)}</pre>
                     </div>
                   )}
                 </div>

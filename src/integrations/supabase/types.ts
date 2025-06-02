@@ -2656,6 +2656,8 @@ export type Database = {
       telnyx_calls: {
         Row: {
           ai_transcript: string | null
+          appointment_data: Json | null
+          appointment_scheduled: boolean | null
           call_control_id: string | null
           call_session_id: string | null
           call_status: string | null
@@ -2671,6 +2673,8 @@ export type Database = {
         }
         Insert: {
           ai_transcript?: string | null
+          appointment_data?: Json | null
+          appointment_scheduled?: boolean | null
           call_control_id?: string | null
           call_session_id?: string | null
           call_status?: string | null
@@ -2686,6 +2690,8 @@ export type Database = {
         }
         Update: {
           ai_transcript?: string | null
+          appointment_data?: Json | null
+          appointment_scheduled?: boolean | null
           call_control_id?: string | null
           call_session_id?: string | null
           call_status?: string | null

@@ -56,6 +56,13 @@ serve(async (req) => {
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
       console.log('Incoming call from:', payload.from, 'to number:', payload.to)
 
+      // Find the phone number owner to associate the call
+      const { data: phoneNumberData } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .select('*')
+        .eq('phone_number', payload.to)
+        .single()
+
       // Find active AI configuration
       const { data: aiConfigs } = await supabaseClient
         .from('ai_agent_configs')
@@ -80,7 +87,7 @@ serve(async (req) => {
         }
       }
 
-      // Log call to database
+      // Log call to database with proper user association
       const { error: logError } = await supabaseClient
         .from('telnyx_calls')
         .insert({
@@ -91,7 +98,9 @@ serve(async (req) => {
           call_status: 'initiated',
           direction: 'incoming',
           started_at: new Date().toISOString(),
-          user_id: aiConfig.user_id || '00000000-0000-0000-0000-000000000000'
+          user_id: phoneNumberData?.user_id || aiConfig?.user_id,
+          appointment_scheduled: false,
+          appointment_data: null
         })
 
       if (logError) {
@@ -107,7 +116,10 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           call_control_id: payload.call_control_id,
-          client_state: JSON.stringify({ ai_config: aiConfig })
+          client_state: JSON.stringify({ 
+            ai_config: aiConfig,
+            user_id: phoneNumberData?.user_id || aiConfig?.user_id
+          })
         })
       })
 
@@ -125,6 +137,14 @@ serve(async (req) => {
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
+
+      // Update call status
+      await supabaseClient
+        .from('telnyx_calls')
+        .update({
+          call_status: 'answered'
+        })
+        .eq('call_control_id', payload.call_control_id)
 
       // Generate greeting
       const currentHour = new Date().getHours()
@@ -154,6 +174,14 @@ serve(async (req) => {
       if (!speakResponse.ok) {
         console.error('TTS error:', await speakResponse.text())
       }
+
+      // Update transcript with greeting
+      await supabaseClient
+        .from('telnyx_calls')
+        .update({
+          ai_transcript: `AI: ${greeting}`
+        })
+        .eq('call_control_id', payload.call_control_id)
 
       // Start listening after greeting
       setTimeout(async () => {

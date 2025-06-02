@@ -3,7 +3,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 interface TelnyxPhoneNumberRequest {
-  action: 'search' | 'purchase' | 'list' | 'configure';
+  action: 'search' | 'purchase' | 'list' | 'configure' | 'add_existing';
   area_code?: string;
   country_code?: string;
   phone_number?: string;
@@ -27,6 +27,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    // Get the current user from the auth header
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    let currentUserId = null
+    if (token) {
+      const { data: { user } } = await supabaseClient.auth.getUser(token)
+      currentUserId = user?.id
+    }
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
     if (!telnyxApiKey) {
@@ -97,7 +107,7 @@ serve(async (req) => {
         throw new Error(`Purchase failed: ${JSON.stringify(purchaseData)}`)
       }
 
-      // Save to our database
+      // Save to our database with user association
       const { error: insertError } = await supabaseClient
         .from('telnyx_phone_numbers')
         .insert({
@@ -105,7 +115,8 @@ serve(async (req) => {
           order_id: purchaseData.data.id,
           status: 'pending',
           country_code: country_code || 'US',
-          purchased_at: new Date().toISOString()
+          purchased_at: new Date().toISOString(),
+          user_id: currentUserId
         })
 
       if (insertError) {
@@ -136,7 +147,8 @@ serve(async (req) => {
           status: 'active',
           country_code: country_code || 'US',
           area_code: phone_number.slice(-10, -7), // Extract area code
-          purchased_at: new Date().toISOString()
+          purchased_at: new Date().toISOString(),
+          user_id: currentUserId
         })
 
       if (insertError) {
@@ -158,6 +170,7 @@ serve(async (req) => {
       const { data: localNumbers } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
+        .eq('user_id', currentUserId)
         .order('purchased_at', { ascending: false })
 
       // Also get current status from Telnyx
@@ -228,6 +241,7 @@ serve(async (req) => {
           configured_at: new Date().toISOString()
         })
         .eq('phone_number', phone_number)
+        .eq('user_id', currentUserId)
 
       return new Response(JSON.stringify({
         success: true,
