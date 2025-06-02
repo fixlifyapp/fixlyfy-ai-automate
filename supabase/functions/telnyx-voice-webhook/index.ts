@@ -119,20 +119,33 @@ serve(async (req) => {
     }
 
     let webhookData: TelnyxWebhookData = {}
+    let rawBody: string = ''
     
-    // Try to parse as JSON first (Call Control API format)
     try {
-      webhookData = await req.json()
-      console.log('=== PARSED JSON WEBHOOK DATA ===')
-      console.log(JSON.stringify(webhookData, null, 2))
-    } catch {
-      // Fallback to form data (TeXML format)
-      const formData = await req.formData()
-      console.log('=== RAW FORM DATA ===')
-      for (const [key, value] of formData.entries()) {
-        webhookData[key as keyof TelnyxWebhookData] = value as string
-        console.log(`${key}: ${value}`)
+      // Get the raw body text first
+      rawBody = await req.text()
+      console.log('=== RAW BODY ===')
+      console.log(rawBody)
+      
+      // Try to parse as JSON first (Call Control API format)
+      try {
+        webhookData = JSON.parse(rawBody)
+        console.log('=== PARSED JSON WEBHOOK DATA ===')
+        console.log(JSON.stringify(webhookData, null, 2))
+      } catch (jsonError) {
+        console.log('JSON parse failed, trying form data format')
+        
+        // If JSON parsing fails, try form data parsing
+        const formData = new URLSearchParams(rawBody)
+        console.log('=== PARSED FORM DATA ===')
+        for (const [key, value] of formData.entries()) {
+          webhookData[key as keyof TelnyxWebhookData] = value as string
+          console.log(`${key}: ${value}`)
+        }
       }
+    } catch (bodyError) {
+      console.error('Failed to parse request body:', bodyError)
+      return new Response('Invalid request body', { status: 400 })
     }
 
     // Extract call information from either format
