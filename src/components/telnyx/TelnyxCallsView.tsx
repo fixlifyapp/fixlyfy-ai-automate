@@ -14,7 +14,8 @@ interface TelnyxCall {
   direction: string;
   ai_transcript?: string;
   call_summary?: string;
-  appointment_scheduled: boolean;
+  appointment_scheduled?: boolean;
+  appointment_data?: any;
   started_at: string;
   ended_at?: string;
   call_duration?: number;
@@ -26,7 +27,20 @@ export function TelnyxCallsView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('telnyx_calls')
-        .select('*')
+        .select(`
+          id,
+          phone_number,
+          to_number,
+          call_status,
+          direction,
+          ai_transcript,
+          call_summary,
+          appointment_scheduled,
+          appointment_data,
+          started_at,
+          ended_at,
+          call_duration
+        `)
         .order('started_at', { ascending: false })
         .limit(50);
 

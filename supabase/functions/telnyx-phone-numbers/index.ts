@@ -122,6 +122,37 @@ serve(async (req) => {
       })
     }
 
+    // Add existing number (for numbers you already own)
+    else if (action === 'add_existing') {
+      if (!phone_number) {
+        throw new Error('Phone number is required')
+      }
+
+      // Add to our database as active
+      const { error: insertError } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .upsert({
+          phone_number: phone_number,
+          status: 'active',
+          country_code: country_code || 'US',
+          area_code: phone_number.slice(-10, -7), // Extract area code
+          purchased_at: new Date().toISOString()
+        })
+
+      if (insertError) {
+        console.error('Error saving to database:', insertError)
+        throw insertError
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Number added successfully',
+        phone_number: phone_number
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // List our numbers
     else if (action === 'list') {
       const { data: localNumbers } = await supabaseClient

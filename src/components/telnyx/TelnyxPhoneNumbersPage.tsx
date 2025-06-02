@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Search, Plus, Settings, CheckCircle } from 'lucide-react';
+import { Phone, Search, Plus, Settings, CheckCircle, PhoneCall } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -44,6 +43,30 @@ export function TelnyxPhoneNumbersPage() {
 
       if (error) throw error;
       return data.phone_numbers || [];
+    }
+  });
+
+  // Add existing number mutation
+  const addExistingNumberMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'add_existing',
+          phone_number: '+14375249932',
+          country_code: 'US'
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Your number +1-437-524-9932 has been added successfully!');
+      queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
+    },
+    onError: (error) => {
+      console.error('Add existing number error:', error);
+      toast.error('Failed to add existing number');
     }
   });
 
@@ -125,6 +148,32 @@ export function TelnyxPhoneNumbersPage() {
 
   return (
     <div className="space-y-6">
+      {/* Add Existing Number Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PhoneCall className="h-5 w-5" />
+            Add Your Existing Number
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div>
+              <p className="font-medium">Your Telnyx Number: +1-437-524-9932</p>
+              <p className="text-sm text-muted-foreground">
+                Add this number to your account to start using AI dispatcher
+              </p>
+            </div>
+            <Button
+              onClick={() => addExistingNumberMutation.mutate()}
+              disabled={addExistingNumberMutation.isPending}
+            >
+              {addExistingNumberMutation.isPending ? 'Adding...' : 'Add to Account'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Search Section */}
       <Card>
         <CardHeader>
@@ -259,23 +308,23 @@ export function TelnyxPhoneNumbersPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <h4 className="font-medium">1. Search & Purchase</h4>
+            <h4 className="font-medium">1. Add Your Number</h4>
             <p className="text-sm text-muted-foreground">
-              Enter an area code to search for available Telnyx phone numbers and purchase one.
+              Click "Add to Account" above to add your existing Telnyx number +1-437-524-9932.
             </p>
           </div>
           
           <div className="space-y-2">
             <h4 className="font-medium">2. Configure for AI</h4>
             <p className="text-sm text-muted-foreground">
-              After purchasing, click "Configure AI" to set up the number for incoming calls with AI dispatcher.
+              After adding, click "Configure AI" to set up the number for incoming calls with AI dispatcher.
             </p>
           </div>
           
           <div className="space-y-2">
             <h4 className="font-medium">3. Test Your Setup</h4>
             <p className="text-sm text-muted-foreground">
-              Once configured, you can call your Telnyx number to test the AI dispatcher system.
+              Once configured, you can call +1-437-524-9932 to test the AI dispatcher system.
             </p>
           </div>
         </CardContent>
