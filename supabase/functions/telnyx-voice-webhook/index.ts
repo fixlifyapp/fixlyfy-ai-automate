@@ -172,40 +172,14 @@ serve(async (req) => {
         }
       }
 
-      // Add a small delay before attempting to answer
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Wait a bit longer before attempting to answer
+      console.log('Waiting 2 seconds before answering call...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
-      // Answer the call
-      console.log('Attempting to answer call...')
-      const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          call_control_id: callControlId,
-          client_state: JSON.stringify({ 
-            ai_config: aiConfig,
-            user_id: phoneNumberData?.user_id,
-            call_record_id: callRecord?.id
-          })
-        })
-      })
-
-      const answerResult = await answerResponse.text()
-      console.log('Answer call response:', answerResponse.status, answerResult)
-
-      if (!answerResponse.ok) {
-        console.error('Error answering call:', answerResult)
-        await supabaseClient
-          .from('telnyx_calls')
-          .update({ call_status: 'failed' })
-          .eq('call_control_id', callControlId)
-        
-        // Try to play a simple greeting even if answer failed
-        console.log('Attempting fallback greeting...')
-        await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+      // Answer the call with proper error handling
+      console.log('Attempting to answer call with control ID:', callControlId)
+      try {
+        const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${telnyxApiKey}`,
@@ -213,54 +187,133 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             call_control_id: callControlId,
-            payload: `Hello! Thank you for calling ${aiConfig.company_name}. We're experiencing technical difficulties but will call you back shortly.`,
-            voice: 'female',
-            language: 'en'
+            client_state: JSON.stringify({ 
+              ai_config: aiConfig,
+              user_id: phoneNumberData?.user_id,
+              call_record_id: callRecord?.id
+            })
           })
         })
 
+        const answerResult = await answerResponse.text()
+        console.log('Answer call response status:', answerResponse.status)
+        console.log('Answer call response body:', answerResult)
+
+        if (!answerResponse.ok) {
+          console.error('Failed to answer call. Status:', answerResponse.status, 'Response:', answerResult)
+          
+          // Update call status to failed
+          await supabaseClient
+            .from('telnyx_calls')
+            .update({ call_status: 'failed' })
+            .eq('call_control_id', callControlId)
+
+          // Try to hang up the call gracefully
+          try {
+            console.log('Attempting to hang up call due to answer failure...')
+            await fetch('https://api.telnyx.com/v2/calls/actions/hangup', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${telnyxApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                call_control_id: callControlId,
+                hangup_cause: 'CALL_REJECTED'
+              })
+            })
+          } catch (hangupError) {
+            console.error('Error hanging up call:', hangupError)
+          }
+
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Failed to answer call',
+            details: answerResult
+          }), {
+            headers: { 
+              ...corsHeaders,
+              'Content-Type': 'application/json' 
+            },
+            status: 500
+          })
+        }
+
+        console.log('Call answered successfully!')
+        
+        // Update call status to answered
+        await supabaseClient
+          .from('telnyx_calls')
+          .update({ call_status: 'answered' })
+          .eq('call_control_id', callControlId)
+
+      } catch (answerError) {
+        console.error('Exception while answering call:', answerError)
+        
+        // Update call status to failed
+        await supabaseClient
+          .from('telnyx_calls')
+          .update({ call_status: 'failed' })
+          .eq('call_control_id', callControlId)
+
         return new Response(JSON.stringify({ 
           success: false, 
-          message: 'Call answered with fallback greeting' 
+          error: 'Exception while answering call',
+          details: answerError.message
         }), {
           headers: { 
             ...corsHeaders,
             'Content-Type': 'application/json' 
-          }
+          },
+          status: 500
         })
       }
-
-      console.log('Call answered successfully!')
     }
 
-    // When call is answered, start streaming to OpenAI
+    // When call is answered, start AI conversation
     else if (event_type === 'call.answered') {
       console.log('Call connected, starting AI conversation...')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
 
-      // Update call status
+      // Update call status to connected
       await supabaseClient
         .from('telnyx_calls')
-        .update({ call_status: 'answered' })
+        .update({ call_status: 'connected' })
         .eq('call_control_id', callControlId)
 
-      // Play a simple greeting for now
+      // Wait a moment before speaking
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // Play AI greeting
       console.log('Playing AI greeting...')
-      await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          call_control_id: callControlId,
-          payload: `Hello! My name is ${aiConfig.agent_name || 'AI Assistant'} from ${aiConfig.company_name || 'our company'}. How can I help you today?`,
-          voice: 'female',
-          language: 'en'
+      try {
+        const speakResponse = await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${telnyxApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            call_control_id: callControlId,
+            payload: `Hello! My name is ${aiConfig.agent_name || 'AI Assistant'} from ${aiConfig.company_name || 'our company'}. How can I help you today?`,
+            voice: 'female',
+            language: 'en'
+          })
         })
-      })
+
+        const speakResult = await speakResponse.text()
+        console.log('Speak response status:', speakResponse.status)
+        console.log('Speak response body:', speakResult)
+
+        if (!speakResponse.ok) {
+          console.error('Failed to play greeting:', speakResult)
+        }
+
+      } catch (speakError) {
+        console.error('Exception while playing greeting:', speakError)
+      }
     }
 
     // Handle call hangup/completion
@@ -293,7 +346,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: `Processed ${event_type} event` 
+      message: `Processed ${event_type} event successfully` 
     }), {
       headers: { 
         ...corsHeaders,
