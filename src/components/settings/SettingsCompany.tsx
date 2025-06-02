@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Building, Mail, MapPin, Clock } from "lucide-react";
-import { CompanyEmailSettings } from "./CompanyEmailSettings";
+import { EmailConfiguration } from "./EmailConfiguration";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
 
 export const SettingsCompany = () => {
@@ -61,6 +60,28 @@ export const SettingsCompany = () => {
                 onChange={(e) => handleInputChange('business_type', e.target.value)}
               />
             </div>
+            
+            {/* Custom Email Domain Section */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="custom-domain-name">Email Domain Name</Label>
+              <div className="flex gap-2 items-center">
+                <Input 
+                  id="custom-domain-name" 
+                  value={settings.custom_domain_name || ''}
+                  onChange={(e) => {
+                    const cleanValue = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                    handleInputChange('custom_domain_name', cleanValue);
+                  }}
+                  placeholder="yourcompany"
+                  className="max-w-xs"
+                />
+                <span className="text-muted-foreground">@fixlyfy.app</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This will be your FROM address when sending emails (e.g., yourcompany@fixlyfy.app)
+              </p>
+            </div>
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="company-address">Address</Label>
               <Input 
@@ -195,7 +216,7 @@ export const SettingsCompany = () => {
       </TabsContent>
 
       <TabsContent value="email">
-        <CompanyEmailSettings />
+        <EmailConfiguration />
       </TabsContent>
 
       <TabsContent value="locations">

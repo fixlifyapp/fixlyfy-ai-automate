@@ -907,6 +907,7 @@ export type Database = {
           company_zip: string | null
           created_at: string
           custom_domain: string | null
+          custom_domain_name: string | null
           domain_verification_status: string | null
           email_from_address: string | null
           email_from_name: string | null
@@ -937,6 +938,7 @@ export type Database = {
           company_zip?: string | null
           created_at?: string
           custom_domain?: string | null
+          custom_domain_name?: string | null
           domain_verification_status?: string | null
           email_from_address?: string | null
           email_from_name?: string | null
@@ -967,6 +969,7 @@ export type Database = {
           company_zip?: string | null
           created_at?: string
           custom_domain?: string | null
+          custom_domain_name?: string | null
           domain_verification_status?: string | null
           email_from_address?: string | null
           email_from_name?: string | null

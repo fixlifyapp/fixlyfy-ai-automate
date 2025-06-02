@@ -9,12 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Send, CheckCircle, AlertCircle, Globe, Info, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useCompanyEmailSettings } from '@/hooks/useCompanyEmailSettings';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 export const MailgunTestPanel = () => {
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
-  const { settings } = useCompanyEmailSettings();
+  const { settings } = useCompanySettings();
   
   const [formData, setFormData] = useState({
     to: '',
@@ -55,52 +55,35 @@ export const MailgunTestPanel = () => {
     }
   };
 
-  const isCustomDomainVerified = settings.domain_verification_status === 'verified';
-  const hasCustomDomain = Boolean(settings.custom_domain);
+  const getEmailAddress = () => {
+    if (settings.custom_domain_name) {
+      return `${settings.custom_domain_name}@fixlyfy.app`;
+    }
+    return 'support@fixlyfy.app';
+  };
 
   return (
     <div className="space-y-4">
-      {/* Domain Status Info */}
+      {/* Email Configuration Status */}
       <div className="p-4 border rounded-lg">
         <div className="flex items-start gap-3">
-          <Globe className="h-5 w-5 mt-0.5 text-blue-600" />
+          <Globe className="h-5 w-5 mt-0.5 text-green-600" />
           <div className="flex-1">
-            <h4 className="font-medium">Email Domain Status</h4>
-            {!hasCustomDomain ? (
-              <div className="mt-2">
-                <p className="text-sm text-muted-foreground mb-2">
-                  No custom domain configured. Currently using Mailgun sandbox.
-                </p>
-                <Badge variant="secondary">Sandbox Mode</Badge>
-                <p className="text-xs text-amber-600 mt-1">
-                  Sandbox mode only allows sending to authorized recipients
-                </p>
+            <h4 className="font-medium">Email Configuration Status</h4>
+            <div className="mt-2">
+              <p className="text-sm text-muted-foreground mb-2">
+                Using verified domain: <strong>fixlyfy.app</strong>
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Your email address: <strong>{getEmailAddress()}</strong>
+              </p>
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="bg-green-100 text-green-800">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Ready to Send
+                </Badge>
               </div>
-            ) : (
-              <div className="mt-2">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Domain: <strong>{settings.custom_domain}@fixlyfy.app</strong>
-                </p>
-                <div className="flex items-center gap-2">
-                  {isCustomDomainVerified ? (
-                    <Badge variant="default" className="bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Verified & Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      Pending Verification
-                    </Badge>
-                  )}
-                </div>
-                {!isCustomDomainVerified && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    Complete domain verification in the settings above to send to any email address
-                  </p>
-                )}
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -117,10 +100,7 @@ export const MailgunTestPanel = () => {
             type="email"
           />
           <p className="text-xs text-muted-foreground">
-            {isCustomDomainVerified 
-              ? 'Enter any valid email address' 
-              : 'Enter only authorized recipient emails (limited in sandbox/unverified mode)'
-            }
+            Enter any valid email address to test the system
           </p>
         </div>
         
@@ -174,22 +154,6 @@ export const MailgunTestPanel = () => {
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
                 {testResult.error}
               </div>
-              {testResult.error.includes('sandbox') && (
-                <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded">
-                  <p className="font-medium mb-2">Sandbox Limitations:</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Add your custom domain in the settings above</li>
-                    <li>Complete DNS verification</li>
-                    <li>Or add authorized recipients in your Mailgun dashboard</li>
-                  </ol>
-                  <Button variant="outline" size="sm" className="mt-2" asChild>
-                    <a href="https://app.mailgun.com" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Open Mailgun Dashboard
-                    </a>
-                  </Button>
-                </div>
-              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -209,12 +173,10 @@ export const MailgunTestPanel = () => {
                 <div className="md:col-span-2">
                   <span className="font-medium">Domain:</span> 
                   <code className="bg-gray-100 px-1 rounded text-xs ml-1">{testResult.domain}</code>
-                  {testResult.isCustomDomain && (
-                    <Badge variant="default" className="ml-2">
-                      <Globe className="h-3 w-3 mr-1" />
-                      Custom Domain
-                    </Badge>
-                  )}
+                  <Badge variant="default" className="ml-2">
+                    <Globe className="h-3 w-3 mr-1" />
+                    Verified Domain
+                  </Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Status:</span>

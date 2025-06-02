@@ -57,7 +57,7 @@ serve(async (req) => {
 
     console.log('Sending email request:', { to, subject, from });
 
-    // Get company settings to determine email configuration
+    // Get company settings to determine custom domain name
     const { data: companySettings, error: settingsError } = await supabaseClient
       .from('company_settings')
       .select('*')
@@ -69,19 +69,19 @@ serve(async (req) => {
     }
 
     let fromEmail = from;
-    let mailgunDomain = 'sandbox79a9a7a7640e4819b2c0a73e5e68e825.mailgun.org'; // Default sandbox
+    const mailgunDomain = 'fixlyfy.app'; // Use the main verified domain
     
-    // Use verified custom domain if available
-    if (companySettings && companySettings.domain_verification_status === 'verified' && companySettings.mailgun_domain) {
-      mailgunDomain = companySettings.mailgun_domain;
-      const fromName = companySettings.email_from_name || 'Support Team';
-      const fromAddress = companySettings.email_from_address || `noreply@${mailgunDomain}`;
-      fromEmail = `${fromName} <${fromAddress}>`;
-      console.log('Using verified custom domain:', mailgunDomain);
+    // Generate dynamic FROM address based on company's custom domain name
+    if (companySettings && companySettings.custom_domain_name) {
+      const fromName = companySettings.email_from_name || companySettings.company_name || 'Support Team';
+      const customDomainName = companySettings.custom_domain_name;
+      fromEmail = `${fromName} <${customDomainName}@fixlyfy.app>`;
+      console.log('Using custom domain name:', customDomainName);
     } else {
-      // Use sandbox domain for testing
-      fromEmail = from || "Mailgun Sandbox <postmaster@sandbox79a9a7a7640e4819b2c0a73e5e68e825.mailgun.org>";
-      console.log('Using sandbox domain for testing');
+      // Fallback to default support email
+      const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team';
+      fromEmail = `${fromName} <support@fixlyfy.app>`;
+      console.log('Using default support domain');
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
@@ -94,7 +94,7 @@ serve(async (req) => {
     console.log(`From: ${fromEmail}`);
     console.log(`To: ${to}`);
 
-    // Send email via Mailgun
+    // Send email via Mailgun using the main domain
     const formData = new FormData();
     formData.append('from', fromEmail);
     formData.append('to', to);
@@ -166,7 +166,7 @@ serve(async (req) => {
         messageId: mailgunResult.id,
         from: fromEmail,
         domain: mailgunDomain,
-        isCustomDomain: companySettings?.domain_verification_status === 'verified'
+        customDomainName: companySettings?.custom_domain_name || null
       }),
       {
         headers: {
