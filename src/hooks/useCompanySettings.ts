@@ -31,6 +31,7 @@ export interface CompanySettings {
   business_hours: BusinessHours;
   // Email settings
   custom_domain?: string;
+  custom_domain_name?: string;
   mailgun_domain?: string;
   email_from_name?: string;
   email_from_address?: string;
