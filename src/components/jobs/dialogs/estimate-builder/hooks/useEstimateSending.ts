@@ -85,7 +85,6 @@ export const useEstimateSending = () => {
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
     console.log("Estimate number:", estimateNumber);
-    console.log("Client info:", contactInfo);
 
     const validationErrorMsg = validateRecipient(sendMethod, sendTo);
     if (validationErrorMsg) {
@@ -108,11 +107,25 @@ export const useEstimateSending = () => {
 
       console.log("Step 2: Estimate saved successfully");
       
-      if (!estimateDetails) {
-        console.error("No estimate details found");
-        toast.error("Estimate not found. Please save the estimate first and try again.");
-        return { success: false, error: "Estimate not found" };
+      // Wait a moment for the estimate to be fully saved
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Get the latest estimate details after saving
+      const { data: savedEstimate, error: fetchError } = await supabase
+        .from('estimates')
+        .select('id, estimate_number, total, status, notes, job_id')
+        .eq('estimate_number', estimateNumber)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError || !savedEstimate) {
+        console.error("Failed to fetch saved estimate:", fetchError);
+        toast.error("Estimate not found after saving. Please try again.");
+        return { success: false, error: "Estimate not found after saving" };
       }
+
+      console.log("Step 3: Retrieved saved estimate:", savedEstimate);
 
       let finalRecipient = sendTo;
       if (sendMethod === "sms") {
@@ -131,13 +144,13 @@ export const useEstimateSending = () => {
       const { data: commData, error: commError } = await supabase
         .from('estimate_communications')
         .insert({
-          estimate_id: estimateDetails.estimate_id,
+          estimate_id: savedEstimate.id,
           communication_type: sendMethod,
           recipient: finalRecipient,
           subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
           content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateDetails.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`
-            : `Please find your estimate ${estimateNumber} attached. Total: $${estimateDetails.total.toFixed(2)}.`,
+            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`
+            : `Please find your estimate ${estimateNumber} attached. Total: $${savedEstimate.total.toFixed(2)}.`,
           status: 'pending',
           estimate_number: estimateNumber,
           client_name: contactInfo.name,
@@ -158,14 +171,14 @@ export const useEstimateSending = () => {
       if (sendMethod === 'sms') {
         // Send SMS via Telnyx
         console.log("Step 6: Sending SMS via Telnyx...");
-        const smsContent = `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${estimateDetails.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`;
+        const smsContent = `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`;
         
         const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
           body: {
             to: finalRecipient,
             body: smsContent,
-            client_id: estimateDetails.client_id,
-            job_id: jobId || estimateDetails.job_id
+            client_id: estimateDetails?.client_id,
+            job_id: jobId || savedEstimate.job_id
           }
         });
 
@@ -199,25 +212,6 @@ export const useEstimateSending = () => {
         // Send Email
         console.log("Step 6: Sending email...");
         
-        // Generate client portal login token
-        let portalLoginLink = '';
-        if (contactInfo.email) {
-          try {
-            const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
-              p_email: contactInfo.email
-            });
-
-            if (!tokenError && tokenData) {
-              portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
-              console.log("Portal login link generated");
-            } else {
-              console.warn("Failed to generate portal login token:", tokenError);
-            }
-          } catch (error) {
-            console.error('Error generating portal login token:', error);
-          }
-        }
-
         const estimateData = {
           lineItems: lineItems.map(item => ({
             description: item.description,
@@ -226,21 +220,18 @@ export const useEstimateSending = () => {
             taxable: item.taxable,
             total: item.quantity * Number(item.unit_price)
           })),
-          total: estimateDetails.total,
+          total: savedEstimate.total,
           taxRate: 13,
-          notes: customNote || estimateDetails.notes,
-          viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`,
-          portalLoginLink: portalLoginLink
+          notes: customNote || savedEstimate.notes,
+          viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`
         };
 
         const { data: emailData, error: emailError } = await supabase.functions.invoke('send-estimate', {
           body: {
-            method: sendMethod,
-            recipient: finalRecipient,
-            estimateNumber: estimateNumber,
-            estimateData: estimateData,
-            clientName: contactInfo.name,
-            communicationId: commData.id
+            estimateId: savedEstimate.id,
+            recipientEmail: finalRecipient,
+            subject: `Estimate ${estimateNumber}`,
+            message: `Please find your estimate ${estimateNumber} attached. Total: $${savedEstimate.total.toFixed(2)}.`
           }
         });
         
@@ -259,32 +250,27 @@ export const useEstimateSending = () => {
         }
 
         console.log("Email sent successfully:", emailData);
+        
+        // Update communication record
+        await supabase
+          .from('estimate_communications')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            provider_message_id: emailData.messageId
+          })
+          .eq('id', commData.id);
       }
 
       const method = sendMethod === "email" ? "email" : "text message";
       toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
       console.log("SUCCESS: Estimate sent successfully");
       
-      if (estimateDetails.client_id) {
-        await supabase
-          .from('client_notifications')
-          .insert({
-            client_id: estimateDetails.client_id,
-            type: 'estimate_sent',
-            title: 'New Estimate Available',
-            message: `Estimate ${estimateNumber} has been sent to you. Total: $${estimateDetails.total.toFixed(2)}`,
-            data: { 
-              estimate_id: estimateDetails.estimate_id, 
-              estimate_number: estimateNumber
-            }
-          });
-      }
-
       // Update estimate status to 'sent'
       await supabase
         .from('estimates')
         .update({ status: 'sent' })
-        .eq('id', estimateDetails.estimate_id);
+        .eq('id', savedEstimate.id);
       
       return { success: true };
         

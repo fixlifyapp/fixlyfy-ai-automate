@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -130,6 +131,7 @@ export const EstimateSendDialog = ({
       console.log("Dialog closing, clearing data");
       setSendTo("");
       setValidationError("");
+      setCurrentStep("warranty");
     }
     onOpenChange(newOpen);
   };
@@ -187,7 +189,7 @@ export const EstimateSendDialog = ({
   };
   
   const handleCloseAfterSend = () => {
-    onOpenChange(false);
+    handleOpenChange(false);
     const currentPath = window.location.pathname;
     if (currentPath.includes('/jobs/')) {
       const jobId = currentPath.split('/').pop();

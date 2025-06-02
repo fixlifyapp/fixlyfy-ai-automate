@@ -88,16 +88,12 @@ serve(async (req) => {
               <h3 style="margin: 0 0 10px 0;">Estimate #${estimate.estimate_number}</h3>
               <p><strong>Job:</strong> ${estimate.jobs?.title || 'Service Request'}</p>
               <p><strong>Total Amount:</strong> $${estimate.total}</p>
-              <p><strong>Valid Until:</strong> ${estimate.valid_until ? new Date(estimate.valid_until).toLocaleDateString() : 'N/A'}</p>
             </div>
             
             ${message ? `<p><strong>Message:</strong><br>${message}</p>` : ''}
             
             <p>If you have any questions, please don't hesitate to contact us.</p>
             <p>Best regards,<br>${companyName}</p>
-            
-            <!-- Tracking pixel -->
-            <img src="${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?type=estimate&id=${estimateId}" width="1" height="1" style="display:none;" />
           </div>
         </body>
       </html>
@@ -123,23 +119,9 @@ serve(async (req) => {
     await supabaseClient
       .from('estimates')
       .update({ 
-        status: 'sent',
-        sent_at: new Date().toISOString()
+        status: 'sent'
       })
       .eq('id', estimateId);
-
-    // Log the communication
-    await supabaseClient
-      .from('estimate_communications')
-      .insert({
-        estimate_id: estimateId,
-        communication_type: 'email',
-        recipient: recipientEmail,
-        subject: emailSubject,
-        content: message || '',
-        status: 'sent',
-        tracking_id: emailResult.messageId
-      });
 
     return new Response(
       JSON.stringify({ 
@@ -157,7 +139,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to send estimate' }),
       {
-        status: 500,
+      status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
