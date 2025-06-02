@@ -26,6 +26,18 @@ interface SendMethodStepProps {
   onBack: () => void;
 }
 
+// Helper functions for validation
+const isValidEmail = (email: string): boolean => {
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const isValidPhoneNumber = (phone: string): boolean => {
+  if (!phone) return false;
+  const cleaned = phone.replace(/\D/g, '');
+  return cleaned.length >= 10;
+};
+
 export const SendMethodStep = ({
   sendMethod,
   setSendMethod,
@@ -41,6 +53,11 @@ export const SendMethodStep = ({
   onSend,
   onBack
 }: SendMethodStepProps) => {
+  // Check if manual input is valid
+  const isManualEmailValid = sendMethod === "email" && isValidEmail(sendTo);
+  const isManualPhoneValid = sendMethod === "sms" && isValidPhoneNumber(sendTo);
+  const canSend = isManualEmailValid || isManualPhoneValid;
+
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground mb-4">
@@ -51,7 +68,7 @@ export const SendMethodStep = ({
         <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
           sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
         }`}>
-          <RadioGroupItem value="email" id="email" className="mt-1" disabled={!hasValidEmail} />
+          <RadioGroupItem value="email" id="email" className="mt-1" />
           <div className="flex-1">
             <Label htmlFor="email" className="flex items-center gap-2 font-medium cursor-pointer">
               <Mail size={16} />
@@ -69,7 +86,7 @@ export const SendMethodStep = ({
         <div className={`flex items-start space-x-3 border rounded-md p-3 hover:bg-muted/50 cursor-pointer ${
           sendMethod === "sms" ? "border-primary bg-primary/5" : "border-input"
         }`}>
-          <RadioGroupItem value="sms" id="sms" className="mt-1" disabled={!hasValidPhone} />
+          <RadioGroupItem value="sms" id="sms" className="mt-1" />
           <div className="flex-1">
             <Label htmlFor="sms" className="flex items-center gap-2 font-medium cursor-pointer">
               <MessageSquare size={16} />
@@ -107,6 +124,11 @@ export const SendMethodStep = ({
             Phone numbers will be automatically formatted for Telnyx delivery
           </p>
         )}
+        {!hasValidEmail && !hasValidPhone && (
+          <p className="text-xs text-blue-600 mt-1">
+            Enter the client's {sendMethod === "email" ? "email address" : "phone number"} to send the estimate
+          </p>
+        )}
       </div>
       
       <div className="pt-4 flex justify-end gap-2">
@@ -115,7 +137,7 @@ export const SendMethodStep = ({
         </Button>
         <Button 
           onClick={onSend} 
-          disabled={!sendTo || isProcessing || !!validationError}
+          disabled={!canSend || isProcessing || !!validationError}
         >
           {isProcessing ? "Sending..." : "Send Estimate"}
         </Button>
