@@ -2,23 +2,23 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Brain, Bot, Settings, Zap } from "lucide-react";
-import { UnifiedAISettings } from "@/components/settings/UnifiedAISettings";
+import { SimplifiedAISettings } from "@/components/settings/SimplifiedAISettings";
 
 const AISettingsPage = () => {
   return (
     <PageLayout>
       <PageHeader
         title="AI Settings"
-        subtitle="Comprehensive AI configuration, voice agents, and automation settings"
+        subtitle="Configure your AI dispatcher for automatic call handling and appointment scheduling"
         icon={Brain}
         badges={[
-          { text: "AI Agent", icon: Bot, variant: "fixlyfy" },
-          { text: "Voice Dispatch", icon: Zap, variant: "success" },
-          { text: "Amazon Connect", icon: Settings, variant: "info" }
+          { text: "AI Dispatcher", icon: Bot, variant: "fixlyfy" },
+          { text: "Voice AI", icon: Zap, variant: "success" },
+          { text: "Telnyx Integration", icon: Settings, variant: "info" }
         ]}
       />
       
-      <UnifiedAISettings />
+      <SimplifiedAISettings />
     </PageLayout>
   );
 };

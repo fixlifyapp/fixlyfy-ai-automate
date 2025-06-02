@@ -43,9 +43,16 @@ serve(async (req) => {
     )
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    
     if (!telnyxApiKey) {
       console.error('TELNYX_API_KEY not configured')
       throw new Error('TELNYX_API_KEY not configured')
+    }
+
+    if (!openaiApiKey) {
+      console.error('OPENAI_API_KEY not configured')
+      throw new Error('OPENAI_API_KEY not configured')
     }
 
     if (req.method !== 'POST') {
@@ -70,7 +77,7 @@ serve(async (req) => {
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
       console.log('Processing incoming call from:', payload.from, 'to:', payload.to)
 
-      // Find the phone number owner to associate the call
+      // Find the phone number owner
       const { data: phoneNumberData } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
@@ -94,16 +101,15 @@ serve(async (req) => {
           diagnostic_price: 75,
           emergency_surcharge: 50,
           agent_name: 'AI Assistant',
-          voice_id: 'alloy',
-          greeting_template: 'Hello! My name is {agent_name}. I am an AI assistant for {company_name}. How can I help you today?',
           company_name: 'our company',
           service_areas: [],
           business_hours: {},
-          service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair']
+          service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
+          custom_prompt_additions: ''
         }
       }
 
-      // Check if call record already exists (to prevent duplicates)
+      // Check if call record already exists
       const { data: existingCall } = await supabaseClient
         .from('telnyx_calls')
         .select('id')
@@ -115,7 +121,7 @@ serve(async (req) => {
         console.log('Call record already exists, skipping insert')
         callRecord = existingCall
       } else {
-        // Log call to database - only insert on first call.initiated event
+        // Log call to database
         const { data: newCallRecord, error: logError } = await supabaseClient
           .from('telnyx_calls')
           .insert({
@@ -135,15 +141,14 @@ serve(async (req) => {
 
         if (logError) {
           console.error('Error logging call to database:', logError)
-          // Continue with call handling even if logging fails
         } else {
           console.log('Call logged to database:', newCallRecord)
           callRecord = newCallRecord
         }
       }
 
-      // Answer the call
-      console.log('Attempting to answer call...')
+      // Answer the call and start streaming to OpenAI
+      console.log('Attempting to answer call and start AI conversation...')
       const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
         method: 'POST',
         headers: {
@@ -165,7 +170,6 @@ serve(async (req) => {
 
       if (!answerResponse.ok) {
         console.error('Error answering call:', answerResult)
-        // Update call status to failed
         await supabaseClient
           .from('telnyx_calls')
           .update({ call_status: 'failed' })
@@ -174,42 +178,48 @@ serve(async (req) => {
         throw new Error(`Failed to answer call: ${answerResult}`)
       }
 
-      console.log('Call answered successfully, waiting for connection...')
+      console.log('Call answered successfully, will start streaming when answered...')
     }
 
-    // When call is connected/answered, start AI interaction
+    // When call is answered, start streaming to OpenAI
     else if (event_type === 'call.answered') {
-      console.log('Call connected, starting AI interaction...')
+      console.log('Call connected, starting OpenAI streaming...')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
 
-      // Update call status in database
-      const { error: updateError } = await supabaseClient
+      // Update call status
+      await supabaseClient
         .from('telnyx_calls')
-        .update({
-          call_status: 'answered'
-        })
+        .update({ call_status: 'answered' })
         .eq('call_control_id', callControlId)
 
-      if (updateError) {
-        console.error('Error updating call status:', updateError)
-      }
+      // Build AI prompt with business context
+      const businessContext = `
+You are ${aiConfig.agent_name || 'AI Assistant'}, an AI assistant for ${aiConfig.company_name || 'our company'}.
 
-      // Generate personalized greeting
-      const currentHour = new Date().getHours()
-      const timeOfDay = currentHour < 12 ? 'morning' : currentHour < 17 ? 'afternoon' : 'evening'
-      
-      let greeting = aiConfig.greeting_template || 'Hello! My name is {agent_name}. I am an AI assistant for {company_name}. How can I help you today?'
-      greeting = greeting
-        .replace(/{agent_name}/g, aiConfig.agent_name || 'AI Assistant')
-        .replace(/{company_name}/g, aiConfig.company_name || 'our company')
-        .replace(/{time_of_day}/g, timeOfDay)
+Business Information:
+- Services: ${aiConfig.service_types?.join(', ') || 'General services'}
+- Service Areas: ${aiConfig.service_areas?.join(', ') || 'Local area'}
+- Diagnostic Fee: $${aiConfig.diagnostic_price || 75}
+- Emergency Surcharge: $${aiConfig.emergency_surcharge || 50}
 
-      console.log('Generated greeting:', greeting)
+Your role:
+1. Answer calls professionally and understand customer needs
+2. Ask about their specific problem and location
+3. Check if they're in our service area
+4. Provide pricing for diagnostic visits
+5. Schedule appointments if requested
+6. Handle emergency situations with appropriate urgency
 
-      // Speak greeting through Telnyx TTS
-      const speakResponse = await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+Custom Instructions: ${aiConfig.custom_prompt_additions || 'Provide excellent customer service.'}
+
+Be helpful, professional, and efficient. Always confirm appointment details.
+`
+
+      // Start streaming audio to OpenAI via Telnyx
+      console.log('Starting media streaming to OpenAI...')
+      const streamResponse = await fetch('https://api.telnyx.com/v2/calls/actions/streaming_start', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${telnyxApiKey}`,
@@ -217,35 +227,24 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           call_control_id: callControlId,
-          payload: greeting,
-          voice: 'female',
-          language: 'en'
+          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`,
+          stream_track: 'inbound_track',
+          client_state: JSON.stringify({
+            openai_api_key: openaiApiKey,
+            system_prompt: businessContext,
+            call_control_id: callControlId,
+            telnyx_api_key: telnyxApiKey
+          })
         })
       })
 
-      const speakResult = await speakResponse.text()
-      console.log('Speak response:', speakResponse.status, speakResult)
+      const streamResult = await streamResponse.text()
+      console.log('Streaming start response:', streamResponse.status, streamResult)
 
-      if (!speakResponse.ok) {
-        console.error('TTS error:', speakResult)
-      }
-
-      // Update transcript with greeting
-      const { error: transcriptError } = await supabaseClient
-        .from('telnyx_calls')
-        .update({
-          ai_transcript: `AI: ${greeting}`
-        })
-        .eq('call_control_id', callControlId)
-
-      if (transcriptError) {
-        console.error('Error updating transcript:', transcriptError)
-      }
-
-      // Start listening for customer response after greeting completes
-      setTimeout(async () => {
-        console.log('Starting to listen for customer input...')
-        const gatherResponse = await fetch('https://api.telnyx.com/v2/calls/actions/gather_using_audio', {
+      if (!streamResponse.ok) {
+        console.error('Error starting stream:', streamResult)
+        // Fallback to basic greeting
+        await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${telnyxApiKey}`,
@@ -253,24 +252,20 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             call_control_id: callControlId,
-            audio_url: 'silence_stream://1000',
-            minimum_digits: 0,
-            maximum_digits: 0,
-            timeout_millis: 30000,
-            inter_digit_timeout_millis: 5000
+            payload: `Hello! I'm ${aiConfig.agent_name || 'an AI assistant'} for ${aiConfig.company_name || 'our company'}. How can I help you today?`,
+            voice: 'female',
+            language: 'en'
           })
         })
-        
-        const gatherResult = await gatherResponse.text()
-        console.log('Gather response:', gatherResponse.status, gatherResult)
-      }, 5000) // Wait 5 seconds for greeting to complete
+      } else {
+        console.log('Successfully started AI conversation streaming')
+      }
     }
 
     // Handle call hangup/completion
     else if (event_type === 'call.hangup') {
       console.log('Call ended, updating status...')
       
-      // Calculate call duration if we have start and end times
       let duration = null
       if (payload.start_time && payload.end_time) {
         const startTime = new Date(payload.start_time)
@@ -278,8 +273,7 @@ serve(async (req) => {
         duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
       }
 
-      // Update status in database
-      const { error: updateError } = await supabaseClient
+      await supabaseClient
         .from('telnyx_calls')
         .update({
           call_status: 'completed',
@@ -288,16 +282,16 @@ serve(async (req) => {
         })
         .eq('call_control_id', callControlId)
 
-      if (updateError) {
-        console.error('Error updating call completion:', updateError)
-      } else {
-        console.log('Call completion recorded successfully')
-      }
+      console.log('Call completion recorded successfully')
     }
 
-    // Handle other call events
-    else if (event_type === 'call.speak.ended') {
-      console.log('TTS finished, call can continue...')
+    // Handle streaming events
+    else if (event_type === 'call.streaming.started') {
+      console.log('Audio streaming started successfully')
+    }
+
+    else if (event_type === 'call.streaming.stopped') {
+      console.log('Audio streaming stopped')
     }
 
     else {
