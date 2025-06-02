@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ export const MailgunConfig = () => {
     email_from_address: "",
     domain_verification_status: "pending"
   });
-  const [testEmail, setTestEmail] = useState("");
+  const [testEmailAddress, setTestEmailAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
@@ -108,8 +107,8 @@ export const MailgunConfig = () => {
     }
   };
 
-  const testEmail = async () => {
-    if (!testEmail) {
+  const sendTestEmail = async () => {
+    if (!testEmailAddress) {
       toast.error('Please enter an email address to test');
       return;
     }
@@ -118,7 +117,7 @@ export const MailgunConfig = () => {
     try {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
-          to: testEmail,
+          to: testEmailAddress,
           subject: 'Test Email from Fixlyfy',
           text: 'This is a test email to verify your Mailgun configuration is working correctly!',
           html: '<p>This is a test email to verify your <strong>Mailgun configuration</strong> is working correctly!</p>'
@@ -202,18 +201,18 @@ export const MailgunConfig = () => {
         </div>
 
         <div>
-          <Label htmlFor="testEmail">Test Email</Label>
+          <Label htmlFor="testEmailInput">Test Email</Label>
           <div className="flex gap-2 mt-1">
             <Input
-              id="testEmail"
-              value={testEmail}
-              onChange={(e) => setTestEmail(e.target.value)}
+              id="testEmailInput"
+              value={testEmailAddress}
+              onChange={(e) => setTestEmailAddress(e.target.value)}
               placeholder="test@example.com"
               disabled={isTesting}
             />
             <Button 
-              onClick={testEmail} 
-              disabled={isTesting || !testEmail}
+              onClick={sendTestEmail} 
+              disabled={isTesting || !testEmailAddress}
               variant="outline"
             >
               <TestTube className="w-4 h-4 mr-2" />

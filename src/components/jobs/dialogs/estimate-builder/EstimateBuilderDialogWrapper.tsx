@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { EstimateBuilderDialog } from './EstimateBuilderDialog';
+import { useJobs } from '@/hooks/useJobs';
 
 interface EstimateBuilderDialogWrapperProps {
   open: boolean;
@@ -16,6 +17,27 @@ interface EstimateBuilderDialogWrapperProps {
   onSyncToInvoice: () => void;
 }
 
-export const EstimateBuilderDialogWrapper = (props: EstimateBuilderDialogWrapperProps) => {
-  return <EstimateBuilderDialog {...props} />;
+export const EstimateBuilderDialogWrapper = ({
+  open,
+  onOpenChange,
+  estimateId,
+  jobId,
+  onSyncToInvoice
+}: EstimateBuilderDialogWrapperProps) => {
+  const { jobs } = useJobs();
+  const job = jobs.find(j => j.id === jobId);
+  
+  if (!job) {
+    return null;
+  }
+
+  return (
+    <EstimateBuilderDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      job={job}
+      estimateId={estimateId || undefined}
+      onSuccess={() => onOpenChange(false)}
+    />
+  );
 };

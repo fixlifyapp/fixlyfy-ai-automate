@@ -17,7 +17,7 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
   const { jobs } = useJobs();
   
   const job = jobs.find(j => j.id === jobId);
-  const { estimates, isLoading, convertEstimateToInvoice } = useEstimates();
+  const { estimates, isLoading, convertEstimateToInvoice } = useEstimates(jobId);
 
   const jobEstimates = estimates ? estimates.filter(estimate => estimate.job_id === jobId) : [];
 

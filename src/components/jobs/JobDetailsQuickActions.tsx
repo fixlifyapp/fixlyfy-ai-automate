@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -88,6 +87,10 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       description: 'User opened job scheduling interface',
       meta: { action: 'schedule_job_initiated' }
     });
+  };
+
+  const handleEstimateCreated = () => {
+    setIsEstimateDialogOpen(false);
   };
 
   if (isLoading) {
@@ -236,8 +239,8 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       <EstimateBuilderDialog
         open={isEstimateDialogOpen}
         onOpenChange={setIsEstimateDialogOpen}
-        jobId={jobId}
-        clientInfo={job?.client}
+        job={job}
+        onSuccess={handleEstimateCreated}
       />
 
       <InvoiceBuilderDialog
