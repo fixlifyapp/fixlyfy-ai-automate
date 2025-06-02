@@ -23,7 +23,7 @@ export const TelnyxSettings = () => {
     voice_enabled: true,
     sms_enabled: true,
     ai_assistant_enabled: true,
-    greeting_message: 'Привет! Меня зовут AI ассистент. Как дела?',
+    greeting_message: 'Hello! My name is AI Assistant. How can I help you today?',
     business_hours: {},
     emergency_detection: true
   });
@@ -32,11 +32,11 @@ export const TelnyxSettings = () => {
   const saveConfig = async () => {
     setSaving(true);
     try {
-      // Здесь будет сохранение в базу
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Симуляция
-      toast.success('Настройки Telnyx сохранены!');
+      // Here will be saving to database
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation
+      toast.success('Telnyx settings saved!');
     } catch (error) {
-      toast.error('Ошибка сохранения настроек');
+      toast.error('Error saving settings');
     } finally {
       setSaving(false);
     }
@@ -46,23 +46,23 @@ export const TelnyxSettings = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Настройки Telnyx</h2>
+          <h2 className="text-2xl font-bold">Telnyx Settings</h2>
           <p className="text-muted-foreground">
-            Простая настройка AI помощника для звонков и SMS
+            Simple AI assistant setup for calls and SMS
           </p>
         </div>
         <Badge variant="fixlyfy" className="flex items-center gap-1">
           <CheckCircle size={14} />
-          Telnyx Подключен
+          Telnyx Connected
         </Badge>
       </div>
 
-      {/* Основные настройки */}
+      {/* Main Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Основные функции
+            Core Features
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -70,10 +70,10 @@ export const TelnyxSettings = () => {
             <div className="space-y-1">
               <Label className="flex items-center gap-2">
                 <Phone size={16} />
-                Голосовые звонки
+                Voice Calls
               </Label>
               <p className="text-sm text-muted-foreground">
-                AI отвечает на входящие звонки
+                AI answers incoming calls
               </p>
             </div>
             <Switch
@@ -88,10 +88,10 @@ export const TelnyxSettings = () => {
             <div className="space-y-1">
               <Label className="flex items-center gap-2">
                 <MessageSquare size={16} />
-                SMS сообщения
+                SMS Messages
               </Label>
               <p className="text-sm text-muted-foreground">
-                Прием и отправка SMS через AI
+                Receive and send SMS through AI
               </p>
             </div>
             <Switch
@@ -106,10 +106,10 @@ export const TelnyxSettings = () => {
             <div className="space-y-1">
               <Label className="flex items-center gap-2">
                 <Zap size={16} />
-                Детекция экстренных случаев
+                Emergency Detection
               </Label>
               <p className="text-sm text-muted-foreground">
-                AI определяет срочные заявки автоматически
+                AI automatically identifies urgent requests
               </p>
             </div>
             <Switch
@@ -122,56 +122,56 @@ export const TelnyxSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Настройка приветствия */}
+      {/* Greeting Setup */}
       <Card>
         <CardHeader>
-          <CardTitle>Приветствие AI помощника</CardTitle>
+          <CardTitle>AI Assistant Greeting</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="greeting">Текст приветствия</Label>
+            <Label htmlFor="greeting">Greeting Text</Label>
             <Input
               id="greeting"
               value={config.greeting_message}
               onChange={(e) => 
                 setConfig(prev => ({ ...prev, greeting_message: e.target.value }))
               }
-              placeholder="Введите приветствие для клиентов"
+              placeholder="Enter greeting for customers"
             />
             <p className="text-xs text-muted-foreground">
-              Доступные переменные: {'{agent_name}'}, {'{company_name}'}, {'{time_of_day}'}
+              Available variables: {'{agent_name}'}, {'{company_name}'}, {'{time_of_day}'}
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Преимущества Telnyx */}
+      {/* Telnyx Benefits */}
       <Card>
         <CardHeader>
-          <CardTitle>Почему Telnyx лучше Amazon Connect?</CardTitle>
+          <CardTitle>Why Telnyx is Better Than Amazon Connect?</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
-              <h4 className="font-medium text-green-600">✅ Telnyx (простота)</h4>
+              <h4 className="font-medium text-green-600">✅ Telnyx (Simplicity)</h4>
               <ul className="space-y-1 text-sm">
-                <li>• Один API ключ</li>
-                <li>• Простые WebHook'и</li>
-                <li>• Покупка номеров через API</li>
-                <li>• Встроенная поддержка SMS</li>
-                <li>• Качественное аудио</li>
-                <li>• Никаких Instance ID</li>
+                <li>• Single API key</li>
+                <li>• Simple webhooks</li>
+                <li>• Number purchase via API</li>
+                <li>• Built-in SMS support</li>
+                <li>• High-quality audio</li>
+                <li>• No Instance IDs</li>
               </ul>
             </div>
             <div className="space-y-3">
-              <h4 className="font-medium text-red-600">❌ Amazon Connect (сложность)</h4>
+              <h4 className="font-medium text-red-600">❌ Amazon Connect (Complexity)</h4>
               <ul className="space-y-1 text-sm">
-              <li>• Множество настроек IAM</li>
-                <li>• Сложные Contact Flow</li>
-                <li>• Lambda функции</li>
-                <li>• Media Streaming настройка</li>
-                <li>• Instance управление</li>
-                <li>• ARN и ID везде</li>
+                <li>• Multiple IAM settings</li>
+                <li>• Complex Contact Flows</li>
+                <li>• Lambda functions</li>
+                <li>• Media Streaming setup</li>
+                <li>• Instance management</li>
+                <li>• ARNs and IDs everywhere</li>
               </ul>
             </div>
           </div>
@@ -180,7 +180,7 @@ export const TelnyxSettings = () => {
 
       <div className="flex justify-end">
         <Button onClick={saveConfig} disabled={saving}>
-          {saving ? 'Сохраняем...' : 'Сохранить настройки'}
+          {saving ? 'Saving...' : 'Save Settings'}
         </Button>
       </div>
     </div>
