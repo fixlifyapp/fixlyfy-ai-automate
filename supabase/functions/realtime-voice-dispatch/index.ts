@@ -3,19 +3,117 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 import { getBusinessConfig } from '../telnyx-voice-webhook/utils/businessConfig.ts'
 
-interface WebSocketMessage {
+interface TelnyxStreamMessage {
+  event: string;
+  sequence_number: number;
+  media?: {
+    track: string;
+    chunk: number;
+    timestamp: string;
+    payload: string;
+  };
+  start?: {
+    streamSid: string;
+    accountSid: string;
+    callSid: string;
+    tracks: string[];
+    mediaFormat: {
+      encoding: string;
+      sampleRate: number;
+      channels: number;
+    };
+  };
+  stop?: {
+    streamSid: string;
+    accountSid: string;
+    callSid: string;
+  };
+}
+
+interface OpenAIRealtimeMessage {
   type: string;
   audio?: string;
   text?: string;
-  callSid?: string;
-  from?: string;
-  to?: string;
   [key: string]: any;
 }
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Convert Telnyx audio (mulaw) to PCM16 for OpenAI
+const convertMulawToPCM16 = (mulawData: Uint8Array): Uint8Array => {
+  const mulawToLinear = [
+    -32124, -31100, -30076, -29052, -28028, -27004, -25980, -24956,
+    -23932, -22908, -21884, -20860, -19836, -18812, -17788, -16764,
+    -15996, -15484, -14972, -14460, -13948, -13436, -12924, -12412,
+    -11900, -11388, -10876, -10364, -9852, -9340, -8828, -8316,
+    -7932, -7676, -7420, -7164, -6908, -6652, -6396, -6140,
+    -5884, -5628, -5372, -5116, -4860, -4604, -4348, -4092,
+    -3900, -3772, -3644, -3516, -3388, -3260, -3132, -3004,
+    -2876, -2748, -2620, -2492, -2364, -2236, -2108, -1980,
+    -1884, -1820, -1756, -1692, -1628, -1564, -1500, -1436,
+    -1372, -1308, -1244, -1180, -1116, -1052, -988, -924,
+    -876, -844, -812, -780, -748, -716, -684, -652,
+    -620, -588, -556, -524, -492, -460, -428, -396,
+    -372, -356, -340, -324, -308, -292, -276, -260,
+    -244, -228, -212, -196, -180, -164, -148, -132,
+    -120, -112, -104, -96, -88, -80, -72, -64,
+    -56, -48, -40, -32, -24, -16, -8, 0,
+    32124, 31100, 30076, 29052, 28028, 27004, 25980, 24956,
+    23932, 22908, 21884, 20860, 19836, 18812, 17788, 16764,
+    15996, 15484, 14972, 14460, 13948, 13436, 12924, 12412,
+    11900, 11388, 10876, 10364, 9852, 9340, 8828, 8316,
+    7932, 7676, 7420, 7164, 6908, 6652, 6396, 6140,
+    5884, 5628, 5372, 5116, 4860, 4604, 4348, 4092,
+    3900, 3772, 3644, 3516, 3388, 3260, 3132, 3004,
+    2876, 2748, 2620, 2492, 2364, 2236, 2108, 1980,
+    1884, 1820, 1756, 1692, 1628, 1564, 1500, 1436,
+    1372, 1308, 1244, 1180, 1116, 1052, 988, 924,
+    876, 844, 812, 780, 748, 716, 684, 652,
+    620, 588, 556, 524, 492, 460, 428, 396,
+    372, 356, 340, 324, 308, 292, 276, 260,
+    244, 228, 212, 196, 180, 164, 148, 132,
+    120, 112, 104, 96, 88, 80, 72, 64,
+    56, 48, 40, 32, 24, 16, 8, 0
+  ];
+
+  const pcm16Data = new Int16Array(mulawData.length);
+  for (let i = 0; i < mulawData.length; i++) {
+    pcm16Data[i] = mulawToLinear[mulawData[i]];
+  }
+  
+  return new Uint8Array(pcm16Data.buffer);
+};
+
+// Convert base64 audio to proper encoding
+const encodeAudioForOpenAI = (base64Audio: string): string => {
+  try {
+    // Decode base64 to get mulaw data
+    const binaryString = atob(base64Audio);
+    const mulawData = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      mulawData[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Convert mulaw to PCM16
+    const pcm16Data = convertMulawToPCM16(mulawData);
+    
+    // Encode PCM16 back to base64
+    let binary = '';
+    const chunkSize = 0x8000;
+    
+    for (let i = 0; i < pcm16Data.length; i += chunkSize) {
+      const chunk = pcm16Data.subarray(i, Math.min(i + chunkSize, pcm16Data.length));
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    return btoa(binary);
+  } catch (error) {
+    console.error('Error encoding audio:', error);
+    return base64Audio; // Return original if conversion fails
+  }
 };
 
 serve(async (req) => {
@@ -26,13 +124,13 @@ serve(async (req) => {
     return new Response("Expected WebSocket connection", { status: 400 });
   }
 
-  console.log('=== WebSocket Connection Request ===');
+  console.log('=== Telnyx Audio Stream WebSocket Connection ===');
   
   const { socket, response } = Deno.upgradeWebSocket(req);
   
   let openAISocket: WebSocket | null = null;
   let sessionConfigured = false;
-  let callSid: string | null = null;
+  let callControlId: string | null = null;
   let businessConfig: any = null;
 
   const supabaseClient = createClient(
@@ -56,7 +154,7 @@ serve(async (req) => {
   }
 
   socket.onopen = async () => {
-    console.log('=== Client WebSocket Connected ===');
+    console.log('=== Telnyx Audio Stream Connected ===');
     
     try {
       // Connect to OpenAI Realtime API
@@ -73,7 +171,6 @@ serve(async (req) => {
 
       openAISocket.onopen = () => {
         console.log('=== Connected to OpenAI Realtime API ===');
-        socket.send(JSON.stringify({ type: 'connection_established' }));
       };
 
       openAISocket.onmessage = async (event) => {
@@ -116,14 +213,11 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
             const sessionUpdate = {
               type: 'session.update',
               session: {
-                modalities: ['text', 'audio'],
+                modalities: ['audio'],
                 instructions: systemPrompt,
                 voice: 'alloy',
                 input_audio_format: 'pcm16',
                 output_audio_format: 'pcm16',
-                input_audio_transcription: {
-                  model: 'whisper-1'
-                },
                 turn_detection: {
                   type: 'server_vad',
                   threshold: 0.5,
@@ -159,6 +253,18 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
             console.log('Session configured with business data');
           }
 
+          // Handle audio output from OpenAI
+          if (data.type === 'response.audio.delta') {
+            // Send audio back to Telnyx
+            const audioMessage = {
+              event: 'media',
+              media: {
+                payload: data.delta
+              }
+            };
+            socket.send(JSON.stringify(audioMessage));
+          }
+
           // Handle function calls
           if (data.type === 'response.function_call_arguments.done') {
             console.log('=== Function Call ===', data);
@@ -168,7 +274,7 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
                 console.log('Scheduling appointment:', args);
                 
                 // Log appointment data to database
-                if (callSid) {
+                if (callControlId) {
                   await supabaseClient
                     .from('telnyx_calls')
                     .update({
@@ -179,7 +285,7 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
                         scheduled_via: 'realtime_api'
                       }
                     })
-                    .eq('call_control_id', callSid);
+                    .eq('call_control_id', callControlId);
                 }
 
                 // Send function result back to OpenAI
@@ -202,14 +308,6 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
             }
           }
 
-          // Forward relevant events to client
-          if (data.type.startsWith('response.audio') || 
-              data.type.startsWith('conversation.item') ||
-              data.type === 'response.done' ||
-              data.type === 'error') {
-            socket.send(JSON.stringify(data));
-          }
-
         } catch (error) {
           console.error('Error processing OpenAI message:', error);
         }
@@ -217,7 +315,6 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
 
       openAISocket.onerror = (error) => {
         console.error('OpenAI WebSocket error:', error);
-        socket.send(JSON.stringify({ type: 'error', message: 'OpenAI connection error' }));
       };
 
       openAISocket.onclose = () => {
@@ -227,77 +324,84 @@ You represent ${businessConfig?.company_name || 'the company'} and should always
 
     } catch (error) {
       console.error('Error connecting to OpenAI:', error);
-      socket.send(JSON.stringify({ type: 'error', message: 'Failed to connect to OpenAI' }));
     }
   };
 
   socket.onmessage = async (event) => {
     try {
-      const message: WebSocketMessage = JSON.parse(event.data);
-      console.log('Client message type:', message.type);
+      const message: TelnyxStreamMessage = JSON.parse(event.data);
+      console.log('Telnyx message type:', message.event);
 
-      // Handle call initialization
-      if (message.type === 'call_started') {
-        callSid = message.callSid;
-        console.log('Call started:', callSid);
+      // Handle stream start
+      if (message.event === 'start' && message.start) {
+        callControlId = message.start.callSid;
+        console.log('Stream started for call:', callControlId);
         
-        // Log call to database
-        if (callSid && message.from && message.to) {
+        // Update call status in database
+        if (callControlId) {
           try {
             await supabaseClient
               .from('telnyx_calls')
-              .insert({
-                call_control_id: callSid,
-                call_session_id: callSid,
-                phone_number: message.from,
-                to_number: message.to,
-                call_status: 'connected',
-                direction: 'incoming',
-                started_at: new Date().toISOString(),
-                appointment_scheduled: false
-              });
+              .update({
+                call_status: 'streaming',
+                streaming_active: true
+              })
+              .eq('call_control_id', callControlId);
           } catch (error) {
-            console.error('Error logging call:', error);
+            console.error('Error updating call status:', error);
           }
         }
       }
 
-      // Forward audio and other relevant messages to OpenAI
-      if (openAISocket && openAISocket.readyState === WebSocket.OPEN) {
-        if (message.type === 'input_audio_buffer.append' ||
-            message.type === 'conversation.item.create' ||
-            message.type === 'response.create') {
-          openAISocket.send(JSON.stringify(message));
+      // Handle audio media
+      if (message.event === 'media' && message.media && openAISocket && openAISocket.readyState === WebSocket.OPEN) {
+        // Convert and send audio to OpenAI
+        const encodedAudio = encodeAudioForOpenAI(message.media.payload);
+        
+        const audioMessage = {
+          type: 'input_audio_buffer.append',
+          audio: encodedAudio
+        };
+        
+        openAISocket.send(JSON.stringify(audioMessage));
+      }
+
+      // Handle stream stop
+      if (message.event === 'stop') {
+        console.log('Stream stopped');
+        if (openAISocket) {
+          openAISocket.close();
         }
       }
 
     } catch (error) {
-      console.error('Error processing client message:', error);
+      console.error('Error processing Telnyx message:', error);
     }
   };
 
   socket.onclose = () => {
-    console.log('=== Client WebSocket Closed ===');
+    console.log('=== Telnyx Audio Stream Closed ===');
     if (openAISocket) {
       openAISocket.close();
     }
     
     // Update call status
-    if (callSid) {
+    if (callControlId) {
       supabaseClient
         .from('telnyx_calls')
         .update({
           call_status: 'completed',
-          ended_at: new Date().toISOString()
+          ended_at: new Date().toISOString(),
+          streaming_active: false
         })
-        .eq('call_control_id', callSid)
+        .eq('call_control_id', callControlId)
         .then(() => console.log('Call status updated'))
         .catch(error => console.error('Error updating call status:', error));
     }
   };
 
   socket.onerror = (error) => {
-    console.error('Client WebSocket error:', error);
+    console.error('Telnyx Audio Stream error:', error);
   };
 
   return response;

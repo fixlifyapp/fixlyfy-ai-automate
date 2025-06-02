@@ -5,6 +5,21 @@ import { getBusinessConfig } from './utils/businessConfig.ts'
 import { findOrCreatePhoneNumber, logCallToDatabase, updateCallStatus } from './utils/callHandling.ts'
 
 interface TelnyxWebhookData {
+  data?: {
+    event_type?: string;
+    id?: string;
+    payload?: {
+      call_control_id?: string;
+      connection_id?: string;
+      call_session_id?: string;
+      from?: string;
+      to?: string;
+      direction?: string;
+      state?: string;
+      previous_state?: string;
+    };
+  };
+  // Legacy format support
   CallSid?: string;
   From?: string;
   To?: string;
@@ -20,19 +35,73 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const createRealtimeTeXML = (websocketUrl: string): string => {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">Hello! Connecting you to our AI assistant. Please hold on.</Say>
-    <Stream url="${websocketUrl}" />
-</Response>`
+const TELNYX_API_KEY = Deno.env.get('TELNYX_API_KEY')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+
+const answerCall = async (callControlId: string) => {
+  try {
+    const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/answer`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TELNYX_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        webhook_url: `${SUPABASE_URL}/functions/v1/telnyx-voice-webhook`,
+        webhook_url_method: 'POST'
+      })
+    })
+    
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Failed to answer call:', error)
+      return false
+    }
+    
+    console.log('Call answered successfully')
+    return true
+  } catch (error) {
+    console.error('Error answering call:', error)
+    return false
+  }
+}
+
+const startAudioStreaming = async (callControlId: string) => {
+  try {
+    const streamUrl = `wss://${SUPABASE_URL?.replace('https://', '')}/functions/v1/realtime-voice-dispatch`
+    
+    const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/streaming_start`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TELNYX_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        stream_url: streamUrl,
+        stream_track: 'both',
+        enable_dialogflow_es: false,
+        enable_dialogflow_cx: false
+      })
+    })
+    
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Failed to start streaming:', error)
+      return false
+    }
+    
+    console.log('Audio streaming started successfully')
+    return true
+  } catch (error) {
+    console.error('Error starting audio streaming:', error)
+    return false
+  }
 }
 
 serve(async (req) => {
-  console.log(`=== Telnyx Realtime Webhook START ===`)
+  console.log(`=== Telnyx Call Control Webhook START ===`)
   console.log(`Method: ${req.method}`)
   console.log(`URL: ${req.url}`)
-  console.log(`Headers:`, Object.fromEntries(req.headers.entries()))
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -49,111 +118,160 @@ serve(async (req) => {
       return new Response('Method not allowed', { status: 405 })
     }
 
-    // Parse form data from Telnyx
-    const formData = await req.formData()
-    const webhookData: TelnyxWebhookData = {}
+    let webhookData: TelnyxWebhookData = {}
     
-    console.log('=== RAW FORM DATA ===')
-    for (const [key, value] of formData.entries()) {
-      webhookData[key as keyof TelnyxWebhookData] = value as string
-      console.log(`${key}: ${value}`)
-    }
-    
-    console.log('=== PARSED WEBHOOK DATA ===')
-    console.log(JSON.stringify(webhookData, null, 2))
-
-    const callSid = webhookData.CallSid
-    const from = webhookData.From
-    const to = webhookData.To
-    const callStatus = webhookData.CallStatus
-    const connectionId = webhookData.ConnectionId
-
-    if (!callSid) {
-      console.error('No CallSid found in webhook data')
-      return new Response('Missing CallSid', { status: 400 })
+    // Try to parse as JSON first (Call Control API format)
+    try {
+      webhookData = await req.json()
+      console.log('=== PARSED JSON WEBHOOK DATA ===')
+      console.log(JSON.stringify(webhookData, null, 2))
+    } catch {
+      // Fallback to form data (TeXML format)
+      const formData = await req.formData()
+      console.log('=== RAW FORM DATA ===')
+      for (const [key, value] of formData.entries()) {
+        webhookData[key as keyof TelnyxWebhookData] = value as string
+        console.log(`${key}: ${value}`)
+      }
     }
 
-    console.log(`=== PROCESSING CALL ${callSid} ===`)
-    console.log(`Status: ${callStatus}`)
-    console.log(`From: ${from} -> To: ${to}`)
-    console.log(`Connection ID: ${connectionId}`)
+    // Extract call information from either format
+    let callControlId: string | undefined
+    let from: string | undefined
+    let to: string | undefined
+    let eventType: string | undefined
+    let callState: string | undefined
 
-    // Handle new incoming call
-    if (callStatus === 'ringing' || (!callStatus && from && to)) {
+    if (webhookData.data?.payload) {
+      // Call Control API format
+      const payload = webhookData.data.payload
+      callControlId = payload.call_control_id
+      from = payload.from
+      to = payload.to
+      eventType = webhookData.data.event_type
+      callState = payload.state
+      
+      console.log(`=== CALL CONTROL EVENT: ${eventType} ===`)
+      console.log(`Call Control ID: ${callControlId}`)
+      console.log(`State: ${callState}`)
+      console.log(`From: ${from} -> To: ${to}`)
+    } else {
+      // Legacy TeXML format
+      callControlId = webhookData.CallSid
+      from = webhookData.From
+      to = webhookData.To
+      eventType = 'legacy_call'
+      callState = webhookData.CallStatus
+      
+      console.log(`=== LEGACY CALL EVENT ===`)
+      console.log(`Call Sid: ${callControlId}`)
+      console.log(`Status: ${callState}`)
+      console.log(`From: ${from} -> To: ${to}`)
+    }
+
+    if (!callControlId) {
+      console.error('No call control ID found in webhook data')
+      return new Response('Missing call control ID', { status: 400 })
+    }
+
+    // Handle incoming call
+    if (eventType === 'call.initiated' || eventType === 'call.ringing' || (!eventType && from && to)) {
       console.log('=== NEW INCOMING CALL - REALTIME MODE ===')
-      console.log('Setting up realtime voice connection...')
 
       // Find or create phone number entry
-      const phoneNumberData = await findOrCreatePhoneNumber(supabaseClient, to)
+      const phoneNumberData = await findOrCreatePhoneNumber(supabaseClient, to || '')
 
       // Get business configuration
       const businessConfig = await getBusinessConfig(supabaseClient)
 
       // Log the call in database
-      await logCallToDatabase(supabaseClient, callSid, from, to, phoneNumberData)
+      await logCallToDatabase(supabaseClient, callControlId, from || '', to || '', phoneNumberData)
 
-      // Create WebSocket URL for real-time connection
-      const websocketUrl = `wss://mqppvcrlvsgrsqelglod.functions.supabase.co/realtime-voice-dispatch`
+      // Answer the call using Call Control API
+      console.log('Answering call with Call Control API...')
+      const answerSuccess = await answerCall(callControlId)
       
-      console.log('Returning TeXML for realtime connection')
-      console.log('WebSocket URL:', websocketUrl)
+      if (!answerSuccess) {
+        console.error('Failed to answer call')
+        return new Response('Failed to answer call', { status: 500 })
+      }
+
+      // Start audio streaming to our realtime endpoint
+      console.log('Starting audio streaming...')
+      const streamSuccess = await startAudioStreaming(callControlId)
       
-      const texmlResponse = createRealtimeTeXML(websocketUrl)
-      console.log('=== REALTIME TEXML RESPONSE ===')
-      console.log(texmlResponse)
-      
-      return new Response(texmlResponse, {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/xml' 
-        }
+      if (!streamSuccess) {
+        console.error('Failed to start audio streaming')
+        return new Response('Failed to start streaming', { status: 500 })
+      }
+
+      // Update call status
+      await updateCallStatus(supabaseClient, callControlId, 'connected', {
+        realtime_mode: true,
+        business_config: businessConfig
+      })
+
+      return new Response('Call answered and streaming started', {
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
       })
     }
 
-    // Handle call events (media, connected, etc.)
-    if (callStatus === 'connected' || webhookData.Event === 'media') {
-      console.log('=== CALL MEDIA/CONNECTED EVENT ===')
+    // Handle call answered event
+    if (eventType === 'call.answered') {
+      console.log('=== CALL ANSWERED ===')
       
-      await updateCallStatus(supabaseClient, callSid, 'connected', {
-        connection_id: connectionId,
+      await updateCallStatus(supabaseClient, callControlId, 'connected', {
         realtime_mode: true
       })
 
-      return new Response('OK', {
+      return new Response('Call answered', {
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+      })
+    }
+
+    // Handle streaming events
+    if (eventType === 'call.streaming.started') {
+      console.log('=== STREAMING STARTED ===')
+      
+      await updateCallStatus(supabaseClient, callControlId, 'streaming', {
+        streaming_active: true
+      })
+
+      return new Response('Streaming started', {
         headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
       })
     }
 
     // Handle call completion
-    if (callStatus === 'completed' || callStatus === 'hangup') {
+    if (eventType === 'call.hangup' || callState === 'completed' || callState === 'hangup') {
       console.log('=== CALL COMPLETED ===')
-      console.log('Call completed:', callSid)
       
-      await updateCallStatus(supabaseClient, callSid, 'completed', {
+      await updateCallStatus(supabaseClient, callControlId, 'completed', {
         ended_at: new Date().toISOString()
       })
 
-      return new Response('OK', {
+      return new Response('Call completed', {
         headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
       })
     }
 
     // Default response for unhandled events
     console.log('=== UNHANDLED WEBHOOK EVENT ===')
-    console.log('Unhandled webhook data:', webhookData)
-    return new Response('OK', {
+    console.log(`Event Type: ${eventType}, Call State: ${callState}`)
+    
+    return new Response('Event received', {
       headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
     })
 
   } catch (error) {
-    console.error('=== ERROR IN REALTIME WEBHOOK ===')
-    console.error('Error processing Telnyx realtime webhook:', error)
+    console.error('=== ERROR IN CALL CONTROL WEBHOOK ===')
+    console.error('Error processing webhook:', error)
     
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     })
   } finally {
-    console.log(`=== Telnyx Realtime Webhook END ===`)
+    console.log(`=== Telnyx Call Control Webhook END ===`)
   }
 })
