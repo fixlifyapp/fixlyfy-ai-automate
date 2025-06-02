@@ -77,9 +77,9 @@ export const useMessageSending = ({
         console.log("Created conversation:", currentConversationId);
       }
       
-      // Send SMS via Amazon SNS edge function
-      console.log("Invoking amazon-sns-sms function...");
-      const { data, error } = await supabase.functions.invoke('amazon-sns-sms', {
+      // Send SMS via Telnyx edge function
+      console.log("Invoking telnyx-sms function...");
+      const { data, error } = await supabase.functions.invoke('telnyx-sms', {
         body: {
           to: client.phone,
           body: message,
@@ -103,7 +103,7 @@ export const useMessageSending = ({
         return;
       }
       
-      console.log("SMS sent successfully:", data.message_id);
+      console.log("SMS sent successfully:", data.id);
       
       // Store the message in the database
       if (currentConversationId) {
@@ -117,7 +117,7 @@ export const useMessageSending = ({
             sender: 'You',
             recipient: client.phone,
             status: 'delivered',
-            message_sid: data.message_id
+            message_sid: data.id
           });
           
         if (msgError) {

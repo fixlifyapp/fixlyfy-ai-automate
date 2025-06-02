@@ -61,8 +61,8 @@ export const sendClientMessage = async ({
   existingConversationId
 }: SendMessageParams) => {
   try {
-    // Call the Amazon SNS edge function
-    const { data, error } = await supabase.functions.invoke('amazon-sns-sms', {
+    // Call the Telnyx SMS edge function
+    const { data, error } = await supabase.functions.invoke('telnyx-sms', {
       body: {
         to: clientPhone,
         body: content,
@@ -94,7 +94,7 @@ export const sendClientMessage = async ({
             sender: 'You',
             recipient: clientPhone,
             status: 'delivered',
-            message_sid: data.message_id
+            message_sid: data.id
           });
           
         // Update conversation timestamp

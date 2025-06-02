@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -16,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { CheckCircle, Mail, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
 
 interface InvoiceSendDialogProps {
   open: boolean;
@@ -57,29 +57,6 @@ interface LineItem {
 }
 
 type SendStep = "warranty" | "send-method" | "confirmation";
-
-// Utility function to format phone number for Twilio
-const formatPhoneForTwilio = (phoneNumber: string): string => {
-  if (!phoneNumber) return "";
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  if (cleaned.startsWith('1') && cleaned.length === 11) {
-    return `+${cleaned}`;
-  }
-  if (cleaned.length === 10) {
-    return `+1${cleaned}`;
-  }
-  if (cleaned.length > 10) {
-    return `+${cleaned}`;
-  }
-  console.warn("Invalid phone number format:", phoneNumber);
-  return phoneNumber;
-};
-
-const isValidPhoneNumber = (phoneNumber: string): boolean => {
-  if (!phoneNumber) return false;
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  return cleaned.length >= 10;
-};
 
 const isValidEmail = (email: string): boolean => {
   if (!email) return false;
@@ -256,7 +233,7 @@ export const InvoiceSendDialog = ({
       if (hasValidEmail && sendMethod === "email") {
         setSendTo(contactInfo.email);
       } else if (hasValidPhone && sendMethod === "sms") {
-        const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+        const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
         setSendTo(formattedPhone);
         console.log("Auto-filled phone number:", formattedPhone);
       } else if (hasValidEmail && !hasValidPhone) {
@@ -264,7 +241,7 @@ export const InvoiceSendDialog = ({
         setSendTo(contactInfo.email);
       } else if (hasValidPhone && !hasValidEmail) {
         setSendMethod("sms");
-        const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+        const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
         setSendTo(formattedPhone);
       }
     }
@@ -333,7 +310,7 @@ export const InvoiceSendDialog = ({
     if (value === "email" && hasValidEmail) {
       setSendTo(contactInfo.email);
     } else if (value === "sms" && hasValidPhone) {
-      const formattedPhone = formatPhoneForTwilio(contactInfo.phone);
+      const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
       setSendTo(formattedPhone);
     } else {
       setSendTo("");
@@ -410,7 +387,7 @@ export const InvoiceSendDialog = ({
 
       let finalRecipient = sendTo;
       if (sendMethod === "sms") {
-        finalRecipient = formatPhoneForTwilio(sendTo);
+        finalRecipient = formatPhoneForTelnyx(sendTo);
         console.log("Formatted phone number:", finalRecipient);
         
         if (!isValidPhoneNumber(finalRecipient)) {
@@ -666,7 +643,7 @@ export const InvoiceSendDialog = ({
                 )}
                 {sendMethod === "sms" && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Phone numbers will be automatically formatted for SMS delivery
+                    Phone numbers will be automatically formatted for Telnyx delivery
                   </p>
                 )}
               </div>
