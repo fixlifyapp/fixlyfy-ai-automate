@@ -13,6 +13,8 @@ interface TelnyxWebhookData {
   Digits?: string;
   SpeechResult?: string;
   AccountSid?: string;
+  TranscriptionText?: string;
+  RecordingStatus?: string;
 }
 
 const corsHeaders = {
@@ -59,14 +61,15 @@ serve(async (req) => {
     const to = webhookData.To
     const callStatus = webhookData.CallStatus
     const recordingUrl = webhookData.RecordingUrl
-    const speechResult = webhookData.SpeechResult
+    const speechResult = webhookData.SpeechResult || webhookData.TranscriptionText
+    const recordingStatus = webhookData.RecordingStatus
 
     if (!callSid) {
       console.error('No CallSid found in webhook data')
       return new Response('Missing CallSid', { status: 400 })
     }
 
-    // Get company and AI configuration
+    // Get company and AI configuration with enhanced fallbacks
     const getBusinessConfig = async () => {
       // First try to get company settings
       const { data: companySettings } = await supabaseClient
@@ -87,8 +90,8 @@ serve(async (req) => {
       // Create enhanced config with company data
       const businessConfig = {
         // Company info (prioritize company_settings, fallback to ai_agent_configs)
-        company_name: companySettings?.company_name || aiConfig?.company_name || 'our company',
-        business_type: companySettings?.business_type || aiConfig?.business_niche || 'General Service',
+        company_name: companySettings?.company_name || aiConfig?.company_name || 'Fixlyfy Services',
+        business_type: companySettings?.business_type || aiConfig?.business_niche || 'HVAC & Plumbing Services',
         company_phone: companySettings?.company_phone || '(555) 123-4567',
         company_address: companySettings?.company_address || null,
         company_city: companySettings?.company_city || null,
@@ -173,7 +176,7 @@ serve(async (req) => {
         console.log('Call logged to database successfully')
       }
 
-      // Return TeXML to answer call and start conversation
+      // Return TeXML to answer call and start conversation with improved recording settings
       const greeting = `Hello! This is ${businessConfig.agent_name} from ${businessConfig.company_name}. How can I help you today?`
       
       const texml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -182,11 +185,10 @@ serve(async (req) => {
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="30"
+        maxLength="20"
         finishOnKey="#"
-        timeout="5"
-        transcribe="true"
-        transcribeCallback="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        timeout="10"
+        playBeep="false"
     />
 </Response>`
 
@@ -200,20 +202,25 @@ serve(async (req) => {
       })
     }
 
-    // Handle recording/transcription callback
-    if (recordingUrl || speechResult) {
-      console.log('Processing recording/speech:', { recordingUrl, speechResult })
+    // Handle recording completion or transcription
+    if (recordingUrl || speechResult || recordingStatus === 'completed') {
+      console.log('Processing recording/speech:', { recordingUrl, speechResult, recordingStatus })
 
       let userMessage = speechResult || ''
       
-      // If we have recording URL but no speech result, we need to transcribe it
+      // If we have recording URL but no speech result, transcribe it with OpenAI
       if (recordingUrl && !speechResult) {
         try {
           console.log('Transcribing recording from URL:', recordingUrl)
           
           // Download the recording
           const recordingResponse = await fetch(recordingUrl)
+          if (!recordingResponse.ok) {
+            throw new Error(`Failed to fetch recording: ${recordingResponse.status}`)
+          }
+          
           const audioBuffer = await recordingResponse.arrayBuffer()
+          console.log('Downloaded audio buffer size:', audioBuffer.byteLength)
           
           // Transcribe with OpenAI Whisper
           const formData = new FormData()
@@ -234,28 +241,29 @@ serve(async (req) => {
             userMessage = transcription.text || ''
             console.log('Transcribed message:', userMessage)
           } else {
-            console.error('Transcription failed:', await transcriptionResponse.text())
-            userMessage = 'Sorry, I could not understand what you said.'
+            const errorText = await transcriptionResponse.text()
+            console.error('Transcription failed:', errorText)
+            userMessage = ''
           }
         } catch (error) {
           console.error('Error transcribing recording:', error)
-          userMessage = 'Sorry, I had trouble processing your message.'
+          userMessage = ''
         }
       }
 
-      if (!userMessage.trim()) {
-        // No input received, ask again
+      // Handle empty or unclear input
+      if (!userMessage || userMessage.trim().length < 3) {
+        console.log('No clear input received, asking again')
         const texml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">I didn't catch that. Could you please repeat what you need help with?</Say>
+    <Say voice="alice">I didn't catch that clearly. Could you please tell me what you need help with?</Say>
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="30"
+        maxLength="20"
         finishOnKey="#"
-        timeout="5"
-        transcribe="true"
-        transcribeCallback="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        timeout="10"
+        playBeep="false"
     />
 </Response>`
 
@@ -292,13 +300,16 @@ IMPORTANT INSTRUCTIONS:
 2. If they need service, offer to schedule an appointment
 3. Ask for their name, phone number, and what service they need
 4. Keep responses under 100 words for phone conversation
-5. If they want to schedule, say you'll transfer them to book the appointment
+5. If they want to schedule, say you'll help them book the appointment
+6. Speak naturally and be empathetic to their needs
 
 ${businessConfig.custom_prompt_additions || ''}
 
 Remember: You represent ${businessConfig.company_name} and should always mention the company name when introducing yourself.`
 
       try {
+        console.log('Generating AI response for user message:', userMessage)
+        
         const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -321,9 +332,10 @@ Remember: You represent ${businessConfig.company_name} and should always mention
         if (gptResponse.ok) {
           const gptData = await gptResponse.json()
           aiResponse = gptData.choices[0]?.message?.content || aiResponse
-          console.log('AI Response generated for', businessConfig.company_name, ':', aiResponse)
+          console.log('AI Response generated:', aiResponse)
         } else {
-          console.error('GPT API error:', await gptResponse.text())
+          const errorText = await gptResponse.text()
+          console.error('GPT API error:', errorText)
         }
 
         // Update call record with conversation
@@ -336,30 +348,37 @@ Remember: You represent ${businessConfig.company_name} and should always mention
           .eq('call_control_id', callSid)
 
         // Check if user wants to schedule appointment
-        const scheduleKeywords = ['schedule', 'appointment', 'book', 'when can', 'available', 'come out']
+        const scheduleKeywords = ['schedule', 'appointment', 'book', 'when can', 'available', 'come out', 'visit', 'time']
         const wantsToSchedule = scheduleKeywords.some(keyword => 
           userMessage.toLowerCase().includes(keyword) || aiResponse.toLowerCase().includes('schedule')
         )
 
         if (wantsToSchedule) {
-          // End call with scheduling message
+          // Continue with appointment scheduling
           const texml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">${aiResponse} Please hold while I connect you to our scheduling system. Thank you for calling ${businessConfig.company_name}!</Say>
-    <Hangup/>
+    <Say voice="alice">${aiResponse} What's the best phone number to reach you, and what type of service do you need?</Say>
+    <Record 
+        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        method="POST"
+        maxLength="20"
+        finishOnKey="#"
+        timeout="10"
+        playBeep="false"
+    />
 </Response>`
 
-          // Mark as appointment scheduled
+          // Mark as appointment in progress
           await supabaseClient
             .from('telnyx_calls')
             .update({
               appointment_scheduled: true,
               appointment_data: { 
-                needs_scheduling: true, 
+                scheduling_in_progress: true, 
                 user_message: userMessage,
-                company_name: businessConfig.company_name
-              },
-              call_status: 'completed'
+                company_name: businessConfig.company_name,
+                step: 'collecting_contact_info'
+              }
             })
             .eq('call_control_id', callSid)
 
@@ -377,11 +396,10 @@ Remember: You represent ${businessConfig.company_name} and should always mention
     <Record 
         action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
         method="POST"
-        maxLength="30"
+        maxLength="20"
         finishOnKey="#"
-        timeout="5"
-        transcribe="true"
-        transcribeCallback="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        timeout="10"
+        playBeep="false"
     />
 </Response>`
 
