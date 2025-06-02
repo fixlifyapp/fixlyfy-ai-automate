@@ -72,13 +72,23 @@ export const EmailManagement = () => {
 
       if (error) throw error;
 
-      // Transform the data to match our interface
+      // Transform the data to match our interface with proper type casting
       const transformedConversations: EmailConversation[] = (conversationsData || []).map(conv => ({
         id: conv.id,
         subject: conv.subject,
         last_message_at: conv.last_message_at,
         status: conv.status,
-        messages: conv.email_messages || []
+        messages: (conv.email_messages || []).map(msg => ({
+          id: msg.id,
+          sender_email: msg.sender_email,
+          recipient_email: msg.recipient_email,
+          subject: msg.subject,
+          body_html: msg.body_html,
+          body_text: msg.body_text,
+          direction: msg.direction as 'inbound' | 'outbound',
+          delivery_status: msg.delivery_status,
+          created_at: msg.created_at
+        }))
       }));
 
       setConversations(transformedConversations);
