@@ -140,137 +140,31 @@ export const useEstimateSending = () => {
         }
       }
 
-      console.log("Step 4: Creating communication record...");
-      const { data: commData, error: commError } = await supabase
-        .from('estimate_communications')
-        .insert({
-          estimate_id: savedEstimate.id,
-          communication_type: sendMethod,
-          recipient: finalRecipient,
-          subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : null,
-          content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`
-            : `Please find your estimate ${estimateNumber} attached. Total: $${savedEstimate.total.toFixed(2)}.`,
-          status: 'pending',
-          estimate_number: estimateNumber,
-          client_name: contactInfo.name,
-          client_email: contactInfo.email,
-          client_phone: contactInfo.phone
-        })
-        .select()
-        .single();
-
-      if (commError) {
-        console.error('Error creating communication record:', commError);
-        toast.error('Failed to create communication record');
-        return { success: false, error: 'Failed to create communication record' };
+      console.log("Step 4: Sending estimate via", sendMethod);
+      
+      // Call the send-estimate function
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          estimateId: savedEstimate.id,
+          sendMethod: sendMethod,
+          recipientEmail: sendMethod === 'email' ? finalRecipient : undefined,
+          recipientPhone: sendMethod === 'sms' ? finalRecipient : undefined,
+          subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : undefined,
+          message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
+        }
+      });
+      
+      if (sendError || !sendData?.success) {
+        console.error("Estimate sending failed:", sendError || sendData);
+        toast.error(`Failed to send ${sendMethod}: ${sendError?.message || sendData?.error || 'Unknown error'}`);
+        return { success: false, error: 'Estimate sending failed' };
       }
 
-      console.log("Step 5: Communication record created:", commData);
-
-      if (sendMethod === 'sms') {
-        // Send SMS via Telnyx
-        console.log("Step 6: Sending SMS via Telnyx...");
-        const smsContent = `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`;
-        
-        const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
-          body: {
-            to: finalRecipient,
-            body: smsContent,
-            client_id: estimateDetails?.client_id,
-            job_id: jobId || savedEstimate.job_id
-          }
-        });
-
-        if (smsError || !smsData?.success) {
-          console.error("SMS sending failed:", smsError || smsData);
-          await supabase
-            .from('estimate_communications')
-            .update({
-              status: 'failed',
-              error_message: smsError?.message || smsData?.error || 'SMS sending failed'
-            })
-            .eq('id', commData.id);
-          
-          toast.error(`Failed to send SMS: ${smsError?.message || smsData?.error || 'Unknown error'}`);
-          return { success: false, error: 'SMS sending failed' };
-        }
-
-        console.log("SMS sent successfully:", smsData);
-        
-        // Update communication record
-        await supabase
-          .from('estimate_communications')
-          .update({
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            provider_message_id: smsData.id
-          })
-          .eq('id', commData.id);
-
-      } else {
-        // Send Email
-        console.log("Step 6: Sending email...");
-        
-        const estimateData = {
-          lineItems: lineItems.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: Number(item.unit_price),
-            taxable: item.taxable,
-            total: item.quantity * Number(item.unit_price)
-          })),
-          total: savedEstimate.total,
-          taxRate: 13,
-          notes: customNote || savedEstimate.notes,
-          viewUrl: `${window.location.origin}/estimate/view/${estimateNumber}`
-        };
-
-        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-estimate', {
-          body: {
-            estimateId: savedEstimate.id,
-            recipientEmail: finalRecipient,
-            subject: `Estimate ${estimateNumber}`,
-            message: `Please find your estimate ${estimateNumber} attached. Total: $${savedEstimate.total.toFixed(2)}.`
-          }
-        });
-        
-        if (emailError || !emailData?.success) {
-          console.error("Email sending failed:", emailError || emailData);
-          await supabase
-            .from('estimate_communications')
-            .update({
-              status: 'failed',
-              error_message: emailError?.message || emailData?.error || 'Email sending failed'
-            })
-            .eq('id', commData.id);
-          
-          toast.error(`Failed to send email: ${emailError?.message || emailData?.error || 'Unknown error'}`);
-          return { success: false, error: 'Email sending failed' };
-        }
-
-        console.log("Email sent successfully:", emailData);
-        
-        // Update communication record
-        await supabase
-          .from('estimate_communications')
-          .update({
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            provider_message_id: emailData.messageId
-          })
-          .eq('id', commData.id);
-      }
+      console.log("Estimate sent successfully:", sendData);
 
       const method = sendMethod === "email" ? "email" : "text message";
       toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
       console.log("SUCCESS: Estimate sent successfully");
-      
-      // Update estimate status to 'sent'
-      await supabase
-        .from('estimates')
-        .update({ status: 'sent' })
-        .eq('id', savedEstimate.id);
       
       return { success: true };
         
