@@ -13,7 +13,6 @@ interface TelnyxCall {
   call_status: string;
   direction: string;
   ai_transcript?: string;
-  call_summary?: string;
   appointment_scheduled?: boolean;
   appointment_data?: any;
   started_at: string;
@@ -34,7 +33,6 @@ export function TelnyxCallsView() {
           call_status,
           direction,
           ai_transcript,
-          call_summary,
           appointment_scheduled,
           appointment_data,
           started_at,
@@ -115,13 +113,6 @@ export function TelnyxCallsView() {
                       <span>{new Date(call.started_at).toLocaleString()}</span>
                     </div>
                   </div>
-
-                  {call.call_summary && (
-                    <div className="bg-muted p-3 rounded-lg">
-                      <h4 className="font-medium text-sm mb-1">Call Summary</h4>
-                      <p className="text-sm">{call.call_summary}</p>
-                    </div>
-                  )}
 
                   {call.ai_transcript && (
                     <div className="bg-blue-50 p-3 rounded-lg">
