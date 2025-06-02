@@ -16,6 +16,8 @@ interface TelnyxWebhookEvent {
       direction?: string;
       state?: string;
       client_state?: string;
+      start_time?: string;
+      end_time?: string;
     };
   };
 }
@@ -40,6 +42,7 @@ serve(async (req) => {
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
     if (!telnyxApiKey) {
+      console.error('TELNYX_API_KEY not configured')
       throw new Error('TELNYX_API_KEY not configured')
     }
 
@@ -48,13 +51,13 @@ serve(async (req) => {
     }
 
     const webhookEvent: TelnyxWebhookEvent = await req.json()
-    console.log('Telnyx webhook event:', JSON.stringify(webhookEvent, null, 2))
+    console.log('Telnyx webhook event received:', JSON.stringify(webhookEvent, null, 2))
 
     const { event_type, payload } = webhookEvent.data
 
-    // Handle incoming call
+    // Handle incoming call initiation
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
-      console.log('Incoming call from:', payload.from, 'to number:', payload.to)
+      console.log('Processing incoming call from:', payload.from, 'to:', payload.to)
 
       // Find the phone number owner to associate the call
       const { data: phoneNumberData } = await supabaseClient
@@ -62,6 +65,8 @@ serve(async (req) => {
         .select('*')
         .eq('phone_number', payload.to)
         .single()
+
+      console.log('Phone number data:', phoneNumberData)
 
       // Find active AI configuration
       const { data: aiConfigs } = await supabaseClient
@@ -72,7 +77,7 @@ serve(async (req) => {
 
       let aiConfig = aiConfigs?.[0]
       if (!aiConfig) {
-        console.log('Using default AI configuration')
+        console.log('No active AI config found, using default')
         aiConfig = {
           business_niche: 'General Service',
           diagnostic_price: 75,
@@ -87,8 +92,8 @@ serve(async (req) => {
         }
       }
 
-      // Log call to database with proper user association
-      const { error: logError } = await supabaseClient
+      // Log call to database
+      const { data: callRecord, error: logError } = await supabaseClient
         .from('telnyx_calls')
         .insert({
           call_control_id: payload.call_control_id,
@@ -98,16 +103,21 @@ serve(async (req) => {
           call_status: 'initiated',
           direction: 'incoming',
           started_at: new Date().toISOString(),
-          user_id: phoneNumberData?.user_id || aiConfig?.user_id,
+          user_id: phoneNumberData?.user_id || null,
           appointment_scheduled: false,
           appointment_data: null
         })
+        .select()
+        .single()
 
       if (logError) {
-        console.error('Error logging call:', logError)
+        console.error('Error logging call to database:', logError)
+      } else {
+        console.log('Call logged to database:', callRecord)
       }
 
       // Answer the call
+      console.log('Attempting to answer call...')
       const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
         method: 'POST',
         headers: {
@@ -118,43 +128,53 @@ serve(async (req) => {
           call_control_id: payload.call_control_id,
           client_state: JSON.stringify({ 
             ai_config: aiConfig,
-            user_id: phoneNumberData?.user_id || aiConfig?.user_id
+            user_id: phoneNumberData?.user_id,
+            call_record_id: callRecord?.id
           })
         })
       })
 
+      const answerResult = await answerResponse.text()
+      console.log('Answer call response:', answerResponse.status, answerResult)
+
       if (!answerResponse.ok) {
-        console.error('Error answering call:', await answerResponse.text())
-        throw new Error('Failed to answer call')
+        console.error('Error answering call:', answerResult)
+        throw new Error(`Failed to answer call: ${answerResult}`)
       }
 
-      console.log('Call answered, waiting for connection to start AI')
+      console.log('Call answered successfully, waiting for connection...')
     }
 
-    // When call is connected, start AI
+    // When call is connected/answered, start AI interaction
     else if (event_type === 'call.answered') {
-      console.log('Call connected, starting AI dialog')
+      console.log('Call connected, starting AI interaction...')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
       const aiConfig = clientState.ai_config || {}
 
-      // Update call status
-      await supabaseClient
+      // Update call status in database
+      const { error: updateError } = await supabaseClient
         .from('telnyx_calls')
         .update({
           call_status: 'answered'
         })
         .eq('call_control_id', payload.call_control_id)
 
-      // Generate greeting
+      if (updateError) {
+        console.error('Error updating call status:', updateError)
+      }
+
+      // Generate personalized greeting
       const currentHour = new Date().getHours()
       const timeOfDay = currentHour < 12 ? 'morning' : currentHour < 17 ? 'afternoon' : 'evening'
       
-      let greeting = aiConfig.greeting_template || 'Hello! My name is {agent_name}. I am an AI assistant. How can I help you?'
+      let greeting = aiConfig.greeting_template || 'Hello! My name is {agent_name}. I am an AI assistant for {company_name}. How can I help you today?'
       greeting = greeting
         .replace(/{agent_name}/g, aiConfig.agent_name || 'AI Assistant')
         .replace(/{company_name}/g, aiConfig.company_name || 'our company')
         .replace(/{time_of_day}/g, timeOfDay)
+
+      console.log('Generated greeting:', greeting)
 
       // Speak greeting through Telnyx TTS
       const speakResponse = await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
@@ -171,21 +191,29 @@ serve(async (req) => {
         })
       })
 
+      const speakResult = await speakResponse.text()
+      console.log('Speak response:', speakResponse.status, speakResult)
+
       if (!speakResponse.ok) {
-        console.error('TTS error:', await speakResponse.text())
+        console.error('TTS error:', speakResult)
       }
 
       // Update transcript with greeting
-      await supabaseClient
+      const { error: transcriptError } = await supabaseClient
         .from('telnyx_calls')
         .update({
           ai_transcript: `AI: ${greeting}`
         })
         .eq('call_control_id', payload.call_control_id)
 
-      // Start listening after greeting
+      if (transcriptError) {
+        console.error('Error updating transcript:', transcriptError)
+      }
+
+      // Start listening for customer response after greeting completes
       setTimeout(async () => {
-        await fetch('https://api.telnyx.com/v2/calls/actions/gather_using_audio', {
+        console.log('Starting to listen for customer input...')
+        const gatherResponse = await fetch('https://api.telnyx.com/v2/calls/actions/gather_using_audio', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${telnyxApiKey}`,
@@ -200,24 +228,54 @@ serve(async (req) => {
             inter_digit_timeout_millis: 5000
           })
         })
-      }, 5000)
+        
+        const gatherResult = await gatherResponse.text()
+        console.log('Gather response:', gatherResponse.status, gatherResult)
+      }, 5000) // Wait 5 seconds for greeting to complete
     }
 
-    // Handle call hangup
+    // Handle call hangup/completion
     else if (event_type === 'call.hangup') {
-      console.log('Call ended')
+      console.log('Call ended, updating status...')
       
+      // Calculate call duration if we have start and end times
+      let duration = null
+      if (payload.start_time && payload.end_time) {
+        const startTime = new Date(payload.start_time)
+        const endTime = new Date(payload.end_time)
+        duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
+      }
+
       // Update status in database
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('telnyx_calls')
         .update({
           call_status: 'completed',
-          ended_at: new Date().toISOString()
+          ended_at: new Date().toISOString(),
+          call_duration: duration
         })
         .eq('call_control_id', payload.call_control_id)
+
+      if (updateError) {
+        console.error('Error updating call completion:', updateError)
+      } else {
+        console.log('Call completion recorded successfully')
+      }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    // Handle other call events
+    else if (event_type === 'call.speak.ended') {
+      console.log('TTS finished, call can continue...')
+    }
+
+    else {
+      console.log('Unhandled event type:', event_type)
+    }
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: `Processed ${event_type} event` 
+    }), {
       headers: { 
         ...corsHeaders,
         'Content-Type': 'application/json' 
@@ -229,7 +287,8 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       error: 'Webhook processing failed',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     }), {
       headers: { 
         ...corsHeaders,

@@ -2659,11 +2659,11 @@ export type Database = {
           appointment_data: Json | null
           appointment_scheduled: boolean | null
           call_control_id: string | null
+          call_duration: number | null
           call_session_id: string | null
           call_status: string | null
           created_at: string | null
           direction: string | null
-          duration: number | null
           ended_at: string | null
           id: string
           phone_number: string | null
@@ -2676,11 +2676,11 @@ export type Database = {
           appointment_data?: Json | null
           appointment_scheduled?: boolean | null
           call_control_id?: string | null
+          call_duration?: number | null
           call_session_id?: string | null
           call_status?: string | null
           created_at?: string | null
           direction?: string | null
-          duration?: number | null
           ended_at?: string | null
           id?: string
           phone_number?: string | null
@@ -2693,11 +2693,11 @@ export type Database = {
           appointment_data?: Json | null
           appointment_scheduled?: boolean | null
           call_control_id?: string | null
+          call_duration?: number | null
           call_session_id?: string | null
           call_status?: string | null
           created_at?: string | null
           direction?: string | null
-          duration?: number | null
           ended_at?: string | null
           id?: string
           phone_number?: string | null

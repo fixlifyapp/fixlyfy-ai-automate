@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Search, Plus, Settings, CheckCircle, PhoneCall } from 'lucide-react';
+import { Phone, Search, Plus, Settings, CheckCircle, PhoneCall, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -48,18 +48,29 @@ export function TelnyxPhoneNumbersPage() {
   const { data: ownedNumbers = [], isLoading: isLoadingOwned } = useQuery({
     queryKey: ['telnyx-owned-numbers'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-        body: { action: 'list' }
-      });
+      try {
+        console.log('Fetching owned numbers...');
+        const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+          body: { action: 'list' }
+        });
 
-      if (error) throw error;
-      return data.phone_numbers || [];
+        if (error) {
+          console.error('Error fetching owned numbers:', error);
+          throw error;
+        }
+        console.log('Owned numbers:', data);
+        return data.phone_numbers || [];
+      } catch (error) {
+        console.error('Failed to fetch owned numbers:', error);
+        return [];
+      }
     }
   });
 
-  // Add existing number mutation
+  // Add existing number mutation - specifically for +14375249932
   const addExistingNumberMutation = useMutation({
     mutationFn: async () => {
+      console.log('Adding existing number +14375249932...');
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
           action: 'add_existing',
@@ -68,16 +79,21 @@ export function TelnyxPhoneNumbersPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding existing number:', error);
+        throw error;
+      }
+      console.log('Add existing number response:', data);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Successfully added number:', data);
       toast.success('Your number +1-437-524-9932 has been added successfully!');
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
     },
     onError: (error) => {
       console.error('Add existing number error:', error);
-      toast.error('Failed to add existing number');
+      toast.error(`Failed to add existing number: ${error.message}`);
     }
   });
 
@@ -90,6 +106,7 @@ export function TelnyxPhoneNumbersPage() {
 
     setIsSearching(true);
     try {
+      console.log('Searching for numbers in area code:', searchAreaCode);
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
           action: 'search',
@@ -98,12 +115,17 @@ export function TelnyxPhoneNumbersPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Search error:', error);
+        throw error;
+      }
+      
+      console.log('Search results:', data);
       setAvailableNumbers(data.available_numbers || []);
       toast.success(`Found ${data.available_numbers?.length || 0} available numbers`);
     } catch (error) {
       console.error('Search error:', error);
-      toast.error('Failed to search for numbers');
+      toast.error(`Failed to search for numbers: ${error.message}`);
     } finally {
       setIsSearching(false);
     }
@@ -112,6 +134,7 @@ export function TelnyxPhoneNumbersPage() {
   // Purchase number mutation
   const purchaseNumberMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
+      console.log('Purchasing number:', phoneNumber);
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
           action: 'purchase',
@@ -120,23 +143,29 @@ export function TelnyxPhoneNumbersPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Purchase error:', error);
+        throw error;
+      }
+      console.log('Purchase response:', data);
       return data;
     },
     onSuccess: (data) => {
+      console.log('Successfully purchased:', data);
       toast.success(`Successfully ordered ${data.phone_number}`);
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
       setAvailableNumbers(prev => prev.filter(num => num.phone_number !== data.phone_number));
     },
     onError: (error) => {
       console.error('Purchase error:', error);
-      toast.error('Failed to purchase number');
+      toast.error(`Failed to purchase number: ${error.message}`);
     }
   });
 
   // Configure number mutation
   const configureNumberMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
+      console.log('Configuring number:', phoneNumber);
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
           action: 'configure',
@@ -144,18 +173,28 @@ export function TelnyxPhoneNumbersPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Configure error:', error);
+        throw error;
+      }
+      console.log('Configure response:', data);
       return data;
     },
     onSuccess: (data) => {
+      console.log('Successfully configured:', data);
       toast.success('Number configured for AI calls');
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
     },
     onError: (error) => {
       console.error('Configure error:', error);
-      toast.error('Failed to configure number');
+      toast.error(`Failed to configure number: ${error.message}`);
     }
   });
+
+  // Check if the specific number exists
+  const hasExistingNumber = ownedNumbers.some((num: OwnedNumber) => 
+    num.phone_number === '+14375249932' || num.phone_number === '14375249932'
+  );
 
   return (
     <div className="space-y-6">
@@ -168,19 +207,29 @@ export function TelnyxPhoneNumbersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+          <div className={`flex items-center justify-between p-4 rounded-lg ${hasExistingNumber ? 'bg-green-50' : 'bg-blue-50'}`}>
             <div>
               <p className="font-medium">Your Telnyx Number: +1-437-524-9932</p>
               <p className="text-sm text-muted-foreground">
-                Add this number to your account to start using AI dispatcher
+                {hasExistingNumber 
+                  ? 'This number is already in your account and ready for AI dispatcher'
+                  : 'Add this number to your account to start using AI dispatcher'
+                }
               </p>
             </div>
-            <Button
-              onClick={() => addExistingNumberMutation.mutate()}
-              disabled={addExistingNumberMutation.isPending}
-            >
-              {addExistingNumberMutation.isPending ? 'Adding...' : 'Add to Account'}
-            </Button>
+            {hasExistingNumber ? (
+              <Badge variant="outline" className="text-green-600">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Added
+              </Badge>
+            ) : (
+              <Button
+                onClick={() => addExistingNumberMutation.mutate()}
+                disabled={addExistingNumberMutation.isPending}
+              >
+                {addExistingNumberMutation.isPending ? 'Adding...' : 'Add to Account'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -247,12 +296,15 @@ export function TelnyxPhoneNumbersPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5" />
-            Your Telnyx Numbers
+            Your Telnyx Numbers ({ownedNumbers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingOwned ? (
-            <p>Loading your numbers...</p>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading your numbers...</p>
+            </div>
           ) : ownedNumbers.length === 0 ? (
             <div className="text-center py-8">
               <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -312,45 +364,48 @@ export function TelnyxPhoneNumbersPage() {
         </CardContent>
       </Card>
 
-      {/* Instructions */}
+      {/* Telnyx Configuration Status */}
       <Card>
         <CardHeader>
-          <CardTitle>AI Dispatcher Setup Status</CardTitle>
+          <CardTitle>Telnyx Configuration Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <h4 className="font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              1. Phone Number Added ✅
-            </h4>
-            <p className="text-sm text-muted-foreground">
-              Your Telnyx number +1-437-524-9932 is added to your account.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              2. AI Configuration Ready ✅
-            </h4>
-            <p className="text-sm text-muted-foreground">
-              Your number is configured for AI dispatcher with webhook endpoints.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-medium">3. Test Your AI Dispatcher</h4>
-            <p className="text-sm text-muted-foreground">
-              Call +1-437-524-9932 to test the AI dispatcher. The call will be logged in the "Call History" tab.
-            </p>
-          </div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              {hasExistingNumber ? (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+              )}
+              <span className="font-medium">1. Phone Number Added</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <span className="font-medium">2. Webhook Configuration</span>
+            </div>
+            
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h5 className="font-medium text-yellow-800 mb-2">⚠️ Manual Telnyx Setup Required</h5>
+              <p className="text-sm text-yellow-700 mb-3">
+                To complete the setup, you need to configure webhooks in your Telnyx dashboard:
+              </p>
+              <ol className="text-sm text-yellow-700 space-y-1">
+                <li>1. Go to your Telnyx Dashboard → Call Control Applications</li>
+                <li>2. Create or edit your Call Control App</li>
+                <li>3. Set Webhook URL to: <code className="bg-yellow-100 px-1 rounded">https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook</code></li>
+                <li>4. Associate your number (+1-437-524-9932) with this app</li>
+                <li>5. Test by calling your number</li>
+              </ol>
+            </div>
 
-          <div className="bg-green-50 p-4 rounded-lg mt-4">
-            <h5 className="font-medium text-green-800 mb-2">🚀 Your AI Dispatcher is Live!</h5>
-            <p className="text-sm text-green-700">
-              Your AI dispatcher is now ready to handle incoming calls 24/7. 
-              It can schedule appointments, capture customer information, and provide intelligent responses.
-            </p>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h5 className="font-medium text-blue-800 mb-2">🧪 Testing</h5>
+              <p className="text-sm text-blue-700">
+                Once configured, test your AI dispatcher by calling +1-437-524-9932. 
+                Calls should appear in the "Call History" tab.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
