@@ -18,6 +18,8 @@ interface TelnyxWebhookEvent {
       client_state?: string;
       start_time?: string;
       end_time?: string;
+      hangup_cause?: string;
+      hangup_source?: string;
     };
   };
 }
@@ -54,6 +56,15 @@ serve(async (req) => {
     console.log('Telnyx webhook event received:', JSON.stringify(webhookEvent, null, 2))
 
     const { event_type, payload } = webhookEvent.data
+    const callControlId = payload.call_control_id
+
+    if (!callControlId) {
+      console.error('No call_control_id found in payload')
+      return new Response(JSON.stringify({ success: false, error: 'Missing call_control_id' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
+      })
+    }
 
     // Handle incoming call initiation
     if (event_type === 'call.initiated' && payload.direction === 'incoming') {
@@ -92,28 +103,43 @@ serve(async (req) => {
         }
       }
 
-      // Log call to database
-      const { data: callRecord, error: logError } = await supabaseClient
+      // Check if call record already exists (to prevent duplicates)
+      const { data: existingCall } = await supabaseClient
         .from('telnyx_calls')
-        .insert({
-          call_control_id: payload.call_control_id,
-          call_session_id: payload.call_session_id,
-          phone_number: payload.from,
-          to_number: payload.to,
-          call_status: 'initiated',
-          direction: 'incoming',
-          started_at: new Date().toISOString(),
-          user_id: phoneNumberData?.user_id || null,
-          appointment_scheduled: false,
-          appointment_data: null
-        })
-        .select()
+        .select('id')
+        .eq('call_control_id', callControlId)
         .single()
 
-      if (logError) {
-        console.error('Error logging call to database:', logError)
+      let callRecord
+      if (existingCall) {
+        console.log('Call record already exists, skipping insert')
+        callRecord = existingCall
       } else {
-        console.log('Call logged to database:', callRecord)
+        // Log call to database - only insert on first call.initiated event
+        const { data: newCallRecord, error: logError } = await supabaseClient
+          .from('telnyx_calls')
+          .insert({
+            call_control_id: callControlId,
+            call_session_id: payload.call_session_id,
+            phone_number: payload.from,
+            to_number: payload.to,
+            call_status: 'initiated',
+            direction: 'incoming',
+            started_at: new Date().toISOString(),
+            user_id: phoneNumberData?.user_id || null,
+            appointment_scheduled: false,
+            appointment_data: null
+          })
+          .select()
+          .single()
+
+        if (logError) {
+          console.error('Error logging call to database:', logError)
+          // Continue with call handling even if logging fails
+        } else {
+          console.log('Call logged to database:', newCallRecord)
+          callRecord = newCallRecord
+        }
       }
 
       // Answer the call
@@ -125,7 +151,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          call_control_id: payload.call_control_id,
+          call_control_id: callControlId,
           client_state: JSON.stringify({ 
             ai_config: aiConfig,
             user_id: phoneNumberData?.user_id,
@@ -139,6 +165,12 @@ serve(async (req) => {
 
       if (!answerResponse.ok) {
         console.error('Error answering call:', answerResult)
+        // Update call status to failed
+        await supabaseClient
+          .from('telnyx_calls')
+          .update({ call_status: 'failed' })
+          .eq('call_control_id', callControlId)
+        
         throw new Error(`Failed to answer call: ${answerResult}`)
       }
 
@@ -158,7 +190,7 @@ serve(async (req) => {
         .update({
           call_status: 'answered'
         })
-        .eq('call_control_id', payload.call_control_id)
+        .eq('call_control_id', callControlId)
 
       if (updateError) {
         console.error('Error updating call status:', updateError)
@@ -184,7 +216,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          call_control_id: payload.call_control_id,
+          call_control_id: callControlId,
           payload: greeting,
           voice: 'female',
           language: 'en'
@@ -204,7 +236,7 @@ serve(async (req) => {
         .update({
           ai_transcript: `AI: ${greeting}`
         })
-        .eq('call_control_id', payload.call_control_id)
+        .eq('call_control_id', callControlId)
 
       if (transcriptError) {
         console.error('Error updating transcript:', transcriptError)
@@ -220,7 +252,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            call_control_id: payload.call_control_id,
+            call_control_id: callControlId,
             audio_url: 'silence_stream://1000',
             minimum_digits: 0,
             maximum_digits: 0,
@@ -254,7 +286,7 @@ serve(async (req) => {
           ended_at: new Date().toISOString(),
           call_duration: duration
         })
-        .eq('call_control_id', payload.call_control_id)
+        .eq('call_control_id', callControlId)
 
       if (updateError) {
         console.error('Error updating call completion:', updateError)
