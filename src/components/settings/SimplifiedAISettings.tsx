@@ -1,81 +1,18 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Save, Brain, DollarSign, MapPin, Wrench, Clock, Plus, X } from "lucide-react";
+import { Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-
-const APPLIANCE_TYPES = [
-  'HVAC Systems',
-  'Plumbing',
-  'Electrical',
-  'Appliance Repair',
-  'Water Heaters',
-  'Garbage Disposals',
-  'Dishwashers',
-  'Washing Machines',
-  'Dryers',
-  'Refrigerators',
-  'Ovens & Stoves'
-];
-
-const BUSINESS_HOURS = [
-  { day: 'Monday', key: 'monday' },
-  { day: 'Tuesday', key: 'tuesday' },
-  { day: 'Wednesday', key: 'wednesday' },
-  { day: 'Thursday', key: 'thursday' },
-  { day: 'Friday', key: 'friday' },
-  { day: 'Saturday', key: 'saturday' },
-  { day: 'Sunday', key: 'sunday' }
-];
-
-// Helper function to safely parse string arrays from JSON
-const parseStringArray = (value: any): string[] => {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.filter(item => typeof item === 'string');
-  }
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(item => typeof item === 'string');
-      }
-    } catch {
-      return [];
-    }
-  }
-  return [];
-};
-
-// Helper function to safely parse business hours
-const parseBusinessHours = (value: any): Record<string, { open: string; close: string; closed: boolean }> => {
-  if (!value) return {};
-  
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    return value as Record<string, { open: string; close: string; closed: boolean }>;
-  }
-  
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        return parsed;
-      }
-    } catch {
-      return {};
-    }
-  }
-  
-  return {};
-};
+import { parseStringArray, parseBusinessHours } from "./utils/aiSettingsUtils";
+import { AIStatusCard } from "./components/AIStatusCard";
+import { BusinessInfoCard } from "./components/BusinessInfoCard";
+import { PricingCard } from "./components/PricingCard";
+import { ServiceAreasCard } from "./components/ServiceAreasCard";
+import { ApplianceTypesCard } from "./components/ApplianceTypesCard";
+import { BusinessHoursEditor } from "../connect/BusinessHoursEditor";
+import { CustomInstructionsCard } from "./components/CustomInstructionsCard";
 
 export const SimplifiedAISettings = () => {
   const { user } = useAuth();
@@ -85,14 +22,13 @@ export const SimplifiedAISettings = () => {
     emergency_surcharge: 50.00,
     service_areas: [] as string[],
     appliance_types: [] as string[],
-    business_hours: {} as Record<string, { open: string; close: string; closed: boolean }>,
+    business_hours: {} as Record<string, { open: string; close: string; enabled: boolean }>,
     custom_instructions: '',
     company_name: 'Your Company',
     agent_name: 'AI Assistant'
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [newServiceArea, setNewServiceArea] = useState('');
 
   useEffect(() => {
     fetchConfig();
@@ -171,45 +107,6 @@ export const SimplifiedAISettings = () => {
     }
   };
 
-  const addServiceArea = () => {
-    if (newServiceArea.trim() && !config.service_areas.includes(newServiceArea.trim())) {
-      setConfig(prev => ({
-        ...prev,
-        service_areas: [...prev.service_areas, newServiceArea.trim()]
-      }));
-      setNewServiceArea('');
-    }
-  };
-
-  const removeServiceArea = (area: string) => {
-    setConfig(prev => ({
-      ...prev,
-      service_areas: prev.service_areas.filter(a => a !== area)
-    }));
-  };
-
-  const toggleApplianceType = (type: string) => {
-    setConfig(prev => ({
-      ...prev,
-      appliance_types: prev.appliance_types.includes(type)
-        ? prev.appliance_types.filter(t => t !== type)
-        : [...prev.appliance_types, type]
-    }));
-  };
-
-  const updateBusinessHours = (day: string, field: string, value: string | boolean) => {
-    setConfig(prev => ({
-      ...prev,
-      business_hours: {
-        ...prev.business_hours,
-        [day]: {
-          ...prev.business_hours[day],
-          [field]: value
-        }
-      }
-    }));
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -220,223 +117,45 @@ export const SimplifiedAISettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* AI Status */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-blue-600" />
-              AI Dispatcher Status
-            </CardTitle>
-            <div className="flex items-center gap-3">
-              <Badge variant={config.is_active ? "success" : "secondary"}>
-                {config.is_active ? "Active" : "Inactive"}
-              </Badge>
-              <Switch
-                checked={config.is_active}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, is_active: checked }))}
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Your AI dispatcher is {config.is_active ? 'active and will' : 'inactive. When active, it will'} automatically 
-            answer calls, understand customer needs, and schedule appointments.
-          </p>
-        </CardContent>
-      </Card>
+      <AIStatusCard 
+        isActive={config.is_active}
+        onToggle={(checked) => setConfig(prev => ({ ...prev, is_active: checked }))}
+      />
 
-      {/* Business Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Business Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="company_name">Company Name</Label>
-              <Input
-                id="company_name"
-                value={config.company_name}
-                onChange={(e) => setConfig(prev => ({ ...prev, company_name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="agent_name">AI Agent Name</Label>
-              <Input
-                id="agent_name"
-                value={config.agent_name}
-                onChange={(e) => setConfig(prev => ({ ...prev, agent_name: e.target.value }))}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <BusinessInfoCard
+        companyName={config.company_name}
+        agentName={config.agent_name}
+        onCompanyNameChange={(value) => setConfig(prev => ({ ...prev, company_name: value }))}
+        onAgentNameChange={(value) => setConfig(prev => ({ ...prev, agent_name: value }))}
+      />
 
-      {/* Pricing */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Service Pricing
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="diagnostic_price">Diagnostic Fee ($)</Label>
-              <Input
-                id="diagnostic_price"
-                type="number"
-                step="0.01"
-                value={config.diagnostic_price}
-                onChange={(e) => setConfig(prev => ({ 
-                  ...prev, 
-                  diagnostic_price: parseFloat(e.target.value) || 0 
-                }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="emergency_surcharge">Emergency Surcharge ($)</Label>
-              <Input
-                id="emergency_surcharge"
-                type="number"
-                step="0.01"
-                value={config.emergency_surcharge}
-                onChange={(e) => setConfig(prev => ({ 
-                  ...prev, 
-                  emergency_surcharge: parseFloat(e.target.value) || 0 
-                }))}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PricingCard
+        diagnosticPrice={config.diagnostic_price}
+        emergencySurcharge={config.emergency_surcharge}
+        onDiagnosticPriceChange={(value) => setConfig(prev => ({ ...prev, diagnostic_price: value }))}
+        onEmergencySurchargeChange={(value) => setConfig(prev => ({ ...prev, emergency_surcharge: value }))}
+      />
 
-      {/* Service Areas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Service Areas
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              value={newServiceArea}
-              onChange={(e) => setNewServiceArea(e.target.value)}
-              placeholder="Enter zip code or city name"
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addServiceArea())}
-            />
-            <Button onClick={addServiceArea}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {config.service_areas.map((area) => (
-              <Badge
-                key={area}
-                variant="secondary"
-                className="cursor-pointer flex items-center gap-1"
-                onClick={() => removeServiceArea(area)}
-              >
-                {area}
-                <X className="h-3 w-3" />
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <ServiceAreasCard
+        serviceAreas={config.service_areas}
+        onServiceAreasChange={(areas) => setConfig(prev => ({ ...prev, service_areas: areas }))}
+      />
 
-      {/* Appliance Types */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5" />
-            Services We Provide
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {APPLIANCE_TYPES.map((type) => (
-              <div
-                key={type}
-                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                  config.appliance_types.includes(type)
-                    ? 'bg-blue-50 border-blue-200 text-blue-800'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                }`}
-                onClick={() => toggleApplianceType(type)}
-              >
-                <div className="font-medium text-sm">{type}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <ApplianceTypesCard
+        selectedTypes={config.appliance_types}
+        onTypesChange={(types) => setConfig(prev => ({ ...prev, appliance_types: types }))}
+      />
 
-      {/* Business Hours */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Business Hours
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {BUSINESS_HOURS.map(({ day, key }) => (
-            <div key={key} className="flex items-center gap-4">
-              <div className="w-20 font-medium">{day}</div>
-              <Switch
-                checked={!config.business_hours[key]?.closed}
-                onCheckedChange={(checked) => updateBusinessHours(key, 'closed', !checked)}
-              />
-              {!config.business_hours[key]?.closed && (
-                <>
-                  <Input
-                    type="time"
-                    value={config.business_hours[key]?.open || '09:00'}
-                    onChange={(e) => updateBusinessHours(key, 'open', e.target.value)}
-                    className="w-32"
-                  />
-                  <span>to</span>
-                  <Input
-                    type="time"
-                    value={config.business_hours[key]?.close || '17:00'}
-                    onChange={(e) => updateBusinessHours(key, 'close', e.target.value)}
-                    className="w-32"
-                  />
-                </>
-              )}
-              {config.business_hours[key]?.closed && (
-                <span className="text-muted-foreground">Closed</span>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <BusinessHoursEditor
+        businessHours={config.business_hours}
+        onBusinessHoursChange={(hours) => setConfig(prev => ({ ...prev, business_hours: hours }))}
+      />
 
-      {/* Custom Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Custom AI Instructions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={config.custom_instructions}
-            onChange={(e) => setConfig(prev => ({ ...prev, custom_instructions: e.target.value }))}
-            placeholder="Add specific instructions for how your AI should handle calls..."
-            rows={4}
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            Example: "Always ask about warranty status", "Mention our 24/7 emergency service"
-          </p>
-        </CardContent>
-      </Card>
+      <CustomInstructionsCard
+        instructions={config.custom_instructions}
+        onInstructionsChange={(instructions) => setConfig(prev => ({ ...prev, custom_instructions: instructions }))}
+      />
 
-      {/* Save Button */}
       <div className="flex justify-end">
         <Button onClick={saveConfig} disabled={isSaving} className="gap-2">
           <Save className="h-4 w-4" />
