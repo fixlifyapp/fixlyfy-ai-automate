@@ -1,6 +1,17 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
+import { getBusinessConfig } from './utils/businessConfig.ts'
+import { findOrCreatePhoneNumber, logCallToDatabase, updateCallStatus } from './utils/callHandling.ts'
+import { transcribeAudio } from './utils/transcription.ts'
+import { generateAIResponse, checkForSchedulingIntent } from './utils/aiResponse.ts'
+import { 
+  createGreetingTeXML, 
+  createResponseTeXML, 
+  createClarificationTeXML, 
+  createErrorTeXML,
+  createAppointmentTeXML 
+} from './utils/texml.ts'
 
 interface TelnyxWebhookData {
   CallSid?: string;
@@ -69,132 +80,25 @@ serve(async (req) => {
       return new Response('Missing CallSid', { status: 400 })
     }
 
-    // Get company and AI configuration with enhanced fallbacks
-    const getBusinessConfig = async () => {
-      // First try to get company settings
-      const { data: companySettings } = await supabaseClient
-        .from('company_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
-
-      // Then get AI agent config
-      const { data: aiConfigs } = await supabaseClient
-        .from('ai_agent_configs')
-        .select('*')
-        .eq('is_active', true)
-        .limit(1)
-
-      let aiConfig = aiConfigs?.[0]
-      
-      // Create enhanced config with company data
-      const businessConfig = {
-        // Company info (prioritize company_settings, fallback to ai_agent_configs)
-        company_name: companySettings?.company_name || aiConfig?.company_name || 'Fixlyfy Services',
-        business_type: companySettings?.business_type || aiConfig?.business_niche || 'HVAC & Plumbing Services',
-        company_phone: companySettings?.company_phone || '(555) 123-4567',
-        company_address: companySettings?.company_address || null,
-        company_city: companySettings?.company_city || null,
-        company_state: companySettings?.company_state || null,
-        service_zip_codes: companySettings?.service_zip_codes || null,
-        
-        // AI config
-        agent_name: aiConfig?.agent_name || 'AI Assistant',
-        diagnostic_price: aiConfig?.diagnostic_price || 75,
-        emergency_surcharge: aiConfig?.emergency_surcharge || 50,
-        service_areas: aiConfig?.service_areas || [],
-        service_types: aiConfig?.service_types || ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
-        business_hours: aiConfig?.business_hours || {},
-        custom_prompt_additions: aiConfig?.custom_prompt_additions || ''
-      }
-
-      console.log('Business config loaded:', JSON.stringify(businessConfig, null, 2))
-      return businessConfig
-    }
-
     // Handle new incoming call
     if (callStatus === 'ringing' || (!callStatus && from && to)) {
       console.log('Processing new incoming call from:', from, 'to:', to)
 
       // Find or create phone number entry
-      let phoneNumberData
-      const { data: existingNumber } = await supabaseClient
-        .from('telnyx_phone_numbers')
-        .select('*')
-        .eq('phone_number', to)
-        .single()
-
-      if (existingNumber) {
-        phoneNumberData = existingNumber
-        console.log('Found existing phone number data')
-      } else {
-        console.log('Phone number not found, creating entry for:', to)
-        const { data: newNumber, error: createError } = await supabaseClient
-          .from('telnyx_phone_numbers')
-          .insert({
-            phone_number: to,
-            status: 'active',
-            country_code: 'US',
-            configured_at: new Date().toISOString(),
-            webhook_url: 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
-          })
-          .select()
-          .single()
-
-        if (createError) {
-          console.error('Error creating phone number entry:', createError)
-        } else {
-          phoneNumberData = newNumber
-          console.log('Created new phone number entry')
-        }
-      }
+      const phoneNumberData = await findOrCreatePhoneNumber(supabaseClient, to)
 
       // Get business configuration
-      const businessConfig = await getBusinessConfig()
+      const businessConfig = await getBusinessConfig(supabaseClient)
 
       // Log the call in database
-      const { data: newCallRecord, error: logError } = await supabaseClient
-        .from('telnyx_calls')
-        .insert({
-          call_control_id: callSid,
-          call_session_id: callSid,
-          phone_number: from,
-          to_number: to,
-          call_status: 'initiated',
-          direction: 'incoming',
-          started_at: new Date().toISOString(),
-          user_id: phoneNumberData?.user_id || null,
-          appointment_scheduled: false,
-          appointment_data: null
-        })
-        .select()
-        .single()
+      await logCallToDatabase(supabaseClient, callSid, from, to, phoneNumberData)
 
-      if (logError && logError.code !== '23505') { // Ignore duplicate key errors
-        console.error('Error logging call to database:', logError)
-      } else {
-        console.log('Call logged to database successfully')
-      }
-
-      // Return TeXML to answer call and start conversation with improved recording settings
+      // Return TeXML to answer call and start conversation
       const greeting = `Hello! This is ${businessConfig.agent_name} from ${businessConfig.company_name}. How can I help you today?`
       
-      const texml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">${greeting}</Say>
-    <Record 
-        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
-        method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
-    />
-</Response>`
-
       console.log('Returning TeXML greeting with company name:', businessConfig.company_name)
       
-      return new Response(texml, {
+      return new Response(createGreetingTeXML(greeting), {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/xml' 
@@ -210,64 +114,13 @@ serve(async (req) => {
       
       // If we have recording URL but no speech result, transcribe it with OpenAI
       if (recordingUrl && !speechResult) {
-        try {
-          console.log('Transcribing recording from URL:', recordingUrl)
-          
-          // Download the recording
-          const recordingResponse = await fetch(recordingUrl)
-          if (!recordingResponse.ok) {
-            throw new Error(`Failed to fetch recording: ${recordingResponse.status}`)
-          }
-          
-          const audioBuffer = await recordingResponse.arrayBuffer()
-          console.log('Downloaded audio buffer size:', audioBuffer.byteLength)
-          
-          // Transcribe with OpenAI Whisper
-          const formData = new FormData()
-          const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' })
-          formData.append('file', audioBlob, 'recording.wav')
-          formData.append('model', 'whisper-1')
-
-          const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openaiApiKey}`,
-            },
-            body: formData,
-          })
-
-          if (transcriptionResponse.ok) {
-            const transcription = await transcriptionResponse.json()
-            userMessage = transcription.text || ''
-            console.log('Transcribed message:', userMessage)
-          } else {
-            const errorText = await transcriptionResponse.text()
-            console.error('Transcription failed:', errorText)
-            userMessage = ''
-          }
-        } catch (error) {
-          console.error('Error transcribing recording:', error)
-          userMessage = ''
-        }
+        userMessage = await transcribeAudio(recordingUrl, openaiApiKey)
       }
 
       // Handle empty or unclear input
       if (!userMessage || userMessage.trim().length < 3) {
         console.log('No clear input received, asking again')
-        const texml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">I didn't catch that clearly. Could you please tell me what you need help with?</Say>
-    <Record 
-        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
-        method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
-    />
-</Response>`
-
-        return new Response(texml, {
+        return new Response(createClarificationTeXML(), {
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/xml' 
@@ -276,151 +129,40 @@ serve(async (req) => {
       }
 
       // Get business configuration for AI response
-      const businessConfig = await getBusinessConfig()
+      const businessConfig = await getBusinessConfig(supabaseClient)
 
-      // Generate enhanced AI response using GPT
-      const systemPrompt = `You are ${businessConfig.agent_name} for ${businessConfig.company_name}, a ${businessConfig.business_type} business.
+      // Generate AI response using GPT
+      const aiResponse = await generateAIResponse(userMessage, businessConfig, openaiApiKey)
 
-COMPANY INFORMATION:
-- Company: ${businessConfig.company_name}
-- Business Type: ${businessConfig.business_type}
-- Phone: ${businessConfig.company_phone}
-${businessConfig.company_address ? `- Address: ${businessConfig.company_address}, ${businessConfig.company_city}, ${businessConfig.company_state}` : ''}
-${businessConfig.service_zip_codes ? `- Service Areas: ${businessConfig.service_zip_codes}` : ''}
+      // Update call record with conversation
+      await updateCallStatus(supabaseClient, callSid, 'connected', {
+        ai_transcript: `User: ${userMessage}\nAI: ${aiResponse}`
+      })
 
-PRICING:
-- Diagnostic service: $${businessConfig.diagnostic_price}
-- Emergency surcharge: $${businessConfig.emergency_surcharge} (for after-hours calls)
+      // Check if user wants to schedule appointment
+      const wantsToSchedule = checkForSchedulingIntent(userMessage, aiResponse)
 
-SERVICES OFFERED:
-${businessConfig.service_types?.join(', ') || 'HVAC, Plumbing, Electrical, General Repair'}
-
-IMPORTANT INSTRUCTIONS:
-1. Be helpful, professional, and conversational
-2. If they need service, offer to schedule an appointment
-3. Ask for their name, phone number, and what service they need
-4. Keep responses under 100 words for phone conversation
-5. If they want to schedule, say you'll help them book the appointment
-6. Speak naturally and be empathetic to their needs
-
-${businessConfig.custom_prompt_additions || ''}
-
-Remember: You represent ${businessConfig.company_name} and should always mention the company name when introducing yourself.`
-
-      try {
-        console.log('Generating AI response for user message:', userMessage)
-        
-        const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userMessage }
-            ],
-            temperature: 0.7,
-            max_tokens: 200
-          })
+      if (wantsToSchedule) {
+        // Mark as appointment in progress
+        await updateCallStatus(supabaseClient, callSid, 'connected', {
+          appointment_scheduled: true,
+          appointment_data: { 
+            scheduling_in_progress: true, 
+            user_message: userMessage,
+            company_name: businessConfig.company_name,
+            step: 'collecting_contact_info'
+          }
         })
 
-        let aiResponse = "I'm sorry, I'm having trouble right now. Please try calling back in a few minutes."
-        
-        if (gptResponse.ok) {
-          const gptData = await gptResponse.json()
-          aiResponse = gptData.choices[0]?.message?.content || aiResponse
-          console.log('AI Response generated:', aiResponse)
-        } else {
-          const errorText = await gptResponse.text()
-          console.error('GPT API error:', errorText)
-        }
-
-        // Update call record with conversation
-        await supabaseClient
-          .from('telnyx_calls')
-          .update({
-            ai_transcript: `User: ${userMessage}\nAI: ${aiResponse}`,
-            call_status: 'connected'
-          })
-          .eq('call_control_id', callSid)
-
-        // Check if user wants to schedule appointment
-        const scheduleKeywords = ['schedule', 'appointment', 'book', 'when can', 'available', 'come out', 'visit', 'time']
-        const wantsToSchedule = scheduleKeywords.some(keyword => 
-          userMessage.toLowerCase().includes(keyword) || aiResponse.toLowerCase().includes('schedule')
-        )
-
-        if (wantsToSchedule) {
-          // Continue with appointment scheduling
-          const texml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">${aiResponse} What's the best phone number to reach you, and what type of service do you need?</Say>
-    <Record 
-        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
-        method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
-    />
-</Response>`
-
-          // Mark as appointment in progress
-          await supabaseClient
-            .from('telnyx_calls')
-            .update({
-              appointment_scheduled: true,
-              appointment_data: { 
-                scheduling_in_progress: true, 
-                user_message: userMessage,
-                company_name: businessConfig.company_name,
-                step: 'collecting_contact_info'
-              }
-            })
-            .eq('call_control_id', callSid)
-
-          return new Response(texml, {
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'application/xml' 
-            }
-          })
-        } else {
-          // Continue conversation
-          const texml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">${aiResponse}</Say>
-    <Record 
-        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
-        method="POST"
-        maxLength="20"
-        finishOnKey="#"
-        timeout="10"
-        playBeep="false"
-    />
-</Response>`
-
-          return new Response(texml, {
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'application/xml' 
-            }
-          })
-        }
-
-      } catch (error) {
-        console.error('Error generating AI response:', error)
-        
-        const texml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">I'm sorry, I'm having technical difficulties. Please try calling back later. Thank you!</Say>
-    <Hangup/>
-</Response>`
-
-        return new Response(texml, {
+        return new Response(createAppointmentTeXML(aiResponse), {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/xml' 
+          }
+        })
+      } else {
+        // Continue conversation
+        return new Response(createResponseTeXML(aiResponse), {
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/xml' 
@@ -433,13 +175,7 @@ Remember: You represent ${businessConfig.company_name} and should always mention
     if (callStatus === 'completed' || callStatus === 'hangup') {
       console.log('Call completed:', callSid)
       
-      await supabaseClient
-        .from('telnyx_calls')
-        .update({
-          call_status: 'completed',
-          ended_at: new Date().toISOString()
-        })
-        .eq('call_control_id', callSid)
+      await updateCallStatus(supabaseClient, callSid, 'completed')
 
       return new Response('OK', {
         headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
@@ -455,14 +191,7 @@ Remember: You represent ${businessConfig.company_name} and should always mention
   } catch (error) {
     console.error('Error processing Telnyx TeXML webhook:', error)
     
-    // Return error TeXML
-    const errorTexml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">I'm sorry, we're experiencing technical difficulties. Please try calling back later.</Say>
-    <Hangup/>
-</Response>`
-
-    return new Response(errorTexml, {
+    return new Response(createErrorTeXML(), {
       headers: { ...corsHeaders, 'Content-Type': 'application/xml' },
       status: 200 // Always return 200 for TeXML
     })
