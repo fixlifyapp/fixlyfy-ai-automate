@@ -2,27 +2,17 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
-interface TelnyxWebhookEvent {
-  data: {
-    event_type: string;
-    id: string;
-    payload: {
-      call_control_id?: string;
-      connection_id?: string;
-      call_session_id?: string;
-      call_leg_id?: string;
-      from?: string;
-      to?: string;
-      direction?: string;
-      state?: string;
-      client_state?: string;
-      start_time?: string;
-      end_time?: string;
-      hangup_cause?: string;
-      hangup_source?: string;
-      stream_url?: string;
-    };
-  };
+interface TelnyxWebhookData {
+  CallSid?: string;
+  From?: string;
+  To?: string;
+  CallStatus?: string;
+  Direction?: string;
+  RecordingUrl?: string;
+  RecordingSid?: string;
+  Digits?: string;
+  SpeechResult?: string;
+  AccountSid?: string;
 }
 
 const corsHeaders = {
@@ -31,7 +21,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log(`Telnyx Voice Webhook: ${req.method} ${req.url}`)
+  console.log(`Telnyx TeXML Webhook: ${req.method} ${req.url}`)
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -43,52 +33,60 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     
-    if (!telnyxApiKey) {
-      console.error('TELNYX_API_KEY not configured')
-      throw new Error('TELNYX_API_KEY not configured')
+    if (!openaiApiKey) {
+      console.error('OPENAI_API_KEY not configured')
+      throw new Error('OPENAI_API_KEY not configured')
     }
 
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 })
     }
 
-    const webhookEvent: TelnyxWebhookEvent = await req.json()
-    console.log('Telnyx webhook event received:', JSON.stringify(webhookEvent, null, 2))
+    // Parse form data from Telnyx
+    const formData = await req.formData()
+    const webhookData: TelnyxWebhookData = {}
+    
+    for (const [key, value] of formData.entries()) {
+      webhookData[key as keyof TelnyxWebhookData] = value as string
+    }
+    
+    console.log('Telnyx TeXML webhook data:', JSON.stringify(webhookData, null, 2))
 
-    const { event_type, payload } = webhookEvent.data
-    const callControlId = payload.call_control_id
+    const callSid = webhookData.CallSid
+    const from = webhookData.From
+    const to = webhookData.To
+    const callStatus = webhookData.CallStatus
+    const recordingUrl = webhookData.RecordingUrl
+    const speechResult = webhookData.SpeechResult
 
-    if (!callControlId) {
-      console.error('No call_control_id found in payload')
-      return new Response(JSON.stringify({ success: false, error: 'Missing call_control_id' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
-      })
+    if (!callSid) {
+      console.error('No CallSid found in webhook data')
+      return new Response('Missing CallSid', { status: 400 })
     }
 
-    // Handle incoming call initiation
-    if (event_type === 'call.initiated' && payload.direction === 'incoming') {
-      console.log('Processing incoming call from:', payload.from, 'to:', payload.to)
+    // Handle new incoming call
+    if (callStatus === 'ringing' || (!callStatus && from && to)) {
+      console.log('Processing new incoming call from:', from, 'to:', to)
 
-      // Find or create the phone number entry
+      // Find or create phone number entry
       let phoneNumberData
       const { data: existingNumber } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
-        .eq('phone_number', payload.to)
+        .eq('phone_number', to)
         .single()
 
       if (existingNumber) {
         phoneNumberData = existingNumber
         console.log('Found existing phone number data')
       } else {
-        console.log('Phone number not found, creating entry for:', payload.to)
+        console.log('Phone number not found, creating entry for:', to)
         const { data: newNumber, error: createError } = await supabaseClient
           .from('telnyx_phone_numbers')
           .insert({
-            phone_number: payload.to,
+            phone_number: to,
             status: 'active',
             country_code: 'US',
             configured_at: new Date().toISOString(),
@@ -105,7 +103,7 @@ serve(async (req) => {
         }
       }
 
-      // Find active AI configuration
+      // Get AI configuration
       const { data: aiConfigs } = await supabaseClient
         .from('ai_agent_configs')
         .select('*')
@@ -132,10 +130,10 @@ serve(async (req) => {
       const { data: newCallRecord, error: logError } = await supabaseClient
         .from('telnyx_calls')
         .insert({
-          call_control_id: callControlId,
-          call_session_id: payload.call_session_id,
-          phone_number: payload.from,
-          to_number: payload.to,
+          call_control_id: callSid,
+          call_session_id: callSid,
+          phone_number: from,
+          to_number: to,
           call_status: 'initiated',
           direction: 'incoming',
           started_at: new Date().toISOString(),
@@ -146,166 +144,290 @@ serve(async (req) => {
         .select()
         .single()
 
-      if (logError) {
+      if (logError && logError.code !== '23505') { // Ignore duplicate key errors
         console.error('Error logging call to database:', logError)
       } else {
         console.log('Call logged to database successfully')
       }
 
-      // Answer the call and start media streaming
-      console.log('Attempting to answer call with control ID:', callControlId)
+      // Return TeXML to answer call and start conversation
+      const greeting = `Hello! This is ${aiConfig.agent_name} from ${aiConfig.company_name}. How can I help you today?`
+      
+      const texml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">${greeting}</Say>
+    <Record 
+        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        method="POST"
+        maxLength="30"
+        finishOnKey="#"
+        timeout="5"
+        transcribe="true"
+        transcribeCallback="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+    />
+</Response>`
+
+      console.log('Returning TeXML greeting:', texml)
+      
+      return new Response(texml, {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/xml' 
+        }
+      })
+    }
+
+    // Handle recording/transcription callback
+    if (recordingUrl || speechResult) {
+      console.log('Processing recording/speech:', { recordingUrl, speechResult })
+
+      let userMessage = speechResult || ''
+      
+      // If we have recording URL but no speech result, we need to transcribe it
+      if (recordingUrl && !speechResult) {
+        try {
+          console.log('Transcribing recording from URL:', recordingUrl)
+          
+          // Download the recording
+          const recordingResponse = await fetch(recordingUrl)
+          const audioBuffer = await recordingResponse.arrayBuffer()
+          
+          // Transcribe with OpenAI Whisper
+          const formData = new FormData()
+          const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' })
+          formData.append('file', audioBlob, 'recording.wav')
+          formData.append('model', 'whisper-1')
+
+          const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+            },
+            body: formData,
+          })
+
+          if (transcriptionResponse.ok) {
+            const transcription = await transcriptionResponse.json()
+            userMessage = transcription.text || ''
+            console.log('Transcribed message:', userMessage)
+          } else {
+            console.error('Transcription failed:', await transcriptionResponse.text())
+            userMessage = 'Sorry, I could not understand what you said.'
+          }
+        } catch (error) {
+          console.error('Error transcribing recording:', error)
+          userMessage = 'Sorry, I had trouble processing your message.'
+        }
+      }
+
+      if (!userMessage.trim()) {
+        // No input received, ask again
+        const texml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">I didn't catch that. Could you please repeat what you need help with?</Say>
+    <Record 
+        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        method="POST"
+        maxLength="30"
+        finishOnKey="#"
+        timeout="5"
+        transcribe="true"
+        transcribeCallback="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+    />
+</Response>`
+
+        return new Response(texml, {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/xml' 
+          }
+        })
+      }
+
+      // Get AI config for this call
+      const { data: aiConfigs } = await supabaseClient
+        .from('ai_agent_configs')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1)
+
+      let aiConfig = aiConfigs?.[0]
+      if (!aiConfig) {
+        aiConfig = {
+          business_niche: 'General Service',
+          diagnostic_price: 75,
+          emergency_surcharge: 50,
+          agent_name: 'AI Assistant',
+          company_name: 'our company',
+          service_areas: [],
+          business_hours: {},
+          service_types: ['HVAC', 'Plumbing', 'Electrical', 'General Repair'],
+          custom_prompt_additions: ''
+        }
+      }
+
+      // Generate AI response using GPT
+      const systemPrompt = `You are ${aiConfig.agent_name} for ${aiConfig.company_name}, a ${aiConfig.business_niche} business.
+
+IMPORTANT INSTRUCTIONS:
+1. Be helpful, professional, and conversational
+2. If they need service, offer to schedule an appointment
+3. Ask for their name, phone number, and what service they need
+4. Keep responses under 100 words for phone conversation
+5. If they want to schedule, say you'll transfer them to book the appointment
+
+Your diagnostic service costs $${aiConfig.diagnostic_price} with a $${aiConfig.emergency_surcharge} emergency surcharge for after-hours calls.
+
+Service areas: ${aiConfig.service_areas?.join(', ') || 'All areas'}
+Services offered: ${aiConfig.service_types?.join(', ') || 'HVAC, Plumbing, Electrical, General Repair'}
+
+${aiConfig.custom_prompt_additions || ''}`
+
       try {
-        const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
+        const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${telnyxApiKey}`,
+            'Authorization': `Bearer ${openaiApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            call_control_id: callControlId,
-            client_state: JSON.stringify({ 
-              ai_config: aiConfig,
-              user_id: phoneNumberData?.user_id,
-              call_record_id: newCallRecord?.id
-            })
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessage }
+            ],
+            temperature: 0.7,
+            max_tokens: 200
           })
         })
 
-        const answerResult = await answerResponse.text()
-        console.log('Answer call response status:', answerResponse.status)
-        console.log('Answer call response body:', answerResult)
+        let aiResponse = "I'm sorry, I'm having trouble right now. Please try calling back in a few minutes."
+        
+        if (gptResponse.ok) {
+          const gptData = await gptResponse.json()
+          aiResponse = gptData.choices[0]?.message?.content || aiResponse
+          console.log('AI Response:', aiResponse)
+        } else {
+          console.error('GPT API error:', await gptResponse.text())
+        }
 
-        if (!answerResponse.ok) {
-          console.error('Failed to answer call. Status:', answerResponse.status, 'Response:', answerResult)
-          
+        // Update call record with conversation
+        await supabaseClient
+          .from('telnyx_calls')
+          .update({
+            ai_transcript: `User: ${userMessage}\nAI: ${aiResponse}`,
+            call_status: 'connected'
+          })
+          .eq('call_control_id', callSid)
+
+        // Check if user wants to schedule appointment
+        const scheduleKeywords = ['schedule', 'appointment', 'book', 'when can', 'available', 'come out']
+        const wantsToSchedule = scheduleKeywords.some(keyword => 
+          userMessage.toLowerCase().includes(keyword) || aiResponse.toLowerCase().includes('schedule')
+        )
+
+        if (wantsToSchedule) {
+          // End call with scheduling message
+          const texml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">${aiResponse} Please hold while I connect you to our scheduling system. Thank you for calling!</Say>
+    <Hangup/>
+</Response>`
+
+          // Mark as appointment scheduled
           await supabaseClient
             .from('telnyx_calls')
-            .update({ call_status: 'failed' })
-            .eq('call_control_id', callControlId)
+            .update({
+              appointment_scheduled: true,
+              appointment_data: { needs_scheduling: true, user_message: userMessage },
+              call_status: 'completed'
+            })
+            .eq('call_control_id', callSid)
 
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: 'Failed to answer call',
-            details: answerResult
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500
+          return new Response(texml, {
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/xml' 
+            }
           })
-        }
-
-        console.log('Call answered successfully!')
-        
-        await supabaseClient
-          .from('telnyx_calls')
-          .update({ call_status: 'answered' })
-          .eq('call_control_id', callControlId)
-
-      } catch (answerError) {
-        console.error('Exception while answering call:', answerError)
-        
-        await supabaseClient
-          .from('telnyx_calls')
-          .update({ call_status: 'failed' })
-          .eq('call_control_id', callControlId)
-
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Exception while answering call',
-          details: answerError.message
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        })
-      }
-    }
-
-    // When call is answered, start media streaming to our Realtime API
-    else if (event_type === 'call.answered') {
-      console.log('Call connected, starting media streaming...')
-
-      const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
-
-      await supabaseClient
-        .from('telnyx_calls')
-        .update({ call_status: 'connected' })
-        .eq('call_control_id', callControlId)
-
-      // Start streaming media to our realtime voice dispatch function
-      try {
-        const streamResponse = await fetch('https://api.telnyx.com/v2/calls/actions/streaming_start', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${telnyxApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            call_control_id: callControlId,
-            stream_url: `wss://mqppvcrlvsgrsqelglod.functions.supabase.co/realtime-voice-dispatch?telnyx=true&call_record_id=${clientState.call_record_id}`,
-            stream_track: 'both',
-            enable_bidirectional_audio: true
-          })
-        })
-
-        const streamResult = await streamResponse.text()
-        console.log('Stream start response status:', streamResponse.status)
-        console.log('Stream start response body:', streamResult)
-
-        if (!streamResponse.ok) {
-          console.error('Failed to start streaming:', streamResult)
         } else {
-          console.log('Media streaming started successfully')
+          // Continue conversation
+          const texml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">${aiResponse}</Say>
+    <Record 
+        action="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+        method="POST"
+        maxLength="30"
+        finishOnKey="#"
+        timeout="5"
+        transcribe="true"
+        transcribeCallback="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook"
+    />
+</Response>`
+
+          return new Response(texml, {
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/xml' 
+            }
+          })
         }
 
-      } catch (streamError) {
-        console.error('Exception while starting streaming:', streamError)
+      } catch (error) {
+        console.error('Error generating AI response:', error)
+        
+        const texml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">I'm sorry, I'm having technical difficulties. Please try calling back later. Thank you!</Say>
+    <Hangup/>
+</Response>`
+
+        return new Response(texml, {
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/xml' 
+          }
+        })
       }
     }
 
-    // Handle call hangup/completion
-    else if (event_type === 'call.hangup') {
-      console.log('Call ended, updating status...')
+    // Handle call completion
+    if (callStatus === 'completed' || callStatus === 'hangup') {
+      console.log('Call completed:', callSid)
       
-      let duration = null
-      if (payload.start_time && payload.end_time) {
-        const startTime = new Date(payload.start_time)
-        const endTime = new Date(payload.end_time)
-        duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
-      }
-
       await supabaseClient
         .from('telnyx_calls')
         .update({
           call_status: 'completed',
-          ended_at: new Date().toISOString(),
-          call_duration: duration
+          ended_at: new Date().toISOString()
         })
-        .eq('call_control_id', callControlId)
+        .eq('call_control_id', callSid)
 
-      console.log('Call completion recorded successfully')
+      return new Response('OK', {
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+      })
     }
 
-    // Handle other events
-    else {
-      console.log('Unhandled event type:', event_type)
-    }
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: `Processed ${event_type} event successfully` 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    // Default response for unhandled events
+    console.log('Unhandled webhook event:', webhookData)
+    return new Response('OK', {
+      headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
     })
 
   } catch (error) {
-    console.error('Error processing Telnyx webhook:', error)
+    console.error('Error processing Telnyx TeXML webhook:', error)
     
-    return new Response(JSON.stringify({
-      error: 'Webhook processing failed',
-      message: error.message,
-      stack: error.stack
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500
+    // Return error TeXML
+    const errorTexml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">I'm sorry, we're experiencing technical difficulties. Please try calling back later.</Say>
+    <Hangup/>
+</Response>`
+
+    return new Response(errorTexml, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/xml' },
+      status: 200 // Always return 200 for TeXML
     })
   }
 })
