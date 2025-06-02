@@ -62,6 +62,13 @@ export const EstimateSendDialog = ({
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
     console.log("Custom note:", customNote);
+    console.log("Contact info:", contactInfo);
+    console.log("Job ID:", jobId);
+
+    if (!sendTo.trim()) {
+      console.error("No recipient specified");
+      return;
+    }
 
     const result = await sendEstimate({
       sendMethod,
@@ -78,6 +85,8 @@ export const EstimateSendDialog = ({
     if (result.success) {
       console.log("Send successful, calling onSuccess");
       onSuccess();
+    } else {
+      console.error("Send failed:", result.error);
     }
   };
 

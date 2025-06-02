@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
 import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
+import { useJobs } from "@/hooks/useJobs";
 
 interface JobEstimatesTabProps {
   jobId: string;
@@ -13,6 +14,9 @@ interface JobEstimatesTabProps {
 
 export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabProps) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const { jobs } = useJobs();
+  
+  const job = jobs.find(j => j.id === jobId);
 
   const handleCreateEstimate = () => {
     setShowCreateForm(true);
@@ -22,6 +26,10 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
     setShowCreateForm(false);
     // The EstimatesList component will automatically refresh via useEstimates hook
   };
+
+  if (!job) {
+    return <div>Job not found</div>;
+  }
 
   return (
     <Card className="border-fixlyfy-border shadow-sm">
@@ -42,8 +50,8 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
         <EstimateBuilderDialog
           open={showCreateForm}
           onOpenChange={setShowCreateForm}
-          jobId={jobId}
-          onSyncToInvoice={handleEstimateCreated}
+          job={job}
+          onSuccess={handleEstimateCreated}
         />
       </CardContent>
     </Card>

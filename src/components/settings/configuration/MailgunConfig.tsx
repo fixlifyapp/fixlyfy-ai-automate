@@ -5,43 +5,50 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Mail, ExternalLink } from "lucide-react";
+import { Mail, ExternalLink, TestTube, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 export const MailgunConfig = () => {
-  const [domain, setDomain] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [fromName, setFromName] = useState("Support Team");
-  const [fromAddress, setFromAddress] = useState("");
-  const [verificationStatus, setVerificationStatus] = useState("pending");
+  const { user } = useAuth();
+  const [settings, setSettings] = useState({
+    mailgun_domain: "",
+    email_from_name: "Support Team",
+    email_from_address: "",
+    domain_verification_status: "pending"
+  });
+  const [testEmail, setTestEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
-    loadMailgunSettings();
-  }, []);
+    loadSettings();
+  }, [user]);
 
-  const loadMailgunSettings = async () => {
+  const loadSettings = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('company_settings')
         .select('mailgun_domain, email_from_name, email_from_address, domain_verification_status')
+        .eq('user_id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        setDomain(data.mailgun_domain || "");
-        setFromName(data.email_from_name || "Support Team");
-        setFromAddress(data.email_from_address || "");
-        setVerificationStatus(data.domain_verification_status || "pending");
+        setSettings({
+          mailgun_domain: data.mailgun_domain || "",
+          email_from_name: data.email_from_name || "Support Team",
+          email_from_address: data.email_from_address || "",
+          domain_verification_status: data.domain_verification_status || "pending"
+        });
       }
     } catch (error) {
-      console.error('Error loading Mailgun settings:', error);
+      console.error('Error loading settings:', error);
       toast.error('Failed to load Mailgun settings');
     } finally {
       setIsLoading(false);
@@ -49,66 +56,87 @@ export const MailgunConfig = () => {
   };
 
   const saveSettings = async () => {
-    setIsSaving(true);
+    if (!user) return;
+    
+    setIsLoading(true);
     try {
-      // Update company settings
-      const { error: settingsError } = await supabase
+      const { error } = await supabase
         .from('company_settings')
         .upsert({
-          mailgun_domain: domain,
-          email_from_name: fromName,
-          email_from_address: fromAddress,
-          domain_verification_status: 'pending'
+          user_id: user.id,
+          ...settings
         });
 
-      if (settingsError) throw settingsError;
-
+      if (error) throw error;
       toast.success('Mailgun settings saved successfully');
-      
-      // If domain is provided, trigger verification
-      if (domain) {
-        await verifyDomain();
-      }
     } catch (error) {
-      console.error('Error saving Mailgun settings:', error);
+      console.error('Error saving settings:', error);
       toast.error('Failed to save Mailgun settings');
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
   const verifyDomain = async () => {
+    if (!settings.mailgun_domain) {
+      toast.error('Please enter a domain first');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('manage-mailgun-domains', {
         body: {
           action: 'verify',
-          domain: domain
+          domain: settings.mailgun_domain
         }
       });
 
       if (error) throw error;
 
-      if (data?.verified) {
-        setVerificationStatus('verified');
-        toast.success('Domain verified successfully!');
+      if (data?.success) {
+        setSettings(prev => ({ ...prev, domain_verification_status: 'verified' }));
+        toast.success('Domain verified successfully');
       } else {
-        setVerificationStatus('pending');
-        toast.info('Domain verification is pending. Please check your DNS settings.');
+        toast.error('Domain verification failed: ' + (data?.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error verifying domain:', error);
       toast.error('Failed to verify domain');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getStatusBadge = () => {
-    switch (verificationStatus) {
-      case 'verified':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Verified</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Failed</Badge>;
-      default:
-        return <Badge className="bg-yellow-100 text-yellow-800"><AlertCircle className="w-3 h-3 mr-1" />Pending</Badge>;
+  const testEmail = async () => {
+    if (!testEmail) {
+      toast.error('Please enter an email address to test');
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: testEmail,
+          subject: 'Test Email from Fixlyfy',
+          text: 'This is a test email to verify your Mailgun configuration is working correctly!',
+          html: '<p>This is a test email to verify your <strong>Mailgun configuration</strong> is working correctly!</p>'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success('Test email sent successfully!');
+      } else {
+        toast.error('Failed to send test email: ' + (data?.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      toast.error('Failed to send test email');
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -120,74 +148,89 @@ export const MailgunConfig = () => {
           Mailgun Email Configuration
         </CardTitle>
         <CardDescription>
-          Configure Mailgun for sending emails like estimates and invoices
+          Configure Mailgun for sending emails and notifications
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="domain">Mailgun Domain</Label>
-            <div className="flex gap-2">
-              <Input
-                id="domain"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                placeholder="mg.yourdomain.com"
-                disabled={isLoading}
-              />
-              {getStatusBadge()}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Your verified Mailgun domain
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="fromName">From Name</Label>
+        <div>
+          <Label htmlFor="domain">Mailgun Domain</Label>
+          <div className="flex gap-2 mt-1">
             <Input
-              id="fromName"
-              value={fromName}
-              onChange={(e) => setFromName(e.target.value)}
-              placeholder="Support Team"
+              id="domain"
+              value={settings.mailgun_domain}
+              onChange={(e) => setSettings(prev => ({ ...prev, mailgun_domain: e.target.value }))}
+              placeholder="mg.yourcompany.com"
               disabled={isLoading}
             />
+            <Button onClick={verifyDomain} disabled={isLoading} variant="outline">
+              Verify
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant={settings.domain_verification_status === 'verified' ? 'default' : 'secondary'}>
+              {settings.domain_verification_status}
+            </Badge>
+            {settings.domain_verification_status !== 'verified' && (
+              <div className="flex items-center gap-1 text-amber-600">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm">Domain needs verification</span>
+              </div>
+            )}
           </div>
         </div>
 
         <div>
-          <Label htmlFor="fromAddress">From Email Address</Label>
+          <Label htmlFor="fromName">From Name</Label>
           <Input
-            id="fromAddress"
-            value={fromAddress}
-            onChange={(e) => setFromAddress(e.target.value)}
-            placeholder="support@yourdomain.com"
+            id="fromName"
+            value={settings.email_from_name}
+            onChange={(e) => setSettings(prev => ({ ...prev, email_from_name: e.target.value }))}
+            placeholder="Support Team"
             disabled={isLoading}
           />
+        </div>
+
+        <div>
+          <Label htmlFor="fromEmail">From Email Address</Label>
+          <Input
+            id="fromEmail"
+            value={settings.email_from_address}
+            onChange={(e) => setSettings(prev => ({ ...prev, email_from_address: e.target.value }))}
+            placeholder="support@yourcompany.com"
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="testEmail">Test Email</Label>
+          <div className="flex gap-2 mt-1">
+            <Input
+              id="testEmail"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="test@example.com"
+              disabled={isTesting}
+            />
+            <Button 
+              onClick={testEmail} 
+              disabled={isTesting || !testEmail}
+              variant="outline"
+            >
+              <TestTube className="w-4 h-4 mr-2" />
+              {isTesting ? 'Sending...' : 'Test'}
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
-            This should match your Mailgun domain
+            Send a test email to verify your Mailgun configuration
           </p>
         </div>
 
         <div className="flex gap-2">
-          <Button 
-            onClick={saveSettings} 
-            disabled={isSaving || isLoading}
-          >
-            {isSaving ? 'Saving...' : 'Save Settings'}
+          <Button onClick={saveSettings} disabled={isLoading}>
+            Save Settings
           </Button>
-          
-          {domain && verificationStatus !== 'verified' && (
-            <Button 
-              variant="outline" 
-              onClick={verifyDomain}
-              disabled={isLoading}
-            >
-              Verify Domain
-            </Button>
-          )}
-
           <Button variant="outline" asChild>
-            <a href="https://app.mailgun.com/mg/domains" target="_blank" rel="noopener noreferrer">
+            <a href="https://app.mailgun.com/" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
               Mailgun Dashboard
             </a>
@@ -198,10 +241,10 @@ export const MailgunConfig = () => {
           <h4 className="font-medium mb-2">Setup Instructions:</h4>
           <ol className="text-sm space-y-1 list-decimal list-inside">
             <li>Create a Mailgun account and add your domain</li>
-            <li>Configure DNS records as shown in Mailgun dashboard</li>
+            <li>Verify your domain by adding DNS records</li>
             <li>Add your Mailgun API key in the secrets section</li>
-            <li>Enter your domain and email settings above</li>
-            <li>Click "Verify Domain" to complete setup</li>
+            <li>Configure the domain and from email above</li>
+            <li>Use the test function to verify email functionality</li>
           </ol>
         </div>
       </CardContent>

@@ -5,26 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
 
 interface EstimateDetails {
-  estimate_id: string;
   estimate_number: string;
-  total: number;
-  status: string;
   notes?: string;
-  job_id: string;
-  job_title: string;
-  job_description?: string;
-  client_id: string;
-  client_name: string;
-  client_email?: string;
-  client_phone?: string;
-  client_company?: string;
 }
 
 interface LineItem {
   id: string;
   description: string;
   quantity: number;
-  unit_price: number;
+  unitPrice: number;
   taxable: boolean;
 }
 
@@ -74,7 +63,7 @@ export const useEstimateSending = () => {
     sendMethod: "email" | "sms";
     sendTo: string;
     estimateNumber: string;
-    estimateDetails: EstimateDetails | null;
+    estimateDetails: EstimateDetails;
     lineItems: LineItem[];
     contactInfo: ContactInfo;
     customNote: string;
@@ -142,31 +131,63 @@ export const useEstimateSending = () => {
 
       console.log("Step 4: Sending estimate via", sendMethod);
       
-      // Call the send-estimate function
-      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
-        body: {
-          estimateId: savedEstimate.id,
-          sendMethod: sendMethod,
-          recipientEmail: sendMethod === 'email' ? finalRecipient : undefined,
-          recipientPhone: sendMethod === 'sms' ? finalRecipient : undefined,
-          subject: sendMethod === 'email' ? `Estimate ${estimateNumber}` : undefined,
-          message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
+      if (sendMethod === "sms") {
+        // Send directly via Telnyx SMS function
+        const smsMessage = customNote || `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. Please contact us if you have any questions.`;
+        
+        console.log("Sending SMS:", {
+          to: finalRecipient,
+          body: smsMessage,
+          jobId: jobId
+        });
+
+        const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
+          body: {
+            to: finalRecipient,
+            body: smsMessage,
+            client_id: jobId || null,
+            job_id: jobId || null
+          }
+        });
+
+        if (smsError || !smsData?.success) {
+          console.error("SMS sending failed:", smsError || smsData);
+          toast.error(`Failed to send SMS: ${smsError?.message || smsData?.error || 'Unknown error'}`);
+          return { success: false, error: 'SMS sending failed' };
         }
-      });
-      
-      if (sendError || !sendData?.success) {
-        console.error("Estimate sending failed:", sendError || sendData);
-        toast.error(`Failed to send ${sendMethod}: ${sendError?.message || sendData?.error || 'Unknown error'}`);
-        return { success: false, error: 'Estimate sending failed' };
+
+        console.log("SMS sent successfully:", smsData);
+        toast.success(`Estimate ${estimateNumber} sent via SMS to ${contactInfo.name}`);
+        
+        // Update estimate status
+        await supabase
+          .from('estimates')
+          .update({ status: 'sent' })
+          .eq('id', savedEstimate.id);
+
+        return { success: true };
+      } else {
+        // Call the send-estimate function for email
+        const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
+          body: {
+            estimateId: savedEstimate.id,
+            sendMethod: sendMethod,
+            recipientEmail: finalRecipient,
+            subject: `Estimate ${estimateNumber}`,
+            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
+          }
+        });
+        
+        if (sendError || !sendData?.success) {
+          console.error("Email sending failed:", sendError || sendData);
+          toast.error(`Failed to send email: ${sendError?.message || sendData?.error || 'Unknown error'}`);
+          return { success: false, error: 'Email sending failed' };
+        }
+
+        console.log("Email sent successfully:", sendData);
+        toast.success(`Estimate ${estimateNumber} sent via email to ${contactInfo.name}`);
+        return { success: true };
       }
-
-      console.log("Estimate sent successfully:", sendData);
-
-      const method = sendMethod === "email" ? "email" : "text message";
-      toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
-      console.log("SUCCESS: Estimate sent successfully");
-      
-      return { success: true };
         
     } catch (error: any) {
       console.error("CRITICAL ERROR in send estimate process:", error);

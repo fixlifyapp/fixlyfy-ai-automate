@@ -45,15 +45,27 @@ serve(async (req) => {
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
     if (!telnyxApiKey) {
+      console.error('TELNYX_API_KEY not configured')
       throw new Error('TELNYX_API_KEY not configured')
     }
 
     // Handle incoming SMS (webhook)
     if (req.headers.get('content-type')?.includes('application/json')) {
-      console.log('=== PROCESSING INCOMING SMS WEBHOOK ===')
-      const webhookData: TelnyxSMSWebhook = await req.json()
+      const body = await req.text()
+      console.log('Request body:', body)
       
-      if (webhookData.data.event_type === 'message.received') {
+      let webhookData: TelnyxSMSWebhook
+      try {
+        webhookData = JSON.parse(body)
+      } catch (parseError) {
+        console.error('Failed to parse webhook JSON:', parseError)
+        // If it's not a webhook, treat it as an outgoing SMS request
+        const requestData = JSON.parse(body) as TelnyxSMSRequest
+        return await handleOutgoingSMS(requestData, supabaseClient, telnyxApiKey)
+      }
+      
+      if (webhookData.data?.event_type === 'message.received') {
+        console.log('=== PROCESSING INCOMING SMS WEBHOOK ===')
         console.log('Incoming SMS:', webhookData.data.payload)
         
         const { from, to, text } = webhookData.data.payload
@@ -133,117 +145,9 @@ serve(async (req) => {
       }
     }
 
-    // Handle outgoing SMS
-    console.log('=== PROCESSING OUTGOING SMS ===')
-    const { to, body, from, client_id, job_id }: TelnyxSMSRequest = await req.json()
-
-    if (!to || !body) {
-      throw new Error('Required parameters: to and body')
-    }
-
-    // Format phone number for Telnyx
-    const formattedTo = to.startsWith('+') ? to : `+${to.replace(/\D/g, '')}`
-    console.log('Formatted recipient:', formattedTo)
-    
-    // Get sender phone number from Telnyx phone numbers
-    let fromNumber = from
-    if (!fromNumber) {
-      const { data: phoneNumbers } = await supabaseClient
-        .from('phone_numbers')
-        .select('phone_number')
-        .eq('status', 'active')
-        .limit(1)
-      
-      fromNumber = phoneNumbers?.[0]?.phone_number
-      if (!fromNumber) {
-        throw new Error('No active Telnyx phone numbers available for sending')
-      }
-    }
-
-    console.log('Sending SMS from:', fromNumber, 'to:', formattedTo)
-
-    // Send SMS via Telnyx API
-    const response = await fetch('https://api.telnyx.com/v2/messages', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: fromNumber,
-        to: formattedTo,
-        text: body,
-        type: 'SMS'
-      })
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      console.error('Telnyx API error:', data)
-      throw new Error(`Telnyx API error: ${JSON.stringify(data)}`)
-    }
-
-    console.log('SMS sent successfully:', data.data.id)
-
-    // Store outgoing message in database if client_id provided
-    if (client_id) {
-      try {
-        // Find or create conversation
-        let { data: conversations } = await supabaseClient
-          .from('conversations')
-          .select('id')
-          .eq('client_id', client_id)
-          .limit(1)
-
-        let conversationId = conversations?.[0]?.id
-        if (!conversationId) {
-          const { data: newConv } = await supabaseClient
-            .from('conversations')
-            .insert({
-              client_id: client_id,
-              job_id: job_id || null,
-              status: 'active',
-              last_message_at: new Date().toISOString()
-            })
-            .select('id')
-            .single()
-          conversationId = newConv?.id
-        }
-
-        if (conversationId) {
-          // Store outgoing message
-          await supabaseClient
-            .from('messages')
-            .insert({
-              conversation_id: conversationId,
-              body: body,
-              direction: 'outbound',
-              sender: fromNumber,
-              recipient: formattedTo,
-              status: 'sent',
-              message_sid: data.data.id
-            })
-
-          // Update conversation timestamp
-          await supabaseClient
-            .from('conversations')
-            .update({ last_message_at: new Date().toISOString() })
-            .eq('id', conversationId)
-        }
-      } catch (dbError) {
-        console.error('Error storing message in database:', dbError)
-        // Don't fail the SMS send if database storage fails
-      }
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'SMS sent successfully',
-      id: data.data.id
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    // Handle outgoing SMS - parse request body
+    const requestData = await req.json() as TelnyxSMSRequest
+    return await handleOutgoingSMS(requestData, supabaseClient, telnyxApiKey)
 
   } catch (error) {
     console.error('Error in telnyx-sms function:', error)
@@ -259,3 +163,121 @@ serve(async (req) => {
     console.log(`=== Telnyx SMS Function END ===`)
   }
 })
+
+async function handleOutgoingSMS(requestData: TelnyxSMSRequest, supabaseClient: any, telnyxApiKey: string) {
+  console.log('=== PROCESSING OUTGOING SMS ===')
+  const { to, body, from, client_id, job_id } = requestData
+
+  if (!to || !body) {
+    throw new Error('Required parameters: to and body')
+  }
+
+  console.log('SMS Request:', { to, body: body.substring(0, 50) + '...', client_id, job_id })
+
+  // Format phone number for Telnyx
+  const formattedTo = to.startsWith('+') ? to : `+${to.replace(/\D/g, '')}`
+  console.log('Formatted recipient:', formattedTo)
+  
+  // Get sender phone number from Telnyx phone numbers
+  let fromNumber = from
+  if (!fromNumber) {
+    const { data: phoneNumbers } = await supabaseClient
+      .from('phone_numbers')
+      .select('phone_number')
+      .eq('status', 'active')
+      .limit(1)
+    
+    fromNumber = phoneNumbers?.[0]?.phone_number
+    if (!fromNumber) {
+      console.error('No active Telnyx phone numbers available')
+      throw new Error('No active Telnyx phone numbers available for sending')
+    }
+  }
+
+  console.log('Sending SMS from:', fromNumber, 'to:', formattedTo)
+
+  // Send SMS via Telnyx API
+  const response = await fetch('https://api.telnyx.com/v2/messages', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${telnyxApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: fromNumber,
+      to: formattedTo,
+      text: body,
+      type: 'SMS'
+    })
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    console.error('Telnyx API error:', data)
+    throw new Error(`Telnyx API error: ${JSON.stringify(data)}`)
+  }
+
+  console.log('SMS sent successfully via Telnyx. Message ID:', data.data.id)
+
+  // Store outgoing message in database if client_id provided
+  if (client_id) {
+    try {
+      // Find or create conversation
+      let { data: conversations } = await supabaseClient
+        .from('conversations')
+        .select('id')
+        .eq('client_id', client_id)
+        .limit(1)
+
+      let conversationId = conversations?.[0]?.id
+      if (!conversationId) {
+        const { data: newConv } = await supabaseClient
+          .from('conversations')
+          .insert({
+            client_id: client_id,
+            job_id: job_id || null,
+            status: 'active',
+            last_message_at: new Date().toISOString()
+          })
+          .select('id')
+          .single()
+        conversationId = newConv?.id
+      }
+
+      if (conversationId) {
+        // Store outgoing message
+        await supabaseClient
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            body: body,
+            direction: 'outbound',
+            sender: fromNumber,
+            recipient: formattedTo,
+            status: 'sent',
+            message_sid: data.data.id
+          })
+
+        // Update conversation timestamp
+        await supabaseClient
+          .from('conversations')
+          .update({ last_message_at: new Date().toISOString() })
+          .eq('id', conversationId)
+        
+        console.log('Message stored in database successfully')
+      }
+    } catch (dbError) {
+      console.error('Error storing message in database:', dbError)
+      // Don't fail the SMS send if database storage fails
+    }
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
+    message: 'SMS sent successfully',
+    id: data.data.id
+  }), {
+    headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }
+  })
+}
