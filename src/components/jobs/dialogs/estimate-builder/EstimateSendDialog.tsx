@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -52,46 +51,53 @@ export const EstimateSendDialog = ({
   const [sendTo, setSendTo] = useState<string>("");
   const [customNote, setCustomNote] = useState("");
   const [validationError, setValidationError] = useState<string>("");
-  const [clientInfo, setClientInfo] = useState(propClientInfo);
   
   const { estimateDetails, lineItems, isLoading, refetchData } = useEstimateData(estimateNumber, jobId);
   const { sendEstimate, isProcessing } = useEstimateSending();
   
-  // Update client info when estimate details are loaded
-  useEffect(() => {
-    if (estimateDetails && estimateDetails.client_name !== 'Unknown Client') {
-      setClientInfo({
-        id: estimateDetails.client_id,
-        name: estimateDetails.client_name,
-        email: estimateDetails.client_email,
-        phone: estimateDetails.client_phone
-      });
-      console.log("Client info updated from estimate details:", {
-        id: estimateDetails.client_id,
-        name: estimateDetails.client_name,
-        email: estimateDetails.client_email,
-        phone: estimateDetails.client_phone
-      });
-    }
-  }, [estimateDetails]);
-
+  // Use client info from props first, then from estimate details as fallback
   const getClientContactInfo = () => {
-    const contactData = {
-      name: clientInfo?.name || estimateDetails?.client_name || 'Unknown Client',
-      email: clientInfo?.email || estimateDetails?.client_email || '',
-      phone: clientInfo?.phone || estimateDetails?.client_phone || ''
-    };
+    console.log("PropClientInfo:", propClientInfo);
+    console.log("EstimateDetails client info:", estimateDetails);
     
-    console.log("Final contact data:", contactData);
-    return contactData;
+    // Prioritize prop client info if available and valid
+    if (propClientInfo && propClientInfo.name && propClientInfo.name !== 'Unknown Client') {
+      const contactData = {
+        name: propClientInfo.name || 'Unknown Client',
+        email: propClientInfo.email || '',
+        phone: propClientInfo.phone || ''
+      };
+      console.log("Using prop client info:", contactData);
+      return contactData;
+    }
+    
+    // Fallback to estimate details
+    if (estimateDetails && estimateDetails.client_name !== 'Unknown Client') {
+      const contactData = {
+        name: estimateDetails.client_name || 'Unknown Client',
+        email: estimateDetails.client_email || '',
+        phone: estimateDetails.client_phone || ''
+      };
+      console.log("Using estimate details client info:", contactData);
+      return contactData;
+    }
+    
+    // Final fallback
+    const fallbackData = {
+      name: 'Unknown Client',
+      email: '',
+      phone: ''
+    };
+    console.log("Using fallback client info:", fallbackData);
+    return fallbackData;
   };
 
   const contactInfo = getClientContactInfo();
   const hasValidEmail = isValidEmail(contactInfo.email);
   const hasValidPhone = isValidPhoneNumber(contactInfo.phone);
   
-  console.log("Contact validation - Email valid:", hasValidEmail, "Phone valid:", hasValidPhone);
-  console.log("Contact info:", contactInfo);
+  console.log("Final contact validation - Email valid:", hasValidEmail, "Phone valid:", hasValidPhone);
+  console.log("Final contact info:", contactInfo);
 
   useEffect(() => {
     if (contactInfo.name !== 'Unknown Client') {

@@ -36,7 +36,9 @@ export const useEstimateData = (estimateNumber: string, jobId?: string) => {
     
     setIsLoading(true);
     try {
-      console.log("Fetching estimate details for estimate number:", estimateNumber);
+      console.log("=== FETCHING ESTIMATE DATA ===");
+      console.log("Estimate number:", estimateNumber);
+      console.log("Job ID:", jobId);
       
       // First try the view
       const { data: details, error: detailsError } = await supabase
@@ -45,16 +47,14 @@ export const useEstimateData = (estimateNumber: string, jobId?: string) => {
         .eq('estimate_number', estimateNumber)
         .maybeSingle();
 
-      if (detailsError && detailsError.code !== 'PGRST116') {
-        console.error('Error fetching estimate details:', detailsError);
-      }
-
-      console.log("Estimate details from view:", details);
+      console.log("View query result:", details);
+      console.log("View query error:", detailsError);
 
       if (details) {
+        console.log("Found estimate details from view:", details);
         setEstimateDetails(details);
       } else {
-        console.log("No data from view, trying direct fetch with order by created_at desc");
+        console.log("No data from view, trying direct fetch approach");
         
         // Get the most recent estimate with this number
         const { data: estimate, error: estimateError } = await supabase
@@ -65,29 +65,30 @@ export const useEstimateData = (estimateNumber: string, jobId?: string) => {
           .limit(1)
           .maybeSingle();
 
-        if (estimateError) {
-          console.error('Error fetching estimate directly:', estimateError);
-          return;
-        }
-
-        console.log("Found estimate:", estimate);
+        console.log("Direct estimate fetch result:", estimate);
+        console.log("Direct estimate fetch error:", estimateError);
 
         if (estimate) {
-          // Get job and client details
-          if (jobId || estimate.job_id) {
-            const targetJobId = jobId || estimate.job_id;
-            
+          // Get job and client details separately
+          const targetJobId = jobId || estimate.job_id;
+          console.log("Target job ID for lookup:", targetJobId);
+          
+          if (targetJobId) {
             const { data: job, error: jobError } = await supabase
               .from('jobs')
               .select(`
                 *,
-                client:clients(*)
+                clients:client_id(*)
               `)
               .eq('id', targetJobId)
               .single();
 
-            if (!jobError && job?.client) {
-              const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
+            console.log("Job fetch result:", job);
+            console.log("Job fetch error:", jobError);
+
+            if (!jobError && job?.clients) {
+              const clientData = Array.isArray(job.clients) ? job.clients[0] : job.clients;
+              console.log("Client data extracted:", clientData);
               
               // Build estimate details
               const estimateDetailsData: EstimateDetails = {
@@ -106,10 +107,10 @@ export const useEstimateData = (estimateNumber: string, jobId?: string) => {
                 client_company: clientData.company || ''
               };
 
+              console.log("Final estimate details built:", estimateDetailsData);
               setEstimateDetails(estimateDetailsData);
-              console.log("Estimate details built:", estimateDetailsData);
             } else {
-              console.error("Error fetching job:", jobError);
+              console.error("Error fetching job or no client found:", jobError);
             }
           } else {
             console.error("No job ID found for estimate");
@@ -129,13 +130,16 @@ export const useEstimateData = (estimateNumber: string, jobId?: string) => {
           .eq('parent_type', 'estimate')
           .eq('parent_id', estimateId);
 
-        if (itemsError) {
-          console.error('Error fetching line items:', itemsError);
-        } else if (items) {
+        console.log("Line items fetch result:", items);
+        console.log("Line items fetch error:", itemsError);
+
+        if (!itemsError && items) {
           console.log("Line items loaded:", items.length, "items");
           setLineItems(items);
         }
       }
+
+      console.log("=== ESTIMATE DATA FETCH COMPLETED ===");
 
     } catch (error: any) {
       console.error('Error in fetchEstimateAndClientDetails:', error);
