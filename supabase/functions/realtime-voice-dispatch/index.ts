@@ -40,13 +40,15 @@ serve(async (req) => {
   let callRecordId: string | null = null;
   let conversation: string[] = [];
   let isTelnyxStream = false;
+  let telnyxCallControlId: string | null = null;
 
-  // Check if this is a Telnyx media stream by looking at headers or URL params
+  // Check if this is a Telnyx media stream
   const url = new URL(req.url);
   const userAgent = headers.get("user-agent") || "";
   if (userAgent.includes("Telnyx") || url.searchParams.has("telnyx")) {
     isTelnyxStream = true;
-    console.log('Detected Telnyx media stream connection');
+    callRecordId = url.searchParams.get("call_record_id");
+    console.log('Detected Telnyx media stream connection, call_record_id:', callRecordId);
   }
 
   const initOpenAI = () => {
@@ -82,23 +84,50 @@ serve(async (req) => {
           conversation.push(`AI: ${data.transcript}`);
           console.log('AI said:', data.transcript);
         }
+      } else if (data.type === 'response.audio.delta') {
+        // Send audio back to Telnyx if this is a Telnyx stream
+        if (isTelnyxStream && telnyxCallControlId && TELNYX_API_KEY) {
+          await sendAudioToTelnyx(data.delta);
+        }
       }
 
-      // Forward appropriate messages to client
-      if (!isTelnyxStream || (data.type.includes('audio') || data.type.includes('transcript'))) {
+      // Forward appropriate messages to client (for non-Telnyx connections)
+      if (!isTelnyxStream) {
         socket.send(event.data);
       }
     };
 
     openAISocket.onerror = (error) => {
       console.error('OpenAI WebSocket error:', error);
-      socket.send(JSON.stringify({ type: 'error', message: 'OpenAI connection error' }));
+      if (!isTelnyxStream) {
+        socket.send(JSON.stringify({ type: 'error', message: 'OpenAI connection error' }));
+      }
     };
 
     openAISocket.onclose = () => {
       console.log('OpenAI connection closed');
       socket.close();
     };
+  };
+
+  const sendAudioToTelnyx = async (audioData: string) => {
+    if (!telnyxCallControlId || !TELNYX_API_KEY) return;
+
+    try {
+      await fetch('https://api.telnyx.com/v2/calls/actions/send_audio', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${TELNYX_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          call_control_id: telnyxCallControlId,
+          audio_url: `data:audio/wav;base64,${audioData}`
+        })
+      });
+    } catch (error) {
+      console.error('Error sending audio to Telnyx:', error);
+    }
   };
 
   const sendSessionUpdate = async () => {
@@ -362,6 +391,7 @@ ${aiConfig?.custom_prompt_additions || ''}`;
       // Handle Telnyx media stream metadata
       if (message.event === 'start' && message.media) {
         console.log('Telnyx media stream started');
+        telnyxCallControlId = message.custom_parameters?.call_control_id;
         callRecordId = message.custom_parameters?.call_record_id;
         return;
       }

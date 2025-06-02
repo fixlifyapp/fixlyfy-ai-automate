@@ -44,16 +44,10 @@ serve(async (req) => {
     )
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     
     if (!telnyxApiKey) {
       console.error('TELNYX_API_KEY not configured')
       throw new Error('TELNYX_API_KEY not configured')
-    }
-
-    if (!openaiApiKey) {
-      console.error('OPENAI_API_KEY not configured')
-      throw new Error('OPENAI_API_KEY not configured')
     }
 
     if (req.method !== 'POST') {
@@ -158,7 +152,7 @@ serve(async (req) => {
         console.log('Call logged to database successfully')
       }
 
-      // Answer the call immediately (no delay)
+      // Answer the call and start media streaming
       console.log('Attempting to answer call with control ID:', callControlId)
       try {
         const answerResponse = await fetch('https://api.telnyx.com/v2/calls/actions/answer', {
@@ -225,26 +219,20 @@ serve(async (req) => {
       }
     }
 
-    // When call is answered, play greeting and start recording
+    // When call is answered, start media streaming to our Realtime API
     else if (event_type === 'call.answered') {
-      console.log('Call connected, playing greeting...')
+      console.log('Call connected, starting media streaming...')
 
       const clientState = payload.client_state ? JSON.parse(payload.client_state) : {}
-      const aiConfig = clientState.ai_config || {}
 
       await supabaseClient
         .from('telnyx_calls')
         .update({ call_status: 'connected' })
         .eq('call_control_id', callControlId)
 
-      // Generate personalized greeting
-      const agentName = aiConfig.agent_name || 'AI Assistant'
-      const companyName = aiConfig.company_name || 'our company'
-      const greeting = `Hello! My name is ${agentName} from ${companyName}. I'm an AI assistant here to help you with your service needs. How can I assist you today?`
-
-      // Play greeting using TTS
+      // Start streaming media to our realtime voice dispatch function
       try {
-        const speakResponse = await fetch('https://api.telnyx.com/v2/calls/actions/speak', {
+        const streamResponse = await fetch('https://api.telnyx.com/v2/calls/actions/streaming_start', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${telnyxApiKey}`,
@@ -252,54 +240,24 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             call_control_id: callControlId,
-            payload: greeting,
-            voice: 'female',
-            language: 'en'
+            stream_url: `wss://mqppvcrlvsgrsqelglod.functions.supabase.co/realtime-voice-dispatch?telnyx=true&call_record_id=${clientState.call_record_id}`,
+            stream_track: 'both',
+            enable_bidirectional_audio: true
           })
         })
 
-        const speakResult = await speakResponse.text()
-        console.log('Speak response status:', speakResponse.status)
-        console.log('Speak response body:', speakResult)
+        const streamResult = await streamResponse.text()
+        console.log('Stream start response status:', streamResponse.status)
+        console.log('Stream start response body:', streamResult)
 
-        if (!speakResponse.ok) {
-          console.error('Failed to play greeting:', speakResult)
+        if (!streamResponse.ok) {
+          console.error('Failed to start streaming:', streamResult)
         } else {
-          console.log('Greeting played successfully')
+          console.log('Media streaming started successfully')
         }
 
-      } catch (speakError) {
-        console.error('Exception while playing greeting:', speakError)
-      }
-
-      // Start recording for future AI processing
-      try {
-        const recordResponse = await fetch('https://api.telnyx.com/v2/calls/actions/record_start', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${telnyxApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            call_control_id: callControlId,
-            format: 'wav',
-            channels: 'single',
-            play_beep: false
-          })
-        })
-
-        const recordResult = await recordResponse.text()
-        console.log('Record start response status:', recordResponse.status)
-        console.log('Record start response body:', recordResult)
-
-        if (!recordResponse.ok) {
-          console.error('Failed to start recording:', recordResult)
-        } else {
-          console.log('Recording started successfully')
-        }
-
-      } catch (recordError) {
-        console.error('Exception while starting recording:', recordError)
+      } catch (streamError) {
+        console.error('Exception while starting streaming:', streamError)
       }
     }
 
@@ -324,14 +282,6 @@ serve(async (req) => {
         .eq('call_control_id', callControlId)
 
       console.log('Call completion recorded successfully')
-    }
-
-    // Handle recording completion
-    else if (event_type === 'call.recording.saved') {
-      console.log('Recording saved event received')
-      
-      // TODO: Process the recording with OpenAI Whisper API
-      // This will be implemented in the next phase
     }
 
     // Handle other events
