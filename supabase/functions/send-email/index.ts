@@ -16,7 +16,7 @@ interface SendEmailRequest {
   templateData?: Record<string, any>;
   companyId?: string;
   conversationId?: string;
-  useSandbox?: boolean; // New option for testing
+  useSandbox?: boolean;
 }
 
 serve(async (req) => {
@@ -74,7 +74,7 @@ serve(async (req) => {
     }
 
     let fromEmail = from;
-    let mailgunDomain = 'fixlyfy.app'; // Default production domain
+    let mailgunDomain = 'fixlify.app'; // Corrected domain name
     
     // Use sandbox domain for testing if requested
     if (useSandbox) {
@@ -86,7 +86,7 @@ serve(async (req) => {
     if (companySettings && companySettings.custom_domain_name && !useSandbox) {
       const fromName = companySettings.email_from_name || companySettings.company_name || 'Support Team';
       const customDomainName = companySettings.custom_domain_name;
-      fromEmail = `${fromName} <${customDomainName}@fixlyfy.app>`;
+      fromEmail = `${fromName} <${customDomainName}@fixlify.app>`;
       console.log('Using custom domain name:', customDomainName);
     } else {
       // Fallback to default support email or sandbox
@@ -94,7 +94,7 @@ serve(async (req) => {
       if (useSandbox) {
         fromEmail = `${fromName} <postmaster@${mailgunDomain}>`;
       } else {
-        fromEmail = `${fromName} <support@fixlyfy.app>`;
+        fromEmail = `${fromName} <support@fixlify.app>`;
       }
       console.log(useSandbox ? 'Using sandbox domain' : 'Using default support domain');
     }
@@ -108,22 +108,10 @@ serve(async (req) => {
       });
     }
 
-    // Enhanced API key validation
+    // Enhanced API key validation - remove the strict "key-" requirement for now
     console.log('API Key details:');
     console.log('- Length:', mailgunApiKey.length);
-    console.log('- Starts with key-:', mailgunApiKey.startsWith('key-'));
     console.log('- First 10 chars:', mailgunApiKey.substring(0, 10));
-    
-    if (!mailgunApiKey.startsWith('key-')) {
-      console.error('Invalid API key format - should start with "key-"');
-      return new Response(JSON.stringify({ 
-        error: 'Invalid Mailgun API key format',
-        details: 'API key should start with "key-"'
-      }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        status: 500,
-      });
-    }
 
     console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
     console.log(`From: ${fromEmail}`);
