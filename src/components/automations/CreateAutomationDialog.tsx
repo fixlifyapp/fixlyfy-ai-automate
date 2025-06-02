@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Mail, Zap, Clock, Bell, Gift, CheckCircle, AlertTriangle, User, MessageSquare, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ActionTypeSelector } from "./ActionTypeSelector";
-import { AmazonConnectConfig } from "../connect/AmazonConnectConfig";
 
 interface CreateAutomationDialogProps {
   open: boolean;
@@ -366,11 +365,7 @@ export const CreateAutomationDialog = ({ open, onOpenChange, initialTemplate = n
                     <div>
                       <Label>Configure {selectedActionType.toUpperCase()} Action</Label>
                       <div className="mt-2 p-4 border border-fixlyfy-border rounded-lg">
-                        <AmazonConnectConfig
-                          actionType={selectedActionType as "sms" | "call" | "ai-call"}
-                          config={actionConfig}
-                          onChange={handleActionConfigChange}
-                        />
+                        <p>Amazon Connect config goes here</p>
                       </div>
                     </div>
                   )}

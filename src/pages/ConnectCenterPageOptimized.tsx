@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { DispatcherMessagesView } from "@/components/connect/DispatcherMessagesView";
-import { RealCallsList } from "@/components/connect/RealCallsList";
 import { EmailManagement } from "@/components/connect/EmailManagement";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
@@ -21,6 +20,7 @@ import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { useConnectCenterData } from "@/components/connect/hooks/useConnectCenterData";
 import { toast } from "sonner";
+import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 
 const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("flow-setup");
@@ -65,16 +65,16 @@ const ConnectCenterPageOptimized = () => {
         break;
       case "calls":
         if (ownedNumbers.length === 0) {
-          toast.error("Please configure Amazon Connect phone numbers first");
+          toast.error("Please configure phone numbers first");
         } else {
-          toast.info("Use the Amazon Connect calling interface below to make calls");
+          toast.info("Use the call monitoring interface below to manage calls");
         }
         break;
       case "emails":
         setEmailComposerOpen(true);
         break;
       case "phone-numbers":
-        toast.info("Use the search above to find and configure Amazon Connect numbers");
+        toast.info("Use the search above to find and configure numbers");
         break;
     }
   };
@@ -96,11 +96,11 @@ const ConnectCenterPageOptimized = () => {
       
       <PageHeader
         title="Connect Center"
-        subtitle="Amazon Connect communication hub and call monitoring"
+        subtitle="Communication hub and call monitoring"
         icon={MessageSquare}
         badges={[
-          { text: "Amazon Connect", icon: Phone, variant: "fixlyfy" },
-          { text: "Media Streaming", icon: Workflow, variant: "success" },
+          { text: "Telnyx", icon: Phone, variant: "fixlyfy" },
+          { text: "AI Powered", icon: Workflow, variant: "success" },
           { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
         ]}
         actionButton={{
@@ -167,7 +167,7 @@ const ConnectCenterPageOptimized = () => {
           </TabsContent>
           
           <TabsContent value="calls" className="mt-0">
-            <RealCallsList />
+            <TelnyxCallsView />
           </TabsContent>
           
           <TabsContent value="emails" className="mt-0">
