@@ -60,13 +60,17 @@ serve(async (req) => {
       .single();
 
     let fromEmail = from;
-    let mailgunDomain = 'mg.fixlyfy.com'; // Default domain
+    let mailgunDomain = 'sandbox79a9a7a7640e4819b2c0a73e5e68e825.mailgun.org'; // Default sandbox
     
-    if (companySettings && companySettings.domain_verification_status === 'verified') {
+    // Use verified custom domain if available
+    if (companySettings && companySettings.domain_verification_status === 'verified' && companySettings.mailgun_domain) {
       mailgunDomain = companySettings.mailgun_domain;
-      fromEmail = companySettings.email_from_address || `noreply@${mailgunDomain}`;
+      const fromName = companySettings.email_from_name || 'Support Team';
+      const fromAddress = companySettings.email_from_address || `noreply@${mailgunDomain}`;
+      fromEmail = `${fromName} <${fromAddress}>`;
     } else {
-      fromEmail = from || "noreply@mg.fixlyfy.com";
+      // Use sandbox domain for testing
+      fromEmail = from || "Mailgun Sandbox <postmaster@sandbox79a9a7a7640e4819b2c0a73e5e68e825.mailgun.org>";
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
@@ -75,6 +79,8 @@ serve(async (req) => {
     }
 
     console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
+    console.log(`From: ${fromEmail}`);
+    console.log(`To: ${to}`);
 
     // Send email via Mailgun
     const formData = new FormData();
@@ -106,7 +112,7 @@ serve(async (req) => {
     const mailgunResult = await mailgunResponse.json();
     console.log('Email sent successfully via Mailgun:', mailgunResult);
 
-    // Store email in database for tracking
+    // Store email in database for tracking if conversation ID provided
     if (conversationId) {
       await supabaseClient
         .from('email_messages')
@@ -114,7 +120,7 @@ serve(async (req) => {
           conversation_id: conversationId,
           mailgun_message_id: mailgunResult.id,
           direction: 'outbound',
-          sender_email: fromEmail,
+          sender_email: fromEmail.includes('<') ? fromEmail.split('<')[1].replace('>', '') : fromEmail,
           recipient_email: to,
           subject,
           body_html: html,
@@ -129,7 +135,8 @@ serve(async (req) => {
         message: 'Email sent successfully via Mailgun',
         messageId: mailgunResult.id,
         from: fromEmail,
-        domain: mailgunDomain
+        domain: mailgunDomain,
+        isCustomDomain: companySettings?.domain_verification_status === 'verified'
       }),
       {
         headers: {
