@@ -16,6 +16,7 @@ interface SendEmailRequest {
   templateData?: Record<string, any>;
   companyId?: string;
   conversationId?: string;
+  useSandbox?: boolean; // New option for testing
 }
 
 serve(async (req) => {
@@ -55,10 +56,11 @@ serve(async (req) => {
       from, 
       templateData = {}, 
       companyId,
-      conversationId 
+      conversationId,
+      useSandbox = false
     }: SendEmailRequest = await req.json();
 
-    console.log('Sending email request:', { to, subject, from });
+    console.log('Sending email request:', { to, subject, from, useSandbox });
 
     // Get company settings to determine custom domain name
     const { data: companySettings, error: settingsError } = await supabaseClient
@@ -72,19 +74,29 @@ serve(async (req) => {
     }
 
     let fromEmail = from;
-    const mailgunDomain = 'fixlyfy.app'; // Use the main verified domain
+    let mailgunDomain = 'fixlyfy.app'; // Default production domain
+    
+    // Use sandbox domain for testing if requested
+    if (useSandbox) {
+      mailgunDomain = 'sandboxXXXXXXXXXXXXXXXXXXXXXXXXXXXX.mailgun.org'; // Replace with your actual sandbox domain
+      console.log('Using Mailgun sandbox domain for testing');
+    }
     
     // Generate dynamic FROM address based on company's custom domain name
-    if (companySettings && companySettings.custom_domain_name) {
+    if (companySettings && companySettings.custom_domain_name && !useSandbox) {
       const fromName = companySettings.email_from_name || companySettings.company_name || 'Support Team';
       const customDomainName = companySettings.custom_domain_name;
       fromEmail = `${fromName} <${customDomainName}@fixlyfy.app>`;
       console.log('Using custom domain name:', customDomainName);
     } else {
-      // Fallback to default support email
+      // Fallback to default support email or sandbox
       const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team';
-      fromEmail = `${fromName} <support@fixlyfy.app>`;
-      console.log('Using default support domain');
+      if (useSandbox) {
+        fromEmail = `${fromName} <postmaster@${mailgunDomain}>`;
+      } else {
+        fromEmail = `${fromName} <support@fixlyfy.app>`;
+      }
+      console.log(useSandbox ? 'Using sandbox domain' : 'Using default support domain');
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
@@ -96,12 +108,63 @@ serve(async (req) => {
       });
     }
 
+    // Enhanced API key validation
+    console.log('API Key details:');
+    console.log('- Length:', mailgunApiKey.length);
+    console.log('- Starts with key-:', mailgunApiKey.startsWith('key-'));
+    console.log('- First 10 chars:', mailgunApiKey.substring(0, 10));
+    
+    if (!mailgunApiKey.startsWith('key-')) {
+      console.error('Invalid API key format - should start with "key-"');
+      return new Response(JSON.stringify({ 
+        error: 'Invalid Mailgun API key format',
+        details: 'API key should start with "key-"'
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 500,
+      });
+    }
+
     console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
     console.log(`From: ${fromEmail}`);
     console.log(`To: ${to}`);
-    console.log('API Key length:', mailgunApiKey.length);
 
-    // Send email via Mailgun using the main domain
+    // Test API key with a simple domain check first
+    const domainCheckUrl = `https://api.mailgun.net/v3/domains/${mailgunDomain}`;
+    const basicAuth = btoa(`api:${mailgunApiKey}`);
+    
+    console.log('Testing API key with domain check...');
+    const domainCheckResponse = await fetch(domainCheckUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`
+      }
+    });
+    
+    console.log('Domain check response status:', domainCheckResponse.status);
+    const domainCheckText = await domainCheckResponse.text();
+    console.log('Domain check response:', domainCheckText);
+    
+    if (!domainCheckResponse.ok) {
+      return new Response(JSON.stringify({ 
+        error: `Domain access failed: ${domainCheckResponse.status}`,
+        details: {
+          status: domainCheckResponse.status,
+          response: domainCheckText,
+          domain: mailgunDomain,
+          suggestion: domainCheckResponse.status === 401 ? 
+            'API key authentication failed. Please verify your Mailgun API key has the correct permissions.' :
+            domainCheckResponse.status === 404 ?
+            'Domain not found. Please verify the domain is added to your Mailgun account.' :
+            'Unknown error occurred during domain verification.'
+        }
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 500,
+      });
+    }
+
+    // If domain check passes, proceed with sending email
     const formData = new FormData();
     formData.append('from', fromEmail);
     formData.append('to', to);
@@ -115,11 +178,7 @@ serve(async (req) => {
     formData.append('o:tracking-opens', 'yes');
 
     const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
-    console.log('Mailgun URL:', mailgunUrl);
-
-    // Create basic auth header - Mailgun uses 'api' as username and API key as password
-    const basicAuth = btoa(`api:${mailgunApiKey}`);
-    console.log('Basic auth header created (length):', basicAuth.length);
+    console.log('Mailgun send URL:', mailgunUrl);
 
     const mailgunResponse = await fetch(mailgunUrl, {
       method: 'POST',
@@ -130,19 +189,25 @@ serve(async (req) => {
     });
 
     const responseText = await mailgunResponse.text();
-    console.log('Mailgun response status:', mailgunResponse.status);
-    console.log('Mailgun response headers:', Object.fromEntries(mailgunResponse.headers.entries()));
-    console.log('Mailgun response body:', responseText);
+    console.log('Email send response status:', mailgunResponse.status);
+    console.log('Email send response headers:', Object.fromEntries(mailgunResponse.headers.entries()));
+    console.log('Email send response body:', responseText);
 
     if (!mailgunResponse.ok) {
-      console.error("Mailgun error response:", responseText);
+      console.error("Mailgun send error:", responseText);
       return new Response(JSON.stringify({ 
         error: `Mailgun API error: ${mailgunResponse.status} - ${responseText}`,
         details: {
           status: mailgunResponse.status,
           response: responseText,
           url: mailgunUrl,
-          domain: mailgunDomain
+          domain: mailgunDomain,
+          troubleshooting: {
+            '401': 'Authentication failed - check API key permissions',
+            '403': 'Domain not authorized for sending - verify domain ownership',
+            '404': 'Domain or endpoint not found',
+            '400': 'Bad request - check email format and required fields'
+          }[mailgunResponse.status.toString()] || 'Unknown error'
         }
       }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -192,7 +257,8 @@ serve(async (req) => {
         messageId: mailgunResult.id,
         from: fromEmail,
         domain: mailgunDomain,
-        customDomainName: companySettings?.custom_domain_name || null
+        customDomainName: companySettings?.custom_domain_name || null,
+        usedSandbox: useSandbox
       }),
       {
         headers: {

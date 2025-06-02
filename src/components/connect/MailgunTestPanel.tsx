@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Send, CheckCircle, AlertCircle, Globe, Info, ExternalLink } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Send, CheckCircle, AlertCircle, Globe, Info, ExternalLink, TestTube } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
@@ -14,6 +15,7 @@ import { useCompanySettings } from '@/hooks/useCompanySettings';
 export const MailgunTestPanel = () => {
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const [useSandbox, setUseSandbox] = useState(false);
   const { settings } = useCompanySettings();
   
   const [formData, setFormData] = useState({
@@ -38,17 +40,22 @@ export const MailgunTestPanel = () => {
           to: formData.to,
           subject: formData.subject,
           text: formData.text,
-          html: formData.html
+          html: formData.html,
+          useSandbox: useSandbox
         }
       });
 
       if (error) throw error;
 
       setTestResult(data);
-      toast.success('Test email sent successfully!');
+      if (data.success) {
+        toast.success('Test email sent successfully!');
+      } else {
+        toast.error('Failed to send test email');
+      }
     } catch (error: any) {
       console.error('Error sending test email:', error);
-      setTestResult({ error: error.message });
+      setTestResult({ error: error.message, details: error.details });
       toast.error('Failed to send test email');
     } finally {
       setLoading(false);
@@ -56,6 +63,9 @@ export const MailgunTestPanel = () => {
   };
 
   const getEmailAddress = () => {
+    if (useSandbox) {
+      return 'postmaster@sandbox.mailgun.org';
+    }
     if (settings.custom_domain_name) {
       return `${settings.custom_domain_name}@fixlyfy.app`;
     }
@@ -72,7 +82,7 @@ export const MailgunTestPanel = () => {
             <h4 className="font-medium">Email Configuration Status</h4>
             <div className="mt-2">
               <p className="text-sm text-muted-foreground mb-2">
-                Using verified domain: <strong>fixlyfy.app</strong>
+                Domain: <strong>{useSandbox ? 'sandbox.mailgun.org' : 'fixlyfy.app'}</strong>
               </p>
               <p className="text-sm text-muted-foreground mb-2">
                 Your email address: <strong>{getEmailAddress()}</strong>
@@ -82,8 +92,42 @@ export const MailgunTestPanel = () => {
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Ready to Send
                 </Badge>
+                {useSandbox && (
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                    <TestTube className="h-3 w-3 mr-1" />
+                    Sandbox Mode
+                  </Badge>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sandbox Testing Option */}
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-medium text-blue-800">Testing Options</h4>
+            <p className="text-sm text-blue-700 mt-1 mb-3">
+              If you're experiencing issues with the main domain, try testing with Mailgun's sandbox first.
+            </p>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sandbox"
+                checked={useSandbox}
+                onCheckedChange={setUseSandbox}
+              />
+              <Label htmlFor="sandbox" className="text-sm">
+                Use Mailgun sandbox domain for testing
+              </Label>
+            </div>
+            {useSandbox && (
+              <p className="text-xs text-blue-600 mt-2">
+                Note: Sandbox emails are not actually delivered but will test API connectivity
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -139,7 +183,7 @@ export const MailgunTestPanel = () => {
 
       <Button onClick={sendTestEmail} disabled={loading || !formData.to} className="w-full">
         <Send className="h-4 w-4 mr-2" />
-        {loading ? 'Sending Test Email...' : 'Send Test Email'}
+        {loading ? 'Sending Test Email...' : useSandbox ? 'Send Test Email (Sandbox)' : 'Send Test Email'}
       </Button>
 
       {/* Test Result Display */}
@@ -154,6 +198,19 @@ export const MailgunTestPanel = () => {
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
                 {testResult.error}
               </div>
+              {testResult.details && (
+                <div className="text-sm space-y-2">
+                  <div className="font-medium">Debug Details:</div>
+                  <div className="bg-gray-100 p-3 rounded text-xs">
+                    <div><strong>Status:</strong> {testResult.details.status}</div>
+                    <div><strong>Response:</strong> {testResult.details.response}</div>
+                    <div><strong>Domain:</strong> {testResult.details.domain}</div>
+                    {testResult.details.troubleshooting && (
+                      <div><strong>Suggestion:</strong> {testResult.details.troubleshooting}</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -175,7 +232,7 @@ export const MailgunTestPanel = () => {
                   <code className="bg-gray-100 px-1 rounded text-xs ml-1">{testResult.domain}</code>
                   <Badge variant="default" className="ml-2">
                     <Globe className="h-3 w-3 mr-1" />
-                    Verified Domain
+                    {testResult.usedSandbox ? 'Sandbox' : 'Verified Domain'}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
@@ -183,10 +240,33 @@ export const MailgunTestPanel = () => {
                   <Badge variant="default" className="bg-green-100 text-green-800">Sent</Badge>
                 </div>
               </div>
+              {testResult.usedSandbox && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-sm text-yellow-700">
+                    <strong>Note:</strong> This was sent using sandbox mode. The email was not actually delivered but confirms your API key is working.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
+
+      {/* Help Links */}
+      <div className="flex flex-wrap gap-2 pt-4 border-t">
+        <Button variant="outline" size="sm" asChild>
+          <a href="https://app.mailgun.com/mg/domains" target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3 w-3 mr-1" />
+            Mailgun Dashboard
+          </a>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a href="https://documentation.mailgun.com/en/latest/api-intro.html" target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3 w-3 mr-1" />
+            API Documentation
+          </a>
+        </Button>
+      </div>
     </div>
   );
 };
