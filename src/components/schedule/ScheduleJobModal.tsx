@@ -46,9 +46,8 @@ interface ScheduleJobModalProps {
 }
 
 interface FormData {
-  title: string;
   client_id: string;
-  property_id: string; // Add property selection
+  property_id: string;
   description: string;
   job_type: string;
   lead_source: string;
@@ -69,9 +68,8 @@ export const ScheduleJobModal = ({
   preselectedClientId 
 }: ScheduleJobModalProps) => {
   const [formData, setFormData] = useState<FormData>({
-    title: "",
     client_id: preselectedClientId || "",
-    property_id: "", // Initialize property selection
+    property_id: "",
     description: "",
     job_type: "",
     lead_source: "",
@@ -86,6 +84,7 @@ export const ScheduleJobModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAISuggestion, setShowAISuggestion] = useState(false);
   const [newTask, setNewTask] = useState("");
+  const [formErrors, setFormErrors] = useState<string[]>([]);
   
   // Configuration hooks with dynamic data from database
   const { clients, isLoading: clientsLoading } = useClients();
@@ -94,16 +93,19 @@ export const ScheduleJobModal = ({
   const { items: tags, isLoading: tagsLoading } = useTags();
   const { availableFields: customFields, isLoading: customFieldsLoading } = useJobCustomFields();
   
-  // Add client properties hook - Fixed import
+  // Add client properties hook
   const { properties: clientProperties, isLoading: propertiesLoading } = useClientProperties(formData.client_id);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData({ ...formData, [id]: value });
+    // Clear errors when user starts typing
+    setFormErrors([]);
   };
 
   const handleSelectChange = (field: string) => (value: string) => {
     setFormData({ ...formData, [field]: value });
+    setFormErrors([]);
   };
 
   const handleTagToggle = (tagId: string) => {
@@ -139,9 +141,8 @@ export const ScheduleJobModal = ({
 
   const resetForm = () => {
     setFormData({
-      title: "",
       client_id: preselectedClientId || "",
-      property_id: "", // Reset property selection
+      property_id: "",
       description: "",
       job_type: "",
       lead_source: "",
@@ -155,6 +156,7 @@ export const ScheduleJobModal = ({
     });
     setShowAISuggestion(false);
     setNewTask("");
+    setFormErrors([]);
   };
 
   const handleSuggestTechnician = () => {
@@ -164,26 +166,48 @@ export const ScheduleJobModal = ({
     }, 500);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const errors: string[] = [];
     
-    if (!formData.title.trim() || !formData.client_id) {
-      toast.error("Please fill in all required fields");
-      return;
+    if (!formData.client_id) {
+      errors.push("Please select a client");
+    }
+    
+    if (!formData.job_type) {
+      errors.push("Please select a job type");
     }
 
     // Validate required custom fields
     const requiredFields = customFields.filter(field => field.required);
     for (const field of requiredFields) {
       if (!formData.customFields[field.id]?.trim()) {
-        toast.error(`${field.name} is required`);
-        return;
+        errors.push(`${field.name} is required`);
       }
+    }
+
+    setFormErrors(errors);
+    return errors.length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    console.log("Form submission started with data:", formData);
+    
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields");
+      return;
     }
 
     setIsSubmitting(true);
     
     try {
+      // Get selected client info
+      const selectedClient = clients.find(c => c.id === formData.client_id);
+      if (!selectedClient) {
+        throw new Error("Selected client not found");
+      }
+
       // Calculate schedule_end if not set but schedule_start exists
       let scheduleEnd = formData.schedule_end;
       if (formData.schedule_start && !scheduleEnd) {
@@ -192,14 +216,17 @@ export const ScheduleJobModal = ({
         scheduleEnd = endDate.toISOString();
       }
 
+      // Auto-generate title based on client and job type
+      const autoTitle = `${selectedClient.name} - ${formData.job_type || 'General Service'}`;
+
       // Prepare comprehensive job data
       const jobData = {
-        title: formData.title,
+        title: autoTitle,
         client_id: formData.client_id,
-        property_id: formData.property_id || undefined, // Include property selection
+        property_id: formData.property_id || undefined,
         description: formData.description,
         job_type: formData.job_type || 'General Service',
-        lead_source: formData.lead_source,
+        lead_source: formData.lead_source || 'Direct',
         date: formData.schedule_start || new Date().toISOString(),
         schedule_start: formData.schedule_start || undefined,
         schedule_end: scheduleEnd || undefined,
@@ -210,10 +237,14 @@ export const ScheduleJobModal = ({
         tasks: formData.tasks
       };
 
+      console.log("Submitting job data:", jobData);
+
       if (onJobCreated) {
         const createdJob = await onJobCreated(jobData);
         
         if (createdJob) {
+          console.log("Job created successfully:", createdJob);
+          
           // Save custom field values if any
           if (Object.keys(formData.customFields).length > 0) {
             try {
@@ -235,11 +266,14 @@ export const ScheduleJobModal = ({
               );
               
               await Promise.all(customFieldPromises);
+              console.log("Custom fields saved successfully");
             } catch (error) {
               console.warn("Failed to save custom fields:", error);
             }
           }
 
+          toast.success(`Job ${createdJob.id} created successfully!`);
+          
           if (onSuccess) {
             onSuccess(createdJob);
           }
@@ -248,11 +282,12 @@ export const ScheduleJobModal = ({
         onOpenChange(false);
         resetForm();
       } else {
-        toast.error("Job creation function not available");
+        throw new Error("Job creation function not available");
       }
     } catch (error) {
       console.error("Error creating job:", error);
-      toast.error("Failed to create job. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to create job: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -323,6 +358,16 @@ export const ScheduleJobModal = ({
           </DialogDescription>
         </DialogHeader>
         
+        {formErrors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <ul className="text-sm text-red-600 space-y-1">
+              {formErrors.map((error, index) => (
+                <li key={index}>• {error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 py-4">
             {/* Basic Information */}
@@ -330,17 +375,6 @@ export const ScheduleJobModal = ({
               <h3 className="text-lg font-medium">Job Information</h3>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="title">Job Title *</Label>
-                  <Input 
-                    id="title" 
-                    value={formData.title} 
-                    onChange={handleChange} 
-                    placeholder="Enter job title" 
-                    required 
-                  />
-                </div>
-
                 <div className="col-span-2">
                   <Label htmlFor="client_id">Client *</Label>
                   <Select onValueChange={handleSelectChange("client_id")} value={formData.client_id}>
@@ -399,7 +433,7 @@ export const ScheduleJobModal = ({
                 </div>
                 
                 <div>
-                  <Label htmlFor="job_type">Job Type</Label>
+                  <Label htmlFor="job_type">Job Type *</Label>
                   <Select onValueChange={handleSelectChange("job_type")} value={formData.job_type}>
                     <SelectTrigger id="job_type">
                       <SelectValue placeholder="Select type" />
