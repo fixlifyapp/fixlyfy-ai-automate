@@ -219,6 +219,10 @@ export const EstimateSendDialog = ({
     return contactData;
   };
 
+  const getClientId = () => {
+    return clientInfo?.id || estimateDetails?.client_id || '';
+  };
+
   const contactInfo = getClientContactInfo();
   const hasValidEmail = isValidEmail(contactInfo.email);
   const hasValidPhone = isValidPhoneNumber(contactInfo.phone);
@@ -371,11 +375,13 @@ export const EstimateSendDialog = ({
       const estimateId = getEstimateId();
       const estimateTotal = getEstimateTotal();
       const estimateNotes = getEstimateNotes();
+      const clientId = getClientId();
 
       console.log("Step 3: Estimate details retrieved:", {
         estimateId,
         estimateTotal,
-        estimateNotes
+        estimateNotes,
+        clientId
       });
 
       if (!estimateId) {
@@ -438,7 +444,7 @@ export const EstimateSendDialog = ({
           body: {
             to: finalRecipient,
             body: smsContent,
-            client_id: contactInfo.id || estimateDetails?.client_id,
+            client_id: clientId,
             job_id: jobId || estimateDetails?.job_id
           }
         });
@@ -541,11 +547,11 @@ export const EstimateSendDialog = ({
       toast.success(`Estimate ${estimateNumber} sent to client via ${method}`);
       console.log("SUCCESS: Estimate sent successfully");
       
-      if (estimateDetails?.client_id) {
+      if (clientId) {
         await supabase
           .from('client_notifications')
           .insert({
-            client_id: estimateDetails.client_id,
+            client_id: clientId,
             type: 'estimate_sent',
             title: 'New Estimate Available',
             message: `Estimate ${estimateNumber} has been sent to you. Total: $${estimateTotal.toFixed(2)}`,
