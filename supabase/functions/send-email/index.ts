@@ -14,57 +14,122 @@ interface SendEmailRequest {
   text?: string;
   from?: string;
   templateData?: Record<string, any>;
+  companyId?: string;
+  conversationId?: string;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { to, subject, html, text, from = "noreply@your-domain.com" }: SendEmailRequest = await req.json();
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    console.log(`Sending email to: ${to}, subject: ${subject}`);
-
-    // Send email via SendGrid
-    const sendGridResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('SENDGRID_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personalizations: [{
-          to: [{ email: to }],
-          subject: subject
-        }],
-        from: { email: from },
-        content: [
-          {
-            type: 'text/html',
-            value: html
-          },
-          ...(text ? [{
-            type: 'text/plain',
-            value: text
-          }] : [])
-        ]
-      })
-    });
-
-    if (!sendGridResponse.ok) {
-      const errorData = await sendGridResponse.text();
-      console.error("SendGrid error response:", errorData);
-      throw new Error(`SendGrid API error: ${sendGridResponse.status} - ${errorData}`);
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        status: 401,
+      });
     }
 
-    console.log('Email sent successfully via SendGrid');
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError) throw userError;
+
+    const { 
+      to, 
+      subject, 
+      html, 
+      text, 
+      from, 
+      templateData = {}, 
+      companyId,
+      conversationId 
+    }: SendEmailRequest = await req.json();
+
+    // Get company settings to determine email configuration
+    const { data: companySettings } = await supabaseClient
+      .from('company_settings')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    let fromEmail = from;
+    let mailgunDomain = 'mg.fixlyfy.com'; // Default domain
+    
+    if (companySettings && companySettings.domain_verification_status === 'verified') {
+      mailgunDomain = companySettings.mailgun_domain;
+      fromEmail = companySettings.email_from_address || `noreply@${mailgunDomain}`;
+    } else {
+      fromEmail = from || "noreply@mg.fixlyfy.com";
+    }
+
+    const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
+    if (!mailgunApiKey) {
+      throw new Error('Mailgun API key not configured');
+    }
+
+    console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
+
+    // Send email via Mailgun
+    const formData = new FormData();
+    formData.append('from', fromEmail);
+    formData.append('to', to);
+    formData.append('subject', subject);
+    formData.append('html', html);
+    if (text) formData.append('text', text);
+    
+    // Add tracking
+    formData.append('o:tracking', 'yes');
+    formData.append('o:tracking-clicks', 'yes');
+    formData.append('o:tracking-opens', 'yes');
+
+    const mailgunResponse = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
+      },
+      body: formData
+    });
+
+    if (!mailgunResponse.ok) {
+      const errorData = await mailgunResponse.text();
+      console.error("Mailgun error response:", errorData);
+      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${errorData}`);
+    }
+
+    const mailgunResult = await mailgunResponse.json();
+    console.log('Email sent successfully via Mailgun:', mailgunResult);
+
+    // Store email in database for tracking
+    if (conversationId) {
+      await supabaseClient
+        .from('email_messages')
+        .insert({
+          conversation_id: conversationId,
+          mailgun_message_id: mailgunResult.id,
+          direction: 'outbound',
+          sender_email: fromEmail,
+          recipient_email: to,
+          subject,
+          body_html: html,
+          body_text: text,
+          delivery_status: 'sent'
+        });
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Email sent successfully' 
+        message: 'Email sent successfully via Mailgun',
+        messageId: mailgunResult.id,
+        from: fromEmail,
+        domain: mailgunDomain
       }),
       {
         headers: {

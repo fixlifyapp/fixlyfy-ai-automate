@@ -29,6 +29,13 @@ export interface CompanySettings {
   service_zip_codes: string;
   // Business hours
   business_hours: BusinessHours;
+  // Email settings
+  custom_domain?: string;
+  mailgun_domain?: string;
+  email_from_name?: string;
+  email_from_address?: string;
+  domain_verification_status?: string;
+  mailgun_settings?: any;
   created_at?: string;
   updated_at?: string;
 }
@@ -49,7 +56,8 @@ const defaultCompanySettings: CompanySettings = {
   company_description: 'Fixlyfy Services provides professional HVAC, plumbing and electrical services to residential and commercial customers throughout the Bay Area. Our team of skilled technicians is available 24/7 for all your service needs.',
   service_radius: 50,
   service_zip_codes: '94103, 94104, 94105, 94107, 94108, 94109, 94110, 94111, 94112, 94114, 94115, 94116, 94117, 94118, 94121, 94122, 94123, 94124, 94127, 94129, 94130, 94131, 94132, 94133, 94134, 94158',
-  business_hours: DEFAULT_BUSINESS_HOURS
+  business_hours: DEFAULT_BUSINESS_HOURS,
+  email_from_name: 'Support Team'
 };
 
 export const useCompanySettings = () => {

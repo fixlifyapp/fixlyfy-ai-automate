@@ -906,7 +906,14 @@ export type Database = {
           company_website: string | null
           company_zip: string | null
           created_at: string
+          custom_domain: string | null
+          domain_verification_status: string | null
+          email_from_address: string | null
+          email_from_name: string | null
           id: string
+          mailgun_api_key: string | null
+          mailgun_domain: string | null
+          mailgun_settings: Json | null
           service_radius: number | null
           service_zip_codes: string | null
           tax_id: string | null
@@ -929,7 +936,14 @@ export type Database = {
           company_website?: string | null
           company_zip?: string | null
           created_at?: string
+          custom_domain?: string | null
+          domain_verification_status?: string | null
+          email_from_address?: string | null
+          email_from_name?: string | null
           id?: string
+          mailgun_api_key?: string | null
+          mailgun_domain?: string | null
+          mailgun_settings?: Json | null
           service_radius?: number | null
           service_zip_codes?: string | null
           tax_id?: string | null
@@ -952,7 +966,14 @@ export type Database = {
           company_website?: string | null
           company_zip?: string | null
           created_at?: string
+          custom_domain?: string | null
+          domain_verification_status?: string | null
+          email_from_address?: string | null
+          email_from_name?: string | null
           id?: string
+          mailgun_api_key?: string | null
+          mailgun_domain?: string | null
+          mailgun_settings?: Json | null
           service_radius?: number | null
           service_zip_codes?: string | null
           tax_id?: string | null
@@ -1051,6 +1072,183 @@ export type Database = {
           required?: boolean | null
         }
         Relationships: []
+      }
+      email_conversations: {
+        Row: {
+          client_id: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          job_id: string | null
+          last_message_at: string | null
+          status: string | null
+          subject: string
+          thread_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          last_message_at?: string | null
+          status?: string | null
+          subject: string
+          thread_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          last_message_at?: string | null
+          status?: string | null
+          subject?: string
+          thread_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_messages: {
+        Row: {
+          attachments: Json | null
+          body_html: string | null
+          body_text: string | null
+          clicked_at: string | null
+          conversation_id: string | null
+          created_at: string | null
+          delivery_status: string | null
+          direction: string
+          id: string
+          mailgun_message_id: string | null
+          opened_at: string | null
+          recipient_email: string
+          sender_email: string
+          subject: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          clicked_at?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          delivery_status?: string | null
+          direction: string
+          id?: string
+          mailgun_message_id?: string | null
+          opened_at?: string | null
+          recipient_email: string
+          sender_email: string
+          subject?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          clicked_at?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          delivery_status?: string | null
+          direction?: string
+          id?: string
+          mailgun_message_id?: string | null
+          opened_at?: string | null
+          recipient_email?: string
+          sender_email?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "email_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          subject: string | null
+          template_type: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          subject?: string | null
+          template_type: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          subject?: string | null
+          template_type?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_settings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emails: {
         Row: {
