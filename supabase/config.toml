@@ -84,6 +84,15 @@ verify_jwt = true
 [functions.update-profiles-schema]
 verify_jwt = true
 
+[functions.telnyx-phone-numbers]
+verify_jwt = true
+
+[functions.telnyx-sms]
+verify_jwt = false
+
+[functions.telnyx-voice-webhook]
+verify_jwt = false
+
 [storage]
 enabled = true
 port = 54325

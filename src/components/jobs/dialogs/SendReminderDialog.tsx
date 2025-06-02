@@ -42,7 +42,7 @@ export function SendReminderDialog({ selectedJobs, onOpenChange, onSuccess }: Se
         .select(`
           id,
           title,
-          scheduled_date,
+          date,
           clients:client_id(
             id,
             name,
@@ -62,7 +62,7 @@ export function SendReminderDialog({ selectedJobs, onOpenChange, onSuccess }: Se
           if (reminderType === 'email' || reminderType === 'both') {
             if (job.clients?.email) {
               const subject = `Appointment Reminder - ${job.title}`;
-              const defaultMessage = `Hi ${job.clients.name},\n\nThis is a friendly reminder about your upcoming appointment:\n\n${job.title}\nScheduled for: ${job.scheduled_date ? new Date(job.scheduled_date).toLocaleDateString() : 'TBD'}\n\nIf you need to reschedule or have any questions, please contact us.\n\nThank you!`;
+              const defaultMessage = `Hi ${job.clients.name},\n\nThis is a friendly reminder about your upcoming appointment:\n\n${job.title}\nScheduled for: ${job.date ? new Date(job.date).toLocaleDateString() : 'TBD'}\n\nIf you need to reschedule or have any questions, please contact us.\n\nThank you!`;
               
               const emailHtml = `
                 <html>
@@ -74,7 +74,7 @@ export function SendReminderDialog({ selectedJobs, onOpenChange, onSuccess }: Se
                       
                       <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
                         <h3 style="margin: 0 0 10px 0;">${job.title}</h3>
-                        <p><strong>Scheduled for:</strong> ${job.scheduled_date ? new Date(job.scheduled_date).toLocaleDateString() : 'TBD'}</p>
+                        <p><strong>Scheduled for:</strong> ${job.date ? new Date(job.date).toLocaleDateString() : 'TBD'}</p>
                       </div>
                       
                       ${customMessage ? `<p><strong>Additional Message:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
@@ -83,7 +83,7 @@ export function SendReminderDialog({ selectedJobs, onOpenChange, onSuccess }: Se
                       <p>Thank you!</p>
                       
                       <!-- Tracking pixel -->
-                      <img src="${supabase.supabaseUrl}/functions/v1/track-email-open?type=reminder&id=${job.id}" width="1" height="1" style="display:none;" />
+                      <img src="https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/track-email-open?type=reminder&id=${job.id}" width="1" height="1" style="display:none;" />
                     </div>
                   </body>
                 </html>

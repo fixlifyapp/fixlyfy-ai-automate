@@ -3,14 +3,13 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, MessageSquare, Mail, BarChart3, Zap, Bot } from "lucide-react";
+import { MessageSquare, Mail, BarChart3, Zap, Settings } from "lucide-react";
 import { EmailsList } from "@/components/connect/EmailsList";
 import { RealEmailsList } from "@/components/connect/RealEmailsList";
 import { EmailManagement } from "@/components/connect/EmailManagement";
 import { EmailComposer } from "@/components/connect/EmailComposer";
 import { EmailAnalytics } from "@/components/connect/EmailAnalytics";
 import { MailgunTestPanel } from "@/components/connect/MailgunTestPanel";
-import { AmazonConnectFlowInstructions } from "@/components/connect/AmazonConnectFlowInstructions";
 
 const ConnectPage = () => {
   const [showEmailComposer, setShowEmailComposer] = useState(false);
@@ -25,7 +24,7 @@ const ConnectPage = () => {
       </div>
 
       <Tabs defaultValue="emails" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-6 gap-1">
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1">
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             Email Center
@@ -38,16 +37,12 @@ const ConnectPage = () => {
             <MessageSquare className="h-4 w-4" />
             Conversations
           </TabsTrigger>
-          <TabsTrigger value="voice" className="flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            Voice & AI
-          </TabsTrigger>
           <TabsTrigger value="automation" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             Automation
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Bot className="h-4 w-4" />
+            <Settings className="h-4 w-4" />
             Settings
           </TabsTrigger>
         </TabsList>
@@ -112,50 +107,6 @@ const ConnectPage = () => {
 
         <TabsContent value="conversations">
           <EmailManagement />
-        </TabsContent>
-
-        <TabsContent value="voice">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="h-5 w-5" />
-                  AI Voice Integration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-green-800">Active Calls</p>
-                        <p className="text-2xl font-bold text-green-900">3</p>
-                      </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Live</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-blue-800">Today's Calls</p>
-                        <p className="text-2xl font-bold text-blue-900">28</p>
-                      </div>
-                      <Badge variant="secondary">Today</Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-purple-800">AI Handled</p>
-                        <p className="text-2xl font-bold text-purple-900">85%</p>
-                      </div>
-                      <Badge variant="secondary">Auto</Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <AmazonConnectFlowInstructions />
-          </div>
         </TabsContent>
 
         <TabsContent value="automation">

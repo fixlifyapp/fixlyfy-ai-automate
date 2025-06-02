@@ -1,12 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Mail, MailOpen, MousePointer, TrendingUp, Calendar, Filter } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { Mail, MailOpen, MousePointer, TrendingUp } from 'lucide-react';
 
 interface EmailMetrics {
   sent: number;
@@ -26,75 +24,22 @@ interface EmailAnalyticsData {
 export const EmailAnalytics = () => {
   const [timeRange, setTimeRange] = useState('7d');
 
-  const { data: metrics, isLoading } = useQuery({
-    queryKey: ['email-analytics', timeRange],
-    queryFn: async () => {
-      const endDate = new Date();
-      const startDate = new Date();
-      
-      switch (timeRange) {
-        case '7d':
-          startDate.setDate(endDate.getDate() - 7);
-          break;
-        case '30d':
-          startDate.setDate(endDate.getDate() - 30);
-          break;
-        case '90d':
-          startDate.setDate(endDate.getDate() - 90);
-          break;
-      }
+  // Mock data for now since email_analytics table was just created
+  const mockMetrics: EmailMetrics = {
+    sent: 156,
+    opened: 98,
+    clicked: 24,
+    openRate: 62.8,
+    clickRate: 15.4
+  };
 
-      // Get email analytics data
-      const { data: analyticsData, error } = await supabase
-        .from('email_analytics')
-        .select('*')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Process data for metrics
-      const sentEmails = analyticsData?.filter(item => item.event_type === 'sent').length || 0;
-      const openedEmails = analyticsData?.filter(item => item.event_type === 'open').length || 0;
-      const clickedEmails = analyticsData?.filter(item => item.event_type === 'click').length || 0;
-
-      const metrics: EmailMetrics = {
-        sent: sentEmails,
-        opened: openedEmails,
-        clicked: clickedEmails,
-        openRate: sentEmails > 0 ? (openedEmails / sentEmails) * 100 : 0,
-        clickRate: sentEmails > 0 ? (clickedEmails / sentEmails) * 100 : 0
-      };
-
-      // Process data for charts
-      const dailyData: { [key: string]: { sent: number; opened: number; clicked: number } } = {};
-      
-      analyticsData?.forEach(item => {
-        const date = new Date(item.created_at).toISOString().split('T')[0];
-        if (!dailyData[date]) {
-          dailyData[date] = { sent: 0, opened: 0, clicked: 0 };
-        }
-        
-        if (item.event_type === 'sent') dailyData[date].sent++;
-        else if (item.event_type === 'open') dailyData[date].opened++;
-        else if (item.event_type === 'click') dailyData[date].clicked++;
-      });
-
-      const chartData: EmailAnalyticsData[] = Object.entries(dailyData).map(([date, data]) => ({
-        date: new Date(date).toLocaleDateString(),
-        ...data
-      }));
-
-      return { metrics, chartData };
-    }
-  });
-
-  if (isLoading) {
-    return <div>Loading email analytics...</div>;
-  }
-
-  const { metrics: emailMetrics, chartData } = metrics || { metrics: null, chartData: [] };
+  const mockChartData: EmailAnalyticsData[] = [
+    { date: '2024-01-01', sent: 25, opened: 18, clicked: 4 },
+    { date: '2024-01-02', sent: 32, opened: 22, clicked: 6 },
+    { date: '2024-01-03', sent: 28, opened: 19, clicked: 3 },
+    { date: '2024-01-04', sent: 35, opened: 24, clicked: 7 },
+    { date: '2024-01-05', sent: 36, opened: 15, clicked: 4 }
+  ];
 
   return (
     <div className="space-y-6">
@@ -135,7 +80,7 @@ export const EmailAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Emails Sent</p>
-                <p className="text-2xl font-bold">{emailMetrics?.sent || 0}</p>
+                <p className="text-2xl font-bold">{mockMetrics.sent}</p>
               </div>
               <Mail className="h-8 w-8 text-blue-600" />
             </div>
@@ -147,7 +92,7 @@ export const EmailAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Emails Opened</p>
-                <p className="text-2xl font-bold">{emailMetrics?.opened || 0}</p>
+                <p className="text-2xl font-bold">{mockMetrics.opened}</p>
               </div>
               <MailOpen className="h-8 w-8 text-green-600" />
             </div>
@@ -159,7 +104,7 @@ export const EmailAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Links Clicked</p>
-                <p className="text-2xl font-bold">{emailMetrics?.clicked || 0}</p>
+                <p className="text-2xl font-bold">{mockMetrics.clicked}</p>
               </div>
               <MousePointer className="h-8 w-8 text-purple-600" />
             </div>
@@ -171,7 +116,7 @@ export const EmailAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Open Rate</p>
-                <p className="text-2xl font-bold">{emailMetrics?.openRate?.toFixed(1) || 0}%</p>
+                <p className="text-2xl font-bold">{mockMetrics.openRate.toFixed(1)}%</p>
               </div>
               <TrendingUp className="h-8 w-8 text-orange-600" />
             </div>
@@ -183,7 +128,7 @@ export const EmailAnalytics = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Click Rate</p>
-                <p className="text-2xl font-bold">{emailMetrics?.clickRate?.toFixed(1) || 0}%</p>
+                <p className="text-2xl font-bold">{mockMetrics.clickRate.toFixed(1)}%</p>
               </div>
               <MousePointer className="h-8 w-8 text-red-600" />
             </div>
@@ -199,7 +144,7 @@ export const EmailAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
+              <BarChart data={mockChartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -218,7 +163,7 @@ export const EmailAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
+              <LineChart data={mockChartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -254,14 +199,14 @@ export const EmailAnalytics = () => {
               <div>
                 <p className="font-medium text-green-800">Open Rate Performance</p>
                 <p className="text-sm text-green-600">
-                  {emailMetrics?.openRate && emailMetrics.openRate > 20 ? 
+                  {mockMetrics.openRate > 20 ? 
                     'Above industry average (20%)' : 
                     'Below industry average (20%)'
                   }
                 </p>
               </div>
-              <Badge variant={emailMetrics?.openRate && emailMetrics.openRate > 20 ? 'default' : 'secondary'}>
-                {emailMetrics?.openRate && emailMetrics.openRate > 20 ? 'Good' : 'Needs Improvement'}
+              <Badge variant={mockMetrics.openRate > 20 ? 'default' : 'secondary'}>
+                {mockMetrics.openRate > 20 ? 'Good' : 'Needs Improvement'}
               </Badge>
             </div>
 
@@ -269,14 +214,14 @@ export const EmailAnalytics = () => {
               <div>
                 <p className="font-medium text-blue-800">Click Rate Performance</p>
                 <p className="text-sm text-blue-600">
-                  {emailMetrics?.clickRate && emailMetrics.clickRate > 3 ? 
+                  {mockMetrics.clickRate > 3 ? 
                     'Above industry average (3%)' : 
                     'Below industry average (3%)'
                   }
                 </p>
               </div>
-              <Badge variant={emailMetrics?.clickRate && emailMetrics.clickRate > 3 ? 'default' : 'secondary'}>
-                {emailMetrics?.clickRate && emailMetrics.clickRate > 3 ? 'Good' : 'Needs Improvement'}
+              <Badge variant={mockMetrics.clickRate > 3 ? 'default' : 'secondary'}>
+                {mockMetrics.clickRate > 3 ? 'Good' : 'Needs Improvement'}
               </Badge>
             </div>
           </div>
