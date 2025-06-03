@@ -2,7 +2,7 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
-import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug, Package, Mail } from "lucide-react";
+import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug, Package, Mail, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MailgunTestPanel } from "@/components/connect/MailgunTestPanel";
@@ -85,16 +85,16 @@ const SettingsPage = () => {
           </div>
         </Link>
         
-        {/* Phone Numbers Card */}
-        <Link to="/phone-numbers">
+        {/* Telnyx Settings Card */}
+        <Link to="/settings/telnyx">
           <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
             <div className="flex items-center p-6 space-x-4">
               <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Phone className="h-6 w-6 text-fixlyfy" />
+                <Zap className="h-6 w-6 text-fixlyfy" />
               </div>
               <div>
-                <h3 className="font-medium">Phone Numbers</h3>
-                <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
+                <h3 className="font-medium">Telnyx Settings</h3>
+                <p className="text-sm text-muted-foreground">Manage phone numbers, AI settings, call analytics, and purchase numbers</p>
               </div>
             </div>
           </div>
