@@ -20,6 +20,17 @@ interface EstimateSendDialogProps {
   onSuccess: () => void;
   onCancel: () => void;
   onSave: () => Promise<boolean>;
+  contactInfo?: { 
+    name?: string;
+    email?: string; 
+    phone?: string; 
+  };
+  clientInfo?: { 
+    id?: string;
+    name?: string;
+    email?: string; 
+    phone?: string; 
+  };
 }
 
 const isValidEmail = (email: string): boolean => {
@@ -34,7 +45,9 @@ export const EstimateSendDialog = ({
   jobId,
   onSuccess,
   onCancel,
-  onSave
+  onSave,
+  contactInfo: propContactInfo,
+  clientInfo: propClientInfo
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
@@ -43,6 +56,9 @@ export const EstimateSendDialog = ({
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [estimateData, setEstimateData] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState<"send" | "confirmation">("send");
+
+  // Merge contact info from props
+  const contactInfo = propContactInfo || propClientInfo || {};
 
   // Fetch client and estimate data
   useEffect(() => {
@@ -228,7 +244,7 @@ export const EstimateSendDialog = ({
           <div className="space-y-6">
             <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
               Send estimate <span className="font-medium">#{estimateNumber}</span> to{' '}
-              <span className="font-medium">{clientInfo?.name || 'client'}</span>
+              <span className="font-medium">{contactInfo?.name || clientInfo?.name || 'client'}</span>
             </div>
 
             <div className="space-y-4">
@@ -247,8 +263,8 @@ export const EstimateSendDialog = ({
                         <p className="text-sm text-gray-600 mt-1">
                           Professional email with portal access link
                         </p>
-                        {clientInfo?.email && (
-                          <p className="text-xs text-blue-600 mt-1">{clientInfo.email}</p>
+                        {(contactInfo?.email || clientInfo?.email) && (
+                          <p className="text-xs text-blue-600 mt-1">{contactInfo?.email || clientInfo?.email}</p>
                         )}
                       </div>
                     </div>
@@ -267,8 +283,8 @@ export const EstimateSendDialog = ({
                         <p className="text-sm text-gray-600 mt-1">
                           Quick SMS with portal link
                         </p>
-                        {clientInfo?.phone && (
-                          <p className="text-xs text-green-600 mt-1">{clientInfo.phone}</p>
+                        {(contactInfo?.phone || clientInfo?.phone) && (
+                          <p className="text-xs text-green-600 mt-1">{contactInfo?.phone || clientInfo?.phone}</p>
                         )}
                       </div>
                     </div>
