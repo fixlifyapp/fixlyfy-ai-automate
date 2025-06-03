@@ -1,10 +1,11 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Search, Plus, Settings, CheckCircle, PhoneCall } from "lucide-react";
+import { Phone, Search, Plus, Settings, CheckCircle, PhoneCall, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,19 +17,51 @@ interface AvailableNumber {
   region_information: any;
   features: string[];
   cost_information: any;
-  source?: 'local' | 'telnyx';
+  source: 'telnyx';
 }
 
 export function PhoneNumberPurchase() {
-  const [searchAreaCode, setSearchAreaCode] = useState('437'); // Default to test area code
+  const [searchAreaCode, setSearchAreaCode] = useState('437');
   const [availableNumbers, setAvailableNumbers] = useState<AvailableNumber[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
 
-  // Add Existing Number Section
-  const [isAddExistingNumberDialogOpen, setIsAddExistingNumberDialogOpen] = useState(false);
+  // Remove test numbers on component mount
+  useEffect(() => {
+    removeTestNumbers();
+  }, []);
 
-  // Search for available numbers
+  // Remove test numbers mutation
+  const removeTestNumbersMutation = useMutation({
+    mutationFn: async () => {
+      console.log('Removing test numbers from account');
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'remove_test_numbers'
+        }
+      });
+
+      if (error) {
+        console.error('Remove test numbers error:', error);
+        throw error;
+      }
+      return data;
+    },
+    onSuccess: () => {
+      console.log('Test numbers removed successfully');
+      queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
+      queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
+    },
+    onError: (error) => {
+      console.error('Remove test numbers error:', error);
+    }
+  });
+
+  const removeTestNumbers = () => {
+    removeTestNumbersMutation.mutate();
+  };
+
+  // Search for available numbers (real Telnyx numbers only)
   const searchNumbers = async () => {
     if (!searchAreaCode) {
       toast.error('Please enter an area code');
@@ -37,7 +70,7 @@ export function PhoneNumberPurchase() {
 
     setIsSearching(true);
     try {
-      console.log('Searching for numbers in area code:', searchAreaCode);
+      console.log('Searching for real Telnyx numbers in area code:', searchAreaCode);
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
           action: 'search',
@@ -88,11 +121,7 @@ export function PhoneNumberPurchase() {
     },
     onSuccess: (data) => {
       console.log('Successfully purchased:', data);
-      if (data.type === 'test') {
-        toast.success(`🎉 Test number ${data.phone_number} purchased successfully! (Free for testing)`);
-      } else {
-        toast.success(`📞 Number ${data.phone_number} ordered successfully!`);
-      }
+      toast.success(`📞 Number ${data.phone_number} ordered successfully!`);
       
       // Refresh the phone numbers list
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
@@ -108,24 +137,10 @@ export function PhoneNumberPurchase() {
   });
 
   const getCostDisplay = (number: AvailableNumber) => {
-    if (number.source === 'local') {
-      return {
-        setup: number.cost_information?.setup_cost || 0,
-        monthly: number.cost_information?.monthly_cost || 0
-      };
-    }
-    
     return {
       setup: number.cost_information?.upfront_cost || 1.00,
       monthly: number.cost_information?.monthly_cost || 1.00
     };
-  };
-
-  const getNumberType = (number: AvailableNumber) => {
-    if (number.source === 'local') {
-      return { type: 'test', color: 'bg-green-100 text-green-800' };
-    }
-    return { type: 'real', color: 'bg-blue-100 text-blue-800' };
   };
 
   return (
@@ -151,7 +166,7 @@ export function PhoneNumberPurchase() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Search Available Numbers
+            Search & Purchase Telnyx Numbers
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -165,7 +180,7 @@ export function PhoneNumberPurchase() {
                 onChange={(e) => setSearchAreaCode(e.target.value)}
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Try "437" to see the test number available for $0
+                Search for real Telnyx phone numbers available for purchase
               </p>
             </div>
             <div className="flex items-end">
@@ -177,11 +192,10 @@ export function PhoneNumberPurchase() {
 
           {availableNumbers.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium">Available Numbers ({availableNumbers.length})</h4>
+              <h4 className="font-medium">Available Real Numbers ({availableNumbers.length})</h4>
               <div className="grid grid-cols-1 gap-3">
                 {availableNumbers.map((number) => {
                   const cost = getCostDisplay(number);
-                  const numberType = getNumberType(number);
                   
                   return (
                     <div
@@ -193,19 +207,14 @@ export function PhoneNumberPurchase() {
                           <span className="font-medium text-lg">
                             {formatPhoneForDisplay(number.phone_number)}
                           </span>
-                          <Badge className={numberType.color}>
-                            {numberType.type === 'test' ? '🧪 Test Number' : '📞 Real Number'}
+                          <Badge className="bg-blue-100 text-blue-800">
+                            📞 Real Telnyx Number
                           </Badge>
-                          {cost.setup === 0 && cost.monthly === 0 && (
-                            <Badge variant="outline" className="text-green-600">
-                              FREE
-                            </Badge>
-                          )}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <div>
-                            {number.region_information?.[0]?.region_name || 'Canada'}, {' '}
-                            {number.region_information?.[0]?.rate_center || 'Toronto Area'}
+                            {number.region_information?.[0]?.region_name || 'United States'}, {' '}
+                            {number.region_information?.[0]?.rate_center || 'Local Area'}
                           </div>
                           <div className="flex items-center gap-4 mt-1">
                             <span>Setup: ${cost.setup.toFixed(2)}</span>
@@ -227,8 +236,7 @@ export function PhoneNumberPurchase() {
                         className="gap-2"
                       >
                         <Plus className="h-4 w-4" />
-                        {purchaseNumberMutation.isPending ? 'Purchasing...' : 
-                         cost.setup === 0 && cost.monthly === 0 ? 'Get Free' : 'Purchase'}
+                        {purchaseNumberMutation.isPending ? 'Purchasing...' : 'Purchase'}
                       </Button>
                     </div>
                   );
@@ -253,9 +261,9 @@ export function PhoneNumberPurchase() {
           <CardTitle>How It Works</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
-              <h5 className="font-medium text-purple-600">📱 Existing Numbers</h5>
+              <h5 className="font-medium text-purple-600">📱 Add Existing Numbers</h5>
               <ul className="space-y-1 text-sm">
                 <li>• Already have a Telnyx number?</li>
                 <li>• Add it using "Add Existing Number"</li>
@@ -264,29 +272,20 @@ export function PhoneNumberPurchase() {
               </ul>
             </div>
             <div className="space-y-3">
-              <h5 className="font-medium text-green-600">🧪 Test Numbers</h5>
+              <h5 className="font-medium text-blue-600">📞 Purchase New Numbers</h5>
               <ul className="space-y-1 text-sm">
-                <li>• Free to use ($0 setup and monthly)</li>
-                <li>• Perfect for testing the platform</li>
-                <li>• Available in area code 437</li>
-                <li>• Automatically assigned to your account</li>
-              </ul>
-            </div>
-            <div className="space-y-3">
-              <h5 className="font-medium text-blue-600">📞 Real Numbers</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• Live Telnyx phone numbers</li>
-                <li>• $1-2 setup + $1/month typically</li>
-                <li>• Ready for production use</li>
-                <li>• Full SMS and voice capabilities</li>
+                <li>• Search real Telnyx phone numbers</li>
+                <li>• Purchase directly through Telnyx</li>
+                <li>• Automatically added to your account</li>
+                <li>• Full SMS, voice, and AI capabilities</li>
               </ul>
             </div>
           </div>
 
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h5 className="font-medium text-purple-800 mb-2">💡 Pro Tip</h5>
-            <p className="text-sm text-purple-700">
-              If you already bought a Telnyx number (+14375249932), use "Add Existing Number" above to connect it to your account. This will give you full control over your real number with AI dispatcher capabilities.
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-medium text-blue-800 mb-2">💡 Pro Tip</h5>
+            <p className="text-sm text-blue-700">
+              If you already purchased a Telnyx number (+14375249932), use "Add Existing Number" above to connect it to your account. This will give you full control over your real number with AI dispatcher capabilities.
             </p>
           </div>
         </CardContent>

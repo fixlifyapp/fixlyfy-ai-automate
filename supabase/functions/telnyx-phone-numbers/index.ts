@@ -1,8 +1,9 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 interface TelnyxPhoneNumberRequest {
-  action: 'search' | 'purchase' | 'list' | 'configure' | 'add_existing';
+  action: 'search' | 'purchase' | 'list' | 'configure' | 'add_existing' | 'remove_test_numbers';
   area_code?: string;
   country_code?: string;
   phone_number?: string;
@@ -45,36 +46,50 @@ serve(async (req) => {
 
     const { action, area_code, country_code, phone_number, webhook_url }: TelnyxPhoneNumberRequest = await req.json()
 
-    // Search available numbers (including our test number)
+    // Remove test numbers from user account
+    if (action === 'remove_test_numbers') {
+      if (!currentUserId) {
+        throw new Error('User authentication required')
+      }
+
+      console.log('Removing test numbers from user account')
+      
+      // Remove test numbers (those with monthly_cost = 0 and setup_cost = 0)
+      const { error: removeError } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .update({ 
+          user_id: null, 
+          status: 'available',
+          configured_at: null,
+          webhook_url: null 
+        })
+        .eq('user_id', currentUserId)
+        .eq('monthly_cost', 0)
+        .eq('setup_cost', 0)
+
+      if (removeError) {
+        throw removeError
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Test numbers removed from account'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Search available numbers (only real Telnyx numbers, no local test numbers)
     if (action === 'search') {
       console.log(`Searching for numbers with area_code: ${area_code}`)
       
-      // First, get available numbers from our database (like the test number)
-      const { data: localAvailableNumbers, error: localError } = await supabaseClient
-        .from('telnyx_phone_numbers')
-        .select('*')
-        .eq('status', 'available')
-        .is('user_id', null)
-
-      if (localError) {
-        console.error('Error fetching local numbers:', localError)
-      }
-
-      console.log('Local available numbers:', localAvailableNumbers)
-
-      // Filter by area code if provided
-      const filteredLocalNumbers = localAvailableNumbers?.filter(num => 
-        !area_code || num.area_code === area_code
-      ) || []
-
-      // Also search Telnyx API for real numbers if API key is available
       let telnyxNumbers = []
       if (telnyxApiKey) {
         try {
           const searchParams = new URLSearchParams({
             'filter[country_code]': country_code || 'US',
             'filter[features][]': 'sms',
-            'page[size]': '10'
+            'page[size]': '25'
           })
           
           if (area_code) {
@@ -99,38 +114,21 @@ serve(async (req) => {
             })) || []
           }
         } catch (error) {
-          console.log('Telnyx API error (continuing with local numbers):', error)
+          console.log('Telnyx API error:', error)
         }
       }
 
-      // Combine local and Telnyx numbers
-      const localNumbers = filteredLocalNumbers?.map(num => ({
-        phone_number: num.phone_number,
-        region_information: [{
-          region_name: num.region || 'Test Region',
-          rate_center: num.locality || 'Test Center'
-        }],
-        features: ['sms', 'voice'],
-        cost_information: {
-          monthly_cost: num.monthly_cost || 0,
-          setup_cost: num.setup_cost || 0
-        },
-        source: 'local'
-      })) || []
-
-      const allNumbers = [...localNumbers, ...telnyxNumbers]
-
-      console.log(`Found ${allNumbers.length} total numbers (${localNumbers.length} local + ${telnyxNumbers.length} telnyx)`)
+      console.log(`Found ${telnyxNumbers.length} real Telnyx numbers`)
 
       return new Response(JSON.stringify({
         success: true,
-        available_numbers: allNumbers
+        available_numbers: telnyxNumbers
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Purchase number (works for both local test numbers and real Telnyx numbers)
+    // Purchase number (real Telnyx numbers only)
     else if (action === 'purchase') {
       if (!phone_number) {
         throw new Error('Phone number is required for purchase')
@@ -140,42 +138,9 @@ serve(async (req) => {
         throw new Error('User authentication required for purchase')
       }
 
-      console.log(`Purchasing number ${phone_number} for user ${currentUserId}`)
+      console.log(`Purchasing real Telnyx number ${phone_number} for user ${currentUserId}`)
 
-      // Check if this is a local test number
-      const { data: localNumber } = await supabaseClient
-        .from('telnyx_phone_numbers')
-        .select('*')
-        .eq('phone_number', phone_number)
-        .eq('status', 'available')
-        .is('user_id', null)
-        .single()
-
-      if (localNumber) {
-        console.log('Purchasing local test number')
-        // This is a local test number, just assign it to the user
-        const { error: updateError } = await supabaseClient
-          .from('telnyx_phone_numbers')
-          .update({
-            user_id: currentUserId,
-            status: 'active',
-            purchased_at: new Date().toISOString()
-          })
-          .eq('phone_number', phone_number)
-
-        if (updateError) {
-          throw updateError
-        }
-
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Test number purchased successfully',
-          phone_number: phone_number,
-          type: 'test'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      } else if (telnyxApiKey) {
+      if (telnyxApiKey) {
         console.log('Purchasing real Telnyx number')
         // This is a real Telnyx number, purchase it
         const purchaseResponse = await fetch('https://api.telnyx.com/v2/number_orders', {
@@ -205,7 +170,9 @@ serve(async (req) => {
             country_code: country_code || 'US',
             area_code: phone_number.slice(-10, -7),
             purchased_at: new Date().toISOString(),
-            user_id: currentUserId
+            user_id: currentUserId,
+            monthly_cost: 1.00, // Real number cost
+            setup_cost: 1.00    // Real number cost
           })
 
         if (insertError) {
@@ -214,7 +181,7 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
           success: true,
-          message: 'Number ordered successfully',
+          message: 'Real number ordered successfully',
           order_id: purchaseData.data.id,
           phone_number: phone_number,
           type: 'real'
@@ -222,7 +189,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       } else {
-        throw new Error('Cannot purchase number: no API key configured and number not found in local database')
+        throw new Error('Cannot purchase number: no Telnyx API key configured')
       }
     }
 
@@ -240,7 +207,9 @@ serve(async (req) => {
           country_code: country_code || 'US',
           area_code: phone_number.slice(-10, -7),
           purchased_at: new Date().toISOString(),
-          user_id: currentUserId
+          user_id: currentUserId,
+          monthly_cost: 1.00, // Real number cost
+          setup_cost: 1.00    // Real number cost
         })
 
       if (insertError) {
@@ -256,7 +225,7 @@ serve(async (req) => {
       })
     }
 
-    // List user's numbers - ИСПРАВЛЯЕМ ЭТУ ЧАСТЬ
+    // List user's numbers - only real numbers, not test numbers
     else if (action === 'list') {
       if (!currentUserId) {
         console.log('No user authenticated, returning empty list')
@@ -270,18 +239,19 @@ serve(async (req) => {
 
       console.log(`Fetching numbers for user: ${currentUserId}`)
 
-      // Получаем номера пользователя из таблицы telnyx_phone_numbers
+      // Get user's real numbers (exclude test numbers with monthly_cost = 0)
       const { data: userNumbers, error } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .eq('user_id', currentUserId)
-        .not('status', 'eq', 'available')  // Исключаем доступные номера
+        .not('status', 'eq', 'available')
+        .or('monthly_cost.gt.0,setup_cost.gt.0') // Only real numbers with cost
         .order('purchased_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching user numbers from telnyx_phone_numbers:', error)
         
-        // Если ошибка, пробуем поискать в обычной таблице phone_numbers
+        // Fallback to phone_numbers table
         const { data: fallbackNumbers, error: fallbackError } = await supabaseClient
           .from('phone_numbers')
           .select('*')
@@ -295,7 +265,6 @@ serve(async (req) => {
 
         console.log(`Found ${fallbackNumbers?.length || 0} numbers in fallback table`)
         
-        // Преобразуем формат из phone_numbers в telnyx_phone_numbers
         const convertedNumbers = fallbackNumbers?.map(num => ({
           id: num.id,
           phone_number: num.phone_number,
@@ -318,8 +287,7 @@ serve(async (req) => {
         })
       }
 
-      console.log(`Found ${userNumbers?.length || 0} numbers for user in telnyx_phone_numbers table`)
-      console.log('User numbers:', userNumbers)
+      console.log(`Found ${userNumbers?.length || 0} real numbers for user`)
 
       return new Response(JSON.stringify({
         success: true,
