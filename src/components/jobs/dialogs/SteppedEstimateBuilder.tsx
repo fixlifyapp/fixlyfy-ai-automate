@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
-import { useJobs } from "@/hooks/useJobs";
+import { useJobData } from "./unified/hooks/useJobData";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -38,20 +39,20 @@ export const SteppedEstimateBuilder = ({
   onEstimateCreated
 }: SteppedEstimateBuilderProps) => {
   const navigate = useNavigate();
-  const { jobs } = useJobs();
+  
+  // Use the optimized useJobData hook instead of fetching all jobs
+  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId, 0);
+  
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
   const [savedEstimate, setSavedEstimate] = useState<any>(null);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
 
-  // Get job data for contact info
-  const job = jobs.find(j => j.id === jobId);
-  
-  // Create contactInfo object for compatibility
+  // Create contactInfo object for compatibility - now loads much faster
   const contactInfo = {
-    name: job?.client?.name || 'Client',
-    email: job?.client?.email || '',
-    phone: job?.client?.phone || ''
+    name: clientInfo?.name || 'Client',
+    email: clientInfo?.email || '',
+    phone: clientInfo?.phone || ''
   };
   
   console.log("=== STEPPED ESTIMATE BUILDER PROPS ===");
@@ -60,6 +61,8 @@ export const SteppedEstimateBuilder = ({
   console.log("Existing estimate:", existingEstimate);
   console.log("Dialog open:", open);
   console.log("Current step:", currentStep);
+  console.log("Job data loading:", jobDataLoading);
+  console.log("Client info:", clientInfo);
   
   const {
     lineItems,
@@ -267,6 +270,7 @@ export const SteppedEstimateBuilder = ({
   console.log("Saved estimate:", !!savedEstimate);
   console.log("Is submitting:", isSubmitting);
   console.log("Document number:", documentNumber);
+  console.log("Contact info available:", !!contactInfo.name);
 
   return (
     <>
