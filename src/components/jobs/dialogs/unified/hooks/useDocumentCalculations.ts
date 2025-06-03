@@ -1,5 +1,5 @@
 
-import { useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { LineItem } from "../../../builder/types";
 
 interface UseDocumentCalculationsProps {
@@ -8,30 +8,50 @@ interface UseDocumentCalculationsProps {
 }
 
 export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalculationsProps) => {
-  const calculateSubtotal = useCallback(() => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const calculateSubtotal = useMemo(() => {
+    return () => {
+      return lineItems.reduce((total, item) => {
+        return total + (item.quantity * item.unitPrice);
+      }, 0);
+    };
   }, [lineItems]);
 
-  const calculateTotalTax = useCallback(() => {
-    const subtotal = calculateSubtotal();
-    return subtotal * (taxRate / 100);
-  }, [calculateSubtotal, taxRate]);
+  const calculateTotalTax = useMemo(() => {
+    return () => {
+      const taxableTotal = lineItems.reduce((total, item) => {
+        if (item.taxable) {
+          return total + (item.quantity * item.unitPrice);
+        }
+        return total;
+      }, 0);
+      return (taxableTotal * taxRate) / 100;
+    };
+  }, [lineItems, taxRate]);
 
-  const calculateGrandTotal = useCallback(() => {
-    return calculateSubtotal() + calculateTotalTax();
+  const calculateGrandTotal = useMemo(() => {
+    return () => {
+      return calculateSubtotal() + calculateTotalTax();
+    };
   }, [calculateSubtotal, calculateTotalTax]);
 
-  const calculateTotalMargin = useCallback(() => {
-    return lineItems.reduce((sum, item) => {
-      const itemMargin = (item.unitPrice - (item.ourPrice || 0)) * item.quantity;
-      return sum + itemMargin;
-    }, 0);
+  const calculateTotalMargin = useMemo(() => {
+    return () => {
+      return lineItems.reduce((total, item) => {
+        const cost = item.ourPrice || 0;
+        const revenue = item.quantity * item.unitPrice;
+        return total + (revenue - (cost * item.quantity));
+      }, 0);
+    };
   }, [lineItems]);
 
-  const calculateMarginPercentage = useCallback(() => {
-    const totalRevenue = calculateSubtotal();
-    const totalMargin = calculateTotalMargin();
-    return totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
+  const calculateMarginPercentage = useMemo(() => {
+    return () => {
+      const totalRevenue = calculateSubtotal();
+      const totalMargin = calculateTotalMargin();
+      
+      if (totalRevenue === 0) return 0;
+      return (totalMargin / totalRevenue) * 100;
+    };
   }, [calculateSubtotal, calculateTotalMargin]);
 
   return {

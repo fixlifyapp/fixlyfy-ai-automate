@@ -48,7 +48,7 @@ export const useDocumentOperations = ({
     if (isSubmitting) return null;
     
     setIsSubmitting(true);
-    console.log('Saving document:', { documentType, lineItems: lineItems.length, total: calculateGrandTotal() });
+    console.log('Saving document:', { documentType, lineItems: lineItems.length, total: calculateGrandTotal(), jobId });
     
     try {
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
@@ -59,7 +59,7 @@ export const useDocumentOperations = ({
       
       // Create document data with proper fields for each type
       const baseDocumentData = {
-        job_id: jobId,
+        job_id: jobId, // Ensure this is passed as text, not UUID
         total: calculateGrandTotal(),
         status: formData.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
         notes: notes || '',
@@ -206,7 +206,7 @@ export const useDocumentOperations = ({
       
       // Create invoice with enhanced data
       const invoiceData = {
-        job_id: jobId,
+        job_id: jobId, // Ensure this is passed as text
         estimate_id: existingDocument.id,
         invoice_number: invoiceNumber,
         total: calculateGrandTotal(),
