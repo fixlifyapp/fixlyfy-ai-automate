@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -66,6 +65,7 @@ serve(async (req) => {
     }
 
     console.log('Company settings found:', !!companySettings)
+    console.log('Custom domain name from DB:', companySettings?.custom_domain_name)
 
     const client = estimate.jobs?.clients
     const job = estimate.jobs
@@ -117,11 +117,11 @@ serve(async (req) => {
       // Use consistent domain - fixlify.app
       const mailgunDomain = 'fixlify.app'
       
-      // UPDATED: Generate FROM email with new priority logic
+      // UPDATED: Generate FROM email with correct priority logic
       let fromEmail = 'support@fixlify.app' // Default fallback
       
       // Priority 1: Use custom_domain_name to build email with fixlify.app
-      if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim()) {
+      if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim() && companySettings.custom_domain_name !== 'support') {
         const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
         fromEmail = `${cleanDomain}@fixlify.app`
         console.log('Using custom domain name to build email:', fromEmail)
@@ -130,6 +130,9 @@ serve(async (req) => {
       else if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
         fromEmail = companySettings.email_from_address.trim()
         console.log('Using configured email_from_address:', fromEmail)
+      }
+      else {
+        console.log('Using default support email (no custom domain configured or custom domain is "support"):', fromEmail)
       }
       
       const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team'
