@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -41,8 +42,11 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('send-estimate - No authorization header provided');
       throw new Error('No authorization header provided');
     }
+
+    console.log('send-estimate - Authorization header present:', !!authHeader);
 
     // Use service role client for database access to bypass RLS
     const supabaseAdmin = createClient(
@@ -50,23 +54,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Also create a client with the user's token to get user info
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    )
+    // Get the current user using the authorization header
+    const token = authHeader.replace('Bearer ', '');
+    console.log('send-estimate - Extracted token:', token.substring(0, 20) + '...');
 
-    // Get the current user
-    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
-      console.error('Error getting user:', userError);
+      console.error('send-estimate - Error getting user:', userError);
       throw new Error('Failed to authenticate user');
     }
 
@@ -101,7 +95,7 @@ serve(async (req) => {
       .single()
 
     if (estimateError || !estimate) {
-      console.error('Estimate lookup error:', estimateError)
+      console.error('send-estimate - Estimate lookup error:', estimateError)
       throw new Error(`Estimate not found: ${estimateError?.message || 'Unknown error'}`)
     }
 
