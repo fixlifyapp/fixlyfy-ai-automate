@@ -9,20 +9,26 @@ import { useDocumentInitialization } from "./hooks/useDocumentInitialization";
 import { useDocumentCalculations } from "./hooks/useDocumentCalculations";
 import { useDocumentOperations } from "./hooks/useDocumentOperations";
 import { useDocumentSmartFeatures } from "./hooks/useDocumentSmartFeatures";
+import { useJobs } from "@/hooks/useJobs";
 
 interface UseUnifiedDocumentBuilderProps {
   documentType: DocumentType;
   existingDocument?: Estimate | Invoice;
   jobId: string;
   open: boolean;
+  onSyncToInvoice?: () => void;
 }
 
 export const useUnifiedDocumentBuilder = ({
   documentType,
   existingDocument,
   jobId,
-  open
+  open,
+  onSyncToInvoice
 }: UseUnifiedDocumentBuilderProps) => {
+  const { jobs } = useJobs();
+  const job = jobs.find(j => j.id === jobId);
+
   // Initialize document state
   const {
     lineItems,
@@ -57,8 +63,9 @@ export const useUnifiedDocumentBuilder = ({
     jobId
   });
 
-  // Document operations
+  // Create form data for operations
   const formData = {
+    documentId: existingDocument?.id,
     documentNumber,
     items: lineItems.map(item => ({
       description: item.description,
@@ -71,6 +78,15 @@ export const useUnifiedDocumentBuilder = ({
     total: calculateGrandTotal()
   };
 
+  // Job data for display
+  const jobData = {
+    id: jobId,
+    title: job?.title || 'Service Request',
+    client: job?.client,
+    description: job?.description
+  };
+
+  // Document operations
   const {
     isSubmitting,
     saveDocumentChanges,
@@ -82,7 +98,8 @@ export const useUnifiedDocumentBuilder = ({
     formData,
     lineItems,
     notes,
-    calculateGrandTotal
+    calculateGrandTotal,
+    onSyncToInvoice
   });
 
   // Line item management
@@ -135,6 +152,10 @@ export const useUnifiedDocumentBuilder = ({
     setDocumentNumber,
     isInitialized,
     isSubmitting,
+
+    // Data objects
+    formData,
+    jobData,
 
     // Calculations
     calculateSubtotal,

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,6 @@ interface UnifiedDocumentBuilderProps {
   existingDocument?: Estimate | Invoice;
   jobId: string;
   onDocumentCreated?: (document?: Estimate | Invoice) => void;
-  onSyncToInvoice?: () => void;
 }
 
 export const UnifiedDocumentBuilder = ({
@@ -39,16 +39,15 @@ export const UnifiedDocumentBuilder = ({
   documentType,
   existingDocument,
   jobId,
-  onDocumentCreated,
-  onSyncToInvoice
+  onDocumentCreated
 }: UnifiedDocumentBuilderProps) => {
   const {
     formData,
+    jobData,
     lineItems,
     taxRate,
     notes,
     isSubmitting,
-    jobData,
     setLineItems,
     setTaxRate,
     setNotes,
@@ -64,8 +63,7 @@ export const UnifiedDocumentBuilder = ({
     documentType,
     existingDocument,
     jobId,
-    open,
-    onSyncToInvoice
+    open
   });
 
   const [newItemDescription, setNewItemDescription] = useState('');

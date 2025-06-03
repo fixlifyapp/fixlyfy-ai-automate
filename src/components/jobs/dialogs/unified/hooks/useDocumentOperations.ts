@@ -52,7 +52,7 @@ export const useDocumentOperations = ({
       documentType, 
       lineItems: lineItems.length, 
       total: calculateGrandTotal(), 
-      jobId: jobId // Ensure this is a string
+      jobId: jobId
     });
     
     try {
@@ -213,7 +213,7 @@ export const useDocumentOperations = ({
       
       // Create invoice with enhanced data
       const invoiceData = {
-        job_id: jobId, // Ensure this is passed as text
+        job_id: String(jobId), // Ensure this is passed as text
         estimate_id: existingDocument.id,
         invoice_number: invoiceNumber,
         total: calculateGrandTotal(),
