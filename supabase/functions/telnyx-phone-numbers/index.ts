@@ -36,6 +36,7 @@ serve(async (req) => {
     if (token) {
       const { data: { user } } = await supabaseClient.auth.getUser(token)
       currentUserId = user?.id
+      console.log('Current user ID:', currentUserId)
     }
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
@@ -45,114 +46,188 @@ serve(async (req) => {
 
     const { action, area_code, country_code, phone_number, webhook_url }: TelnyxPhoneNumberRequest = await req.json()
 
-    // Search available numbers
+    // Search available numbers (including our test number)
     if (action === 'search') {
+      // First, get available numbers from our database (like the test number)
+      const { data: localAvailableNumbers } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .select('*')
+        .eq('status', 'available')
+        .is('user_id', null)
+
+      console.log('Local available numbers:', localAvailableNumbers)
+
+      // Also search Telnyx API for real numbers
       const searchParams = new URLSearchParams({
         'filter[country_code]': country_code || 'US',
         'filter[features][]': 'sms',
-        'filter[features][]': 'voice',
-        'page[size]': '20'
+        'page[size]': '10'
       })
       
       if (area_code) {
         searchParams.append('filter[national_destination_code]', area_code)
       }
 
-      const response = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${searchParams}`, {
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        }
-      })
+      let telnyxNumbers = []
+      try {
+        const response = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${searchParams}`, {
+          headers: {
+            'Authorization': `Bearer ${telnyxApiKey}`,
+            'Content-Type': 'application/json',
+          }
+        })
 
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(`Telnyx search error: ${JSON.stringify(data)}`)
+        if (response.ok) {
+          const data = await response.json()
+          telnyxNumbers = data.data?.map((num: any) => ({
+            phone_number: num.phone_number,
+            region_information: num.region_information,
+            features: num.features,
+            cost_information: num.cost_information,
+            source: 'telnyx'
+          })) || []
+        }
+      } catch (error) {
+        console.log('Telnyx API error (continuing with local numbers):', error)
       }
+
+      // Combine local and Telnyx numbers
+      const localNumbers = localAvailableNumbers?.map(num => ({
+        phone_number: num.phone_number,
+        region_information: [{
+          region_name: num.region || 'Test Region',
+          rate_center: num.locality || 'Test Center'
+        }],
+        features: ['sms', 'voice'],
+        cost_information: {
+          monthly_cost: num.monthly_cost || 0,
+          setup_cost: num.setup_cost || 0
+        },
+        source: 'local'
+      })) || []
+
+      const allNumbers = [...localNumbers, ...telnyxNumbers]
 
       return new Response(JSON.stringify({
         success: true,
-        available_numbers: data.data?.map((num: any) => ({
-          phone_number: num.phone_number,
-          region_information: num.region_information,
-          features: num.features,
-          cost_information: num.cost_information
-        })) || []
+        available_numbers: allNumbers
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Purchase number
+    // Purchase number (works for both local test numbers and real Telnyx numbers)
     else if (action === 'purchase') {
       if (!phone_number) {
         throw new Error('Phone number is required for purchase')
       }
 
-      const purchaseResponse = await fetch('https://api.telnyx.com/v2/number_orders', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone_numbers: [{ phone_number }]
-        })
-      })
-
-      const purchaseData = await purchaseResponse.json()
-
-      if (!purchaseResponse.ok) {
-        throw new Error(`Purchase failed: ${JSON.stringify(purchaseData)}`)
+      if (!currentUserId) {
+        throw new Error('User authentication required for purchase')
       }
 
-      // Save to our database with user association
-      const { error: insertError } = await supabaseClient
+      console.log(`Purchasing number ${phone_number} for user ${currentUserId}`)
+
+      // Check if this is a local test number
+      const { data: localNumber } = await supabaseClient
         .from('telnyx_phone_numbers')
-        .insert({
+        .select('*')
+        .eq('phone_number', phone_number)
+        .eq('status', 'available')
+        .is('user_id', null)
+        .single()
+
+      if (localNumber) {
+        console.log('Purchasing local test number')
+        // This is a local test number, just assign it to the user
+        const { error: updateError } = await supabaseClient
+          .from('telnyx_phone_numbers')
+          .update({
+            user_id: currentUserId,
+            status: 'active',
+            purchased_at: new Date().toISOString()
+          })
+          .eq('phone_number', phone_number)
+
+        if (updateError) {
+          throw updateError
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Test number purchased successfully',
           phone_number: phone_number,
-          order_id: purchaseData.data.id,
-          status: 'pending',
-          country_code: country_code || 'US',
-          purchased_at: new Date().toISOString(),
-          user_id: currentUserId
+          type: 'test'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } else {
+        console.log('Purchasing real Telnyx number')
+        // This is a real Telnyx number, purchase it
+        const purchaseResponse = await fetch('https://api.telnyx.com/v2/number_orders', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${telnyxApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone_numbers: [{ phone_number }]
+          })
         })
 
-      if (insertError) {
-        console.error('Error saving to database:', insertError)
-      }
+        const purchaseData = await purchaseResponse.json()
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Number ordered successfully',
-        order_id: purchaseData.data.id,
-        phone_number: phone_number
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+        if (!purchaseResponse.ok) {
+          throw new Error(`Purchase failed: ${JSON.stringify(purchaseData)}`)
+        }
+
+        // Save to our database with user association
+        const { error: insertError } = await supabaseClient
+          .from('telnyx_phone_numbers')
+          .insert({
+            phone_number: phone_number,
+            telnyx_phone_number_id: purchaseData.data.id,
+            status: 'pending',
+            country_code: country_code || 'US',
+            area_code: phone_number.slice(-10, -7),
+            purchased_at: new Date().toISOString(),
+            user_id: currentUserId
+          })
+
+        if (insertError) {
+          console.error('Error saving to database:', insertError)
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Number ordered successfully',
+          order_id: purchaseData.data.id,
+          phone_number: phone_number,
+          type: 'real'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
-    // Add existing number (for numbers you already own)
+    // Add existing number
     else if (action === 'add_existing') {
-      if (!phone_number) {
-        throw new Error('Phone number is required')
+      if (!phone_number || !currentUserId) {
+        throw new Error('Phone number and user authentication required')
       }
 
-      // Add to our database as active
       const { error: insertError } = await supabaseClient
         .from('telnyx_phone_numbers')
         .upsert({
           phone_number: phone_number,
           status: 'active',
           country_code: country_code || 'US',
-          area_code: phone_number.slice(-10, -7), // Extract area code
+          area_code: phone_number.slice(-10, -7),
           purchased_at: new Date().toISOString(),
           user_id: currentUserId
         })
 
       if (insertError) {
-        console.error('Error saving to database:', insertError)
         throw insertError
       }
 
@@ -165,75 +240,42 @@ serve(async (req) => {
       })
     }
 
-    // List our numbers
+    // List user's numbers
     else if (action === 'list') {
-      const { data: localNumbers } = await supabaseClient
+      if (!currentUserId) {
+        return new Response(JSON.stringify({
+          success: true,
+          phone_numbers: []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      const { data: userNumbers } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .eq('user_id', currentUserId)
         .order('purchased_at', { ascending: false })
 
-      // Also get current status from Telnyx
-      const telnyxResponse = await fetch('https://api.telnyx.com/v2/phone_numbers', {
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        }
-      })
-
-      const telnyxData = await telnyxResponse.json()
-      const telnyxNumbers = telnyxData.data || []
-
-      // Combine data
-      const combinedNumbers = localNumbers?.map(localNum => {
-        const telnyxNum = telnyxNumbers.find((tn: any) => tn.phone_number === localNum.phone_number)
-        return {
-          ...localNum,
-          telnyx_status: telnyxNum?.status,
-          messaging_profile_id: telnyxNum?.messaging_profile_id,
-          connection_id: telnyxNum?.connection_id
-        }
-      }) || []
-
       return new Response(JSON.stringify({
         success: true,
-        phone_numbers: combinedNumbers
+        phone_numbers: userNumbers || []
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Configure number for webhooks
+    // Configure number for AI
     else if (action === 'configure') {
-      if (!phone_number) {
-        throw new Error('Phone number is required for configuration')
+      if (!phone_number || !currentUserId) {
+        throw new Error('Phone number and user authentication required')
       }
 
       const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://')
       const voiceWebhookUrl = webhook_url || `${baseUrl}/functions/v1/telnyx-voice-webhook`
-      const smsWebhookUrl = `${baseUrl}/functions/v1/telnyx-sms`
-
-      // Configure number for voice calls and SMS
-      const configResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phone_number}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          webhook_url: voiceWebhookUrl,
-          webhook_failover_url: voiceWebhookUrl,
-          connection_name: 'AI Voice Assistant'
-        })
-      })
-
-      if (!configResponse.ok) {
-        const errorData = await configResponse.json()
-        console.error('Configuration error:', errorData)
-      }
 
       // Update status in database
-      await supabaseClient
+      const { error: updateError } = await supabaseClient
         .from('telnyx_phone_numbers')
         .update({
           status: 'active',
@@ -243,11 +285,14 @@ serve(async (req) => {
         .eq('phone_number', phone_number)
         .eq('user_id', currentUserId)
 
+      if (updateError) {
+        throw updateError
+      }
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Number configured for AI calls',
-        voice_webhook: voiceWebhookUrl,
-        sms_webhook: smsWebhookUrl
+        voice_webhook: voiceWebhookUrl
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })

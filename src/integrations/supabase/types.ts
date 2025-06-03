@@ -2939,37 +2939,52 @@ export type Database = {
       }
       telnyx_phone_numbers: {
         Row: {
+          area_code: string | null
           configured_at: string | null
           country_code: string | null
           created_at: string | null
           id: string
+          locality: string | null
+          monthly_cost: number | null
           order_id: string | null
           phone_number: string
           purchased_at: string | null
+          region: string | null
+          setup_cost: number | null
           status: string | null
           user_id: string | null
           webhook_url: string | null
         }
         Insert: {
+          area_code?: string | null
           configured_at?: string | null
           country_code?: string | null
           created_at?: string | null
           id?: string
+          locality?: string | null
+          monthly_cost?: number | null
           order_id?: string | null
           phone_number: string
           purchased_at?: string | null
+          region?: string | null
+          setup_cost?: number | null
           status?: string | null
           user_id?: string | null
           webhook_url?: string | null
         }
         Update: {
+          area_code?: string | null
           configured_at?: string | null
           country_code?: string | null
           created_at?: string | null
           id?: string
+          locality?: string | null
+          monthly_cost?: number | null
           order_id?: string | null
           phone_number?: string
           purchased_at?: string | null
+          region?: string | null
+          setup_cost?: number | null
           status?: string | null
           user_id?: string | null
           webhook_url?: string | null
