@@ -124,7 +124,7 @@ export const LineItemsManager = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ProductCatalog onProductSelect={handleProductSelect} />
+              <ProductCatalog onAddProduct={handleProductSelect} />
             </CardContent>
           </Card>
         </TabsContent>
