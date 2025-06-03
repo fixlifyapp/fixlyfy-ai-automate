@@ -77,7 +77,7 @@ serve(async (req) => {
     console.log('send-email function - custom_domain_name from DB:', companySettings?.custom_domain_name);
 
     let fromEmail = from;
-    let mailgunDomain = 'fixlyfy.app';
+    let mailgunDomain = 'fixlify.app';
     
     // Use sandbox domain for testing if requested
     if (useSandbox) {
@@ -85,14 +85,14 @@ serve(async (req) => {
       console.log('send-email function - Using Mailgun sandbox domain for testing');
     }
     
-    // FIXED: Use the EXACT same logic as in send-estimate function for consistency
+    // Use the EXACT same logic as in send-estimate function for consistency
     if (!fromEmail) {
-      let fromEmailAddress = 'support@fixlyfy.app'; // Default fallback
+      let fromEmailAddress = 'support@fixlify.app'; // Default fallback - CHANGED TO fixlify.app
       
-      // Priority 1: Use custom_domain_name to build email with fixlyfy.app
+      // Priority 1: Use custom_domain_name to build email with fixlify.app
       if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim() && companySettings.custom_domain_name !== 'support') {
         const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-        fromEmailAddress = `${cleanDomain}@fixlyfy.app`;
+        fromEmailAddress = `${cleanDomain}@fixlify.app`; // CHANGED TO fixlify.app
         console.log('send-email function - Using custom domain name to build email:', fromEmailAddress);
       }
       // Priority 2: Use email_from_address if configured and no custom_domain_name
