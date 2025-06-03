@@ -1,191 +1,107 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
+import { Resend } from 'npm:resend@2.0.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface SendEstimateRequest {
-  estimateId: string;
-  recipientEmail?: string;
-  recipientPhone?: string;
-  sendMethod: 'email' | 'sms';
-  message?: string;
-  subject?: string;
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    )
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        status: 401,
-      });
-    }
+    const {
+      estimateId,
+      sendMethod,
+      recipientEmail,
+      subject,
+      message
+    } = await req.json()
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) {
-      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        status: 401,
-      });
-    }
-
-    const { estimateId, recipientEmail, recipientPhone, sendMethod, message, subject }: SendEstimateRequest = await req.json();
+    console.log('Send estimate request:', { estimateId, sendMethod, recipientEmail })
 
     // Get estimate details
     const { data: estimate, error: estimateError } = await supabaseClient
       .from('estimates')
       .select(`
         *,
-        jobs:job_id(
-          title,
-          clients:client_id(name, email, phone)
+        jobs:job_id (
+          *,
+          clients:client_id (*)
         )
       `)
       .eq('id', estimateId)
-      .single();
+      .single()
 
     if (estimateError || !estimate) {
-      return new Response(JSON.stringify({ error: 'Estimate not found' }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        status: 404,
-      });
+      throw new Error('Estimate not found')
     }
 
-    // Get company settings
-    const { data: companySettings } = await supabaseClient
-      .from('company_settings')
-      .select('company_name, custom_domain_name')
-      .eq('user_id', userData.user.id)
-      .single();
-
-    const companyName = companySettings?.company_name || 'Your Company';
-    const clientName = estimate.jobs?.clients?.name || 'Valued Customer';
-
-    let result;
+    // Get line items
+    const { data: lineItems } = await supabaseClient
+      .from('line_items')
+      .select('*')
+      .eq('parent_type', 'estimate')
+      .eq('parent_id', estimateId)
 
     if (sendMethod === 'email') {
-      const recipient = recipientEmail || estimate.jobs?.clients?.email;
-      if (!recipient) {
-        throw new Error('No email address provided');
-      }
-
-      // Use Mailgun directly for email sending
-      const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
-      const mailgunDomain = 'fixlify.app';
+      const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
       
-      if (!mailgunApiKey) {
-        throw new Error('Mailgun API key not configured');
-      }
-
-      const emailSubject = subject || `Estimate ${estimate.estimate_number} from ${companyName}`;
       const emailHtml = `
-        <html>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #2563eb;">Estimate from ${companyName}</h2>
-              <p>Dear ${clientName},</p>
-              <p>Please find your estimate details below:</p>
-              
-              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin: 0 0 10px 0;">Estimate #${estimate.estimate_number}</h3>
-                <p><strong>Job:</strong> ${estimate.jobs?.title || 'Service Request'}</p>
-                <p><strong>Total Amount:</strong> $${estimate.total}</p>
-              </div>
-              
-              ${message ? `<p><strong>Message:</strong><br>${message}</p>` : ''}
-              
-              <p>If you have any questions, please don't hesitate to contact us.</p>
-              <p>Best regards,<br>${companyName}</p>
-            </div>
-          </body>
-        </html>
-      `;
+        <h2>Estimate ${estimate.estimate_number}</h2>
+        <p>Dear ${estimate.jobs?.clients?.name || 'Valued Customer'},</p>
+        <p>${message}</p>
+        
+        <h3>Estimate Details:</h3>
+        <ul>
+          ${lineItems?.map(item => 
+            `<li>${item.description} - Qty: ${item.quantity} - $${item.unit_price} each</li>`
+          ).join('') || ''}
+        </ul>
+        
+        <p><strong>Total: $${estimate.total}</strong></p>
+        
+        <p>Thank you for choosing our services!</p>
+      `
 
-      const formData = new FormData();
-      formData.append('from', `${companyName} <support@${mailgunDomain}>`);
-      formData.append('to', recipient);
-      formData.append('subject', emailSubject);
-      formData.append('html', emailHtml);
+      const { data: emailData, error: emailError } = await resend.emails.send({
+        from: 'estimates@fixlyfy.com',
+        to: [recipientEmail],
+        subject: subject || `Estimate ${estimate.estimate_number}`,
+        html: emailHtml
+      })
 
-      const mailgunResponse = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
-        },
-        body: formData
-      });
-
-      if (!mailgunResponse.ok) {
-        const errorText = await mailgunResponse.text();
-        throw new Error(`Mailgun error: ${errorText}`);
+      if (emailError) {
+        throw emailError
       }
 
-      result = await mailgunResponse.json();
-    } else {
-      // SMS sending
-      const recipient = recipientPhone || estimate.jobs?.clients?.phone;
-      if (!recipient) {
-        throw new Error('No phone number provided');
-      }
-
-      const smsContent = `Hi ${clientName}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimate.total}. ${message || ''}`;
-      
-      const { data: smsData, error: smsError } = await supabaseClient.functions.invoke('telnyx-sms', {
-        body: {
-          to: recipient,
-          body: smsContent,
-          client_id: estimate.jobs?.clients?.id,
-          job_id: estimate.job_id
-        }
-      });
-
-      if (smsError || !smsData?.success) {
-        throw new Error(`SMS sending failed: ${smsError?.message || smsData?.error || 'Unknown error'}`);
-      }
-
-      result = smsData;
+      console.log('Email sent successfully:', emailData)
     }
 
-    // Update estimate status
-    await supabaseClient
-      .from('estimates')
-      .update({ status: 'sent' })
-      .eq('id', estimateId);
-
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Estimate sent successfully',
-        messageId: result.id || result.message_id
-      }),
+      JSON.stringify({ success: true, message: 'Estimate sent successfully' }),
       {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
       }
-    );
-
+    )
   } catch (error) {
-    console.error('Error in send-estimate function:', error);
+    console.error('Error sending estimate:', error)
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to send estimate' }),
+      JSON.stringify({ success: false, error: error.message }),
       {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
-    );
+    )
   }
-});
+})

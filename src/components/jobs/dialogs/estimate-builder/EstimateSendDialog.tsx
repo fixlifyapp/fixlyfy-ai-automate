@@ -50,21 +50,53 @@ export const EstimateSendDialog = ({
   const [sendTo, setSendTo] = useState("");
   const [customNote, setCustomNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [clientData, setClientData] = useState<any>(null);
 
   // Use clientInfo or contactInfo, whichever is available
   const finalContactInfo = clientInfo || contactInfo || { name: '', email: '', phone: '' };
 
-  // Set default recipient when dialog opens
+  // Fetch client data when dialog opens
   useEffect(() => {
-    if (open && finalContactInfo) {
-      setSendTo(sendMethod === "email" ? (finalContactInfo.email || "") : (finalContactInfo.phone || ""));
+    const fetchClientData = async () => {
+      if (open && jobId) {
+        console.log("Fetching client data for job:", jobId);
+        try {
+          const { data: job, error } = await supabase
+            .from('jobs')
+            .select(`
+              *,
+              clients:client_id (*)
+            `)
+            .eq('id', jobId)
+            .single();
+
+          if (!error && job?.clients) {
+            const client = Array.isArray(job.clients) ? job.clients[0] : job.clients;
+            setClientData(client);
+            console.log("Client data loaded:", client);
+          }
+        } catch (error) {
+          console.error("Error fetching client data:", error);
+        }
+      }
+    };
+
+    fetchClientData();
+  }, [open, jobId]);
+
+  // Set default recipient when dialog opens or send method changes
+  useEffect(() => {
+    if (open && (clientData || finalContactInfo)) {
+      const contact = clientData || finalContactInfo;
+      setSendTo(sendMethod === "email" ? (contact.email || "") : (contact.phone || ""));
     }
-  }, [open, sendMethod, finalContactInfo]);
+  }, [open, sendMethod, clientData, finalContactInfo]);
 
   const handleSendMethodChange = (value: "email" | "sms") => {
     setSendMethod(value);
-    if (finalContactInfo) {
-      setSendTo(value === "email" ? (finalContactInfo.email || "") : (finalContactInfo.phone || ""));
+    const contact = clientData || finalContactInfo;
+    if (contact) {
+      setSendTo(value === "email" ? (contact.email || "") : (contact.phone || ""));
     }
   };
 
@@ -72,8 +104,6 @@ export const EstimateSendDialog = ({
     console.log("=== SEND ESTIMATE CLICKED ===");
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
-    console.log("Custom note:", customNote);
-    console.log("Job ID:", jobId);
     console.log("Estimate number:", estimateNumber);
 
     if (!sendTo.trim()) {
@@ -95,23 +125,8 @@ export const EstimateSendDialog = ({
     setIsProcessing(true);
 
     try {
-      // Step 1: Save the estimate first
-      console.log("Step 1: Saving estimate...");
-      const saveSuccess = await onSave();
-      
-      if (!saveSuccess) {
-        console.error("Failed to save estimate");
-        toast.error("Failed to save estimate. Please try again.");
-        return;
-      }
-
-      console.log("Step 2: Estimate saved successfully");
-      
-      // Wait a moment for the estimate to be fully saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Step 3: Get the saved estimate from database
-      const { data: savedEstimate, error: fetchError } = await supabase
+      // Get the estimate from database
+      const { data: estimate, error: fetchError } = await supabase
         .from('estimates')
         .select('id, estimate_number, total, status, notes, job_id')
         .eq('estimate_number', estimateNumber)
@@ -119,28 +134,23 @@ export const EstimateSendDialog = ({
         .limit(1)
         .maybeSingle();
 
-      if (fetchError || !savedEstimate) {
-        console.error("Failed to fetch saved estimate:", fetchError);
-        toast.error("Estimate not found after saving. Please try again.");
+      if (fetchError || !estimate) {
+        console.error("Failed to fetch estimate:", fetchError);
+        toast.error("Estimate not found. Please save the estimate first.");
         return;
       }
 
-      console.log("Step 3: Retrieved saved estimate:", savedEstimate);
+      console.log("Retrieved estimate:", estimate);
+      const contact = clientData || finalContactInfo;
 
-      // Step 4: Send via appropriate method
+      // Send via appropriate method
       if (sendMethod === "sms") {
         // Format phone number for Telnyx
         const formattedPhone = formatPhoneForTelnyx(sendTo);
-        console.log("Formatted phone number:", formattedPhone);
+        console.log("Sending SMS to:", formattedPhone);
         
-        const smsMessage = customNote || `Hi ${finalContactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. Please contact us if you have any questions.`;
+        const smsMessage = customNote || `Hi ${contact.name}! Your estimate ${estimateNumber} is ready. Total: $${estimate.total.toFixed(2)}. Please contact us if you have any questions.`;
         
-        console.log("Sending SMS via Telnyx:", {
-          to: formattedPhone,
-          body: smsMessage,
-          jobId: jobId
-        });
-
         const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
           body: {
             to: formattedPhone,
@@ -157,18 +167,18 @@ export const EstimateSendDialog = ({
         }
 
         console.log("SMS sent successfully:", smsData);
-        toast.success(`Estimate ${estimateNumber} sent via SMS to ${finalContactInfo.name}`);
+        toast.success(`Estimate ${estimateNumber} sent via SMS to ${contact.name}`);
       } else {
-        // Send via email using send-estimate function
-        console.log("Sending email via send-estimate function");
+        // Send via email
+        console.log("Sending email to:", sendTo);
         
         const { data: emailData, error: emailError } = await supabase.functions.invoke('send-estimate', {
           body: {
-            estimateId: savedEstimate.id,
+            estimateId: estimate.id,
             sendMethod: 'email',
             recipientEmail: sendTo,
             subject: `Estimate ${estimateNumber} from your service provider`,
-            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
+            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${estimate.total.toFixed(2)}.`
           }
         });
         
@@ -179,28 +189,23 @@ export const EstimateSendDialog = ({
         }
 
         console.log("Email sent successfully:", emailData);
-        toast.success(`Estimate ${estimateNumber} sent via email to ${finalContactInfo.name}`);
+        toast.success(`Estimate ${estimateNumber} sent via email to ${contact.name}`);
       }
 
-      // Step 5: Update estimate status to 'sent'
+      // Update estimate status to 'sent'
       await supabase
         .from('estimates')
         .update({ status: 'sent' })
-        .eq('id', savedEstimate.id);
+        .eq('id', estimate.id);
 
       console.log("Estimate status updated to 'sent'");
 
-      // Step 6: Close dialog and navigate
+      // Close dialog and call success callback
       onOpenChange(false);
       
       if (onSuccess) {
         onSuccess();
       }
-
-      // Add a small delay before showing success message
-      setTimeout(() => {
-        toast.success("Estimate sent successfully and status updated!");
-      }, 500);
 
     } catch (error: any) {
       console.error("CRITICAL ERROR in send estimate process:", error);
@@ -218,6 +223,8 @@ export const EstimateSendDialog = ({
       onCancel();
     }
   };
+
+  const contact = clientData || finalContactInfo;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -277,14 +284,16 @@ export const EstimateSendDialog = ({
           </div>
 
           {/* Client Info Display */}
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Sending to:</h4>
-            <div className="text-sm text-gray-600">
-              <p><strong>{finalContactInfo.name}</strong></p>
-              <p>Email: {finalContactInfo.email || 'Not provided'}</p>
-              <p>Phone: {finalContactInfo.phone || 'Not provided'}</p>
+          {contact && (
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="font-medium text-sm mb-2">Sending to:</h4>
+              <div className="text-sm text-gray-600">
+                <p><strong>{contact.name || 'Unknown Client'}</strong></p>
+                <p>Email: {contact.email || 'Not provided'}</p>
+                <p>Phone: {contact.phone || 'Not provided'}</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter>

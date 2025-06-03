@@ -26,14 +26,7 @@ export const formatPhoneForTelnyx = (phone: string): string => {
     cleanPhone = '1' + cleanPhone;
   }
   
-  // Add + if not present
-  if (!cleanPhone.startsWith('+')) {
-    cleanPhone = '+' + cleanPhone;
-  } else if (cleanPhone.startsWith('+')) {
-    // Already formatted
-    return cleanPhone;
-  }
-  
+  // Add + prefix
   return '+' + cleanPhone;
 };
 
