@@ -973,8 +973,6 @@ export type Database = {
           mailgun_api_key: string | null
           mailgun_domain: string | null
           mailgun_settings: Json | null
-          phone_number_limit: number | null
-          phone_numbers_used: number | null
           service_radius: number | null
           service_zip_codes: string | null
           tax_id: string | null
@@ -1008,8 +1006,6 @@ export type Database = {
           mailgun_api_key?: string | null
           mailgun_domain?: string | null
           mailgun_settings?: Json | null
-          phone_number_limit?: number | null
-          phone_numbers_used?: number | null
           service_radius?: number | null
           service_zip_codes?: string | null
           tax_id?: string | null
@@ -1043,8 +1039,6 @@ export type Database = {
           mailgun_api_key?: string | null
           mailgun_domain?: string | null
           mailgun_settings?: Json | null
-          phone_number_limit?: number | null
-          phone_numbers_used?: number | null
           service_radius?: number | null
           service_zip_codes?: string | null
           tax_id?: string | null
@@ -2380,237 +2374,6 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      phone_number_assignments: {
-        Row: {
-          ai_settings: Json | null
-          assigned_at: string
-          assigned_name: string | null
-          call_settings: Json | null
-          company_id: string | null
-          created_at: string
-          id: string
-          is_active: boolean | null
-          phone_number: string
-          purchase_id: string | null
-          sms_settings: Json | null
-          updated_at: string
-        }
-        Insert: {
-          ai_settings?: Json | null
-          assigned_at?: string
-          assigned_name?: string | null
-          call_settings?: Json | null
-          company_id?: string | null
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          phone_number: string
-          purchase_id?: string | null
-          sms_settings?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          ai_settings?: Json | null
-          assigned_at?: string
-          assigned_name?: string | null
-          call_settings?: Json | null
-          company_id?: string | null
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          phone_number?: string
-          purchase_id?: string | null
-          sms_settings?: Json | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "phone_number_assignments_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company_settings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "phone_number_assignments_purchase_id_fkey"
-            columns: ["purchase_id"]
-            isOneToOne: false
-            referencedRelation: "phone_number_purchases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      phone_number_billing: {
-        Row: {
-          billing_period_end: string
-          billing_period_start: string
-          call_minutes: number | null
-          company_id: string | null
-          created_at: string
-          due_date: string
-          id: string
-          monthly_fee: number
-          paid_at: string | null
-          phone_number: string
-          purchase_id: string | null
-          sms_count: number | null
-          status: string
-          total_amount: number
-          updated_at: string
-          usage_charges: number | null
-        }
-        Insert: {
-          billing_period_end: string
-          billing_period_start: string
-          call_minutes?: number | null
-          company_id?: string | null
-          created_at?: string
-          due_date: string
-          id?: string
-          monthly_fee: number
-          paid_at?: string | null
-          phone_number: string
-          purchase_id?: string | null
-          sms_count?: number | null
-          status?: string
-          total_amount: number
-          updated_at?: string
-          usage_charges?: number | null
-        }
-        Update: {
-          billing_period_end?: string
-          billing_period_start?: string
-          call_minutes?: number | null
-          company_id?: string | null
-          created_at?: string
-          due_date?: string
-          id?: string
-          monthly_fee?: number
-          paid_at?: string | null
-          phone_number?: string
-          purchase_id?: string | null
-          sms_count?: number | null
-          status?: string
-          total_amount?: number
-          updated_at?: string
-          usage_charges?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "phone_number_billing_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company_settings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "phone_number_billing_purchase_id_fkey"
-            columns: ["purchase_id"]
-            isOneToOne: false
-            referencedRelation: "phone_number_purchases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      phone_number_plans: {
-        Row: {
-          created_at: string
-          description: string | null
-          features: Json | null
-          id: string
-          is_active: boolean | null
-          monthly_fee: number
-          name: string
-          price_per_number: number
-          setup_fee: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          features?: Json | null
-          id?: string
-          is_active?: boolean | null
-          monthly_fee?: number
-          name: string
-          price_per_number?: number
-          setup_fee?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          features?: Json | null
-          id?: string
-          is_active?: boolean | null
-          monthly_fee?: number
-          name?: string
-          price_per_number?: number
-          setup_fee?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      phone_number_purchases: {
-        Row: {
-          company_id: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          monthly_fee: number
-          phone_number: string
-          plan_id: string | null
-          purchase_price: number
-          purchased_at: string
-          status: string
-          telnyx_number_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          monthly_fee: number
-          phone_number: string
-          plan_id?: string | null
-          purchase_price: number
-          purchased_at?: string
-          status?: string
-          telnyx_number_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          monthly_fee?: number
-          phone_number?: string
-          plan_id?: string | null
-          purchase_price?: number
-          purchased_at?: string
-          status?: string
-          telnyx_number_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "phone_number_purchases_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company_settings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "phone_number_purchases_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "phone_number_plans"
             referencedColumns: ["id"]
           },
         ]
