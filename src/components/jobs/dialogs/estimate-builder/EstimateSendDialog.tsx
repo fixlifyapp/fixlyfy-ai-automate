@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -65,18 +64,15 @@ export const EstimateSendDialog = ({
           // Check if required secrets are configured
           const { data: companySettings } = await supabase
             .from('company_settings')
-            .select('mailgun_api_key, company_phone, mailgun_domain, email_from_address')
+            .select('company_phone, custom_domain_name, email_from_address, email_from_name')
             .limit(1)
             .maybeSingle();
 
           console.log('Company settings check:', companySettings);
 
           if (sendMethod === 'email') {
-            if (!companySettings?.mailgun_domain || !companySettings?.email_from_address) {
-              setConfigError('Email not configured. Please set up Mailgun domain and email address in company settings.');
-            } else {
-              setConfigError('');
-            }
+            // Email should work with the fixlyfy.app domain as it's working in the test panel
+            setConfigError('');
           } else if (sendMethod === 'sms') {
             if (!companySettings?.company_phone) {
               setConfigError('SMS not configured. Please set up company phone number in settings.');

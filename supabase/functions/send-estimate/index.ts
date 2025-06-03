@@ -19,12 +19,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Also create anon client for user context if needed
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
-
     const {
       estimateId,
       sendMethod,
@@ -101,11 +95,23 @@ serve(async (req) => {
         throw new Error('Mailgun API key not configured. Please configure MAILGUN_API_KEY in Supabase secrets.')
       }
 
-      const mailgunDomain = companySettings?.mailgun_domain || 'fixlyfy.app'
-      const fromEmail = companySettings?.email_from_address || `support@${mailgunDomain}`
+      // Use consistent domain - fixlyfy.app (matching the working email function)
+      const mailgunDomain = 'fixlyfy.app'
+      
+      // Generate FROM email using the same logic as the working email function
+      let fromEmail = 'support@fixlyfy.app' // Default fallback
+      
+      if (companySettings?.custom_domain_name) {
+        fromEmail = `${companySettings.custom_domain_name}@fixlyfy.app`
+      } else if (companySettings?.email_from_address) {
+        fromEmail = companySettings.email_from_address
+      }
+      
       const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team'
 
-      console.log('Sending email with Mailgun:', { domain: mailgunDomain, from: fromEmail })
+      console.log('Sending email with Mailgun domain:', mailgunDomain)
+      console.log('From email:', fromEmail)
+      console.log('From name:', fromName)
 
       // Create detailed HTML email template
       const lineItemsHtml = lineItems?.map(item => 
@@ -195,8 +201,13 @@ serve(async (req) => {
         </html>
       `
 
-      // Use Mailgun API
-      const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+      // Use Mailgun API with the corrected URL
+      const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`
+      console.log('Mailgun send URL:', mailgunUrl)
+      console.log('From:', `${fromName} <${fromEmail}>`)
+      console.log('To:', recipientEmail)
+
+      const response = await fetch(mailgunUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`,
@@ -210,7 +221,11 @@ serve(async (req) => {
         })
       })
 
+      console.log('Email send response status:', response.status)
+      console.log('Email send response headers:', Object.fromEntries(response.headers.entries()))
+
       const result = await response.text()
+      console.log('Email send response body:', result)
       
       if (!response.ok) {
         console.error('Mailgun API error:', result)
