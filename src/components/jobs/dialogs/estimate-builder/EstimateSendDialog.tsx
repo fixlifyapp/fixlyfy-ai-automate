@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface EstimateSendDialogProps {
     email: string;
     phone: string;
   };
+  onSuccess?: () => void;
 }
 
 export const EstimateSendDialog = ({ 
@@ -29,7 +31,8 @@ export const EstimateSendDialog = ({
   estimateId, 
   estimateNumber, 
   total,
-  contactInfo 
+  contactInfo,
+  onSuccess
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [recipientEmail, setRecipientEmail] = useState(contactInfo?.email || "");
@@ -102,7 +105,12 @@ export const EstimateSendDialog = ({
         toast.success("Estimate sent via SMS successfully!");
       }
       
-      onClose();
+      // Call the success callback to close the dialog and navigate
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onClose();
+      }
     } catch (error) {
       console.error('Error sending estimate:', error);
       toast.error('Failed to send estimate');

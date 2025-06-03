@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -47,6 +46,13 @@ export const SteppedEstimateBuilder = ({
 
   // Get job data for contact info
   const job = jobs.find(j => j.id === jobId);
+  
+  // Create contactInfo object for compatibility
+  const contactInfo = {
+    name: job?.client?.name || 'Client',
+    email: job?.client?.email || '',
+    phone: job?.client?.phone || ''
+  };
   
   console.log("=== STEPPED ESTIMATE BUILDER PROPS ===");
   console.log("Job ID:", jobId);
@@ -100,7 +106,6 @@ export const SteppedEstimateBuilder = ({
           setDocumentNumber(newNumber);
         } catch (error) {
           console.error("Error generating estimate number:", error);
-          // Fallback to timestamp-based number
           const fallbackNumber = `EST-${Date.now()}`;
           setDocumentNumber(fallbackNumber);
         }
@@ -133,7 +138,6 @@ export const SteppedEstimateBuilder = ({
       return;
     }
 
-    // Validate job ID format
     if (typeof jobId !== 'string') {
       console.log("❌ Job ID is not a string:", typeof jobId);
       toast.error("Invalid job ID format");
@@ -172,7 +176,6 @@ export const SteppedEstimateBuilder = ({
     setSelectedUpsells(upsells);
     setUpsellNotes(notes);
     
-    // Add upsell items to line items if any selected
     if (upsells.length > 0) {
       const upsellLineItems = upsells.map(upsell => ({
         id: `upsell-${upsell.id}-${Date.now()}`,
@@ -189,7 +192,6 @@ export const SteppedEstimateBuilder = ({
       
       setLineItems(prev => [...prev, ...upsellLineItems]);
       
-      // Save updated estimate with upsells
       try {
         const updatedEstimate = await saveDocumentChanges();
         if (updatedEstimate) {
@@ -203,7 +205,6 @@ export const SteppedEstimateBuilder = ({
       }
     }
     
-    // Combine notes
     const combinedNotes = [notes, upsellNotes].filter(Boolean).join('\n\n');
     setNotes(combinedNotes);
     
@@ -214,16 +215,13 @@ export const SteppedEstimateBuilder = ({
     console.log("=== SEND SUCCESS ===");
     console.log("Estimate sent successfully, closing builder and calling callback");
     
-    // Close the dialog
     onOpenChange(false);
     
-    // Call the callback to refresh the estimates list
     if (onEstimateCreated) {
       console.log("Calling onEstimateCreated callback");
       onEstimateCreated();
     }
 
-    // Small delay to ensure dialog closes before navigation
     setTimeout(() => {
       console.log("Navigating to estimates tab");
       navigate(`/jobs/${jobId}`, { 
@@ -338,11 +336,8 @@ export const SteppedEstimateBuilder = ({
         estimateId={savedEstimate?.id || ''}
         estimateNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
         total={calculateGrandTotal()}
-        contactInfo={{
-          name: job?.client?.name || 'Client',
-          email: job?.client?.email || '',
-          phone: job?.client?.phone || ''
-        }}
+        contactInfo={contactInfo}
+        onSuccess={handleSendSuccess}
       />
     </>
   );
