@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,8 @@ export const SteppedEstimateBuilder = ({
   const [savedEstimate, setSavedEstimate] = useState<any>(null);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
+  const [estimateCreated, setEstimateCreated] = useState(false); // Track if estimate was already created
+  const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set()); // Track added upsells
 
   // Create contactInfo object for compatibility - now loads much faster
   const contactInfo = {
@@ -62,6 +65,8 @@ export const SteppedEstimateBuilder = ({
   console.log("Current step:", currentStep);
   console.log("Job data loading:", jobDataLoading);
   console.log("Client info:", clientInfo);
+  console.log("Estimate created:", estimateCreated);
+  console.log("Added upsell IDs:", Array.from(addedUpsellIds));
   
   const {
     lineItems,
@@ -92,11 +97,13 @@ export const SteppedEstimateBuilder = ({
     if (open) {
       console.log("Dialog opened, resetting state");
       setCurrentStep("items");
-      setSavedEstimate(null);
+      setSavedEstimate(existingEstimate || null);
       setSelectedUpsells([]);
       setUpsellNotes("");
+      setEstimateCreated(!!existingEstimate); // If editing existing, mark as created
+      setAddedUpsellIds(new Set());
     }
-  }, [open]);
+  }, [open, existingEstimate]);
 
   // Generate estimate number if creating new
   useEffect(() => {
@@ -127,6 +134,7 @@ export const SteppedEstimateBuilder = ({
     console.log("Subtotal:", calculateSubtotal());
     console.log("Total tax:", calculateTotalTax());
     console.log("Grand total:", calculateGrandTotal());
+    console.log("Estimate already created:", estimateCreated);
     
     if (lineItems.length === 0) {
       console.log("❌ No line items, showing error");
@@ -149,20 +157,28 @@ export const SteppedEstimateBuilder = ({
     console.log("✅ Starting save process...");
     
     try {
-      console.log("📞 Calling saveDocumentChanges...");
-      const estimate = await saveDocumentChanges();
-      
-      console.log("📋 Save result:", estimate);
-      
-      if (estimate) {
-        console.log("✅ Estimate saved successfully:", estimate);
-        setSavedEstimate(estimate);
-        setCurrentStep("upsell");
-        toast.success("Estimate saved! Choose additional services.");
+      // Only create/save estimate if not already created
+      if (!estimateCreated || !savedEstimate) {
+        console.log("📞 Calling saveDocumentChanges...");
+        const estimate = await saveDocumentChanges();
+        
+        console.log("📋 Save result:", estimate);
+        
+        if (estimate) {
+          console.log("✅ Estimate saved successfully:", estimate);
+          setSavedEstimate(estimate);
+          setEstimateCreated(true);
+          toast.success("Estimate saved! Choose additional services.");
+        } else {
+          console.log("❌ Save returned null/undefined");
+          toast.error("Failed to save estimate. Please try again.");
+          return;
+        }
       } else {
-        console.log("❌ Save returned null/undefined");
-        toast.error("Failed to save estimate. Please try again.");
+        console.log("✅ Using existing estimate:", savedEstimate);
       }
+      
+      setCurrentStep("upsell");
     } catch (error: any) {
       console.error("❌ Error in handleSaveAndContinue:", error);
       console.error("Error stack:", error.stack);
@@ -174,12 +190,18 @@ export const SteppedEstimateBuilder = ({
     console.log("=== UPSELL CONTINUE ===");
     console.log("Selected upsells:", upsells);
     console.log("Upsell notes:", notes);
+    console.log("Already added upsell IDs:", Array.from(addedUpsellIds));
     
-    setSelectedUpsells(upsells);
+    setSelectedUpsells(prev => [...prev, ...upsells]);
     setUpsellNotes(notes);
     
-    if (upsells.length > 0) {
-      const upsellLineItems = upsells.map(upsell => ({
+    // Only add new upsells that haven't been added before
+    const newUpsells = upsells.filter(upsell => !addedUpsellIds.has(upsell.id));
+    
+    if (newUpsells.length > 0) {
+      console.log("Adding new upsells:", newUpsells);
+      
+      const upsellLineItems = newUpsells.map(upsell => ({
         id: `upsell-${upsell.id}-${Date.now()}`,
         description: upsell.title + (upsell.description ? ` - ${upsell.description}` : ''),
         quantity: 1,
@@ -194,6 +216,9 @@ export const SteppedEstimateBuilder = ({
       
       setLineItems(prev => [...prev, ...upsellLineItems]);
       
+      // Mark these upsells as added
+      setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
+      
       try {
         const updatedEstimate = await saveDocumentChanges();
         if (updatedEstimate) {
@@ -205,6 +230,8 @@ export const SteppedEstimateBuilder = ({
         toast.error("Failed to save additional services");
         return;
       }
+    } else {
+      console.log("No new upsells to add");
     }
     
     const combinedNotes = [notes, upsellNotes].filter(Boolean).join('\n\n');
@@ -326,6 +353,7 @@ export const SteppedEstimateBuilder = ({
                 estimateTotal={calculateGrandTotal()}
                 onContinue={handleUpsellContinue}
                 onBack={handleUpsellBack}
+                existingUpsellItems={selectedUpsells}
               />
             )}
           </div>

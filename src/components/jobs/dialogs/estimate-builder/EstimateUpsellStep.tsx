@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,27 +21,41 @@ interface EstimateUpsellStepProps {
   onContinue: (upsellItems: UpsellItem[], notes: string) => void;
   onBack: () => void;
   estimateTotal: number;
+  existingUpsellItems?: UpsellItem[]; // Add prop to track existing upsells
 }
 
-export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: EstimateUpsellStepProps) => {
+export const EstimateUpsellStep = ({ 
+  onContinue, 
+  onBack, 
+  estimateTotal, 
+  existingUpsellItems = [] 
+}: EstimateUpsellStepProps) => {
   const [notes, setNotes] = useState("");
   const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false); // Prevent multiple submissions
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
 
-  // Convert warranty products to upsell items
+  // Convert warranty products to upsell items and restore previous selections
   useEffect(() => {
-    const warrantyUpsells = warrantyProducts.map(product => ({
-      id: product.id,
-      title: product.name,
-      description: product.description || "",
-      price: product.price,
-      icon: Shield,
-      selected: false
-    }));
+    const warrantyUpsells = warrantyProducts.map(product => {
+      // Check if this warranty was previously selected
+      const existingSelection = existingUpsellItems.find(item => item.id === product.id);
+      
+      return {
+        id: product.id,
+        title: product.name,
+        description: product.description || "",
+        price: product.price,
+        icon: Shield,
+        selected: existingSelection ? existingSelection.selected : false
+      };
+    });
     setUpsellItems(warrantyUpsells);
-  }, [warrantyProducts]);
+  }, [warrantyProducts, existingUpsellItems]);
 
   const handleUpsellToggle = (itemId: string) => {
+    if (isProcessing) return; // Prevent changes during processing
+    
     setUpsellItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, selected: !item.selected } : item
     ));
@@ -52,8 +65,28 @@ export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: Estima
   const upsellTotal = selectedUpsells.reduce((sum, item) => sum + item.price, 0);
   const grandTotal = estimateTotal + upsellTotal;
 
-  const handleContinue = () => {
-    onContinue(selectedUpsells, notes);
+  const handleContinue = async () => {
+    if (isProcessing) return; // Prevent double-clicks
+    
+    setIsProcessing(true);
+    
+    try {
+      // Only pass newly selected upsells, not ones that were already added
+      const newlySelectedUpsells = selectedUpsells.filter(upsell => 
+        !existingUpsellItems.some(existing => 
+          existing.id === upsell.id && existing.selected
+        )
+      );
+      
+      console.log("=== UPSELL STEP CONTINUE ===");
+      console.log("All selected upsells:", selectedUpsells);
+      console.log("Existing upsells:", existingUpsellItems);
+      console.log("Newly selected upsells (to be added):", newlySelectedUpsells);
+      
+      await onContinue(newlySelectedUpsells, notes);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isLoading) {
@@ -91,12 +124,23 @@ export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: Estima
           ) : (
             upsellItems.map((item) => {
               const Icon = item.icon;
+              const isAlreadyAdded = existingUpsellItems.some(existing => 
+                existing.id === item.id && existing.selected
+              );
+              
               return (
                 <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-start gap-3 flex-1">
                     <Icon className="h-5 w-5 text-blue-600 mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="font-medium">{item.title}</h4>
+                      <h4 className="font-medium flex items-center gap-2">
+                        {item.title}
+                        {isAlreadyAdded && (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                            Already Added
+                          </span>
+                        )}
+                      </h4>
                       {item.description && (
                         <p className="text-sm text-muted-foreground">{item.description}</p>
                       )}
@@ -108,6 +152,7 @@ export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: Estima
                   <Switch
                     checked={item.selected}
                     onCheckedChange={() => handleUpsellToggle(item.id)}
+                    disabled={isProcessing}
                   />
                 </div>
               );
@@ -203,11 +248,15 @@ export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: Estima
       </Card>
 
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={onBack} disabled={isProcessing}>
           Back to Items
         </Button>
-        <Button onClick={handleContinue} className="gap-2">
-          Continue to Send
+        <Button 
+          onClick={handleContinue} 
+          className="gap-2"
+          disabled={isProcessing}
+        >
+          {isProcessing ? "Processing..." : "Continue to Send"}
         </Button>
       </div>
     </div>
