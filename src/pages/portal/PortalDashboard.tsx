@@ -92,9 +92,9 @@ export default function PortalDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full mx-auto mb-4"></div>
+          <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
@@ -102,18 +102,18 @@ export default function PortalDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white border-b border-fixlyfy/10">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">F</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Fixlyfy</h1>
-                <p className="text-sm text-fixlyfy">Client Portal</p>
+                <h1 className="text-2xl font-bold text-gray-900">Fixlify</h1>
+                <p className="text-sm text-blue-600">Client Portal</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -134,44 +134,44 @@ export default function PortalDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-2xl p-8 text-white">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white">
             <h2 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h2>
-            <p className="text-fixlyfy-light text-lg">
+            <p className="text-blue-100 text-lg">
               Here's an overview of your projects and services with us.
             </p>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-fixlyfy/20">
+            <Card className="border-blue-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Jobs</CardTitle>
-                <Calendar className="h-4 w-4 text-fixlyfy" />
+                <Calendar className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-fixlyfy">{jobs.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{jobs.length}</div>
                 <p className="text-xs text-gray-600">Current projects</p>
               </CardContent>
             </Card>
 
-            <Card className="border-fixlyfy/20">
+            <Card className="border-blue-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Estimates</CardTitle>
-                <FileText className="h-4 w-4 text-fixlyfy" />
+                <FileText className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-fixlyfy">{estimates.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{estimates.length}</div>
                 <p className="text-xs text-gray-600">Recent estimates</p>
               </CardContent>
             </Card>
 
-            <Card className="border-fixlyfy/20">
+            <Card className="border-blue-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Invoices</CardTitle>
-                <DollarSign className="h-4 w-4 text-fixlyfy" />
+                <DollarSign className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-fixlyfy">{invoices.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{invoices.length}</div>
                 <p className="text-xs text-gray-600">Recent invoices</p>
               </CardContent>
             </Card>
@@ -180,15 +180,15 @@ export default function PortalDashboard() {
           {/* Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Recent Jobs */}
-            <Card className="border-fixlyfy/20">
+            <Card className="border-blue-200">
               <CardHeader>
-                <CardTitle className="text-fixlyfy">Recent Projects</CardTitle>
+                <CardTitle className="text-blue-600">Recent Projects</CardTitle>
               </CardHeader>
               <CardContent>
                 {jobs.length > 0 ? (
                   <div className="space-y-4">
                     {jobs.map((job) => (
-                      <div key={job.id} className="flex justify-between items-center p-3 bg-fixlyfy/5 rounded-lg">
+                      <div key={job.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                         <div>
                           <p className="font-medium text-gray-900">{job.title}</p>
                           <p className="text-sm text-gray-600">{job.address}</p>
@@ -210,26 +210,26 @@ export default function PortalDashboard() {
             </Card>
 
             {/* Contact Info */}
-            <Card className="border-fixlyfy/20">
+            <Card className="border-blue-200">
               <CardHeader>
-                <CardTitle className="text-fixlyfy">Need Help?</CardTitle>
+                <CardTitle className="text-blue-600">Need Help?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-fixlyfy/5 rounded-lg p-4">
-                  <h4 className="font-medium text-fixlyfy mb-3">Contact Our Team</h4>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-600 mb-3">Contact Our Team</h4>
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
-                      <Phone className="h-4 w-4 text-fixlyfy" />
+                      <Phone className="h-4 w-4 text-blue-600" />
                       <span className="text-sm text-gray-600">(555) 123-4567</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Mail className="h-4 w-4 text-fixlyfy" />
-                      <span className="text-sm text-gray-600">support@fixlyfy.com</span>
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm text-gray-600">support@fixlify.com</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-center">
-                  <Button className="w-full bg-fixlyfy hover:bg-fixlyfy-dark">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
                     <Phone className="h-4 w-4 mr-2" />
                     Call Support
                   </Button>

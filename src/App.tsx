@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/use-auth";
 import { RBACProvider } from "@/components/auth/RBACProvider";
 import { ClientPortalAuthProvider } from "@/hooks/useClientPortalAuth";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Main App Pages
 import DashboardPage from "@/pages/DashboardPage";

@@ -70,9 +70,9 @@ export default function PortalLoginPage() {
 
   if (loading || isAuthenticating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-fixlyfy rounded-full flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
           </div>
           <div className="space-y-2">
@@ -89,18 +89,18 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white border-b border-fixlyfy/10">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">F</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Fixlyfy</h1>
-                <p className="text-sm text-fixlyfy">Client Portal</p>
+                <h1 className="text-2xl font-bold text-gray-900">Fixlify</h1>
+                <p className="text-sm text-blue-600">Client Portal</p>
               </div>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function PortalLoginPage() {
       <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-full flex items-center justify-center">
+            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
               {authError ? (
                 <ExternalLink className="h-8 w-8 text-white" />
               ) : (
@@ -126,9 +126,9 @@ export default function PortalLoginPage() {
             </p>
           </div>
 
-          <Card className="shadow-xl border-fixlyfy/20">
-            <CardHeader className="bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
-              <CardTitle className="flex items-center gap-2 text-fixlyfy">
+          <Card className="shadow-xl border-gray-200">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+              <CardTitle className="flex items-center gap-2 text-blue-600">
                 <Lock className="h-5 w-5" />
                 Secure Access
               </CardTitle>
@@ -164,8 +164,8 @@ export default function PortalLoginPage() {
                     <p className="text-sm text-gray-600">
                       Your access link may have expired or been used already. Please contact support for a new link.
                     </p>
-                    <div className="bg-fixlyfy/5 rounded-lg p-4">
-                      <h4 className="font-medium text-fixlyfy mb-2">Need Help?</h4>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h4 className="font-medium text-blue-600 mb-2">Need Help?</h4>
                       <p className="text-sm text-gray-600">
                         Contact our support team and we'll send you a fresh access link right away.
                       </p>
@@ -190,8 +190,8 @@ export default function PortalLoginPage() {
                     </div>
                   </div>
                   
-                  <div className="bg-fixlyfy/5 rounded-lg p-4">
-                    <h4 className="font-medium text-fixlyfy mb-2">How to Access</h4>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-600 mb-2">How to Access</h4>
                     <p className="text-sm text-gray-600">
                       Use the secure link sent to your email or phone to access your portal.
                     </p>
@@ -200,7 +200,7 @@ export default function PortalLoginPage() {
               ) : (
                 <div className="text-center py-8">
                   <div className="space-y-4">
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-fixlyfy" />
+                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
                     <div>
                       <p className="text-lg font-medium text-gray-900">Verifying Access</p>
                       <p className="text-sm text-gray-600 mt-1">
@@ -215,8 +215,8 @@ export default function PortalLoginPage() {
 
           {jobId && (
             <div className="text-center">
-              <div className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-lg p-4">
-                <p className="text-sm text-fixlyfy font-medium">
+              <div className="bg-blue-100 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-600 font-medium">
                   You'll be redirected to your project details after authentication.
                 </p>
               </div>
@@ -226,7 +226,7 @@ export default function PortalLoginPage() {
           {/* Footer */}
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Powered by Fixlyfy • Secure & Encrypted
+              Powered by Fixlify • Secure & Encrypted
             </p>
           </div>
         </div>
