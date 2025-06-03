@@ -3,7 +3,7 @@ import React from 'react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Phone, MessageSquare, Mail, Bot, Users, Settings as SettingsIcon } from 'lucide-react';
+import { Phone, MessageSquare, Mail, Bot } from 'lucide-react';
 import { CallingInterface } from '@/components/connect/CallingInterface';
 import { CallsList } from '@/components/connect/CallsList';
 import { MessagesList } from '@/components/connect/MessagesList';
@@ -60,7 +60,7 @@ const ConnectCenterPage = () => {
           </TabsContent>
           
           <TabsContent value="messages" className="space-y-6">
-            <MessagesList />
+            <MessagesList searchResults={[]} />
           </TabsContent>
           
           <TabsContent value="emails" className="space-y-6">

@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RBACProvider } from './components/auth/RBACProvider';
+import { AppProviders } from './components/ui/AppProviders';
 import ClientsPage from './pages/ClientsPage';
 import JobsPage from './pages/JobsPage';
 import EstimatesPage from './pages/EstimatesPage';
@@ -12,13 +12,14 @@ import AutomationsPage from './pages/AutomationsPage';
 import SettingsPage from './pages/SettingsPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import PhoneSettingsPage from "./pages/PhoneSettingsPage";
+import ConnectCenterPage from './pages/ConnectCenterPage';
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RBACProvider>
+      <AppProviders>
         <Router>
           <Routes>
             <Route path="/" element={<ClientsPage />} />
@@ -31,10 +32,11 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/phone" element={<PhoneSettingsPage />} />
             <Route path="/settings/integrations" element={<IntegrationsPage />} />
+            <Route path="/connect" element={<ConnectCenterPage />} />
             <Route path="*" element={<div>Page not found</div>} />
           </Routes>
         </Router>
-      </RBACProvider>
+      </AppProviders>
     </QueryClientProvider>
   );
 }
