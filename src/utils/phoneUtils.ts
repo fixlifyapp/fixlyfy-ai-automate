@@ -1,23 +1,55 @@
 
-// Utility function to format phone number for Telnyx
-export const formatPhoneForTelnyx = (phoneNumber: string): string => {
-  if (!phoneNumber) return "";
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  if (cleaned.startsWith('1') && cleaned.length === 11) {
-    return `+${cleaned}`;
+export const isValidPhoneNumber = (phone: string): boolean => {
+  if (!phone) return false;
+  
+  // Remove all non-digit characters
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  // Check if it's a valid length (10-15 digits)
+  if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+    return false;
   }
-  if (cleaned.length === 10) {
-    return `+1${cleaned}`;
-  }
-  if (cleaned.length > 10) {
-    return `+${cleaned}`;
-  }
-  console.warn("Invalid phone number format:", phoneNumber);
-  return phoneNumber;
+  
+  // Basic US phone number validation (can be expanded for international)
+  const usPhoneRegex = /^(\+?1)?[2-9]\d{9}$/;
+  return usPhoneRegex.test(cleanPhone) || cleanPhone.length >= 10;
 };
 
-export const isValidPhoneNumber = (phoneNumber: string): boolean => {
-  if (!phoneNumber) return false;
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  return cleaned.length >= 10;
+export const formatPhoneForTelnyx = (phone: string): string => {
+  if (!phone) return '';
+  
+  // Remove all non-digit characters
+  let cleanPhone = phone.replace(/\D/g, '');
+  
+  // If it doesn't start with country code, assume US (+1)
+  if (cleanPhone.length === 10) {
+    cleanPhone = '1' + cleanPhone;
+  }
+  
+  // Add + if not present
+  if (!cleanPhone.startsWith('+')) {
+    cleanPhone = '+' + cleanPhone;
+  } else if (cleanPhone.startsWith('+')) {
+    // Already formatted
+    return cleanPhone;
+  }
+  
+  return '+' + cleanPhone;
+};
+
+export const formatPhoneDisplay = (phone: string): string => {
+  if (!phone) return '';
+  
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  if (cleanPhone.length === 10) {
+    return `(${cleanPhone.slice(0, 3)}) ${cleanPhone.slice(3, 6)}-${cleanPhone.slice(6)}`;
+  }
+  
+  if (cleanPhone.length === 11 && cleanPhone.startsWith('1')) {
+    const withoutCountryCode = cleanPhone.slice(1);
+    return `+1 (${withoutCountryCode.slice(0, 3)}) ${withoutCountryCode.slice(3, 6)}-${withoutCountryCode.slice(6)}`;
+  }
+  
+  return phone; // Return original if can't format
 };
