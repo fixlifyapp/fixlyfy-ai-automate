@@ -9,14 +9,14 @@ import { ClientPortalAuthProvider } from "@/hooks/useClientPortalAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Main App Pages
-import DashboardPage from "@/pages/DashboardPage";
+import Dashboard from "@/pages/Dashboard";
 import JobsPage from "@/pages/JobsPage";
 import JobDetailsPage from "@/pages/JobDetailsPage";
 import ClientsPage from "@/pages/ClientsPage";
 import FinancePage from "@/pages/FinancePage";
 import ConnectPage from "@/pages/ConnectPage";
-import LoginPage from "@/pages/LoginPage";
-import TeamPage from "@/pages/TeamPage";
+import AuthPage from "@/pages/AuthPage";
+import TeamManagementPage from "@/pages/TeamManagementPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AutomationsPage from "@/pages/AutomationsPage";
 
@@ -53,10 +53,10 @@ function App() {
               <AuthProvider>
                 <RBACProvider>
                   <Routes>
-                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/auth" element={<AuthPage />} />
                     <Route path="/" element={
                       <ProtectedRoute>
-                        <DashboardPage />
+                        <Dashboard />
                       </ProtectedRoute>
                     } />
                     <Route path="/jobs" element={
@@ -86,7 +86,7 @@ function App() {
                     } />
                     <Route path="/team" element={
                       <ProtectedRoute>
-                        <TeamPage />
+                        <TeamManagementPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/settings" element={
