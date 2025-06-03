@@ -41,58 +41,71 @@ serve(async (req) => {
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
     if (!telnyxApiKey) {
-      throw new Error('TELNYX_API_KEY not configured')
+      console.log('TELNYX_API_KEY not configured, working with local numbers only')
     }
 
     const { action, area_code, country_code, phone_number, webhook_url }: TelnyxPhoneNumberRequest = await req.json()
 
     // Search available numbers (including our test number)
     if (action === 'search') {
+      console.log(`Searching for numbers with area_code: ${area_code}`)
+      
       // First, get available numbers from our database (like the test number)
-      const { data: localAvailableNumbers } = await supabaseClient
+      const { data: localAvailableNumbers, error: localError } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .eq('status', 'available')
         .is('user_id', null)
 
-      console.log('Local available numbers:', localAvailableNumbers)
-
-      // Also search Telnyx API for real numbers
-      const searchParams = new URLSearchParams({
-        'filter[country_code]': country_code || 'US',
-        'filter[features][]': 'sms',
-        'page[size]': '10'
-      })
-      
-      if (area_code) {
-        searchParams.append('filter[national_destination_code]', area_code)
+      if (localError) {
+        console.error('Error fetching local numbers:', localError)
       }
 
-      let telnyxNumbers = []
-      try {
-        const response = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${searchParams}`, {
-          headers: {
-            'Authorization': `Bearer ${telnyxApiKey}`,
-            'Content-Type': 'application/json',
-          }
-        })
+      console.log('Local available numbers:', localAvailableNumbers)
 
-        if (response.ok) {
-          const data = await response.json()
-          telnyxNumbers = data.data?.map((num: any) => ({
-            phone_number: num.phone_number,
-            region_information: num.region_information,
-            features: num.features,
-            cost_information: num.cost_information,
-            source: 'telnyx'
-          })) || []
+      // Filter by area code if provided
+      const filteredLocalNumbers = localAvailableNumbers?.filter(num => 
+        !area_code || num.area_code === area_code
+      ) || []
+
+      // Also search Telnyx API for real numbers if API key is available
+      let telnyxNumbers = []
+      if (telnyxApiKey) {
+        try {
+          const searchParams = new URLSearchParams({
+            'filter[country_code]': country_code || 'US',
+            'filter[features][]': 'sms',
+            'page[size]': '10'
+          })
+          
+          if (area_code) {
+            searchParams.append('filter[national_destination_code]', area_code)
+          }
+
+          const response = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${searchParams}`, {
+            headers: {
+              'Authorization': `Bearer ${telnyxApiKey}`,
+              'Content-Type': 'application/json',
+            }
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            telnyxNumbers = data.data?.map((num: any) => ({
+              phone_number: num.phone_number,
+              region_information: num.region_information,
+              features: num.features,
+              cost_information: num.cost_information,
+              source: 'telnyx'
+            })) || []
+          }
+        } catch (error) {
+          console.log('Telnyx API error (continuing with local numbers):', error)
         }
-      } catch (error) {
-        console.log('Telnyx API error (continuing with local numbers):', error)
       }
 
       // Combine local and Telnyx numbers
-      const localNumbers = localAvailableNumbers?.map(num => ({
+      const localNumbers = filteredLocalNumbers?.map(num => ({
         phone_number: num.phone_number,
         region_information: [{
           region_name: num.region || 'Test Region',
@@ -107,6 +120,8 @@ serve(async (req) => {
       })) || []
 
       const allNumbers = [...localNumbers, ...telnyxNumbers]
+
+      console.log(`Found ${allNumbers.length} total numbers (${localNumbers.length} local + ${telnyxNumbers.length} telnyx)`)
 
       return new Response(JSON.stringify({
         success: true,
@@ -161,7 +176,7 @@ serve(async (req) => {
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
-      } else {
+      } else if (telnyxApiKey) {
         console.log('Purchasing real Telnyx number')
         // This is a real Telnyx number, purchase it
         const purchaseResponse = await fetch('https://api.telnyx.com/v2/number_orders', {
@@ -207,6 +222,8 @@ serve(async (req) => {
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
+      } else {
+        throw new Error('Cannot purchase number: no API key configured and number not found in local database')
       }
     }
 
@@ -251,11 +268,20 @@ serve(async (req) => {
         })
       }
 
-      const { data: userNumbers } = await supabaseClient
+      console.log(`Fetching numbers for user: ${currentUserId}`)
+
+      const { data: userNumbers, error } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .eq('user_id', currentUserId)
         .order('purchased_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching user numbers:', error)
+        throw error
+      }
+
+      console.log(`Found ${userNumbers?.length || 0} numbers for user`)
 
       return new Response(JSON.stringify({
         success: true,
