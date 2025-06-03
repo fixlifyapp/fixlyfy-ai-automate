@@ -1,6 +1,5 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from "@/integrations/supabase/client";
 
 interface ClientPortalUser {
   id: string;
@@ -36,24 +35,29 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
         return;
       }
 
-      const { data, error } = await supabase.rpc('validate_client_session', {
-        p_session_token: sessionToken
+      const response = await fetch('/supabase/functions/v1/client-portal-estimates', {
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (error || !data || data.length === 0) {
+      if (!response.ok) {
         localStorage.removeItem('client_portal_session');
         setUser(null);
         setLoading(false);
         return;
       }
 
-      const sessionData = data[0];
-      setUser({
-        id: sessionData.user_id,
-        clientId: sessionData.client_id,
-        name: sessionData.client_name,
-        email: sessionData.client_email
-      });
+      const data = await response.json();
+      if (data.client) {
+        setUser({
+          id: data.client.id,
+          clientId: data.client.id,
+          name: data.client.name,
+          email: data.client.email
+        });
+      }
 
     } catch (error) {
       console.error('Session check error:', error);
@@ -66,39 +70,19 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
 
   const signIn = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const { data, error } = await supabase.rpc('generate_client_login_token', {
-        p_email: email
+      const response = await fetch('/supabase/functions/v1/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'client_portal_login',
+          email: email
+        })
       });
 
-      if (error) {
-        return { success: false, message: 'Failed to generate login link' };
-      }
-
-      if (!data) {
-        return { success: false, message: 'No account found with this email address' };
-      }
-
-      // Send the login link via email
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: email,
-          subject: 'Your Client Portal Login Link',
-          html: `
-            <h2>Access Your Client Portal</h2>
-            <p>Click the link below to access your client portal:</p>
-            <a href="${window.location.origin}/portal/login?token=${data}" 
-               style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-              Access Portal
-            </a>
-            <p>This link will expire in 30 minutes for security.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          `
-        }
-      });
-
-      if (emailError) {
-        console.error('Email send error:', emailError);
-        return { success: false, message: 'Failed to send login email' };
+      if (!response.ok) {
+        return { success: false, message: 'Failed to send login link' };
       }
 
       return { success: true, message: 'Login link sent to your email' };
@@ -110,31 +94,42 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
 
   const verifyToken = async (token: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const { data, error } = await supabase.rpc('verify_client_login_token', {
-        p_token: token
+      const response = await fetch('/supabase/functions/v1/client-portal-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'verify_token',
+          token: token
+        })
       });
 
-      if (error || !data || data.length === 0) {
+      if (!response.ok) {
         return { success: false, message: 'Invalid or expired login link' };
       }
 
-      const sessionData = data[0];
-      localStorage.setItem('client_portal_session', sessionData.session_token);
-      
-      // Set user data
-      const userData = {
-        id: sessionData.user_id,
-        clientId: sessionData.client_id,
-        name: '', // Will be filled by checkSession
-        email: ''
-      };
-      
-      setUser(userData);
-      
-      // Refresh session to get full user data
-      await checkSession();
+      const data = await response.json();
+      if (data.session_token) {
+        localStorage.setItem('client_portal_session', data.session_token);
+        
+        // Set user data
+        const userData = {
+          id: data.user_id,
+          clientId: data.client_id,
+          name: data.client_name || '',
+          email: data.client_email || ''
+        };
+        
+        setUser(userData);
+        
+        // Refresh session to get full user data
+        await checkSession();
 
-      return { success: true, message: 'Successfully logged in' };
+        return { success: true, message: 'Successfully logged in' };
+      }
+
+      return { success: false, message: 'Invalid response from server' };
     } catch (error) {
       console.error('Token verification error:', error);
       return { success: false, message: 'Failed to verify login link' };

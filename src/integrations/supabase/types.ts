@@ -949,6 +949,7 @@ export type Database = {
         Row: {
           business_hours: Json | null
           business_type: string | null
+          client_portal_url: string | null
           company_address: string | null
           company_city: string | null
           company_country: string | null
@@ -980,6 +981,7 @@ export type Database = {
         Insert: {
           business_hours?: Json | null
           business_type?: string | null
+          client_portal_url?: string | null
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
@@ -1011,6 +1013,7 @@ export type Database = {
         Update: {
           business_hours?: Json | null
           business_type?: string | null
+          client_portal_url?: string | null
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
@@ -3298,6 +3301,10 @@ export type Database = {
           p_details?: Json
           p_user_id?: string
         }
+        Returns: undefined
+      }
+      set_client_portal_user_email: {
+        Args: { user_email: string }
         Returns: undefined
       }
       update_team_member_commission: {

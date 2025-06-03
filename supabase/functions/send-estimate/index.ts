@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -89,6 +88,25 @@ serve(async (req) => {
         throw new Error('Valid email address is required')
       }
 
+      // Create or update client portal user
+      let portalLoginToken = null
+      if (client?.email) {
+        try {
+          // Generate login token for client portal
+          const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
+            p_email: client.email
+          })
+          
+          if (!tokenError && tokenData) {
+            portalLoginToken = tokenData
+            console.log('Generated client portal login token')
+          }
+        } catch (error) {
+          console.error('Failed to generate portal token:', error)
+          // Don't fail the email send if portal token generation fails
+        }
+      }
+
       // Check Mailgun configuration
       const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY')
       if (!mailgunApiKey) {
@@ -113,7 +131,13 @@ serve(async (req) => {
       console.log('From email:', fromEmail)
       console.log('From name:', fromName)
 
-      // Create detailed HTML email template
+      // Create portal access link
+      const portalBaseUrl = companySettings?.client_portal_url || 'https://your-app.vercel.app/portal'
+      const portalLink = portalLoginToken ? 
+        `${portalBaseUrl}/login?token=${portalLoginToken}` : 
+        `${portalBaseUrl}/login`
+
+      // Create detailed HTML email template with portal link
       const lineItemsHtml = lineItems?.map(item => 
         `<tr>
           <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.description}</td>
@@ -144,6 +168,8 @@ serve(async (req) => {
             .total-amount { font-size: 24px; font-weight: bold; color: #007bff; }
             .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; }
             .message { background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .portal-button { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold; }
+            .portal-section { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
           </style>
         </head>
         <body>
@@ -161,6 +187,15 @@ serve(async (req) => {
               ${client?.phone ? `<strong>Phone:</strong> ${client.phone}<br>` : ''}
               ${job?.address ? `<strong>Service Address:</strong> ${job.address}<br>` : ''}
             </div>
+
+            ${portalLoginToken ? `
+            <div class="portal-section">
+              <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
+              <p>Access your estimate online, download a PDF copy, and track the status of your service request:</p>
+              <a href="${portalLink}" class="portal-button" style="color: white;">Access Client Portal</a>
+              <p style="font-size: 12px; color: #666; margin-top: 10px;">This link will expire in 30 minutes for security.</p>
+            </div>
+            ` : ''}
 
             ${message ? `<div class="message">${message}</div>` : ''}
             
