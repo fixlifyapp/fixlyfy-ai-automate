@@ -17,6 +17,9 @@ interface CompanyInfo {
   logoUrl: string;
   tagline: string;
   description: string;
+  emailDomainName: string;
+  emailFromName: string;
+  emailFromAddress: string;
 }
 
 export const useCompanySettings = () => {
@@ -53,7 +56,10 @@ export const useCompanySettings = () => {
             taxId: companySettings.tax_id,
             logoUrl: companySettings.company_logo_url,
             tagline: companySettings.company_tagline,
-            description: companySettings.company_description
+            description: companySettings.company_description,
+            emailDomainName: companySettings.custom_domain_name || '',
+            emailFromName: companySettings.email_from_name || '',
+            emailFromAddress: companySettings.email_from_address || ''
           });
         } else {
           // Fallback company info with all required properties
@@ -71,7 +77,10 @@ export const useCompanySettings = () => {
             taxId: '',
             logoUrl: '',
             tagline: 'Professional Service You Can Trust',
-            description: 'Licensed & Insured Professional Services'
+            description: 'Licensed & Insured Professional Services',
+            emailDomainName: '',
+            emailFromName: 'Support Team',
+            emailFromAddress: ''
           });
         }
       } catch (error) {
@@ -91,7 +100,10 @@ export const useCompanySettings = () => {
           taxId: '',
           logoUrl: '',
           tagline: 'Professional Service You Can Trust',
-          description: 'Licensed & Insured Professional Services'
+          description: 'Licensed & Insured Professional Services',
+          emailDomainName: '',
+          emailFromName: 'Support Team',
+          emailFromAddress: ''
         });
       } finally {
         setLoading(false);

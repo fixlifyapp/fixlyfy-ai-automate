@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -65,28 +66,6 @@ serve(async (req) => {
     }
 
     console.log('Company settings found:', !!companySettings)
-    console.log('Company settings details:', {
-      company_name: companySettings?.company_name,
-      email_from_address: companySettings?.email_from_address,
-      custom_domain_name: companySettings?.custom_domain_name,
-      email_from_name: companySettings?.email_from_name,
-      company_phone: companySettings?.company_phone,
-      company_email: companySettings?.company_email,
-      company_website: companySettings?.company_website
-    })
-
-    // Get line items using admin client
-    const { data: lineItems, error: lineItemsError } = await supabaseAdmin
-      .from('line_items')
-      .select('*')
-      .eq('parent_type', 'estimate')
-      .eq('parent_id', estimateId)
-
-    if (lineItemsError) {
-      console.error('Line items error:', lineItemsError)
-    }
-
-    console.log('Line items found:', lineItems?.length || 0)
 
     const client = estimate.jobs?.clients
     const job = estimate.jobs
@@ -135,22 +114,22 @@ serve(async (req) => {
         throw new Error('Mailgun API key not configured. Please configure MAILGUN_API_KEY in Supabase secrets.')
       }
 
-      // Use consistent domain - fixlify.app (corrected spelling)
+      // Use consistent domain - fixlify.app
       const mailgunDomain = 'fixlify.app'
       
-      // Generate FROM email with improved logic - use custom_domain_name to build email
+      // UPDATED: Generate FROM email with new priority logic
       let fromEmail = 'support@fixlify.app' // Default fallback
       
-      // Priority 1: Use email_from_address if configured
-      if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
-        fromEmail = companySettings.email_from_address.trim()
-        console.log('Using configured email_from_address:', fromEmail)
-      }
-      // Priority 2: Use custom_domain_name to build email with fixlify.app
-      else if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim()) {
+      // Priority 1: Use custom_domain_name to build email with fixlify.app
+      if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim()) {
         const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
         fromEmail = `${cleanDomain}@fixlify.app`
         console.log('Using custom domain name to build email:', fromEmail)
+      }
+      // Priority 2: Use email_from_address if configured and no custom_domain_name
+      else if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
+        fromEmail = companySettings.email_from_address.trim()
+        console.log('Using configured email_from_address:', fromEmail)
       }
       
       const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team'
@@ -160,136 +139,104 @@ serve(async (req) => {
       console.log('From email:', fromEmail)
       console.log('From name:', fromName)
 
-      // Create detailed HTML email template with portal link
-      const lineItemsHtml = lineItems?.map(item => 
-        `<tr>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.description}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.unit_price?.toFixed(2)}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${(item.quantity * item.unit_price)?.toFixed(2)}</td>
-        </tr>`
-      ).join('') || '<tr><td colspan="4" style="padding: 16px; text-align: center; color: #666;">No items found</td></tr>'
-
-      // Portal section - always show if we have a client email
-      let portalSectionHtml = ''
-      if (client?.email) {
-        if (portalLoginToken && portalLoginLink) {
-          portalSectionHtml = `
-            <div class="portal-section" style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
-              <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
-              <p>Access your estimate online, download a PDF copy, and track the status of your service request:</p>
-              <a href="${portalLoginLink}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold;">Access Client Portal</a>
-              <p style="font-size: 12px; color: #666; margin-top: 10px;">This link will expire in 30 minutes for security.</p>
-            </div>`
-        } else {
-          // Fallback portal section if token generation failed - use current domain
-          const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app'
-          portalSectionHtml = `
-            <div class="portal-section" style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
-              <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
-              <p>Access your client portal to view estimates and track service requests:</p>
-              <a href="${currentDomain}/portal/login" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold;">Access Client Portal</a>
-              <p style="font-size: 12px; color: #666; margin-top: 10px;">Use your email address to log in.</p>
-            </div>`
-        }
+      // UPDATED: Create simple HTML email template focused on portal access
+      let emailHtml = ''
+      
+      if (client?.email && portalLoginToken && portalLoginLink) {
+        // Simple email with portal access
+        emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Your Estimate is Ready</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f5f5f5; }
+              .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+              .header { margin-bottom: 30px; }
+              .company-name { color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+              .title { color: #333; font-size: 20px; margin-bottom: 20px; }
+              .message { font-size: 16px; margin-bottom: 30px; color: #666; }
+              .portal-button { display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin: 20px 0; }
+              .portal-button:hover { background-color: #0056b3; }
+              .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+              .security-note { font-size: 12px; color: #999; margin-top: 15px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <div class="company-name">${companySettings?.company_name || 'Fixlify Services'}</div>
+                <div class="title">Your Estimate is Ready!</div>
+              </div>
+              
+              <div class="message">
+                <p>Hi ${client?.name || 'Valued Customer'},</p>
+                <p>Your estimate <strong>${estimate.estimate_number}</strong> for "${job?.title || 'service request'}" has been prepared and is ready for your review.</p>
+              </div>
+              
+              <a href="${portalLoginLink}" class="portal-button">View Your Estimate</a>
+              
+              <p class="security-note">This secure link will expire in 30 minutes for your protection.</p>
+              
+              <div class="footer">
+                <p>Thank you for choosing ${companySettings?.company_name || 'Fixlify Services'}!</p>
+                ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
+                ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
+              </div>
+            </div>
+          </body>
+          </html>
+        `
+      } else {
+        // Fallback email without portal link
+        const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app'
+        emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Your Estimate is Ready</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f5f5f5; }
+              .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+              .header { margin-bottom: 30px; }
+              .company-name { color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+              .title { color: #333; font-size: 20px; margin-bottom: 20px; }
+              .message { font-size: 16px; margin-bottom: 30px; color: #666; }
+              .portal-button { display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin: 20px 0; }
+              .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <div class="company-name">${companySettings?.company_name || 'Fixlify Services'}</div>
+                <div class="title">Your Estimate is Ready!</div>
+              </div>
+              
+              <div class="message">
+                <p>Hi ${client?.name || 'Valued Customer'},</p>
+                <p>Your estimate <strong>${estimate.estimate_number}</strong> for "${job?.title || 'service request'}" has been prepared.</p>
+                <p>Total Amount: <strong>$${estimate.total?.toFixed(2) || '0.00'}</strong></p>
+              </div>
+              
+              <a href="${currentDomain}/portal/login" class="portal-button">Access Client Portal</a>
+              
+              <div class="footer">
+                <p>Thank you for choosing ${companySettings?.company_name || 'Fixlify Services'}!</p>
+                ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
+                ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
+              </div>
+            </div>
+          </body>
+          </html>
+        `
       }
 
-      // Enhanced footer with company information from settings
-      let footerHtml = `
-        <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
-          <p>Thank you for choosing ${companySettings?.company_name || 'our services'}!</p>`
-      
-      if (companySettings?.company_phone) {
-        footerHtml += `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>`
-      }
-      
-      if (companySettings?.company_email) {
-        footerHtml += `<p><strong>Email:</strong> ${companySettings.company_email}</p>`
-      }
-      
-      if (companySettings?.company_website) {
-        footerHtml += `<p><strong>Website:</strong> ${companySettings.company_website}</p>`
-      }
-      
-      footerHtml += `</div>`
-
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Estimate ${estimate.estimate_number}</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f5f5f5; }
-            .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #007bff; }
-            .company-name { color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-            .estimate-title { color: #333; font-size: 20px; margin-bottom: 20px; }
-            .client-info { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-            .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .items-table th { background-color: #007bff; color: white; padding: 12px; text-align: left; }
-            .items-table td { padding: 8px; border-bottom: 1px solid #eee; }
-            .total-section { text-align: right; margin-top: 20px; padding-top: 15px; border-top: 2px solid #007bff; }
-            .total-amount { font-size: 24px; font-weight: bold; color: #007bff; }
-            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; }
-            .message { background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .portal-section { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="company-name">${companySettings?.company_name || 'Fixlify Services'}</div>
-              <div style="color: #666;">${companySettings?.company_tagline || 'Professional Service Solutions'}</div>
-            </div>
-            
-            <div class="estimate-title">Estimate ${estimate.estimate_number}</div>
-            
-            <div class="client-info">
-              <strong>To:</strong> ${client?.name || 'Valued Customer'}<br>
-              ${client?.email ? `<strong>Email:</strong> ${client.email}<br>` : ''}
-              ${client?.phone ? `<strong>Phone:</strong> ${client.phone}<br>` : ''}
-              ${job?.address ? `<strong>Service Address:</strong> ${job.address}<br>` : ''}
-            </div>
-
-            ${portalSectionHtml}
-
-            ${message ? `<div class="message">${message}</div>` : ''}
-            
-            <div style="margin: 20px 0;">
-              <strong>Job:</strong> ${job?.title || 'Service Request'}<br>
-              ${job?.description ? `<strong>Description:</strong> ${job.description}<br>` : ''}
-              <strong>Date:</strong> ${new Date(estimate.date || estimate.created_at).toLocaleDateString()}
-            </div>
-            
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th style="text-align: center;">Qty</th>
-                  <th style="text-align: right;">Unit Price</th>
-                  <th style="text-align: right;">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lineItemsHtml}
-              </tbody>
-            </table>
-            
-            <div class="total-section">
-              <div class="total-amount">Total: $${estimate.total?.toFixed(2) || '0.00'}</div>
-            </div>
-
-            ${estimate.notes ? `<div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;"><strong>Notes:</strong><br>${estimate.notes}</div>` : ''}
-            
-            ${footerHtml}
-          </div>
-        </body>
-        </html>
-      `
-
-      // Use Mailgun API with the corrected URL
+      // Use Mailgun API
       const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`
       console.log('Mailgun send URL:', mailgunUrl)
       console.log('From:', `${fromName} <${fromEmail}>`)
@@ -304,14 +251,12 @@ serve(async (req) => {
         body: new URLSearchParams({
           from: `${fromName} <${fromEmail}>`,
           to: recipientEmail,
-          subject: subject || `Estimate ${estimate.estimate_number} from ${companySettings?.company_name || 'Fixlyfy Services'}`,
+          subject: subject || `Your Estimate from ${companySettings?.company_name || 'Fixlify Services'}`,
           html: emailHtml
         })
       })
 
       console.log('Email send response status:', response.status)
-      console.log('Email send response headers:', Object.fromEntries(response.headers.entries()))
-
       const result = await response.text()
       console.log('Email send response body:', result)
       
@@ -330,7 +275,7 @@ serve(async (req) => {
             estimate_id: estimateId,
             communication_type: 'email',
             recipient: recipientEmail,
-            subject: subject || `Estimate ${estimate.estimate_number}`,
+            subject: subject || `Your Estimate from ${companySettings?.company_name || 'Fixlify Services'}`,
             content: emailHtml,
             status: 'sent',
             provider_message_id: JSON.parse(result).id,

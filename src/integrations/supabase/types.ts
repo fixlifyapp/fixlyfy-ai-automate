@@ -966,6 +966,7 @@ export type Database = {
           custom_domain: string | null
           custom_domain_name: string | null
           domain_verification_status: string | null
+          email_domain_name: string | null
           email_from_address: string | null
           email_from_name: string | null
           id: string
@@ -998,6 +999,7 @@ export type Database = {
           custom_domain?: string | null
           custom_domain_name?: string | null
           domain_verification_status?: string | null
+          email_domain_name?: string | null
           email_from_address?: string | null
           email_from_name?: string | null
           id?: string
@@ -1030,6 +1032,7 @@ export type Database = {
           custom_domain?: string | null
           custom_domain_name?: string | null
           domain_verification_status?: string | null
+          email_domain_name?: string | null
           email_from_address?: string | null
           email_from_name?: string | null
           id?: string

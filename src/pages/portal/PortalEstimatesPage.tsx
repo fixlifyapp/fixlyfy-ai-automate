@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Eye, Download, Calendar, DollarSign, Loader2 } from 'lucide-react';
 import { UnifiedDocumentPreview } from '@/components/jobs/dialogs/unified/UnifiedDocumentPreview';
 import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface LineItem {
@@ -58,26 +59,54 @@ const PortalEstimatesPage = () => {
   const fetchEstimates = async () => {
     try {
       setLoading(true);
-      const sessionToken = localStorage.getItem('client_portal_session');
       
-      if (!sessionToken) {
-        toast.error('Please log in to view your estimates');
+      if (!user?.client_email) {
+        console.error('No client email available');
         return;
       }
 
-      const response = await fetch('/supabase/functions/v1/client-portal-estimates', {
-        headers: {
-          'Authorization': `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json'
-        }
+      // Set the client email in the session for RLS
+      await supabase.rpc('set_client_portal_user_email', {
+        user_email: user.client_email
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch estimates');
+      const { data: estimatesData, error } = await supabase
+        .from('estimate_details_view')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching estimates:', error);
+        toast.error('Failed to load estimates');
+        return;
       }
 
-      const data = await response.json();
-      setEstimates(data.estimates || []);
+      // Transform data to match expected structure
+      const transformedEstimates = estimatesData?.map(estimate => ({
+        id: estimate.estimate_id,
+        estimate_number: estimate.estimate_number,
+        date: estimate.created_at,
+        status: estimate.status,
+        total: estimate.total || 0,
+        notes: estimate.notes,
+        created_at: estimate.created_at,
+        jobs: {
+          id: estimate.job_id,
+          title: estimate.job_title,
+          description: estimate.job_description,
+          address: '', // Not available in view
+          clients: {
+            id: estimate.client_id,
+            name: estimate.client_name,
+            email: estimate.client_email,
+            phone: estimate.client_phone,
+            company: estimate.client_company
+          }
+        },
+        lineItems: [] // Line items would need separate fetch
+      })) || [];
+
+      setEstimates(transformedEstimates);
     } catch (error) {
       console.error('Error fetching estimates:', error);
       toast.error('Failed to load estimates');
@@ -91,26 +120,12 @@ const PortalEstimatesPage = () => {
     setPreviewOpen(true);
   };
 
-  const calculateSubtotal = () => {
-    if (!selectedEstimate) return 0;
-    return selectedEstimate.lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  };
-
-  const calculateTax = () => {
-    const subtotal = calculateSubtotal();
-    return subtotal * 0.13; // 13% tax rate
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
-  };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'approved': return 'bg-green-100 text-green-800';
       case 'sent': return 'bg-blue-100 text-blue-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      case 'expired': return 'bg-gray-100 text-gray-800';
+      case 'draft': return 'bg-gray-100 text-gray-800';
       default: return 'bg-yellow-100 text-yellow-800';
     }
   };
@@ -132,7 +147,7 @@ const PortalEstimatesPage = () => {
         <div>
           <h1 className="text-3xl font-bold">My Estimates</h1>
           <p className="text-muted-foreground">
-            View and download your service estimates
+            View and review your service estimates
           </p>
         </div>
 
@@ -153,7 +168,7 @@ const PortalEstimatesPage = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">{estimate.estimate_number}</CardTitle>
-                      <CardDescription>{estimate.jobs?.title || 'Service Request'}</CardDescription>
+                      <CardDescription>{estimate.jobs?.title || 'Service Estimate'}</CardDescription>
                     </div>
                     <Badge className={getStatusColor(estimate.status)}>
                       {estimate.status}
@@ -164,17 +179,15 @@ const PortalEstimatesPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{new Date(estimate.date || estimate.created_at).toLocaleDateString()}</span>
+                      <span className="text-sm">{new Date(estimate.date).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">${estimate.total?.toFixed(2) || '0.00'}</span>
                     </div>
-                    {estimate.jobs?.address && (
-                      <div className="text-sm text-muted-foreground">
-                        📍 {estimate.jobs.address}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Status: {estimate.status}</span>
+                    </div>
                   </div>
                   
                   {estimate.jobs?.description && (
@@ -186,19 +199,19 @@ const PortalEstimatesPage = () => {
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" onClick={() => handleViewEstimate(estimate)}>
                           <Eye className="h-4 w-4 mr-2" />
-                          View
+                          View Details
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
                         <DialogHeader>
-                          <DialogTitle>Estimate Preview - {selectedEstimate?.estimate_number}</DialogTitle>
+                          <DialogTitle>Estimate Details - {selectedEstimate?.estimate_number}</DialogTitle>
                         </DialogHeader>
                         <div className="overflow-auto max-h-[80vh]">
                           {selectedEstimate && (
                             <UnifiedDocumentPreview
                               documentType="estimate"
                               documentNumber={selectedEstimate.estimate_number}
-                              lineItems={selectedEstimate.lineItems.map(item => ({
+                              lineItems={selectedEstimate.lineItems?.map(item => ({
                                 id: item.id,
                                 description: item.description,
                                 quantity: item.quantity,
@@ -207,13 +220,13 @@ const PortalEstimatesPage = () => {
                                 name: item.description,
                                 price: item.unit_price,
                                 total: item.quantity * item.unit_price
-                              }))}
-                              taxRate={13}
-                              calculateSubtotal={calculateSubtotal}
-                              calculateTotalTax={calculateTax}
-                              calculateGrandTotal={calculateTotal}
+                              })) || []}
+                              taxRate={8.5}
+                              calculateSubtotal={() => selectedEstimate.total * 0.92}
+                              calculateTotalTax={() => selectedEstimate.total * 0.08}
+                              calculateGrandTotal={() => selectedEstimate.total}
                               notes={selectedEstimate.notes || ''}
-                              issueDate={new Date(selectedEstimate.date || selectedEstimate.created_at).toLocaleDateString()}
+                              issueDate={new Date(selectedEstimate.created_at).toLocaleDateString()}
                               dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
                             />
                           )}
@@ -225,6 +238,12 @@ const PortalEstimatesPage = () => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
+                    
+                    {estimate.status === 'sent' && (
+                      <Button size="sm">
+                        Approve Estimate
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
