@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Send, DollarSign, Eye } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
-import { SimpleEstimateBuilder } from "../dialogs/SimpleEstimateBuilder";
+import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
 import { EstimateSendDialog } from "../dialogs/estimate-builder/EstimateSendDialog";
 import { formatCurrency } from "@/lib/utils";
 import { Estimate } from "@/hooks/useEstimates";
+import { useJobs } from "@/hooks/useJobs";
 
 interface EstimatesListProps {
   jobId: string;
@@ -18,29 +19,42 @@ interface EstimatesListProps {
 }
 
 export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: EstimatesListProps) => {
-  const { estimates, isLoading, convertEstimateToInvoice } = useEstimates(jobId);
+  const { estimates, isLoading, convertEstimateToInvoice, refreshEstimates } = useEstimates(jobId);
+  const { jobs } = useJobs();
   const [editingEstimate, setEditingEstimate] = useState<Estimate | null>(null);
   const [sendingEstimate, setSendingEstimate] = useState<Estimate | null>(null);
 
+  const job = jobs.find(j => j.id === jobId);
+
   const handleEdit = (estimate: Estimate) => {
+    console.log('Editing estimate:', estimate.id);
     setEditingEstimate(estimate);
   };
 
   const handleSend = (estimate: Estimate) => {
+    console.log('Sending estimate:', estimate.id);
     setSendingEstimate(estimate);
   };
 
   const handleView = (estimate: Estimate) => {
+    console.log('Viewing estimate:', estimate.id);
     if (onViewEstimate) {
       onViewEstimate(estimate);
     }
   };
 
   const handleConvert = async (estimate: Estimate) => {
+    console.log('Converting estimate:', estimate.id);
     const success = await convertEstimateToInvoice(estimate.id);
     if (success && onEstimateConverted) {
       onEstimateConverted();
     }
+  };
+
+  const handleEstimateUpdated = () => {
+    console.log('Estimate updated, refreshing');
+    setEditingEstimate(null);
+    refreshEstimates();
   };
 
   const getStatusColor = (status: string) => {
@@ -54,7 +68,11 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
   };
 
   if (isLoading) {
-    return <div className="text-center py-4">Loading estimates...</div>;
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
   if (estimates.length === 0) {
@@ -75,7 +93,7 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-lg">
-                    {estimate.estimate_number || estimate.number}
+                    {estimate.estimate_number || estimate.number || `EST-${estimate.id.slice(0, 8)}`}
                   </CardTitle>
                   <Badge className={getStatusColor(estimate.status)}>
                     {estimate.status || 'draft'}
@@ -137,12 +155,13 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
       </div>
 
       {/* Edit Estimate Dialog */}
-      <SimpleEstimateBuilder
+      <UnifiedDocumentBuilder
         open={!!editingEstimate}
         onOpenChange={(open) => !open && setEditingEstimate(null)}
+        documentType="estimate"
         jobId={jobId}
-        existingEstimate={editingEstimate || undefined}
-        onEstimateCreated={() => setEditingEstimate(null)}
+        existingDocument={editingEstimate || undefined}
+        onDocumentCreated={handleEstimateUpdated}
       />
 
       {/* Send Estimate Dialog */}
@@ -151,6 +170,8 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
         onOpenChange={(open) => !open && setSendingEstimate(null)}
         estimateNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
         jobId={jobId}
+        clientInfo={job?.client}
+        contactInfo={job?.client}
         onSuccess={() => setSendingEstimate(null)}
         onCancel={() => setSendingEstimate(null)}
         onSave={async () => true}

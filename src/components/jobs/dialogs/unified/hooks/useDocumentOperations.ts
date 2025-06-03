@@ -48,33 +48,42 @@ export const useDocumentOperations = ({
     if (isSubmitting) return null;
     
     setIsSubmitting(true);
+    console.log('Saving document:', { documentType, lineItems: lineItems.length, total: calculateGrandTotal() });
     
     try {
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
+      
+      // Generate document number if not exists
+      const documentNumber = formData.documentNumber || 
+        `${documentType === 'estimate' ? 'EST' : 'INV'}-${Date.now()}`;
       
       // Create document data with proper fields for each type
       const baseDocumentData = {
         job_id: jobId,
         total: calculateGrandTotal(),
-        status: formData.status,
-        notes: notes
+        status: formData.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
+        notes: notes || '',
+        date: new Date().toISOString()
       };
 
       const documentData = documentType === 'estimate' 
         ? {
             ...baseDocumentData,
-            estimate_number: formData.documentNumber
+            estimate_number: documentNumber
           }
         : {
             ...baseDocumentData,
-            invoice_number: formData.documentNumber,
+            invoice_number: documentNumber,
             amount_paid: 0,
             balance: calculateGrandTotal()
           };
 
+      console.log('Document data to save:', documentData);
+
       let document;
       if (formData.documentId) {
         // Update existing document
+        console.log('Updating existing document:', formData.documentId);
         const { data, error } = await supabase
           .from(tableName)
           .update(documentData)
@@ -82,22 +91,32 @@ export const useDocumentOperations = ({
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating document:', error);
+          throw error;
+        }
         document = data;
       } else {
         // Create new document
+        console.log('Creating new document');
         const { data, error } = await supabase
           .from(tableName)
           .insert(documentData)
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating document:', error);
+          throw error;
+        }
         document = data;
+        console.log('Created document:', document);
       }
       
       // Handle line items
       if (document) {
+        console.log('Saving line items for document:', document.id);
+        
         // Delete existing line items
         await supabase
           .from('line_items')
@@ -116,9 +135,18 @@ export const useDocumentOperations = ({
             taxable: item.taxable
           }));
           
-          await supabase
+          console.log('Inserting line items:', lineItemsData);
+          
+          const { error: lineItemsError } = await supabase
             .from('line_items')
             .insert(lineItemsData);
+            
+          if (lineItemsError) {
+            console.error('Error creating line items:', lineItemsError);
+            throw lineItemsError;
+          }
+          
+          console.log('Line items saved successfully');
         }
       }
       
@@ -170,6 +198,7 @@ export const useDocumentOperations = ({
 
     try {
       setIsSubmitting(true);
+      console.log('Converting estimate to invoice:', existingDocument.id);
       
       // Generate smart invoice number
       const estimateNumber = (existingDocument as Estimate).estimate_number || (existingDocument as Estimate).number;
@@ -185,8 +214,11 @@ export const useDocumentOperations = ({
         balance: calculateGrandTotal(),
         status: 'unpaid',
         notes: notes || existingDocument.notes,
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        date: new Date().toISOString()
       };
+
+      console.log('Creating invoice:', invoiceData);
 
       const { data: invoice, error } = await supabase
         .from('invoices')
@@ -194,7 +226,12 @@ export const useDocumentOperations = ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating invoice:', error);
+        throw error;
+      }
+
+      console.log('Created invoice:', invoice);
 
       // Copy line items to invoice
       if (lineItems.length > 0) {
@@ -207,16 +244,30 @@ export const useDocumentOperations = ({
           taxable: item.taxable
         }));
 
-        await supabase
+        console.log('Copying line items to invoice:', invoiceLineItems);
+
+        const { error: lineItemsError } = await supabase
           .from('line_items')
           .insert(invoiceLineItems);
+          
+        if (lineItemsError) {
+          console.error('Error copying line items:', lineItemsError);
+          throw lineItemsError;
+        }
       }
 
       // Update estimate status
-      await supabase
+      const { error: updateError } = await supabase
         .from('estimates')
         .update({ status: 'converted' })
         .eq('id', existingDocument.id);
+        
+      if (updateError) {
+        console.error('Error updating estimate status:', updateError);
+        throw updateError;
+      }
+
+      console.log('Estimate converted successfully');
 
       toast.success('Estimate successfully converted to invoice');
       

@@ -34,6 +34,7 @@ export const useEstimates = (jobId?: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshEstimates = async () => {
+    console.log('Refreshing estimates for job:', jobId);
     try {
       setIsLoading(true);
       let query = supabase.from('estimates').select('*').order('created_at', { ascending: false });
@@ -44,14 +45,20 @@ export const useEstimates = (jobId?: string) => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching estimates:', error);
+        throw error;
+      }
+      
+      console.log('Fetched estimates:', data);
       
       // Map the data to include the alias properties
       const mappedData = (data || []).map(item => ({
         ...item,
-        number: item.estimate_number, // Add alias
-        amount: item.total, // Add alias
+        number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Add alias with fallback
+        amount: item.total || 0, // Add alias
         date: item.date || item.created_at, // Ensure date is present
+        estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
       }));
       
       setEstimates(mappedData);
@@ -64,6 +71,7 @@ export const useEstimates = (jobId?: string) => {
   };
 
   const convertEstimateToInvoice = async (estimateId: string): Promise<boolean> => {
+    console.log('Converting estimate to invoice:', estimateId);
     try {
       // Get the estimate data
       const { data: estimate, error: estimateError } = await supabase
@@ -72,7 +80,12 @@ export const useEstimates = (jobId?: string) => {
         .eq('id', estimateId)
         .single();
 
-      if (estimateError) throw estimateError;
+      if (estimateError) {
+        console.error('Error fetching estimate:', estimateError);
+        throw estimateError;
+      }
+
+      console.log('Found estimate for conversion:', estimate);
 
       // Get line items for the estimate
       const { data: lineItems, error: lineItemsError } = await supabase
@@ -81,7 +94,12 @@ export const useEstimates = (jobId?: string) => {
         .eq('parent_id', estimateId)
         .eq('parent_type', 'estimate');
 
-      if (lineItemsError) throw lineItemsError;
+      if (lineItemsError) {
+        console.error('Error fetching line items:', lineItemsError);
+        throw lineItemsError;
+      }
+
+      console.log('Found line items:', lineItems);
 
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
@@ -91,7 +109,9 @@ export const useEstimates = (jobId?: string) => {
           job_id: estimate.job_id,
           estimate_id: estimateId,
           invoice_number: invoiceNumber,
-          total: estimate.total,
+          total: estimate.total || 0,
+          amount_paid: 0,
+          balance: estimate.total || 0,
           status: 'unpaid',
           notes: estimate.notes,
           due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -99,7 +119,12 @@ export const useEstimates = (jobId?: string) => {
         .select()
         .single();
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) {
+        console.error('Error creating invoice:', invoiceError);
+        throw invoiceError;
+      }
+
+      console.log('Created invoice:', invoice);
 
       // Copy line items to invoice
       if (lineItems && lineItems.length > 0) {
@@ -116,14 +141,26 @@ export const useEstimates = (jobId?: string) => {
           .from('line_items')
           .insert(invoiceLineItems);
 
-        if (lineItemError) throw lineItemError;
+        if (lineItemError) {
+          console.error('Error copying line items:', lineItemError);
+          throw lineItemError;
+        }
+
+        console.log('Copied line items to invoice');
       }
 
       // Update estimate status
-      await supabase
+      const { error: updateError } = await supabase
         .from('estimates')
-        .update({ status: 'accepted' })
+        .update({ status: 'converted' })
         .eq('id', estimateId);
+
+      if (updateError) {
+        console.error('Error updating estimate status:', updateError);
+        throw updateError;
+      }
+
+      console.log('Updated estimate status to converted');
 
       toast.success('Estimate converted to invoice successfully');
       await refreshEstimates();
@@ -136,7 +173,9 @@ export const useEstimates = (jobId?: string) => {
   };
 
   useEffect(() => {
-    refreshEstimates();
+    if (jobId) {
+      refreshEstimates();
+    }
   }, [jobId]);
 
   return {

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Eye } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
-import { SimpleEstimateBuilder } from "./dialogs/SimpleEstimateBuilder";
+import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
 import { EstimatePreviewWindow } from "./dialogs/EstimatePreviewWindow";
 import { useJobs } from "@/hooks/useJobs";
 import { useEstimates, Estimate } from "@/hooks/useEstimates";
@@ -21,24 +21,33 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   
   const { jobs } = useJobs();
-  const { convertEstimateToInvoice } = useEstimates(jobId);
+  const { convertEstimateToInvoice, refreshEstimates } = useEstimates(jobId);
   
   const job = jobs.find(j => j.id === jobId);
 
   const handleCreateEstimate = () => {
+    console.log('Creating new estimate for job:', jobId);
     setShowCreateForm(true);
   };
 
-  const handleEstimateCreated = () => {
+  const handleEstimateCreated = (estimate?: Estimate) => {
+    console.log('Estimate created, refreshing list');
     setShowCreateForm(false);
+    refreshEstimates();
+    if (onEstimateConverted) {
+      onEstimateConverted();
+    }
+    toast.success('Estimate created successfully!');
   };
 
   const handleViewEstimate = (estimate: Estimate) => {
+    console.log('Viewing estimate:', estimate.id);
     setSelectedEstimate(estimate);
     setShowPreview(true);
   };
 
   const handleConvertToInvoice = async (estimate: Estimate) => {
+    console.log('Converting estimate to invoice:', estimate.id);
     const success = await convertEstimateToInvoice(estimate.id);
     if (success && onEstimateConverted) {
       onEstimateConverted();
@@ -64,20 +73,25 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
 
           <EstimatesList
             jobId={jobId}
-            onEstimateConverted={onEstimateConverted}
+            onEstimateConverted={() => {
+              refreshEstimates();
+              if (onEstimateConverted) onEstimateConverted();
+            }}
             onViewEstimate={handleViewEstimate}
           />
         </CardContent>
       </Card>
 
-      <SimpleEstimateBuilder
+      {/* Unified Document Builder for creating/editing estimates */}
+      <UnifiedDocumentBuilder
         open={showCreateForm}
         onOpenChange={setShowCreateForm}
+        documentType="estimate"
         jobId={jobId}
-        clientInfo={job?.client}
-        onEstimateCreated={handleEstimateCreated}
+        onDocumentCreated={handleEstimateCreated}
       />
 
+      {/* Estimate Preview Window */}
       {selectedEstimate && (
         <EstimatePreviewWindow
           open={showPreview}
