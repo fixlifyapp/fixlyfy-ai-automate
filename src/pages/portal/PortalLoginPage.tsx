@@ -13,32 +13,50 @@ export default function PortalLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { signIn, verifyToken, user } = useClientPortalAuth();
+  const { signIn, verifyToken, user, loading: authLoading } = useClientPortalAuth();
   
   const token = searchParams.get('token');
 
   useEffect(() => {
-    if (user) {
+    console.log('PortalLoginPage: user:', user, 'authLoading:', authLoading, 'token:', token);
+    
+    if (!authLoading && user) {
+      console.log('User is already logged in, redirecting to dashboard');
       navigate('/portal/dashboard');
       return;
     }
 
-    if (token) {
+    if (token && !authLoading) {
+      console.log('Token found in URL, attempting verification');
       handleTokenVerification(token);
     }
-  }, [token, user, navigate]);
+  }, [token, user, authLoading, navigate]);
 
   const handleTokenVerification = async (token: string) => {
+    console.log('Starting token verification for token:', token.substring(0, 20) + '...');
     setIsLoading(true);
-    const result = await verifyToken(token);
     
-    if (result.success) {
-      toast.success(result.message);
-      navigate('/portal/dashboard');
-    } else {
-      toast.error(result.message);
+    try {
+      const result = await verifyToken(token);
+      console.log('Token verification result:', result);
+      
+      if (result.success) {
+        toast.success(result.message);
+        console.log('Token verification successful, redirecting to dashboard');
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          navigate('/portal/dashboard');
+        }, 100);
+      } else {
+        toast.error(result.message);
+        console.log('Token verification failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Error during token verification:', error);
+      toast.error('Failed to verify login link');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,13 +74,21 @@ export default function PortalLoginPage() {
     setIsLoading(false);
   };
 
-  if (token) {
+  // Show loading spinner while checking auth state or verifying token
+  if (authLoading || (token && isLoading)) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <Card className="w-full max-w-md shadow-xl">
           <CardContent className="p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Verifying your login...</p>
+            <div className="mb-4">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">
+              {token ? 'Verifying your login...' : 'Loading...'}
+            </h2>
+            <p className="text-gray-600">
+              {token ? 'Please wait while we verify your login link.' : 'Please wait...'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -70,15 +96,18 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle>Client Portal</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="text-center space-y-2 pb-6">
+          <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+            <Mail className="h-6 w-6 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-gray-800">Client Portal</CardTitle>
+          <CardDescription className="text-gray-600">
             Enter your email to receive a secure login link
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Input
@@ -88,11 +117,12 @@ export default function PortalLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="h-12 text-base"
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700" 
               disabled={isLoading || !email}
             >
               {isLoading ? (
@@ -109,7 +139,8 @@ export default function PortalLoginPage() {
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="text-center text-sm text-gray-600 bg-blue-50 p-4 rounded-lg">
+            <p className="font-medium text-blue-800 mb-1">🔒 Secure Access</p>
             <p>No password required! We'll send you a secure link to access your portal.</p>
           </div>
         </CardContent>
