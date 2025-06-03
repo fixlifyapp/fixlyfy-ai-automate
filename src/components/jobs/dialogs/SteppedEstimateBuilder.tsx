@@ -95,15 +95,16 @@ export const SteppedEstimateBuilder = ({
   };
 
   const handleSendSuccess = () => {
-    console.log("Estimate sent successfully, closing builder and navigating");
+    console.log("Estimate sent successfully, closing builder and calling callback");
     onOpenChange(false);
     
     if (onEstimateCreated) {
       onEstimateCreated();
     }
 
-    // Navigate back to job estimates tab
+    // Small delay to ensure dialog closes before navigation
     setTimeout(() => {
+      console.log("Navigating to estimates tab");
       navigate(`/jobs/${jobId}`, { 
         state: { activeTab: "estimates" },
         replace: true 

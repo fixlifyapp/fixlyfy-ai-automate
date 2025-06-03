@@ -56,6 +56,13 @@ export const useDocumentOperations = ({
     });
     
     try {
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        throw new Error('Authentication required. Please log in to save documents.');
+      }
+
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
       
       // Generate document number if not exists
@@ -98,7 +105,7 @@ export const useDocumentOperations = ({
           
         if (error) {
           console.error('Error updating document:', error);
-          throw error;
+          throw new Error(`Failed to update ${documentType}: ${error.message}`);
         }
         document = data;
       } else {
@@ -112,7 +119,7 @@ export const useDocumentOperations = ({
           
         if (error) {
           console.error('Error creating document:', error);
-          throw error;
+          throw new Error(`Failed to create ${documentType}: ${error.message}`);
         }
         document = data;
         console.log('Created document:', document);
@@ -131,6 +138,7 @@ export const useDocumentOperations = ({
           
         if (deleteError) {
           console.error('Error deleting existing line items:', deleteError);
+          // Don't throw here, just log as it might not exist
         }
         
         // Create new line items
@@ -151,7 +159,7 @@ export const useDocumentOperations = ({
           
         if (lineItemsError) {
           console.error('Error creating line items:', lineItemsError);
-          throw lineItemsError;
+          throw new Error(`Failed to save line items: ${lineItemsError.message}`);
         }
         
         console.log('Line items saved successfully');
@@ -190,9 +198,18 @@ export const useDocumentOperations = ({
           updated_at: document.updated_at
         };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error saving ${documentType}:`, error);
-      toast.error(`Failed to save ${documentType}. Please check the console for details.`);
+      
+      // Show more specific error messages
+      if (error.message.includes('row-level security')) {
+        toast.error(`Access denied. Please ensure you're logged in and have permission to ${formData.documentId ? 'update' : 'create'} ${documentType}s.`);
+      } else if (error.message.includes('Authentication required')) {
+        toast.error(error.message);
+      } else {
+        toast.error(`Failed to save ${documentType}: ${error.message}`);
+      }
+      
       return null;
     } finally {
       setIsSubmitting(false);
@@ -206,6 +223,13 @@ export const useDocumentOperations = ({
     try {
       setIsSubmitting(true);
       console.log('Converting estimate to invoice:', existingDocument.id);
+      
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        throw new Error('Authentication required to convert estimate to invoice.');
+      }
       
       // Generate smart invoice number
       const estimateNumber = (existingDocument as Estimate).estimate_number || (existingDocument as Estimate).number;
@@ -235,7 +259,7 @@ export const useDocumentOperations = ({
 
       if (error) {
         console.error('Error creating invoice:', error);
-        throw error;
+        throw new Error(`Failed to create invoice: ${error.message}`);
       }
 
       console.log('Created invoice:', invoice);
@@ -259,7 +283,7 @@ export const useDocumentOperations = ({
           
         if (lineItemsError) {
           console.error('Error copying line items:', lineItemsError);
-          throw lineItemsError;
+          throw new Error(`Failed to copy line items: ${lineItemsError.message}`);
         }
       }
 
@@ -271,7 +295,7 @@ export const useDocumentOperations = ({
         
       if (updateError) {
         console.error('Error updating estimate status:', updateError);
-        throw updateError;
+        // Don't throw here as the invoice was created successfully
       }
 
       console.log('Estimate converted successfully');
@@ -297,9 +321,15 @@ export const useDocumentOperations = ({
         updated_at: invoice.updated_at
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error converting to invoice:', error);
-      toast.error('Failed to convert estimate to invoice');
+      
+      if (error.message.includes('row-level security')) {
+        toast.error('Access denied. Please ensure you have permission to create invoices.');
+      } else {
+        toast.error(`Failed to convert estimate to invoice: ${error.message}`);
+      }
+      
       return null;
     } finally {
       setIsSubmitting(false);
