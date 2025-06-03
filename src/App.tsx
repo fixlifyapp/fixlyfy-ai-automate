@@ -1,185 +1,59 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { RBACProvider } from "@/components/auth/RBACProvider";
-import { OnboardingModal } from "@/components/auth/OnboardingModal";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { ProtectedPortalRoute } from "@/components/portal/ProtectedPortalRoute";
-import Index from "@/pages/Index";
-import AuthPage from "@/pages/AuthPage";
-import Dashboard from "@/pages/Dashboard";
-import ClientsPage from "@/pages/ClientsPage";
-import ClientDetailPage from "@/pages/ClientDetailPage";
-import JobsPageOptimized from "@/pages/JobsPageOptimized";
-import JobDetailsPage from "@/pages/JobDetailsPage";
-import ConnectCenterPageOptimized from "@/pages/ConnectCenterPageOptimized";
-import SchedulePage from "@/pages/SchedulePage";
-import FinancePage from "@/pages/FinancePage";
-import AnalyticsPage from "@/pages/AnalyticsPage";
-import SettingsPage from "@/pages/SettingsPage";
-import ProfileCompanyPage from "@/pages/ProfileCompanyPage";
-import IntegrationsPage from "@/pages/IntegrationsPage";
-import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
-import AISettingsPage from "@/pages/AISettingsPage";
-import TeamManagementPage from "@/pages/TeamManagementPage";
-import ProductsPage from "@/pages/ProductsPage";
-import { AutomationsPage } from "@/components/automations/AutomationsPage";
-import AiCenterPage from "@/pages/AiCenterPage";
-import ConfigurationPage from "@/pages/ConfigurationPage";
-import PortalLoginPage from "@/pages/portal/PortalLoginPage";
-import PortalDashboardPage from "@/pages/portal/PortalDashboardPage";
-import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
-import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
-import PortalProfilePage from "@/pages/portal/PortalProfilePage";
-import { useState } from "react";
-import { AuthProvider } from "@/hooks/use-auth";
-import { AppProviders } from "@/components/ui/AppProviders";
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RBACProvider } from './components/auth/RBACProvider';
+import DashboardPage from './pages/DashboardPage';
+import ClientsPage from './pages/ClientsPage';
+import JobsPage from './pages/JobsPage';
+import EstimatesPage from './pages/EstimatesPage';
+import InvoicesPage from './pages/InvoicesPage';
+import PaymentsPage from './pages/PaymentsPage';
+import ProductsPage from './pages/ProductsPage';
+import TeamPage from './pages/TeamPage';
+import AutomationsPage from './pages/AutomationsPage';
+import SettingsPage from './pages/SettingsPage';
+import IntegrationsPage from './pages/IntegrationsPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ProfilePage from './pages/ProfilePage';
+import NotFoundPage from './pages/NotFoundPage';
+import PublicProfilePage from './pages/PublicProfilePage';
+import PhoneSettingsPage from "@/pages/PhoneSettingsPage";
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
-
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppProviders>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<AuthPage />} />
-              
-              {/* Client Portal Routes */}
-              <Route path="/portal/login" element={<PortalLoginPage />} />
-              <Route path="/portal/dashboard" element={
-                <ProtectedPortalRoute>
-                  <PortalDashboardPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/estimates" element={
-                <ProtectedPortalRoute>
-                  <PortalEstimatesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/invoices" element={
-                <ProtectedPortalRoute>
-                  <PortalInvoicesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/profile" element={
-                <ProtectedPortalRoute>
-                  <PortalProfilePage />
-                </ProtectedPortalRoute>
-              } />
-              
-              {/* Main App Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients" element={
-                <ProtectedRoute>
-                  <ClientsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients/:id" element={
-                <ProtectedRoute>
-                  <ClientDetailPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs" element={
-                <ProtectedRoute>
-                  <JobsPageOptimized />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs/:id" element={
-                <ProtectedRoute>
-                  <JobDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/products" element={
-                <ProtectedRoute>
-                  <ProductsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect" element={
-                <ProtectedRoute>
-                  <ConnectCenterPageOptimized />
-                </ProtectedRoute>
-              } />
-              <Route path="/schedule" element={
-                <ProtectedRoute>
-                  <SchedulePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/finance" element={
-                <ProtectedRoute>
-                  <FinancePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile-company" element={
-                <ProtectedRoute>
-                  <ProfileCompanyPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/integrations" element={
-                <ProtectedRoute>
-                  <IntegrationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/phone-numbers" element={
-                <ProtectedRoute>
-                  <PhoneNumbersPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-settings" element={
-                <ProtectedRoute>
-                  <AISettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/team" element={
-                <ProtectedRoute>
-                  <TeamManagementPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/automations" element={
-                <ProtectedRoute>
-                  <AutomationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-center" element={
-                <ProtectedRoute>
-                  <AiCenterPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/configuration" element={
-                <ProtectedRoute>
-                  <ConfigurationPage />
-                </ProtectedRoute>
-              } />
-            </Routes>
-            <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
-          </BrowserRouter>
-        </AppProviders>
-      </TooltipProvider>
+      <RBACProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/estimates" element={<EstimatesPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/team" element={<TeamPage />} />
+            <Route path="/automations" element={<AutomationsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/phone" element={<PhoneSettingsPage />} />
+            <Route path="/settings/integrations" element={<IntegrationsPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/public-profile/:id" element={<PublicProfilePage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Router>
+      </RBACProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
