@@ -41,7 +41,7 @@ export interface CompanySettings {
 }
 
 const defaultCompanySettings: CompanySettings = {
-  company_name: 'Fixlyfy Services Inc.',
+  company_name: '', // Changed from hardcoded value to empty string
   business_type: 'HVAC & Plumbing Services',
   company_address: '123 Business Park, Suite 456',
   company_city: 'San Francisco',
@@ -53,7 +53,7 @@ const defaultCompanySettings: CompanySettings = {
   company_website: 'https://www.fixlyfy.com',
   tax_id: 'XX-XXXXXXX',
   company_tagline: 'Smart Solutions for Field Service Businesses',
-  company_description: 'Fixlyfy Services provides professional HVAC, plumbing and electrical services to residential and commercial customers throughout the Bay Area. Our team of skilled technicians is available 24/7 for all your service needs.',
+  company_description: 'Professional HVAC, plumbing and electrical services to residential and commercial customers throughout the Bay Area. Our team of skilled technicians is available 24/7 for all your service needs.',
   service_radius: 50,
   service_zip_codes: '94103, 94104, 94105, 94107, 94108, 94109, 94110, 94111, 94112, 94114, 94115, 94116, 94117, 94118, 94121, 94122, 94123, 94124, 94127, 94129, 94130, 94131, 94132, 94133, 94134, 94158',
   business_hours: DEFAULT_BUSINESS_HOURS,
@@ -90,24 +90,31 @@ export const useCompanySettings = () => {
           (typeof data.business_hours === 'string' ? JSON.parse(data.business_hours) : data.business_hours) :
           DEFAULT_BUSINESS_HOURS;
           
-        console.log('Fetched company settings with custom_domain_name:', data.custom_domain_name);
+        console.log('Fetched company settings - company_name:', data.company_name);
         setSettings({ 
           ...defaultCompanySettings, 
           ...data,
-          business_hours: businessHours
+          business_hours: businessHours,
+          // Ensure company_name is not overridden if it exists in data
+          company_name: data.company_name || defaultCompanySettings.company_name
         });
       } else {
-        // Create default settings if none exist
+        // Create default settings if none exist, but with empty company name
+        const newSettings = {
+          ...defaultCompanySettings,
+          company_name: '' // Start with empty company name for new users
+        };
+        
         const { error: insertError } = await supabase
           .from('company_settings')
           .insert({
             user_id: user.id,
-            ...defaultCompanySettings,
+            ...newSettings,
             business_hours: JSON.stringify(DEFAULT_BUSINESS_HOURS)
           });
         
         if (!insertError) {
-          setSettings(defaultCompanySettings);
+          setSettings(newSettings);
         }
       }
     } catch (error) {
@@ -134,7 +141,7 @@ export const useCompanySettings = () => {
         business_hours: JSON.stringify(newSettings.business_hours)
       };
       
-      console.log('Sending to database:', dataToUpdate);
+      console.log('Sending to database - company_name:', dataToUpdate.company_name);
       
       const { error } = await supabase
         .from('company_settings')
@@ -151,7 +158,7 @@ export const useCompanySettings = () => {
       }
 
       setSettings(newSettings);
-      console.log('Company settings updated successfully with custom_domain_name:', newSettings.custom_domain_name);
+      console.log('Company settings updated successfully - company_name:', newSettings.company_name);
     } catch (error) {
       console.error('Error updating company settings:', error);
       toast.error('Failed to update company settings');
