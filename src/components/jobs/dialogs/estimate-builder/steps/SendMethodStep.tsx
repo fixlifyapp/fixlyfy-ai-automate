@@ -4,7 +4,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageSquare, Edit } from "lucide-react";
+import { Mail, MessageSquare } from "lucide-react";
 
 interface SendMethodStepProps {
   sendMethod: "email" | "sms";
@@ -53,28 +53,10 @@ export const SendMethodStep = ({
   onSend,
   onBack
 }: SendMethodStepProps) => {
-  const [useCustomContact, setUseCustomContact] = useState(false);
-
   // Check if manual input is valid
   const isManualEmailValid = sendMethod === "email" && isValidEmail(sendTo);
   const isManualPhoneValid = sendMethod === "sms" && isValidPhoneNumber(sendTo);
   const canSend = isManualEmailValid || isManualPhoneValid;
-
-  const handleUseClientContact = () => {
-    setUseCustomContact(false);
-    if (sendMethod === "email" && hasValidEmail) {
-      setSendTo(contactInfo.email);
-    } else if (sendMethod === "sms" && hasValidPhone) {
-      setSendTo(contactInfo.phone);
-    }
-    setValidationError("");
-  };
-
-  const handleUseCustomContact = () => {
-    setUseCustomContact(true);
-    setSendTo("");
-    setValidationError("");
-  };
 
   return (
     <div className="space-y-6">
@@ -93,7 +75,7 @@ export const SendMethodStep = ({
               Send via Email
             </Label>
             {hasValidEmail ? (
-              <p className="text-sm text-muted-foreground mt-1">{contactInfo.email}</p>
+              <p className="text-sm text-muted-foreground mt-1">Client email: {contactInfo.email}</p>
             ) : (
               <p className="text-sm text-amber-600 mt-1">No valid email available for this client</p>
             )}
@@ -111,7 +93,7 @@ export const SendMethodStep = ({
               Send via Text Message
             </Label>
             {hasValidPhone ? (
-              <p className="text-sm text-muted-foreground mt-1">{contactInfo.phone}</p>
+              <p className="text-sm text-muted-foreground mt-1">Client phone: {contactInfo.phone}</p>
             ) : (
               <p className="text-sm text-amber-600 mt-1">No valid phone number available for this client</p>
             )}
@@ -119,72 +101,34 @@ export const SendMethodStep = ({
           </div>
         </div>
       </RadioGroup>
-
-      {/* Contact method selection */}
-      {((sendMethod === "email" && hasValidEmail) || (sendMethod === "sms" && hasValidPhone)) && (
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Contact Options</Label>
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id="use-client-contact"
-                name="contact-option"
-                checked={!useCustomContact}
-                onChange={handleUseClientContact}
-                className="w-4 h-4"
-              />
-              <Label htmlFor="use-client-contact" className="text-sm cursor-pointer">
-                Use client's {sendMethod === "email" ? "email" : "phone number"}: {sendMethod === "email" ? contactInfo.email : contactInfo.phone}
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id="use-custom-contact"
-                name="contact-option"
-                checked={useCustomContact}
-                onChange={handleUseCustomContact}
-                className="w-4 h-4"
-              />
-              <Label htmlFor="use-custom-contact" className="text-sm cursor-pointer flex items-center gap-1">
-                <Edit size={14} />
-                Use different {sendMethod === "email" ? "email address" : "phone number"}
-              </Label>
-            </div>
-          </div>
-        </div>
-      )}
       
-      {/* Manual input field - always show if no valid contact info or if custom option is selected */}
-      {(useCustomContact || !((sendMethod === "email" && hasValidEmail) || (sendMethod === "sms" && hasValidPhone))) && (
-        <div className="space-y-2">
-          <Label htmlFor="send-to">
-            {sendMethod === "email" ? "Email Address" : "Phone Number"}
-          </Label>
-          <Input
-            id="send-to"
-            value={sendTo}
-            onChange={(e) => {
-              setSendTo(e.target.value);
-              setValidationError("");
-            }}
-            placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
-            className={validationError ? "border-red-500" : ""}
-          />
-          {validationError && (
-            <p className="text-sm text-red-600 mt-1">{validationError}</p>
-          )}
-          {sendMethod === "sms" && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Phone numbers will be automatically formatted for Telnyx delivery
-            </p>
-          )}
-          <p className="text-xs text-blue-600 mt-1">
-            Enter the {sendMethod === "email" ? "email address" : "phone number"} to send the estimate
+      {/* Always show editable field */}
+      <div className="space-y-2">
+        <Label htmlFor="send-to">
+          {sendMethod === "email" ? "Email Address" : "Phone Number"}
+        </Label>
+        <Input
+          id="send-to"
+          value={sendTo}
+          onChange={(e) => {
+            setSendTo(e.target.value);
+            setValidationError("");
+          }}
+          placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
+          className={validationError ? "border-red-500" : ""}
+        />
+        {validationError && (
+          <p className="text-sm text-red-600 mt-1">{validationError}</p>
+        )}
+        {sendMethod === "sms" && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Phone numbers will be automatically formatted for Telnyx delivery
           </p>
-        </div>
-      )}
+        )}
+        <p className="text-xs text-gray-500 mt-1">
+          💡 You can enter any {sendMethod === "email" ? "email address" : "phone number"} - this won't update the client's contact information
+        </p>
+      </div>
       
       <div className="pt-4 flex justify-end gap-2">
         <Button variant="outline" onClick={onBack}>
