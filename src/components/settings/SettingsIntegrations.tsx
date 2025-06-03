@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,39 +7,47 @@ import { Phone, MessageSquare, Mail, Zap, ExternalLink, Bot, Settings } from 'lu
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CompanyEmailSettings } from './CompanyEmailSettings';
-
 export const SettingsIntegrations = () => {
   // Get both Telnyx numbers and regular phone numbers
-  const { data: allNumbers = [], isLoading } = useQuery({
+  const {
+    data: allNumbers = [],
+    isLoading
+  } = useQuery({
     queryKey: ['phone-numbers-management'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-        body: { action: 'list' }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'list'
+        }
       });
-
       if (error) throw error;
       return data.phone_numbers || [];
     }
   });
-
-  const { data: telnyxConfig } = useQuery({
+  const {
+    data: telnyxConfig
+  } = useQuery({
     queryKey: ['telnyx-config'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-        body: { action: 'get_config' }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'get_config'
+        }
       });
-
       if (error) throw error;
       return data.config;
     }
   });
-
   const formatPhoneNumber = (phone: string) => {
     return phone.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Integrations</h2>
         <p className="text-muted-foreground">
@@ -54,10 +61,7 @@ export const SettingsIntegrations = () => {
             <Phone className="h-4 w-4" />
             Phone Numbers
           </TabsTrigger>
-          <TabsTrigger value="email" className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            Email
-          </TabsTrigger>
+          
           <TabsTrigger value="messaging" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Messaging
@@ -89,10 +93,7 @@ export const SettingsIntegrations = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <div>Loading your phone numbers...</div>
-              ) : allNumbers.length === 0 ? (
-                <div className="text-center py-8">
+              {isLoading ? <div>Loading your phone numbers...</div> : allNumbers.length === 0 ? <div className="text-center py-8">
                   <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h4 className="text-lg font-medium mb-2">No phone numbers configured</h4>
                   <p className="text-muted-foreground mb-4">
@@ -103,14 +104,8 @@ export const SettingsIntegrations = () => {
                       Go to Phone Numbers
                     </a>
                   </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {allNumbers.map((number: any) => (
-                    <div
-                      key={number.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
+                </div> : <div className="space-y-4">
+                  {allNumbers.map((number: any) => <div key={number.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <div className="flex items-center gap-3">
                           <span className="font-medium">
@@ -119,28 +114,20 @@ export const SettingsIntegrations = () => {
                           <Badge variant={number.status === 'active' ? 'default' : 'secondary'}>
                             {number.status}
                           </Badge>
-                          {(number.ai_dispatcher_enabled || number.configured_for_ai || number.configured_at) && (
-                            <Badge variant="outline" className="text-green-600">
+                          {(number.ai_dispatcher_enabled || number.configured_for_ai || number.configured_at) && <Badge variant="outline" className="text-green-600">
                               <Bot className="h-3 w-3 mr-1" />
                               AI Ready
-                            </Badge>
-                          )}
-                          {number.source === 'telnyx_table' && (
-                            <Badge variant="outline" className="text-blue-600">
+                            </Badge>}
+                          {number.source === 'telnyx_table' && <Badge variant="outline" className="text-blue-600">
                               <Zap className="h-3 w-3 mr-1" />
                               Telnyx
-                            </Badge>
-                          )}
+                            </Badge>}
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          {number.purchased_at && (
-                            <span>Added: {new Date(number.purchased_at).toLocaleDateString()}</span>
-                          )}
-                          {number.configured_at && (
-                            <span className="ml-4">
+                          {number.purchased_at && <span>Added: {new Date(number.purchased_at).toLocaleDateString()}</span>}
+                          {number.configured_at && <span className="ml-4">
                               AI Configured: {new Date(number.configured_at).toLocaleDateString()}
-                            </span>
-                          )}
+                            </span>}
                         </div>
                       </div>
                       
@@ -150,10 +137,8 @@ export const SettingsIntegrations = () => {
                           Configure
                         </a>
                       </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </CardContent>
           </Card>
 
@@ -169,10 +154,7 @@ export const SettingsIntegrations = () => {
                 <div>
                   <h4 className="font-medium">API Configuration</h4>
                   <p className="text-sm text-muted-foreground">
-                    {telnyxConfig?.api_key_configured ? 
-                      'Telnyx API key is configured and ready' : 
-                      'Telnyx API key needs to be configured'
-                    }
+                    {telnyxConfig?.api_key_configured ? 'Telnyx API key is configured and ready' : 'Telnyx API key needs to be configured'}
                   </p>
                 </div>
                 <Badge variant={telnyxConfig?.api_key_configured ? 'default' : 'destructive'}>
@@ -256,6 +238,5 @@ export const SettingsIntegrations = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
