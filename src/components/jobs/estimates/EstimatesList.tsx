@@ -1,12 +1,15 @@
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pencil, Eye, Copy, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Send, DollarSign, Eye } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
-import { Link } from "react-router-dom";
-import { useJobs } from "@/hooks/useJobs";
-import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
+import { SteppedEstimateBuilder } from "../dialogs/SteppedEstimateBuilder";
+import { EstimateSendDialog } from "../dialogs/estimate-builder/EstimateSendDialog";
+import { formatCurrency } from "@/lib/utils";
+import { Estimate } from "@/hooks/useEstimates";
 
 interface EstimatesListProps {
   jobId: string;
@@ -14,104 +17,128 @@ interface EstimatesListProps {
 }
 
 export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps) => {
-  const [editingEstimate, setEditingEstimate] = useState<string | null>(null);
-  const { jobs } = useJobs();
-  
-  const job = jobs.find(j => j.id === jobId);
   const { estimates, isLoading, convertEstimateToInvoice } = useEstimates(jobId);
+  const [editingEstimate, setEditingEstimate] = useState<Estimate | null>(null);
+  const [sendingEstimate, setSendingEstimate] = useState<Estimate | null>(null);
 
-  const jobEstimates = estimates ? estimates.filter(estimate => estimate.job_id === jobId) : [];
+  const handleEdit = (estimate: Estimate) => {
+    setEditingEstimate(estimate);
+  };
 
-  const handleConvertToInvoice = async (estimateId: string) => {
-    if (estimateId) {
-      const success = await convertEstimateToInvoice(estimateId);
-      if (success) {
-        onEstimateConverted?.();
-      }
+  const handleSend = (estimate: Estimate) => {
+    setSendingEstimate(estimate);
+  };
+
+  const handleConvert = async (estimate: Estimate) => {
+    const success = await convertEstimateToInvoice(estimate.id);
+    if (success && onEstimateConverted) {
+      onEstimateConverted();
     }
   };
 
-  const handleEdit = (estimateId: string) => {
-    setEditingEstimate(estimateId);
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'sent': return 'bg-blue-100 text-blue-800';
+      case 'accepted': return 'bg-green-100 text-green-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'converted': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  const handleEditClose = () => {
-    setEditingEstimate(null);
-  };
+  if (isLoading) {
+    return <div className="text-center py-4">Loading estimates...</div>;
+  }
 
-  const handleEstimateUpdated = () => {
-    setEditingEstimate(null);
-  };
-
-  // Find the estimate being edited
-  const estimateToEdit = editingEstimate ? jobEstimates.find(est => est.id === editingEstimate) : null;
+  if (estimates.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <div className="text-lg mb-2">No estimates yet</div>
+        <div className="text-sm">Create your first estimate to get started</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {isLoading ? (
-        <p>Loading estimates...</p>
-      ) : jobEstimates.length > 0 ? (
-        jobEstimates.map((estimate) => (
-          <Card key={estimate.id} className="border-fixlyfy-border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-semibold">{estimate.estimate_number}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Total: ${estimate.total.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Status: {estimate.status}
-                  </p>
+    <>
+      <div className="space-y-4">
+        {estimates.map((estimate) => (
+          <Card key={estimate.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-lg">
+                    {estimate.estimate_number || estimate.number}
+                  </CardTitle>
+                  <Badge className={getStatusColor(estimate.status)}>
+                    {estimate.status || 'draft'}
+                  </Badge>
                 </div>
-                <div className="space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(estimate.id)}
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Copy className="h-4 w-4 mr-2" />
-                    Duplicate
-                  </Button>
-                  {estimate.status === 'sent' && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleConvertToInvoice(estimate.id)}
-                      className="gap-2"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Convert to Invoice
-                    </Button>
-                  )}
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <div className="font-semibold text-lg">
+                      {formatCurrency(estimate.total || estimate.amount || 0)}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(estimate.date || estimate.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(estimate)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSend(estimate)}>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send
+                      </DropdownMenuItem>
+                      {estimate.status !== 'converted' && (
+                        <DropdownMenuItem onClick={() => handleConvert(estimate)}>
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Convert to Invoice
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-            </CardContent>
+            </CardHeader>
+            {estimate.notes && (
+              <CardContent className="pt-0">
+                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                  {estimate.notes}
+                </div>
+              </CardContent>
+            )}
           </Card>
-        ))
-      ) : (
-        <p>No estimates found for this job.</p>
-      )}
-      
-      {editingEstimate && job && estimateToEdit && (
-        <UnifiedDocumentBuilder
-          open={!!editingEstimate}
-          onOpenChange={handleEditClose}
-          documentType="estimate"
-          existingDocument={estimateToEdit}
-          jobId={jobId}
-          clientInfo={job.client}
-          onDocumentCreated={handleEstimateUpdated}
-        />
-      )}
-    </div>
+        ))}
+      </div>
+
+      {/* Edit Estimate Dialog */}
+      <SteppedEstimateBuilder
+        open={!!editingEstimate}
+        onOpenChange={(open) => !open && setEditingEstimate(null)}
+        jobId={jobId}
+        existingEstimate={editingEstimate || undefined}
+        onEstimateCreated={() => setEditingEstimate(null)}
+      />
+
+      {/* Send Estimate Dialog */}
+      <EstimateSendDialog
+        open={!!sendingEstimate}
+        onOpenChange={(open) => !open && setSendingEstimate(null)}
+        estimateNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
+        jobId={jobId}
+        onSuccess={() => setSendingEstimate(null)}
+        onCancel={() => setSendingEstimate(null)}
+        onSave={async () => true}
+      />
+    </>
   );
 };

@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Mail, MessageSquare, Loader2 } from "lucide-react";
-import { useEstimateSending } from "./hooks/useEstimateSending";
-import { Product } from "../../builder/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface EstimateSendDialogProps {
   open: boolean;
@@ -30,7 +30,6 @@ interface EstimateSendDialogProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   onSave: () => Promise<boolean>;
-  onAddWarranty?: (warranty: Product | null, note: string) => void;
 }
 
 export const EstimateSendDialog = ({ 
@@ -44,13 +43,12 @@ export const EstimateSendDialog = ({
   jobId,
   onSuccess,
   onCancel,
-  onSave,
-  onAddWarranty
+  onSave
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
   const [customNote, setCustomNote] = useState("");
-  const { sendEstimate, isProcessing } = useEstimateSending();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Use clientInfo or contactInfo, whichever is available
   const finalContactInfo = clientInfo || contactInfo || { name: '', email: '', phone: '' };
@@ -69,44 +67,104 @@ export const EstimateSendDialog = ({
     }
   };
 
+  const sendViaEmail = async () => {
+    try {
+      // Get estimate data first
+      const { data: estimates } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('estimate_number', estimateNumber)
+        .single();
+
+      if (!estimates) {
+        throw new Error('Estimate not found');
+      }
+
+      // Send via the existing send-estimate function
+      const { data, error } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          estimateId: estimates.id,
+          recipientEmail: sendTo,
+          sendMethod: 'email',
+          message: customNote,
+          subject: `Estimate ${estimateNumber} from your service provider`
+        }
+      });
+
+      if (error) throw error;
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Email send error:', error);
+      throw new Error(`Failed to send email: ${error.message}`);
+    }
+  };
+
+  const sendViaSMS = async () => {
+    try {
+      // Get estimate data first
+      const { data: estimates } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('estimate_number', estimateNumber)
+        .single();
+
+      if (!estimates) {
+        throw new Error('Estimate not found');
+      }
+
+      // Send via the existing send-estimate function
+      const { data, error } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          estimateId: estimates.id,
+          recipientPhone: sendTo,
+          sendMethod: 'sms',
+          message: customNote
+        }
+      });
+
+      if (error) throw error;
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      throw new Error(`Failed to send SMS: ${error.message}`);
+    }
+  };
+
   const handleSend = async () => {
     console.log("=== SEND ESTIMATE CLICKED ===");
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
     console.log("Custom note:", customNote);
-    console.log("Contact info:", finalContactInfo);
-    console.log("Job ID:", jobId);
 
     if (!sendTo.trim()) {
-      console.error("No recipient specified");
+      toast.error("Please enter a recipient");
       return;
     }
 
-    // Create enhanced custom note with warranty information if applicable
-    let enhancedNote = customNote;
-    if (!enhancedNote) {
-      enhancedNote = `Hi ${finalContactInfo.name}! Your estimate ${estimateNumber} is ready. Please review the details and let us know if you have any questions.`;
-    }
+    setIsProcessing(true);
 
-    const result = await sendEstimate({
-      sendMethod,
-      sendTo,
-      estimateNumber,
-      estimateDetails,
-      lineItems: lineItems || [],
-      contactInfo: finalContactInfo,
-      customNote: enhancedNote,
-      jobId,
-      onSave
-    });
-
-    if (result.success) {
-      console.log("Send successful, calling onSuccess");
-      if (onSuccess) {
-        onSuccess();
+    try {
+      let result;
+      
+      if (sendMethod === "email") {
+        result = await sendViaEmail();
+      } else {
+        result = await sendViaSMS();
       }
-    } else {
-      console.error("Send failed:", result.error);
+
+      if (result.success) {
+        toast.success(`Estimate sent successfully via ${sendMethod}!`);
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error: any) {
+      console.error("Send failed:", error);
+      toast.error(error.message || `Failed to send via ${sendMethod}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
