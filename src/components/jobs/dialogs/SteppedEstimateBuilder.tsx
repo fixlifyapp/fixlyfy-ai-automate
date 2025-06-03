@@ -106,10 +106,14 @@ export const SteppedEstimateBuilder = ({
 
     // Auto-save estimate after warranty step
     try {
-      const estimate = await saveDocumentChanges();
-      if (estimate && onEstimateCreated) {
+      const savedDocument = await saveDocumentChanges();
+      // Type guard to ensure we have an estimate
+      if (savedDocument && 'estimate_number' in savedDocument) {
+        const estimate = savedDocument as Estimate;
         setSavedEstimate(estimate);
-        onEstimateCreated(estimate);
+        if (onEstimateCreated) {
+          onEstimateCreated(estimate);
+        }
         toast.success("Estimate saved successfully!");
         
         // Move to step 3 automatically
