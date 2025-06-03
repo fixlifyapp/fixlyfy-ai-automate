@@ -257,9 +257,10 @@ serve(async (req) => {
       })
     }
 
-    // List user's numbers
+    // List user's numbers - ИСПРАВЛЯЕМ ЭТУ ЧАСТЬ
     else if (action === 'list') {
       if (!currentUserId) {
+        console.log('No user authenticated, returning empty list')
         return new Response(JSON.stringify({
           success: true,
           phone_numbers: []
@@ -270,18 +271,56 @@ serve(async (req) => {
 
       console.log(`Fetching numbers for user: ${currentUserId}`)
 
+      // Получаем номера пользователя из таблицы telnyx_phone_numbers
       const { data: userNumbers, error } = await supabaseClient
         .from('telnyx_phone_numbers')
         .select('*')
         .eq('user_id', currentUserId)
+        .not('status', 'eq', 'available')  // Исключаем доступные номера
         .order('purchased_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching user numbers:', error)
-        throw error
+        console.error('Error fetching user numbers from telnyx_phone_numbers:', error)
+        
+        // Если ошибка, пробуем поискать в обычной таблице phone_numbers
+        const { data: fallbackNumbers, error: fallbackError } = await supabaseClient
+          .from('phone_numbers')
+          .select('*')
+          .eq('purchased_by', currentUserId)
+          .order('purchased_at', { ascending: false })
+
+        if (fallbackError) {
+          console.error('Error fetching from fallback table:', fallbackError)
+          throw fallbackError
+        }
+
+        console.log(`Found ${fallbackNumbers?.length || 0} numbers in fallback table`)
+        
+        // Преобразуем формат из phone_numbers в telnyx_phone_numbers
+        const convertedNumbers = fallbackNumbers?.map(num => ({
+          id: num.id,
+          phone_number: num.phone_number,
+          status: num.status || 'active',
+          country_code: 'US',
+          area_code: num.phone_number.replace(/\D/g, '').slice(-10, -7),
+          purchased_at: num.purchased_at || num.created_at,
+          configured_at: num.ai_dispatcher_enabled ? num.updated_at : null,
+          webhook_url: null,
+          user_id: currentUserId,
+          monthly_cost: num.monthly_price || 1.00,
+          setup_cost: num.price || 1.00
+        })) || []
+
+        return new Response(JSON.stringify({
+          success: true,
+          phone_numbers: convertedNumbers
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
 
-      console.log(`Found ${userNumbers?.length || 0} numbers for user`)
+      console.log(`Found ${userNumbers?.length || 0} numbers for user in telnyx_phone_numbers table`)
+      console.log('User numbers:', userNumbers)
 
       return new Response(JSON.stringify({
         success: true,
