@@ -9,6 +9,9 @@ interface TelnyxPhoneNumberRequest {
   phone_number?: string;
   webhook_url?: string;
   config?: any;
+  locality?: string;
+  administrative_area?: string;
+  number_type?: string;
 }
 
 const corsHeaders = {
@@ -45,7 +48,7 @@ serve(async (req) => {
       console.log('TELNYX_API_KEY not configured')
     }
 
-    const { action, area_code, country_code, phone_number, webhook_url, config }: TelnyxPhoneNumberRequest = await req.json()
+    const { action, area_code, country_code, phone_number, webhook_url, config, locality, administrative_area, number_type }: TelnyxPhoneNumberRequest = await req.json()
 
     // Check if number is claimable
     if (action === 'check_claimable') {
@@ -106,8 +109,8 @@ serve(async (req) => {
           user_id: currentUserId,
           status: 'active',
           configured_at: new Date().toISOString(),
-          monthly_cost: 1.00,
-          setup_cost: 0.00 // Free claim
+          monthly_cost: 0.00,
+          setup_cost: 0.00
         })
         .eq('phone_number', phone_number)
         .is('user_id', null)
@@ -119,8 +122,8 @@ serve(async (req) => {
           phone_number: phone_number,
           status: 'available',
           capabilities: { voice: true, sms: true, mms: false },
-          monthly_price: 1.00,
-          price: 0.00, // Free claim
+          monthly_price: 0.00,
+          price: 0.00,
           purchased_by: currentUserId,
           purchased_at: new Date().toISOString(),
           ai_dispatcher_enabled: true,
@@ -249,9 +252,9 @@ serve(async (req) => {
       })
     }
 
-    // Search available numbers (real Telnyx numbers only)
+    // Search available numbers (real Telnyx numbers)
     if (action === 'search') {
-      console.log(`Searching for numbers with area_code: ${area_code}`)
+      console.log(`Searching for numbers in ${country_code || 'US'} with params:`, { area_code, locality, administrative_area, number_type })
       
       let telnyxNumbers = []
       if (telnyxApiKey) {
@@ -262,9 +265,32 @@ serve(async (req) => {
             'page[size]': '25'
           })
           
-          if (area_code) {
+          // Add voice feature for better compatibility
+          searchParams.append('filter[features][]', 'voice')
+          
+          // Handle different search types
+          if (number_type === 'toll_free') {
+            searchParams.append('filter[number_type]', 'toll_free')
+          } else if (number_type === 'local') {
+            searchParams.append('filter[number_type]', 'local')
+            if (area_code) {
+              searchParams.append('filter[national_destination_code]', area_code)
+            }
+          } else if (area_code) {
             searchParams.append('filter[national_destination_code]', area_code)
           }
+          
+          // Handle locality/city search
+          if (locality) {
+            searchParams.append('filter[locality]', locality)
+          }
+          
+          // Handle administrative area (province/state)
+          if (administrative_area) {
+            searchParams.append('filter[administrative_area]', administrative_area)
+          }
+
+          console.log('Telnyx API URL:', `https://api.telnyx.com/v2/available_phone_numbers?${searchParams}`)
 
           const response = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?${searchParams}`, {
             headers: {
@@ -275,20 +301,27 @@ serve(async (req) => {
 
           if (response.ok) {
             const data = await response.json()
+            console.log('Telnyx API response:', data)
             telnyxNumbers = data.data?.map((num: any) => ({
               phone_number: num.phone_number,
               region_information: num.region_information,
               features: num.features,
-              cost_information: num.cost_information,
+              cost_information: {
+                upfront_cost: 0.00, // Free for now
+                monthly_cost: 0.00  // Free for now
+              },
               source: 'telnyx'
             })) || []
+          } else {
+            const errorData = await response.json()
+            console.error('Telnyx API error:', errorData)
           }
         } catch (error) {
           console.log('Telnyx API error:', error)
         }
       }
 
-      console.log(`Found ${telnyxNumbers.length} real Telnyx numbers`)
+      console.log(`Found ${telnyxNumbers.length} Telnyx numbers`)
 
       return new Response(JSON.stringify({
         success: true,
@@ -298,7 +331,7 @@ serve(async (req) => {
       })
     }
 
-    // Purchase number (real Telnyx numbers only)
+    // Purchase number (real Telnyx numbers)
     else if (action === 'purchase') {
       if (!phone_number) {
         throw new Error('Phone number is required for purchase')
@@ -308,7 +341,7 @@ serve(async (req) => {
         throw new Error('User authentication required for purchase')
       }
 
-      console.log(`Purchasing real Telnyx number ${phone_number} for user ${currentUserId}`)
+      console.log(`Purchasing Telnyx number ${phone_number} for user ${currentUserId}`)
 
       if (telnyxApiKey) {
         console.log('Purchasing real Telnyx number')
@@ -326,6 +359,7 @@ serve(async (req) => {
         const purchaseData = await purchaseResponse.json()
 
         if (!purchaseResponse.ok) {
+          console.error('Telnyx purchase failed:', purchaseData)
           throw new Error(`Purchase failed: ${JSON.stringify(purchaseData)}`)
         }
 
@@ -340,8 +374,8 @@ serve(async (req) => {
             area_code: phone_number.slice(-10, -7),
             purchased_at: new Date().toISOString(),
             user_id: currentUserId,
-            monthly_cost: 1.00,
-            setup_cost: 1.00
+            monthly_cost: 0.00, // Free for now
+            setup_cost: 0.00    // Free for now
           })
 
         const { error: insertPhoneError } = await supabaseClient
@@ -351,8 +385,8 @@ serve(async (req) => {
             telnyx_phone_number_id: purchaseData.data.id,
             status: 'available',
             capabilities: { voice: true, sms: true, mms: false },
-            monthly_price: 1.00,
-            price: 1.00,
+            monthly_price: 0.00, // Free for now
+            price: 0.00,         // Free for now
             purchased_by: currentUserId,
             purchased_at: new Date().toISOString()
           })
@@ -363,10 +397,11 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
           success: true,
-          message: 'Real number ordered successfully',
+          message: 'Number purchased successfully for FREE',
           order_id: purchaseData.data.id,
           phone_number: phone_number,
-          type: 'real'
+          type: 'real',
+          cost: 0.00
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
@@ -393,8 +428,8 @@ serve(async (req) => {
           area_code: phone_number.slice(-10, -7),
           purchased_at: new Date().toISOString(),
           user_id: currentUserId,
-          monthly_cost: 1.00,
-          setup_cost: 1.00
+          monthly_cost: 0.00, // Free for now
+          setup_cost: 0.00    // Free for now
         })
 
       const { error: insertPhoneError } = await supabaseClient
@@ -403,8 +438,8 @@ serve(async (req) => {
           phone_number: phone_number,
           status: 'available',
           capabilities: { voice: true, sms: true, mms: false },
-          monthly_price: 1.00,
-          price: 1.00,
+          monthly_price: 0.00, // Free for now
+          price: 0.00,         // Free for now
           purchased_by: currentUserId,
           purchased_at: new Date().toISOString()
         })

@@ -30,7 +30,7 @@ interface ClaimableNumber {
 export function PhoneNumberPurchase() {
   const [searchType, setSearchType] = useState<'city' | 'area-code' | 'local' | 'toll-free'>('city');
   const [searchValue, setSearchValue] = useState('');
-  const [country, setCountry] = useState('US');
+  const [country, setCountry] = useState('CA');
   const [availableNumbers, setAvailableNumbers] = useState<AvailableNumber[]>([]);
   const [claimableNumber, setClaimableNumber] = useState<ClaimableNumber | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -94,6 +94,7 @@ export function PhoneNumberPurchase() {
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
       queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
       queryClient.invalidateQueries({ queryKey: ['phone-numbers-management'] });
+      queryClient.invalidateQueries({ queryKey: ['telnyx-phone-management'] });
     },
     onError: (error) => {
       console.error('Claim error:', error);
@@ -103,7 +104,7 @@ export function PhoneNumberPurchase() {
 
   // Search for available numbers
   const searchNumbers = async () => {
-    if (!searchValue.trim()) {
+    if (!searchValue.trim() && searchType !== 'toll-free' && searchType !== 'local') {
       toast.error('Please enter a search term');
       return;
     }
@@ -124,6 +125,7 @@ export function PhoneNumberPurchase() {
           break;
         case 'city':
           searchParams.locality = searchValue;
+          searchParams.administrative_area = searchValue;
           break;
         case 'local':
           searchParams.number_type = 'local';
@@ -182,12 +184,13 @@ export function PhoneNumberPurchase() {
     },
     onSuccess: (data) => {
       console.log('Successfully purchased:', data);
-      toast.success(`📞 Number ${data.phone_number} ordered successfully!`);
+      toast.success(`📞 Number ${data.phone_number} purchased successfully for $0!`);
       
       // Refresh all related queries
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
       queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
       queryClient.invalidateQueries({ queryKey: ['phone-numbers-management'] });
+      queryClient.invalidateQueries({ queryKey: ['telnyx-phone-management'] });
       
       // Remove the purchased number from available list
       setAvailableNumbers(prev => prev.filter(num => num.phone_number !== data.phone_number));
@@ -200,27 +203,39 @@ export function PhoneNumberPurchase() {
 
   const getCostDisplay = (number: AvailableNumber) => {
     return {
-      setup: number.cost_information?.upfront_cost || 1.00,
-      monthly: number.cost_information?.monthly_cost || 1.00
+      setup: 0.00, // Free for now until payment integration
+      monthly: 0.00 // Free for now until payment integration
     };
   };
 
   const getSearchPlaceholder = () => {
     switch (searchType) {
       case 'area-code':
-        return 'e.g., 212, 310, 415';
+        return country === 'CA' ? 'e.g., 416, 604, 514' : 'e.g., 212, 310, 415';
       case 'city':
-        return 'e.g., New York, Los Angeles, San Francisco';
+        return country === 'CA' ? 'e.g., Toronto, Vancouver, Montreal' : 'e.g., New York, Los Angeles, San Francisco';
       case 'local':
         return 'Optional: Enter area code for local numbers';
       case 'toll-free':
-        return 'Search toll-free numbers (800, 888, 877, etc.)';
+        return country === 'CA' ? 'Search toll-free numbers (800, 888, 877, etc.)' : 'Search toll-free numbers (800, 888, 877, etc.)';
       default:
         return 'Enter search term';
     }
   };
 
-  const cities = [
+  const canadianCities = [
+    'Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton',
+    'Mississauga', 'Winnipeg', 'Quebec City', 'Hamilton', 'Brampton',
+    'Surrey', 'Laval', 'Halifax', 'London', 'Markham', 'Vaughan',
+    'Gatineau', 'Longueuil', 'Burnaby', 'Saskatoon', 'Kitchener',
+    'Windsor', 'Regina', 'Richmond', 'Richmond Hill', 'Oakville',
+    'Burlington', 'Sherbrooke', 'Oshawa', 'Saguenay', 'Lévis',
+    'Barrie', 'Abbotsford', 'St. Catharines', 'Trois-Rivières',
+    'Cambridge', 'Coquitlam', 'Kingston', 'Whitby', 'Guelph',
+    'Kelowna', 'Thunder Bay', 'Sudbury', 'Waterloo', 'Brantford'
+  ];
+
+  const usCities = [
     'New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia',
     'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville',
     'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis',
@@ -231,6 +246,8 @@ export function PhoneNumberPurchase() {
     'Omaha', 'Oakland', 'Minneapolis', 'Tulsa', 'Arlington', 'Tampa',
     'New Orleans', 'Wichita', 'Cleveland', 'Bakersfield'
   ];
+
+  const cities = country === 'CA' ? canadianCities : usCities;
 
   return (
     <div className="space-y-6">
@@ -259,7 +276,7 @@ export function PhoneNumberPurchase() {
                     <div>This is your existing Telnyx number, ready to claim!</div>
                     <div className="flex items-center gap-4 mt-1">
                       <span className="font-medium">Setup: FREE</span>
-                      <span className="font-medium">Monthly: $1.00</span>
+                      <span className="font-medium">Monthly: FREE</span>
                       <div className="flex gap-1">
                         <Badge variant="outline" className="text-xs border-green-300">Voice</Badge>
                         <Badge variant="outline" className="text-xs border-green-300">SMS</Badge>
@@ -304,8 +321,8 @@ export function PhoneNumberPurchase() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="US">🇺🇸 United States</SelectItem>
                   <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                  <SelectItem value="US">🇺🇸 United States</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -385,7 +402,7 @@ export function PhoneNumberPurchase() {
 
           <Button 
             onClick={searchNumbers}
-            disabled={isSearching || (!searchValue && searchType !== 'toll-free')}
+            disabled={isSearching || (!searchValue && searchType !== 'toll-free' && searchType !== 'local')}
             className="w-full"
           >
             {isSearching ? 'Searching...' : 'Search Available Numbers'}
@@ -412,15 +429,18 @@ export function PhoneNumberPurchase() {
                           <Badge className="bg-blue-100 text-blue-800">
                             📞 Telnyx Number
                           </Badge>
+                          <Badge className="bg-green-100 text-green-800">
+                            💰 FREE
+                          </Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <div>
-                            {number.region_information?.[0]?.region_name || country === 'US' ? 'United States' : 'Canada'}, {' '}
+                            {number.region_information?.[0]?.region_name || (country === 'CA' ? 'Canada' : 'United States')}, {' '}
                             {number.region_information?.[0]?.rate_center || 'Local Area'}
                           </div>
                           <div className="flex items-center gap-4 mt-1">
-                            <span>Setup: ${cost.setup.toFixed(2)}</span>
-                            <span>Monthly: ${cost.monthly.toFixed(2)}</span>
+                            <span>Setup: FREE</span>
+                            <span>Monthly: FREE</span>
                             <div className="flex gap-1">
                               {number.features?.includes('voice') && (
                                 <Badge variant="outline" className="text-xs">Voice</Badge>
@@ -438,7 +458,7 @@ export function PhoneNumberPurchase() {
                         className="gap-2"
                       >
                         <Plus className="h-4 w-4" />
-                        {purchaseNumberMutation.isPending ? 'Purchasing...' : 'Purchase'}
+                        {purchaseNumberMutation.isPending ? 'Purchasing...' : 'Get for FREE'}
                       </Button>
                     </div>
                   );
@@ -471,6 +491,14 @@ export function PhoneNumberPurchase() {
               <div>
                 <strong>Toll-Free:</strong> 800, 888, 877, 866, 855, 844, 833 numbers
               </div>
+            </div>
+            <div className="mt-3 p-3 bg-white rounded border border-blue-200">
+              <div className="flex items-center gap-2 text-blue-800 font-medium mb-1">
+                <span>🇨🇦 Canada Support</span>
+              </div>
+              <p className="text-sm text-blue-700">
+                Now supporting Canadian phone numbers! All numbers are currently FREE while we integrate payment processing.
+              </p>
             </div>
           </div>
         </CardContent>
