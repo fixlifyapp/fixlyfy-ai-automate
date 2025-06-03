@@ -241,7 +241,6 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
         open={isEstimateDialogOpen}
         onOpenChange={setIsEstimateDialogOpen}
         jobId={jobId}
-        clientInfo={job?.client}
         onEstimateCreated={handleEstimateCreated}
       />
 

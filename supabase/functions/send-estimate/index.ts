@@ -1,7 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
-import { Resend } from 'npm:resend@2.0.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,11 +22,12 @@ serve(async (req) => {
       estimateId,
       sendMethod,
       recipientEmail,
+      recipientPhone,
       subject,
       message
     } = await req.json()
 
-    console.log('Send estimate request:', { estimateId, sendMethod, recipientEmail })
+    console.log('Send estimate request:', { estimateId, sendMethod, recipientEmail, recipientPhone })
 
     // Get estimate details
     const { data: estimate, error: estimateError } = await supabaseClient
@@ -54,8 +54,12 @@ serve(async (req) => {
       .eq('parent_id', estimateId)
 
     if (sendMethod === 'email') {
-      const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
-      
+      // Use Telnyx for email sending instead of Resend
+      const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
+      if (!telnyxApiKey) {
+        throw new Error('TELNYX_API_KEY not configured')
+      }
+
       const emailHtml = `
         <h2>Estimate ${estimate.estimate_number}</h2>
         <p>Dear ${estimate.jobs?.clients?.name || 'Valued Customer'},</p>
@@ -73,18 +77,57 @@ serve(async (req) => {
         <p>Thank you for choosing our services!</p>
       `
 
-      const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'estimates@fixlyfy.com',
-        to: [recipientEmail],
-        subject: subject || `Estimate ${estimate.estimate_number}`,
-        html: emailHtml
+      // Use Telnyx Email API
+      const response = await fetch('https://api.telnyx.com/v2/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${telnyxApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'estimates@fixlyfy.com',
+          to: [{ email: recipientEmail }],
+          subject: subject || `Estimate ${estimate.estimate_number}`,
+          html: emailHtml
+        })
       })
 
-      if (emailError) {
-        throw emailError
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.errors?.[0]?.detail || 'Failed to send email')
       }
 
-      console.log('Email sent successfully:', emailData)
+      console.log('Email sent successfully via Telnyx:', result)
+    } else if (sendMethod === 'sms') {
+      // Use Telnyx SMS API
+      const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
+      if (!telnyxApiKey) {
+        throw new Error('TELNYX_API_KEY not configured')
+      }
+
+      const smsMessage = `Hi ${estimate.jobs?.clients?.name || 'Customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimate.total}. ${message || 'Please contact us if you have any questions.'}`
+
+      const response = await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${telnyxApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: '+1555XXXXX', // Replace with your Telnyx phone number
+          to: recipientPhone,
+          text: smsMessage
+        })
+      })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.errors?.[0]?.detail || 'Failed to send SMS')
+      }
+
+      console.log('SMS sent successfully via Telnyx:', result)
     }
 
     return new Response(
