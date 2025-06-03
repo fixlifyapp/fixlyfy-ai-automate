@@ -3,9 +3,12 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Phone, Zap, Shield } from "lucide-react";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
-import { PhoneNumberPurchase } from "@/components/connect/PhoneNumberPurchase";
+import { TelnyxPhoneNumbersPage } from "@/components/telnyx/TelnyxPhoneNumbersPage";
+import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
+import { TelnyxSettings } from "@/components/telnyx/TelnyxSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { History, Bot } from "lucide-react";
 
 const PhoneNumbersPage = () => {
   const isMobile = useIsMobile();
@@ -14,7 +17,7 @@ const PhoneNumbersPage = () => {
     <PageLayout>
       <PageHeader
         title="Phone Numbers"
-        subtitle="Purchase and manage your business phone numbers with AI dispatcher"
+        subtitle="Complete AI-powered phone system with Telnyx - Manage numbers, configure AI, and track calls"
         icon={Phone}
         badges={[
           { text: "AI Powered", icon: Zap, variant: "fixlyfy" },
@@ -23,22 +26,39 @@ const PhoneNumbersPage = () => {
       />
       
       <div className="space-y-6">
-        <Tabs defaultValue="manage" className="w-full">
-          <TabsList className={`grid w-full grid-cols-2 ${isMobile ? 'h-10' : ''}`}>
-            <TabsTrigger value="manage" className={isMobile ? 'text-sm' : ''}>
-              Manage Numbers
+        <Tabs defaultValue="numbers" className="w-full">
+          <TabsList className={`grid w-full grid-cols-4 ${isMobile ? 'h-10' : ''}`}>
+            <TabsTrigger value="numbers" className={isMobile ? 'text-sm' : ''}>
+              <Phone size={16} className="mr-1" />
+              Numbers
             </TabsTrigger>
-            <TabsTrigger value="purchase" className={isMobile ? 'text-sm' : ''}>
-              Purchase New
+            <TabsTrigger value="calls" className={isMobile ? 'text-sm' : ''}>
+              <History size={16} className="mr-1" />
+              Call History
+            </TabsTrigger>
+            <TabsTrigger value="settings" className={isMobile ? 'text-sm' : ''}>
+              <Bot size={16} className="mr-1" />
+              AI Settings
+            </TabsTrigger>
+            <TabsTrigger value="legacy" className={isMobile ? 'text-sm' : ''}>
+              Legacy
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="manage" className="space-y-6">
-            <PhoneNumbersList />
+          <TabsContent value="numbers" className="space-y-6">
+            <TelnyxPhoneNumbersPage />
           </TabsContent>
           
-          <TabsContent value="purchase" className="space-y-6">
-            <PhoneNumberPurchase />
+          <TabsContent value="calls" className="space-y-6">
+            <TelnyxCallsView />
+          </TabsContent>
+          
+          <TabsContent value="settings" className="space-y-6">
+            <TelnyxSettings />
+          </TabsContent>
+          
+          <TabsContent value="legacy" className="space-y-6">
+            <PhoneNumbersList />
           </TabsContent>
         </Tabs>
       </div>

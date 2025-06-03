@@ -34,7 +34,6 @@ import PortalDashboardPage from "@/pages/portal/PortalDashboardPage";
 import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
 import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
 import PortalProfilePage from "@/pages/portal/PortalProfilePage";
-import TelnyxPage from "@/pages/TelnyxPage";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppProviders } from "@/components/ui/AppProviders";
@@ -172,11 +171,6 @@ const App = () => {
               <Route path="/configuration" element={
                 <ProtectedRoute>
                   <ConfigurationPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/telnyx" element={
-                <ProtectedRoute>
-                  <TelnyxPage />
                 </ProtectedRoute>
               } />
             </Routes>
