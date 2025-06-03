@@ -90,6 +90,21 @@ export const useDocumentOperations = ({
         throw new Error('Invalid job ID provided');
       }
       
+      // Validate job exists
+      console.log('🔍 Validating job exists...');
+      const { data: jobExists, error: jobError } = await supabase
+        .from('jobs')
+        .select('id')
+        .eq('id', jobId)
+        .single();
+      
+      if (jobError || !jobExists) {
+        console.error('❌ Job validation failed:', jobError);
+        throw new Error('Job not found. Please ensure the job exists.');
+      }
+      
+      console.log('✅ Job validated:', jobExists.id);
+      
       // Create document data - ensure job_id is always a string
       const baseDocumentData = {
         job_id: String(jobId), // Explicitly convert to string
@@ -126,6 +141,12 @@ export const useDocumentOperations = ({
           
         if (error) {
           console.error('❌ Error updating document:', error);
+          console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
           throw new Error(`Failed to update ${documentType}: ${error.message}`);
         }
         document = data;
@@ -147,7 +168,15 @@ export const useDocumentOperations = ({
             details: error.details,
             hint: error.hint
           });
-          throw new Error(`Failed to create ${documentType}: ${error.message}`);
+          
+          // Provide more specific error messages
+          if (error.code === '23503') {
+            throw new Error(`Job ID ${jobId} not found. Please ensure the job exists.`);
+          } else if (error.message.includes('row-level security')) {
+            throw new Error('Access denied. Please ensure you have permission to create estimates.');
+          } else {
+            throw new Error(`Failed to create ${documentType}: ${error.message}`);
+          }
         }
         document = data;
         console.log('✅ Document created:', document);
@@ -284,6 +313,8 @@ export const useDocumentOperations = ({
         toast.error(error.message);
       } else if (error.message.includes('invalid input syntax for type uuid')) {
         toast.error(`Invalid job ID format. Please refresh the page and try again.`);
+      } else if (error.message.includes('Job ID') && error.message.includes('not found')) {
+        toast.error(error.message);
       } else {
         toast.error(`Failed to save ${documentType}: ${error.message}`);
       }
