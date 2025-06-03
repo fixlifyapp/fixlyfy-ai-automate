@@ -70,15 +70,30 @@ export const SteppedEstimateBuilder = ({
   }, [open, existingEstimate, documentNumber, setDocumentNumber]);
 
   const handleSaveAndContinue = async () => {
-    console.log("Saving estimate before proceeding to send step...");
+    console.log("=== SAVE AND CONTINUE CLICKED ===");
+    console.log("Line items count:", lineItems.length);
+    console.log("Job ID:", jobId);
+    console.log("Document number:", documentNumber);
     
     if (lineItems.length === 0) {
+      console.log("No line items, showing error");
       toast.error("Please add at least one item to the estimate");
       return;
     }
 
+    if (!jobId) {
+      console.log("No job ID, showing error");
+      toast.error("Job ID is required to save estimate");
+      return;
+    }
+
+    console.log("Starting save process...");
+    
     try {
+      console.log("Calling saveDocumentChanges...");
       const estimate = await saveDocumentChanges();
+      
+      console.log("Save result:", estimate);
       
       if (estimate) {
         console.log("Estimate saved successfully:", estimate);
@@ -86,19 +101,25 @@ export const SteppedEstimateBuilder = ({
         setCurrentStep("send");
         toast.success("Estimate saved! Now choose how to send it.");
       } else {
+        console.log("Save returned null/undefined");
         toast.error("Failed to save estimate. Please try again.");
       }
     } catch (error: any) {
-      console.error("Error saving estimate:", error);
-      toast.error("Failed to save estimate: " + error.message);
+      console.error("Error in handleSaveAndContinue:", error);
+      toast.error("Failed to save estimate: " + (error.message || "Unknown error"));
     }
   };
 
   const handleSendSuccess = () => {
+    console.log("=== SEND SUCCESS ===");
     console.log("Estimate sent successfully, closing builder and calling callback");
+    
+    // Close the dialog
     onOpenChange(false);
     
+    // Call the callback to refresh the estimates list
     if (onEstimateCreated) {
+      console.log("Calling onEstimateCreated callback");
       onEstimateCreated();
     }
 
@@ -118,6 +139,7 @@ export const SteppedEstimateBuilder = ({
   };
 
   const handleDialogClose = () => {
+    console.log("Dialog close requested, current step:", currentStep);
     if (currentStep === "send") {
       // If we're in send step, go back to items
       setCurrentStep("items");
@@ -131,6 +153,14 @@ export const SteppedEstimateBuilder = ({
     items: existingEstimate ? "Edit Estimate" : "Create Estimate",
     send: "Send Estimate"
   };
+
+  console.log("Rendering SteppedEstimateBuilder:", {
+    open,
+    currentStep,
+    lineItemsCount: lineItems.length,
+    savedEstimate: !!savedEstimate,
+    isSubmitting
+  });
 
   return (
     <>

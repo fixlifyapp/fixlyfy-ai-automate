@@ -45,29 +45,37 @@ export const useDocumentOperations = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const saveDocumentChanges = useCallback(async (): Promise<Estimate | Invoice | null> => {
-    if (isSubmitting) return null;
+    if (isSubmitting) {
+      console.log("Already submitting, skipping");
+      return null;
+    }
     
     setIsSubmitting(true);
-    console.log('Saving document:', { 
-      documentType, 
-      lineItems: lineItems.length, 
-      total: calculateGrandTotal(), 
-      jobId: jobId
-    });
+    console.log('=== SAVE DOCUMENT CHANGES ===');
+    console.log('Document type:', documentType);
+    console.log('Line items count:', lineItems.length);
+    console.log('Total:', calculateGrandTotal());
+    console.log('Job ID:', jobId);
     
     try {
       // Check if user is authenticated
+      console.log('Checking authentication...');
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !user) {
+        console.error('Authentication error:', authError);
         throw new Error('Authentication required. Please log in to save documents.');
       }
+
+      console.log('User authenticated:', user.id);
 
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
       
       // Generate document number if not exists
       const documentNumber = formData.documentNumber || 
         `${documentType === 'estimate' ? 'EST' : 'INV'}-${Date.now()}`;
+      
+      console.log('Generated document number:', documentNumber);
       
       // Create document data - ensure job_id is always a string
       const baseDocumentData = {
@@ -164,12 +172,38 @@ export const useDocumentOperations = ({
         
         console.log('Line items saved successfully');
       }
+
+      // Try to log to job history (don't fail if this doesn't work)
+      try {
+        console.log('Attempting to log job history...');
+        const { error: historyError } = await supabase
+          .from('job_history')
+          .insert({
+            job_id: String(jobId),
+            entity_id: document.id,
+            entity_type: documentType,
+            type: `${documentType}-created`,
+            title: `${documentType === 'estimate' ? 'Estimate' : 'Invoice'} Created`,
+            description: `New ${documentType} ${documentNumber} created with total $${calculateGrandTotal()}`,
+            user_id: user.id,
+            user_name: user.email,
+            new_value: document
+          });
+
+        if (historyError) {
+          console.warn('Failed to log job history (non-critical):', historyError);
+        } else {
+          console.log('Job history logged successfully');
+        }
+      } catch (historyErr) {
+        console.warn('Job history logging failed (non-critical):', historyErr);
+      }
       
       toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} ${formData.documentId ? 'updated' : 'created'} successfully`);
       
       // Return standardized format
       if (documentType === 'estimate') {
-        return {
+        const result = {
           id: document.id,
           job_id: document.job_id,
           estimate_number: document.estimate_number,
@@ -182,8 +216,10 @@ export const useDocumentOperations = ({
           created_at: document.created_at,
           updated_at: document.updated_at
         };
+        console.log('Returning estimate result:', result);
+        return result;
       } else {
-        return {
+        const result = {
           id: document.id,
           job_id: document.job_id,
           invoice_number: document.invoice_number,
@@ -197,6 +233,8 @@ export const useDocumentOperations = ({
           created_at: document.created_at,
           updated_at: document.updated_at
         };
+        console.log('Returning invoice result:', result);
+        return result;
       }
     } catch (error: any) {
       console.error(`Error saving ${documentType}:`, error);
