@@ -114,9 +114,9 @@ serve(async (req) => {
             portalLoginToken = tokenData
             console.log('Successfully generated client portal login token')
             
-            // Create portal access link
-            const portalBaseUrl = companySettings?.client_portal_url || 'https://your-app.vercel.app/portal'
-            portalLoginLink = `${portalBaseUrl}/login?token=${portalLoginToken}`
+            // Create portal access link - use the current domain
+            const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app'
+            portalLoginLink = `${currentDomain}/portal/login?token=${portalLoginToken}`
             console.log('Portal login link created:', portalLoginLink)
           } else {
             console.error('Failed to generate portal token:', tokenError)
@@ -135,10 +135,10 @@ serve(async (req) => {
         throw new Error('Mailgun API key not configured. Please configure MAILGUN_API_KEY in Supabase secrets.')
       }
 
-      // Use consistent domain - fixlify.app (matching the working email function)
+      // Use consistent domain - fixlify.app (corrected spelling)
       const mailgunDomain = 'fixlify.app'
       
-      // Generate FROM email with improved logic
+      // Generate FROM email with improved logic - use custom_domain_name to build email
       let fromEmail = 'support@fixlify.app' // Default fallback
       
       // Priority 1: Use email_from_address if configured
@@ -146,7 +146,7 @@ serve(async (req) => {
         fromEmail = companySettings.email_from_address.trim()
         console.log('Using configured email_from_address:', fromEmail)
       }
-      // Priority 2: Use custom_domain_name to build email
+      // Priority 2: Use custom_domain_name to build email with fixlify.app
       else if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim()) {
         const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
         fromEmail = `${cleanDomain}@fixlify.app`
@@ -182,19 +182,19 @@ serve(async (req) => {
               <p style="font-size: 12px; color: #666; margin-top: 10px;">This link will expire in 30 minutes for security.</p>
             </div>`
         } else {
-          // Fallback portal section if token generation failed
-          const fallbackPortalUrl = companySettings?.client_portal_url || 'https://your-app.vercel.app/portal'
+          // Fallback portal section if token generation failed - use current domain
+          const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app'
           portalSectionHtml = `
             <div class="portal-section" style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
               <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
               <p>Access your client portal to view estimates and track service requests:</p>
-              <a href="${fallbackPortalUrl}/login" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold;">Access Client Portal</a>
+              <a href="${currentDomain}/portal/login" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold;">Access Client Portal</a>
               <p style="font-size: 12px; color: #666; margin-top: 10px;">Use your email address to log in.</p>
             </div>`
         }
       }
 
-      // Enhanced footer with company information
+      // Enhanced footer with company information from settings
       let footerHtml = `
         <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
           <p>Thank you for choosing ${companySettings?.company_name || 'our services'}!</p>`
