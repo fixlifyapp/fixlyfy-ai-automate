@@ -119,13 +119,13 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
               disabled={!isEditing}
               className="max-w-xs"
             />
-            <span className="text-muted-foreground">@fixlyfy.app</span>
+            <span className="text-muted-foreground">@fixlify.app</span>
           </div>
           {localSettings.custom_domain_name && (
             <div className="flex items-center gap-2 mt-2">
               <span className="text-sm text-muted-foreground">Your email address:</span>
               <Badge variant="secondary" className="bg-green-50 text-green-700">
-                {localSettings.custom_domain_name}@fixlyfy.app
+                {localSettings.custom_domain_name}@fixlify.app
               </Badge>
             </div>
           )}

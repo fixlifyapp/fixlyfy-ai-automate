@@ -77,10 +77,10 @@ export const SettingsCompany = () => {
                   placeholder="yourcompany"
                   className="max-w-xs"
                 />
-                <span className="text-muted-foreground">@fixlyfy.app</span>
+                <span className="text-muted-foreground">@fixlify.app</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                This will be your FROM address when sending emails (e.g., yourcompany@fixlyfy.app)
+                This will be your FROM address when sending emails (e.g., yourcompany@fixlify.app)
               </p>
             </div>
 

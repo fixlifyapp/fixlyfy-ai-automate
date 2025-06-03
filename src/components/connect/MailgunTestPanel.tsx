@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ export const MailgunTestPanel = () => {
   
   const [formData, setFormData] = useState({
     to: '',
-    subject: 'Test Email from Fixlyfy',
+    subject: 'Test Email from Fixlify',
     text: 'This is a test email sent via Mailgun integration to verify your email configuration is working properly.',
     html: '<h1>Test Email</h1><p>This is a test email sent via <strong>Mailgun integration</strong> to verify your email configuration is working properly.</p><p>If you received this email, your setup is working correctly!</p>'
   });
@@ -71,9 +72,9 @@ export const MailgunTestPanel = () => {
     // Use the same logic as in the send-email function
     if (settings.custom_domain_name && settings.custom_domain_name.trim() && settings.custom_domain_name !== 'support') {
       const cleanDomain = settings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-      return `${cleanDomain}@fixlyfy.app`;
+      return `${cleanDomain}@fixlify.app`;
     }
-    return 'support@fixlyfy.app';
+    return 'support@fixlify.app';
   };
 
   return (
@@ -86,7 +87,7 @@ export const MailgunTestPanel = () => {
             <h4 className="font-medium">Email Configuration Status</h4>
             <div className="mt-2">
               <p className="text-sm text-muted-foreground mb-2">
-                Domain: <strong>{useSandbox ? 'sandbox.mailgun.org' : 'fixlyfy.app'}</strong>
+                Domain: <strong>{useSandbox ? 'sandbox.mailgun.org' : 'fixlify.app'}</strong>
               </p>
               <p className="text-sm text-muted-foreground mb-2">
                 Your email address: <strong>{getEmailAddress()}</strong>
