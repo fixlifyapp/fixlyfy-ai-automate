@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatPhoneForDisplay } from "@/utils/phoneUtils";
+import { AddExistingNumberDialog } from "@/components/telnyx/AddExistingNumberDialog";
 
 interface AvailableNumber {
   phone_number: string;
@@ -24,6 +24,9 @@ export function PhoneNumberPurchase() {
   const [availableNumbers, setAvailableNumbers] = useState<AvailableNumber[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
+
+  // Add Existing Number Section
+  const [isAddExistingNumberDialogOpen, setIsAddExistingNumberDialogOpen] = useState(false);
 
   // Search for available numbers
   const searchNumbers = async () => {
@@ -127,6 +130,22 @@ export function PhoneNumberPurchase() {
 
   return (
     <div className="space-y-6">
+      {/* Add Existing Number Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Already Have a Telnyx Number?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            If you already purchased a Telnyx number, you can add it to your account here.
+          </p>
+          <AddExistingNumberDialog />
+        </CardContent>
+      </Card>
+
       {/* Search Section */}
       <Card>
         <CardHeader>
@@ -234,7 +253,16 @@ export function PhoneNumberPurchase() {
           <CardTitle>How It Works</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="space-y-3">
+              <h5 className="font-medium text-purple-600">📱 Existing Numbers</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• Already have a Telnyx number?</li>
+                <li>• Add it using "Add Existing Number"</li>
+                <li>• Connect it to your AI dispatcher</li>
+                <li>• Start handling calls immediately</li>
+              </ul>
+            </div>
             <div className="space-y-3">
               <h5 className="font-medium text-green-600">🧪 Test Numbers</h5>
               <ul className="space-y-1 text-sm">
@@ -255,14 +283,11 @@ export function PhoneNumberPurchase() {
             </div>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h5 className="font-medium text-blue-800 mb-2">🚀 Getting Started</h5>
-            <ol className="text-sm text-blue-700 space-y-1">
-              <li>1. Search for numbers in area code "437" to see the free test number</li>
-              <li>2. Purchase the test number to try the platform</li>
-              <li>3. Configure AI dispatcher for automated call handling</li>
-              <li>4. Test by calling your new number!</li>
-            </ol>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h5 className="font-medium text-purple-800 mb-2">💡 Pro Tip</h5>
+            <p className="text-sm text-purple-700">
+              If you already bought a Telnyx number (+14375249932), use "Add Existing Number" above to connect it to your account. This will give you full control over your real number with AI dispatcher capabilities.
+            </p>
           </div>
         </CardContent>
       </Card>
