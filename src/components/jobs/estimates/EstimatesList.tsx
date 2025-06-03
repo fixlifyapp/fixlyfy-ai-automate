@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Send, DollarSign, Eye } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
-import { SteppedEstimateBuilder } from "../dialogs/SteppedEstimateBuilder";
+import { SimpleEstimateBuilder } from "../dialogs/SimpleEstimateBuilder";
 import { EstimateSendDialog } from "../dialogs/estimate-builder/EstimateSendDialog";
 import { formatCurrency } from "@/lib/utils";
 import { Estimate } from "@/hooks/useEstimates";
@@ -14,9 +14,10 @@ import { Estimate } from "@/hooks/useEstimates";
 interface EstimatesListProps {
   jobId: string;
   onEstimateConverted?: () => void;
+  onViewEstimate?: (estimate: Estimate) => void;
 }
 
-export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps) => {
+export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: EstimatesListProps) => {
   const { estimates, isLoading, convertEstimateToInvoice } = useEstimates(jobId);
   const [editingEstimate, setEditingEstimate] = useState<Estimate | null>(null);
   const [sendingEstimate, setSendingEstimate] = useState<Estimate | null>(null);
@@ -27,6 +28,12 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
 
   const handleSend = (estimate: Estimate) => {
     setSendingEstimate(estimate);
+  };
+
+  const handleView = (estimate: Estimate) => {
+    if (onViewEstimate) {
+      onViewEstimate(estimate);
+    }
   };
 
   const handleConvert = async (estimate: Estimate) => {
@@ -75,6 +82,15 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleView(estimate)}
+                    className="gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Button>
                   <div className="text-right">
                     <div className="font-semibold text-lg">
                       {formatCurrency(estimate.total || estimate.amount || 0)}
@@ -121,7 +137,7 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
       </div>
 
       {/* Edit Estimate Dialog */}
-      <SteppedEstimateBuilder
+      <SimpleEstimateBuilder
         open={!!editingEstimate}
         onOpenChange={(open) => !open && setEditingEstimate(null)}
         jobId={jobId}
