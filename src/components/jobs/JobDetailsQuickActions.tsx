@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -242,7 +241,6 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
         onOpenChange={setIsEstimateDialogOpen}
         documentType="estimate"
         jobId={jobId}
-        clientInfo={job?.client}
         onDocumentCreated={handleEstimateCreated}
       />
 

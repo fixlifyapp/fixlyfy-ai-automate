@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -170,8 +169,16 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
         onOpenChange={(open) => !open && setSendingEstimate(null)}
         estimateNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
         jobId={jobId}
-        clientInfo={job?.client}
-        contactInfo={job?.client}
+        clientInfo={{
+          name: job?.client?.name || 'Client',
+          email: job?.client?.email || 'client@example.com',
+          phone: job?.client?.phone || '(555) 123-4567'
+        }}
+        contactInfo={{
+          name: job?.client?.name || 'Client',
+          email: job?.client?.email || 'client@example.com',
+          phone: job?.client?.phone || '(555) 123-4567'
+        }}
         onSuccess={() => setSendingEstimate(null)}
         onCancel={() => setSendingEstimate(null)}
         onSave={async () => true}

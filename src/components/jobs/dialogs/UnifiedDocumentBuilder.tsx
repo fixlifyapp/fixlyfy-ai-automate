@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -57,7 +56,7 @@ export const UnifiedDocumentBuilder = ({
     handleRemoveLineItem,
     handleUpdateLineItem,
     calculateSubtotal,
-    calculateTax,
+    calculateTotalTax,
     calculateGrandTotal,
     saveDocumentChanges,
     convertToInvoice
@@ -325,7 +324,7 @@ export const UnifiedDocumentBuilder = ({
                   />
                   <span className="text-xs">%</span>
                 </div>
-                <span>{formatCurrency(calculateTax())}</span>
+                <span>{formatCurrency(calculateTotalTax())}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg border-t pt-2">
                 <span>Total:</span>
