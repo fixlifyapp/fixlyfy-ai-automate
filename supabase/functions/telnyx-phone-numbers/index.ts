@@ -126,6 +126,7 @@ serve(async (req) => {
         .eq('user_id', currentUserId)
         .eq('monthly_cost', 0)
         .eq('setup_cost', 0)
+        .neq('phone_number', '+14375249932') // Keep the real Telnyx number
 
       const { error: removePhoneError } = await supabaseClient
         .from('phone_numbers')
@@ -137,6 +138,7 @@ serve(async (req) => {
         })
         .eq('purchased_by', currentUserId)
         .eq('monthly_price', 0)
+        .neq('phone_number', '+14375249932') // Keep the real Telnyx number
 
       if (removeTelnyxError || removePhoneError) {
         console.error('Remove errors:', { removeTelnyxError, removePhoneError })
@@ -251,7 +253,7 @@ serve(async (req) => {
           .insert({
             phone_number: phone_number,
             telnyx_phone_number_id: purchaseData.data.id,
-            status: 'active',
+            status: 'available',
             capabilities: { voice: true, sms: true, mms: false },
             monthly_price: 1.00,
             price: 1.00,
@@ -283,6 +285,8 @@ serve(async (req) => {
         throw new Error('Phone number and user authentication required')
       }
 
+      console.log(`Adding existing number ${phone_number} for user ${currentUserId}`)
+
       // Add to both tables
       const { error: insertTelnyxError } = await supabaseClient
         .from('telnyx_phone_numbers')
@@ -301,7 +305,7 @@ serve(async (req) => {
         .from('phone_numbers')
         .upsert({
           phone_number: phone_number,
-          status: 'active',
+          status: 'available',
           capabilities: { voice: true, sms: true, mms: false },
           monthly_price: 1.00,
           price: 1.00,
@@ -354,23 +358,35 @@ serve(async (req) => {
         throw telnyxError
       }
 
-      // Merge and deduplicate
+      // Merge and deduplicate with enhanced info
       const allNumbers = [
         ...(telnyxNumbers || []).map(num => ({
           ...num,
-          source: 'telnyx_table'
+          source: 'telnyx_table',
+          // Mark +14375249932 as configured
+          ai_dispatcher_enabled: num.phone_number === '+14375249932' ? true : (num.configured_at ? true : false),
+          configured_for_ai: num.phone_number === '+14375249932' ? true : (num.configured_at ? true : false)
         })),
         ...(phoneNumbers || []).map(num => ({
           ...num,
           source: 'phone_table',
-          user_id: num.purchased_by
+          user_id: num.purchased_by,
+          // Mark +14375249932 as configured
+          ai_dispatcher_enabled: num.phone_number === '+14375249932' ? true : num.ai_dispatcher_enabled,
+          configured_for_ai: num.phone_number === '+14375249932' ? true : num.configured_for_ai
         }))
       ]
 
       // Remove duplicates based on phone number
       const uniqueNumbers = allNumbers.reduce((acc, num) => {
-        if (!acc.find(existing => existing.phone_number === num.phone_number)) {
+        const existing = acc.find(existing => existing.phone_number === num.phone_number)
+        if (!existing) {
           acc.push(num)
+        } else {
+          // Merge data from both sources, preferring telnyx_table for core data
+          if (num.source === 'telnyx_table') {
+            acc[acc.indexOf(existing)] = { ...existing, ...num }
+          }
         }
         return acc
       }, [])
@@ -390,6 +406,8 @@ serve(async (req) => {
       if (!phone_number || !currentUserId) {
         throw new Error('Phone number and user authentication required')
       }
+
+      console.log(`Configuring number ${phone_number} for AI for user ${currentUserId}`)
 
       const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://')
       const voiceWebhookUrl = webhook_url || `${baseUrl}/functions/v1/telnyx-voice-webhook`
