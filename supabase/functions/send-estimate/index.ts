@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -170,8 +169,8 @@ serve(async (req) => {
       // Auto-generate email from company name
       const fromEmail = generateFromEmail(companyName)
       
-      // Generate professional subject line using COMPANY NAME (not client name)
-      const emailSubject = subject || `[${companyName}] - Estimate #${estimate.estimate_number}`
+      // Generate correct subject line format: "Estimate #{number} from {company name}"
+      const emailSubject = subject || `Estimate #${estimate.estimate_number} from ${companyName}`
 
       console.log('send-estimate - Final email configuration:')
       console.log('send-estimate - User ID:', userData.user.id)
@@ -333,10 +332,9 @@ serve(async (req) => {
               </div>
               
               <div class="content">
-                <div class="title">Your Estimate is Ready! 📋</div>
+                <div class="title">Hello ${client?.name || 'Valued Customer'}, Your Estimate is Ready! 📋</div>
                 
                 <div class="message">
-                  <p>Hi ${client?.name || 'Valued Customer'},</p>
                   <p>We've prepared your estimate and it's ready for your review. You can view all the details securely through our client portal.</p>
                 </div>
                 
@@ -496,10 +494,9 @@ serve(async (req) => {
               </div>
               
               <div class="content">
-                <div class="title">Your Estimate is Ready! 📋</div>
+                <div class="title">Hello ${client?.name || 'Valued Customer'}, Your Estimate is Ready! 📋</div>
                 
                 <div class="message">
-                  <p>Hi ${client?.name || 'Valued Customer'},</p>
                   <p>We've prepared your estimate and it's ready for your review.</p>
                 </div>
                 
