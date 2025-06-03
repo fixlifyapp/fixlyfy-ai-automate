@@ -1,3 +1,4 @@
+
 export interface PhoneNumber {
   id: string;
   phone_number: string;
@@ -13,17 +14,13 @@ export interface PhoneNumber {
   };
   status: string;
   monthly_price: number;
-  monthly_cost?: number; // Added for Telnyx compatibility
   purchased_by?: string;
   purchased_at?: string;
   assigned_to?: string;
   webhook_url?: string;
   ai_dispatcher_enabled?: boolean;
-  configured_for_ai?: boolean; // Added for AI configuration status
-  configured_at?: string; // Added for AI configuration timestamp
   connect_phone_number_arn?: string;
   connect_instance_id?: string;
-  source?: string; // Added to track data source (telnyx_table, phone_table, etc)
   created_at: string;
   updated_at: string;
 }

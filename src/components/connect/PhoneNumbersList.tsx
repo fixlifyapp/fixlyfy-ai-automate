@@ -56,7 +56,7 @@ export const PhoneNumbersList = () => {
         capabilities: typeof item.capabilities === 'string' 
           ? JSON.parse(item.capabilities) 
           : item.capabilities || { voice: true, sms: true, mms: false },
-        ai_dispatcher_enabled: item.ai_dispatcher_enabled || item.configured_for_ai || !!item.configured_at,
+        ai_dispatcher_enabled: item.ai_dispatcher_enabled || item.configured_for_ai || item.configured_at || false,
         // Handle both user_id and purchased_by fields
         purchased_by: item.user_id || item.purchased_by
       })) || [];
@@ -108,12 +108,7 @@ export const PhoneNumbersList = () => {
       // Update local state
       setPhoneNumbers(prev => prev.map(pn => 
         pn.id === phoneNumber.id 
-          ? { 
-              ...pn, 
-              ai_dispatcher_enabled: newStatus, 
-              configured_for_ai: newStatus, 
-              configured_at: newStatus ? new Date().toISOString() : undefined
-            }
+          ? { ...pn, ai_dispatcher_enabled: newStatus, configured_for_ai: newStatus, configured_at: newStatus ? new Date().toISOString() : null }
           : pn
       ));
 
@@ -220,7 +215,7 @@ export const PhoneNumbersList = () => {
           ) : (
             <div className="space-y-4">
               {phoneNumbers.map((phoneNumber) => {
-                const isConfigured = phoneNumber.ai_dispatcher_enabled || phoneNumber.configured_for_ai || !!phoneNumber.configured_at;
+                const isConfigured = phoneNumber.ai_dispatcher_enabled || phoneNumber.configured_for_ai || phoneNumber.configured_at;
                 const isTelnyx = phoneNumber.source === 'telnyx_table' || phoneNumber.phone_number === '+14375249932';
                 
                 return (
