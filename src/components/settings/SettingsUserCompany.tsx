@@ -129,7 +129,22 @@ export const SettingsUserCompany = () => {
         />
         
         <CompanyInfoCard 
-          companyInfo={currentCompanySettings}
+          companyInfo={{
+            company_name: currentCompanySettings.company_name || '',
+            business_type: currentCompanySettings.business_type || '',
+            company_address: currentCompanySettings.company_address || '',
+            company_city: currentCompanySettings.company_city || '',
+            company_state: currentCompanySettings.company_state || '',
+            company_zip: currentCompanySettings.company_zip || '',
+            company_country: currentCompanySettings.company_country || '',
+            company_phone: currentCompanySettings.company_phone || '',
+            company_email: currentCompanySettings.company_email || '',
+            company_website: currentCompanySettings.company_website || '',
+            company_description: currentCompanySettings.company_description || '',
+            custom_domain_name: currentCompanySettings.custom_domain_name || '',
+            email_from_name: currentCompanySettings.email_from_name || '',
+            email_from_address: currentCompanySettings.email_from_address || ''
+          }}
           onUpdate={updatePendingCompanySettings}
         />
         

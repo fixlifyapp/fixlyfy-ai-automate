@@ -27,7 +27,7 @@ interface CompanyInfo {
 
 interface CompanyInfoCardProps {
   companyInfo: CompanyInfo;
-  onUpdate: (updatedInfo: CompanyInfo) => void;
+  onUpdate: (updatedInfo: Partial<CompanyInfo>) => void;
   isLoading?: boolean;
 }
 
@@ -37,7 +37,25 @@ export const CompanyInfoCard = ({ companyInfo, onUpdate, isLoading }: CompanyInf
 
   const handleSave = async () => {
     try {
-      await onUpdate(formData);
+      // Map the form data to the correct database field names
+      const updateData = {
+        company_name: formData.company_name,
+        business_type: formData.business_type,
+        company_address: formData.company_address,
+        company_city: formData.company_city,
+        company_state: formData.company_state,
+        company_zip: formData.company_zip,
+        company_country: formData.company_country,
+        company_phone: formData.company_phone,
+        company_email: formData.company_email,
+        company_website: formData.company_website,
+        company_description: formData.company_description,
+        custom_domain_name: formData.custom_domain_name,
+        email_from_name: formData.email_from_name,
+        email_from_address: formData.email_from_address
+      };
+      
+      await onUpdate(updateData);
       setIsEditing(false);
       toast.success('Company information updated successfully');
     } catch (error) {
@@ -53,6 +71,12 @@ export const CompanyInfoCard = ({ companyInfo, onUpdate, isLoading }: CompanyInf
 
   const handleInputChange = (field: keyof CompanyInfo, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCustomDomainNameChange = (value: string) => {
+    // Clean the input to only allow letters, numbers, and hyphens
+    const cleanValue = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    handleInputChange('custom_domain_name', cleanValue);
   };
 
   return (
@@ -220,8 +244,8 @@ export const CompanyInfoCard = ({ companyInfo, onUpdate, isLoading }: CompanyInf
               <div className="flex items-center space-x-2">
                 <Input
                   id="custom_domain_name"
-                  value={formData.custom_domain_name}
-                  onChange={(e) => handleInputChange('custom_domain_name', e.target.value)}
+                  value={formData.custom_domain_name || ''}
+                  onChange={(e) => handleCustomDomainNameChange(e.target.value)}
                   disabled={!isEditing}
                   placeholder="nicksappliancerepair"
                 />
