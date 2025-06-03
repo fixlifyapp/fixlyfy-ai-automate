@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,26 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { InvoiceDialog } from "./dialogs/InvoiceDialog";
 import { InvoicePreviewWindow } from "./dialogs/InvoicePreviewWindow";
 import { formatCurrency } from "@/lib/utils";
+import { Invoice } from "@/hooks/useInvoices";
 
 interface JobInvoicesProps {
   jobId: string;
 }
-
-type Invoice = {
-  id: string;
-  invoice_number: string;
-  number: string; // Add alias for compatibility
-  created_at: string;
-  updated_at: string; // Add missing property
-  total: number;
-  amount_paid: number;
-  balance: number;
-  status: string;
-  notes?: string;
-  date?: string;
-  due_date?: string;
-  job_id: string;
-};
 
 export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -68,11 +54,15 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         throw error;
       }
       
-      // Add compatibility properties
-      const processedInvoices = (data || []).map(invoice => ({
+      // Add compatibility properties and ensure required fields
+      const processedInvoices: Invoice[] = (data || []).map(invoice => ({
         ...invoice,
         number: invoice.invoice_number, // Add alias
-        updated_at: invoice.updated_at || invoice.created_at // Ensure updated_at exists
+        updated_at: invoice.updated_at || invoice.created_at, // Ensure updated_at exists
+        date: invoice.date || invoice.created_at, // Ensure date exists
+        amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
+        notes: invoice.notes || ''
       }));
       
       setInvoices(processedInvoices);
