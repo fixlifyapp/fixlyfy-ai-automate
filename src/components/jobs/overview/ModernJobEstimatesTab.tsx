@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Send, Trash2, Edit, DollarSign } from "lucide-react";
+import { Plus, FileText, Send, Trash2, Edit, DollarSign, Eye } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
 import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
+import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
 interface ModernJobEstimatesTabProps {
@@ -18,6 +20,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEstimate, setEditingEstimate] = useState<any>(null);
+  const [previewEstimate, setPreviewEstimate] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -49,8 +53,15 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   };
 
   const handleEditEstimate = (estimate: any) => {
+    console.log('Setting estimate for editing:', estimate);
     setEditingEstimate(estimate);
     setShowCreateForm(true);
+  };
+
+  const handleViewEstimate = (estimate: any) => {
+    console.log('Setting estimate for preview:', estimate);
+    setPreviewEstimate(estimate);
+    setShowPreview(true);
   };
 
   const handleCreateNew = () => {
@@ -61,6 +72,11 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const handleDialogClose = () => {
     setShowCreateForm(false);
     setEditingEstimate(null);
+  };
+
+  const handlePreviewClose = () => {
+    setShowPreview(false);
+    setPreviewEstimate(null);
   };
 
   return (
@@ -141,6 +157,15 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleViewEstimate(estimate)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleEditEstimate(estimate)}
                       >
                         <Edit className="h-4 w-4 mr-1" />
@@ -202,6 +227,31 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         existingEstimate={editingEstimate}
         onEstimateCreated={handleEstimateCreated}
       />
+
+      {/* Estimate Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Estimate Preview - {previewEstimate?.estimate_number}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[80vh]">
+            {previewEstimate && (
+              <UnifiedDocumentPreview
+                documentType="estimate"
+                documentNumber={previewEstimate.estimate_number}
+                lineItems={[]} // TODO: Load actual line items
+                taxRate={8.5}
+                calculateSubtotal={() => previewEstimate.total * 0.92}
+                calculateTotalTax={() => previewEstimate.total * 0.08}
+                calculateGrandTotal={() => previewEstimate.total}
+                notes={previewEstimate.notes || ''}
+                issueDate={new Date(previewEstimate.created_at).toLocaleDateString()}
+                dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
