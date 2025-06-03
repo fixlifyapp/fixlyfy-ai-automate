@@ -117,7 +117,7 @@ serve(async (req) => {
       // Use correct domain - fixlify.app
       const mailgunDomain = 'fixlify.app'
       
-      // FIXED: Generate FROM email with correct priority logic
+      // FIXED: Use EXACT same logic as send-email function
       let fromEmail = 'support@fixlify.app' // Default fallback
       
       // Priority 1: Use custom_domain_name to build email with fixlify.app
@@ -126,11 +126,7 @@ serve(async (req) => {
         fromEmail = `${cleanDomain}@fixlify.app`
         console.log('Using custom domain name to build email:', fromEmail)
       }
-      // Priority 2: Use email_from_address if configured and no custom_domain_name
-      else if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
-        fromEmail = companySettings.email_from_address.trim()
-        console.log('Using configured email_from_address:', fromEmail)
-      }
+      // REMOVED: Priority 2 logic that was causing the issue
       else {
         console.log('Using default support email (no custom domain configured or custom domain is "support"):', fromEmail)
       }
