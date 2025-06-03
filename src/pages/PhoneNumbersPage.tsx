@@ -1,9 +1,8 @@
 
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { Phone, Zap, Shield } from "lucide-react";
+import { Phone, Shield } from "lucide-react";
 import { PhoneNumbersList } from "@/components/connect/PhoneNumbersList";
-import { TelnyxPhoneNumbersPage } from "@/components/telnyx/TelnyxPhoneNumbersPage";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 import { TelnyxSettings } from "@/components/telnyx/TelnyxSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,17 +16,17 @@ const PhoneNumbersPage = () => {
     <PageLayout>
       <PageHeader
         title="Phone Numbers"
-        subtitle="Complete AI-powered phone system with Telnyx - Manage numbers, configure AI, and track calls"
+        subtitle="Complete AI-powered phone system - Manage numbers, configure AI, and track calls"
         icon={Phone}
         badges={[
-          { text: "AI Powered", icon: Zap, variant: "fixlyfy" },
+          { text: "AI Powered", icon: Bot, variant: "fixlyfy" },
           { text: "Secure", icon: Shield, variant: "success" }
         ]}
       />
       
       <div className="space-y-6">
         <Tabs defaultValue="numbers" className="w-full">
-          <TabsList className={`grid w-full grid-cols-4 ${isMobile ? 'h-10' : ''}`}>
+          <TabsList className={`grid w-full grid-cols-3 ${isMobile ? 'h-10' : ''}`}>
             <TabsTrigger value="numbers" className={isMobile ? 'text-sm' : ''}>
               <Phone size={16} className="mr-1" />
               Numbers
@@ -40,13 +39,10 @@ const PhoneNumbersPage = () => {
               <Bot size={16} className="mr-1" />
               AI Settings
             </TabsTrigger>
-            <TabsTrigger value="legacy" className={isMobile ? 'text-sm' : ''}>
-              Legacy
-            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="numbers" className="space-y-6">
-            <TelnyxPhoneNumbersPage />
+            <PhoneNumbersList />
           </TabsContent>
           
           <TabsContent value="calls" className="space-y-6">
@@ -55,10 +51,6 @@ const PhoneNumbersPage = () => {
           
           <TabsContent value="settings" className="space-y-6">
             <TelnyxSettings />
-          </TabsContent>
-          
-          <TabsContent value="legacy" className="space-y-6">
-            <PhoneNumbersList />
           </TabsContent>
         </Tabs>
       </div>
