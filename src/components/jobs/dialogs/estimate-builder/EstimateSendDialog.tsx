@@ -44,7 +44,8 @@ export const EstimateSendDialog = ({
   jobId,
   onSuccess,
   onCancel,
-  onSave
+  onSave,
+  onAddWarranty
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
@@ -81,6 +82,12 @@ export const EstimateSendDialog = ({
       return;
     }
 
+    // Create enhanced custom note with warranty information if applicable
+    let enhancedNote = customNote;
+    if (!enhancedNote) {
+      enhancedNote = `Hi ${finalContactInfo.name}! Your estimate ${estimateNumber} is ready. Please review the details and let us know if you have any questions.`;
+    }
+
     const result = await sendEstimate({
       sendMethod,
       sendTo,
@@ -88,7 +95,7 @@ export const EstimateSendDialog = ({
       estimateDetails,
       lineItems: lineItems || [],
       contactInfo: finalContactInfo,
-      customNote,
+      customNote: enhancedNote,
       jobId,
       onSave
     });
@@ -165,6 +172,16 @@ export const EstimateSendDialog = ({
               rows={3}
               disabled={isProcessing}
             />
+          </div>
+
+          {/* Client Info Display */}
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h4 className="font-medium text-sm mb-2">Sending to:</h4>
+            <div className="text-sm text-gray-600">
+              <p><strong>{finalContactInfo.name}</strong></p>
+              <p>Email: {finalContactInfo.email || 'Not provided'}</p>
+              <p>Phone: {finalContactInfo.phone || 'Not provided'}</p>
+            </div>
           </div>
         </div>
 
