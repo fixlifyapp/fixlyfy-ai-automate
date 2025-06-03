@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Pencil, Eye, Copy, CheckCircle } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { Link } from "react-router-dom";
 import { useJobs } from "@/hooks/useJobs";
-import { EstimateBuilderDialog } from "../dialogs/estimate-builder/EstimateBuilderDialog";
+import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
 
 interface EstimatesListProps {
   jobId: string;
@@ -37,6 +38,13 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
   const handleEditClose = () => {
     setEditingEstimate(null);
   };
+
+  const handleEstimateUpdated = () => {
+    setEditingEstimate(null);
+  };
+
+  // Find the estimate being edited
+  const estimateToEdit = editingEstimate ? jobEstimates.find(est => est.id === editingEstimate) : null;
 
   return (
     <div className="space-y-4">
@@ -93,13 +101,15 @@ export const EstimatesList = ({ jobId, onEstimateConverted }: EstimatesListProps
         <p>No estimates found for this job.</p>
       )}
       
-      {editingEstimate && job && (
-        <EstimateBuilderDialog
+      {editingEstimate && job && estimateToEdit && (
+        <UnifiedDocumentBuilder
           open={!!editingEstimate}
           onOpenChange={handleEditClose}
-          job={job}
-          estimateId={editingEstimate}
-          onSuccess={handleEditClose}
+          documentType="estimate"
+          existingDocument={estimateToEdit}
+          jobId={jobId}
+          clientInfo={job.client}
+          onDocumentCreated={handleEstimateUpdated}
         />
       )}
     </div>
