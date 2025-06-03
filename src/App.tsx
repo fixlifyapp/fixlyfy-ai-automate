@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/use-auth";
 import { RBACProvider } from "@/components/auth/RBACProvider";
 import { ClientPortalAuthProvider } from "@/hooks/useClientPortalAuth";
+import { GlobalRealtimeProvider } from "@/contexts/GlobalRealtimeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Main App Pages
@@ -52,54 +53,56 @@ function App() {
             <Route path="/*" element={
               <AuthProvider>
                 <RBACProvider>
-                  <Routes>
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/" element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/jobs" element={
-                      <ProtectedRoute>
-                        <JobsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/jobs/:id" element={
-                      <ProtectedRoute>
-                        <JobDetailsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/clients" element={
-                      <ProtectedRoute>
-                        <ClientsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/finance" element={
-                      <ProtectedRoute>
-                        <FinancePage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/connect" element={
-                      <ProtectedRoute>
-                        <ConnectPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/team" element={
-                      <ProtectedRoute>
-                        <TeamManagementPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/settings" element={
-                      <ProtectedRoute>
-                        <SettingsPage />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/automations" element={
-                      <ProtectedRoute>
-                        <AutomationsPage />
-                      </ProtectedRoute>
-                    } />
-                  </Routes>
+                  <GlobalRealtimeProvider>
+                    <Routes>
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route path="/" element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/jobs" element={
+                        <ProtectedRoute>
+                          <JobsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/jobs/:id" element={
+                        <ProtectedRoute>
+                          <JobDetailsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/clients" element={
+                        <ProtectedRoute>
+                          <ClientsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/finance" element={
+                        <ProtectedRoute>
+                          <FinancePage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/connect" element={
+                        <ProtectedRoute>
+                          <ConnectPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/team" element={
+                        <ProtectedRoute>
+                          <TeamManagementPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/settings" element={
+                        <ProtectedRoute>
+                          <SettingsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/automations" element={
+                        <ProtectedRoute>
+                          <AutomationsPage />
+                        </ProtectedRoute>
+                      } />
+                    </Routes>
+                  </GlobalRealtimeProvider>
                 </RBACProvider>
               </AuthProvider>
             } />
