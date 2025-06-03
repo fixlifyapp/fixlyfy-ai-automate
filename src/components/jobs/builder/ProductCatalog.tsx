@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,13 +128,6 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
             No products found
           </div>
         )}
-      </div>
-      
-      <div className="p-3 border-t">
-        <Button variant="outline" size="sm" className="w-full gap-1">
-          <Plus size={14} />
-          Add New Product
-        </Button>
       </div>
     </div>
   );
