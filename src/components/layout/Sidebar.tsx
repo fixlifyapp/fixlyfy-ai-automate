@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Phone, Bot, Zap, UserCheck } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, Calendar, DollarSign, MessageSquare, BarChart3, Settings, Bot, Zap, UserCheck } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { TrackingWrapper } from "@/components/ui/TrackingWrapper";
 
@@ -43,11 +43,6 @@ export function Sidebar({
     label: 'Connect Center',
     icon: MessageSquare,
     href: '/connect',
-    color: "text-fixlyfy"
-  }, {
-    label: 'Telnyx',
-    icon: Phone,
-    href: '/telnyx',
     color: "text-fixlyfy"
   }, {
     label: 'AI Center',
