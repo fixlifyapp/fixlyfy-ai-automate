@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -379,12 +378,19 @@ export const useUnifiedDocumentBuilder = ({
     setLineItems(prev => prev.filter(item => item.id !== id));
   }, []);
 
-  const handleUpdateLineItem = useCallback((id: string, updates: Partial<LineItem>) => {
-    setLineItems(prev => prev.map(item => 
-      item.id === id 
-        ? { ...item, ...updates, total: (updates.quantity || item.quantity) * (updates.unitPrice || item.unitPrice) }
-        : item
-    ));
+  // Updated to match the expected signature: (id: string, field: string, value: any)
+  const handleUpdateLineItem = useCallback((id: string, field: string, value: any) => {
+    setLineItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, [field]: value };
+        // Recalculate total when quantity or unitPrice changes
+        if (field === 'quantity' || field === 'unitPrice') {
+          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+        }
+        return updatedItem;
+      }
+      return item;
+    }));
   }, []);
 
   const saveDocumentChanges = useCallback(async (): Promise<Estimate | Invoice | null> => {
