@@ -1,13 +1,13 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Shield, Clock, Wrench } from "lucide-react";
+import { TrendingUp, Shield } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
 
 interface UpsellItem {
   id: string;
@@ -26,32 +26,21 @@ interface EstimateUpsellStepProps {
 
 export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: EstimateUpsellStepProps) => {
   const [notes, setNotes] = useState("");
-  const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([
-    {
-      id: "warranty",
-      title: "Extended Warranty",
-      description: "1-year extended warranty on all parts and labor",
-      price: 150,
+  const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([]);
+  const { products: warrantyProducts, isLoading } = useProducts("Warranties");
+
+  // Convert warranty products to upsell items
+  useEffect(() => {
+    const warrantyUpsells = warrantyProducts.map(product => ({
+      id: product.id,
+      title: product.name,
+      description: product.description || "",
+      price: product.price,
       icon: Shield,
       selected: false
-    },
-    {
-      id: "maintenance",
-      title: "Annual Maintenance Plan",
-      description: "Yearly preventive maintenance visits",
-      price: 200,
-      icon: Wrench,
-      selected: false
-    },
-    {
-      id: "priority",
-      title: "Priority Service",
-      description: "24/7 priority emergency service calls",
-      price: 100,
-      icon: Clock,
-      selected: false
-    }
-  ]);
+    }));
+    setUpsellItems(warrantyUpsells);
+  }, [warrantyProducts]);
 
   const handleUpsellToggle = (itemId: string) => {
     setUpsellItems(prev => prev.map(item => 
@@ -67,42 +56,63 @@ export const EstimateUpsellStep = ({ onContinue, onBack, estimateTotal }: Estima
     onContinue(selectedUpsells, notes);
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Loading Warranties...</h3>
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mt-4"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">Enhance Your Service</h3>
-        <p className="text-muted-foreground">Add valuable services to provide complete protection</p>
+        <p className="text-muted-foreground">Add valuable warranty services to provide complete protection</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Recommended Add-ons
+            Available Warranties
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {upsellItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-start gap-3 flex-1">
-                  <Icon className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="font-medium">{item.title}</h4>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                    <p className="text-lg font-semibold text-green-600 mt-1">
-                      +${item.price.toFixed(2)}
-                    </p>
+          {upsellItems.length === 0 ? (
+            <div className="text-center py-8">
+              <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No warranty products available</p>
+              <p className="text-sm text-muted-foreground mt-1">Add warranty products to your catalog to offer them to customers.</p>
+            </div>
+          ) : (
+            upsellItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-start gap-3 flex-1">
+                    <Icon className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium">{item.title}</h4>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                      <p className="text-lg font-semibold text-green-600 mt-1">
+                        +${item.price.toFixed(2)}
+                      </p>
+                    </div>
                   </div>
+                  <Switch
+                    checked={item.selected}
+                    onCheckedChange={() => handleUpsellToggle(item.id)}
+                  />
                 </div>
-                <Switch
-                  checked={item.selected}
-                  onCheckedChange={() => handleUpsellToggle(item.id)}
-                />
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </CardContent>
       </Card>
 
