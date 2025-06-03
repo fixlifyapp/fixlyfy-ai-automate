@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PortalLayout } from '@/components/portal/PortalLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,14 +59,14 @@ const PortalEstimatesPage = () => {
     try {
       setLoading(true);
       
-      if (!user?.client_email) {
+      if (!user?.email) {
         console.error('No client email available');
         return;
       }
 
       // Set the client email in the session for RLS
       await supabase.rpc('set_client_portal_user_email', {
-        user_email: user.client_email
+        user_email: user.email
       });
 
       const { data: estimatesData, error } = await supabase

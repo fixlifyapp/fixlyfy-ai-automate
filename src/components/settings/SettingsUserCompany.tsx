@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useCompanySettings } from "@/hooks/useCompanySettings";
@@ -128,8 +129,8 @@ export const SettingsUserCompany = () => {
         />
         
         <CompanyInfoCard 
-          companySettings={currentCompanySettings}
-          updateCompanySettings={updatePendingCompanySettings}
+          companyInfo={currentCompanySettings}
+          onUpdate={updatePendingCompanySettings}
         />
         
         <BrandingCard 
