@@ -124,8 +124,9 @@ serve(async (req) => {
         });
         
         if (tokenData && !tokenError) {
-          const currentDomain = req.headers.get('origin') || 'https://mqppvcrlvsgrsqelglod.supabase.co';
-          portalLink = `${currentDomain}/portal/login?token=${tokenData}&jobId=${job.id}`;
+          // Use the custom domain for client portal
+          const portalDomain = 'https://hub.fixlify.app';
+          portalLink = `${portalDomain}/portal/login?token=${tokenData}&jobId=${job.id}`;
           
           // Create SMS message with portal link
           smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready ($${estimate.total?.toFixed(2) || '0.00'}). View and manage it here: ${portalLink}`;
