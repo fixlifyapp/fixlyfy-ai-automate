@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -335,18 +334,12 @@ export const EstimatePreviewWindow = ({
       </Dialog>
 
       <EstimateSendDialog
-        open={showSendDialog}
-        onOpenChange={setShowSendDialog}
+        isOpen={showSendDialog}
+        onClose={() => setShowSendDialog(false)}
+        estimateId={estimate.id}
         estimateNumber={estimate.estimate_number || estimate.number || ''}
+        total={estimate.total || estimate.amount || 0}
         contactInfo={clientInfo}
-        clientInfo={clientInfo}
-        jobId={estimate.job_id}
-        onSuccess={() => {
-          setShowSendDialog(false);
-          toast.success("Estimate sent successfully!");
-        }}
-        onCancel={() => setShowSendDialog(false)}
-        onSave={async () => true}
       />
     </>
   );

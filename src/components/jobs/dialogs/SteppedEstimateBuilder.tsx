@@ -327,15 +327,15 @@ export const SteppedEstimateBuilder = ({
 
       {/* Send Dialog */}
       <EstimateSendDialog
-        open={currentStep === "send"}
-        onOpenChange={(open) => !open && handleSendCancel()}
+        isOpen={currentStep === "send"}
+        onClose={() => handleSendCancel()}
+        estimateId={savedEstimate?.id || ''}
         estimateNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
-        jobId={jobId}
-        onSuccess={handleSendSuccess}
-        onCancel={handleSendCancel}
-        onSave={async () => {
-          // Estimate is already saved, just return true
-          return true;
+        total={calculateGrandTotal()}
+        contactInfo={{
+          name: contactInfo?.name || 'Client',
+          email: contactInfo?.email || '',
+          phone: contactInfo?.phone || ''
         }}
       />
     </>

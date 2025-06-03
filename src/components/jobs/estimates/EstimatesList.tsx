@@ -165,23 +165,16 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
 
       {/* Send Estimate Dialog */}
       <EstimateSendDialog
-        open={!!sendingEstimate}
-        onOpenChange={(open) => !open && setSendingEstimate(null)}
+        isOpen={!!sendingEstimate}
+        onClose={() => setSendingEstimate(null)}
+        estimateId={sendingEstimate?.id || ''}
         estimateNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
-        jobId={jobId}
-        clientInfo={{
-          name: job?.client?.name || 'Client',
-          email: job?.client?.email || 'client@example.com',
-          phone: job?.client?.phone || '(555) 123-4567'
-        }}
+        total={sendingEstimate?.total || sendingEstimate?.amount || 0}
         contactInfo={{
           name: job?.client?.name || 'Client',
-          email: job?.client?.email || 'client@example.com',
-          phone: job?.client?.phone || '(555) 123-4567'
+          email: job?.client?.email || '',
+          phone: job?.client?.phone || ''
         }}
-        onSuccess={() => setSendingEstimate(null)}
-        onCancel={() => setSendingEstimate(null)}
-        onSave={async () => true}
       />
     </>
   );
