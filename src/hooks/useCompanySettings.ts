@@ -41,7 +41,7 @@ export interface CompanySettings {
 }
 
 const defaultCompanySettings: CompanySettings = {
-  company_name: '', // Changed from hardcoded value to empty string
+  company_name: '', // Start with empty company name for new users
   business_type: 'HVAC & Plumbing Services',
   company_address: '123 Business Park, Suite 456',
   company_city: 'San Francisco',
@@ -72,13 +72,18 @@ export const useCompanySettings = () => {
   const fetchSettings = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error('No authenticated user found');
+        return;
+      }
+
+      console.log('Fetching company settings for user:', user.id);
 
       const { data, error } = await supabase
         .from('company_settings')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .single();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching company settings:', error);
@@ -90,16 +95,18 @@ export const useCompanySettings = () => {
           (typeof data.business_hours === 'string' ? JSON.parse(data.business_hours) : data.business_hours) :
           DEFAULT_BUSINESS_HOURS;
           
-        console.log('Fetched company settings - company_name:', data.company_name);
+        console.log('Successfully fetched company settings - company_name:', data.company_name);
+        console.log('Full company settings data:', data);
+        
         setSettings({ 
           ...defaultCompanySettings, 
           ...data,
-          business_hours: businessHours,
-          // Ensure company_name is not overridden if it exists in data
-          company_name: data.company_name || defaultCompanySettings.company_name
+          business_hours: businessHours
         });
       } else {
-        // Create default settings if none exist, but with empty company name
+        console.log('No company settings found, creating default settings for user:', user.id);
+        
+        // Create default settings if none exist
         const newSettings = {
           ...defaultCompanySettings,
           company_name: '' // Start with empty company name for new users
@@ -114,7 +121,10 @@ export const useCompanySettings = () => {
           });
         
         if (!insertError) {
+          console.log('Created new company settings for user:', user.id);
           setSettings(newSettings);
+        } else {
+          console.error('Error creating company settings:', insertError);
         }
       }
     } catch (error) {
@@ -132,6 +142,7 @@ export const useCompanySettings = () => {
       if (!user) throw new Error('No user found');
 
       console.log('updateSettings called with:', updates);
+      console.log('Current user ID:', user.id);
       
       const newSettings = { ...settings, ...updates };
       
@@ -141,16 +152,26 @@ export const useCompanySettings = () => {
         business_hours: JSON.stringify(newSettings.business_hours)
       };
       
-      console.log('Sending to database - company_name:', dataToUpdate.company_name);
+      console.log('Updating company settings in database for user:', user.id);
+      console.log('Data being sent to database:', dataToUpdate);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('company_settings')
         .upsert({
           user_id: user.id,
           ...dataToUpdate
-        });
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      console.log('Database update successful:', data);
 
       // Sync business hours with AI agent config if it exists
       if (updates.business_hours) {
@@ -159,6 +180,7 @@ export const useCompanySettings = () => {
 
       setSettings(newSettings);
       console.log('Company settings updated successfully - company_name:', newSettings.company_name);
+      toast.success('Company settings updated successfully');
     } catch (error) {
       console.error('Error updating company settings:', error);
       toast.error('Failed to update company settings');

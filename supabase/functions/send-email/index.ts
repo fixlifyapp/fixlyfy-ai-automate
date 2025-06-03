@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -70,6 +69,8 @@ serve(async (req) => {
       });
     }
 
+    console.log('Authenticated user for send-email:', userData.user.id);
+
     const { 
       to, 
       subject, 
@@ -84,7 +85,7 @@ serve(async (req) => {
 
     console.log('send-email function - Sending email request:', { to, subject, from, useSandbox });
 
-    // Get company settings to determine email configuration
+    // Get company settings for the CURRENT USER
     const { data: companySettings, error: settingsError } = await supabaseClient
       .from('company_settings')
       .select('*')
@@ -95,8 +96,9 @@ serve(async (req) => {
       console.error('send-email function - Error fetching company settings:', settingsError);
     }
 
-    console.log('send-email function - Company settings:', companySettings);
-    console.log('send-email function - company_name from DB:', companySettings?.company_name);
+    console.log('send-email function - Company settings query for user:', userData.user.id);
+    console.log('send-email function - Company settings found:', !!companySettings);
+    console.log('send-email function - company_name from DB:', companySettings?.company_name || 'No company name found');
 
     let fromEmail = from;
     let mailgunDomain = 'fixlify.app';
@@ -107,18 +109,18 @@ serve(async (req) => {
       console.log('send-email function - Using Mailgun sandbox domain for testing');
     }
     
-    // NEW: Auto-generate email from company name
+    // Auto-generate email from company name if not provided
     if (!fromEmail) {
-      const fromEmailAddress = generateFromEmail(companySettings?.company_name || 'Fixlify Services');
-      const fromName = companySettings?.company_name || 'Fixlify Services';
+      const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
+      const fromEmailAddress = generateFromEmail(companyName);
       
       if (useSandbox) {
-        fromEmail = `${fromName} <postmaster@${mailgunDomain}>`;
+        fromEmail = `${companyName} <postmaster@${mailgunDomain}>`;
       } else {
-        fromEmail = `${fromName} <${fromEmailAddress}>`;
+        fromEmail = `${companyName} <${fromEmailAddress}>`;
       }
       
-      console.log('send-email function - Auto-generated email from company name:', fromEmail);
+      console.log('send-email function - Auto-generated email from company name:', companyName, '-> email:', fromEmail);
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');

@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,12 +70,18 @@ export const MailgunTestPanel = () => {
     if (useSandbox) {
       return 'postmaster@sandbox.mailgun.org';
     }
-    // Use the new auto-generated email logic
-    return generateFromEmail(settings.company_name || 'Fixlify Services');
+    // Use the current company name from settings
+    const companyName = settings.company_name?.trim() || 'Fixlify Services';
+    return generateFromEmail(companyName);
   };
 
   const getFormattedCompanyName = () => {
-    return formatCompanyNameForEmail(settings.company_name || 'Fixlify Services');
+    const companyName = settings.company_name?.trim() || 'Fixlify Services';
+    return formatCompanyNameForEmail(companyName);
+  };
+
+  const getCurrentCompanyName = () => {
+    return settings.company_name?.trim() || 'Fixlify Services';
   };
 
   return (
@@ -95,7 +100,7 @@ export const MailgunTestPanel = () => {
                 Your email address: <strong>{getEmailAddress()}</strong>
               </p>
               <p className="text-sm text-muted-foreground mb-2">
-                Company name: <strong>{settings.company_name || 'Not set'}</strong>
+                Company name: <strong>{getCurrentCompanyName()}</strong>
               </p>
               <p className="text-sm text-muted-foreground mb-2">
                 Formatted for email: <strong>{getFormattedCompanyName()}</strong>
@@ -128,7 +133,9 @@ export const MailgunTestPanel = () => {
               Update your company name in Company Settings to change your email address.
             </p>
             <div className="text-sm text-blue-700">
-              <p><strong>Example:</strong></p>
+              <p><strong>Current setup:</strong></p>
+              <p>Company: "{getCurrentCompanyName()}" → Email: "{getEmailAddress()}"</p>
+              <p><strong>Examples:</strong></p>
               <p>"Fixlify AI Services" → "fixlify_ai_services@fixlify.app"</p>
               <p>"Bob's Plumbing & HVAC" → "bobs_plumbing_hvac@fixlify.app"</p>
             </div>

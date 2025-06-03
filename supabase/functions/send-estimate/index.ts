@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -39,11 +40,39 @@ serve(async (req) => {
   }
 
   try {
+    // Get the user from the authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header provided');
+    }
+
     // Use service role client for database access to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    // Also create a client with the user's token to get user info
+    const supabaseUser = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    )
+
+    // Get the current user
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !userData.user) {
+      console.error('Error getting user:', userError);
+      throw new Error('Failed to authenticate user');
+    }
+
+    console.log('Authenticated user ID:', userData.user.id);
 
     const {
       estimateId,
@@ -80,19 +109,20 @@ serve(async (req) => {
 
     console.log('Found estimate:', estimate.estimate_number)
 
-    // Get company settings using admin client
+    // Get company settings for the CURRENT USER using admin client
     const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
-      .limit(1)
+      .eq('user_id', userData.user.id)
       .maybeSingle()
 
     if (settingsError) {
       console.error('Company settings error:', settingsError)
     }
 
+    console.log('Company settings query for user:', userData.user.id)
     console.log('Company settings found:', !!companySettings)
-    console.log('Company name from DB:', companySettings?.company_name)
+    console.log('Company name from DB:', companySettings?.company_name || 'No company name found')
 
     const client = estimate.jobs?.clients
     const job = estimate.jobs
@@ -144,23 +174,23 @@ serve(async (req) => {
       // Use correct domain - fixlify.app
       const mailgunDomain = 'fixlify.app'
       
-      // NEW: Auto-generate email from company name
-      const fromEmail = generateFromEmail(companySettings?.company_name || 'Fixlify Services')
-      const fromName = companySettings?.company_name || 'Fixlify Services'
+      // Get company name - use the one from the current user's settings, fallback to default
+      const companyName = companySettings?.company_name?.trim() || 'Fixlify Services'
       
-      // NEW: Generate professional subject line
-      const emailSubject = subject || generateEmailSubject(
-        companySettings?.company_name || 'Fixlify Services',
-        estimate.estimate_number
-      )
+      // Auto-generate email from company name
+      const fromEmail = generateFromEmail(companyName)
+      
+      // Generate professional subject line
+      const emailSubject = subject || generateEmailSubject(companyName, estimate.estimate_number)
 
       console.log('Final email configuration:')
+      console.log('User ID:', userData.user.id)
+      console.log('Company name used:', companyName)
       console.log('Mailgun domain:', mailgunDomain)
       console.log('From email:', fromEmail)
-      console.log('From name:', fromName)
       console.log('Subject:', emailSubject)
 
-      // UPDATED: Create simple HTML email template focused on portal access
+      // Create email template
       let emailHtml = ''
       
       if (client?.email && portalLoginToken && portalLoginLink) {
@@ -188,7 +218,7 @@ serve(async (req) => {
           <body>
             <div class="container">
               <div class="header">
-                <div class="company-name">${fromName}</div>
+                <div class="company-name">${companyName}</div>
                 <div class="title">Your Estimate is Ready!</div>
               </div>
               
@@ -202,7 +232,7 @@ serve(async (req) => {
               <p class="security-note">This secure link will expire in 30 minutes for your protection.</p>
               
               <div class="footer">
-                <p>Thank you for choosing ${fromName}!</p>
+                <p>Thank you for choosing ${companyName}!</p>
                 ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
                 ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
               </div>
@@ -234,7 +264,7 @@ serve(async (req) => {
           <body>
             <div class="container">
               <div class="header">
-                <div class="company-name">${fromName}</div>
+                <div class="company-name">${companyName}</div>
                 <div class="title">Your Estimate is Ready!</div>
               </div>
               
@@ -247,7 +277,7 @@ serve(async (req) => {
               <a href="${currentDomain}/portal/login" class="portal-button">Access Client Portal</a>
               
               <div class="footer">
-                <p>Thank you for choosing ${fromName}!</p>
+                <p>Thank you for choosing ${companyName}!</p>
                 ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
                 ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
               </div>
@@ -260,7 +290,7 @@ serve(async (req) => {
       // Use Mailgun API
       const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`
       console.log('Mailgun send URL:', mailgunUrl)
-      console.log('From:', `${fromName} <${fromEmail}>`)
+      console.log('From:', `${companyName} <${fromEmail}>`)
       console.log('To:', recipientEmail)
 
       const response = await fetch(mailgunUrl, {
@@ -270,7 +300,7 @@ serve(async (req) => {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: new URLSearchParams({
-          from: `${fromName} <${fromEmail}>`,
+          from: `${companyName} <${fromEmail}>`,
           to: recipientEmail,
           subject: emailSubject,
           html: emailHtml

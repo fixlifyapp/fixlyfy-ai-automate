@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +36,15 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
     
     setIsSaving(true);
     try {
-      console.log('Saving company info section with company_name:', localSettings.company_name);
+      console.log('Saving company info section with data:', localSettings);
+      console.log('Specifically, company_name:', localSettings.company_name);
+      
       await updateCompanySettings(localSettings);
       setHasChanges(false);
       toast.success('Company information saved successfully');
+      
+      // Log the update for debugging
+      console.log('Company information saved successfully. New company name:', localSettings.company_name);
     } catch (error) {
       console.error('Error saving company settings:', error);
       toast.error('Failed to save company information');
@@ -109,7 +113,7 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
             placeholder="Enter your company name"
           />
           <p className="text-xs text-muted-foreground">
-            This will be used to generate your email address automatically
+            This will be used to generate your email address automatically and as the sender name for emails
           </p>
         </div>
         <div className="space-y-2">
@@ -132,7 +136,7 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
                 <h4 className="font-medium text-blue-800">Automatic Email Generation</h4>
                 <div className="mt-2 space-y-2">
                   <p className="text-sm text-blue-700">
-                    Your email address is automatically generated from your company name:
+                    Your email address and sender name are automatically generated from your company name:
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-blue-700">Email address:</span>
@@ -141,7 +145,13 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-700">Formatted name:</span>
+                    <span className="text-sm text-blue-700">Sender name:</span>
+                    <Badge variant="secondary" className="bg-green-50 text-green-700">
+                      {localSettings.company_name?.trim() || 'Fixlify Services'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-700">Formatted for email:</span>
                     <code className="bg-white px-2 py-1 rounded text-xs">
                       {getFormattedName()}
                     </code>
