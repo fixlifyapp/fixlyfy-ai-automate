@@ -45,7 +45,16 @@ export const useEstimates = (jobId?: string) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      setEstimates(data || []);
+      
+      // Map the data to include the alias properties
+      const mappedData = (data || []).map(item => ({
+        ...item,
+        number: item.estimate_number, // Add alias
+        amount: item.total, // Add alias
+        date: item.date || item.created_at, // Ensure date is present
+      }));
+      
+      setEstimates(mappedData);
     } catch (error: any) {
       console.error('Error fetching estimates:', error);
       toast.error('Failed to fetch estimates');

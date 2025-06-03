@@ -14,16 +14,21 @@ interface EstimateSendDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   estimateNumber: string;
-  estimateDetails: any;
-  lineItems: any[];
-  contactInfo: {
+  estimateDetails?: any;
+  lineItems?: any[];
+  contactInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  clientInfo?: {
     name: string;
     email: string;
     phone: string;
   };
   jobId?: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+  onSuccess?: () => void;
+  onCancel?: () => void;
   onSave: () => Promise<boolean>;
   onAddWarranty?: (warranty: Product | null, note: string) => void;
 }
@@ -35,6 +40,7 @@ export const EstimateSendDialog = ({
   estimateDetails,
   lineItems,
   contactInfo,
+  clientInfo,
   jobId,
   onSuccess,
   onCancel,
@@ -45,17 +51,20 @@ export const EstimateSendDialog = ({
   const [customNote, setCustomNote] = useState("");
   const { sendEstimate, isProcessing } = useEstimateSending();
 
+  // Use clientInfo or contactInfo, whichever is available
+  const finalContactInfo = clientInfo || contactInfo || { name: '', email: '', phone: '' };
+
   // Set default recipient when dialog opens
   useEffect(() => {
-    if (open && contactInfo) {
-      setSendTo(sendMethod === "email" ? (contactInfo.email || "") : (contactInfo.phone || ""));
+    if (open && finalContactInfo) {
+      setSendTo(sendMethod === "email" ? (finalContactInfo.email || "") : (finalContactInfo.phone || ""));
     }
-  }, [open, sendMethod, contactInfo]);
+  }, [open, sendMethod, finalContactInfo]);
 
   const handleSendMethodChange = (value: "email" | "sms") => {
     setSendMethod(value);
-    if (contactInfo) {
-      setSendTo(value === "email" ? (contactInfo.email || "") : (contactInfo.phone || ""));
+    if (finalContactInfo) {
+      setSendTo(value === "email" ? (finalContactInfo.email || "") : (finalContactInfo.phone || ""));
     }
   };
 
@@ -64,7 +73,7 @@ export const EstimateSendDialog = ({
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
     console.log("Custom note:", customNote);
-    console.log("Contact info:", contactInfo);
+    console.log("Contact info:", finalContactInfo);
     console.log("Job ID:", jobId);
 
     if (!sendTo.trim()) {
@@ -77,8 +86,8 @@ export const EstimateSendDialog = ({
       sendTo,
       estimateNumber,
       estimateDetails,
-      lineItems,
-      contactInfo,
+      lineItems: lineItems || [],
+      contactInfo: finalContactInfo,
       customNote,
       jobId,
       onSave
@@ -86,7 +95,9 @@ export const EstimateSendDialog = ({
 
     if (result.success) {
       console.log("Send successful, calling onSuccess");
-      onSuccess();
+      if (onSuccess) {
+        onSuccess();
+      }
     } else {
       console.error("Send failed:", result.error);
     }
@@ -94,7 +105,9 @@ export const EstimateSendDialog = ({
 
   const handleCancel = () => {
     console.log("Send cancelled");
-    onCancel();
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   return (
