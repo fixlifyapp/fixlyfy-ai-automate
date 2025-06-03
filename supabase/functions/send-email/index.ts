@@ -7,6 +7,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Email utility functions
+const formatCompanyNameForEmail = (companyName: string): string => {
+  if (!companyName || typeof companyName !== 'string') {
+    return 'support';
+  }
+
+  return companyName
+    .toLowerCase()
+    .trim()
+    .replace(/[\s\-&+.,()]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 30)
+    || 'support';
+};
+
+const generateFromEmail = (companyName: string): string => {
+  const formattedName = formatCompanyNameForEmail(companyName);
+  return `${formattedName}@fixlify.app`;
+};
+
 interface SendEmailRequest {
   to: string;
   subject: string;
@@ -62,7 +84,7 @@ serve(async (req) => {
 
     console.log('send-email function - Sending email request:', { to, subject, from, useSandbox });
 
-    // Get company settings to determine custom domain name
+    // Get company settings to determine email configuration
     const { data: companySettings, error: settingsError } = await supabaseClient
       .from('company_settings')
       .select('*')
@@ -74,7 +96,7 @@ serve(async (req) => {
     }
 
     console.log('send-email function - Company settings:', companySettings);
-    console.log('send-email function - custom_domain_name from DB:', companySettings?.custom_domain_name);
+    console.log('send-email function - company_name from DB:', companySettings?.company_name);
 
     let fromEmail = from;
     let mailgunDomain = 'fixlify.app';
@@ -85,32 +107,18 @@ serve(async (req) => {
       console.log('send-email function - Using Mailgun sandbox domain for testing');
     }
     
-    // Use the EXACT same logic as in send-estimate function for consistency
+    // NEW: Auto-generate email from company name
     if (!fromEmail) {
-      let fromEmailAddress = 'support@fixlify.app'; // Default fallback - CHANGED TO fixlify.app
-      
-      // Priority 1: Use custom_domain_name to build email with fixlify.app
-      if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim() && companySettings.custom_domain_name !== 'support') {
-        const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-        fromEmailAddress = `${cleanDomain}@fixlify.app`; // CHANGED TO fixlify.app
-        console.log('send-email function - Using custom domain name to build email:', fromEmailAddress);
-      }
-      // Priority 2: Use email_from_address if configured and no custom_domain_name
-      else if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
-        fromEmailAddress = companySettings.email_from_address.trim();
-        console.log('send-email function - Using configured email_from_address:', fromEmailAddress);
-      }
-      else {
-        console.log('send-email function - Using default support email (no custom domain configured or custom domain is "support"):', fromEmailAddress);
-      }
-      
-      const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team';
+      const fromEmailAddress = generateFromEmail(companySettings?.company_name || 'Fixlify Services');
+      const fromName = companySettings?.company_name || 'Fixlify Services';
       
       if (useSandbox) {
         fromEmail = `${fromName} <postmaster@${mailgunDomain}>`;
       } else {
         fromEmail = `${fromName} <${fromEmailAddress}>`;
       }
+      
+      console.log('send-email function - Auto-generated email from company name:', fromEmail);
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
@@ -221,7 +229,7 @@ serve(async (req) => {
         messageId: mailgunResult.id,
         from: fromEmail,
         domain: mailgunDomain,
-        customDomainName: companySettings?.custom_domain_name || null,
+        companyName: companySettings?.company_name || null,
         usedSandbox: useSandbox
       }),
       {

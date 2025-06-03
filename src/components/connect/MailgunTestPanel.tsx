@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Send, CheckCircle, AlertCircle, Globe, Info, ExternalLink, TestTube } f
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { formatCompanyNameForEmail, generateFromEmail } from '@/utils/emailUtils';
 
 export const MailgunTestPanel = () => {
   const [loading, setLoading] = useState(false);
@@ -36,7 +38,7 @@ export const MailgunTestPanel = () => {
     
     try {
       console.log('MailgunTestPanel - Sending test email with settings:', settings);
-      console.log('MailgunTestPanel - custom_domain_name:', settings.custom_domain_name);
+      console.log('MailgunTestPanel - company_name:', settings.company_name);
       
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
@@ -69,12 +71,12 @@ export const MailgunTestPanel = () => {
     if (useSandbox) {
       return 'postmaster@sandbox.mailgun.org';
     }
-    // Use the same logic as in the send-email function
-    if (settings.custom_domain_name && settings.custom_domain_name.trim() && settings.custom_domain_name !== 'support') {
-      const cleanDomain = settings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-      return `${cleanDomain}@fixlify.app`;
-    }
-    return 'support@fixlify.app';
+    // Use the new auto-generated email logic
+    return generateFromEmail(settings.company_name || 'Fixlify Services');
+  };
+
+  const getFormattedCompanyName = () => {
+    return formatCompanyNameForEmail(settings.company_name || 'Fixlify Services');
   };
 
   return (
@@ -93,12 +95,15 @@ export const MailgunTestPanel = () => {
                 Your email address: <strong>{getEmailAddress()}</strong>
               </p>
               <p className="text-sm text-muted-foreground mb-2">
-                Custom domain from settings: <strong>{settings.custom_domain_name || 'Not set'}</strong>
+                Company name: <strong>{settings.company_name || 'Not set'}</strong>
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Formatted for email: <strong>{getFormattedCompanyName()}</strong>
               </p>
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="bg-green-100 text-green-800">
                   <CheckCircle className="h-3 w-3 mr-1" />
-                  Ready to Send
+                  Auto-Generated
                 </Badge>
                 {useSandbox && (
                   <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
@@ -112,13 +117,32 @@ export const MailgunTestPanel = () => {
         </div>
       </div>
 
-      {/* Sandbox Testing Option */}
+      {/* Email Generation Info */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="flex-1">
-            <h4 className="font-medium text-blue-800">Testing Options</h4>
+            <h4 className="font-medium text-blue-800">Automatic Email Generation</h4>
             <p className="text-sm text-blue-700 mt-1 mb-3">
+              Your email address is automatically generated from your company name. 
+              Update your company name in Company Settings to change your email address.
+            </p>
+            <div className="text-sm text-blue-700">
+              <p><strong>Example:</strong></p>
+              <p>"Fixlify AI Services" → "fixlify_ai_services@fixlify.app"</p>
+              <p>"Bob's Plumbing & HVAC" → "bobs_plumbing_hvac@fixlify.app"</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sandbox Testing Option */}
+      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <TestTube className="h-5 w-5 text-yellow-600 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-medium text-yellow-800">Testing Options</h4>
+            <p className="text-sm text-yellow-700 mt-1 mb-3">
               If you're experiencing issues with the main domain, try testing with Mailgun's sandbox first.
             </p>
             <div className="flex items-center space-x-2">
@@ -132,7 +156,7 @@ export const MailgunTestPanel = () => {
               </Label>
             </div>
             {useSandbox && (
-              <p className="text-xs text-blue-600 mt-2">
+              <p className="text-xs text-yellow-600 mt-2">
                 Note: Sandbox emails are not actually delivered but will test API connectivity
               </p>
             )}
@@ -247,6 +271,12 @@ export const MailgunTestPanel = () => {
                   <span className="font-medium">Status:</span>
                   <Badge variant="default" className="bg-green-100 text-green-800">Sent</Badge>
                 </div>
+                {testResult.companyName && (
+                  <div>
+                    <span className="font-medium">Company:</span>
+                    <code className="bg-gray-100 px-1 rounded text-xs ml-1">{testResult.companyName}</code>
+                  </div>
+                )}
               </div>
               {testResult.usedSandbox && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">

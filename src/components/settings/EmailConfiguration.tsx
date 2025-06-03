@@ -5,15 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Mail, Info } from 'lucide-react';
 import { MailgunTestPanel } from '@/components/connect/MailgunTestPanel';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { generateFromEmail } from '@/utils/emailUtils';
 
 export const EmailConfiguration = () => {
   const { settings } = useCompanySettings();
 
   const getEmailAddress = () => {
-    if (settings.custom_domain_name) {
-      return `${settings.custom_domain_name}@fixlyfy.app`;
-    }
-    return 'support@fixlyfy.app';
+    return generateFromEmail(settings.company_name || 'Fixlify Services');
   };
 
   return (
@@ -46,7 +44,7 @@ export const EmailConfiguration = () => {
                   Sending emails from: <strong>{getEmailAddress()}</strong>
                 </p>
                 <p className="text-sm text-green-700">
-                  Domain: <strong>fixlyfy.app</strong> (verified)
+                  Domain: <strong>fixlify.app</strong> (verified)
                 </p>
               </div>
             </div>
@@ -56,12 +54,13 @@ export const EmailConfiguration = () => {
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-600 mt-0.5" />
               <div>
-                <h4 className="font-medium text-blue-800">Custom Email Address</h4>
+                <h4 className="font-medium text-blue-800">Automatic Email Generation</h4>
                 <p className="text-sm text-blue-700 mt-1">
-                  To customize your email address, update your "Email Domain Name" in the Company Information section above.
+                  Your email address is automatically generated from your company name. 
+                  To change it, update your company name in the Company Information section above.
                 </p>
-                <p className="text-sm text-blue-700">
-                  For example: "coolcleaning" becomes <strong>coolcleaning@fixlyfy.app</strong>
+                <p className="text-sm text-blue-700 mt-2">
+                  <strong>Example:</strong> "Fixlify AI" becomes <strong>fixlify_ai@fixlify.app</strong>
                 </p>
               </div>
             </div>

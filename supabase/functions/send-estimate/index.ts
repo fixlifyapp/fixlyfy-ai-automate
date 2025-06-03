@@ -6,6 +6,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Email utility functions
+const formatCompanyNameForEmail = (companyName: string): string => {
+  if (!companyName || typeof companyName !== 'string') {
+    return 'support';
+  }
+
+  return companyName
+    .toLowerCase()
+    .trim()
+    .replace(/[\s\-&+.,()]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 30)
+    || 'support';
+};
+
+const generateFromEmail = (companyName: string): string => {
+  const formattedName = formatCompanyNameForEmail(companyName);
+  return `${formattedName}@fixlify.app`;
+};
+
+const generateEmailSubject = (companyName: string, documentNumber: string): string => {
+  const cleanCompanyName = companyName?.trim() || 'Fixlify Services';
+  return `[${cleanCompanyName}] - Estimate #${documentNumber}`;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -65,7 +92,7 @@ serve(async (req) => {
     }
 
     console.log('Company settings found:', !!companySettings)
-    console.log('Custom domain name from DB:', companySettings?.custom_domain_name)
+    console.log('Company name from DB:', companySettings?.company_name)
 
     const client = estimate.jobs?.clients
     const job = estimate.jobs
@@ -117,26 +144,21 @@ serve(async (req) => {
       // Use correct domain - fixlify.app
       const mailgunDomain = 'fixlify.app'
       
-      // FIXED: Use EXACT same logic as send-email function
-      let fromEmail = 'support@fixlify.app' // Default fallback
+      // NEW: Auto-generate email from company name
+      const fromEmail = generateFromEmail(companySettings?.company_name || 'Fixlify Services')
+      const fromName = companySettings?.company_name || 'Fixlify Services'
       
-      // Priority 1: Use custom_domain_name to build email with fixlify.app
-      if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim() && companySettings.custom_domain_name !== 'support') {
-        const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
-        fromEmail = `${cleanDomain}@fixlify.app`
-        console.log('Using custom domain name to build email:', fromEmail)
-      }
-      // REMOVED: Priority 2 logic that was causing the issue
-      else {
-        console.log('Using default support email (no custom domain configured or custom domain is "support"):', fromEmail)
-      }
-      
-      const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team'
+      // NEW: Generate professional subject line
+      const emailSubject = subject || generateEmailSubject(
+        companySettings?.company_name || 'Fixlify Services',
+        estimate.estimate_number
+      )
 
       console.log('Final email configuration:')
       console.log('Mailgun domain:', mailgunDomain)
       console.log('From email:', fromEmail)
       console.log('From name:', fromName)
+      console.log('Subject:', emailSubject)
 
       // UPDATED: Create simple HTML email template focused on portal access
       let emailHtml = ''
@@ -166,7 +188,7 @@ serve(async (req) => {
           <body>
             <div class="container">
               <div class="header">
-                <div class="company-name">${companySettings?.company_name || 'Fixlify Services'}</div>
+                <div class="company-name">${fromName}</div>
                 <div class="title">Your Estimate is Ready!</div>
               </div>
               
@@ -180,7 +202,7 @@ serve(async (req) => {
               <p class="security-note">This secure link will expire in 30 minutes for your protection.</p>
               
               <div class="footer">
-                <p>Thank you for choosing ${companySettings?.company_name || 'Fixlify Services'}!</p>
+                <p>Thank you for choosing ${fromName}!</p>
                 ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
                 ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
               </div>
@@ -212,7 +234,7 @@ serve(async (req) => {
           <body>
             <div class="container">
               <div class="header">
-                <div class="company-name">${companySettings?.company_name || 'Fixlify Services'}</div>
+                <div class="company-name">${fromName}</div>
                 <div class="title">Your Estimate is Ready!</div>
               </div>
               
@@ -225,7 +247,7 @@ serve(async (req) => {
               <a href="${currentDomain}/portal/login" class="portal-button">Access Client Portal</a>
               
               <div class="footer">
-                <p>Thank you for choosing ${companySettings?.company_name || 'Fixlify Services'}!</p>
+                <p>Thank you for choosing ${fromName}!</p>
                 ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
                 ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
               </div>
@@ -250,7 +272,7 @@ serve(async (req) => {
         body: new URLSearchParams({
           from: `${fromName} <${fromEmail}>`,
           to: recipientEmail,
-          subject: subject || `Your Estimate from ${companySettings?.company_name || 'Fixlify Services'}`,
+          subject: emailSubject,
           html: emailHtml
         })
       })
@@ -274,7 +296,7 @@ serve(async (req) => {
             estimate_id: estimateId,
             communication_type: 'email',
             recipient: recipientEmail,
-            subject: subject || `Your Estimate from ${companySettings?.company_name || 'Fixlify Services'}`,
+            subject: emailSubject,
             content: emailHtml,
             status: 'sent',
             provider_message_id: JSON.parse(result).id,
