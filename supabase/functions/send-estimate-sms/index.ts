@@ -39,7 +39,7 @@ serve(async (req) => {
       throw new Error('Missing required fields: estimateId, recipientPhone, fromNumber');
     }
 
-    // Get estimate details
+    // Get estimate details with job and client information
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
       .select(`
@@ -85,28 +85,81 @@ serve(async (req) => {
     const formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`;
     const formattedToPhone = cleanToPhone.length === 10 ? `+1${cleanToPhone}` : `+${cleanToPhone}`;
 
-    // Create SMS message with client portal link if client has email
+    // Generate client portal login token and create portal link
+    let portalLink = '';
     let smsMessage = message;
-    if (!smsMessage) {
-      if (client?.email) {
-        // Generate client portal login token
+
+    if (client?.email) {
+      try {
+        console.log('Generating client portal login token for:', client.email);
+        
+        // First ensure client portal user exists
+        const { data: existingPortalUser, error: portalUserError } = await supabaseAdmin
+          .from('client_portal_users')
+          .select('*')
+          .eq('email', client.email)
+          .eq('client_id', client.id)
+          .single();
+
+        if (portalUserError && portalUserError.code === 'PGRST116') {
+          // Create client portal user if doesn't exist
+          const { error: createError } = await supabaseAdmin
+            .from('client_portal_users')
+            .insert({
+              client_id: client.id,
+              email: client.email,
+              is_active: true
+            });
+
+          if (createError) {
+            console.error('Error creating client portal user:', createError);
+          } else {
+            console.log('Created client portal user for:', client.email);
+          }
+        }
+
+        // Generate login token
         const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
           p_email: client.email
         });
         
-        if (tokenData) {
-          const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app';
-          const portalLink = `${currentDomain}/portal/login?token=${tokenData}`;
-          smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready ($${estimate.total?.toFixed(2) || '0.00'}). View it here: ${portalLink}`;
+        if (tokenData && !tokenError) {
+          const currentDomain = req.headers.get('origin') || 'https://mqppvcrlvsgrsqelglod.supabase.co';
+          portalLink = `${currentDomain}/portal/login?token=${tokenData}&jobId=${job.id}`;
+          
+          // Create SMS message with portal link
+          smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready ($${estimate.total?.toFixed(2) || '0.00'}). View and manage it here: ${portalLink}`;
+          
+          console.log('Generated portal link:', portalLink.substring(0, 50) + '...');
         } else {
+          console.error('Failed to generate portal login token:', tokenError);
+          // Fallback message without portal link
           smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us for details.`;
         }
-      } else {
+      } catch (error) {
+        console.error('Error generating portal link:', error);
+        // Fallback message without portal link
         smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us for details.`;
+      }
+    } else {
+      // No email available, use simple message
+      smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us for details.`;
+    }
+
+    // Use custom message if provided, otherwise use generated message
+    if (!message) {
+      // Use our generated message with portal link
+    } else {
+      // If custom message provided, append portal link if available
+      if (portalLink) {
+        smsMessage = `${message} View details: ${portalLink}`;
+      } else {
+        smsMessage = message;
       }
     }
 
     console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedToPhone);
+    console.log('SMS content:', smsMessage.substring(0, 100) + '...');
 
     // Send SMS via Telnyx
     const response = await fetch('https://api.telnyx.com/v2/messages', {
@@ -131,7 +184,7 @@ serve(async (req) => {
 
     console.log('SMS sent successfully:', result);
 
-    // Log SMS communication
+    // Log SMS communication with portal link info
     try {
       await supabaseAdmin
         .from('estimate_communications')
@@ -148,6 +201,24 @@ serve(async (req) => {
           client_phone: client?.phone,
           sent_at: new Date().toISOString()
         });
+
+      // Also create a client notification
+      if (client?.id) {
+        await supabaseAdmin
+          .from('client_notifications')
+          .insert({
+            client_id: client.id,
+            type: 'estimate_sent',
+            title: 'New Estimate Available',
+            message: `Estimate ${estimate.estimate_number} has been sent to you. Total: $${estimate.total?.toFixed(2) || '0.00'}`,
+            data: { 
+              estimate_id: estimateId, 
+              estimate_number: estimate.estimate_number,
+              portal_link: portalLink,
+              job_id: job.id
+            }
+          });
+      }
     } catch (logError) {
       console.error('Failed to log SMS communication:', logError);
     }
@@ -156,7 +227,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'SMS sent successfully',
-        messageId: result.data?.id
+        messageId: result.data?.id,
+        portalLinkIncluded: !!portalLink
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
