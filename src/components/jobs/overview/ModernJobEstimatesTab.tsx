@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,12 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const handlePreviewClose = () => {
     setShowPreview(false);
     setPreviewEstimate(null);
+  };
+
+  const handleDeleteEstimate = async (estimate: any) => {
+    console.log('Deleting estimate:', estimate);
+    actions.setSelectedEstimate(estimate);
+    await actions.confirmDeleteEstimate();
   };
 
   return (
@@ -201,10 +208,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          actions.setSelectedEstimate(estimate);
-                          actions.confirmDeleteEstimate();
-                        }}
+                        onClick={() => handleDeleteEstimate(estimate)}
                         disabled={state.isDeleting}
                         className="text-red-600 hover:text-red-700"
                       >
