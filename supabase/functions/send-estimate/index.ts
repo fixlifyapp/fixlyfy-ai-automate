@@ -114,16 +114,16 @@ serve(async (req) => {
         throw new Error('Mailgun API key not configured. Please configure MAILGUN_API_KEY in Supabase secrets.')
       }
 
-      // Use consistent domain - fixlify.app
-      const mailgunDomain = 'fixlify.app'
+      // Use consistent domain - fixlyfy.app
+      const mailgunDomain = 'fixlyfy.app'
       
-      // UPDATED: Generate FROM email with correct priority logic
-      let fromEmail = 'support@fixlify.app' // Default fallback
+      // FIXED: Generate FROM email with correct priority logic
+      let fromEmail = 'support@fixlyfy.app' // Default fallback
       
-      // Priority 1: Use custom_domain_name to build email with fixlify.app
+      // Priority 1: Use custom_domain_name to build email with fixlyfy.app
       if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim() && companySettings.custom_domain_name !== 'support') {
         const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
-        fromEmail = `${cleanDomain}@fixlify.app`
+        fromEmail = `${cleanDomain}@fixlyfy.app`
         console.log('Using custom domain name to build email:', fromEmail)
       }
       // Priority 2: Use email_from_address if configured and no custom_domain_name

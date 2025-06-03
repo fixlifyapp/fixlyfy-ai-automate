@@ -29,8 +29,7 @@ export interface CompanySettings {
   service_zip_codes: string;
   // Business hours
   business_hours: BusinessHours;
-  // Email settings
-  custom_domain?: string;
+  // Email settings - FIXED: Use consistent field name
   custom_domain_name?: string;
   mailgun_domain?: string;
   email_from_name?: string;
@@ -91,6 +90,7 @@ export const useCompanySettings = () => {
           (typeof data.business_hours === 'string' ? JSON.parse(data.business_hours) : data.business_hours) :
           DEFAULT_BUSINESS_HOURS;
           
+        console.log('Fetched company settings with custom_domain_name:', data.custom_domain_name);
         setSettings({ 
           ...defaultCompanySettings, 
           ...data,
@@ -124,6 +124,8 @@ export const useCompanySettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      console.log('updateSettings called with:', updates);
+      
       const newSettings = { ...settings, ...updates };
       
       // Prepare data for database
@@ -131,6 +133,8 @@ export const useCompanySettings = () => {
         ...newSettings,
         business_hours: JSON.stringify(newSettings.business_hours)
       };
+      
+      console.log('Sending to database:', dataToUpdate);
       
       const { error } = await supabase
         .from('company_settings')
@@ -147,7 +151,7 @@ export const useCompanySettings = () => {
       }
 
       setSettings(newSettings);
-      console.log('Company settings updated successfully');
+      console.log('Company settings updated successfully with custom_domain_name:', newSettings.custom_domain_name);
     } catch (error) {
       console.error('Error updating company settings:', error);
       toast.error('Failed to update company settings');

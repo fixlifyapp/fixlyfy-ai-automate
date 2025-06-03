@@ -12,6 +12,7 @@ export const SettingsCompany = () => {
   const { settings, loading, saving, updateSettings } = useCompanySettings();
 
   const handleInputChange = (field: string, value: string | number) => {
+    console.log(`SettingsCompany - updating field: ${field} with value:`, value);
     updateSettings({ [field]: value });
   };
 
@@ -70,6 +71,7 @@ export const SettingsCompany = () => {
                   value={settings.custom_domain_name || ''}
                   onChange={(e) => {
                     const cleanValue = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                    console.log('Settings - custom domain name changed to:', cleanValue);
                     handleInputChange('custom_domain_name', cleanValue);
                   }}
                   placeholder="yourcompany"

@@ -20,11 +20,13 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
 
   // Update local settings when companySettings changes
   useEffect(() => {
+    console.log('CompanyInfoSection - received companySettings:', companySettings);
     setLocalSettings(companySettings);
     setHasChanges(false);
   }, [companySettings]);
 
   const handleFieldChange = (field: string, value: string) => {
+    console.log(`Field changed: ${field} = ${value}`);
     setLocalSettings(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
@@ -32,6 +34,7 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
   const handleCustomDomainNameChange = (value: string) => {
     // Clean the input to only allow letters, numbers, and hyphens
     const cleanValue = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    console.log('Custom domain name changed to:', cleanValue);
     handleFieldChange('custom_domain_name', cleanValue);
   };
 
@@ -40,6 +43,7 @@ export const CompanyInfoSection = ({ companySettings, updateCompanySettings, isE
     
     setIsSaving(true);
     try {
+      console.log('Saving company info section with:', localSettings);
       await updateCompanySettings(localSettings);
       setHasChanges(false);
       toast.success('Company information saved successfully');
