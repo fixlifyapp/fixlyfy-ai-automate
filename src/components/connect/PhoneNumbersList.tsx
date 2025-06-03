@@ -1,340 +1,337 @@
-
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  Phone, 
-  Bot, 
-  Settings, 
-  MapPin, 
-  DollarSign, 
-  Zap,
-  Loader2,
-  HelpCircle,
-  Sparkles
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { PhoneNumber } from "@/types/database";
-import { toast } from "@/hooks/use-toast";
-import { AIDispatcherSettings } from "./AIDispatcherSettings";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Phone, Plus, Settings, Trash2, Zap, Bot, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
+import { PhoneNumberPurchase } from './PhoneNumberPurchase';
+import { SetupAIDispatcher } from './SetupAIDispatcher';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export const PhoneNumbersList = () => {
-  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [aiToggleLoading, setAiToggleLoading] = useState<string | null>(null);
-  const [showAISettings, setShowAISettings] = useState(false);
-  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<PhoneNumber | null>(null);
+  const [showPurchase, setShowPurchase] = useState(false);
+  const [selectedNumber, setSelectedNumber] = useState<any>(null);
+  const [showAISetup, setShowAISetup] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchPhoneNumbers();
-  }, []);
-
-  const fetchPhoneNumbers = async () => {
-    setIsLoading(true);
-    try {
-      console.log('Fetching phone numbers from telnyx-phone-numbers function...');
-      
-      // Use the telnyx-phone-numbers function to get all numbers
+  const { data: allNumbers = [], isLoading } = useQuery({
+    queryKey: ['phone-numbers'],
+    queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: { action: 'list' }
       });
 
-      if (error) {
-        console.error('Error from telnyx-phone-numbers function:', error);
-        throw error;
-      }
-      
-      console.log('Phone numbers received:', data);
-      
-      // Transform the data to match our PhoneNumber type
-      const transformedData = data?.phone_numbers?.map((item: any) => ({
-        ...item,
-        capabilities: typeof item.capabilities === 'string' 
-          ? JSON.parse(item.capabilities) 
-          : item.capabilities || { voice: true, sms: true, mms: false },
-        ai_dispatcher_enabled: item.ai_dispatcher_enabled || item.configured_for_ai || item.configured_at || false,
-        // Handle both user_id and purchased_by fields
-        purchased_by: item.user_id || item.purchased_by
-      })) || [];
-      
-      console.log('Transformed phone numbers:', transformedData);
-      setPhoneNumbers(transformedData);
-    } catch (error) {
-      console.error('Error fetching phone numbers:', error);
-      toast({
-        title: "Error Loading Phone Numbers",
-        description: "We couldn't load your phone numbers. Please try refreshing the page.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+      if (error) throw error;
+      return data.phone_numbers || [];
     }
+  });
+
+  const { data: telnyxConfig } = useQuery({
+    queryKey: ['telnyx-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'get_config' }
+      });
+
+      if (error) throw error;
+      return data.config;
+    }
+  });
+
+  const removeNumber = useMutation(
+    async (phoneNumber: string) => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'remove', phone_number: phoneNumber }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Phone number removed successfully');
+        queryClient.invalidateQueries({ queryKey: ['phone-numbers'] });
+      },
+      onError: (error: any) => {
+        toast.error('Failed to remove phone number: ' + error.message);
+      },
+    }
+  );
+
+  const handleConfigureAI = (number: any) => {
+    setSelectedNumber(number);
+    setShowAISetup(true);
   };
 
-  const toggleAIDispatcher = async (phoneNumber: PhoneNumber) => {
-    setAiToggleLoading(phoneNumber.id);
+  const handleRemoveTestNumbers = async () => {
     try {
-      const newStatus = !phoneNumber.ai_dispatcher_enabled;
-      
-      console.log(`Toggling AI dispatcher for ${phoneNumber.phone_number} to ${newStatus}`);
-      
-      if (newStatus) {
-        // Configure the number for AI
-        const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-          body: {
-            action: 'configure',
-            phone_number: phoneNumber.phone_number
-          }
-        });
-
-        if (error) throw error;
-        console.log('Configure response:', data);
-      } else {
-        // Call the manage-ai-dispatcher function to disable
-        const { error } = await supabase.functions.invoke('manage-ai-dispatcher', {
-          body: {
-            action: 'disable',
-            phoneNumberId: phoneNumber.id
-          }
-        });
-
-        if (error) throw error;
-      }
-
-      // Update local state
-      setPhoneNumbers(prev => prev.map(pn => 
-        pn.id === phoneNumber.id 
-          ? { ...pn, ai_dispatcher_enabled: newStatus, configured_for_ai: newStatus, configured_at: newStatus ? new Date().toISOString() : null }
-          : pn
-      ));
-
-      toast({
-        title: newStatus ? "AI Dispatcher Enabled" : "AI Dispatcher Disabled",
-        description: newStatus 
-          ? `AI is now handling calls for ${formatPhoneNumber(phoneNumber.phone_number)}` 
-          : `AI dispatcher has been disabled for ${formatPhoneNumber(phoneNumber.phone_number)}`,
-        variant: "default"
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'remove_test_numbers' }
       });
 
-      // If enabling AI for the first time, open settings dialog
-      if (newStatus) {
-        setSelectedPhoneNumber({ ...phoneNumber, ai_dispatcher_enabled: newStatus });
-        setShowAISettings(true);
-      }
+      if (error) throw error;
 
+      if (data?.success) {
+        toast.success('Test numbers removed from your account');
+        queryClient.invalidateQueries({ queryKey: ['phone-numbers'] });
+      }
     } catch (error) {
-      console.error('Error toggling AI dispatcher:', error);
-      toast({
-        title: "Configuration Error",
-        description: "Failed to update AI Dispatcher settings. Please check your connection and try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setAiToggleLoading(null);
+      console.error('Error removing test numbers:', error);
+      toast.error('Failed to remove test numbers');
     }
-  };
-
-  const openAISettings = (phoneNumber: PhoneNumber) => {
-    setSelectedPhoneNumber(phoneNumber);
-    setShowAISettings(true);
   };
 
   const formatPhoneNumber = (phone: string) => {
     return phone.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
   };
 
-  if (isLoading) {
+  if (showPurchase) {
     return (
-      <Card className="border-blue-100">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="h-5 w-5 bg-blue-100 rounded animate-pulse" />
-            <Skeleton className="h-6 w-48" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div>
-                    <Skeleton className="h-4 w-32 mb-2" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-20" />
-                  <Skeleton className="h-6 w-12" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Purchase Phone Number</h3>
+          <Button variant="outline" onClick={() => setShowPurchase(false)}>
+            Back to Numbers
+          </Button>
+        </div>
+        <PhoneNumberPurchase onClose={() => setShowPurchase(false)} />
+      </div>
+    );
+  }
+
+  if (showAISetup && selectedNumber) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Setup AI Dispatcher</h3>
+          <Button variant="outline" onClick={() => setShowAISetup(false)}>
+            Back to Numbers
+          </Button>
+        </div>
+        <SetupAIDispatcher 
+          phoneNumber={selectedNumber.phone_number}
+          onClose={() => setShowAISetup(false)}
+        />
+      </div>
     );
   }
 
   return (
-    <TooltipProvider>
-      <Card className="border-blue-100 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Phone Numbers</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage your Telnyx phone numbers and AI dispatcher settings
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove Test Numbers
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove Test Numbers</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove all test phone numbers from your account. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRemoveTestNumbers}>
+                  Remove Test Numbers
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button onClick={() => setShowPurchase(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Get Phone Number
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Phone className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <span className="text-gray-900">Your Phone Numbers</span>
-              <span className="ml-2 text-sm font-normal text-blue-600">({phoneNumbers.length})</span>
-            </div>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-4 w-4 text-gray-400" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-xs">Manage your purchased phone numbers and enable AI dispatcher for automated call handling</p>
-              </TooltipContent>
-            </Tooltip>
+            <Phone className="h-5 w-5" />
+            Your Phone Numbers
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          {phoneNumbers.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="p-3 bg-gray-100 rounded-full w-fit mx-auto mb-4">
-                <Phone className="h-8 w-8 text-gray-400" />
-              </div>
-              <p className="text-lg font-medium text-gray-900 mb-2">No phone numbers found</p>
-              <p className="text-sm text-gray-500 max-w-md mx-auto">
-                Your phone numbers should appear here. Try refreshing the page or check the console for errors.
+        <CardContent>
+          {isLoading ? (
+            <div>Loading your phone numbers...</div>
+          ) : allNumbers.length === 0 ? (
+            <div className="text-center py-8">
+              <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h4 className="text-lg font-medium mb-2">No phone numbers yet</h4>
+              <p className="text-muted-foreground mb-4">
+                Purchase or add your first Telnyx phone number to enable AI dispatcher
               </p>
+              <Button onClick={() => setShowPurchase(true)}>
+                Get Your First Number
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
-              {phoneNumbers.map((phoneNumber) => {
-                const isConfigured = phoneNumber.ai_dispatcher_enabled || phoneNumber.configured_for_ai || phoneNumber.configured_at;
-                const isTelnyx = phoneNumber.source === 'telnyx_table' || phoneNumber.phone_number === '+14375249932';
-                
-                return (
-                  <div key={phoneNumber.id || phoneNumber.phone_number} className="group flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-200">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-full transition-all duration-200 ${
-                        isConfigured 
-                          ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-200' 
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {isConfigured ? (
-                          <div className="relative">
-                            <Bot className="h-6 w-6" />
-                            <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-blue-400" />
-                          </div>
-                        ) : (
-                          <Phone className="h-6 w-6" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="font-semibold text-gray-900 text-lg">
-                            {formatPhoneNumber(phoneNumber.phone_number)}
-                          </span>
-                          {isConfigured ? (
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
-                              <Bot className="h-3 w-3 mr-1" />
-                              AI Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-gray-600 border-gray-300">
-                              Standard
-                            </Badge>
-                          )}
-                          {isTelnyx && (
-                            <Badge variant="outline" className="text-green-600 border-green-300">
-                              <Zap className="h-3 w-3 mr-1" />
-                              Telnyx
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            <span>{phoneNumber.locality || 'Toronto'}, {phoneNumber.region || 'ON'}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            <span>${phoneNumber.monthly_price || phoneNumber.monthly_cost || 1.00}/month</span>
-                          </div>
-                          {phoneNumber.configured_at && (
-                            <span>Configured: {new Date(phoneNumber.configured_at).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
+              {allNumbers.map((number: any) => (
+                <div
+                  key={number.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div>
                     <div className="flex items-center gap-3">
-                      {/* AI Settings Button */}
-                      {isConfigured && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openAISettings(phoneNumber)}
-                              className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                            >
-                              <Settings className="h-4 w-4 mr-2" />
-                              AI Settings
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Configure AI behavior, pricing, and voice settings</p>
-                          </TooltipContent>
-                        </Tooltip>
+                      <span className="font-medium">
+                        {formatPhoneNumber(number.phone_number)}
+                      </span>
+                      <Badge variant={number.status === 'active' ? 'default' : 'secondary'}>
+                        {number.status}
+                      </Badge>
+                      {(number.ai_dispatcher_enabled || number.configured_for_ai || number.configured_at) && (
+                        <Badge variant="outline" className="text-green-600">
+                          <Bot className="h-3 w-3 mr-1" />
+                          AI Ready
+                        </Badge>
                       )}
-                      
-                      {/* AI Dispatcher Toggle */}
-                      <div className="flex items-center gap-3 p-2 rounded-lg bg-white border">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm font-medium text-gray-700">AI</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Enable AI to automatically handle incoming calls</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        {aiToggleLoading === phoneNumber.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                        ) : (
-                          <Switch
-                            checked={isConfigured}
-                            onCheckedChange={() => toggleAIDispatcher(phoneNumber)}
-                            className="data-[state=checked]:bg-blue-600"
-                          />
+                      {number.source === 'telnyx_table' && (
+                        <Badge variant="outline" className="text-blue-600">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Telnyx
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {number.purchased_at && (
+                        <span>Added: {new Date(number.purchased_at).toLocaleDateString()}</span>
+                      )}
+                      {number.configured_at && (
+                        <span className="ml-4">
+                          AI Configured: {new Date(number.configured_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    {number.capabilities && (
+                      <div className="flex gap-2 mt-2">
+                        {number.capabilities.voice && (
+                          <Badge variant="outline" size="sm">Voice</Badge>
+                        )}
+                        {number.capabilities.sms && (
+                          <Badge variant="outline" size="sm">SMS</Badge>
+                        )}
+                        {number.capabilities.mms && (
+                          <Badge variant="outline" size="sm">MMS</Badge>
                         )}
                       </div>
-                    </div>
+                    )}
                   </div>
-                );
-              })}
+                  
+                  <div className="flex gap-2">
+                    {!(number.configured_for_ai || number.ai_dispatcher_enabled || number.configured_at) ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureAI(number)}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Setup AI
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureAI(number)}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configure
+                      </Button>
+                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeNumber.mutate(number.phone_number)}
+                      disabled={removeNumber.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* AI Settings Dialog */}
-      {selectedPhoneNumber && (
-        <AIDispatcherSettings
-          open={showAISettings}
-          onOpenChange={setShowAISettings}
-          phoneNumberId={selectedPhoneNumber.id}
-          phoneNumber={formatPhoneNumber(selectedPhoneNumber.phone_number)}
-        />
-      )}
-    </TooltipProvider>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Telnyx Integration Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium">API Configuration</h4>
+              <p className="text-sm text-muted-foreground">
+                {telnyxConfig?.api_key_configured ? 
+                  'Telnyx API key is configured and ready' : 
+                  'Telnyx API key needs to be configured'
+                }
+              </p>
+            </div>
+            <Badge variant={telnyxConfig?.api_key_configured ? 'default' : 'destructive'}>
+              {telnyxConfig?.api_key_configured ? 'Connected' : 'Not Connected'}
+            </Badge>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <h4 className="font-medium text-green-600">✅ Telnyx Benefits</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• Simple API integration</li>
+                <li>• Real-time webhooks</li>
+                <li>• Global phone numbers</li>
+                <li>• High-quality voice calls</li>
+                <li>• Built-in SMS support</li>
+                <li>• Competitive pricing</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <h4 className="font-medium">🚀 AI Dispatcher Features</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• 24/7 call answering</li>
+                <li>• Appointment scheduling</li>
+                <li>• Customer information capture</li>
+                <li>• Emergency detection</li>
+                <li>• Call transcription</li>
+                <li>• CRM integration</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-medium text-blue-800 mb-2">📞 Your Telnyx Number</h5>
+            <p className="text-sm text-blue-700">
+              You have the Telnyx number +14375249932. Use "Add Existing Number" in the Phone Numbers section to connect it to your account for full AI dispatcher capabilities.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <a href="https://portal.telnyx.com/" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Telnyx Portal
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

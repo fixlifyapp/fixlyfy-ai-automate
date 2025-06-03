@@ -2,7 +2,7 @@
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
-import { Settings2, Shield, Sliders, User, Brain, Building2, Plug, Package, Mail } from "lucide-react";
+import { Settings2, Shield, Sliders, User, Brain, Building2, Plug, Package, Mail, Zap, Phone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MailgunTestPanel } from "@/components/connect/MailgunTestPanel";
@@ -50,6 +50,36 @@ const SettingsPage = () => {
               <div>
                 <h3 className="font-medium">Products</h3>
                 <p className="text-sm text-muted-foreground">Manage your product catalog and inventory</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Phone Numbers Card */}
+        <Link to="/phone-numbers">
+          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+            <div className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Phone className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Phone Numbers</h3>
+                <p className="text-sm text-muted-foreground">Manage your phone numbers and communication settings</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Telnyx Card */}
+        <Link to="/telnyx">
+          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+            <div className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Zap className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Telnyx</h3>
+                <p className="text-sm text-muted-foreground">Configure Telnyx SMS and voice settings</p>
               </div>
             </div>
           </div>

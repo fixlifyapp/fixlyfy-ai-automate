@@ -25,6 +25,8 @@ import IntegrationsPage from "@/pages/IntegrationsPage";
 import AISettingsPage from "@/pages/AISettingsPage";
 import TeamManagementPage from "@/pages/TeamManagementPage";
 import ProductsPage from "@/pages/ProductsPage";
+import PhoneNumbersPage from "@/pages/PhoneNumbersPage";
+import TelnyxPage from "@/pages/TelnyxPage";
 import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
@@ -105,6 +107,16 @@ const App = () => {
               <Route path="/products" element={
                 <ProtectedRoute>
                   <ProductsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/phone-numbers" element={
+                <ProtectedRoute>
+                  <PhoneNumbersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/telnyx" element={
+                <ProtectedRoute>
+                  <TelnyxPage />
                 </ProtectedRoute>
               } />
               <Route path="/connect" element={
