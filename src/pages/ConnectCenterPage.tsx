@@ -11,7 +11,7 @@ import { CallMonitoring } from "@/components/connect/CallMonitoring";
 import { AmazonConnectFlowInstructions } from "@/components/connect/AmazonConnectFlowInstructions";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Phone, Mail, Plus, PhoneCall, Users, Workflow } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";

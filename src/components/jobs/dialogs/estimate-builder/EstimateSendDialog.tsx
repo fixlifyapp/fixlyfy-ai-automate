@@ -1,357 +1,358 @@
-
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Mail, MessageSquare, Send } from "lucide-react";
-import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail, MessageSquare, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
 
 interface EstimateSendDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   estimateNumber: string;
-  jobId: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+  estimateDetails?: any;
+  lineItems?: any[];
+  contactInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  clientInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  jobId?: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
   onSave: () => Promise<boolean>;
-  contactInfo?: { 
-    name?: string;
-    email?: string; 
-    phone?: string; 
-  };
-  clientInfo?: { 
-    id?: string;
-    name?: string;
-    email?: string; 
-    phone?: string; 
-  };
 }
 
-const isValidEmail = (email: string): boolean => {
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
-
-export const EstimateSendDialog = ({
-  open,
-  onOpenChange,
+export const EstimateSendDialog = ({ 
+  open, 
+  onOpenChange, 
   estimateNumber,
+  estimateDetails,
+  lineItems,
+  contactInfo,
+  clientInfo,
   jobId,
   onSuccess,
   onCancel,
-  onSave,
-  contactInfo: propContactInfo,
-  clientInfo: propClientInfo
+  onSave
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
-  const [customMessage, setCustomMessage] = useState("");
+  const [customNote, setCustomNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [clientInfo, setClientInfo] = useState<any>(null);
-  const [estimateData, setEstimateData] = useState<any>(null);
-  const [currentStep, setCurrentStep] = useState<"send" | "confirmation">("send");
+  const [clientData, setClientData] = useState<any>(null);
+  const [configError, setConfigError] = useState<string>("");
 
-  // Merge contact info from props
-  const contactInfo = propContactInfo || propClientInfo || {};
+  // Use clientInfo or contactInfo, whichever is available
+  const finalContactInfo = clientInfo || contactInfo || { name: '', email: '', phone: '' };
 
-  // Fetch client and estimate data
+  // Check configuration when dialog opens
   useEffect(() => {
-    if (open && jobId) {
-      fetchClientAndEstimateData();
+    const checkConfiguration = async () => {
+      if (open) {
+        try {
+          // Check if required secrets are configured
+          const { data: companySettings } = await supabase
+            .from('company_settings')
+            .select('company_phone, custom_domain_name, email_from_address, email_from_name')
+            .limit(1)
+            .maybeSingle();
+
+          console.log('Company settings check:', companySettings);
+
+          if (sendMethod === 'email') {
+            // Email should work with the fixlyfy.app domain as it's working in the test panel
+            setConfigError('');
+          } else if (sendMethod === 'sms') {
+            if (!companySettings?.company_phone) {
+              setConfigError('SMS not configured. Please set up company phone number in settings.');
+            } else {
+              setConfigError('');
+            }
+          }
+        } catch (error) {
+          console.error('Configuration check error:', error);
+          setConfigError('Unable to check configuration. Please try again.');
+        }
+      }
+    };
+
+    checkConfiguration();
+  }, [open, sendMethod]);
+
+  // Fetch client data when dialog opens
+  useEffect(() => {
+    const fetchClientData = async () => {
+      if (open && jobId) {
+        console.log("Fetching client data for job:", jobId);
+        try {
+          const { data: job, error } = await supabase
+            .from('jobs')
+            .select(`
+              *,
+              clients:client_id (*)
+            `)
+            .eq('id', jobId)
+            .single();
+
+          if (!error && job?.clients) {
+            const client = Array.isArray(job.clients) ? job.clients[0] : job.clients;
+            setClientData(client);
+            console.log("Client data loaded:", client);
+          }
+        } catch (error) {
+          console.error("Error fetching client data:", error);
+        }
+      }
+    };
+
+    fetchClientData();
+  }, [open, jobId]);
+
+  // Set default recipient when dialog opens or send method changes
+  useEffect(() => {
+    if (open && (clientData || finalContactInfo)) {
+      const contact = clientData || finalContactInfo;
+      setSendTo(sendMethod === "email" ? (contact.email || "") : (contact.phone || ""));
     }
-  }, [open, jobId, estimateNumber]);
-
-  const fetchClientAndEstimateData = async () => {
-    try {
-      // Get job and client info
-      const { data: job, error: jobError } = await supabase
-        .from('jobs')
-        .select(`
-          *,
-          client:clients(*)
-        `)
-        .eq('id', jobId)
-        .single();
-
-      if (jobError) {
-        console.error('Error fetching job:', jobError);
-        return;
-      }
-
-      // Get estimate data
-      const { data: estimate, error: estimateError } = await supabase
-        .from('estimates')
-        .select('*')
-        .eq('estimate_number', estimateNumber)
-        .single();
-
-      if (estimateError) {
-        console.error('Error fetching estimate:', estimateError);
-        return;
-      }
-
-      const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
-      setClientInfo(clientData);
-      setEstimateData(estimate);
-
-      // Auto-fill based on available contact info
-      if (clientData?.email && isValidEmail(clientData.email)) {
-        setSendMethod("email");
-        setSendTo(clientData.email);
-      } else if (clientData?.phone && isValidPhoneNumber(clientData.phone)) {
-        setSendMethod("sms");
-        setSendTo(formatPhoneForTelnyx(clientData.phone));
-      }
-
-    } catch (error) {
-      console.error('Error fetching client data:', error);
-      toast.error('Failed to load client information');
-    }
-  };
+  }, [open, sendMethod, clientData, finalContactInfo]);
 
   const handleSendMethodChange = (value: "email" | "sms") => {
     setSendMethod(value);
-    
-    if (value === "email" && clientInfo?.email && isValidEmail(clientInfo.email)) {
-      setSendTo(clientInfo.email);
-    } else if (value === "sms" && clientInfo?.phone && isValidPhoneNumber(clientInfo.phone)) {
-      setSendTo(formatPhoneForTelnyx(clientInfo.phone));
-    } else {
-      setSendTo("");
+    const contact = clientData || finalContactInfo;
+    if (contact) {
+      setSendTo(value === "email" ? (contact.email || "") : (contact.phone || ""));
     }
-  };
-
-  const validateInput = (): string | null => {
-    if (!sendTo.trim()) {
-      return `Please enter a ${sendMethod === "email" ? "email address" : "phone number"}`;
-    }
-
-    if (sendMethod === "email" && !isValidEmail(sendTo)) {
-      return "Please enter a valid email address";
-    }
-
-    if (sendMethod === "sms" && !isValidPhoneNumber(sendTo)) {
-      return "Please enter a valid phone number";
-    }
-
-    return null;
   };
 
   const handleSend = async () => {
-    const validationError = validateInput();
-    if (validationError) {
-      toast.error(validationError);
+    console.log("=== SEND ESTIMATE CLICKED ===");
+    console.log("Send method:", sendMethod);
+    console.log("Send to:", sendTo);
+    console.log("Estimate number:", estimateNumber);
+
+    if (!sendTo.trim()) {
+      toast.error("Please enter a recipient");
+      return;
+    }
+
+    // Validate email/phone
+    if (sendMethod === "email" && !sendTo.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (sendMethod === "sms" && !isValidPhoneNumber(sendTo)) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
+    if (configError) {
+      toast.error(`Configuration Error: ${configError}`);
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // First save the estimate
-      console.log('Saving estimate before sending...');
-      const saveSuccess = await onSave();
-      if (!saveSuccess) {
-        toast.error("Failed to save estimate. Please try again.");
-        setIsProcessing(false);
+      // Get the estimate from database
+      const { data: estimate, error: fetchError } = await supabase
+        .from('estimates')
+        .select('id, estimate_number, total, status, notes, job_id')
+        .eq('estimate_number', estimateNumber)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError || !estimate) {
+        console.error("Failed to fetch estimate:", fetchError);
+        toast.error("Estimate not found. Please save the estimate first.");
         return;
       }
 
-      if (sendMethod === "email") {
-        // Use existing email function
-        const { data, error } = await supabase.functions.invoke('send-estimate', {
-          body: {
-            estimateId: estimateData.id,
-            sendMethod: 'email',
-            recipientEmail: sendTo,
-            subject: customMessage ? `Estimate #${estimateNumber}` : undefined,
-            message: customMessage || undefined
-          }
-        });
+      console.log("Retrieved estimate:", estimate);
+      const contact = clientData || finalContactInfo;
 
-        if (error) throw error;
-
-        if (data?.success) {
-          toast.success("Estimate sent via email successfully!");
-          setCurrentStep("confirmation");
-        } else {
-          throw new Error(data?.error || 'Failed to send email');
+      // Send via appropriate method using the updated edge function
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          estimateId: estimate.id,
+          sendMethod: sendMethod,
+          recipientEmail: sendMethod === 'email' ? sendTo : undefined,
+          recipientPhone: sendMethod === 'sms' ? sendTo : undefined,
+          subject: sendMethod === 'email' ? `Estimate ${estimateNumber} from ${contact?.name || 'your service provider'}` : undefined,
+          message: customNote || (sendMethod === 'email' 
+            ? `Please find your estimate ${estimateNumber}. Total: $${estimate.total?.toFixed(2) || '0.00'}.` 
+            : `Hi ${contact?.name || 'Customer'}! Your estimate ${estimateNumber} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us if you have any questions.`)
         }
-      } else {
-        // Use new SMS function
-        const { data, error } = await supabase.functions.invoke('send-estimate-sms', {
-          body: {
-            estimateId: estimateData.id,
-            recipientPhone: sendTo,
-            customMessage: customMessage || undefined
-          }
-        });
-
-        if (error) throw error;
-
-        if (data?.success) {
-          toast.success("Estimate sent via SMS successfully!");
-          setCurrentStep("confirmation");
+      });
+      
+      if (sendError || !sendData?.success) {
+        console.error("Send operation failed:", sendError || sendData);
+        const errorMessage = sendError?.message || sendData?.error || 'Unknown error occurred';
+        
+        // Provide specific error messages for common issues
+        if (errorMessage.includes('Mailgun API key not configured')) {
+          toast.error('Email sending not configured. Please contact support to set up Mailgun.');
+        } else if (errorMessage.includes('Telnyx API key not configured')) {
+          toast.error('SMS sending not configured. Please contact support to set up Telnyx.');
+        } else if (errorMessage.includes('Company phone number not configured')) {
+          toast.error('Company phone number not set up. Please configure it in settings.');
         } else {
-          throw new Error(data?.error || 'Failed to send SMS');
+          toast.error(`Failed to send ${sendMethod}: ${errorMessage}`);
         }
+        return;
+      }
+
+      console.log("Send operation successful:", sendData);
+      toast.success(`Estimate ${estimateNumber} sent successfully via ${sendMethod}!`);
+
+      // Update estimate status to 'sent'
+      await supabase
+        .from('estimates')
+        .update({ status: 'sent' })
+        .eq('id', estimate.id);
+
+      console.log("Estimate status updated to 'sent'");
+
+      // Close dialog and call success callback
+      onOpenChange(false);
+      
+      if (onSuccess) {
+        onSuccess();
       }
 
     } catch (error: any) {
-      console.error('Error sending estimate:', error);
-      toast.error(`Failed to send estimate: ${error.message}`);
+      console.error("CRITICAL ERROR in send estimate process:", error);
+      toast.error(`An error occurred while sending the estimate: ${error.message}`);
     } finally {
       setIsProcessing(false);
+      console.log("=== ESTIMATE SEND PROCESS COMPLETED ===");
     }
   };
 
-  const handleClose = () => {
-    if (currentStep === "confirmation") {
-      onSuccess();
-    } else {
+  const handleCancel = () => {
+    console.log("Send cancelled");
+    onOpenChange(false);
+    if (onCancel) {
       onCancel();
     }
   };
 
-  const resetForm = () => {
-    setCurrentStep("send");
-    setCustomMessage("");
-    setIsProcessing(false);
-  };
-
-  useEffect(() => {
-    if (open) {
-      resetForm();
-    }
-  }, [open]);
+  const contact = clientData || finalContactInfo;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="w-5 h-5 text-blue-600" />
-            {currentStep === "send" ? "Send Estimate" : "Estimate Sent"}
-          </DialogTitle>
+          <DialogTitle>Send Estimate {estimateNumber}</DialogTitle>
         </DialogHeader>
-
-        {currentStep === "send" && (
-          <div className="space-y-6">
-            <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-              Send estimate <span className="font-medium">#{estimateNumber}</span> to{' '}
-              <span className="font-medium">{contactInfo?.name || clientInfo?.name || 'client'}</span>
-            </div>
-
-            <div className="space-y-4">
-              <Label className="text-base font-medium">How would you like to send?</Label>
-              
-              <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
-                <Card className={`cursor-pointer transition-colors ${sendMethod === "email" ? "ring-2 ring-blue-500 bg-blue-50/30" : "hover:bg-gray-50"}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <RadioGroupItem value="email" id="email" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="email" className="flex items-center gap-2 font-medium cursor-pointer">
-                          <Mail className="w-4 h-4 text-blue-600" />
-                          Email
-                        </Label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Professional email with portal access link
-                        </p>
-                        {(contactInfo?.email || clientInfo?.email) && (
-                          <p className="text-xs text-blue-600 mt-1">{contactInfo?.email || clientInfo?.email}</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className={`cursor-pointer transition-colors ${sendMethod === "sms" ? "ring-2 ring-blue-500 bg-blue-50/30" : "hover:bg-gray-50"}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <RadioGroupItem value="sms" id="sms" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="sms" className="flex items-center gap-2 font-medium cursor-pointer">
-                          <MessageSquare className="w-4 h-4 text-green-600" />
-                          Text Message
-                        </Label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Quick SMS with portal link
-                        </p>
-                        {(contactInfo?.phone || clientInfo?.phone) && (
-                          <p className="text-xs text-green-600 mt-1">{contactInfo?.phone || clientInfo?.phone}</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="send-to">
-                {sendMethod === "email" ? "Email Address" : "Phone Number"}
-              </Label>
-              <Input
-                id="send-to"
-                value={sendTo}
-                onChange={(e) => setSendTo(e.target.value)}
-                placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890"}
-                className="text-sm"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="custom-message">Custom Message (Optional)</Label>
-              <Textarea
-                id="custom-message"
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder={sendMethod === "email" 
-                  ? "Add a personal note to the email..." 
-                  : "Add a custom SMS message..."
-                }
-                className="text-sm min-h-[80px] resize-none"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSend} 
-                disabled={!sendTo || isProcessing}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isProcessing ? "Sending..." : `Send via ${sendMethod === "email" ? "Email" : "SMS"}`}
-              </Button>
-            </div>
+        
+        <div className="space-y-4">
+          <div>
+            <Label>Send Method</Label>
+            <RadioGroup 
+              value={sendMethod} 
+              onValueChange={handleSendMethodChange}
+              className="flex gap-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="email" id="email" />
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="sms" id="sms" />
+                <Label htmlFor="sms" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  SMS
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
-        )}
 
-        {currentStep === "confirmation" && (
-          <div className="text-center py-6">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-green-500" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2 text-gray-900">
-              Estimate Sent Successfully!
-            </h3>
-            <p className="text-gray-600 mb-6">
-              The estimate has been sent to the client via {sendMethod === "email" ? "email" : "text message"}.
-              {sendMethod === "email" ? " They can access their portal to view and respond." : " They received a link to view the estimate."}
-            </p>
-            <Button onClick={handleClose} className="bg-blue-600 hover:bg-blue-700">
-              Done
-            </Button>
+          {configError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{configError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div>
+            <Label htmlFor="sendTo">
+              {sendMethod === "email" ? "Email Address" : "Phone Number"}
+            </Label>
+            <Input
+              id="sendTo"
+              value={sendTo}
+              onChange={(e) => setSendTo(e.target.value)}
+              placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890"}
+              disabled={isProcessing}
+            />
           </div>
-        )}
+
+          <div>
+            <Label htmlFor="customNote">Custom Message (Optional)</Label>
+            <Textarea
+              id="customNote"
+              value={customNote}
+              onChange={(e) => setCustomNote(e.target.value)}
+              placeholder="Add a personal message to your estimate..."
+              rows={3}
+              disabled={isProcessing}
+            />
+          </div>
+
+          {/* Client Info Display */}
+          {contact && (
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                Sending to:
+              </h4>
+              <div className="text-sm text-gray-600">
+                <p><strong>{contact.name || 'Unknown Client'}</strong></p>
+                <p>Email: {contact.email || 'Not provided'}</p>
+                <p>Phone: {contact.phone || 'Not provided'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            disabled={isProcessing}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSend}
+            disabled={isProcessing || !sendTo.trim() || !!configError}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              `Send via ${sendMethod === "email" ? "Email" : "SMS"}`
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

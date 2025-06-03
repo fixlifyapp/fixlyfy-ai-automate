@@ -1,16 +1,24 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Package, ChevronDown, ChevronUp } from "lucide-react";
-import { LineItem } from "../../builder/types";
-import { ProductCatalog } from "../../builder/ProductCatalog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Plus, 
+  Trash2, 
+  Calculator,
+  ShoppingCart,
+  Package
+} from 'lucide-react';
+import { LineItem, Product } from '../../builder/types';
+import { ProductCatalog } from '../../builder/ProductCatalog';
+import { formatCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface LineItemsManagerProps {
   lineItems: LineItem[];
@@ -19,13 +27,13 @@ interface LineItemsManagerProps {
   onLineItemsChange: (items: LineItem[]) => void;
   onTaxRateChange: (rate: number) => void;
   onNotesChange: (notes: string) => void;
-  onAddProduct: (product: any) => void;
+  onAddProduct: (product: Product) => void;
   onRemoveLineItem: (id: string) => void;
   onUpdateLineItem: (id: string, field: string, value: any) => void;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
-  documentType: "estimate" | "invoice";
+  documentType: 'estimate' | 'invoice';
 }
 
 export const LineItemsManager = ({
@@ -43,198 +51,270 @@ export const LineItemsManager = ({
   calculateGrandTotal,
   documentType
 }: LineItemsManagerProps) => {
-  const [isProductCatalogOpen, setIsProductCatalogOpen] = useState(false);
+  const [newItemDescription, setNewItemDescription] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState(1);
+  const [newItemPrice, setNewItemPrice] = useState(0);
+  const [newItemTaxable, setNewItemTaxable] = useState(true);
 
-  const handleAddCustomItem = () => {
+  const handleAddLineItem = () => {
+    if (!newItemDescription.trim() || newItemPrice <= 0) {
+      toast.error('Please enter valid item details');
+      return;
+    }
+
     const newItem: LineItem = {
-      id: `custom-${Date.now()}`,
-      description: "",
-      quantity: 1,
-      unitPrice: 0,
-      taxable: true,
+      id: `temp-${Date.now()}`,
+      description: newItemDescription,
+      quantity: newItemQuantity,
+      unitPrice: newItemPrice,
+      taxable: newItemTaxable,
       discount: 0,
       ourPrice: 0,
-      name: "",
-      price: 0,
-      total: 0
+      name: newItemDescription,
+      price: newItemPrice,
+      total: newItemQuantity * newItemPrice
     };
+
     onLineItemsChange([...lineItems, newItem]);
+    
+    // Reset form
+    setNewItemDescription('');
+    setNewItemQuantity(1);
+    setNewItemPrice(0);
+    setNewItemTaxable(true);
+    
+    toast.success('Item added successfully');
+  };
+
+  const handleProductSelect = (product: Product) => {
+    onAddProduct(product);
+    toast.success(`${product.name} added to ${documentType}`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {documentType === "estimate" ? "Estimate" : "Invoice"} Items
-        </h3>
-        <Badge variant="outline" className="text-sm">
-          {lineItems.length} {lineItems.length === 1 ? "item" : "items"}
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Calculator className="h-6 w-6 text-blue-600" />
+          Add Items & Services
+        </h2>
+        <Badge variant="outline" className="text-lg px-3 py-1">
+          Total: {formatCurrency(calculateGrandTotal())}
         </Badge>
       </div>
 
-      {/* Add Items Section */}
-      <Card className="border-blue-200 bg-blue-50/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base text-blue-900">Add Items</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex gap-2">
-            <Button
-              onClick={handleAddCustomItem}
-              variant="outline"
-              className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Custom Item
-            </Button>
-            
-            <Collapsible open={isProductCatalogOpen} onOpenChange={setIsProductCatalogOpen}>
-              <CollapsibleTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
-                >
-                  <Package className="w-4 h-4 mr-2" />
-                  Product Catalog
-                  {isProductCatalogOpen ? (
-                    <ChevronUp className="w-4 h-4 ml-2" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent className="mt-3">
-                <div className="border border-blue-200 rounded-lg bg-white">
-                  <ProductCatalog onAddProduct={onAddProduct} />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="catalog" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="catalog" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Product Catalog
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Manual Entry
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Line Items */}
+        <TabsContent value="catalog" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Select Products & Services
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductCatalog onAddProduct={handleProductSelect} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="manual" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Custom Item</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-5">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    placeholder="Service or product description"
+                    value={newItemDescription}
+                    onChange={(e) => setNewItemDescription(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={newItemQuantity}
+                    onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="price">Unit Price</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="taxable">Taxable</Label>
+                  <Select value={newItemTaxable.toString()} onValueChange={(value) => setNewItemTaxable(value === 'true')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Yes</SelectItem>
+                      <SelectItem value="false">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-1 flex items-end">
+                  <Button onClick={handleAddLineItem} className="w-full">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Line Items List */}
       {lineItems.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Items</CardTitle>
+            <CardTitle>Added Items ({lineItems.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="space-y-0">
-              {lineItems.map((item, index) => (
-                <div key={item.id} className={`p-4 ${index > 0 ? 'border-t' : ''}`}>
-                  <div className="grid grid-cols-12 gap-3 items-start">
-                    {/* Description */}
-                    <div className="col-span-5">
-                      <Label className="text-xs text-gray-600 mb-1 block">Description</Label>
-                      <Input
-                        placeholder="Item description"
-                        value={item.description}
-                        onChange={(e) => onUpdateLineItem(item.id, "description", e.target.value)}
-                        className="text-sm"
-                      />
-                    </div>
+          <CardContent>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Description</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Qty</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Unit Price</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Taxable</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item) => (
+                    <tr key={item.id} className="border-t">
+                      <td className="px-4 py-3">
+                        <Input
+                          value={item.description}
+                          onChange={(e) => onUpdateLineItem(item.id, 'description', e.target.value)}
+                          className="border-0 p-0 h-auto bg-transparent"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => onUpdateLineItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                          className="w-16 text-center"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unitPrice}
+                          onChange={(e) => onUpdateLineItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          className="w-24 text-right"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Select 
+                          value={item.taxable.toString()} 
+                          onValueChange={(value) => onUpdateLineItem(item.id, 'taxable', value === 'true')}
+                        >
+                          <SelectTrigger className="w-16">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Yes</SelectItem>
+                            <SelectItem value="false">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {formatCurrency(item.quantity * item.unitPrice)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemoveLineItem(item.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                    {/* Quantity */}
-                    <div className="col-span-2">
-                      <Label className="text-xs text-gray-600 mb-1 block">Qty</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => onUpdateLineItem(item.id, "quantity", parseInt(e.target.value) || 1)}
-                        className="text-sm text-center"
-                      />
-                    </div>
-
-                    {/* Unit Price */}
-                    <div className="col-span-2">
-                      <Label className="text-xs text-gray-600 mb-1 block">Price</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unitPrice}
-                        onChange={(e) => onUpdateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
-                        className="text-sm text-right"
-                      />
-                    </div>
-
-                    {/* Total */}
-                    <div className="col-span-2">
-                      <Label className="text-xs text-gray-600 mb-1 block">Total</Label>
-                      <div className="text-sm font-medium text-right py-2 px-3 bg-gray-50 rounded border">
-                        ${(item.quantity * item.unitPrice).toFixed(2)}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="col-span-1 flex justify-center pt-6">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveLineItem(item.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {/* Totals Section */}
+            <div className="mt-6 flex justify-end">
+              <div className="w-80 space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(calculateSubtotal())}</span>
                 </div>
-              ))}
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span>Tax:</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={taxRate}
+                      onChange={(e) => onTaxRateChange(parseFloat(e.target.value) || 0)}
+                      className="w-16 h-6 text-xs"
+                    />
+                    <span className="text-xs">%</span>
+                  </div>
+                  <span>{formatCurrency(calculateTotalTax())}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                  <span>Total:</span>
+                  <span className="text-green-600">{formatCurrency(calculateGrandTotal())}</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Summary */}
-      <Card className="bg-gray-50">
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
-              <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Tax Rate (%):</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={taxRate}
-                  onChange={(e) => onTaxRateChange(parseFloat(e.target.value) || 0)}
-                  className="w-20 h-8 text-sm text-center"
-                />
-              </div>
-              <span className="text-sm font-medium">${calculateTotalTax().toFixed(2)}</span>
-            </div>
-            
-            <Separator />
-            
-            <div className="flex justify-between text-lg font-bold text-blue-900">
-              <span>Total:</span>
-              <span>${calculateGrandTotal().toFixed(2)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notes */}
+      {/* Notes Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Notes</CardTitle>
+          <CardTitle>Additional Notes</CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
-            placeholder={`Add any additional notes for this ${documentType}...`}
+            placeholder="Add any additional notes, terms, or special instructions..."
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
-            className="min-h-[80px] resize-none"
+            rows={3}
           />
         </CardContent>
       </Card>
