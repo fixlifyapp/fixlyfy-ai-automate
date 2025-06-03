@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Phone, Save, Zap } from 'lucide-react';
+import { Bot, Phone, Save, Zap, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,24 +20,34 @@ export const TelnyxSettings = () => {
   const { data: config, isLoading } = useQuery({
     queryKey: ['telnyx-config'],
     queryFn: async () => {
+      console.log('Fetching Telnyx config...');
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: { action: 'get_config' }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching config:', error);
+        throw error;
+      }
+      console.log('Config received:', data);
       return data.config;
     }
   });
 
   // Get user's phone numbers
-  const { data: phoneNumbers = [] } = useQuery({
-    queryKey: ['user-phone-numbers'],
+  const { data: phoneNumbers = [], refetch: refetchPhoneNumbers } = useQuery({
+    queryKey: ['user-phone-numbers-ai-settings'],
     queryFn: async () => {
+      console.log('Fetching phone numbers for AI settings...');
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: { action: 'list' }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching phone numbers:', error);
+        throw error;
+      }
+      console.log('Phone numbers for AI settings:', data);
       return data.phone_numbers || [];
     }
   });
@@ -74,6 +83,7 @@ export const TelnyxSettings = () => {
   // Update configuration mutation
   const updateConfigMutation = useMutation({
     mutationFn: async (newConfig: any) => {
+      console.log('Updating config:', newConfig);
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
           action: 'update_config',
@@ -93,7 +103,11 @@ export const TelnyxSettings = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update config error:', error);
+        throw error;
+      }
+      console.log('Config updated successfully:', data);
       return data;
     },
     onSuccess: () => {
@@ -111,9 +125,20 @@ export const TelnyxSettings = () => {
     updateConfigMutation.mutate(formData);
   };
 
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['telnyx-config'] });
+    queryClient.invalidateQueries({ queryKey: ['user-phone-numbers-ai-settings'] });
+    refetchPhoneNumbers();
+    toast.success('Data refreshed');
+  };
+
   const configuredNumbers = phoneNumbers.filter(num => 
     num.ai_dispatcher_enabled || num.configured_for_ai || num.configured_at
   );
+
+  const formatPhoneNumber = (phone: string) => {
+    return phone.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+  };
 
   if (isLoading) {
     return <div>Loading Telnyx settings...</div>;
@@ -129,6 +154,15 @@ export const TelnyxSettings = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
           <Badge variant={config?.api_key_configured ? 'default' : 'destructive'}>
             <Zap className="h-3 w-3 mr-1" />
             {config?.api_key_configured ? 'Telnyx Connected' : 'Telnyx Not Connected'}
@@ -168,10 +202,18 @@ export const TelnyxSettings = () => {
           ) : (
             <div className="space-y-2">
               {configuredNumbers.map((number: any) => (
-                <div key={number.id} className="flex items-center justify-between p-3 border rounded">
-                  <span className="font-medium">
-                    {number.phone_number.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')}
-                  </span>
+                <div key={number.id || number.phone_number} className="flex items-center justify-between p-3 border rounded">
+                  <div>
+                    <span className="font-medium">
+                      {formatPhoneNumber(number.phone_number)}
+                    </span>
+                    {number.source === 'telnyx_table' && (
+                      <Badge variant="outline" className="ml-2 text-blue-600">
+                        <Zap className="h-3 w-3 mr-1" />
+                        Telnyx
+                      </Badge>
+                    )}
+                  </div>
                   <Badge variant="outline" className="text-green-600">
                     <Bot className="h-3 w-3 mr-1" />
                     AI Active

@@ -36,26 +36,32 @@ export const PhoneNumbersList = () => {
   const fetchPhoneNumbers = async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      console.log('Fetching phone numbers from telnyx-phone-numbers function...');
+      
+      // Use the telnyx-phone-numbers function to get all numbers
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'list' }
+      });
 
-      const { data, error } = await supabase
-        .from('phone_numbers')
-        .select('*')
-        .eq('purchased_by', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      if (error) {
+        console.error('Error from telnyx-phone-numbers function:', error);
+        throw error;
+      }
+      
+      console.log('Phone numbers received:', data);
       
       // Transform the data to match our PhoneNumber type
-      const transformedData = data?.map(item => ({
+      const transformedData = data?.phone_numbers?.map((item: any) => ({
         ...item,
         capabilities: typeof item.capabilities === 'string' 
           ? JSON.parse(item.capabilities) 
           : item.capabilities || { voice: true, sms: true, mms: false },
-        ai_dispatcher_enabled: item.ai_dispatcher_enabled || false
+        ai_dispatcher_enabled: item.ai_dispatcher_enabled || item.configured_for_ai || item.configured_at || false,
+        // Handle both user_id and purchased_by fields
+        purchased_by: item.user_id || item.purchased_by
       })) || [];
       
+      console.log('Transformed phone numbers:', transformedData);
       setPhoneNumbers(transformedData);
     } catch (error) {
       console.error('Error fetching phone numbers:', error);
@@ -74,20 +80,35 @@ export const PhoneNumbersList = () => {
     try {
       const newStatus = !phoneNumber.ai_dispatcher_enabled;
       
-      // Call the manage-ai-dispatcher function
-      const { error } = await supabase.functions.invoke('manage-ai-dispatcher', {
-        body: {
-          action: newStatus ? 'enable' : 'disable',
-          phoneNumberId: phoneNumber.id
-        }
-      });
+      console.log(`Toggling AI dispatcher for ${phoneNumber.phone_number} to ${newStatus}`);
+      
+      if (newStatus) {
+        // Configure the number for AI
+        const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+          body: {
+            action: 'configure',
+            phone_number: phoneNumber.phone_number
+          }
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        console.log('Configure response:', data);
+      } else {
+        // Call the manage-ai-dispatcher function to disable
+        const { error } = await supabase.functions.invoke('manage-ai-dispatcher', {
+          body: {
+            action: 'disable',
+            phoneNumberId: phoneNumber.id
+          }
+        });
+
+        if (error) throw error;
+      }
 
       // Update local state
       setPhoneNumbers(prev => prev.map(pn => 
         pn.id === phoneNumber.id 
-          ? { ...pn, ai_dispatcher_enabled: newStatus }
+          ? { ...pn, ai_dispatcher_enabled: newStatus, configured_for_ai: newStatus, configured_at: newStatus ? new Date().toISOString() : null }
           : pn
       ));
 
@@ -96,7 +117,7 @@ export const PhoneNumbersList = () => {
         description: newStatus 
           ? `AI is now handling calls for ${formatPhoneNumber(phoneNumber.phone_number)}` 
           : `AI dispatcher has been disabled for ${formatPhoneNumber(phoneNumber.phone_number)}`,
-        variant: newStatus ? "default" : "default"
+        variant: "default"
       });
 
       // If enabling AI for the first time, open settings dialog
@@ -186,108 +207,120 @@ export const PhoneNumbersList = () => {
               <div className="p-3 bg-gray-100 rounded-full w-fit mx-auto mb-4">
                 <Phone className="h-8 w-8 text-gray-400" />
               </div>
-              <p className="text-lg font-medium text-gray-900 mb-2">No phone numbers purchased</p>
+              <p className="text-lg font-medium text-gray-900 mb-2">No phone numbers found</p>
               <p className="text-sm text-gray-500 max-w-md mx-auto">
-                Purchase a phone number to get started with AI-powered call handling and customer management
+                Your phone numbers should appear here. Try refreshing the page or check the console for errors.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {phoneNumbers.map((phoneNumber) => (
-                <div key={phoneNumber.id} className="group flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-200">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-full transition-all duration-200 ${
-                      phoneNumber.ai_dispatcher_enabled 
-                        ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-200' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {phoneNumber.ai_dispatcher_enabled ? (
-                        <div className="relative">
-                          <Bot className="h-6 w-6" />
-                          <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-blue-400" />
-                        </div>
-                      ) : (
-                        <Phone className="h-6 w-6" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="font-semibold text-gray-900 text-lg">
-                          {formatPhoneNumber(phoneNumber.phone_number)}
-                        </span>
-                        {phoneNumber.ai_dispatcher_enabled ? (
-                          <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
-                            <Bot className="h-3 w-3 mr-1" />
-                            AI Active
-                          </Badge>
+              {phoneNumbers.map((phoneNumber) => {
+                const isConfigured = phoneNumber.ai_dispatcher_enabled || phoneNumber.configured_for_ai || phoneNumber.configured_at;
+                const isTelnyx = phoneNumber.source === 'telnyx_table' || phoneNumber.phone_number === '+14375249932';
+                
+                return (
+                  <div key={phoneNumber.id || phoneNumber.phone_number} className="group flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-200">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-full transition-all duration-200 ${
+                        isConfigured 
+                          ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-200' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {isConfigured ? (
+                          <div className="relative">
+                            <Bot className="h-6 w-6" />
+                            <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-blue-400" />
+                          </div>
                         ) : (
-                          <Badge variant="outline" className="text-gray-600 border-gray-300">
-                            Standard
-                          </Badge>
+                          <Phone className="h-6 w-6" />
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        {phoneNumber.locality && (
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="font-semibold text-gray-900 text-lg">
+                            {formatPhoneNumber(phoneNumber.phone_number)}
+                          </span>
+                          {isConfigured ? (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
+                              <Bot className="h-3 w-3 mr-1" />
+                              AI Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-gray-600 border-gray-300">
+                              Standard
+                            </Badge>
+                          )}
+                          {isTelnyx && (
+                            <Badge variant="outline" className="text-green-600 border-green-300">
+                              <Zap className="h-3 w-3 mr-1" />
+                              Telnyx
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            <span>{phoneNumber.locality}, {phoneNumber.region}</span>
+                            <span>{phoneNumber.locality || 'Toronto'}, {phoneNumber.region || 'ON'}</span>
                           </div>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          <span>${phoneNumber.monthly_price}/month</span>
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            <span>${phoneNumber.monthly_price || phoneNumber.monthly_cost || 1.00}/month</span>
+                          </div>
+                          {phoneNumber.configured_at && (
+                            <span>Configured: {new Date(phoneNumber.configured_at).toLocaleDateString()}</span>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {/* AI Settings Button */}
-                    {phoneNumber.ai_dispatcher_enabled && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openAISettings(phoneNumber)}
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                          >
-                            <Settings className="h-4 w-4 mr-2" />
-                            AI Settings
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Configure AI behavior, pricing, and voice settings</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
                     
-                    {/* AI Dispatcher Toggle */}
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-white border">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm font-medium text-gray-700">AI</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Enable AI to automatically handle incoming calls</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      {aiToggleLoading === phoneNumber.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                      ) : (
-                        <Switch
-                          checked={phoneNumber.ai_dispatcher_enabled || false}
-                          onCheckedChange={() => toggleAIDispatcher(phoneNumber)}
-                          className="data-[state=checked]:bg-blue-600"
-                        />
+                    <div className="flex items-center gap-3">
+                      {/* AI Settings Button */}
+                      {isConfigured && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openAISettings(phoneNumber)}
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              AI Settings
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Configure AI behavior, pricing, and voice settings</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
+                      
+                      {/* AI Dispatcher Toggle */}
+                      <div className="flex items-center gap-3 p-2 rounded-lg bg-white border">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm font-medium text-gray-700">AI</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Enable AI to automatically handle incoming calls</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        {aiToggleLoading === phoneNumber.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        ) : (
+                          <Switch
+                            checked={isConfigured}
+                            onCheckedChange={() => toggleAIDispatcher(phoneNumber)}
+                            className="data-[state=checked]:bg-blue-600"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
