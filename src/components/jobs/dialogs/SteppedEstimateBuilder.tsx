@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,7 @@ export const SteppedEstimateBuilder = ({
   const navigate = useNavigate();
   
   // Use the optimized useJobData hook instead of fetching all jobs
-  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId, 0);
+  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId);
   
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
   const [savedEstimate, setSavedEstimate] = useState<any>(null);
