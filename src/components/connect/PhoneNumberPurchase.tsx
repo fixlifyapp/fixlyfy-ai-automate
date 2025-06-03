@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Search, Plus, CheckCircle, Trash2, Star } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phone, Search, Plus, MapPin, Hash, Globe } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatPhoneForDisplay } from "@/utils/phoneUtils";
-import { AddExistingNumberDialog } from "@/components/telnyx/AddExistingNumberDialog";
 
 interface AvailableNumber {
   phone_number: string;
@@ -28,7 +28,9 @@ interface ClaimableNumber {
 }
 
 export function PhoneNumberPurchase() {
-  const [searchAreaCode, setSearchAreaCode] = useState('437');
+  const [searchType, setSearchType] = useState<'city' | 'area-code' | 'local' | 'toll-free'>('city');
+  const [searchValue, setSearchValue] = useState('');
+  const [country, setCountry] = useState('US');
   const [availableNumbers, setAvailableNumbers] = useState<AvailableNumber[]>([]);
   const [claimableNumber, setClaimableNumber] = useState<ClaimableNumber | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -61,46 +63,6 @@ export function PhoneNumberPurchase() {
     } catch (error) {
       console.error('Error checking claimable number:', error);
     }
-  };
-
-  // Remove test numbers on component mount - only once
-  useEffect(() => {
-    const hasRemovedTestNumbers = sessionStorage.getItem('test_numbers_removed');
-    if (!hasRemovedTestNumbers) {
-      removeTestNumbers();
-      sessionStorage.setItem('test_numbers_removed', 'true');
-    }
-  }, []);
-
-  // Remove test numbers mutation
-  const removeTestNumbersMutation = useMutation({
-    mutationFn: async () => {
-      console.log('Removing test numbers from account');
-      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-        body: {
-          action: 'remove_test_numbers'
-        }
-      });
-
-      if (error) {
-        console.error('Remove test numbers error:', error);
-        throw error;
-      }
-      return data;
-    },
-    onSuccess: () => {
-      console.log('Test numbers removed successfully');
-      queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
-      queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
-      queryClient.invalidateQueries({ queryKey: ['phone-numbers-management'] });
-    },
-    onError: (error) => {
-      console.error('Remove test numbers error:', error);
-    }
-  });
-
-  const removeTestNumbers = () => {
-    removeTestNumbersMutation.mutate();
   };
 
   // Claim existing number mutation
@@ -139,22 +101,43 @@ export function PhoneNumberPurchase() {
     }
   });
 
-  // Search for available numbers (real Telnyx numbers only)
+  // Search for available numbers
   const searchNumbers = async () => {
-    if (!searchAreaCode) {
-      toast.error('Please enter an area code');
+    if (!searchValue.trim()) {
+      toast.error('Please enter a search term');
       return;
     }
 
     setIsSearching(true);
     try {
-      console.log('Searching for real Telnyx numbers in area code:', searchAreaCode);
+      console.log('Searching for numbers:', { searchType, searchValue, country });
+      
+      let searchParams: any = {
+        action: 'search',
+        country_code: country
+      };
+
+      // Configure search based on type
+      switch (searchType) {
+        case 'area-code':
+          searchParams.area_code = searchValue;
+          break;
+        case 'city':
+          searchParams.locality = searchValue;
+          break;
+        case 'local':
+          searchParams.number_type = 'local';
+          if (searchValue) {
+            searchParams.area_code = searchValue;
+          }
+          break;
+        case 'toll-free':
+          searchParams.number_type = 'toll_free';
+          break;
+      }
+
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-        body: {
-          action: 'search',
-          area_code: searchAreaCode,
-          country_code: 'US'
-        }
+        body: searchParams
       });
 
       if (error) {
@@ -168,7 +151,7 @@ export function PhoneNumberPurchase() {
       if (data.available_numbers?.length > 0) {
         toast.success(`Found ${data.available_numbers.length} available numbers`);
       } else {
-        toast.info('No numbers found for this area code. Try a different area code.');
+        toast.info('No numbers found for your search criteria. Try different parameters.');
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -186,7 +169,7 @@ export function PhoneNumberPurchase() {
         body: {
           action: 'purchase',
           phone_number: phoneNumber,
-          country_code: 'US'
+          country_code: country
         }
       });
 
@@ -222,14 +205,41 @@ export function PhoneNumberPurchase() {
     };
   };
 
+  const getSearchPlaceholder = () => {
+    switch (searchType) {
+      case 'area-code':
+        return 'e.g., 212, 310, 415';
+      case 'city':
+        return 'e.g., New York, Los Angeles, San Francisco';
+      case 'local':
+        return 'Optional: Enter area code for local numbers';
+      case 'toll-free':
+        return 'Search toll-free numbers (800, 888, 877, etc.)';
+      default:
+        return 'Enter search term';
+    }
+  };
+
+  const cities = [
+    'New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia',
+    'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville',
+    'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis',
+    'Seattle', 'Denver', 'Washington DC', 'Boston', 'Nashville', 'Baltimore',
+    'Oklahoma City', 'Louisville', 'Portland', 'Las Vegas', 'Milwaukee',
+    'Albuquerque', 'Tucson', 'Fresno', 'Mesa', 'Kansas City', 'Atlanta',
+    'Long Beach', 'Colorado Springs', 'Raleigh', 'Miami', 'Virginia Beach',
+    'Omaha', 'Oakland', 'Minneapolis', 'Tulsa', 'Arlington', 'Tampa',
+    'New Orleans', 'Wichita', 'Cleveland', 'Bakersfield'
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Claim Your Telnyx Number Section */}
+      {/* Claim Your Telnyx Number Section - Only show if claimable */}
       {claimableNumber && (
         <Card className="border-green-200 bg-green-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-800">
-              <Star className="h-5 w-5" />
+              <Phone className="h-5 w-5" />
               Claim Your Telnyx Number - Special Offer!
             </CardTitle>
           </CardHeader>
@@ -263,7 +273,7 @@ export function PhoneNumberPurchase() {
                   disabled={claimNumberMutation.isPending}
                   className="gap-2 bg-green-600 hover:bg-green-700"
                 >
-                  <Star className="h-4 w-4" />
+                  <Phone className="h-4 w-4" />
                   {claimNumberMutation.isPending ? 'Claiming...' : 'Claim FREE'}
                 </Button>
               </div>
@@ -276,77 +286,115 @@ export function PhoneNumberPurchase() {
         </Card>
       )}
 
-      {/* Add Existing Number Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Already Have a Telnyx Number?
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground">
-            If you have other Telnyx numbers, you can add them to your account here.
-          </p>
-          <AddExistingNumberDialog />
-        </CardContent>
-      </Card>
-
-      {/* Manual Test Number Removal */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5" />
-            Clean Up Test Numbers
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground">
-            Remove any test numbers from your account to keep your phone numbers list clean.
-          </p>
-          <Button 
-            variant="outline" 
-            onClick={removeTestNumbers} 
-            disabled={removeTestNumbersMutation.isPending}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {removeTestNumbersMutation.isPending ? 'Removing...' : 'Remove Test Numbers'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Search Section */}
+      {/* Search & Purchase Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Search & Purchase Telnyx Numbers
+            Search & Purchase Phone Numbers
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="area-code">Area Code</Label>
-              <Input
-                id="area-code"
-                placeholder="e.g., 437, 212, 310, 555"
-                value={searchAreaCode}
-                onChange={(e) => setSearchAreaCode(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Search for real Telnyx phone numbers available for purchase
-              </p>
+          {/* Search Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">🇺🇸 United States</SelectItem>
+                  <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-end">
-              <Button onClick={searchNumbers} disabled={isSearching}>
-                {isSearching ? 'Searching...' : 'Search'}
-              </Button>
+
+            <div>
+              <Label htmlFor="search-type">Search Type</Label>
+              <Select value={searchType} onValueChange={(value: 'city' | 'area-code' | 'local' | 'toll-free') => setSearchType(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="city">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      City/Region
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="area-code">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Area Code
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="local">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Local Numbers
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="toll-free">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Toll-Free
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="search-value">
+                {searchType === 'area-code' ? 'Area Code' : 
+                 searchType === 'city' ? 'City/Region' : 
+                 searchType === 'local' ? 'Area Code (Optional)' : 
+                 'Search Toll-Free'}
+              </Label>
+              {searchType === 'city' ? (
+                <Select value={searchValue} onValueChange={setSearchValue}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a city..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="search-value"
+                  placeholder={getSearchPlaceholder()}
+                  value={searchValue}
+                  onChange={(e) => {
+                    if (searchType === 'area-code' || searchType === 'local') {
+                      setSearchValue(e.target.value.replace(/\D/g, '').slice(0, 3));
+                    } else {
+                      setSearchValue(e.target.value);
+                    }
+                  }}
+                  maxLength={searchType === 'area-code' || searchType === 'local' ? 3 : undefined}
+                />
+              )}
             </div>
           </div>
 
+          <Button 
+            onClick={searchNumbers}
+            disabled={isSearching || (!searchValue && searchType !== 'toll-free')}
+            className="w-full"
+          >
+            {isSearching ? 'Searching...' : 'Search Available Numbers'}
+          </Button>
+
+          {/* Search Results */}
           {availableNumbers.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium">Available Real Numbers ({availableNumbers.length})</h4>
+              <h4 className="font-medium">Available Numbers ({availableNumbers.length})</h4>
               <div className="grid grid-cols-1 gap-3">
                 {availableNumbers.map((number) => {
                   const cost = getCostDisplay(number);
@@ -362,12 +410,12 @@ export function PhoneNumberPurchase() {
                             {formatPhoneForDisplay(number.phone_number)}
                           </span>
                           <Badge className="bg-blue-100 text-blue-800">
-                            📞 Real Telnyx Number
+                            📞 Telnyx Number
                           </Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <div>
-                            {number.region_information?.[0]?.region_name || 'United States'}, {' '}
+                            {number.region_information?.[0]?.region_name || country === 'US' ? 'United States' : 'Canada'}, {' '}
                             {number.region_information?.[0]?.rate_center || 'Local Area'}
                           </div>
                           <div className="flex items-center gap-4 mt-1">
@@ -399,58 +447,31 @@ export function PhoneNumberPurchase() {
             </div>
           )}
 
-          {availableNumbers.length === 0 && searchAreaCode && !isSearching && (
+          {availableNumbers.length === 0 && searchValue && !isSearching && (
             <div className="text-center py-8 text-muted-foreground">
               <Phone className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>No numbers found for area code {searchAreaCode}</p>
-              <p className="text-sm">Try searching for a different area code (e.g., 212, 310, 555)</p>
+              <p>No numbers found for your search criteria</p>
+              <p className="text-sm">Try different search parameters or contact support for assistance</p>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>How It Works</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-3">
-              <h5 className="font-medium text-green-600">🎁 Claim Your Number</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• FREE: Claim +14375249932</li>
-                <li>• Already under your Telnyx account</li>
-                <li>• Automatically set as default</li>
-                <li>• Full AI dispatcher ready</li>
-              </ul>
-            </div>
-            <div className="space-y-3">
-              <h5 className="font-medium text-purple-600">📱 Add Existing Numbers</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• Already have other Telnyx numbers?</li>
-                <li>• Add them using "Add Existing Number"</li>
-                <li>• Connect them to your AI dispatcher</li>
-                <li>• Start handling calls immediately</li>
-              </ul>
-            </div>
-            <div className="space-y-3">
-              <h5 className="font-medium text-blue-600">📞 Purchase New Numbers</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• Search real Telnyx phone numbers</li>
-                <li>• Purchase directly through Telnyx</li>
-                <li>• Automatically added to your account</li>
-                <li>• Full SMS, voice, and AI capabilities</li>
-              </ul>
-            </div>
-          </div>
-
+          {/* Search Help */}
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h5 className="font-medium text-blue-800 mb-2">💡 Pro Tip</h5>
-            <p className="text-sm text-blue-700">
-              Start by claiming your existing Telnyx number (+14375249932) for FREE! 
-              This will give you immediate access to the AI dispatcher with your real number.
-            </p>
+            <h5 className="font-medium text-blue-800 mb-2">Search Options</h5>
+            <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-700">
+              <div>
+                <strong>City/Region:</strong> Find numbers in specific cities
+              </div>
+              <div>
+                <strong>Area Code:</strong> Search by 3-digit area code
+              </div>
+              <div>
+                <strong>Local Numbers:</strong> Standard geographic numbers
+              </div>
+              <div>
+                <strong>Toll-Free:</strong> 800, 888, 877, 866, 855, 844, 833 numbers
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
