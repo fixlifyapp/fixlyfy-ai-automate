@@ -1,4 +1,3 @@
-
 export interface PhoneNumber {
   id: string;
   phone_number: string;
@@ -23,6 +22,10 @@ export interface PhoneNumber {
   connect_instance_id?: string;
   created_at: string;
   updated_at: string;
+  configured_for_ai?: boolean;
+  configured_at?: string;
+  source?: string;
+  monthly_cost?: number;
 }
 
 // AI Response types
