@@ -46,36 +46,49 @@ export const useDocumentOperations = ({
 
   const saveDocumentChanges = useCallback(async (): Promise<Estimate | Invoice | null> => {
     if (isSubmitting) {
-      console.log("Already submitting, skipping");
+      console.log("❌ Already submitting, skipping");
       return null;
     }
     
     setIsSubmitting(true);
-    console.log('=== SAVE DOCUMENT CHANGES ===');
+    console.log('=== SAVE DOCUMENT CHANGES START ===');
     console.log('Document type:', documentType);
+    console.log('Line items:', lineItems);
     console.log('Line items count:', lineItems.length);
-    console.log('Total:', calculateGrandTotal());
+    console.log('Form data:', formData);
     console.log('Job ID:', jobId);
+    console.log('Job ID type:', typeof jobId);
+    console.log('Total:', calculateGrandTotal());
+    console.log('Notes:', notes);
     
     try {
       // Check if user is authenticated
-      console.log('Checking authentication...');
+      console.log('🔐 Checking authentication...');
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
+      console.log('Authentication result:', { user: !!user, error: authError });
+      
       if (authError || !user) {
-        console.error('Authentication error:', authError);
+        console.error('❌ Authentication error:', authError);
         throw new Error('Authentication required. Please log in to save documents.');
       }
 
-      console.log('User authenticated:', user.id);
+      console.log('✅ User authenticated:', user.id);
 
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
+      console.log('📋 Using table:', tableName);
       
       // Generate document number if not exists
       const documentNumber = formData.documentNumber || 
         `${documentType === 'estimate' ? 'EST' : 'INV'}-${Date.now()}`;
       
-      console.log('Generated document number:', documentNumber);
+      console.log('📄 Document number:', documentNumber);
+      
+      // Validate job ID is string and not empty
+      if (!jobId || typeof jobId !== 'string') {
+        console.error('❌ Invalid job ID:', { jobId, type: typeof jobId });
+        throw new Error('Invalid job ID provided');
+      }
       
       // Create document data - ensure job_id is always a string
       const baseDocumentData = {
@@ -98,12 +111,12 @@ export const useDocumentOperations = ({
             balance: calculateGrandTotal()
           };
 
-      console.log('Document data to save:', documentData);
+      console.log('📦 Document data to save:', documentData);
 
       let document;
       if (formData.documentId) {
         // Update existing document
-        console.log('Updating existing document:', formData.documentId);
+        console.log('📝 Updating existing document:', formData.documentId);
         const { data, error } = await supabase
           .from(tableName)
           .update(documentData)
@@ -112,13 +125,14 @@ export const useDocumentOperations = ({
           .single();
           
         if (error) {
-          console.error('Error updating document:', error);
+          console.error('❌ Error updating document:', error);
           throw new Error(`Failed to update ${documentType}: ${error.message}`);
         }
         document = data;
+        console.log('✅ Document updated:', document);
       } else {
         // Create new document
-        console.log('Creating new document for job_id:', String(jobId));
+        console.log('➕ Creating new document for job_id:', String(jobId));
         const { data, error } = await supabase
           .from(tableName)
           .insert(documentData)
@@ -126,18 +140,26 @@ export const useDocumentOperations = ({
           .single();
           
         if (error) {
-          console.error('Error creating document:', error);
+          console.error('❌ Error creating document:', error);
+          console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
           throw new Error(`Failed to create ${documentType}: ${error.message}`);
         }
         document = data;
-        console.log('Created document:', document);
+        console.log('✅ Document created:', document);
       }
       
       // Handle line items
       if (document && lineItems.length > 0) {
-        console.log('Saving line items for document:', document.id);
+        console.log('📋 Saving line items for document:', document.id);
+        console.log('Line items to save:', lineItems);
         
         // Delete existing line items first
+        console.log('🗑️ Deleting existing line items...');
         const { error: deleteError } = await supabase
           .from('line_items')
           .delete()
@@ -145,37 +167,52 @@ export const useDocumentOperations = ({
           .eq('parent_type', documentType);
           
         if (deleteError) {
-          console.error('Error deleting existing line items:', deleteError);
+          console.error('⚠️ Error deleting existing line items:', deleteError);
           // Don't throw here, just log as it might not exist
+        } else {
+          console.log('✅ Existing line items deleted');
         }
         
         // Create new line items
-        const lineItemsData = lineItems.map(item => ({
-          parent_id: document.id,
-          parent_type: documentType,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
+        const lineItemsData = lineItems.map((item, index) => {
+          const lineItemData = {
+            parent_id: document.id,
+            parent_type: documentType,
+            description: item.description || `Item ${index + 1}`,
+            quantity: item.quantity || 1,
+            unit_price: item.unitPrice || 0,
+            taxable: item.taxable !== undefined ? item.taxable : true
+          };
+          console.log(`Line item ${index}:`, lineItemData);
+          return lineItemData;
+        });
         
-        console.log('Inserting line items:', lineItemsData);
+        console.log('💾 Inserting line items:', lineItemsData);
         
-        const { error: lineItemsError } = await supabase
+        const { data: insertedLineItems, error: lineItemsError } = await supabase
           .from('line_items')
-          .insert(lineItemsData);
+          .insert(lineItemsData)
+          .select();
           
         if (lineItemsError) {
-          console.error('Error creating line items:', lineItemsError);
+          console.error('❌ Error creating line items:', lineItemsError);
+          console.error('Line items error details:', {
+            code: lineItemsError.code,
+            message: lineItemsError.message,
+            details: lineItemsError.details,
+            hint: lineItemsError.hint
+          });
           throw new Error(`Failed to save line items: ${lineItemsError.message}`);
         }
         
-        console.log('Line items saved successfully');
+        console.log('✅ Line items saved successfully:', insertedLineItems);
+      } else {
+        console.log('ℹ️ No line items to save');
       }
 
       // Try to log to job history (don't fail if this doesn't work)
       try {
-        console.log('Attempting to log job history...');
+        console.log('📝 Attempting to log job history...');
         const { error: historyError } = await supabase
           .from('job_history')
           .insert({
@@ -191,12 +228,12 @@ export const useDocumentOperations = ({
           });
 
         if (historyError) {
-          console.warn('Failed to log job history (non-critical):', historyError);
+          console.warn('⚠️ Failed to log job history (non-critical):', historyError);
         } else {
-          console.log('Job history logged successfully');
+          console.log('✅ Job history logged successfully');
         }
       } catch (historyErr) {
-        console.warn('Job history logging failed (non-critical):', historyErr);
+        console.warn('⚠️ Job history logging failed (non-critical):', historyErr);
       }
       
       toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} ${formData.documentId ? 'updated' : 'created'} successfully`);
@@ -216,7 +253,7 @@ export const useDocumentOperations = ({
           created_at: document.created_at,
           updated_at: document.updated_at
         };
-        console.log('Returning estimate result:', result);
+        console.log('📋 Returning estimate result:', result);
         return result;
       } else {
         const result = {
@@ -233,17 +270,20 @@ export const useDocumentOperations = ({
           created_at: document.created_at,
           updated_at: document.updated_at
         };
-        console.log('Returning invoice result:', result);
+        console.log('📋 Returning invoice result:', result);
         return result;
       }
     } catch (error: any) {
-      console.error(`Error saving ${documentType}:`, error);
+      console.error(`❌ Error saving ${documentType}:`, error);
+      console.error('Error stack:', error.stack);
       
       // Show more specific error messages
       if (error.message.includes('row-level security')) {
         toast.error(`Access denied. Please ensure you're logged in and have permission to ${formData.documentId ? 'update' : 'create'} ${documentType}s.`);
       } else if (error.message.includes('Authentication required')) {
         toast.error(error.message);
+      } else if (error.message.includes('invalid input syntax for type uuid')) {
+        toast.error(`Invalid job ID format. Please refresh the page and try again.`);
       } else {
         toast.error(`Failed to save ${documentType}: ${error.message}`);
       }
@@ -251,6 +291,7 @@ export const useDocumentOperations = ({
       return null;
     } finally {
       setIsSubmitting(false);
+      console.log('=== SAVE DOCUMENT CHANGES END ===');
     }
   }, [documentType, jobId, formData, lineItems, notes, calculateGrandTotal, isSubmitting]);
 

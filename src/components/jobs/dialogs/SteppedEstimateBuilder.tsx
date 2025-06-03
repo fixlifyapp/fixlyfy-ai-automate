@@ -30,6 +30,12 @@ export const SteppedEstimateBuilder = ({
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
   const [savedEstimate, setSavedEstimate] = useState<any>(null);
   
+  console.log("=== STEPPED ESTIMATE BUILDER PROPS ===");
+  console.log("Job ID:", jobId);
+  console.log("Job ID type:", typeof jobId);
+  console.log("Existing estimate:", existingEstimate);
+  console.log("Dialog open:", open);
+  
   const {
     lineItems,
     setLineItems,
@@ -57,6 +63,7 @@ export const SteppedEstimateBuilder = ({
   // Reset step when dialog opens/closes
   useEffect(() => {
     if (open) {
+      console.log("Dialog opened, resetting state");
       setCurrentStep("items");
       setSavedEstimate(null);
     }
@@ -65,47 +72,62 @@ export const SteppedEstimateBuilder = ({
   // Generate estimate number if creating new
   useEffect(() => {
     if (open && !existingEstimate && !documentNumber) {
-      setDocumentNumber(`EST-${Date.now()}`);
+      const newNumber = `EST-${Date.now()}`;
+      console.log("Generated new estimate number:", newNumber);
+      setDocumentNumber(newNumber);
     }
   }, [open, existingEstimate, documentNumber, setDocumentNumber]);
 
   const handleSaveAndContinue = async () => {
     console.log("=== SAVE AND CONTINUE CLICKED ===");
+    console.log("Line items:", lineItems);
     console.log("Line items count:", lineItems.length);
     console.log("Job ID:", jobId);
+    console.log("Job ID type:", typeof jobId);
     console.log("Document number:", documentNumber);
+    console.log("Subtotal:", calculateSubtotal());
+    console.log("Total tax:", calculateTotalTax());
+    console.log("Grand total:", calculateGrandTotal());
     
     if (lineItems.length === 0) {
-      console.log("No line items, showing error");
+      console.log("❌ No line items, showing error");
       toast.error("Please add at least one item to the estimate");
       return;
     }
 
     if (!jobId) {
-      console.log("No job ID, showing error");
+      console.log("❌ No job ID, showing error");
       toast.error("Job ID is required to save estimate");
       return;
     }
 
-    console.log("Starting save process...");
+    // Validate job ID format
+    if (typeof jobId !== 'string') {
+      console.log("❌ Job ID is not a string:", typeof jobId);
+      toast.error("Invalid job ID format");
+      return;
+    }
+
+    console.log("✅ Starting save process...");
     
     try {
-      console.log("Calling saveDocumentChanges...");
+      console.log("📞 Calling saveDocumentChanges...");
       const estimate = await saveDocumentChanges();
       
-      console.log("Save result:", estimate);
+      console.log("📋 Save result:", estimate);
       
       if (estimate) {
-        console.log("Estimate saved successfully:", estimate);
+        console.log("✅ Estimate saved successfully:", estimate);
         setSavedEstimate(estimate);
         setCurrentStep("send");
         toast.success("Estimate saved! Now choose how to send it.");
       } else {
-        console.log("Save returned null/undefined");
+        console.log("❌ Save returned null/undefined");
         toast.error("Failed to save estimate. Please try again.");
       }
     } catch (error: any) {
-      console.error("Error in handleSaveAndContinue:", error);
+      console.error("❌ Error in handleSaveAndContinue:", error);
+      console.error("Error stack:", error.stack);
       toast.error("Failed to save estimate: " + (error.message || "Unknown error"));
     }
   };
@@ -154,13 +176,12 @@ export const SteppedEstimateBuilder = ({
     send: "Send Estimate"
   };
 
-  console.log("Rendering SteppedEstimateBuilder:", {
-    open,
-    currentStep,
-    lineItemsCount: lineItems.length,
-    savedEstimate: !!savedEstimate,
-    isSubmitting
-  });
+  console.log("=== RENDERING STEPPED ESTIMATE BUILDER ===");
+  console.log("Current step:", currentStep);
+  console.log("Line items count:", lineItems.length);
+  console.log("Saved estimate:", !!savedEstimate);
+  console.log("Is submitting:", isSubmitting);
+  console.log("Document number:", documentNumber);
 
   return (
     <>
