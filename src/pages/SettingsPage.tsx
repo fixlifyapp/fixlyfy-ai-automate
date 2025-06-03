@@ -1,3 +1,4 @@
+
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
@@ -23,7 +24,7 @@ const SettingsPage = () => {
       />
       
       {/* Main Settings Cards Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {/* Profile & Company Card */}
         <Link to="/profile-company">
           <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
@@ -113,25 +114,6 @@ const SettingsPage = () => {
             </div>
           </div>
         </Link>
-        
-        {/* Phone Settings Card */}
-        <Card className="hover:shadow-md transition-shadow cursor-pointer group">
-          <Link to="/settings/phone" className="block">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                  <Phone className="h-5 w-5 text-blue-600" />
-                </div>
-                Phone Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Manage phone numbers, AI dispatcher, SMS, and call routing settings
-              </p>
-            </CardContent>
-          </Link>
-        </Card>
       </div>
 
       {/* Email Testing Section */}
