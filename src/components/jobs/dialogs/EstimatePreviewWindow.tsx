@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,15 @@ import { useJobs } from "@/hooks/useJobs";
 import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  taxable: boolean;
+}
 
 interface EstimatePreviewWindowProps {
   open: boolean;
@@ -33,6 +42,8 @@ export const EstimatePreviewWindow = ({
   onConvertToInvoice
 }: EstimatePreviewWindowProps) => {
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
   const { jobs } = useJobs();
   
   const job = jobs.find(j => j.id === estimate.job_id);
@@ -42,6 +53,44 @@ export const EstimatePreviewWindow = ({
     name: job?.client?.name || 'Client Name',
     email: job?.client?.email || 'client@example.com',
     phone: job?.client?.phone || '(555) 123-4567'
+  };
+
+  // Fetch line items for the estimate
+  useEffect(() => {
+    const fetchLineItems = async () => {
+      if (!estimate.id || !open) return;
+      
+      setIsLoadingItems(true);
+      try {
+        const { data, error } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_id', estimate.id)
+          .eq('parent_type', 'estimate');
+
+        if (error) throw error;
+        
+        setLineItems(data || []);
+      } catch (error) {
+        console.error('Error fetching line items:', error);
+        toast.error('Failed to load estimate items');
+      } finally {
+        setIsLoadingItems(false);
+      }
+    };
+
+    fetchLineItems();
+  }, [estimate.id, open]);
+
+  const calculateSubtotal = () => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  };
+
+  const calculateTax = () => {
+    const taxableTotal = lineItems
+      .filter(item => item.taxable)
+      .reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    return taxableTotal * 0.13; // 13% tax rate
   };
 
   const handlePrint = () => {
@@ -170,7 +219,7 @@ export const EstimatePreviewWindow = ({
                 </div>
               )}
 
-              {/* Line Items Placeholder */}
+              {/* Line Items */}
               <div className="mb-8">
                 <h3 className="font-semibold text-gray-900 mb-4">Services & Products:</h3>
                 <div className="border rounded-lg overflow-hidden">
@@ -184,12 +233,32 @@ export const EstimatePreviewWindow = ({
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-t">
-                        <td className="px-4 py-3 text-gray-700">Service items will be displayed here</td>
-                        <td className="px-4 py-3 text-center text-gray-700">-</td>
-                        <td className="px-4 py-3 text-right text-gray-700">-</td>
-                        <td className="px-4 py-3 text-right text-gray-700">-</td>
-                      </tr>
+                      {isLoadingItems ? (
+                        <tr className="border-t">
+                          <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                            Loading items...
+                          </td>
+                        </tr>
+                      ) : lineItems.length > 0 ? (
+                        lineItems.map((item) => (
+                          <tr key={item.id} className="border-t">
+                            <td className="px-4 py-3 text-gray-700">{item.description}</td>
+                            <td className="px-4 py-3 text-center text-gray-700">{item.quantity}</td>
+                            <td className="px-4 py-3 text-right text-gray-700">
+                              {formatCurrency(item.unit_price)}
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-700">
+                              {formatCurrency(item.quantity * item.unit_price)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr className="border-t">
+                          <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                            No items added to this estimate
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -201,15 +270,15 @@ export const EstimatePreviewWindow = ({
                   <div className="space-y-2">
                     <div className="flex justify-between text-gray-700">
                       <span>Subtotal:</span>
-                      <span>{formatCurrency((estimate.total || estimate.amount || 0) * 0.87)}</span>
+                      <span>{formatCurrency(calculateSubtotal())}</span>
                     </div>
                     <div className="flex justify-between text-gray-700">
                       <span>Tax (13%):</span>
-                      <span>{formatCurrency((estimate.total || estimate.amount || 0) * 0.13)}</span>
+                      <span>{formatCurrency(calculateTax())}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-lg border-t pt-2">
                       <span>Total:</span>
-                      <span>{formatCurrency(estimate.total || estimate.amount || 0)}</span>
+                      <span>{formatCurrency(calculateSubtotal() + calculateTax())}</span>
                     </div>
                   </div>
                 </div>

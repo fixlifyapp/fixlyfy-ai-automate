@@ -119,7 +119,10 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
   };
 
   const handlePaymentRecorded = () => {
+    // Refresh invoices when payment is recorded
     fetchInvoices();
+    // Clear selected invoice to force refresh when reopened
+    setSelectedInvoice(null);
   };
 
   // Function to render status badge with appropriate color
@@ -250,7 +253,16 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
           {selectedInvoice && (
             <InvoicePreviewWindow
               open={showPreview}
-              onOpenChange={setShowPreview}
+              onOpenChange={(open) => {
+                setShowPreview(open);
+                if (!open) {
+                  // Refresh invoice data when closing preview
+                  const refreshedInvoice = invoices.find(inv => inv.id === selectedInvoice.id);
+                  if (refreshedInvoice) {
+                    setSelectedInvoice(refreshedInvoice);
+                  }
+                }
+              }}
               invoice={selectedInvoice}
               onPaymentRecorded={handlePaymentRecorded}
             />

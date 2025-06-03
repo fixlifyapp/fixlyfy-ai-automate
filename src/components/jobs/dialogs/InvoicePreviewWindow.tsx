@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,14 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  taxable: boolean;
+}
+
 interface InvoicePreviewWindowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,11 +49,51 @@ export const InvoicePreviewWindow = ({
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
 
   const { jobs } = useJobs();
   
   const job = jobs.find(j => j.id === invoice.job_id);
   const clientInfo = job?.client || { name: '', email: '', phone: '' };
+
+  // Fetch line items for the invoice
+  useEffect(() => {
+    const fetchLineItems = async () => {
+      if (!invoice.id || !open) return;
+      
+      setIsLoadingItems(true);
+      try {
+        const { data, error } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_id', invoice.id)
+          .eq('parent_type', 'invoice');
+
+        if (error) throw error;
+        
+        setLineItems(data || []);
+      } catch (error) {
+        console.error('Error fetching line items:', error);
+        toast.error('Failed to load invoice items');
+      } finally {
+        setIsLoadingItems(false);
+      }
+    };
+
+    fetchLineItems();
+  }, [invoice.id, open]);
+
+  const calculateSubtotal = () => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  };
+
+  const calculateTax = () => {
+    const taxableTotal = lineItems
+      .filter(item => item.taxable)
+      .reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    return taxableTotal * 0.13; // 13% tax rate
+  };
 
   const handlePrint = () => {
     window.print();
@@ -98,9 +146,15 @@ export const InvoicePreviewWindow = ({
       
       toast.success("Payment recorded successfully");
       setShowPaymentDialog(false);
+      
+      // Trigger parent refresh
       if (onPaymentRecorded) {
         onPaymentRecorded();
       }
+      
+      // Close the preview window to show updated data
+      onOpenChange(false);
+      
     } catch (error) {
       console.error("Error recording payment:", error);
       toast.error("Failed to record payment");
@@ -253,7 +307,7 @@ export const InvoicePreviewWindow = ({
               </div>
             )}
 
-            {/* Line Items Placeholder */}
+            {/* Line Items */}
             <div className="mb-8">
               <h3 className="font-semibold text-gray-900 mb-4">Services & Products:</h3>
               <div className="border rounded-lg overflow-hidden">
@@ -267,12 +321,32 @@ export const InvoicePreviewWindow = ({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t">
-                      <td className="px-4 py-3 text-gray-700">Service items will be displayed here</td>
-                      <td className="px-4 py-3 text-center text-gray-700">-</td>
-                      <td className="px-4 py-3 text-right text-gray-700">-</td>
-                      <td className="px-4 py-3 text-right text-gray-700">-</td>
-                    </tr>
+                    {isLoadingItems ? (
+                      <tr className="border-t">
+                        <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                          Loading items...
+                        </td>
+                      </tr>
+                    ) : lineItems.length > 0 ? (
+                      lineItems.map((item) => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-4 py-3 text-gray-700">{item.description}</td>
+                          <td className="px-4 py-3 text-center text-gray-700">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {formatCurrency(item.unit_price)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {formatCurrency(item.quantity * item.unit_price)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr className="border-t">
+                        <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                          No items found for this invoice
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -284,15 +358,15 @@ export const InvoicePreviewWindow = ({
                 <div className="space-y-2">
                   <div className="flex justify-between text-gray-700">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(invoice.total * 0.87)}</span>
+                    <span>{formatCurrency(calculateSubtotal())}</span>
                   </div>
                   <div className="flex justify-between text-gray-700">
                     <span>Tax (13%):</span>
-                    <span>{formatCurrency(invoice.total * 0.13)}</span>
+                    <span>{formatCurrency(calculateTax())}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span>{formatCurrency(invoice.total)}</span>
+                    <span>{formatCurrency(calculateSubtotal() + calculateTax())}</span>
                   </div>
                   {invoice.amount_paid > 0 && (
                     <>
