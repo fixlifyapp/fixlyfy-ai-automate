@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,9 @@ interface JobInvoicesProps {
 type Invoice = {
   id: string;
   invoice_number: string;
+  number: string; // Add alias for compatibility
   created_at: string;
+  updated_at: string; // Add missing property
   total: number;
   amount_paid: number;
   balance: number;
@@ -67,7 +68,14 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         throw error;
       }
       
-      setInvoices(data || []);
+      // Add compatibility properties
+      const processedInvoices = (data || []).map(invoice => ({
+        ...invoice,
+        number: invoice.invoice_number, // Add alias
+        updated_at: invoice.updated_at || invoice.created_at // Ensure updated_at exists
+      }));
+      
+      setInvoices(processedInvoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       toast.error("Failed to load invoices");

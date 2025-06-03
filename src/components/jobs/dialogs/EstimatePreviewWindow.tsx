@@ -36,7 +36,13 @@ export const EstimatePreviewWindow = ({
   const { jobs } = useJobs();
   
   const job = jobs.find(j => j.id === estimate.job_id);
-  const clientInfo = job?.client || { name: '', email: '', phone: '' };
+  
+  // Ensure clientInfo has required properties with fallbacks
+  const clientInfo = {
+    name: job?.client?.name || 'Client Name',
+    email: job?.client?.email || 'client@example.com',
+    phone: job?.client?.phone || '(555) 123-4567'
+  };
 
   const handlePrint = () => {
     window.print();
@@ -118,18 +124,14 @@ export const EstimatePreviewWindow = ({
                       <User className="h-4 w-4" />
                       {clientInfo.name}
                     </div>
-                    {clientInfo.email && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="w-4" />
-                        {clientInfo.email}
-                      </div>
-                    )}
-                    {clientInfo.phone && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="w-4" />
-                        {clientInfo.phone}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="w-4" />
+                      {clientInfo.email}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="w-4" />
+                      {clientInfo.phone}
+                    </div>
                     {job?.address && (
                       <div className="flex items-center gap-2 mt-1">
                         <MapPin className="h-4 w-4" />
