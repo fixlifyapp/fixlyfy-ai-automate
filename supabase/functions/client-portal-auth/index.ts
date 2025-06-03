@@ -18,22 +18,23 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { action, token, email, resource_type, resource_id } = await req.json()
-    console.log('client-portal-auth - Action:', action)
+    const { action, token, email } = await req.json()
+    console.log('client-portal-auth - Action:', action, 'Email:', email, 'Token:', token ? token.substring(0, 20) + '...' : 'none')
 
-    if (action === 'generate_access_token') {
-      console.log('client-portal-auth - Generating access token for:', email, resource_type, resource_id)
+    if (action === 'generate_login_token') {
+      console.log('client-portal-auth - Generating login token for email:', email)
       
-      const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_access_token', {
-        p_email: email,
-        p_resource_type: resource_type || 'general',
-        p_resource_id: resource_id || null
+      // Generate login token for client
+      const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
+        p_email: email
       })
+
+      console.log('client-portal-auth - Token generation result:', tokenData ? 'success' : 'failed', tokenError)
 
       if (tokenError || !tokenData) {
         console.error('client-portal-auth - Token generation error:', tokenError)
         return new Response(
-          JSON.stringify({ error: 'No client found with this email address' }),
+          JSON.stringify({ error: 'No account found with this email address' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
         )
       }
@@ -44,57 +45,63 @@ serve(async (req) => {
       )
     }
 
-    if (action === 'authenticate_token') {
-      console.log('client-portal-auth - Authenticating token:', token ? token.substring(0, 20) + '...' : 'none')
+    if (action === 'verify_token') {
+      console.log('client-portal-auth - Verifying token:', token ? token.substring(0, 20) + '...' : 'none')
       
-      const { data: authData, error: authError } = await supabaseAdmin.rpc('authenticate_client_token', {
+      // Verify login token and create session
+      const { data: sessionData, error: sessionError } = await supabaseAdmin.rpc('verify_client_login_token', {
         p_token: token
       })
 
-      if (authError || !authData || authData.length === 0 || !authData[0].success) {
-        console.error('client-portal-auth - Token authentication error:', authError)
+      console.log('client-portal-auth - Token verification result:', sessionData ? sessionData.length : 0, 'records', sessionError)
+
+      if (sessionError || !sessionData || sessionData.length === 0) {
+        console.error('client-portal-auth - Token verification error:', sessionError)
         return new Response(
-          JSON.stringify({ error: 'Invalid or expired access token' }),
+          JSON.stringify({ error: 'Invalid or expired login token' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
         )
       }
 
-      const auth = authData[0]
-      console.log('client-portal-auth - Session created for client:', auth.client_id)
+      const session = sessionData[0]
+      console.log('client-portal-auth - Session created for client:', session.client_id)
       
       return new Response(
         JSON.stringify({
-          success: true,
-          session_token: auth.session_token,
-          client_id: auth.client_id,
-          client_name: auth.client_name,
-          client_email: auth.client_email,
-          resource_type: auth.resource_type,
-          resource_id: auth.resource_id,
-          expires_at: auth.expires_at
+          session_token: session.session_token,
+          client_id: session.client_id,
+          user_id: session.user_id,
+          client_name: session.client_name,
+          client_email: session.client_email,
+          expires_at: session.expires_at
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     if (action === 'validate_session') {
-      const sessionToken = req.headers.get('authorization')?.replace('Bearer ', '') ||
+      const sessionToken = req.headers.get('client-portal-session') || 
+                          req.headers.get('Authorization')?.replace('Bearer ', '') ||
                           (await req.json()).session_token
       
       console.log('client-portal-auth - Validating session token:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'none')
       
       if (!sessionToken) {
+        console.log('client-portal-auth - No session token provided')
         return new Response(
           JSON.stringify({ error: 'Missing session token' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
         )
       }
 
-      const { data: sessionData, error: sessionError } = await supabaseAdmin.rpc('validate_client_portal_session', {
+      const { data: sessionData, error: sessionError } = await supabaseAdmin.rpc('validate_client_session', {
         p_session_token: sessionToken
       })
 
-      if (sessionError || !sessionData || sessionData.length === 0 || !sessionData[0].valid) {
+      console.log('client-portal-auth - Session validation result:', sessionData ? sessionData.length : 0, 'records', sessionError)
+
+      if (sessionError || !sessionData || sessionData.length === 0) {
+        console.error('client-portal-auth - Session validation error:', sessionError)
         return new Response(
           JSON.stringify({ error: 'Invalid session' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
@@ -106,6 +113,7 @@ serve(async (req) => {
         JSON.stringify({
           valid: true,
           client_id: session.client_id,
+          user_id: session.user_id,
           client_name: session.client_name,
           client_email: session.client_email
         }),

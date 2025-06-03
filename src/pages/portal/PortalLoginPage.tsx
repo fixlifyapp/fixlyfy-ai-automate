@@ -1,235 +1,185 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
 import { toast } from 'sonner';
-import { Loader2, Lock, CheckCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Mail, Lock } from 'lucide-react';
 
 export default function PortalLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, loading, authenticateWithToken } = useClientPortalAuth();
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const { user, loading, signIn, verifyToken } = useClientPortalAuth();
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tokenProcessing, setTokenProcessing] = useState(false);
 
   const token = searchParams.get('token');
   const jobId = searchParams.get('jobId');
 
-  // If user is already logged in, redirect to appropriate page
+  // If user is already logged in, redirect to dashboard
   useEffect(() => {
-    if (user && !loading && !isAuthenticating) {
+    if (user && !loading) {
       if (jobId) {
+        // Redirect to specific job/estimate if jobId provided
         navigate(`/portal/estimates?jobId=${jobId}`, { replace: true });
       } else {
         navigate('/portal/dashboard', { replace: true });
       }
     }
-  }, [user, loading, navigate, jobId, isAuthenticating]);
+  }, [user, loading, navigate, jobId]);
 
-  // Handle token-based authentication
+  // Handle token-based login
   useEffect(() => {
-    if (token && !user && !loading && !isAuthenticating) {
-      handleTokenAuthentication();
+    if (token && !user && !loading) {
+      handleTokenLogin();
     }
-  }, [token, user, loading, isAuthenticating]);
+  }, [token, user, loading]);
 
-  const handleTokenAuthentication = async () => {
+  const handleTokenLogin = async () => {
     if (!token) return;
     
-    setIsAuthenticating(true);
-    setAuthError(null);
-    
+    setTokenProcessing(true);
     try {
-      const result = await authenticateWithToken(token);
+      const result = await verifyToken(token);
       if (result.success) {
-        toast.success('Access granted! Welcome to your portal.');
-        
-        // Navigate based on resource type or jobId
-        if (result.resourceType === 'estimate' && result.resourceId) {
-          navigate(`/portal/estimates/${result.resourceId}`, { replace: true });
-        } else if (result.resourceType === 'invoice' && result.resourceId) {
-          navigate(`/portal/invoices/${result.resourceId}`, { replace: true });
-        } else if (jobId) {
-          navigate(`/portal/estimates?jobId=${jobId}`, { replace: true });
-        } else {
-          navigate('/portal/dashboard', { replace: true });
-        }
+        toast.success('Successfully logged in!');
+        // The user state will be updated by the verifyToken function
+        // and the useEffect above will handle the redirect
       } else {
-        setAuthError(result.message);
         toast.error(result.message);
       }
     } catch (error) {
-      const errorMessage = 'Failed to authenticate access link';
-      setAuthError(errorMessage);
-      toast.error(errorMessage);
+      toast.error('Failed to verify login link');
     } finally {
-      setIsAuthenticating(false);
+      setTokenProcessing(false);
     }
   };
 
-  if (loading || isAuthenticating) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await signIn(email);
+      if (result.success) {
+        toast.success(result.message);
+        setEmail('');
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading || tokenProcessing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {isAuthenticating ? 'Authenticating...' : 'Loading...'}
-            </h2>
-            <p className="text-gray-600">
-              {isAuthenticating ? 'Verifying your access link' : 'Please wait'}
-            </p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">
+            {tokenProcessing ? 'Verifying login link...' : 'Loading...'}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">F</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Fixlify</h1>
-                <p className="text-sm text-blue-600">Client Portal</p>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+            Client Portal
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Access your estimates, invoices, and project information
+          </p>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-              {authError ? (
-                <ExternalLink className="h-8 w-8 text-white" />
-              ) : (
-                <CheckCircle className="h-8 w-8 text-white" />
-              )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Sign In
+            </CardTitle>
+            <CardDescription>
+              {token 
+                ? 'Processing your login link...' 
+                : 'Enter your email to receive a secure login link'
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!token && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="pl-10"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Login Link...
+                    </>
+                  ) : (
+                    'Send Login Link'
+                  )}
+                </Button>
+              </form>
+            )}
+
+            {token && (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Verifying your login link...</p>
+              </div>
+            )}
+
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-500">
+                Having trouble? Contact support for assistance.
+              </p>
             </div>
-            <h2 className="mt-6 text-3xl font-bold text-gray-900">
-              Welcome to Your Portal
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Access your estimates, invoices, and project information
+          </CardContent>
+        </Card>
+
+        {jobId && (
+          <div className="text-center">
+            <p className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+              You'll be redirected to your estimate details after logging in.
             </p>
           </div>
-
-          <Card className="shadow-xl border-gray-200">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-              <CardTitle className="flex items-center gap-2 text-blue-600">
-                <Lock className="h-5 w-5" />
-                Secure Access
-              </CardTitle>
-              <CardDescription>
-                {token 
-                  ? authError 
-                    ? 'There was an issue with your access link'
-                    : 'Processing your secure access link...'
-                  : 'Invalid or missing access token'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {authError ? (
-                <div className="space-y-4">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <ExternalLink className="h-5 w-5 text-red-400" />
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-red-800">
-                          Access Link Issue
-                        </h3>
-                        <div className="mt-2 text-sm text-red-700">
-                          <p>{authError}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-gray-600">
-                      Your access link may have expired or been used already. Please contact support for a new link.
-                    </p>
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <h4 className="font-medium text-blue-600 mb-2">Need Help?</h4>
-                      <p className="text-sm text-gray-600">
-                        Contact our support team and we'll send you a fresh access link right away.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : !token ? (
-                <div className="text-center space-y-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <ExternalLink className="h-5 w-5 text-amber-400" />
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-amber-800">
-                          Invalid Access Link
-                        </h3>
-                        <div className="mt-2 text-sm text-amber-700">
-                          <p>This page requires a valid access token from your email or SMS.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h4 className="font-medium text-blue-600 mb-2">How to Access</h4>
-                    <p className="text-sm text-gray-600">
-                      Use the secure link sent to your email or phone to access your portal.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="space-y-4">
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
-                    <div>
-                      <p className="text-lg font-medium text-gray-900">Verifying Access</p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Please wait while we authenticate your secure link...
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {jobId && (
-            <div className="text-center">
-              <div className="bg-blue-100 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-600 font-medium">
-                  You'll be redirected to your project details after authentication.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500">
-              Powered by Fixlify • Secure & Encrypted
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
