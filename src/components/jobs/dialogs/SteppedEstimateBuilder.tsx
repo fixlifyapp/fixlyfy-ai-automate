@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { generateNextId } from "@/utils/idGeneration";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -86,11 +86,22 @@ export const SteppedEstimateBuilder = ({
 
   // Generate estimate number if creating new
   useEffect(() => {
-    if (open && !existingEstimate && !documentNumber) {
-      const newNumber = `EST-${Date.now()}`;
-      console.log("Generated new estimate number:", newNumber);
-      setDocumentNumber(newNumber);
-    }
+    const generateEstimateNumber = async () => {
+      if (open && !existingEstimate && !documentNumber) {
+        try {
+          const newNumber = await generateNextId('estimate');
+          console.log("Generated new estimate number:", newNumber);
+          setDocumentNumber(newNumber);
+        } catch (error) {
+          console.error("Error generating estimate number:", error);
+          // Fallback to timestamp-based number
+          const fallbackNumber = `EST-${Date.now()}`;
+          setDocumentNumber(fallbackNumber);
+        }
+      }
+    };
+
+    generateEstimateNumber();
   }, [open, existingEstimate, documentNumber, setDocumentNumber]);
 
   const handleSaveAndContinue = async () => {
@@ -263,7 +274,7 @@ export const SteppedEstimateBuilder = ({
                 Step {currentStepNumber} of 3
               </span>
               {stepTitles[currentStep]}
-              {documentNumber && <span className="text-sm text-muted-foreground">({documentNumber})</span>}
+              {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
             </DialogTitle>
           </DialogHeader>
 
