@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Send, Trash2, Edit, DollarSign } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
-import { EstimateBuilderDialogWrapper } from "@/components/jobs/dialogs/estimate-builder/EstimateBuilderDialogWrapper";
+import { UnifiedDocumentBuilder } from "@/components/jobs/dialogs/UnifiedDocumentBuilder";
 import { format } from "date-fns";
 
 interface ModernJobEstimatesTabProps {
@@ -194,13 +195,14 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         </Card>
       </div>
 
-      {/* Estimate Builder Dialog */}
-      <EstimateBuilderDialogWrapper
+      {/* Unified Document Builder Dialog */}
+      <UnifiedDocumentBuilder
         open={showCreateForm}
         onOpenChange={handleDialogClose}
+        documentType="estimate"
+        existingDocument={editingEstimate}
         jobId={jobId}
-        estimateId={editingEstimate?.id || null}
-        onSyncToInvoice={handleEstimateCreated}
+        onDocumentCreated={handleEstimateCreated}
       />
     </>
   );

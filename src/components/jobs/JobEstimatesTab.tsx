@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EstimatesList } from "./estimates/EstimatesList";
-import { EstimateBuilderDialog } from "./dialogs/estimate-builder/EstimateBuilderDialog";
+import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
 import { useJobs } from "@/hooks/useJobs";
 
 interface JobEstimatesTabProps {
@@ -47,11 +47,13 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           onEstimateConverted={onEstimateConverted}
         />
 
-        <EstimateBuilderDialog
+        <UnifiedDocumentBuilder
           open={showCreateForm}
           onOpenChange={setShowCreateForm}
-          job={job}
-          onSuccess={handleEstimateCreated}
+          documentType="estimate"
+          jobId={jobId}
+          clientInfo={job?.client}
+          onDocumentCreated={handleEstimateCreated}
         />
       </CardContent>
     </Card>
