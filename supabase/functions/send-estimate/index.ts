@@ -95,14 +95,14 @@ serve(async (req) => {
         throw new Error('Mailgun API key not configured. Please configure MAILGUN_API_KEY in Supabase secrets.')
       }
 
-      // Use consistent domain - fixlyfy.app (matching the working email function)
-      const mailgunDomain = 'fixlyfy.app'
+      // Use consistent domain - fixlify.app (matching the working email function)
+      const mailgunDomain = 'fixlify.app'
       
       // Generate FROM email using the same logic as the working email function
-      let fromEmail = 'support@fixlyfy.app' // Default fallback
+      let fromEmail = 'support@fixlify.app' // Default fallback
       
       if (companySettings?.custom_domain_name) {
-        fromEmail = `${companySettings.custom_domain_name}@fixlyfy.app`
+        fromEmail = `${companySettings.custom_domain_name}@fixlify.app`
       } else if (companySettings?.email_from_address) {
         fromEmail = companySettings.email_from_address
       }
