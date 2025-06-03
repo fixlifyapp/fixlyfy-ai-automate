@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Mail, MessageSquare, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail, MessageSquare, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
@@ -51,9 +52,47 @@ export const EstimateSendDialog = ({
   const [customNote, setCustomNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [clientData, setClientData] = useState<any>(null);
+  const [configError, setConfigError] = useState<string>("");
 
   // Use clientInfo or contactInfo, whichever is available
   const finalContactInfo = clientInfo || contactInfo || { name: '', email: '', phone: '' };
+
+  // Check configuration when dialog opens
+  useEffect(() => {
+    const checkConfiguration = async () => {
+      if (open) {
+        try {
+          // Check if required secrets are configured
+          const { data: companySettings } = await supabase
+            .from('company_settings')
+            .select('mailgun_api_key, company_phone, mailgun_domain, email_from_address')
+            .limit(1)
+            .maybeSingle();
+
+          console.log('Company settings check:', companySettings);
+
+          if (sendMethod === 'email') {
+            if (!companySettings?.mailgun_domain || !companySettings?.email_from_address) {
+              setConfigError('Email not configured. Please set up Mailgun domain and email address in company settings.');
+            } else {
+              setConfigError('');
+            }
+          } else if (sendMethod === 'sms') {
+            if (!companySettings?.company_phone) {
+              setConfigError('SMS not configured. Please set up company phone number in settings.');
+            } else {
+              setConfigError('');
+            }
+          }
+        } catch (error) {
+          console.error('Configuration check error:', error);
+          setConfigError('Unable to check configuration. Please try again.');
+        }
+      }
+    };
+
+    checkConfiguration();
+  }, [open, sendMethod]);
 
   // Fetch client data when dialog opens
   useEffect(() => {
@@ -122,6 +161,11 @@ export const EstimateSendDialog = ({
       return;
     }
 
+    if (configError) {
+      toast.error(`Configuration Error: ${configError}`);
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -143,54 +187,39 @@ export const EstimateSendDialog = ({
       console.log("Retrieved estimate:", estimate);
       const contact = clientData || finalContactInfo;
 
-      // Send via appropriate method
-      if (sendMethod === "sms") {
-        // Format phone number for Telnyx
-        const formattedPhone = formatPhoneForTelnyx(sendTo);
-        console.log("Sending SMS to:", formattedPhone);
-        
-        const smsMessage = customNote || `Hi ${contact.name}! Your estimate ${estimateNumber} is ready. Total: $${estimate.total.toFixed(2)}. Please contact us if you have any questions.`;
-        
-        const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
-          body: {
-            to: formattedPhone,
-            body: smsMessage,
-            client_id: jobId || null,
-            job_id: jobId || null
-          }
-        });
-
-        if (smsError || !smsData?.success) {
-          console.error("SMS sending failed:", smsError || smsData);
-          toast.error(`Failed to send SMS: ${smsError?.message || smsData?.error || 'Unknown error'}`);
-          return;
+      // Send via appropriate method using the updated edge function
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
+        body: {
+          estimateId: estimate.id,
+          sendMethod: sendMethod,
+          recipientEmail: sendMethod === 'email' ? sendTo : undefined,
+          recipientPhone: sendMethod === 'sms' ? sendTo : undefined,
+          subject: sendMethod === 'email' ? `Estimate ${estimateNumber} from ${contact?.name || 'your service provider'}` : undefined,
+          message: customNote || (sendMethod === 'email' 
+            ? `Please find your estimate ${estimateNumber}. Total: $${estimate.total?.toFixed(2) || '0.00'}.` 
+            : `Hi ${contact?.name || 'Customer'}! Your estimate ${estimateNumber} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us if you have any questions.`)
         }
-
-        console.log("SMS sent successfully:", smsData);
-        toast.success(`Estimate ${estimateNumber} sent via SMS to ${contact.name}`);
-      } else {
-        // Send via email
-        console.log("Sending email to:", sendTo);
+      });
+      
+      if (sendError || !sendData?.success) {
+        console.error("Send operation failed:", sendError || sendData);
+        const errorMessage = sendError?.message || sendData?.error || 'Unknown error occurred';
         
-        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-estimate', {
-          body: {
-            estimateId: estimate.id,
-            sendMethod: 'email',
-            recipientEmail: sendTo,
-            subject: `Estimate ${estimateNumber} from your service provider`,
-            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${estimate.total.toFixed(2)}.`
-          }
-        });
-        
-        if (emailError || !emailData?.success) {
-          console.error("Email sending failed:", emailError || emailData);
-          toast.error(`Failed to send email: ${emailError?.message || emailData?.error || 'Unknown error'}`);
-          return;
+        // Provide specific error messages for common issues
+        if (errorMessage.includes('Mailgun API key not configured')) {
+          toast.error('Email sending not configured. Please contact support to set up Mailgun.');
+        } else if (errorMessage.includes('Telnyx API key not configured')) {
+          toast.error('SMS sending not configured. Please contact support to set up Telnyx.');
+        } else if (errorMessage.includes('Company phone number not configured')) {
+          toast.error('Company phone number not set up. Please configure it in settings.');
+        } else {
+          toast.error(`Failed to send ${sendMethod}: ${errorMessage}`);
         }
-
-        console.log("Email sent successfully:", emailData);
-        toast.success(`Estimate ${estimateNumber} sent via email to ${contact.name}`);
+        return;
       }
+
+      console.log("Send operation successful:", sendData);
+      toast.success(`Estimate ${estimateNumber} sent successfully via ${sendMethod}!`);
 
       // Update estimate status to 'sent'
       await supabase
@@ -258,6 +287,13 @@ export const EstimateSendDialog = ({
             </RadioGroup>
           </div>
 
+          {configError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{configError}</AlertDescription>
+            </Alert>
+          )}
+
           <div>
             <Label htmlFor="sendTo">
               {sendMethod === "email" ? "Email Address" : "Phone Number"}
@@ -286,7 +322,10 @@ export const EstimateSendDialog = ({
           {/* Client Info Display */}
           {contact && (
             <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="font-medium text-sm mb-2">Sending to:</h4>
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                Sending to:
+              </h4>
               <div className="text-sm text-gray-600">
                 <p><strong>{contact.name || 'Unknown Client'}</strong></p>
                 <p>Email: {contact.email || 'Not provided'}</p>
@@ -306,7 +345,7 @@ export const EstimateSendDialog = ({
           </Button>
           <Button 
             onClick={handleSend}
-            disabled={isProcessing || !sendTo.trim()}
+            disabled={isProcessing || !sendTo.trim() || !!configError}
           >
             {isProcessing ? (
               <>
