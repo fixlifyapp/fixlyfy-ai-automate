@@ -594,22 +594,48 @@ serve(async (req) => {
       // Format phone number for Telnyx
       const formattedPhone = cleanPhone.length === 10 ? `+1${cleanPhone}` : `+${cleanPhone}`
 
+      // Get user's Telnyx phone numbers
+      const { data: userPhoneNumbers, error: phoneError } = await supabaseAdmin
+        .from('telnyx_phone_numbers')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .order('purchased_at', { ascending: false })
+        .limit(1);
+
+      if (phoneError || !userPhoneNumbers || userPhoneNumbers.length === 0) {
+        console.error('send-estimate - No Telnyx phone numbers found for user:', phoneError);
+        throw new Error('No Telnyx phone numbers available. Please purchase a phone number first.');
+      }
+
+      const fromPhone = userPhoneNumbers[0].phone_number;
+
       // Use Telnyx SMS API
       const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
       if (!telnyxApiKey) {
         throw new Error('Telnyx API key not configured. Please configure TELNYX_API_KEY in Supabase secrets.')
       }
 
-      // Get company phone number from settings
-      const fromPhone = companySettings?.company_phone?.replace(/\D/g, '') || null
-      
-      if (!fromPhone) {
-        throw new Error('Company phone number not configured in settings')
+      // Create SMS message with portal link if client has email
+      let smsMessage = message;
+      if (!smsMessage) {
+        if (client?.email) {
+          // Generate client portal login token
+          const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
+            p_email: client.email
+          });
+          
+          if (tokenData) {
+            const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app';
+            const portalLink = `${currentDomain}/portal/login?token=${tokenData}`;
+            smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready ($${estimate.total?.toFixed(2) || '0.00'}). View it here: ${portalLink}`;
+          } else {
+            smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us for details.`;
+          }
+        } else {
+          smsMessage = `Hi ${client?.name || 'Customer'}! Your estimate #${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us for details.`;
+        }
       }
-
-      const formattedFromPhone = fromPhone.length === 10 ? `+1${fromPhone}` : `+${fromPhone}`
-
-      const smsMessage = message || `Hi ${client?.name || 'Customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us if you have any questions.`
 
       const response = await fetch('https://api.telnyx.com/v2/messages', {
         method: 'POST',
@@ -618,7 +644,7 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: formattedFromPhone,
+          from: fromPhone,
           to: formattedPhone,
           text: smsMessage
         })

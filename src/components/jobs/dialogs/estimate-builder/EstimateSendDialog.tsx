@@ -1,358 +1,238 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, MessageSquare, Loader2, AlertCircle, CheckCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Mail, MessageSquare, Send, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface EstimateSendDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  estimateId: string;
   estimateNumber: string;
-  estimateDetails?: any;
-  lineItems?: any[];
+  total: number;
   contactInfo?: {
     name: string;
     email: string;
     phone: string;
   };
-  clientInfo?: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-  jobId?: string;
-  onSuccess?: () => void;
-  onCancel?: () => void;
-  onSave: () => Promise<boolean>;
 }
 
 export const EstimateSendDialog = ({ 
-  open, 
-  onOpenChange, 
-  estimateNumber,
-  estimateDetails,
-  lineItems,
-  contactInfo,
-  clientInfo,
-  jobId,
-  onSuccess,
-  onCancel,
-  onSave
+  isOpen, 
+  onClose, 
+  estimateId, 
+  estimateNumber, 
+  total,
+  contactInfo 
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
-  const [sendTo, setSendTo] = useState("");
-  const [customNote, setCustomNote] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [clientData, setClientData] = useState<any>(null);
-  const [configError, setConfigError] = useState<string>("");
+  const [recipientEmail, setRecipientEmail] = useState(contactInfo?.email || "");
+  const [recipientPhone, setRecipientPhone] = useState(contactInfo?.phone || "");
+  const [subject, setSubject] = useState(`Estimate #${estimateNumber}`);
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
-  // Use clientInfo or contactInfo, whichever is available
-  const finalContactInfo = clientInfo || contactInfo || { name: '', email: '', phone: '' };
+  // Fetch user's Telnyx phone numbers
+  const { data: userPhoneNumbers = [] } = useQuery({
+    queryKey: ['user-telnyx-numbers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('telnyx_phone_numbers')
+        .select('*')
+        .eq('status', 'active')
+        .order('purchased_at', { ascending: false });
 
-  // Check configuration when dialog opens
-  useEffect(() => {
-    const checkConfiguration = async () => {
-      if (open) {
-        try {
-          // Check if required secrets are configured
-          const { data: companySettings } = await supabase
-            .from('company_settings')
-            .select('company_phone, custom_domain_name, email_from_address, email_from_name')
-            .limit(1)
-            .maybeSingle();
-
-          console.log('Company settings check:', companySettings);
-
-          if (sendMethod === 'email') {
-            // Email should work with the fixlyfy.app domain as it's working in the test panel
-            setConfigError('');
-          } else if (sendMethod === 'sms') {
-            if (!companySettings?.company_phone) {
-              setConfigError('SMS not configured. Please set up company phone number in settings.');
-            } else {
-              setConfigError('');
-            }
-          }
-        } catch (error) {
-          console.error('Configuration check error:', error);
-          setConfigError('Unable to check configuration. Please try again.');
-        }
-      }
-    };
-
-    checkConfiguration();
-  }, [open, sendMethod]);
-
-  // Fetch client data when dialog opens
-  useEffect(() => {
-    const fetchClientData = async () => {
-      if (open && jobId) {
-        console.log("Fetching client data for job:", jobId);
-        try {
-          const { data: job, error } = await supabase
-            .from('jobs')
-            .select(`
-              *,
-              clients:client_id (*)
-            `)
-            .eq('id', jobId)
-            .single();
-
-          if (!error && job?.clients) {
-            const client = Array.isArray(job.clients) ? job.clients[0] : job.clients;
-            setClientData(client);
-            console.log("Client data loaded:", client);
-          }
-        } catch (error) {
-          console.error("Error fetching client data:", error);
-        }
-      }
-    };
-
-    fetchClientData();
-  }, [open, jobId]);
-
-  // Set default recipient when dialog opens or send method changes
-  useEffect(() => {
-    if (open && (clientData || finalContactInfo)) {
-      const contact = clientData || finalContactInfo;
-      setSendTo(sendMethod === "email" ? (contact.email || "") : (contact.phone || ""));
+      if (error) throw error;
+      return data || [];
     }
-  }, [open, sendMethod, clientData, finalContactInfo]);
-
-  const handleSendMethodChange = (value: "email" | "sms") => {
-    setSendMethod(value);
-    const contact = clientData || finalContactInfo;
-    if (contact) {
-      setSendTo(value === "email" ? (contact.email || "") : (contact.phone || ""));
-    }
-  };
+  });
 
   const handleSend = async () => {
-    console.log("=== SEND ESTIMATE CLICKED ===");
-    console.log("Send method:", sendMethod);
-    console.log("Send to:", sendTo);
-    console.log("Estimate number:", estimateNumber);
-
-    if (!sendTo.trim()) {
-      toast.error("Please enter a recipient");
+    if (sendMethod === "email" && !recipientEmail) {
+      toast.error("Please enter an email address");
+      return;
+    }
+    
+    if (sendMethod === "sms" && !recipientPhone) {
+      toast.error("Please enter a phone number");
       return;
     }
 
-    // Validate email/phone
-    if (sendMethod === "email" && !sendTo.includes("@")) {
-      toast.error("Please enter a valid email address");
+    if (sendMethod === "sms" && userPhoneNumbers.length === 0) {
+      toast.error("No Telnyx phone numbers available. Please purchase a phone number first.");
       return;
     }
 
-    if (sendMethod === "sms" && !isValidPhoneNumber(sendTo)) {
-      toast.error("Please enter a valid phone number");
-      return;
-    }
-
-    if (configError) {
-      toast.error(`Configuration Error: ${configError}`);
-      return;
-    }
-
-    setIsProcessing(true);
+    setIsSending(true);
 
     try {
-      // Get the estimate from database
-      const { data: estimate, error: fetchError } = await supabase
-        .from('estimates')
-        .select('id, estimate_number, total, status, notes, job_id')
-        .eq('estimate_number', estimateNumber)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (sendMethod === "email") {
+        const { data, error } = await supabase.functions.invoke('send-estimate', {
+          body: {
+            estimateId,
+            sendMethod: "email",
+            recipientEmail,
+            subject,
+            message
+          }
+        });
 
-      if (fetchError || !estimate) {
-        console.error("Failed to fetch estimate:", fetchError);
-        toast.error("Estimate not found. Please save the estimate first.");
-        return;
-      }
-
-      console.log("Retrieved estimate:", estimate);
-      const contact = clientData || finalContactInfo;
-
-      // Send via appropriate method using the updated edge function
-      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
-        body: {
-          estimateId: estimate.id,
-          sendMethod: sendMethod,
-          recipientEmail: sendMethod === 'email' ? sendTo : undefined,
-          recipientPhone: sendMethod === 'sms' ? sendTo : undefined,
-          subject: sendMethod === 'email' ? `Estimate ${estimateNumber} from ${contact?.name || 'your service provider'}` : undefined,
-          message: customNote || (sendMethod === 'email' 
-            ? `Please find your estimate ${estimateNumber}. Total: $${estimate.total?.toFixed(2) || '0.00'}.` 
-            : `Hi ${contact?.name || 'Customer'}! Your estimate ${estimateNumber} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. Please contact us if you have any questions.`)
-        }
-      });
-      
-      if (sendError || !sendData?.success) {
-        console.error("Send operation failed:", sendError || sendData);
-        const errorMessage = sendError?.message || sendData?.error || 'Unknown error occurred';
+        if (error) throw error;
+        toast.success("Estimate sent via email successfully!");
+      } else {
+        // Use the first available Telnyx phone number
+        const fromNumber = userPhoneNumbers[0]?.phone_number;
         
-        // Provide specific error messages for common issues
-        if (errorMessage.includes('Mailgun API key not configured')) {
-          toast.error('Email sending not configured. Please contact support to set up Mailgun.');
-        } else if (errorMessage.includes('Telnyx API key not configured')) {
-          toast.error('SMS sending not configured. Please contact support to set up Telnyx.');
-        } else if (errorMessage.includes('Company phone number not configured')) {
-          toast.error('Company phone number not set up. Please configure it in settings.');
-        } else {
-          toast.error(`Failed to send ${sendMethod}: ${errorMessage}`);
-        }
-        return;
+        const { data, error } = await supabase.functions.invoke('send-estimate-sms', {
+          body: {
+            estimateId,
+            recipientPhone,
+            fromNumber,
+            message: message || `Hi ${contactInfo?.name || 'Customer'}! Your estimate #${estimateNumber} is ready. Total: $${total.toFixed(2)}. Please contact us if you have any questions.`
+          }
+        });
+
+        if (error) throw error;
+        toast.success("Estimate sent via SMS successfully!");
       }
-
-      console.log("Send operation successful:", sendData);
-      toast.success(`Estimate ${estimateNumber} sent successfully via ${sendMethod}!`);
-
-      // Update estimate status to 'sent'
-      await supabase
-        .from('estimates')
-        .update({ status: 'sent' })
-        .eq('id', estimate.id);
-
-      console.log("Estimate status updated to 'sent'");
-
-      // Close dialog and call success callback
-      onOpenChange(false);
       
-      if (onSuccess) {
-        onSuccess();
-      }
-
-    } catch (error: any) {
-      console.error("CRITICAL ERROR in send estimate process:", error);
-      toast.error(`An error occurred while sending the estimate: ${error.message}`);
+      onClose();
+    } catch (error) {
+      console.error('Error sending estimate:', error);
+      toast.error('Failed to send estimate');
     } finally {
-      setIsProcessing(false);
-      console.log("=== ESTIMATE SEND PROCESS COMPLETED ===");
+      setIsSending(false);
     }
   };
-
-  const handleCancel = () => {
-    console.log("Send cancelled");
-    onOpenChange(false);
-    if (onCancel) {
-      onCancel();
-    }
-  };
-
-  const contact = clientData || finalContactInfo;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Send Estimate {estimateNumber}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5 text-blue-600" />
+            Send Estimate #{estimateNumber}
+          </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
-          <div>
-            <Label>Send Method</Label>
-            <RadioGroup 
-              value={sendMethod} 
-              onValueChange={handleSendMethodChange}
-              className="flex gap-4 mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="email" id="email" />
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sms" id="sms" />
-                <Label htmlFor="sms" className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  SMS
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {configError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{configError}</AlertDescription>
-            </Alert>
-          )}
-
-          <div>
-            <Label htmlFor="sendTo">
-              {sendMethod === "email" ? "Email Address" : "Phone Number"}
-            </Label>
-            <Input
-              id="sendTo"
-              value={sendTo}
-              onChange={(e) => setSendTo(e.target.value)}
-              placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890"}
-              disabled={isProcessing}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="customNote">Custom Message (Optional)</Label>
-            <Textarea
-              id="customNote"
-              value={customNote}
-              onChange={(e) => setCustomNote(e.target.value)}
-              placeholder="Add a personal message to your estimate..."
-              rows={3}
-              disabled={isProcessing}
-            />
-          </div>
-
-          {/* Client Info Display */}
-          {contact && (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                Sending to:
-              </h4>
-              <div className="text-sm text-gray-600">
-                <p><strong>{contact.name || 'Unknown Client'}</strong></p>
-                <p>Email: {contact.email || 'Not provided'}</p>
-                <p>Phone: {contact.phone || 'Not provided'}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={handleCancel}
-            disabled={isProcessing}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSend}
-            disabled={isProcessing || !sendTo.trim() || !!configError}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              `Send via ${sendMethod === "email" ? "Email" : "SMS"}`
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Total:</strong> ${total.toFixed(2)}
+            </p>
+            {contactInfo?.name && (
+              <p className="text-sm text-blue-800">
+                <strong>Customer:</strong> {contactInfo.name}
+              </p>
             )}
-          </Button>
-        </DialogFooter>
+          </div>
+
+          <Tabs value={sendMethod} onValueChange={(value) => setSendMethod(value as "email" | "sms")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="email" className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Email
+              </TabsTrigger>
+              <TabsTrigger value="sms" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                SMS
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="email" className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="customer@example.com"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="subject">Subject</Label>
+                <Input
+                  id="subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="message">Additional Message (Optional)</Label>
+                <Textarea
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Add any additional notes..."
+                  rows={3}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sms" className="space-y-4">
+              {userPhoneNumbers.length === 0 ? (
+                <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm text-yellow-800">
+                    No Telnyx phone numbers available. Please purchase a phone number first.
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      <strong>From:</strong> {userPhoneNumbers[0]?.phone_number}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      placeholder="+1234567890"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sms-message">Message (Optional)</Label>
+                    <Textarea
+                      id="sms-message"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder={`Hi ${contactInfo?.name || 'Customer'}! Your estimate #${estimateNumber} is ready. Total: $${total.toFixed(2)}. Please contact us if you have any questions.`}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSend} 
+              disabled={isSending || (sendMethod === "sms" && userPhoneNumbers.length === 0)}
+            >
+              {isSending ? "Sending..." : `Send via ${sendMethod === "email" ? "Email" : "SMS"}`}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
