@@ -29,11 +29,6 @@ const generateFromEmail = (companyName: string): string => {
   return `${formattedName}@fixlify.app`;
 };
 
-const generateEmailSubject = (companyName: string, documentNumber: string): string => {
-  const cleanCompanyName = companyName?.trim() || 'Fixlify Services';
-  return `[${cleanCompanyName}] - Estimate #${documentNumber}`;
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -185,7 +180,7 @@ serve(async (req) => {
       console.log('send-estimate - From email:', fromEmail)
       console.log('send-estimate - Subject:', emailSubject)
 
-      // Create email template
+      // Create branded email template with modern design
       let emailHtml = ''
       
       if (client?.email && portalLoginToken && portalLoginLink) {
@@ -197,38 +192,177 @@ serve(async (req) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Your Estimate is Ready</title>
             <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f5f5f5; }
-              .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
-              .header { margin-bottom: 30px; }
-              .company-name { color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-              .title { color: #333; font-size: 20px; margin-bottom: 20px; }
-              .message { font-size: 16px; margin-bottom: 30px; color: #666; }
-              .portal-button { display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin: 20px 0; }
-              .portal-button:hover { background-color: #0056b3; }
-              .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
-              .security-note { font-size: 12px; color: #999; margin-top: 15px; }
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+                line-height: 1.6; 
+                color: #333; 
+                margin: 0; 
+                padding: 0; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+              }
+              .container { 
+                max-width: 600px; 
+                margin: 0 auto; 
+                background-color: white; 
+                border-radius: 12px; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+                overflow: hidden;
+                margin-top: 40px;
+                margin-bottom: 40px;
+              }
+              .header { 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                padding: 40px 30px; 
+                text-align: center; 
+              }
+              .company-name { 
+                font-size: 32px; 
+                font-weight: bold; 
+                margin-bottom: 8px; 
+                letter-spacing: -0.5px;
+              }
+              .subtitle { 
+                font-size: 16px; 
+                opacity: 0.9; 
+                margin: 0;
+              }
+              .content { 
+                padding: 40px 30px; 
+              }
+              .title { 
+                color: #333; 
+                font-size: 24px; 
+                font-weight: 600; 
+                margin-bottom: 20px; 
+                text-align: center;
+              }
+              .message { 
+                font-size: 16px; 
+                margin-bottom: 30px; 
+                color: #666; 
+                line-height: 1.7;
+              }
+              .estimate-details {
+                background: #f8fafc;
+                border-radius: 8px;
+                padding: 24px;
+                margin: 30px 0;
+                border-left: 4px solid #667eea;
+              }
+              .estimate-number {
+                font-size: 18px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 8px;
+              }
+              .estimate-amount {
+                font-size: 24px;
+                font-weight: bold;
+                color: #667eea;
+                margin-bottom: 8px;
+              }
+              .job-title {
+                color: #666;
+                font-size: 14px;
+              }
+              .portal-button { 
+                display: inline-block; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                padding: 16px 32px; 
+                text-decoration: none; 
+                border-radius: 8px; 
+                font-size: 16px; 
+                font-weight: 600; 
+                margin: 20px 0; 
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                transition: all 0.3s ease;
+                border: none;
+                cursor: pointer;
+              }
+              .portal-button:hover { 
+                box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                transform: translateY(-1px);
+              }
+              .button-container {
+                text-align: center;
+                margin: 30px 0;
+              }
+              .footer { 
+                margin-top: 40px; 
+                padding-top: 30px; 
+                border-top: 1px solid #e5e7eb; 
+                color: #666; 
+                font-size: 14px; 
+                text-align: center;
+              }
+              .contact-info {
+                margin: 10px 0;
+              }
+              .security-note { 
+                font-size: 12px; 
+                color: #999; 
+                margin-top: 20px; 
+                text-align: center;
+                padding: 16px;
+                background: #fef7e7;
+                border-radius: 6px;
+                border: 1px solid #f4d03f;
+              }
+              .brand-colors {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+              }
+              @media (max-width: 600px) {
+                .container { margin: 20px; max-width: none; }
+                .header { padding: 30px 20px; }
+                .content { padding: 30px 20px; }
+                .company-name { font-size: 28px; }
+              }
             </style>
           </head>
           <body>
             <div class="container">
               <div class="header">
                 <div class="company-name">${companyName}</div>
-                <div class="title">Your Estimate is Ready!</div>
+                <div class="subtitle">Professional Service Solutions</div>
               </div>
               
-              <div class="message">
-                <p>Hi ${client?.name || 'Valued Customer'},</p>
-                <p>Your estimate <strong>${estimate.estimate_number}</strong> for "${job?.title || 'service request'}" has been prepared and is ready for your review.</p>
-              </div>
-              
-              <a href="${portalLoginLink}" class="portal-button">View Your Estimate</a>
-              
-              <p class="security-note">This secure link will expire in 30 minutes for your protection.</p>
-              
-              <div class="footer">
-                <p>Thank you for choosing ${companyName}!</p>
-                ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
-                ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
+              <div class="content">
+                <div class="title">Your Estimate is Ready! 📋</div>
+                
+                <div class="message">
+                  <p>Hi ${client?.name || 'Valued Customer'},</p>
+                  <p>We've prepared your estimate and it's ready for your review. You can view all the details securely through our client portal.</p>
+                </div>
+                
+                <div class="estimate-details">
+                  <div class="estimate-number">Estimate #${estimate.estimate_number}</div>
+                  <div class="estimate-amount">$${estimate.total?.toFixed(2) || '0.00'}</div>
+                  <div class="job-title">${job?.title || 'Service Request'}</div>
+                </div>
+                
+                <div class="button-container">
+                  <a href="${portalLoginLink}" class="portal-button">🔐 View Your Estimate</a>
+                </div>
+                
+                <div class="security-note">
+                  🔒 This secure link will expire in 30 minutes for your protection.
+                </div>
+                
+                <div class="footer">
+                  <div style="font-weight: 600; margin-bottom: 16px;">Thank you for choosing ${companyName}!</div>
+                  ${companySettings?.company_phone ? `<div class="contact-info">📞 <strong>Phone:</strong> ${companySettings.company_phone}</div>` : ''}
+                  ${companySettings?.company_email ? `<div class="contact-info">✉️ <strong>Email:</strong> ${companySettings.company_email}</div>` : ''}
+                  ${companySettings?.company_website ? `<div class="contact-info">🌐 <strong>Website:</strong> ${companySettings.company_website}</div>` : ''}
+                  <div style="margin-top: 20px; color: #999; font-size: 12px;">
+                    Powered by Fixlify - Smart Solutions for Field Service Businesses
+                  </div>
+                </div>
               </div>
             </div>
           </body>
@@ -244,35 +378,150 @@ serve(async (req) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Your Estimate is Ready</title>
             <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f5f5f5; }
-              .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
-              .header { margin-bottom: 30px; }
-              .company-name { color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-              .title { color: #333; font-size: 20px; margin-bottom: 20px; }
-              .message { font-size: 16px; margin-bottom: 30px; color: #666; }
-              .portal-button { display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin: 20px 0; }
-              .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+                line-height: 1.6; 
+                color: #333; 
+                margin: 0; 
+                padding: 0; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+              }
+              .container { 
+                max-width: 600px; 
+                margin: 0 auto; 
+                background-color: white; 
+                border-radius: 12px; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+                overflow: hidden;
+                margin-top: 40px;
+                margin-bottom: 40px;
+              }
+              .header { 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                padding: 40px 30px; 
+                text-align: center; 
+              }
+              .company-name { 
+                font-size: 32px; 
+                font-weight: bold; 
+                margin-bottom: 8px; 
+                letter-spacing: -0.5px;
+              }
+              .subtitle { 
+                font-size: 16px; 
+                opacity: 0.9; 
+                margin: 0;
+              }
+              .content { 
+                padding: 40px 30px; 
+              }
+              .title { 
+                color: #333; 
+                font-size: 24px; 
+                font-weight: 600; 
+                margin-bottom: 20px; 
+                text-align: center;
+              }
+              .message { 
+                font-size: 16px; 
+                margin-bottom: 30px; 
+                color: #666; 
+                line-height: 1.7;
+              }
+              .estimate-details {
+                background: #f8fafc;
+                border-radius: 8px;
+                padding: 24px;
+                margin: 30px 0;
+                border-left: 4px solid #667eea;
+              }
+              .estimate-number {
+                font-size: 18px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 8px;
+              }
+              .estimate-amount {
+                font-size: 24px;
+                font-weight: bold;
+                color: #667eea;
+                margin-bottom: 8px;
+              }
+              .job-title {
+                color: #666;
+                font-size: 14px;
+              }
+              .portal-button { 
+                display: inline-block; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                padding: 16px 32px; 
+                text-decoration: none; 
+                border-radius: 8px; 
+                font-size: 16px; 
+                font-weight: 600; 
+                margin: 20px 0; 
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+              }
+              .button-container {
+                text-align: center;
+                margin: 30px 0;
+              }
+              .footer { 
+                margin-top: 40px; 
+                padding-top: 30px; 
+                border-top: 1px solid #e5e7eb; 
+                color: #666; 
+                font-size: 14px; 
+                text-align: center;
+              }
+              .contact-info {
+                margin: 10px 0;
+              }
+              @media (max-width: 600px) {
+                .container { margin: 20px; max-width: none; }
+                .header { padding: 30px 20px; }
+                .content { padding: 30px 20px; }
+                .company-name { font-size: 28px; }
+              }
             </style>
           </head>
           <body>
             <div class="container">
               <div class="header">
                 <div class="company-name">${companyName}</div>
-                <div class="title">Your Estimate is Ready!</div>
+                <div class="subtitle">Professional Service Solutions</div>
               </div>
               
-              <div class="message">
-                <p>Hi ${client?.name || 'Valued Customer'},</p>
-                <p>Your estimate <strong>${estimate.estimate_number}</strong> for "${job?.title || 'service request'}" has been prepared.</p>
-                <p>Total Amount: <strong>$${estimate.total?.toFixed(2) || '0.00'}</strong></p>
-              </div>
-              
-              <a href="${currentDomain}/portal/login" class="portal-button">Access Client Portal</a>
-              
-              <div class="footer">
-                <p>Thank you for choosing ${companyName}!</p>
-                ${companySettings?.company_phone ? `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>` : ''}
-                ${companySettings?.company_email ? `<p><strong>Email:</strong> ${companySettings.company_email}</p>` : ''}
+              <div class="content">
+                <div class="title">Your Estimate is Ready! 📋</div>
+                
+                <div class="message">
+                  <p>Hi ${client?.name || 'Valued Customer'},</p>
+                  <p>We've prepared your estimate and it's ready for your review.</p>
+                </div>
+                
+                <div class="estimate-details">
+                  <div class="estimate-number">Estimate #${estimate.estimate_number}</div>
+                  <div class="estimate-amount">$${estimate.total?.toFixed(2) || '0.00'}</div>
+                  <div class="job-title">${job?.title || 'Service Request'}</div>
+                </div>
+                
+                <div class="button-container">
+                  <a href="${currentDomain}/portal/login" class="portal-button">🔐 Access Client Portal</a>
+                </div>
+                
+                <div class="footer">
+                  <div style="font-weight: 600; margin-bottom: 16px;">Thank you for choosing ${companyName}!</div>
+                  ${companySettings?.company_phone ? `<div class="contact-info">📞 <strong>Phone:</strong> ${companySettings.company_phone}</div>` : ''}
+                  ${companySettings?.company_email ? `<div class="contact-info">✉️ <strong>Email:</strong> ${companySettings.company_email}</div>` : ''}
+                  ${companySettings?.company_website ? `<div class="contact-info">🌐 <strong>Website:</strong> ${companySettings.company_website}</div>` : ''}
+                  <div style="margin-top: 20px; color: #999; font-size: 12px;">
+                    Powered by Fixlify - Smart Solutions for Field Service Businesses
+                  </div>
+                </div>
               </div>
             </div>
           </body>
