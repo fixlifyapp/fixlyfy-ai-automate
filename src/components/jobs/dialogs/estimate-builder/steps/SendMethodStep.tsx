@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -38,6 +37,11 @@ const isValidPhoneNumber = (phone: string): boolean => {
   return cleaned.length >= 10;
 };
 
+const formatPhoneForTelnyx = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '');
+  return `+1${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+};
+
 export const SendMethodStep = ({
   sendMethod,
   setSendMethod,
@@ -63,13 +67,28 @@ export const SendMethodStep = ({
     setValidationError("");
   };
 
+  const handleSendMethodChange = (value: "email" | "sms") => {
+    setSendMethod(value);
+    setValidationError("");
+    
+    // Only auto-fill if the current field is empty
+    if (!sendTo.trim()) {
+      if (value === "email" && hasValidEmail) {
+        setSendTo(contactInfo.email);
+      } else if (value === "sms" && hasValidPhone) {
+        const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
+        setSendTo(formattedPhone);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground mb-4">
         Send estimate {estimateNumber} to {contactInfo.name}:
       </div>
       
-      <RadioGroup value={sendMethod} onValueChange={setSendMethod}>
+      <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
         <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
           sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
         }`}>
