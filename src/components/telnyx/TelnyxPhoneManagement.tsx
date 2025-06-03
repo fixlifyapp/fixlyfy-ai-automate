@@ -24,6 +24,7 @@ interface PhoneNumber {
   setup_cost?: number;
   source?: string;
   purchased_at?: string;
+  monthly_cost?: number;
 }
 
 export const TelnyxPhoneManagement = () => {
@@ -55,23 +56,31 @@ export const TelnyxPhoneManagement = () => {
       console.log(`Toggling AI for ${phoneNumber.phone_number} to ${enabled}`);
       
       if (enabled) {
+        // Enable AI - configure the number
         const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
           body: {
             action: 'configure',
             phone_number: phoneNumber.phone_number
           }
         });
-        if (error) throw error;
+        if (error) {
+          console.error('Configure error:', error);
+          throw new Error(error.message || 'Failed to configure AI');
+        }
         return data;
       } else {
-        const { error } = await supabase.functions.invoke('manage-ai-dispatcher', {
+        // Disable AI - call the manage-ai-dispatcher function
+        const { data, error } = await supabase.functions.invoke('manage-ai-dispatcher', {
           body: {
             action: 'disable',
             phoneNumberId: phoneNumber.id
           }
         });
-        if (error) throw error;
-        return { success: true };
+        if (error) {
+          console.error('Disable AI error:', error);
+          throw new Error(error.message || 'Failed to disable AI');
+        }
+        return data;
       }
     },
     onSuccess: (data, variables) => {
@@ -81,12 +90,13 @@ export const TelnyxPhoneManagement = () => {
           ? `🤖 AI enabled for ${formatPhoneForDisplay(phoneNumber.phone_number)}` 
           : `🔇 AI disabled for ${formatPhoneForDisplay(phoneNumber.phone_number)}`
       );
+      // Refresh the data
       queryClient.invalidateQueries({ queryKey: ['telnyx-phone-management'] });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Toggle AI error:', error);
-      toast.error(`Failed to update AI settings: ${error.message}`);
+      toast.error(`Failed to update AI settings: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -101,6 +111,12 @@ export const TelnyxPhoneManagement = () => {
 
   const isAIEnabled = (number: PhoneNumber) => {
     return number.ai_dispatcher_enabled || number.configured_for_ai || !!number.configured_at;
+  };
+
+  const getCostDisplay = (number: PhoneNumber) => {
+    const monthlyCost = number.monthly_price || number.monthly_cost || 0;
+    const setupCost = number.setup_cost || 0;
+    return { monthly: monthlyCost, setup: setupCost };
   };
 
   return (
@@ -132,6 +148,7 @@ export const TelnyxPhoneManagement = () => {
               {phoneNumbers.map((number: PhoneNumber) => {
                 const aiEnabled = isAIEnabled(number);
                 const isSpecialNumber = number.phone_number === '+14375249932';
+                const costs = getCostDisplay(number);
                 
                 return (
                   <div
@@ -152,7 +169,7 @@ export const TelnyxPhoneManagement = () => {
                             Your Telnyx Number
                           </Badge>
                         )}
-                        {number.source === 'telnyx' && (
+                        {number.source === 'telnyx_table' && (
                           <Badge variant="outline" className="text-blue-600">
                             <Zap className="h-3 w-3 mr-1" />
                             Telnyx
@@ -172,11 +189,9 @@ export const TelnyxPhoneManagement = () => {
                         {number.configured_at && (
                           <div>AI Configured: {new Date(number.configured_at).toLocaleDateString()}</div>
                         )}
-                        {(number.monthly_price !== undefined && number.setup_cost !== undefined) && (
-                          <div>
-                            Cost: ${number.setup_cost} setup + ${number.monthly_price}/month
-                          </div>
-                        )}
+                        <div>
+                          Cost: ${costs.setup.toFixed(2)} setup + ${costs.monthly.toFixed(2)}/month
+                        </div>
                       </div>
                     </div>
                     

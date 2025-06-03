@@ -53,33 +53,35 @@ serve(async (req) => {
 
     const { action, phoneNumberId, config }: ManageAIDispatcherRequest = await req.json()
 
-    // Verify user owns the phone number
-    const { data: phoneNumber, error: phoneError } = await supabaseClient
-      .from('phone_numbers')
-      .select('*')
-      .eq('id', phoneNumberId)
-      .eq('purchased_by', userData.user.id)
-      .single()
-
-    if (phoneError || !phoneNumber) {
-      return new Response(JSON.stringify({ error: 'Phone number not found or unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      })
-    }
+    console.log(`AI Dispatcher ${action} for phoneNumberId: ${phoneNumberId}`)
 
     if (action === 'enable') {
-      // Update phone number to enable AI dispatcher
-      const { error: updateError } = await supabaseClient
-        .from('phone_numbers')
-        .update({ ai_dispatcher_enabled: true })
+      // Update both tables to enable AI dispatcher
+      const { error: updateTelnyxError } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .update({ 
+          ai_dispatcher_enabled: true,
+          configured_for_ai: true,
+          configured_at: new Date().toISOString()
+        })
         .eq('id', phoneNumberId)
+        .eq('user_id', userData.user.id)
 
-      if (updateError) {
-        throw updateError
+      const { error: updatePhoneError } = await supabaseClient
+        .from('phone_numbers')
+        .update({ 
+          ai_dispatcher_enabled: true,
+          configured_for_ai: true
+        })
+        .eq('id', phoneNumberId)
+        .eq('purchased_by', userData.user.id)
+
+      if (updateTelnyxError && updatePhoneError) {
+        console.error('Enable errors:', { updateTelnyxError, updatePhoneError })
+        throw new Error('Failed to enable AI dispatcher')
       }
 
-      // Create or update AI configuration
+      // Create or update AI configuration if provided
       if (config) {
         const { error: configError } = await supabaseClient
           .from('ai_dispatcher_configs')
@@ -89,7 +91,7 @@ serve(async (req) => {
           })
 
         if (configError) {
-          throw configError
+          console.error('Config error:', configError)
         }
       }
 
@@ -100,14 +102,29 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     } else if (action === 'disable') {
-      // Update phone number to disable AI dispatcher
-      const { error: updateError } = await supabaseClient
-        .from('phone_numbers')
-        .update({ ai_dispatcher_enabled: false })
+      // Update both tables to disable AI dispatcher
+      const { error: updateTelnyxError } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .update({ 
+          ai_dispatcher_enabled: false,
+          configured_for_ai: false,
+          configured_at: null
+        })
         .eq('id', phoneNumberId)
+        .eq('user_id', userData.user.id)
 
-      if (updateError) {
-        throw updateError
+      const { error: updatePhoneError } = await supabaseClient
+        .from('phone_numbers')
+        .update({ 
+          ai_dispatcher_enabled: false,
+          configured_for_ai: false
+        })
+        .eq('id', phoneNumberId)
+        .eq('purchased_by', userData.user.id)
+
+      if (updateTelnyxError && updatePhoneError) {
+        console.error('Disable errors:', { updateTelnyxError, updatePhoneError })
+        throw new Error('Failed to disable AI dispatcher')
       }
 
       return new Response(JSON.stringify({ 
