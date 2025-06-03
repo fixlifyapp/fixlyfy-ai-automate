@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstimateInfo } from "./useEstimateInfo";
 import { Product, LineItem } from "@/components/jobs/builder/types";
+import { generateNextId } from "@/utils/idGeneration";
 
 export const useEstimateCreation = (
   jobId: string,
@@ -12,7 +13,6 @@ export const useEstimateCreation = (
 ) => {
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [estimateItems, setEstimateItems] = useState<Product[]>([]);
-  const { generateUniqueNumber } = useEstimateInfo();
 
   // Handle creating a new estimate
   const handleCreateEstimate = () => {
@@ -153,10 +153,11 @@ export const useEstimateCreation = (
   // Handle estimate creation from the dialog
   const handleEstimateCreated = async (amount: number) => {
     try {
-      // Generate a new estimate number using the utility function
-      const newEstimateNumber = generateUniqueNumber('EST');
+      // Generate a new estimate number using the simplified numbering system
+      const newEstimateNumber = await generateNextId('estimate');
       
       console.log('Creating estimate for job:', jobId, 'with amount:', amount);
+      console.log('Generated estimate number:', newEstimateNumber);
       
       // Create a new estimate in Supabase
       const { data, error } = await supabase

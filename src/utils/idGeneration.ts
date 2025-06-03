@@ -1,15 +1,15 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Starting values for each entity type
+// Starting values for each entity type - simplified numbering
 const STARTING_VALUES = {
   job: 2000,
   estimate: 2000,
-  invoice: 3000,
-  client: 1000
+  invoice: 2000,
+  client: 2000
 };
 
-// Prefixes for each entity type
+// Simple prefixes for each entity type
 const PREFIXES = {
   job: 'J',
   estimate: 'E',
@@ -52,11 +52,21 @@ export const generateNextId = async (entityType: 'job' | 'estimate' | 'invoice' 
       throw new Error('Unexpected error fetching counter');
     }
 
+    // Return just the number for estimates (simpler format)
+    if (entityType === 'estimate') {
+      return nextNumber.toString();
+    }
+
     return `${PREFIXES[entityType]}-${nextNumber}`;
   } catch (error) {
     console.error(`Error generating ${entityType} ID:`, error);
     // Fallback to random number if database operation fails
     const fallbackNumber = Math.floor(Math.random() * 9999) + STARTING_VALUES[entityType];
+    
+    if (entityType === 'estimate') {
+      return fallbackNumber.toString();
+    }
+    
     return `${PREFIXES[entityType]}-${fallbackNumber}`;
   }
 };

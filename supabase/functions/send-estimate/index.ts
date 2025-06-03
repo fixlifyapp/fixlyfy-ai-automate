@@ -175,8 +175,8 @@ serve(async (req) => {
       // Auto-generate email from company name
       const fromEmail = generateFromEmail(companyName)
       
-      // Generate professional subject line
-      const emailSubject = subject || generateEmailSubject(companyName, estimate.estimate_number)
+      // Generate professional subject line using COMPANY NAME (not client name)
+      const emailSubject = subject || `[${companyName}] - Estimate #${estimate.estimate_number}`
 
       console.log('send-estimate - Final email configuration:')
       console.log('send-estimate - User ID:', userData.user.id)

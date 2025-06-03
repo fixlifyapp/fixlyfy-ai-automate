@@ -39,17 +39,9 @@ export const useEstimateInfo = (jobId?: string) => {
     }
   }, [jobId]);
   
-  // Generate a unique number for the estimate
-  const generateUniqueNumber = (prefix: string) => {
-    const timestamp = new Date().getTime();
-    const random = Math.floor(Math.random() * 1000);
-    return `${prefix}-${timestamp % 10000}${random}`;
-  };
-  
   return {
     jobInfo,
     clientInfo,
-    companyInfo,
-    generateUniqueNumber
+    companyInfo
   };
 };
