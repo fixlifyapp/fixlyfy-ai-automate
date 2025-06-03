@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Search, Plus, CheckCircle, Trash2 } from "lucide-react";
+import { Phone, Search, Plus, CheckCircle, Trash2, Star } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,11 +20,48 @@ interface AvailableNumber {
   source: 'telnyx';
 }
 
+interface ClaimableNumber {
+  phone_number: string;
+  status: string;
+  user_id: string | null;
+  source: 'claimable';
+}
+
 export function PhoneNumberPurchase() {
   const [searchAreaCode, setSearchAreaCode] = useState('437');
   const [availableNumbers, setAvailableNumbers] = useState<AvailableNumber[]>([]);
+  const [claimableNumber, setClaimableNumber] = useState<ClaimableNumber | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
+
+  // Check for claimable number (+14375249932) on component mount
+  useEffect(() => {
+    checkClaimableNumber();
+  }, []);
+
+  const checkClaimableNumber = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'check_claimable',
+          phone_number: '+14375249932'
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data.claimable) {
+        setClaimableNumber({
+          phone_number: '+14375249932',
+          status: 'available_to_claim',
+          user_id: null,
+          source: 'claimable'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking claimable number:', error);
+    }
+  };
 
   // Remove test numbers on component mount - only once
   useEffect(() => {
@@ -65,6 +102,42 @@ export function PhoneNumberPurchase() {
   const removeTestNumbers = () => {
     removeTestNumbersMutation.mutate();
   };
+
+  // Claim existing number mutation
+  const claimNumberMutation = useMutation({
+    mutationFn: async (phoneNumber: string) => {
+      console.log('Claiming number:', phoneNumber);
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'claim_existing',
+          phone_number: phoneNumber
+        }
+      });
+
+      if (error) {
+        console.error('Claim error:', error);
+        throw error;
+      }
+      console.log('Claim response:', data);
+      return data;
+    },
+    onSuccess: (data) => {
+      console.log('Successfully claimed:', data);
+      toast.success(`🎉 Number ${data.phone_number} claimed successfully and set as default!`);
+      
+      // Clear the claimable number from state
+      setClaimableNumber(null);
+      
+      // Refresh all related queries
+      queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
+      queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
+      queryClient.invalidateQueries({ queryKey: ['phone-numbers-management'] });
+    },
+    onError: (error) => {
+      console.error('Claim error:', error);
+      toast.error(`Failed to claim number: ${error.message}`);
+    }
+  });
 
   // Search for available numbers (real Telnyx numbers only)
   const searchNumbers = async () => {
@@ -151,6 +224,58 @@ export function PhoneNumberPurchase() {
 
   return (
     <div className="space-y-6">
+      {/* Claim Your Telnyx Number Section */}
+      {claimableNumber && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <Star className="h-5 w-5" />
+              Claim Your Telnyx Number - Special Offer!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white p-4 rounded-lg border border-green-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-bold text-xl text-green-800">
+                      {formatPhoneForDisplay(claimableNumber.phone_number)}
+                    </span>
+                    <Badge className="bg-green-100 text-green-800">
+                      🎁 FREE - Your Telnyx Number
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-green-700">
+                    <div>This is your existing Telnyx number, ready to claim!</div>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className="font-medium">Setup: FREE</span>
+                      <span className="font-medium">Monthly: $1.00</span>
+                      <div className="flex gap-1">
+                        <Badge variant="outline" className="text-xs border-green-300">Voice</Badge>
+                        <Badge variant="outline" className="text-xs border-green-300">SMS</Badge>
+                        <Badge variant="outline" className="text-xs border-green-300">AI Ready</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => claimNumberMutation.mutate(claimableNumber.phone_number)}
+                  disabled={claimNumberMutation.isPending}
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <Star className="h-4 w-4" />
+                  {claimNumberMutation.isPending ? 'Claiming...' : 'Claim FREE'}
+                </Button>
+              </div>
+            </div>
+            <div className="text-sm text-green-700">
+              <strong>🎉 Special Offer:</strong> This number is already under your Telnyx account. 
+              Claim it now for FREE and it will be set as your default number with full AI dispatcher capabilities!
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Add Existing Number Section */}
       <Card>
         <CardHeader>
@@ -161,7 +286,7 @@ export function PhoneNumberPurchase() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            If you already purchased a Telnyx number (+14375249932), you can add it to your account here.
+            If you have other Telnyx numbers, you can add them to your account here.
           </p>
           <AddExistingNumberDialog />
         </CardContent>
@@ -290,13 +415,22 @@ export function PhoneNumberPurchase() {
           <CardTitle>How It Works</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="space-y-3">
+              <h5 className="font-medium text-green-600">🎁 Claim Your Number</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• FREE: Claim +14375249932</li>
+                <li>• Already under your Telnyx account</li>
+                <li>• Automatically set as default</li>
+                <li>• Full AI dispatcher ready</li>
+              </ul>
+            </div>
             <div className="space-y-3">
               <h5 className="font-medium text-purple-600">📱 Add Existing Numbers</h5>
               <ul className="space-y-1 text-sm">
-                <li>• Already have a Telnyx number?</li>
-                <li>• Add it using "Add Existing Number"</li>
-                <li>• Connect it to your AI dispatcher</li>
+                <li>• Already have other Telnyx numbers?</li>
+                <li>• Add them using "Add Existing Number"</li>
+                <li>• Connect them to your AI dispatcher</li>
                 <li>• Start handling calls immediately</li>
               </ul>
             </div>
@@ -314,7 +448,8 @@ export function PhoneNumberPurchase() {
           <div className="bg-blue-50 p-4 rounded-lg">
             <h5 className="font-medium text-blue-800 mb-2">💡 Pro Tip</h5>
             <p className="text-sm text-blue-700">
-              If you already purchased a Telnyx number (+14375249932), use "Add Existing Number" above to connect it to your account. This will give you full control over your real number with AI dispatcher capabilities.
+              Start by claiming your existing Telnyx number (+14375249932) for FREE! 
+              This will give you immediate access to the AI dispatcher with your real number.
             </p>
           </div>
         </CardContent>

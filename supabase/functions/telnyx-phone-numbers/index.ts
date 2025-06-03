@@ -3,7 +3,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 interface TelnyxPhoneNumberRequest {
-  action: 'search' | 'purchase' | 'list' | 'configure' | 'add_existing' | 'remove_test_numbers' | 'get_config' | 'update_config';
+  action: 'search' | 'purchase' | 'list' | 'configure' | 'add_existing' | 'remove_test_numbers' | 'get_config' | 'update_config' | 'claim_existing' | 'check_claimable';
   area_code?: string;
   country_code?: string;
   phone_number?: string;
@@ -46,6 +46,102 @@ serve(async (req) => {
     }
 
     const { action, area_code, country_code, phone_number, webhook_url, config }: TelnyxPhoneNumberRequest = await req.json()
+
+    // Check if number is claimable
+    if (action === 'check_claimable') {
+      if (!phone_number || !currentUserId) {
+        throw new Error('Phone number and user authentication required')
+      }
+
+      console.log(`Checking if ${phone_number} is claimable for user ${currentUserId}`)
+
+      // Check if the number exists in database but is not assigned to any user
+      const { data: existingNumber, error } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .select('*')
+        .eq('phone_number', phone_number)
+        .is('user_id', null)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        throw error
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        claimable: !!existingNumber,
+        number: existingNumber
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Claim existing number
+    if (action === 'claim_existing') {
+      if (!phone_number || !currentUserId) {
+        throw new Error('Phone number and user authentication required')
+      }
+
+      console.log(`Claiming existing number ${phone_number} for user ${currentUserId}`)
+
+      // Check if the number exists and is unassigned
+      const { data: existingNumber, error: checkError } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .select('*')
+        .eq('phone_number', phone_number)
+        .is('user_id', null)
+        .single()
+
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          throw new Error('Number not found or already claimed')
+        }
+        throw checkError
+      }
+
+      // Update the number to assign it to the user
+      const { error: updateTelnyxError } = await supabaseClient
+        .from('telnyx_phone_numbers')
+        .update({
+          user_id: currentUserId,
+          status: 'active',
+          configured_at: new Date().toISOString(),
+          monthly_cost: 1.00,
+          setup_cost: 0.00 // Free claim
+        })
+        .eq('phone_number', phone_number)
+        .is('user_id', null)
+
+      // Also update/insert in phone_numbers table
+      const { error: updatePhoneError } = await supabaseClient
+        .from('phone_numbers')
+        .upsert({
+          phone_number: phone_number,
+          status: 'available',
+          capabilities: { voice: true, sms: true, mms: false },
+          monthly_price: 1.00,
+          price: 0.00, // Free claim
+          purchased_by: currentUserId,
+          purchased_at: new Date().toISOString(),
+          ai_dispatcher_enabled: true,
+          configured_for_ai: true
+        })
+
+      if (updateTelnyxError || updatePhoneError) {
+        console.error('Update errors:', { updateTelnyxError, updatePhoneError })
+        throw updateTelnyxError || updatePhoneError
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Number claimed successfully and set as default',
+        phone_number: phone_number,
+        type: 'claimed',
+        cost: 0.00
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
     // Get Telnyx configuration
     if (action === 'get_config') {
