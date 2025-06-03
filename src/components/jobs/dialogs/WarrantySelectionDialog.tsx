@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, Shield } from "lucide-react";
 import { Product } from "../builder/types";
 
@@ -100,46 +101,53 @@ export const WarrantySelectionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Shield className="text-green-600" size={20} />
             Recommend a Warranty
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm sm:text-base">
             Select a warranty to recommend to your customer. Warranties address customer concerns and provide peace of mind.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <RadioGroup value={selectedWarrantyId || ""} onValueChange={setSelectedWarrantyId}>
-            {warranties.map((warranty) => (
-              <div 
-                key={warranty.id}
-                className={`flex items-start space-x-3 border rounded-md p-3 hover:bg-muted/50 cursor-pointer ${
-                  selectedWarrantyId === warranty.id ? "border-primary bg-primary/5" : "border-input"
-                }`}
-                onClick={() => setSelectedWarrantyId(warranty.id)}
-              >
-                <RadioGroupItem value={warranty.id} id={warranty.id} className="mt-1" />
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <Label htmlFor={warranty.id} className="font-medium text-base cursor-pointer">
-                      {warranty.name}
-                    </Label>
-                    <span className="font-medium">${warranty.price}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{warranty.description}</p>
-                  <div className="mt-1 flex items-center text-sm text-green-600">
-                    <Check size={14} className="mr-1" /> {warranty.benefit}
+        <ScrollArea className="flex-1 max-h-[50vh] pr-4">
+          <div className="space-y-3 py-4">
+            <RadioGroup value={selectedWarrantyId || ""} onValueChange={setSelectedWarrantyId}>
+              {warranties.map((warranty) => (
+                <div 
+                  key={warranty.id}
+                  className={`flex items-start space-x-3 border rounded-md p-3 sm:p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
+                    selectedWarrantyId === warranty.id ? "border-primary bg-primary/5" : "border-input"
+                  }`}
+                  onClick={() => setSelectedWarrantyId(warranty.id)}
+                >
+                  <RadioGroupItem value={warranty.id} id={warranty.id} className="mt-1 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-2">
+                      <Label htmlFor={warranty.id} className="font-medium text-sm sm:text-base cursor-pointer">
+                        {warranty.name}
+                      </Label>
+                      <span className="font-medium text-lg text-primary">${warranty.price}</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
+                      {warranty.description}
+                    </p>
+                    <div className="mt-2 flex items-center text-xs sm:text-sm text-green-600">
+                      <Check size={14} className="mr-1 flex-shrink-0" /> 
+                      <span>{warranty.benefit}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </RadioGroup>
-          
-          <div className="space-y-2 pt-2">
-            <Label htmlFor="custom-note">
+              ))}
+            </RadioGroup>
+          </div>
+        </ScrollArea>
+        
+        <div className="flex-shrink-0 space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="custom-note" className="text-sm sm:text-base">
               Custom note for customer (optional)
             </Label>
             <Input
@@ -147,18 +155,19 @@ export const WarrantySelectionDialog = ({
               placeholder="E.g., Based on the age of your unit, I'd recommend this warranty to prevent future repair costs..."
               value={customNote}
               onChange={(e) => setCustomNote(e.target.value)}
+              className="text-sm"
             />
           </div>
-        </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={handleSkip} className="sm:mr-auto">
-            Skip Recommendation
-          </Button>
-          <Button onClick={handleConfirm}>
-            Add Recommendation
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+            <Button variant="outline" onClick={handleSkip} className="sm:mr-auto order-2 sm:order-1">
+              Skip Recommendation
+            </Button>
+            <Button onClick={handleConfirm} className="order-1 sm:order-2">
+              Add Recommendation
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

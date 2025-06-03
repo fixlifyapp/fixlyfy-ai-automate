@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -44,6 +43,7 @@ export const UnifiedDocumentBuilder = ({
   const [showWarrantyDialog, setShowWarrantyDialog] = useState(false);
   const [selectedWarranty, setSelectedWarranty] = useState<Product | null>(null);
   const [warrantyNote, setWarrantyNote] = useState("");
+  const [pendingSaveAndSend, setPendingSaveAndSend] = useState(false);
   
   const { jobs } = useJobs();
   const job = jobs.find(j => j.id === jobId);
@@ -90,6 +90,14 @@ export const UnifiedDocumentBuilder = ({
   };
 
   const handleSaveAndSend = async () => {
+    // Check if this is an estimate and has line items but no warranty yet
+    if (documentType === 'estimate' && lineItems.length > 0 && !selectedWarranty) {
+      setPendingSaveAndSend(true);
+      setShowWarrantyDialog(true);
+      return;
+    }
+
+    // If warranty is already selected or this is an invoice, proceed directly
     const success = await handleSave();
     if (success) {
       setShowSendDialog(true);
@@ -115,6 +123,7 @@ export const UnifiedDocumentBuilder = ({
 
   const handleAddWarranty = () => {
     setShowWarrantyDialog(true);
+    setPendingSaveAndSend(false);
   };
 
   const handleWarrantySelection = (warranty: Product | null, note: string) => {
@@ -122,9 +131,21 @@ export const UnifiedDocumentBuilder = ({
       setSelectedWarranty(warranty);
       setWarrantyNote(note);
       handleAddProduct(warranty);
-      toast.success(`${warranty.name} added to estimate`);
+      toast.success(`${warranty.name} added to ${documentType}`);
     }
     setShowWarrantyDialog(false);
+
+    // If this was triggered by "Save & Send", continue with the send process
+    if (pendingSaveAndSend) {
+      setPendingSaveAndSend(false);
+      // Delay slightly to allow the line item to be added
+      setTimeout(async () => {
+        const success = await handleSave();
+        if (success) {
+          setShowSendDialog(true);
+        }
+      }, 100);
+    }
   };
 
   const formatCurrency = (amount: number) => {
