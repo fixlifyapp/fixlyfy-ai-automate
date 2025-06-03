@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,9 @@ export const MailgunTestPanel = () => {
     setTestResult(null);
     
     try {
+      console.log('MailgunTestPanel - Sending test email with settings:', settings);
+      console.log('MailgunTestPanel - custom_domain_name:', settings.custom_domain_name);
+      
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to: formData.to,
@@ -66,8 +68,10 @@ export const MailgunTestPanel = () => {
     if (useSandbox) {
       return 'postmaster@sandbox.mailgun.org';
     }
-    if (settings.custom_domain_name) {
-      return `${settings.custom_domain_name}@fixlyfy.app`;
+    // Use the same logic as in the send-email function
+    if (settings.custom_domain_name && settings.custom_domain_name.trim() && settings.custom_domain_name !== 'support') {
+      const cleanDomain = settings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      return `${cleanDomain}@fixlyfy.app`;
     }
     return 'support@fixlyfy.app';
   };
@@ -86,6 +90,9 @@ export const MailgunTestPanel = () => {
               </p>
               <p className="text-sm text-muted-foreground mb-2">
                 Your email address: <strong>{getEmailAddress()}</strong>
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Custom domain from settings: <strong>{settings.custom_domain_name || 'Not set'}</strong>
               </p>
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="bg-green-100 text-green-800">

@@ -60,7 +60,7 @@ serve(async (req) => {
       useSandbox = false
     }: SendEmailRequest = await req.json();
 
-    console.log('Sending email request:', { to, subject, from, useSandbox });
+    console.log('send-email function - Sending email request:', { to, subject, from, useSandbox });
 
     // Get company settings to determine custom domain name
     const { data: companySettings, error: settingsError } = await supabaseClient
@@ -70,48 +70,62 @@ serve(async (req) => {
       .maybeSingle();
 
     if (settingsError) {
-      console.error('Error fetching company settings:', settingsError);
+      console.error('send-email function - Error fetching company settings:', settingsError);
     }
 
+    console.log('send-email function - Company settings:', companySettings);
+    console.log('send-email function - custom_domain_name from DB:', companySettings?.custom_domain_name);
+
     let fromEmail = from;
-    let mailgunDomain = 'fixlify.app';
+    let mailgunDomain = 'fixlyfy.app';
     
     // Use sandbox domain for testing if requested
     if (useSandbox) {
       mailgunDomain = 'sandboxXXXXXXXXXXXXXXXXXXXXXXXXXXXX.mailgun.org'; // Replace with your actual sandbox domain
-      console.log('Using Mailgun sandbox domain for testing');
+      console.log('send-email function - Using Mailgun sandbox domain for testing');
     }
     
-    // Generate dynamic FROM address based on company's custom domain name
-    if (companySettings && companySettings.custom_domain_name && !useSandbox) {
-      const fromName = companySettings.email_from_name || companySettings.company_name || 'Support Team';
-      const customDomainName = companySettings.custom_domain_name;
-      fromEmail = `${fromName} <${customDomainName}@fixlify.app>`;
-      console.log('Using custom domain name:', customDomainName);
-    } else {
-      // Fallback to default support email or sandbox
+    // FIXED: Use the EXACT same logic as in send-estimate function for consistency
+    if (!fromEmail) {
+      let fromEmailAddress = 'support@fixlyfy.app'; // Default fallback
+      
+      // Priority 1: Use custom_domain_name to build email with fixlyfy.app
+      if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim() && companySettings.custom_domain_name !== 'support') {
+        const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+        fromEmailAddress = `${cleanDomain}@fixlyfy.app`;
+        console.log('send-email function - Using custom domain name to build email:', fromEmailAddress);
+      }
+      // Priority 2: Use email_from_address if configured and no custom_domain_name
+      else if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
+        fromEmailAddress = companySettings.email_from_address.trim();
+        console.log('send-email function - Using configured email_from_address:', fromEmailAddress);
+      }
+      else {
+        console.log('send-email function - Using default support email (no custom domain configured or custom domain is "support"):', fromEmailAddress);
+      }
+      
       const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team';
+      
       if (useSandbox) {
         fromEmail = `${fromName} <postmaster@${mailgunDomain}>`;
       } else {
-        fromEmail = `${fromName} <support@fixlify.app>`;
+        fromEmail = `${fromName} <${fromEmailAddress}>`;
       }
-      console.log(useSandbox ? 'Using sandbox domain' : 'Using default support domain');
     }
 
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
-      console.error('Mailgun API key not found in environment variables');
+      console.error('send-email function - Mailgun API key not found in environment variables');
       return new Response(JSON.stringify({ error: 'Mailgun API key not configured' }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
 
-    console.log('API Key configured, proceeding with email send');
-    console.log(`Sending email via Mailgun domain: ${mailgunDomain}`);
-    console.log(`From: ${fromEmail}`);
-    console.log(`To: ${to}`);
+    console.log('send-email function - API Key configured, proceeding with email send');
+    console.log(`send-email function - Sending email via Mailgun domain: ${mailgunDomain}`);
+    console.log(`send-email function - From: ${fromEmail}`);
+    console.log(`send-email function - To: ${to}`);
 
     // Prepare email data
     const formData = new FormData();
@@ -129,7 +143,7 @@ serve(async (req) => {
     const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
     const basicAuth = btoa(`api:${mailgunApiKey}`);
     
-    console.log('Mailgun send URL:', mailgunUrl);
+    console.log('send-email function - Mailgun send URL:', mailgunUrl);
 
     const mailgunResponse = await fetch(mailgunUrl, {
       method: 'POST',
@@ -140,12 +154,11 @@ serve(async (req) => {
     });
 
     const responseText = await mailgunResponse.text();
-    console.log('Email send response status:', mailgunResponse.status);
-    console.log('Email send response headers:', Object.fromEntries(mailgunResponse.headers.entries()));
-    console.log('Email send response body:', responseText);
+    console.log('send-email function - Email send response status:', mailgunResponse.status);
+    console.log('send-email function - Email send response body:', responseText);
 
     if (!mailgunResponse.ok) {
-      console.error("Mailgun send error:", responseText);
+      console.error("send-email function - Mailgun send error:", responseText);
       return new Response(JSON.stringify({ 
         error: `Mailgun API error: ${mailgunResponse.status} - ${responseText}`,
         details: {
@@ -170,14 +183,14 @@ serve(async (req) => {
     try {
       mailgunResult = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('Error parsing Mailgun response:', parseError);
+      console.error('send-email function - Error parsing Mailgun response:', parseError);
       return new Response(JSON.stringify({ error: 'Invalid response from Mailgun API' }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
 
-    console.log('Email sent successfully via Mailgun:', mailgunResult);
+    console.log('send-email function - Email sent successfully via Mailgun:', mailgunResult);
 
     // Store email in database for tracking if conversation ID provided
     if (conversationId) {
@@ -196,7 +209,7 @@ serve(async (req) => {
         });
 
       if (insertError) {
-        console.error('Error storing email message:', insertError);
+        console.error('send-email function - Error storing email message:', insertError);
         // Don't fail the entire request if database insert fails
       }
     }
@@ -220,7 +233,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in send-email function:', error);
+    console.error('send-email function - Error in send-email function:', error);
     
     return new Response(
       JSON.stringify({ 
