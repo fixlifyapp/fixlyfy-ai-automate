@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RBACProvider } from "@/components/auth/RBACProvider";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ProtectedPortalRoute } from "@/components/portal/ProtectedPortalRoute";
 import Index from "@/pages/Index";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
@@ -28,6 +30,10 @@ import { AutomationsPage } from "@/components/automations/AutomationsPage";
 import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
 import PortalLoginPage from "@/pages/portal/PortalLoginPage";
+import PortalDashboardPage from "@/pages/portal/PortalDashboardPage";
+import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
+import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
+import PortalProfilePage from "@/pages/portal/PortalProfilePage";
 import TelnyxPage from "@/pages/TelnyxPage";
 import { useState } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -48,7 +54,31 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
+              
+              {/* Client Portal Routes */}
               <Route path="/portal/login" element={<PortalLoginPage />} />
+              <Route path="/portal/dashboard" element={
+                <ProtectedPortalRoute>
+                  <PortalDashboardPage />
+                </ProtectedPortalRoute>
+              } />
+              <Route path="/portal/estimates" element={
+                <ProtectedPortalRoute>
+                  <PortalEstimatesPage />
+                </ProtectedPortalRoute>
+              } />
+              <Route path="/portal/invoices" element={
+                <ProtectedPortalRoute>
+                  <PortalInvoicesPage />
+                </ProtectedPortalRoute>
+              } />
+              <Route path="/portal/profile" element={
+                <ProtectedPortalRoute>
+                  <PortalProfilePage />
+                </ProtectedPortalRoute>
+              } />
+              
+              {/* Main App Routes */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />

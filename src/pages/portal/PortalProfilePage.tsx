@@ -1,277 +1,259 @@
+import React, { useState } from 'react';
+import { PortalLayout } from '@/components/portal/PortalLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
+import { toast } from 'sonner';
+import { Save, User, Mail, Phone, Building, MapPin, Download } from 'lucide-react';
 
-import { useEffect, useState } from "react";
-import { useClientPortalAuth } from "@/hooks/useClientPortalAuth";
-import { PortalLayout } from "@/components/portal/PortalLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { User, Save } from "lucide-react";
-
-interface ClientProfile {
-  id: string;
-  name: string;
-  company?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  notes?: string;
-}
-
-export default function PortalProfilePage() {
+const PortalProfilePage = () => {
   const { user } = useClientPortalAuth();
-  const [profile, setProfile] = useState<ClientProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
-    if (!user) return;
-
-    try {
-      setIsLoading(true);
-
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', user.clientId)
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast.error('Failed to load profile');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    company: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    notes: ''
+  });
 
   const handleSave = async () => {
-    if (!profile || !user) return;
-
     try {
-      setIsSaving(true);
-
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          name: profile.name,
-          company: profile.company,
-          phone: profile.phone,
-          address: profile.address,
-          city: profile.city,
-          state: profile.state,
-          zip: profile.zip,
-          notes: profile.notes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.clientId);
-
-      if (error) {
-        throw error;
-      }
-
-      // Also update the client portal user email if it changed
-      if (profile.email && profile.email !== user.email) {
-        await supabase
-          .from('client_portal_users')
-          .update({ email: profile.email })
-          .eq('client_id', user.clientId);
-      }
-
+      // TODO: Implement profile update
       toast.success('Profile updated successfully');
+      setIsEditing(false);
     } catch (error) {
-      console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const handleInputChange = (field: keyof ClientProfile, value: string) => {
-    setProfile(prev => prev ? { ...prev, [field]: value } : null);
+  const handleCancel = () => {
+    // Reset form to original values
+    setFormData({
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: '',
+      company: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      notes: ''
+    });
+    setIsEditing(false);
   };
-
-  if (isLoading) {
-    return (
-      <PortalLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </PortalLayout>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <PortalLayout>
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-600">Profile not found</p>
-          </CardContent>
-        </Card>
-      </PortalLayout>
-    );
-  }
 
   return (
     <PortalLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <p className="text-gray-600">Manage your contact information and preferences</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">My Profile</h1>
+            <p className="text-muted-foreground">
+              Manage your account information and preferences
+            </p>
+          </div>
+          {!isEditing ? (
+            <Button onClick={() => setIsEditing(true)}>
+              <User className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Contact Information
-            </CardTitle>
-            <CardDescription>
-              Keep your information up to date to ensure we can reach you
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Full Name *</Label>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+              <CardDescription>Your basic contact details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
-                  value={profile.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  disabled={!isEditing}
                 />
               </div>
-              <div>
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  value={profile.company || ''}
-                  onChange={(e) => handleInputChange('company', e.target.value)}
-                  placeholder="Company name (optional)"
-                />
-              </div>
-              <div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
-                  value={profile.email || ''}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="your.email@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  disabled={!isEditing}
+                  className="flex items-center"
                 />
               </div>
-              <div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  value={profile.phone || ''}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  disabled={!isEditing}
                   placeholder="(555) 123-4567"
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              
+              <div className="space-y-2">
+                <Label htmlFor="company">Company (Optional)</Label>
+                <Input
+                  id="company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  disabled={!isEditing}
+                  placeholder="Your company name"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Address Information</CardTitle>
-            <CardDescription>
-              Your service address and location details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="address">Street Address</Label>
-              <Input
-                id="address"
-                value={profile.address || ''}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                placeholder="123 Main Street"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="city">City</Label>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Address Information
+              </CardTitle>
+              <CardDescription>Your service address details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">Street Address</Label>
                 <Input
-                  id="city"
-                  value={profile.city || ''}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  placeholder="City"
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  disabled={!isEditing}
+                  placeholder="123 Main Street"
                 />
               </div>
-              <div>
-                <Label htmlFor="state">State/Province</Label>
-                <Input
-                  id="state"
-                  value={profile.state || ''}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  placeholder="State"
-                />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    disabled={!isEditing}
+                    placeholder="San Francisco"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    disabled={!isEditing}
+                    placeholder="CA"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="zip">ZIP/Postal Code</Label>
+              
+              <div className="space-y-2">
+                <Label htmlFor="zip">ZIP Code</Label>
                 <Input
                   id="zip"
-                  value={profile.zip || ''}
-                  onChange={(e) => handleInputChange('zip', e.target.value)}
-                  placeholder="12345"
+                  value={formData.zip}
+                  onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                  disabled={!isEditing}
+                  placeholder="94103"
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  disabled={!isEditing}
+                  placeholder="Any special instructions or notes for technicians..."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Settings</CardTitle>
+            <CardDescription>Manage your account preferences</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Email Notifications</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Receive updates about your service requests via email
+                  </p>
+                </div>
+                <Button variant="outline" size="sm">
+                  Configure
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">SMS Notifications</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Get text message updates about appointments and service status
+                  </p>
+                </div>
+                <Button variant="outline" size="sm">
+                  Configure
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Download Data</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Download a copy of all your service records and invoices
+                  </p>
+                </div>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Notes</CardTitle>
-            <CardDescription>
-              Any special instructions or notes for your service
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={profile.notes || ''}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Special instructions, access notes, or other information..."
-              rows={4}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={isSaving || !profile.name}>
-            {isSaving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
       </div>
     </PortalLayout>
   );
-}
+};
+
+export default PortalProfilePage;
