@@ -240,7 +240,7 @@ serve(async (req) => {
         <body>
           <div class="container">
             <div class="header">
-              <div class="company-name">${companySettings?.company_name || 'Fixlyfy Services'}</div>
+              <div class="company-name">${companySettings?.company_name || 'Fixlify Services'}</div>
               <div style="color: #666;">${companySettings?.company_tagline || 'Professional Service Solutions'}</div>
             </div>
             
