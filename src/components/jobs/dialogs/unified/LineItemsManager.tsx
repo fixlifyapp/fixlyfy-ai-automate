@@ -7,11 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, 
   Trash2, 
   Calculator,
-  Search
+  Search,
+  Package,
+  Edit
 } from 'lucide-react';
 import { LineItem, Product } from '../../builder/types';
 import { ProductCatalog } from '../../builder/ProductCatalog';
@@ -53,7 +56,6 @@ export const LineItemsManager = ({
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemPrice, setNewItemPrice] = useState(0);
   const [newItemTaxable, setNewItemTaxable] = useState(true);
-  const [showProductCatalog, setShowProductCatalog] = useState(false);
 
   const handleAddLineItem = () => {
     if (!newItemDescription.trim() || newItemPrice <= 0) {
@@ -87,7 +89,6 @@ export const LineItemsManager = ({
 
   const handleProductSelect = (product: Product) => {
     onAddProduct(product);
-    setShowProductCatalog(false);
     toast.success(`${product.name} added to ${documentType}`);
   };
 
@@ -103,98 +104,86 @@ export const LineItemsManager = ({
         </Badge>
       </div>
 
-      {/* Combined Entry Form */}
+      {/* Add Items Options */}
       <Card>
         <CardHeader>
-          <CardTitle>Add Item</CardTitle>
+          <CardTitle>Add Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-4">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                placeholder="Service or product description"
-                value={newItemDescription}
-                onChange={(e) => setNewItemDescription(e.target.value)}
-              />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={newItemQuantity}
-                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-              />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="price">Unit Price</Label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={newItemPrice}
-                onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="taxable">Taxable</Label>
-              <Select value={newItemTaxable.toString()} onValueChange={(value) => setNewItemTaxable(value === 'true')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Yes</SelectItem>
-                  <SelectItem value="false">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-1 flex items-end">
-              <Button onClick={handleAddLineItem} className="w-full">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="col-span-1 flex items-end">
-              <Button 
-                onClick={() => setShowProductCatalog(true)} 
-                variant="outline" 
-                className="w-full"
-                title="Find Product"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <Tabs defaultValue="products" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="products" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Add from Products
+              </TabsTrigger>
+              <TabsTrigger value="custom" className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                Add Custom Product
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="products" className="mt-4">
+              <div className="border rounded-lg p-4">
+                <ProductCatalog onAddProduct={handleProductSelect} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="custom" className="mt-4">
+              <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-4">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    placeholder="Service or product description"
+                    value={newItemDescription}
+                    onChange={(e) => setNewItemDescription(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={newItemQuantity}
+                    onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="price">Unit Price</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="taxable">Taxable</Label>
+                  <Select value={newItemTaxable.toString()} onValueChange={(value) => setNewItemTaxable(value === 'true')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Yes</SelectItem>
+                      <SelectItem value="false">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-2 flex items-end">
+                  <Button onClick={handleAddLineItem} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
-
-      {/* Product Catalog Modal */}
-      {showProductCatalog && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Select Products & Services
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowProductCatalog(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ProductCatalog onAddProduct={handleProductSelect} />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Line Items List */}
       {lineItems.length > 0 && (
