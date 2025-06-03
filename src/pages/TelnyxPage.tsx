@@ -5,7 +5,7 @@ import { TelnyxSettings } from '@/components/telnyx/TelnyxSettings';
 import { TelnyxPhoneNumbersPage } from '@/components/telnyx/TelnyxPhoneNumbersPage';
 import { TelnyxCallsView } from '@/components/telnyx/TelnyxCallsView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Phone, Settings, History, Bot } from 'lucide-react';
+import { Phone, History, Bot, BarChart3 } from 'lucide-react';
 
 const TelnyxPage = () => {
   return (
@@ -24,13 +24,13 @@ const TelnyxPage = () => {
               <Phone size={16} />
               Phone Numbers
             </TabsTrigger>
-            <TabsTrigger value="calls" className="flex items-center gap-2">
-              <History size={16} />
-              Call History
-            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Bot size={16} />
               AI Settings
+            </TabsTrigger>
+            <TabsTrigger value="calls" className="flex items-center gap-2">
+              <BarChart3 size={16} />
+              Call Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -38,12 +38,12 @@ const TelnyxPage = () => {
             <TelnyxPhoneNumbersPage />
           </TabsContent>
 
-          <TabsContent value="calls">
-            <TelnyxCallsView />
-          </TabsContent>
-
           <TabsContent value="settings">
             <TelnyxSettings />
+          </TabsContent>
+
+          <TabsContent value="calls">
+            <TelnyxCallsView />
           </TabsContent>
         </Tabs>
       </div>

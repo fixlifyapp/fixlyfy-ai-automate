@@ -3,9 +3,10 @@ import React from 'react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { TelnyxPhoneManagement } from '@/components/telnyx/TelnyxPhoneManagement';
-import { TelnyxAIAnalytics } from '@/components/telnyx/TelnyxAIAnalytics';
+import { TelnyxSettings } from '@/components/telnyx/TelnyxSettings';
+import { TelnyxCallsView } from '@/components/telnyx/TelnyxCallsView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Phone, Bot, Settings, Zap } from 'lucide-react';
+import { Phone, Bot, Settings, Zap, BarChart3 } from 'lucide-react';
 
 const TelnyxSettingsPage = () => {
   return (
@@ -22,14 +23,18 @@ const TelnyxSettingsPage = () => {
 
       <div className="container mx-auto py-6">
         <Tabs defaultValue="phone-numbers" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="phone-numbers" className="flex items-center gap-2">
               <Phone size={16} />
               Phone Numbers
             </TabsTrigger>
-            <TabsTrigger value="ai-analytics" className="flex items-center gap-2">
+            <TabsTrigger value="ai-settings" className="flex items-center gap-2">
               <Bot size={16} />
-              AI & Analytics
+              AI Settings
+            </TabsTrigger>
+            <TabsTrigger value="call-analytics" className="flex items-center gap-2">
+              <BarChart3 size={16} />
+              Call Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -37,8 +42,12 @@ const TelnyxSettingsPage = () => {
             <TelnyxPhoneManagement />
           </TabsContent>
 
-          <TabsContent value="ai-analytics">
-            <TelnyxAIAnalytics />
+          <TabsContent value="ai-settings">
+            <TelnyxSettings />
+          </TabsContent>
+
+          <TabsContent value="call-analytics">
+            <TelnyxCallsView />
           </TabsContent>
         </Tabs>
       </div>

@@ -5,8 +5,33 @@ import { TelnyxCallsView } from './TelnyxCallsView';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bot, BarChart3, Settings } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export const TelnyxAIAnalytics = () => {
+  // Get Telnyx configuration to check connection status
+  const { data: config } = useQuery({
+    queryKey: ['telnyx-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'get_config' }
+      });
+
+      if (error) {
+        console.error('Error fetching config:', error);
+        throw error;
+      }
+      return data.config;
+    }
+  });
+
+  const isConnected = config?.api_key_configured;
+
+  // If not connected, only show Call Analytics
+  if (!isConnected) {
+    return <TelnyxCallsView />;
+  }
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="ai-settings" className="space-y-4">
