@@ -116,6 +116,22 @@ export const useEstimateSending = () => {
 
       console.log("Step 3: Retrieved saved estimate:", savedEstimate);
 
+      // Generate portal access token for this estimate
+      console.log("Step 4: Generating portal access token...");
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('client-portal-auth', {
+        body: {
+          action: 'generate_access_token',
+          email: contactInfo.email,
+          resource_type: 'estimate',
+          resource_id: savedEstimate.id
+        }
+      });
+
+      if (tokenError || !tokenData?.token) {
+        console.error("Failed to generate portal token:", tokenError);
+        // Continue without portal link if token generation fails
+      }
+
       let finalRecipient = sendTo;
       if (sendMethod === "sms") {
         finalRecipient = formatPhoneForTelnyx(sendTo);
@@ -129,17 +145,20 @@ export const useEstimateSending = () => {
         }
       }
 
-      console.log("Step 4: Sending estimate via", sendMethod);
+      console.log("Step 5: Sending estimate via", sendMethod);
       
       if (sendMethod === "sms") {
-        // Send directly via Telnyx SMS function
-        const smsMessage = customNote || `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. Please contact us if you have any questions.`;
+        // Create portal link if token was generated
+        let portalLinkText = '';
+        if (tokenData?.token) {
+          const portalLink = `${window.location.origin}/portal/login?token=${tokenData.token}&jobId=${jobId}`;
+          portalLinkText = `\n\nView online: ${portalLink}`;
+        }
+
+        const smsMessage = customNote || 
+          `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}.${portalLinkText}\n\nQuestions? Just reply to this message.`;
         
-        console.log("Sending SMS:", {
-          to: finalRecipient,
-          body: smsMessage,
-          jobId: jobId
-        });
+        console.log("Sending SMS with portal link");
 
         const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
           body: {
@@ -167,14 +186,21 @@ export const useEstimateSending = () => {
 
         return { success: true };
       } else {
-        // Call the send-estimate function for email
+        // Create portal link for email if token was generated
+        let portalLink = '';
+        if (tokenData?.token) {
+          portalLink = `${window.location.origin}/portal/login?token=${tokenData.token}&jobId=${jobId}`;
+        }
+
+        // Call the send-estimate function for email with portal link
         const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
           body: {
             estimateId: savedEstimate.id,
             sendMethod: sendMethod,
             recipientEmail: finalRecipient,
             subject: `Estimate ${estimateNumber}`,
-            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
+            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`,
+            portalLink: portalLink
           }
         });
         

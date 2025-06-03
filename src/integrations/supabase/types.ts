@@ -683,38 +683,122 @@ export type Database = {
           },
         ]
       }
-      client_portal_sessions: {
+      client_portal_access_tokens: {
         Row: {
-          client_portal_user_id: string
+          client_id: string
           created_at: string | null
+          email: string
           expires_at: string
           id: string
-          last_accessed_at: string | null
-          session_token: string
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          token: string
+          used_at: string | null
         }
         Insert: {
-          client_portal_user_id: string
+          client_id: string
           created_at?: string | null
-          expires_at: string
-          id?: string
-          last_accessed_at?: string | null
-          session_token: string
-        }
-        Update: {
-          client_portal_user_id?: string
-          created_at?: string | null
+          email: string
           expires_at?: string
           id?: string
-          last_accessed_at?: string | null
-          session_token?: string
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          token?: string
+          used_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "client_portal_sessions_client_portal_user_id_fkey"
-            columns: ["client_portal_user_id"]
+            foreignKeyName: "client_portal_access_tokens_client_id_fkey"
+            columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "client_portal_users"
+            referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_access_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_access_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      client_portal_sessions: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          last_accessed_at: string | null
+          session_token: string
+          user_agent: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          last_accessed_at?: string | null
+          session_token: string
+          user_agent?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          last_accessed_at?: string | null
+          session_token?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -3552,6 +3636,19 @@ export type Database = {
       }
     }
     Functions: {
+      authenticate_client_token: {
+        Args: { p_token: string }
+        Returns: {
+          success: boolean
+          session_token: string
+          client_id: string
+          client_name: string
+          client_email: string
+          resource_type: string
+          resource_id: string
+          expires_at: string
+        }[]
+      }
       check_rate_limit: {
         Args: {
           p_identifier: string
@@ -3560,6 +3657,14 @@ export type Database = {
           p_window_minutes?: number
         }
         Returns: boolean
+      }
+      generate_client_access_token: {
+        Args: {
+          p_email: string
+          p_resource_type?: string
+          p_resource_id?: string
+        }
+        Returns: string
       }
       generate_client_login_token: {
         Args: { p_email: string }
@@ -3616,6 +3721,15 @@ export type Database = {
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined
+      }
+      validate_client_portal_session: {
+        Args: { p_session_token: string }
+        Returns: {
+          valid: boolean
+          client_id: string
+          client_name: string
+          client_email: string
+        }[]
       }
       validate_client_session: {
         Args: { p_session_token: string }

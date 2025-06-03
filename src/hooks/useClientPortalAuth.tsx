@@ -7,14 +7,15 @@ interface ClientPortalUser {
   clientId: string;
   name: string;
   email: string;
+  resourceType?: string;
+  resourceId?: string;
 }
 
 interface ClientPortalAuthContextType {
   user: ClientPortalUser | null;
   loading: boolean;
-  signIn: (email: string) => Promise<{ success: boolean; message: string }>;
+  authenticateWithToken: (token: string) => Promise<{ success: boolean; message: string; resourceType?: string; resourceId?: string }>;
   signOut: () => Promise<void>;
-  verifyToken: (token: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const ClientPortalAuthContext = createContext<ClientPortalAuthContextType | undefined>(undefined);
@@ -36,7 +37,7 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
         return;
       }
 
-      console.log('Checking session with token:', sessionToken.substring(0, 20) + '...');
+      console.log('Checking client portal session...');
 
       const { data, error } = await supabase.functions.invoke('client-portal-auth', {
         body: {
@@ -44,8 +45,6 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
           session_token: sessionToken
         }
       });
-
-      console.log('Session validation response:', data);
 
       if (error || !data?.valid) {
         console.log('Session validation failed, clearing session');
@@ -76,84 +75,49 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
     }
   };
 
-  const signIn = async (email: string): Promise<{ success: boolean; message: string }> => {
+  const authenticateWithToken = async (token: string): Promise<{ success: boolean; message: string; resourceType?: string; resourceId?: string }> => {
     try {
-      console.log('Generating login token for:', email);
+      console.log('Authenticating with token:', token.substring(0, 20) + '...');
       
       const { data, error } = await supabase.functions.invoke('client-portal-auth', {
         body: {
-          action: 'generate_login_token',
-          email: email
-        }
-      });
-
-      console.log('Token generation response:', data);
-
-      if (error || !data?.token) {
-        console.error('Token generation failed:', error);
-        return { success: false, message: error?.message || 'Failed to send login link' };
-      }
-
-      // Send the login email using the send-email function
-      const emailResponse = await supabase.functions.invoke('send-email', {
-        body: {
-          type: 'client_portal_login',
-          email: email,
-          token: data.token
-        }
-      });
-
-      if (emailResponse.error) {
-        console.error('Failed to send login email:', emailResponse.error);
-        return { success: false, message: 'Failed to send login email' };
-      }
-
-      return { success: true, message: 'Login link sent to your email' };
-    } catch (error) {
-      console.error('Sign in error:', error);
-      return { success: false, message: 'An error occurred' };
-    }
-  };
-
-  const verifyToken = async (token: string): Promise<{ success: boolean; message: string }> => {
-    try {
-      console.log('Verifying token:', token.substring(0, 20) + '...');
-      
-      const { data, error } = await supabase.functions.invoke('client-portal-auth', {
-        body: {
-          action: 'verify_token',
+          action: 'authenticate_token',
           token: token
         }
       });
 
-      console.log('Token verification response:', data);
-
-      if (error || !data?.session_token) {
-        console.error('Token verification failed:', error);
-        return { success: false, message: error?.message || 'Invalid or expired login link' };
+      if (error || !data?.success) {
+        console.error('Token authentication failed:', error);
+        return { success: false, message: error?.message || 'Invalid or expired access link' };
       }
       
       if (data.session_token) {
         localStorage.setItem('client_portal_session', data.session_token);
         
-        // Set user data immediately
         const userData = {
           id: data.client_id,
           clientId: data.client_id,
           name: data.client_name || 'Client',
-          email: data.client_email || ''
+          email: data.client_email || '',
+          resourceType: data.resource_type,
+          resourceId: data.resource_id
         };
         
         setUser(userData);
-        console.log('User set:', userData);
+        console.log('User authenticated:', userData);
 
-        return { success: true, message: 'Successfully logged in' };
+        return { 
+          success: true, 
+          message: 'Successfully authenticated',
+          resourceType: data.resource_type,
+          resourceId: data.resource_id
+        };
       }
 
       return { success: false, message: 'Invalid response from server' };
     } catch (error) {
-      console.error('Token verification error:', error);
-      return { success: false, message: 'Failed to verify login link' };
+      console.error('Token authentication error:', error);
+      return { success: false, message: 'Failed to authenticate access link' };
     }
   };
 
@@ -165,9 +129,8 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
   const value = {
     user,
     loading,
-    signIn,
+    authenticateWithToken,
     signOut,
-    verifyToken,
   };
 
   return (
