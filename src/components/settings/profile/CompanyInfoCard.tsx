@@ -37,7 +37,9 @@ export const CompanyInfoCard = ({ companyInfo, onUpdate, isLoading }: CompanyInf
 
   const handleSave = async () => {
     try {
-      // Map the form data to the correct database field names
+      console.log('Saving company info with custom_domain_name:', formData.custom_domain_name);
+      
+      // Ensure we're passing the correct field name for custom domain
       const updateData = {
         company_name: formData.company_name,
         business_type: formData.business_type,
@@ -50,11 +52,12 @@ export const CompanyInfoCard = ({ companyInfo, onUpdate, isLoading }: CompanyInf
         company_email: formData.company_email,
         company_website: formData.company_website,
         company_description: formData.company_description,
-        custom_domain_name: formData.custom_domain_name,
+        custom_domain_name: formData.custom_domain_name, // This is the key fix
         email_from_name: formData.email_from_name,
         email_from_address: formData.email_from_address
       };
       
+      console.log('Update data being sent:', updateData);
       await onUpdate(updateData);
       setIsEditing(false);
       toast.success('Company information updated successfully');
@@ -78,6 +81,12 @@ export const CompanyInfoCard = ({ companyInfo, onUpdate, isLoading }: CompanyInf
     const cleanValue = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     handleInputChange('custom_domain_name', cleanValue);
   };
+
+  // Update form data when companyInfo changes
+  React.useEffect(() => {
+    console.log('CompanyInfo updated:', companyInfo);
+    setFormData(companyInfo);
+  }, [companyInfo]);
 
   return (
     <Card>

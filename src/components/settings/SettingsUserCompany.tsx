@@ -58,6 +58,7 @@ export const SettingsUserCompany = () => {
       
       // Save company settings changes if any
       if (Object.keys(pendingCompanyChanges).length > 0) {
+        console.log('Saving company changes:', pendingCompanyChanges);
         await updateCompanySettings(pendingCompanyChanges);
         setPendingCompanyChanges({});
       }
@@ -76,6 +77,7 @@ export const SettingsUserCompany = () => {
   };
 
   const updatePendingCompanySettings = (updates: any) => {
+    console.log('Updating pending company settings:', updates);
     setPendingCompanyChanges((prev: any) => ({ ...prev, ...updates }));
   };
 
