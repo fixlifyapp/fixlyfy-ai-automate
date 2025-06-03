@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
+import { useJobs } from "@/hooks/useJobs";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -37,10 +39,14 @@ export const SteppedEstimateBuilder = ({
   onEstimateCreated
 }: SteppedEstimateBuilderProps) => {
   const navigate = useNavigate();
+  const { jobs } = useJobs();
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
   const [savedEstimate, setSavedEstimate] = useState<any>(null);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
+
+  // Get job data for contact info
+  const job = jobs.find(j => j.id === jobId);
   
   console.log("=== STEPPED ESTIMATE BUILDER PROPS ===");
   console.log("Job ID:", jobId);
@@ -333,9 +339,9 @@ export const SteppedEstimateBuilder = ({
         estimateNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
         total={calculateGrandTotal()}
         contactInfo={{
-          name: contactInfo?.name || 'Client',
-          email: contactInfo?.email || '',
-          phone: contactInfo?.phone || ''
+          name: job?.client?.name || 'Client',
+          email: job?.client?.email || '',
+          phone: job?.client?.phone || ''
         }}
       />
     </>
