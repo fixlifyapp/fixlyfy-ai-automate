@@ -3620,6 +3620,7 @@ export type Database = {
       validate_client_session: {
         Args: { p_session_token: string }
         Returns: {
+          valid: boolean
           client_id: string
           user_id: string
           client_name: string
@@ -3632,6 +3633,8 @@ export type Database = {
           session_token: string
           client_id: string
           user_id: string
+          client_name: string
+          client_email: string
           expires_at: string
         }[]
       }
