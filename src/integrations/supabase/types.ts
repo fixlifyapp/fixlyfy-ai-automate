@@ -2384,6 +2384,7 @@ export type Database = {
           ai_settings: Json | null
           assigned_to: string | null
           capabilities: Json | null
+          configured_for_ai: boolean | null
           connect_contact_flow_id: string | null
           connect_instance_id: string | null
           connect_phone_number_arn: string | null
@@ -2405,13 +2406,17 @@ export type Database = {
           rate_center: string | null
           region: string | null
           status: string | null
+          telnyx_connection_id: string | null
+          telnyx_phone_number_id: string | null
           updated_at: string
+          webhook_url: string | null
         }
         Insert: {
           ai_dispatcher_enabled?: boolean | null
           ai_settings?: Json | null
           assigned_to?: string | null
           capabilities?: Json | null
+          configured_for_ai?: boolean | null
           connect_contact_flow_id?: string | null
           connect_instance_id?: string | null
           connect_phone_number_arn?: string | null
@@ -2433,13 +2438,17 @@ export type Database = {
           rate_center?: string | null
           region?: string | null
           status?: string | null
+          telnyx_connection_id?: string | null
+          telnyx_phone_number_id?: string | null
           updated_at?: string
+          webhook_url?: string | null
         }
         Update: {
           ai_dispatcher_enabled?: boolean | null
           ai_settings?: Json | null
           assigned_to?: string | null
           capabilities?: Json | null
+          configured_for_ai?: boolean | null
           connect_contact_flow_id?: string | null
           connect_instance_id?: string | null
           connect_phone_number_arn?: string | null
@@ -2461,7 +2470,10 @@ export type Database = {
           rate_center?: string | null
           region?: string | null
           status?: string | null
+          telnyx_connection_id?: string | null
+          telnyx_phone_number_id?: string | null
           updated_at?: string
+          webhook_url?: string | null
         }
         Relationships: []
       }
@@ -2934,6 +2946,45 @@ export type Database = {
           started_at?: string | null
           to_number?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      telnyx_configurations: {
+        Row: {
+          ai_settings: Json | null
+          api_key_configured: boolean | null
+          app_id: string | null
+          business_settings: Json | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+          voice_settings: Json | null
+          webhook_url: string | null
+        }
+        Insert: {
+          ai_settings?: Json | null
+          api_key_configured?: boolean | null
+          app_id?: string | null
+          business_settings?: Json | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          voice_settings?: Json | null
+          webhook_url?: string | null
+        }
+        Update: {
+          ai_settings?: Json | null
+          api_key_configured?: boolean | null
+          app_id?: string | null
+          business_settings?: Json | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          voice_settings?: Json | null
+          webhook_url?: string | null
         }
         Relationships: []
       }

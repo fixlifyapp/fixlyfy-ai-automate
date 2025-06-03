@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Search, Plus, Settings, CheckCircle, PhoneCall, Trash2 } from "lucide-react";
+import { Phone, Search, Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,9 +26,13 @@ export function PhoneNumberPurchase() {
   const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
 
-  // Remove test numbers on component mount
+  // Remove test numbers on component mount - only once
   useEffect(() => {
-    removeTestNumbers();
+    const hasRemovedTestNumbers = sessionStorage.getItem('test_numbers_removed');
+    if (!hasRemovedTestNumbers) {
+      removeTestNumbers();
+      sessionStorage.setItem('test_numbers_removed', 'true');
+    }
   }, []);
 
   // Remove test numbers mutation
@@ -51,6 +55,7 @@ export function PhoneNumberPurchase() {
       console.log('Test numbers removed successfully');
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
       queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
+      queryClient.invalidateQueries({ queryKey: ['phone-numbers-management'] });
     },
     onError: (error) => {
       console.error('Remove test numbers error:', error);
@@ -90,7 +95,7 @@ export function PhoneNumberPurchase() {
       if (data.available_numbers?.length > 0) {
         toast.success(`Found ${data.available_numbers.length} available numbers`);
       } else {
-        toast.info('No numbers found for this area code');
+        toast.info('No numbers found for this area code. Try a different area code.');
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -123,9 +128,10 @@ export function PhoneNumberPurchase() {
       console.log('Successfully purchased:', data);
       toast.success(`📞 Number ${data.phone_number} ordered successfully!`);
       
-      // Refresh the phone numbers list
+      // Refresh all related queries
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
       queryClient.invalidateQueries({ queryKey: ['user-telnyx-numbers'] });
+      queryClient.invalidateQueries({ queryKey: ['phone-numbers-management'] });
       
       // Remove the purchased number from available list
       setAvailableNumbers(prev => prev.filter(num => num.phone_number !== data.phone_number));
@@ -155,9 +161,32 @@ export function PhoneNumberPurchase() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            If you already purchased a Telnyx number, you can add it to your account here.
+            If you already purchased a Telnyx number (+14375249932), you can add it to your account here.
           </p>
           <AddExistingNumberDialog />
+        </CardContent>
+      </Card>
+
+      {/* Manual Test Number Removal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5" />
+            Clean Up Test Numbers
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            Remove any test numbers from your account to keep your phone numbers list clean.
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={removeTestNumbers} 
+            disabled={removeTestNumbersMutation.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {removeTestNumbersMutation.isPending ? 'Removing...' : 'Remove Test Numbers'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -175,7 +204,7 @@ export function PhoneNumberPurchase() {
               <Label htmlFor="area-code">Area Code</Label>
               <Input
                 id="area-code"
-                placeholder="e.g., 437, 212, 310"
+                placeholder="e.g., 437, 212, 310, 555"
                 value={searchAreaCode}
                 onChange={(e) => setSearchAreaCode(e.target.value)}
               />
@@ -249,7 +278,7 @@ export function PhoneNumberPurchase() {
             <div className="text-center py-8 text-muted-foreground">
               <Phone className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p>No numbers found for area code {searchAreaCode}</p>
-              <p className="text-sm">Try searching for a different area code</p>
+              <p className="text-sm">Try searching for a different area code (e.g., 212, 310, 555)</p>
             </div>
           )}
         </CardContent>

@@ -1,188 +1,342 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Phone, Settings, Zap, MessageSquare, CheckCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Bot, Phone, Save, Zap } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface TelnyxConfig {
-  voice_enabled: boolean;
-  sms_enabled: boolean;
-  ai_assistant_enabled: boolean;
-  greeting_message: string;
-  business_hours: any;
-  emergency_detection: boolean;
-}
-
 export const TelnyxSettings = () => {
-  const [config, setConfig] = useState<TelnyxConfig>({
-    voice_enabled: true,
-    sms_enabled: true,
-    ai_assistant_enabled: true,
-    greeting_message: 'Hello! My name is AI Assistant. How can I help you today?',
-    business_hours: {},
-    emergency_detection: true
-  });
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
 
-  const saveConfig = async () => {
-    setSaving(true);
-    try {
-      // Here will be saving to database
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulation
-      toast.success('Telnyx settings saved!');
-    } catch (error) {
-      toast.error('Error saving settings');
-    } finally {
-      setSaving(false);
+  // Get Telnyx configuration
+  const { data: config, isLoading } = useQuery({
+    queryKey: ['telnyx-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'get_config' }
+      });
+
+      if (error) throw error;
+      return data.config;
     }
+  });
+
+  // Get user's phone numbers
+  const { data: phoneNumbers = [] } = useQuery({
+    queryKey: ['user-phone-numbers'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: { action: 'list' }
+      });
+
+      if (error) throw error;
+      return data.phone_numbers || [];
+    }
+  });
+
+  const [formData, setFormData] = useState({
+    voice: 'alloy',
+    language: 'en-US',
+    greeting: 'Hello, this is an AI assistant for our company. How can I help you today?',
+    ai_enabled: true,
+    business_hours: {
+      monday: { open: '08:00', close: '17:00', enabled: true },
+      tuesday: { open: '08:00', close: '17:00', enabled: true },
+      wednesday: { open: '08:00', close: '17:00', enabled: true },
+      thursday: { open: '08:00', close: '17:00', enabled: true },
+      friday: { open: '08:00', close: '17:00', enabled: true },
+      saturday: { open: '09:00', close: '15:00', enabled: false },
+      sunday: { open: '10:00', close: '14:00', enabled: false }
+    }
+  });
+
+  React.useEffect(() => {
+    if (config) {
+      setFormData({
+        voice: config.voice_settings?.voice || 'alloy',
+        language: config.voice_settings?.language || 'en-US',
+        greeting: config.ai_settings?.greeting || 'Hello, this is an AI assistant for our company. How can I help you today?',
+        ai_enabled: config.ai_settings?.enabled !== false,
+        business_hours: config.business_settings?.hours || formData.business_hours
+      });
+    }
+  }, [config]);
+
+  // Update configuration mutation
+  const updateConfigMutation = useMutation({
+    mutationFn: async (newConfig: any) => {
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+        body: {
+          action: 'update_config',
+          config: {
+            voice_settings: {
+              voice: newConfig.voice,
+              language: newConfig.language
+            },
+            ai_settings: {
+              enabled: newConfig.ai_enabled,
+              greeting: newConfig.greeting
+            },
+            business_settings: {
+              hours: newConfig.business_hours
+            }
+          }
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Settings updated successfully');
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['telnyx-config'] });
+    },
+    onError: (error) => {
+      console.error('Update error:', error);
+      toast.error('Failed to update settings');
+    }
+  });
+
+  const handleSave = () => {
+    updateConfigMutation.mutate(formData);
   };
+
+  const configuredNumbers = phoneNumbers.filter(num => 
+    num.ai_dispatcher_enabled || num.configured_for_ai || num.configured_at
+  );
+
+  if (isLoading) {
+    return <div>Loading Telnyx settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Telnyx Settings</h2>
+          <h2 className="text-2xl font-bold">AI Settings</h2>
           <p className="text-muted-foreground">
-            Simple AI assistant setup for calls and SMS
+            Configure your AI voice assistant and phone system
           </p>
         </div>
-        <Badge variant="fixlyfy" className="flex items-center gap-1">
-          <CheckCircle size={14} />
-          Telnyx Connected
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={config?.api_key_configured ? 'default' : 'destructive'}>
+            <Zap className="h-3 w-3 mr-1" />
+            {config?.api_key_configured ? 'Telnyx Connected' : 'Telnyx Not Connected'}
+          </Badge>
+          {!isEditing ? (
+            <Button onClick={() => setIsEditing(true)}>
+              Edit Settings
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={updateConfigMutation.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                {updateConfigMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Main Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Core Features
+            <Phone className="h-5 w-5" />
+            Connected Numbers ({configuredNumbers.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label className="flex items-center gap-2">
-                <Phone size={16} />
-                Voice Calls
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                AI answers incoming calls
+        <CardContent>
+          {configuredNumbers.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">
+                No numbers configured for AI yet. Go to the Numbers tab to configure your phone numbers.
               </p>
             </div>
-            <Switch
-              checked={config.voice_enabled}
-              onCheckedChange={(checked) => 
-                setConfig(prev => ({ ...prev, voice_enabled: checked }))
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label className="flex items-center gap-2">
-                <MessageSquare size={16} />
-                SMS Messages
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Receive and send SMS through AI
-              </p>
+          ) : (
+            <div className="space-y-2">
+              {configuredNumbers.map((number: any) => (
+                <div key={number.id} className="flex items-center justify-between p-3 border rounded">
+                  <span className="font-medium">
+                    {number.phone_number.replace(/^\+1/, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')}
+                  </span>
+                  <Badge variant="outline" className="text-green-600">
+                    <Bot className="h-3 w-3 mr-1" />
+                    AI Active
+                  </Badge>
+                </div>
+              ))}
             </div>
-            <Switch
-              checked={config.sms_enabled}
-              onCheckedChange={(checked) => 
-                setConfig(prev => ({ ...prev, sms_enabled: checked }))
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label className="flex items-center gap-2">
-                <Zap size={16} />
-                Emergency Detection
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                AI automatically identifies urgent requests
-              </p>
-            </div>
-            <Switch
-              checked={config.emergency_detection}
-              onCheckedChange={(checked) => 
-                setConfig(prev => ({ ...prev, emergency_detection: checked }))
-              }
-            />
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Greeting Setup */}
       <Card>
         <CardHeader>
-          <CardTitle>AI Assistant Greeting</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            AI Voice Settings
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="greeting">Greeting Text</Label>
-            <Input
-              id="greeting"
-              value={config.greeting_message}
-              onChange={(e) => 
-                setConfig(prev => ({ ...prev, greeting_message: e.target.value }))
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>AI Assistant Enabled</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable or disable the AI voice assistant
+              </p>
+            </div>
+            <Switch
+              checked={formData.ai_enabled}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, ai_enabled: checked }))
               }
-              placeholder="Enter greeting for customers"
+              disabled={!isEditing}
             />
-            <p className="text-xs text-muted-foreground">
-              Available variables: {'{agent_name}'}, {'{company_name}'}, {'{time_of_day}'}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="voice">Voice</Label>
+              <Select
+                value={formData.voice}
+                onValueChange={(value) => 
+                  setFormData(prev => ({ ...prev, voice: value }))
+                }
+                disabled={!isEditing}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alloy">Alloy (Neutral)</SelectItem>
+                  <SelectItem value="echo">Echo (Male)</SelectItem>
+                  <SelectItem value="fable">Fable (British)</SelectItem>
+                  <SelectItem value="onyx">Onyx (Deep)</SelectItem>
+                  <SelectItem value="nova">Nova (Female)</SelectItem>
+                  <SelectItem value="shimmer">Shimmer (Soft)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="language">Language</Label>
+              <Select
+                value={formData.language}
+                onValueChange={(value) => 
+                  setFormData(prev => ({ ...prev, language: value }))
+                }
+                disabled={!isEditing}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en-US">English (US)</SelectItem>
+                  <SelectItem value="en-GB">English (UK)</SelectItem>
+                  <SelectItem value="es-ES">Spanish</SelectItem>
+                  <SelectItem value="fr-FR">French</SelectItem>
+                  <SelectItem value="de-DE">German</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="greeting">AI Greeting Message</Label>
+            <Textarea
+              id="greeting"
+              value={formData.greeting}
+              onChange={(e) => 
+                setFormData(prev => ({ ...prev, greeting: e.target.value }))
+              }
+              placeholder="Enter the greeting message for your AI assistant"
+              rows={3}
+              disabled={!isEditing}
+            />
+            <p className="text-sm text-muted-foreground mt-1">
+              This message will be spoken when someone calls your phone number
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Telnyx Benefits */}
       <Card>
         <CardHeader>
-          <CardTitle>Why Telnyx is Better Than Amazon Connect?</CardTitle>
+          <CardTitle>Business Hours</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <h4 className="font-medium text-green-600">✅ Telnyx (Simplicity)</h4>
-              <ul className="space-y-1 text-sm">
-                <li>• Single API key</li>
-                <li>• Simple webhooks</li>
-                <li>• Number purchase via API</li>
-                <li>• Built-in SMS support</li>
-                <li>• High-quality audio</li>
-                <li>• No Instance IDs</li>
-              </ul>
-            </div>
-            <div className="space-y-3">
-              <h4 className="font-medium text-red-600">❌ Amazon Connect (Complexity)</h4>
-              <ul className="space-y-1 text-sm">
-                <li>• Multiple IAM settings</li>
-                <li>• Complex Contact Flows</li>
-                <li>• Lambda functions</li>
-                <li>• Media Streaming setup</li>
-                <li>• Instance management</li>
-                <li>• ARNs and IDs everywhere</li>
-              </ul>
-            </div>
+          <div className="space-y-4">
+            {Object.entries(formData.business_hours).map(([day, hours]) => (
+              <div key={day} className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Switch
+                    checked={hours.enabled}
+                    onCheckedChange={(checked) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        business_hours: {
+                          ...prev.business_hours,
+                          [day]: { ...hours, enabled: checked }
+                        }
+                      }))
+                    }
+                    disabled={!isEditing}
+                  />
+                  <span className="w-20 capitalize">{day}</span>
+                </div>
+                {hours.enabled && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={hours.open}
+                      onChange={(e) => 
+                        setFormData(prev => ({
+                          ...prev,
+                          business_hours: {
+                            ...prev.business_hours,
+                            [day]: { ...hours, open: e.target.value }
+                          }
+                        }))
+                      }
+                      disabled={!isEditing}
+                      className="w-24"
+                    />
+                    <span>to</span>
+                    <Input
+                      type="time"
+                      value={hours.close}
+                      onChange={(e) => 
+                        setFormData(prev => ({
+                          ...prev,
+                          business_hours: {
+                            ...prev.business_hours,
+                            [day]: { ...hours, close: e.target.value }
+                          }
+                        }))
+                      }
+                      disabled={!isEditing}
+                      className="w-24"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
-
-      <div className="flex justify-end">
-        <Button onClick={saveConfig} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Settings'}
-        </Button>
-      </div>
     </div>
   );
 };
