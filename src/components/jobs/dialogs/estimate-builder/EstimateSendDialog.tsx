@@ -1,15 +1,12 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Mail, MessageSquare, Send, AlertCircle } from "lucide-react";
+import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { SendMethodStep } from "./steps/SendMethodStep";
 
 interface EstimateSendDialogProps {
   isOpen: boolean;
@@ -35,11 +32,9 @@ export const EstimateSendDialog = ({
   onSuccess
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
-  const [recipientEmail, setRecipientEmail] = useState(contactInfo?.email || "");
-  const [recipientPhone, setRecipientPhone] = useState(contactInfo?.phone || "");
-  const [subject, setSubject] = useState(`Estimate #${estimateNumber}`);
-  const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [sendTo, setSendTo] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch user's Telnyx phone numbers
   const { data: userPhoneNumbers = [] } = useQuery({
@@ -56,23 +51,55 @@ export const EstimateSendDialog = ({
     }
   });
 
+  // Helper functions for validation
+  const isValidEmail = (email: string): boolean => {
+    if (!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const isValidPhoneNumber = (phone: string): boolean => {
+    if (!phone) return false;
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10;
+  };
+
+  // Check if contact info has valid email/phone
+  const hasValidEmail = contactInfo?.email && isValidEmail(contactInfo.email);
+  const hasValidPhone = contactInfo?.phone && isValidPhoneNumber(contactInfo.phone);
+
+  // Set default sendTo value when dialog opens or method changes
+  React.useEffect(() => {
+    if (isOpen) {
+      if (sendMethod === "email" && hasValidEmail) {
+        setSendTo(contactInfo.email);
+      } else if (sendMethod === "sms" && hasValidPhone) {
+        setSendTo(contactInfo.phone);
+      } else {
+        setSendTo("");
+      }
+      setValidationError("");
+    }
+  }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo]);
+
   const handleSend = async () => {
-    if (sendMethod === "email" && !recipientEmail) {
-      toast.error("Please enter an email address");
+    setValidationError("");
+
+    if (sendMethod === "email" && !isValidEmail(sendTo)) {
+      setValidationError("Please enter a valid email address");
       return;
     }
     
-    if (sendMethod === "sms" && !recipientPhone) {
-      toast.error("Please enter a phone number");
+    if (sendMethod === "sms" && !isValidPhoneNumber(sendTo)) {
+      setValidationError("Please enter a valid phone number");
       return;
     }
 
     if (sendMethod === "sms" && userPhoneNumbers.length === 0) {
-      toast.error("No Telnyx phone numbers available. Please purchase a phone number first.");
+      setValidationError("No Telnyx phone numbers available. Please purchase a phone number first.");
       return;
     }
 
-    setIsSending(true);
+    setIsProcessing(true);
 
     try {
       if (sendMethod === "email") {
@@ -80,9 +107,9 @@ export const EstimateSendDialog = ({
           body: {
             estimateId,
             sendMethod: "email",
-            recipientEmail,
-            subject,
-            message
+            recipientEmail: sendTo,
+            subject: `Estimate #${estimateNumber}`,
+            message: ""
           }
         });
 
@@ -95,9 +122,9 @@ export const EstimateSendDialog = ({
         const { data, error } = await supabase.functions.invoke('send-estimate-sms', {
           body: {
             estimateId,
-            recipientPhone,
+            recipientPhone: sendTo,
             fromNumber,
-            message: message || `Hi ${contactInfo?.name || 'Customer'}! Your estimate #${estimateNumber} is ready. Total: $${total.toFixed(2)}. Please contact us if you have any questions.`
+            message: `Hi ${contactInfo?.name || 'Customer'}! Your estimate #${estimateNumber} is ready. Total: $${total.toFixed(2)}. Please contact us if you have any questions.`
           }
         });
 
@@ -115,8 +142,12 @@ export const EstimateSendDialog = ({
       console.error('Error sending estimate:', error);
       toast.error('Failed to send estimate');
     } finally {
-      setIsSending(false);
+      setIsProcessing(false);
     }
+  };
+
+  const handleBack = () => {
+    onClose();
   };
 
   return (
@@ -141,104 +172,21 @@ export const EstimateSendDialog = ({
             )}
           </div>
 
-          <Tabs value={sendMethod} onValueChange={(value) => setSendMethod(value as "email" | "sms")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email
-              </TabsTrigger>
-              <TabsTrigger value="sms" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                SMS
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="email" className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="customer@example.com"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="message">Additional Message (Optional)</Label>
-                <Textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Add any additional notes..."
-                  rows={3}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="sms" className="space-y-4">
-              {userPhoneNumbers.length === 0 ? (
-                <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">
-                    No Telnyx phone numbers available. Please purchase a phone number first.
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <p className="text-sm text-green-800">
-                      <strong>From:</strong> {userPhoneNumbers[0]?.phone_number}
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(e.target.value)}
-                      placeholder="+1234567890"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="sms-message">Message (Optional)</Label>
-                    <Textarea
-                      id="sms-message"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder={`Hi ${contactInfo?.name || 'Customer'}! Your estimate #${estimateNumber} is ready. Total: $${total.toFixed(2)}. Please contact us if you have any questions.`}
-                      rows={3}
-                    />
-                  </div>
-                </>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSend} 
-              disabled={isSending || (sendMethod === "sms" && userPhoneNumbers.length === 0)}
-            >
-              {isSending ? "Sending..." : `Send via ${sendMethod === "email" ? "Email" : "SMS"}`}
-            </Button>
-          </div>
+          <SendMethodStep
+            sendMethod={sendMethod}
+            setSendMethod={setSendMethod}
+            sendTo={sendTo}
+            setSendTo={setSendTo}
+            validationError={validationError}
+            setValidationError={setValidationError}
+            contactInfo={contactInfo || { name: '', email: '', phone: '' }}
+            hasValidEmail={!!hasValidEmail}
+            hasValidPhone={!!hasValidPhone}
+            estimateNumber={estimateNumber}
+            isProcessing={isProcessing}
+            onSend={handleSend}
+            onBack={handleBack}
+          />
         </div>
       </DialogContent>
     </Dialog>
