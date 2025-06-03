@@ -65,6 +65,15 @@ serve(async (req) => {
     }
 
     console.log('Company settings found:', !!companySettings)
+    console.log('Company settings details:', {
+      company_name: companySettings?.company_name,
+      email_from_address: companySettings?.email_from_address,
+      custom_domain_name: companySettings?.custom_domain_name,
+      email_from_name: companySettings?.email_from_name,
+      company_phone: companySettings?.company_phone,
+      company_email: companySettings?.company_email,
+      company_website: companySettings?.company_website
+    })
 
     // Get line items using admin client
     const { data: lineItems, error: lineItemsError } = await supabaseAdmin
@@ -88,10 +97,14 @@ serve(async (req) => {
         throw new Error('Valid email address is required')
       }
 
-      // Create or update client portal user
+      // Create or update client portal user and generate login token
       let portalLoginToken = null
+      let portalLoginLink = ''
+      
       if (client?.email) {
         try {
+          console.log('Generating portal login token for:', client.email)
+          
           // Generate login token for client portal
           const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
             p_email: client.email
@@ -99,12 +112,21 @@ serve(async (req) => {
           
           if (!tokenError && tokenData) {
             portalLoginToken = tokenData
-            console.log('Generated client portal login token')
+            console.log('Successfully generated client portal login token')
+            
+            // Create portal access link
+            const portalBaseUrl = companySettings?.client_portal_url || 'https://your-app.vercel.app/portal'
+            portalLoginLink = `${portalBaseUrl}/login?token=${portalLoginToken}`
+            console.log('Portal login link created:', portalLoginLink)
+          } else {
+            console.error('Failed to generate portal token:', tokenError)
           }
         } catch (error) {
-          console.error('Failed to generate portal token:', error)
+          console.error('Error generating portal token:', error)
           // Don't fail the email send if portal token generation fails
         }
+      } else {
+        console.log('No client email available for portal token generation')
       }
 
       // Check Mailgun configuration
@@ -116,26 +138,27 @@ serve(async (req) => {
       // Use consistent domain - fixlify.app (matching the working email function)
       const mailgunDomain = 'fixlify.app'
       
-      // Generate FROM email using the same logic as the working email function
+      // Generate FROM email with improved logic
       let fromEmail = 'support@fixlify.app' // Default fallback
       
-      if (companySettings?.custom_domain_name) {
-        fromEmail = `${companySettings.custom_domain_name}@fixlify.app`
-      } else if (companySettings?.email_from_address) {
-        fromEmail = companySettings.email_from_address
+      // Priority 1: Use email_from_address if configured
+      if (companySettings?.email_from_address && companySettings.email_from_address.trim()) {
+        fromEmail = companySettings.email_from_address.trim()
+        console.log('Using configured email_from_address:', fromEmail)
+      }
+      // Priority 2: Use custom_domain_name to build email
+      else if (companySettings?.custom_domain_name && companySettings.custom_domain_name.trim()) {
+        const cleanDomain = companySettings.custom_domain_name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+        fromEmail = `${cleanDomain}@fixlify.app`
+        console.log('Using custom domain name to build email:', fromEmail)
       }
       
       const fromName = companySettings?.email_from_name || companySettings?.company_name || 'Support Team'
 
-      console.log('Sending email with Mailgun domain:', mailgunDomain)
+      console.log('Final email configuration:')
+      console.log('Mailgun domain:', mailgunDomain)
       console.log('From email:', fromEmail)
       console.log('From name:', fromName)
-
-      // Create portal access link
-      const portalBaseUrl = companySettings?.client_portal_url || 'https://your-app.vercel.app/portal'
-      const portalLink = portalLoginToken ? 
-        `${portalBaseUrl}/login?token=${portalLoginToken}` : 
-        `${portalBaseUrl}/login`
 
       // Create detailed HTML email template with portal link
       const lineItemsHtml = lineItems?.map(item => 
@@ -146,6 +169,49 @@ serve(async (req) => {
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${(item.quantity * item.unit_price)?.toFixed(2)}</td>
         </tr>`
       ).join('') || '<tr><td colspan="4" style="padding: 16px; text-align: center; color: #666;">No items found</td></tr>'
+
+      // Portal section - always show if we have a client email
+      let portalSectionHtml = ''
+      if (client?.email) {
+        if (portalLoginToken && portalLoginLink) {
+          portalSectionHtml = `
+            <div class="portal-section" style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+              <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
+              <p>Access your estimate online, download a PDF copy, and track the status of your service request:</p>
+              <a href="${portalLoginLink}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold;">Access Client Portal</a>
+              <p style="font-size: 12px; color: #666; margin-top: 10px;">This link will expire in 30 minutes for security.</p>
+            </div>`
+        } else {
+          // Fallback portal section if token generation failed
+          const fallbackPortalUrl = companySettings?.client_portal_url || 'https://your-app.vercel.app/portal'
+          portalSectionHtml = `
+            <div class="portal-section" style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+              <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
+              <p>Access your client portal to view estimates and track service requests:</p>
+              <a href="${fallbackPortalUrl}/login" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold;">Access Client Portal</a>
+              <p style="font-size: 12px; color: #666; margin-top: 10px;">Use your email address to log in.</p>
+            </div>`
+        }
+      }
+
+      // Enhanced footer with company information
+      let footerHtml = `
+        <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
+          <p>Thank you for choosing ${companySettings?.company_name || 'our services'}!</p>`
+      
+      if (companySettings?.company_phone) {
+        footerHtml += `<p><strong>Phone:</strong> ${companySettings.company_phone}</p>`
+      }
+      
+      if (companySettings?.company_email) {
+        footerHtml += `<p><strong>Email:</strong> ${companySettings.company_email}</p>`
+      }
+      
+      if (companySettings?.company_website) {
+        footerHtml += `<p><strong>Website:</strong> ${companySettings.company_website}</p>`
+      }
+      
+      footerHtml += `</div>`
 
       const emailHtml = `
         <!DOCTYPE html>
@@ -168,7 +234,6 @@ serve(async (req) => {
             .total-amount { font-size: 24px; font-weight: bold; color: #007bff; }
             .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; }
             .message { background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .portal-button { display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold; }
             .portal-section { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
           </style>
         </head>
@@ -188,14 +253,7 @@ serve(async (req) => {
               ${job?.address ? `<strong>Service Address:</strong> ${job.address}<br>` : ''}
             </div>
 
-            ${portalLoginToken ? `
-            <div class="portal-section">
-              <h3 style="margin-top: 0; color: #007bff;">📋 View Online</h3>
-              <p>Access your estimate online, download a PDF copy, and track the status of your service request:</p>
-              <a href="${portalLink}" class="portal-button" style="color: white;">Access Client Portal</a>
-              <p style="font-size: 12px; color: #666; margin-top: 10px;">This link will expire in 30 minutes for security.</p>
-            </div>
-            ` : ''}
+            ${portalSectionHtml}
 
             ${message ? `<div class="message">${message}</div>` : ''}
             
@@ -225,12 +283,7 @@ serve(async (req) => {
 
             ${estimate.notes ? `<div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;"><strong>Notes:</strong><br>${estimate.notes}</div>` : ''}
             
-            <div class="footer">
-              <p>Thank you for choosing ${companySettings?.company_name || 'our services'}!</p>
-              ${companySettings?.company_phone ? `<p>Questions? Call us at ${companySettings.company_phone}</p>` : ''}
-              ${companySettings?.company_email ? `<p>Email: ${companySettings.company_email}</p>` : ''}
-              ${companySettings?.company_website ? `<p>Web: ${companySettings.company_website}</p>` : ''}
-            </div>
+            ${footerHtml}
           </div>
         </body>
         </html>
