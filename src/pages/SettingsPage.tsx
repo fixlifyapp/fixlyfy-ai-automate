@@ -1,8 +1,7 @@
-
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Link } from "react-router-dom";
-import { Settings2, Shield, Sliders, User, Brain, Building2, Plug, Package, Mail, Zap, Phone } from "lucide-react";
+import { Settings2, Shield, Sliders, User, Phone, Brain, Building2, Plug, Package, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MailgunTestPanel } from "@/components/connect/MailgunTestPanel";
@@ -24,7 +23,7 @@ const SettingsPage = () => {
       />
       
       {/* Main Settings Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Profile & Company Card */}
         <Link to="/profile-company">
           <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
@@ -50,36 +49,6 @@ const SettingsPage = () => {
               <div>
                 <h3 className="font-medium">Products</h3>
                 <p className="text-sm text-muted-foreground">Manage your product catalog and inventory</p>
-              </div>
-            </div>
-          </div>
-        </Link>
-
-        {/* Phone Numbers Card */}
-        <Link to="/phone-numbers">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
-            <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Phone className="h-6 w-6 text-fixlyfy" />
-              </div>
-              <div>
-                <h3 className="font-medium">Phone Numbers</h3>
-                <p className="text-sm text-muted-foreground">Manage your phone numbers and communication settings</p>
-              </div>
-            </div>
-          </div>
-        </Link>
-
-        {/* Telnyx Card */}
-        <Link to="/telnyx">
-          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
-            <div className="flex items-center p-6 space-x-4">
-              <div className="bg-fixlyfy/10 p-3 rounded-full">
-                <Zap className="h-6 w-6 text-fixlyfy" />
-              </div>
-              <div>
-                <h3 className="font-medium">Telnyx</h3>
-                <p className="text-sm text-muted-foreground">Configure Telnyx SMS and voice settings</p>
               </div>
             </div>
           </div>
@@ -115,6 +84,21 @@ const SettingsPage = () => {
           </div>
         </Link>
         
+        {/* Phone Numbers Card */}
+        <Link to="/phone-numbers">
+          <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
+            <div className="flex items-center p-6 space-x-4">
+              <div className="bg-fixlyfy/10 p-3 rounded-full">
+                <Phone className="h-6 w-6 text-fixlyfy" />
+              </div>
+              <div>
+                <h3 className="font-medium">Phone Numbers</h3>
+                <p className="text-sm text-muted-foreground">Purchase and manage business phone numbers</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+        
         {/* AI Settings Card */}
         <Link to="/ai-settings">
           <div className="h-full hover:shadow-md transition-shadow fixlyfy-card cursor-pointer">
@@ -129,6 +113,25 @@ const SettingsPage = () => {
             </div>
           </div>
         </Link>
+        
+        {/* Phone Settings Card */}
+        <Card className="hover:shadow-md transition-shadow cursor-pointer group">
+          <Link to="/settings/phone" className="block">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                  <Phone className="h-5 w-5 text-blue-600" />
+                </div>
+                Phone Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Manage phone numbers, AI dispatcher, SMS, and call routing settings
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
       </div>
 
       {/* Email Testing Section */}
