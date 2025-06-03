@@ -57,6 +57,9 @@ export const LineItemsManager = ({
   const [newItemPrice, setNewItemPrice] = useState(0);
   const [newItemTaxable, setNewItemTaxable] = useState(true);
 
+  // Lock tax rate at 13%
+  const LOCKED_TAX_RATE = 13;
+
   const handleAddLineItem = () => {
     if (!newItemDescription.trim() || newItemPrice <= 0) {
       toast.error('Please enter valid item details');
@@ -276,16 +279,7 @@ export const LineItemsManager = ({
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span>Tax:</span>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={taxRate}
-                      onChange={(e) => onTaxRateChange(parseFloat(e.target.value) || 0)}
-                      className="w-16 h-6 text-xs"
-                    />
-                    <span className="text-xs">%</span>
+                    <span className="text-sm font-medium text-blue-600">{LOCKED_TAX_RATE}% (Locked)</span>
                   </div>
                   <span>{formatCurrency(calculateTotalTax())}</span>
                 </div>
