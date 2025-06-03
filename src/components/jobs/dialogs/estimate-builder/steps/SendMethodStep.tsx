@@ -58,6 +58,11 @@ export const SendMethodStep = ({
   const isManualPhoneValid = sendMethod === "sms" && isValidPhoneNumber(sendTo);
   const canSend = isManualEmailValid || isManualPhoneValid;
 
+  const handleInputChange = (value: string) => {
+    setSendTo(value);
+    setValidationError("");
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground mb-4">
@@ -110,10 +115,7 @@ export const SendMethodStep = ({
         <Input
           id="send-to"
           value={sendTo}
-          onChange={(e) => {
-            setSendTo(e.target.value);
-            setValidationError("");
-          }}
+          onChange={(e) => handleInputChange(e.target.value)}
           placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
           className={validationError ? "border-red-500" : ""}
         />
