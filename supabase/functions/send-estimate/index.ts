@@ -54,10 +54,10 @@ serve(async (req) => {
       .eq('parent_id', estimateId)
 
     if (sendMethod === 'email') {
-      // Use Telnyx for email sending instead of Resend
-      const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
-      if (!telnyxApiKey) {
-        throw new Error('TELNYX_API_KEY not configured')
+      // Use Mailgun for email sending
+      const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY')
+      if (!mailgunApiKey) {
+        throw new Error('MAILGUN_API_KEY not configured')
       }
 
       const emailHtml = `
@@ -77,28 +77,28 @@ serve(async (req) => {
         <p>Thank you for choosing our services!</p>
       `
 
-      // Use Telnyx Email API
-      const response = await fetch('https://api.telnyx.com/v2/emails', {
+      // Use Mailgun API
+      const response = await fetch('https://api.mailgun.net/v3/fixlyfy.app/messages', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: JSON.stringify({
-          from: 'estimates@fixlyfy.com',
-          to: [{ email: recipientEmail }],
+        body: new URLSearchParams({
+          from: 'estimates@fixlyfy.app',
+          to: recipientEmail,
           subject: subject || `Estimate ${estimate.estimate_number}`,
           html: emailHtml
         })
       })
 
-      const result = await response.json()
+      const result = await response.text()
       
       if (!response.ok) {
-        throw new Error(result.errors?.[0]?.detail || 'Failed to send email')
+        throw new Error(`Failed to send email: ${result}`)
       }
 
-      console.log('Email sent successfully via Telnyx:', result)
+      console.log('Email sent successfully via Mailgun:', result)
     } else if (sendMethod === 'sms') {
       // Use Telnyx SMS API
       const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
