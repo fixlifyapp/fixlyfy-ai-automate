@@ -134,107 +134,103 @@ export const UnifiedDocumentBuilder = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0 pb-6 border-b">
             <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                {existingDocument ? 'Edit' : 'Create'} {documentType === 'estimate' ? 'Estimate' : 'Invoice'}
-                <Badge variant="secondary">{documentNumber}</Badge>
-              </DialogTitle>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-blue-600">
-                  Total: {formatCurrency(calculateGrandTotal())}
-                </span>
+              <div className="flex items-center gap-3">
+                <FileText className="h-6 w-6 text-blue-600" />
+                <div>
+                  <DialogTitle className="text-xl">
+                    {existingDocument ? 'Edit' : 'Create'} {documentType === 'estimate' ? 'Estimate' : 'Invoice'}
+                  </DialogTitle>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-sm">{documentNumber}</Badge>
+                    <span className="text-sm text-gray-500">•</span>
+                    <span className="text-sm text-gray-600">{job?.client?.name || 'Client'}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">Total Amount</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(calculateGrandTotal())}
+                </div>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 flex gap-6 min-h-0">
-            {/* Left Panel - Form */}
-            <div className="w-1/2 flex flex-col">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="items">Line Items</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                </TabsList>
+          <div className="flex-1 min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="items" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Line Items
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Preview
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="items" className="flex-1 space-y-6 overflow-y-auto">
+                <LineItemsManager
+                  lineItems={lineItems}
+                  taxRate={taxRate}
+                  notes={notes}
+                  onLineItemsChange={setLineItems}
+                  onTaxRateChange={setTaxRate}
+                  onNotesChange={setNotes}
+                  onAddProduct={handleAddProduct}
+                  onRemoveLineItem={handleRemoveLineItem}
+                  onUpdateLineItem={handleUpdateLineItem}
+                  calculateSubtotal={calculateSubtotal}
+                  calculateTotalTax={calculateTotalTax}
+                  calculateGrandTotal={calculateGrandTotal}
+                  documentType={documentType}
+                />
                 
-                <TabsContent value="items" className="flex-1 space-y-4 overflow-y-auto">
-                  <LineItemsManager
-                    lineItems={lineItems}
-                    taxRate={taxRate}
-                    notes={notes}
-                    onLineItemsChange={setLineItems}
-                    onTaxRateChange={setTaxRate}
-                    onNotesChange={setNotes}
-                    onAddProduct={handleAddProduct}
-                    onRemoveLineItem={handleRemoveLineItem}
-                    onUpdateLineItem={handleUpdateLineItem}
-                    calculateSubtotal={calculateSubtotal}
-                    calculateTotalTax={calculateTotalTax}
-                    calculateGrandTotal={calculateGrandTotal}
-                    documentType={documentType}
-                  />
-                  
-                  {/* Warranty Section for Estimates */}
-                  {documentType === 'estimate' && (
-                    <div className="border rounded-lg p-4 bg-amber-50 border-amber-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-amber-800">Warranty Options</h3>
-                        <Button size="sm" onClick={handleAddWarranty} variant="outline">
-                          Add Warranty
-                        </Button>
-                      </div>
-                      {selectedWarranty ? (
-                        <div className="text-sm text-amber-700">
-                          <p><strong>{selectedWarranty.name}</strong> - {formatCurrency(selectedWarranty.price)}</p>
-                          {warrantyNote && <p className="mt-1 italic">"{warrantyNote}"</p>}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-amber-600">
-                          Add warranty options to provide extra value and peace of mind to your customers.
-                        </p>
-                      )}
+                {/* Warranty Section for Estimates */}
+                {documentType === 'estimate' && (
+                  <div className="border rounded-lg p-4 bg-amber-50 border-amber-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium text-amber-800">Warranty Options</h3>
+                      <Button size="sm" onClick={handleAddWarranty} variant="outline">
+                        Add Warranty
+                      </Button>
                     </div>
-                  )}
-                </TabsContent>
+                    {selectedWarranty ? (
+                      <div className="text-sm text-amber-700">
+                        <p><strong>{selectedWarranty.name}</strong> - {formatCurrency(selectedWarranty.price)}</p>
+                        {warrantyNote && <p className="mt-1 italic">"{warrantyNote}"</p>}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-amber-600">
+                        Add warranty options to provide extra value and peace of mind to your customers.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
 
-                <TabsContent value="preview" className="flex-1 overflow-y-auto">
-                  <UnifiedDocumentPreview
-                    documentType={documentType}
-                    documentNumber={documentNumber}
-                    lineItems={lineItems}
-                    taxRate={taxRate}
-                    calculateSubtotal={calculateSubtotal}
-                    calculateTotalTax={calculateTotalTax}
-                    calculateGrandTotal={calculateGrandTotal}
-                    notes={notes}
-                    clientInfo={finalClientInfo}
-                    jobId={jobId}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {/* Right Panel - Live Preview */}
-            <div className="w-1/2 border-l pl-6 overflow-y-auto">
-              <UnifiedDocumentPreview
-                documentType={documentType}
-                documentNumber={documentNumber}
-                lineItems={lineItems}
-                taxRate={taxRate}
-                calculateSubtotal={calculateSubtotal}
-                calculateTotalTax={calculateTotalTax}
-                calculateGrandTotal={calculateGrandTotal}
-                notes={notes}
-                clientInfo={finalClientInfo}
-                jobId={jobId}
-              />
-            </div>
+              <TabsContent value="preview" className="flex-1 overflow-y-auto">
+                <UnifiedDocumentPreview
+                  documentType={documentType}
+                  documentNumber={documentNumber}
+                  lineItems={lineItems}
+                  taxRate={taxRate}
+                  calculateSubtotal={calculateSubtotal}
+                  calculateTotalTax={calculateTotalTax}
+                  calculateGrandTotal={calculateGrandTotal}
+                  notes={notes}
+                  clientInfo={finalClientInfo}
+                  jobId={jobId}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Footer Actions */}
-          <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t">
+          <div className="flex-shrink-0 flex justify-between items-center pt-6 border-t">
             <div className="flex gap-2">
               {documentType === 'estimate' && existingDocument && (
                 <Button 
@@ -249,7 +245,7 @@ export const UnifiedDocumentBuilder = ({
               )}
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
@@ -264,7 +260,7 @@ export const UnifiedDocumentBuilder = ({
                 className="gap-2"
               >
                 <Save className="h-4 w-4" />
-                Save
+                {isSubmitting ? 'Saving...' : 'Save'}
               </Button>
               <Button 
                 onClick={handleSaveAndSend}
