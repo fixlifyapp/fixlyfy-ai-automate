@@ -1,135 +1,113 @@
 
-import { useState, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
+import { LineItem, Product } from "../../builder/types";
+import { DocumentType } from "../UnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
-import { Product, LineItem } from "@/components/jobs/builder/types";
-import { DocumentType } from "../UnifiedDocumentBuilder";
 import { useDocumentInitialization } from "./hooks/useDocumentInitialization";
 import { useDocumentCalculations } from "./hooks/useDocumentCalculations";
-import { useDocumentSmartFeatures } from "./hooks/useDocumentSmartFeatures";
 import { useDocumentOperations } from "./hooks/useDocumentOperations";
+import { useDocumentSmartFeatures } from "./hooks/useDocumentSmartFeatures";
 
 interface UseUnifiedDocumentBuilderProps {
   documentType: DocumentType;
   existingDocument?: Estimate | Invoice;
   jobId: string;
   open: boolean;
-  onSyncToInvoice?: () => void;
 }
 
-export const useUnifiedDocumentBuilder = ({ 
-  documentType, 
-  existingDocument, 
-  jobId, 
-  open, 
-  onSyncToInvoice 
+export const useUnifiedDocumentBuilder = ({
+  documentType,
+  existingDocument,
+  jobId,
+  open
 }: UseUnifiedDocumentBuilderProps) => {
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [taxRate, setTaxRate] = useState<number>(13);
-  const [notes, setNotes] = useState<string>("");
-
-  // Use initialization hook
-  const { formData, setFormData, jobData } = useDocumentInitialization({
+  // Initialize document state
+  const {
+    lineItems,
+    setLineItems,
+    taxRate,
+    setTaxRate,
+    notes,
+    setNotes,
+    documentNumber,
+    setDocumentNumber,
+    isInitialized
+  } = useDocumentInitialization({
     documentType,
     existingDocument,
     jobId,
     open
   });
 
-  // Use calculations hook
-  const calculations = useDocumentCalculations({ lineItems, taxRate });
+  // Calculate totals
+  const {
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage
+  } = useDocumentCalculations({ lineItems, taxRate });
 
-  // Use smart features hook
-  const { generateSmartNotes, addProductWithSmartPricing } = useDocumentSmartFeatures();
+  // Smart features
+  const smartFeatures = useDocumentSmartFeatures({
+    documentType,
+    lineItems,
+    jobId
+  });
 
-  // Use operations hook
-  const { isSubmitting, saveDocumentChanges, convertToInvoice } = useDocumentOperations({
+  // Document operations
+  const formData = {
+    documentNumber,
+    items: lineItems.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxable: item.taxable
+    })),
+    notes,
+    status: existingDocument?.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
+    total: calculateGrandTotal()
+  };
+
+  const {
+    isSubmitting,
+    saveDocumentChanges,
+    convertToInvoice
+  } = useDocumentOperations({
     documentType,
     existingDocument,
     jobId,
     formData,
     lineItems,
     notes,
-    calculateGrandTotal: calculations.calculateGrandTotal,
-    onSyncToInvoice
+    calculateGrandTotal
   });
 
-  // Auto-populate from job description for new documents
-  useEffect(() => {
-    if (!existingDocument && jobData?.description && open) {
-      const smartNote = generateSmartNotes(jobData, documentType);
-      setNotes(smartNote);
-    }
-  }, [existingDocument, jobData, open, generateSmartNotes, documentType]);
+  // Line item management
+  const handleAddProduct = useCallback((product: Product) => {
+    const newLineItem: LineItem = {
+      id: `temp-${Date.now()}`,
+      description: product.name,
+      quantity: 1,
+      unitPrice: product.price,
+      taxable: true,
+      discount: 0,
+      ourPrice: product.cost || 0,
+      name: product.name,
+      price: product.price,
+      total: product.price
+    };
 
-  // Initialize from existing document with smart conversion
-  useEffect(() => {
-    if (existingDocument && open) {
-      const initializeFromExisting = async () => {
-        try {
-          // Get document number safely
-          const documentNumber = documentType === 'estimate' 
-            ? (existingDocument as Estimate).estimate_number || (existingDocument as Estimate).number
-            : (existingDocument as Invoice).invoice_number || (existingDocument as Invoice).number;
-
-          // Get total/amount safely
-          const total = documentType === 'estimate'
-            ? (existingDocument as Estimate).total || (existingDocument as Estimate).amount || 0
-            : (existingDocument as Invoice).total || 0;
-
-          // Set basic document data
-          setFormData({
-            documentId: existingDocument.id,
-            documentNumber: documentNumber || '',
-            items: [],
-            notes: existingDocument.notes || "",
-            status: existingDocument.status || "draft",
-            total: total
-          });
-
-          setNotes(existingDocument.notes || "");
-
-          // Fetch line items with smart enhancements
-          const { data: items } = await supabase
-            .from('line_items')
-            .select('*')
-            .eq('parent_id', existingDocument.id)
-            .eq('parent_type', documentType === 'estimate' ? 'estimate' : 'invoice');
-
-          if (items) {
-            const enhancedLineItems: LineItem[] = items.map(item => ({
-              id: item.id,
-              description: item.description || '',
-              quantity: item.quantity || 1,
-              unitPrice: item.unit_price || 0,
-              taxable: item.taxable !== undefined ? item.taxable : true,
-              discount: 0,
-              ourPrice: 0,
-              name: item.description || '',
-              price: item.unit_price || 0,
-              total: (item.quantity || 1) * (item.unit_price || 0)
-            }));
-
-            setLineItems(enhancedLineItems);
-          }
-
-        } catch (error) {
-          console.error('Error loading existing document:', error);
-        }
-      };
-
-      initializeFromExisting();
-    }
-  }, [existingDocument, open, documentType, setFormData]);
-
-  const handleAddProduct = useCallback(async (product: Product) => {
-    await addProductWithSmartPricing(product, setLineItems);
-  }, [addProductWithSmartPricing]);
+    setLineItems(prev => [...prev, newLineItem]);
+    toast.success(`${product.name} added to ${documentType}`);
+  }, [setLineItems, documentType]);
 
   const handleRemoveLineItem = useCallback((id: string) => {
     setLineItems(prev => prev.filter(item => item.id !== id));
-  }, []);
+    toast.success("Item removed");
+  }, [setLineItems]);
 
   const handleUpdateLineItem = useCallback((id: string, field: string, value: any) => {
     setLineItems(prev => prev.map(item => {
@@ -143,24 +121,38 @@ export const useUnifiedDocumentBuilder = ({
       }
       return item;
     }));
-  }, []);
+  }, [setLineItems]);
 
   return {
-    formData,
+    // State
     lineItems,
-    taxRate,
-    notes,
-    documentNumber: formData.documentNumber,
-    isSubmitting,
-    jobData,
     setLineItems,
+    taxRate,
     setTaxRate,
+    notes,
     setNotes,
+    documentNumber,
+    setDocumentNumber,
+    isInitialized,
+    isSubmitting,
+
+    // Calculations
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage,
+
+    // Line item actions
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
-    ...calculations,
+
+    // Document operations
     saveDocumentChanges,
-    convertToInvoice
+    convertToInvoice,
+
+    // Smart features
+    ...smartFeatures
   };
 };

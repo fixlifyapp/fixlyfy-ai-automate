@@ -48,7 +48,12 @@ export const useDocumentOperations = ({
     if (isSubmitting) return null;
     
     setIsSubmitting(true);
-    console.log('Saving document:', { documentType, lineItems: lineItems.length, total: calculateGrandTotal(), jobId });
+    console.log('Saving document:', { 
+      documentType, 
+      lineItems: lineItems.length, 
+      total: calculateGrandTotal(), 
+      jobId: jobId // Ensure this is a string
+    });
     
     try {
       const tableName = documentType === 'estimate' ? 'estimates' : 'invoices';
@@ -57,9 +62,9 @@ export const useDocumentOperations = ({
       const documentNumber = formData.documentNumber || 
         `${documentType === 'estimate' ? 'EST' : 'INV'}-${Date.now()}`;
       
-      // Create document data with proper fields for each type
+      // Create document data - ensure job_id is always a string
       const baseDocumentData = {
-        job_id: jobId, // Ensure this is passed as text, not UUID
+        job_id: String(jobId), // Explicitly convert to string
         total: calculateGrandTotal(),
         status: formData.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
         notes: notes || '',
@@ -98,7 +103,7 @@ export const useDocumentOperations = ({
         document = data;
       } else {
         // Create new document
-        console.log('Creating new document');
+        console.log('Creating new document for job_id:', String(jobId));
         const { data, error } = await supabase
           .from(tableName)
           .insert(documentData)
@@ -114,40 +119,42 @@ export const useDocumentOperations = ({
       }
       
       // Handle line items
-      if (document) {
+      if (document && lineItems.length > 0) {
         console.log('Saving line items for document:', document.id);
         
-        // Delete existing line items
-        await supabase
+        // Delete existing line items first
+        const { error: deleteError } = await supabase
           .from('line_items')
           .delete()
           .eq('parent_id', document.id)
           .eq('parent_type', documentType);
+          
+        if (deleteError) {
+          console.error('Error deleting existing line items:', deleteError);
+        }
         
         // Create new line items
-        if (lineItems.length > 0) {
-          const lineItemsData = lineItems.map(item => ({
-            parent_id: document.id,
-            parent_type: documentType,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            taxable: item.taxable
-          }));
+        const lineItemsData = lineItems.map(item => ({
+          parent_id: document.id,
+          parent_type: documentType,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }));
+        
+        console.log('Inserting line items:', lineItemsData);
+        
+        const { error: lineItemsError } = await supabase
+          .from('line_items')
+          .insert(lineItemsData);
           
-          console.log('Inserting line items:', lineItemsData);
-          
-          const { error: lineItemsError } = await supabase
-            .from('line_items')
-            .insert(lineItemsData);
-            
-          if (lineItemsError) {
-            console.error('Error creating line items:', lineItemsError);
-            throw lineItemsError;
-          }
-          
-          console.log('Line items saved successfully');
+        if (lineItemsError) {
+          console.error('Error creating line items:', lineItemsError);
+          throw lineItemsError;
         }
+        
+        console.log('Line items saved successfully');
       }
       
       toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} ${formData.documentId ? 'updated' : 'created'} successfully`);
@@ -185,7 +192,7 @@ export const useDocumentOperations = ({
       }
     } catch (error) {
       console.error(`Error saving ${documentType}:`, error);
-      toast.error(`Failed to save ${documentType}`);
+      toast.error(`Failed to save ${documentType}. Please check the console for details.`);
       return null;
     } finally {
       setIsSubmitting(false);

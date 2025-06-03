@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import {
   Settings,
   Zap
 } from "lucide-react";
-import { UnifiedDocumentBuilder } from "./dialogs/UnifiedDocumentBuilder";
+import { SteppedEstimateBuilder } from "./dialogs/SteppedEstimateBuilder";
 import { InvoiceBuilderDialog } from "./dialogs/InvoiceBuilderDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { useJobHistory } from "@/hooks/useJobHistory";
@@ -236,12 +237,12 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       </ModernCard>
 
       {/* Dialogs */}
-      <UnifiedDocumentBuilder
+      <SteppedEstimateBuilder
         open={isEstimateDialogOpen}
         onOpenChange={setIsEstimateDialogOpen}
-        documentType="estimate"
         jobId={jobId}
-        onDocumentCreated={handleEstimateCreated}
+        clientInfo={job?.client}
+        onEstimateCreated={handleEstimateCreated}
       />
 
       <InvoiceBuilderDialog

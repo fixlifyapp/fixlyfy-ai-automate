@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Send, Trash2, Edit, DollarSign } from "lucide-react";
 import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
-import { UnifiedDocumentBuilder } from "@/components/jobs/dialogs/UnifiedDocumentBuilder";
+import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
 import { format } from "date-fns";
 
 interface ModernJobEstimatesTabProps {
@@ -195,14 +194,13 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         </Card>
       </div>
 
-      {/* Unified Document Builder Dialog */}
-      <UnifiedDocumentBuilder
+      {/* Stepped Estimate Builder Dialog */}
+      <SteppedEstimateBuilder
         open={showCreateForm}
         onOpenChange={handleDialogClose}
-        documentType="estimate"
-        existingDocument={editingEstimate}
         jobId={jobId}
-        onDocumentCreated={handleEstimateCreated}
+        existingEstimate={editingEstimate}
+        onEstimateCreated={handleEstimateCreated}
       />
     </>
   );

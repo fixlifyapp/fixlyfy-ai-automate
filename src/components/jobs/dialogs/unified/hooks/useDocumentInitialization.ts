@@ -1,24 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { LineItem } from "../../../builder/types";
 import { DocumentType } from "../../UnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
-import { LineItem } from "../../../builder/types";
-
-interface DocumentFormData {
-  documentId?: string;
-  documentNumber: string;
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    taxable: boolean;
-  }>;
-  notes: string;
-  status: string;
-  total: number;
-}
 
 interface UseDocumentInitializationProps {
   documentType: DocumentType;
@@ -33,64 +18,58 @@ export const useDocumentInitialization = ({
   jobId,
   open
 }: UseDocumentInitializationProps) => {
-  const [formData, setFormData] = useState<DocumentFormData>({
-    documentNumber: `${documentType === 'estimate' ? 'EST' : 'INV'}-${Date.now()}`,
-    items: [],
-    notes: "",
-    status: "draft",
-    total: 0
-  });
-  
-  const [jobData, setJobData] = useState<any>(null);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [taxRate, setTaxRate] = useState(8.5);
+  const [notes, setNotes] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Smart initialization based on job data and existing documents
+  // Initialize document data when dialog opens or existing document changes
   useEffect(() => {
-    const initializeDocument = async () => {
-      try {
-        // Fetch job data for smart defaults
-        const { data: job } = await supabase
-          .from('jobs')
-          .select(`
-            *,
-            client:clients(*),
-            estimates(*),
-            invoices(*)
-          `)
-          .eq('id', jobId)
-          .single();
+    if (!open) {
+      setIsInitialized(false);
+      return;
+    }
 
-        if (job) {
-          setJobData(job);
-          
-          // Smart document number generation
-          if (!existingDocument) {
-            const existingDocs = documentType === 'estimate' 
-              ? job.estimates || []
-              : job.invoices || [];
-            
-            const nextNumber = existingDocs.length + 1;
-            const prefix = documentType === 'estimate' ? 'EST' : 'INV';
-            
-            setFormData(prev => ({
-              ...prev,
-              documentNumber: `${prefix}-${jobId.slice(-6)}-${String(nextNumber).padStart(3, '0')}`
-            }));
-          }
+    const initializeDocument = async () => {
+      if (existingDocument) {
+        // Load existing document data
+        setNotes(existingDocument.notes || "");
+        
+        if (documentType === 'estimate') {
+          const estimate = existingDocument as Estimate;
+          setDocumentNumber(estimate.estimate_number || estimate.number || "");
+        } else {
+          const invoice = existingDocument as Invoice;
+          setDocumentNumber(invoice.invoice_number || invoice.number || "");
         }
-      } catch (error) {
-        console.error('Error initializing document:', error);
+
+        // TODO: Load line items from database
+        setLineItems([]);
+      } else {
+        // Generate new document number
+        const prefix = documentType === 'estimate' ? 'EST' : 'INV';
+        const timestamp = Date.now();
+        setDocumentNumber(`${prefix}-${timestamp}`);
+        setLineItems([]);
+        setNotes("");
       }
+      
+      setIsInitialized(true);
     };
 
-    if (open && jobId) {
-      initializeDocument();
-    }
-  }, [open, jobId, documentType, existingDocument]);
+    initializeDocument();
+  }, [open, existingDocument, documentType]);
 
   return {
-    formData,
-    setFormData,
-    jobData,
-    setJobData
+    lineItems,
+    setLineItems,
+    taxRate,
+    setTaxRate,
+    notes,
+    setNotes,
+    documentNumber,
+    setDocumentNumber,
+    isInitialized
   };
 };
