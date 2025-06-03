@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -40,7 +39,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get the user from the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header provided');
@@ -72,7 +70,7 @@ serve(async (req) => {
       throw new Error('Failed to authenticate user');
     }
 
-    console.log('Authenticated user ID:', userData.user.id);
+    console.log('send-estimate - Authenticated user ID:', userData.user.id);
 
     const {
       estimateId,
@@ -83,7 +81,7 @@ serve(async (req) => {
       message
     } = await req.json()
 
-    console.log('Send estimate request:', { estimateId, sendMethod, recipientEmail, recipientPhone })
+    console.log('send-estimate - Request details:', { estimateId, sendMethod, recipientEmail, recipientPhone })
 
     if (!estimateId) {
       throw new Error('Estimate ID is required')
@@ -107,9 +105,9 @@ serve(async (req) => {
       throw new Error(`Estimate not found: ${estimateError?.message || 'Unknown error'}`)
     }
 
-    console.log('Found estimate:', estimate.estimate_number)
+    console.log('send-estimate - Found estimate:', estimate.estimate_number)
 
-    // Get company settings for the CURRENT USER using admin client
+    // Get company settings for the AUTHENTICATED USER with explicit filtering
     const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
@@ -117,12 +115,19 @@ serve(async (req) => {
       .maybeSingle()
 
     if (settingsError) {
-      console.error('Company settings error:', settingsError)
+      console.error('send-estimate - Error fetching company settings:', settingsError)
     }
 
-    console.log('Company settings query for user:', userData.user.id)
-    console.log('Company settings found:', !!companySettings)
-    console.log('Company name from DB:', companySettings?.company_name || 'No company name found')
+    console.log('send-estimate - Fetching company settings for user_id:', userData.user.id)
+    console.log('send-estimate - Company settings found:', !!companySettings)
+    console.log('send-estimate - Company name from database:', companySettings?.company_name || 'NULL')
+
+    // Validate we have the correct user's data
+    if (companySettings && companySettings.user_id !== userData.user.id) {
+      console.error('send-estimate - CRITICAL: Company settings user_id mismatch!')
+      console.error('send-estimate - Expected user_id:', userData.user.id)
+      console.error('send-estimate - Got user_id:', companySettings.user_id)
+    }
 
     const client = estimate.jobs?.clients
     const job = estimate.jobs
@@ -139,30 +144,27 @@ serve(async (req) => {
       
       if (client?.email) {
         try {
-          console.log('Generating portal login token for:', client.email)
+          console.log('send-estimate - Generating portal login token for:', client.email)
           
-          // Generate login token for client portal
           const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
             p_email: client.email
           })
           
           if (!tokenError && tokenData) {
             portalLoginToken = tokenData
-            console.log('Successfully generated client portal login token')
+            console.log('send-estimate - Successfully generated client portal login token')
             
-            // Create portal access link - use the current domain
             const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app'
             portalLoginLink = `${currentDomain}/portal/login?token=${portalLoginToken}`
-            console.log('Portal login link created:', portalLoginLink)
+            console.log('send-estimate - Portal login link created:', portalLoginLink)
           } else {
-            console.error('Failed to generate portal token:', tokenError)
+            console.error('send-estimate - Failed to generate portal token:', tokenError)
           }
         } catch (error) {
-          console.error('Error generating portal token:', error)
-          // Don't fail the email send if portal token generation fails
+          console.error('send-estimate - Error generating portal token:', error)
         }
       } else {
-        console.log('No client email available for portal token generation')
+        console.log('send-estimate - No client email available for portal token generation')
       }
 
       // Check Mailgun configuration
@@ -171,10 +173,9 @@ serve(async (req) => {
         throw new Error('Mailgun API key not configured. Please configure MAILGUN_API_KEY in Supabase secrets.')
       }
 
-      // Use correct domain - fixlify.app
       const mailgunDomain = 'fixlify.app'
       
-      // Get company name - use the one from the current user's settings, fallback to default
+      // Get company name from the AUTHENTICATED USER's settings
       const companyName = companySettings?.company_name?.trim() || 'Fixlify Services'
       
       // Auto-generate email from company name
@@ -183,18 +184,17 @@ serve(async (req) => {
       // Generate professional subject line
       const emailSubject = subject || generateEmailSubject(companyName, estimate.estimate_number)
 
-      console.log('Final email configuration:')
-      console.log('User ID:', userData.user.id)
-      console.log('Company name used:', companyName)
-      console.log('Mailgun domain:', mailgunDomain)
-      console.log('From email:', fromEmail)
-      console.log('Subject:', emailSubject)
+      console.log('send-estimate - Final email configuration:')
+      console.log('send-estimate - User ID:', userData.user.id)
+      console.log('send-estimate - Company name used:', companyName)
+      console.log('send-estimate - Mailgun domain:', mailgunDomain)
+      console.log('send-estimate - From email:', fromEmail)
+      console.log('send-estimate - Subject:', emailSubject)
 
       // Create email template
       let emailHtml = ''
       
       if (client?.email && portalLoginToken && portalLoginLink) {
-        // Simple email with portal access
         emailHtml = `
           <!DOCTYPE html>
           <html>
@@ -241,7 +241,6 @@ serve(async (req) => {
           </html>
         `
       } else {
-        // Fallback email without portal link
         const currentDomain = req.headers.get('origin') || 'https://your-app.vercel.app'
         emailHtml = `
           <!DOCTYPE html>
@@ -289,9 +288,9 @@ serve(async (req) => {
 
       // Use Mailgun API
       const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`
-      console.log('Mailgun send URL:', mailgunUrl)
-      console.log('From:', `${companyName} <${fromEmail}>`)
-      console.log('To:', recipientEmail)
+      console.log('send-estimate - Sending email via Mailgun URL:', mailgunUrl)
+      console.log('send-estimate - From:', `${companyName} <${fromEmail}>`)
+      console.log('send-estimate - To:', recipientEmail)
 
       const response = await fetch(mailgunUrl, {
         method: 'POST',
@@ -307,16 +306,16 @@ serve(async (req) => {
         })
       })
 
-      console.log('Email send response status:', response.status)
+      console.log('send-estimate - Email send response status:', response.status)
       const result = await response.text()
-      console.log('Email send response body:', result)
+      console.log('send-estimate - Email send response body:', result)
       
       if (!response.ok) {
-        console.error('Mailgun API error:', result)
+        console.error('send-estimate - Mailgun API error:', result)
         throw new Error(`Failed to send email via Mailgun: ${result}`)
       }
 
-      console.log('Email sent successfully via Mailgun:', result)
+      console.log('send-estimate - Email sent successfully via Mailgun:', result)
 
       // Log communication in database
       try {
@@ -337,8 +336,7 @@ serve(async (req) => {
             sent_at: new Date().toISOString()
           })
       } catch (logError) {
-        console.error('Failed to log communication:', logError)
-        // Don't fail the whole operation for logging errors
+        console.error('send-estimate - Failed to log communication:', logError)
       }
 
     } else if (sendMethod === 'sms') {
@@ -389,11 +387,11 @@ serve(async (req) => {
       const result = await response.json()
       
       if (!response.ok) {
-        console.error('Telnyx API error:', result)
+        console.error('send-estimate - Telnyx API error:', result)
         throw new Error(result.errors?.[0]?.detail || 'Failed to send SMS via Telnyx')
       }
 
-      console.log('SMS sent successfully via Telnyx:', result)
+      console.log('send-estimate - SMS sent successfully via Telnyx:', result)
 
       // Log SMS communication
       try {
@@ -413,20 +411,24 @@ serve(async (req) => {
             sent_at: new Date().toISOString()
           })
       } catch (logError) {
-        console.error('Failed to log SMS communication:', logError)
-        // Don't fail the whole operation for logging errors
+        console.error('send-estimate - Failed to log SMS communication:', logError)
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Estimate sent successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'Estimate sent successfully',
+        companyName: companySettings?.company_name,
+        userId: userData.user.id
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
     )
   } catch (error) {
-    console.error('Error sending estimate:', error)
+    console.error('send-estimate - Error sending estimate:', error)
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

@@ -29,7 +29,7 @@ export interface CompanySettings {
   service_zip_codes: string;
   // Business hours
   business_hours: BusinessHours;
-  // Email settings - FIXED: Use consistent field name
+  // Email settings
   custom_domain_name?: string;
   mailgun_domain?: string;
   email_from_name?: string;
@@ -41,7 +41,7 @@ export interface CompanySettings {
 }
 
 const defaultCompanySettings: CompanySettings = {
-  company_name: '', // Start with empty company name for new users
+  company_name: '',
   business_type: 'HVAC & Plumbing Services',
   company_address: '123 Business Park, Suite 456',
   company_city: 'San Francisco',
@@ -74,19 +74,22 @@ export const useCompanySettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.error('No authenticated user found');
+        setLoading(false);
         return;
       }
 
-      console.log('Fetching company settings for user:', user.id);
+      console.log('fetchSettings - Current user ID:', user.id);
 
+      // Always fetch with explicit user_id filter and single() to ensure we get exactly one record
       const { data, error } = await supabase
         .from('company_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching company settings:', error);
+        setLoading(false);
         return;
       }
 
@@ -95,8 +98,8 @@ export const useCompanySettings = () => {
           (typeof data.business_hours === 'string' ? JSON.parse(data.business_hours) : data.business_hours) :
           DEFAULT_BUSINESS_HOURS;
           
-        console.log('Successfully fetched company settings - company_name:', data.company_name);
-        console.log('Full company settings data:', data);
+        console.log('fetchSettings - Found company settings for user:', user.id);
+        console.log('fetchSettings - Company name from DB:', data.company_name);
         
         setSettings({ 
           ...defaultCompanySettings, 
@@ -104,12 +107,12 @@ export const useCompanySettings = () => {
           business_hours: businessHours
         });
       } else {
-        console.log('No company settings found, creating default settings for user:', user.id);
+        console.log('fetchSettings - No settings found, creating default for user:', user.id);
         
         // Create default settings if none exist
         const newSettings = {
           ...defaultCompanySettings,
-          company_name: '' // Start with empty company name for new users
+          company_name: ''
         };
         
         const { error: insertError } = await supabase
@@ -121,14 +124,14 @@ export const useCompanySettings = () => {
           });
         
         if (!insertError) {
-          console.log('Created new company settings for user:', user.id);
+          console.log('fetchSettings - Created new company settings for user:', user.id);
           setSettings(newSettings);
         } else {
           console.error('Error creating company settings:', insertError);
         }
       }
     } catch (error) {
-      console.error('Error fetching company settings:', error);
+      console.error('Error in fetchSettings:', error);
       toast.error('Failed to load company settings');
     } finally {
       setLoading(false);
@@ -141,26 +144,25 @@ export const useCompanySettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      console.log('updateSettings called with:', updates);
-      console.log('Current user ID:', user.id);
+      console.log('updateSettings - User ID:', user.id);
+      console.log('updateSettings - Updates:', updates);
       
       const newSettings = { ...settings, ...updates };
       
-      // Prepare data for database
+      // Prepare data for database with explicit user_id
       const dataToUpdate = {
+        user_id: user.id, // Explicitly set user_id
         ...newSettings,
         business_hours: JSON.stringify(newSettings.business_hours)
       };
       
-      console.log('Updating company settings in database for user:', user.id);
-      console.log('Data being sent to database:', dataToUpdate);
+      console.log('updateSettings - Saving to database with user_id:', user.id);
+      console.log('updateSettings - Company name being saved:', dataToUpdate.company_name);
       
+      // Use upsert with explicit user_id conflict resolution
       const { data, error } = await supabase
         .from('company_settings')
-        .upsert({
-          user_id: user.id,
-          ...dataToUpdate
-        }, {
+        .upsert(dataToUpdate, {
           onConflict: 'user_id'
         })
         .select()
@@ -171,7 +173,8 @@ export const useCompanySettings = () => {
         throw error;
       }
 
-      console.log('Database update successful:', data);
+      console.log('updateSettings - Database update successful:', data);
+      console.log('updateSettings - Saved company name:', data.company_name);
 
       // Sync business hours with AI agent config if it exists
       if (updates.business_hours) {
@@ -179,7 +182,6 @@ export const useCompanySettings = () => {
       }
 
       setSettings(newSettings);
-      console.log('Company settings updated successfully - company_name:', newSettings.company_name);
       toast.success('Company settings updated successfully');
     } catch (error) {
       console.error('Error updating company settings:', error);
@@ -192,7 +194,6 @@ export const useCompanySettings = () => {
 
   const syncBusinessHoursWithAIAgent = async (userId: string, businessHours: BusinessHours) => {
     try {
-      // Check if AI agent config exists
       const { data: aiConfig } = await supabase
         .from('ai_agent_configs')
         .select('id')
@@ -200,7 +201,6 @@ export const useCompanySettings = () => {
         .maybeSingle();
 
       if (aiConfig) {
-        // Update existing AI agent config with new business hours
         await supabase
           .from('ai_agent_configs')
           .update({
@@ -213,7 +213,6 @@ export const useCompanySettings = () => {
       }
     } catch (error) {
       console.error('Error syncing business hours with AI agent:', error);
-      // Don't throw error here as this is a secondary operation
     }
   };
 
@@ -221,6 +220,7 @@ export const useCompanySettings = () => {
     settings,
     loading,
     saving,
-    updateSettings
+    updateSettings,
+    refetch: fetchSettings
   };
 };
