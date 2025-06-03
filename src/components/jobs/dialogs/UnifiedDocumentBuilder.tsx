@@ -311,6 +311,6 @@ export const UnifiedDocumentBuilder = ({
       {documentType === 'estimate' && existingDocument && <DocumentConversionDialog open={isConversionDialogOpen} onOpenChange={setIsConversionDialogOpen} estimate={existingDocument as Estimate} onConvert={handleConvertToInvoice} isConverting={documentBuilder.isSubmitting} />}
       
       {/* Send Dialog with Warranty Selection (for estimates) */}
-      {documentType === 'estimate' && <EstimateSendDialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen} onSave={handleSaveDocumentWrapper} onAddWarranty={handleAddWarranty} clientInfo={clientInfo || jobData?.client} estimateNumber={documentBuilder.documentNumber} jobId={jobId} />}
+      {documentType === 'estimate' && <EstimateSendDialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen} onSave={handleSaveDocumentWrapper} clientInfo={clientInfo || jobData?.client} estimateNumber={documentBuilder.documentNumber} jobId={jobId} />}
     </Dialog>;
 };

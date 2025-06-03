@@ -7,12 +7,26 @@ export interface Estimate {
   id: string;
   job_id: string;
   estimate_number: string;
+  number: string; // alias for estimate_number
   date: string;
   total: number;
+  amount: number; // alias for total
   status: string;
   notes?: string;
   created_at: string;
   updated_at: string;
+  items?: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxable: boolean;
+    total: number;
+    name?: string;
+    price?: number;
+  }>;
+  viewed?: boolean;
+  techniciansNote?: string;
 }
 
 export const useEstimates = (jobId?: string) => {

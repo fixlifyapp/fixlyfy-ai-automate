@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,8 +29,8 @@ export const useEstimateUpsell = (
           taxable: true,
           cost: 50,
           ourPrice: 75,
-          sku: ""
-          // Do not include quantity here as it's optional in the Product interface
+          sku: "",
+          tags: []
         };
         
         setRecommendedProduct(fakeProduct);

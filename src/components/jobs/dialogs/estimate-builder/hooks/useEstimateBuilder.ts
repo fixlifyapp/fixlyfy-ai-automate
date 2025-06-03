@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -207,6 +206,7 @@ export const useEstimateBuilder = (jobId: string, estimateId?: string) => {
     lineItems,
     setLineItems,
     estimateDetails,
+    estimateNumber: estimateDetails.estimate_number,
     isLoading,
     taxRate,
     setTaxRate,
@@ -215,9 +215,9 @@ export const useEstimateBuilder = (jobId: string, estimateId?: string) => {
     addLineItem,
     updateLineItem,
     handleUpdateLineItem,
+    handleAddProduct,
     removeLineItem,
     updateEstimateDetails,
-    handleAddProduct,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,

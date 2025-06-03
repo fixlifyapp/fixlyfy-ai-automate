@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Mail, MessageSquare, Loader2 } from "lucide-react";
 import { useEstimateSending } from "./hooks/useEstimateSending";
+import { Product } from "../../builder/types";
 
 interface EstimateSendDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface EstimateSendDialogProps {
   onSuccess: () => void;
   onCancel: () => void;
   onSave: () => Promise<boolean>;
+  onAddWarranty?: (warranty: Product | null, note: string) => void;
 }
 
 export const EstimateSendDialog = ({ 

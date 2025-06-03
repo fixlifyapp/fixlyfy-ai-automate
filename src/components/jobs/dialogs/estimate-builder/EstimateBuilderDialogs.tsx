@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
 import { CustomLineItemDialog } from "./CustomLineItemDialog";
@@ -101,7 +100,7 @@ export const EstimateBuilderDialogs = ({ clientInfo, jobId }: EstimateBuilderDia
         onSave={handleSaveEstimateWrapper}
         onAddWarranty={handleAddWarranty}
         clientInfo={clientInfo || jobData?.client}
-        estimateNumber={estimateBuilder.estimateNumber}
+        estimateNumber={estimateBuilder.estimateDetails.estimate_number}
         jobId={jobId}
       />
 
