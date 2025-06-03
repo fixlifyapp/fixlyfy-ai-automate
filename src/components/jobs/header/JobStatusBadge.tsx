@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useJobStatuses } from "@/hooks/useConfigItems";
 
 interface JobStatusBadgeProps {
@@ -108,22 +107,12 @@ export const JobStatusBadge = ({
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (status === newStatus) return;
+    if (status === newStatus || isUpdating) return;
     
     setIsUpdating(true);
     try {
-      // If jobId is provided, update the status in Supabase
-      if (jobId) {
-        const { error } = await supabase
-          .from('jobs')
-          .update({ status: newStatus })
-          .eq('id', jobId);
-          
-        if (error) throw error;
-      }
-      
-      // Call the onStatusChange callback
-      onStatusChange(newStatus);
+      // Call the onStatusChange callback immediately for optimistic update
+      await onStatusChange(newStatus);
       toast.success(`Status updated to ${getStatusLabel(newStatus)}`);
     } catch (error) {
       console.error("Error updating job status:", error);
@@ -140,9 +129,9 @@ export const JobStatusBadge = ({
           variant="outline" 
           size="sm" 
           className={cn(
-            "h-7 border font-medium",
+            "h-7 border font-medium transition-all duration-200",
             getStatusColor(status),
-            isUpdating && "opacity-70 cursor-not-allowed",
+            isUpdating && "opacity-70",
             className
           )}
           disabled={isUpdating}
@@ -168,6 +157,7 @@ export const JobStatusBadge = ({
               key={statusOption.id}
               className={status === statusOption.name ? "bg-fixlyfy/10" : ""} 
               onClick={() => handleStatusChange(statusOption.name)}
+              disabled={isUpdating}
             >
               {getStatusIcon(statusOption.name)}
               <span className="ml-2">{getStatusLabel(statusOption.name)}</span>

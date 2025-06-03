@@ -4,6 +4,7 @@ import { JobStatusBadge } from "./JobStatusBadge";
 import { ClientContactButtons } from "./ClientContactButtons";
 import { FileText, CreditCard, CheckCircle, Hash, MapPin } from "lucide-react";
 import { useJobFinancials } from "@/hooks/useJobFinancials";
+import { useState, useEffect } from "react";
 
 interface JobInfoSectionProps {
   job: {
@@ -31,6 +32,16 @@ export const JobInfoSection = ({
   onMessageClick,
   onEditClient
 }: JobInfoSectionProps) => {
+  // Use local state for optimistic status updates
+  const [currentStatus, setCurrentStatus] = useState(status);
+  
+  // Sync with prop changes but prevent unnecessary updates
+  useEffect(() => {
+    if (status !== currentStatus) {
+      setCurrentStatus(status);
+    }
+  }, [status]);
+
   const {
     invoiceAmount,
     balance,
@@ -48,6 +59,20 @@ export const JobInfoSection = ({
       const encodedAddress = encodeURIComponent(job.address);
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
       window.open(googleMapsUrl, '_blank');
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    // Optimistic update - update UI immediately
+    setCurrentStatus(newStatus);
+    
+    try {
+      // Call the parent's status change handler
+      await onStatusChange(newStatus);
+    } catch (error) {
+      // Revert on error
+      setCurrentStatus(status);
+      throw error;
     }
   };
 
@@ -79,7 +104,11 @@ export const JobInfoSection = ({
                   <span className="text-white text-xs font-medium uppercase tracking-wide">Status</span>
                 </div>
                 <div className="mt-1">
-                  <JobStatusBadge status={status} onStatusChange={onStatusChange} className="bg-white/90 text-fixlyfy border-white/30 hover:bg-white shadow-md text-xs h-6" />
+                  <JobStatusBadge 
+                    status={currentStatus} 
+                    onStatusChange={handleStatusChange} 
+                    className="bg-white/90 text-fixlyfy border-white/30 hover:bg-white shadow-md text-xs h-6" 
+                  />
                 </div>
               </div>
             </div>

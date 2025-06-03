@@ -52,7 +52,7 @@ export const JobDetailsProvider = ({
   // Handle status updates
   const { updateJobStatus: handleUpdateJobStatus } = useJobStatusUpdate(jobId, refreshJob);
   
-  // Single real-time subscription with smart debouncing
+  // Optimized real-time subscription with minimal refresh
   useEffect(() => {
     if (!jobId) return;
 
@@ -65,7 +65,7 @@ export const JobDetailsProvider = ({
     let isSubscribed = true;
     
     const channel = supabase
-      .channel(`job-details-realtime-${jobId}`)
+      .channel(`job-details-optimized-${jobId}`)
       .on(
         'postgres_changes',
         {
@@ -74,16 +74,24 @@ export const JobDetailsProvider = ({
           table: 'jobs',
           filter: `id=eq.${jobId}`
         },
-        () => {
+        (payload) => {
           if (!isSubscribed || !isMountedRef.current) return;
           
-          // Smart debouncing with longer delay
+          console.log('Real-time job update:', payload);
+          
+          // For status changes, update immediately without debounce
+          if (payload.eventType === 'UPDATE' && payload.new?.status !== payload.old?.status) {
+            setCurrentStatus(payload.new.status);
+            return;
+          }
+          
+          // For other changes, use longer debounce
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
             if (isSubscribed && isMountedRef.current) {
               refreshJob();
             }
-          }, 1500); // 1.5 second debounce
+          }, 2000); // 2 second debounce for non-status changes
         }
       )
       .subscribe();
@@ -98,18 +106,19 @@ export const JobDetailsProvider = ({
         subscriptionRef.current = null;
       }
     };
-  }, [jobId]);
+  }, [jobId, setCurrentStatus]);
   
   const updateJobStatus = async (newStatus: string) => {
-    // Optimistic update - update UI immediately
+    // Optimistic update - update UI immediately without waiting
+    const previousStatus = currentStatus;
     setCurrentStatus(newStatus);
     
     try {
       await handleUpdateJobStatus(newStatus);
-      // Don't trigger manual refresh - real-time will handle it with debounce
+      // Status already updated optimistically, no need to refresh
     } catch (error) {
       // Revert optimistic update on error
-      setCurrentStatus(currentStatus);
+      setCurrentStatus(previousStatus);
       throw error;
     }
   };
