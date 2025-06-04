@@ -159,7 +159,7 @@ const ConnectCenterPage = () => {
               <CardTitle>Messages</CardTitle>
             </CardHeader>
             <CardContent>
-              <MessagesList />
+              <MessagesList searchResults={[]} />
             </CardContent>
           </Card>
         </TabsContent>
