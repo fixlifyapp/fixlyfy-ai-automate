@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { InvoiceItemsStep } from "./invoice-builder/InvoiceItemsStep";
+import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
+import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
 import { InvoiceSendStep } from "./invoice-builder/InvoiceSendStep";
 import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
 import { Estimate } from "@/hooks/useEstimates";
@@ -23,6 +24,17 @@ interface SteppedInvoiceBuilderProps {
   onInvoiceCreated?: (invoice: Invoice) => void;
 }
 
+type BuilderStep = "items" | "upsell" | "send";
+
+interface UpsellItem {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  icon: any;
+  selected: boolean;
+}
+
 export const SteppedInvoiceBuilder = ({
   open,
   onOpenChange,
@@ -31,8 +43,13 @@ export const SteppedInvoiceBuilder = ({
   estimateToConvert,
   onInvoiceCreated
 }: SteppedInvoiceBuilderProps) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
   const [isCompleting, setIsCompleting] = useState(false);
+  const [savedInvoice, setSavedInvoice] = useState<any>(null);
+  const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
+  const [upsellNotes, setUpsellNotes] = useState("");
+  const [invoiceCreated, setInvoiceCreated] = useState(false);
+  const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
 
   const {
     formData,
@@ -61,25 +78,78 @@ export const SteppedInvoiceBuilder = ({
     if (open) {
       if (existingInvoice) {
         initializeFromInvoice(existingInvoice);
+        setInvoiceCreated(true);
       } else if (estimateToConvert) {
         initializeFromEstimate(estimateToConvert);
       } else {
         resetForm();
       }
-      setCurrentStep(1);
+      setCurrentStep("items");
+      setSelectedUpsells([]);
+      setUpsellNotes("");
+      setAddedUpsellIds(new Set());
     }
   }, [open, existingInvoice, estimateToConvert, initializeFromEstimate, initializeFromInvoice, resetForm]);
 
-  const handleNext = () => {
-    if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
+  const handleSaveAndContinue = async () => {
+    if (lineItems.length === 0) {
+      return;
+    }
+
+    try {
+      if (!invoiceCreated || !savedInvoice) {
+        const invoice = await saveInvoiceChanges();
+        if (invoice) {
+          setSavedInvoice(invoice);
+          setInvoiceCreated(true);
+        } else {
+          return;
+        }
+      }
+      setCurrentStep("upsell");
+    } catch (error) {
+      console.error("Error saving invoice:", error);
     }
   };
 
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+  const handleUpsellContinue = async (upsells: UpsellItem[], notes: string) => {
+    setSelectedUpsells(prev => [...prev, ...upsells]);
+    setUpsellNotes(notes);
+    
+    const newUpsells = upsells.filter(upsell => !addedUpsellIds.has(upsell.id));
+    
+    if (newUpsells.length > 0) {
+      const upsellLineItems = newUpsells.map(upsell => ({
+        id: `upsell-${upsell.id}-${Date.now()}`,
+        description: upsell.title + (upsell.description ? ` - ${upsell.description}` : ''),
+        quantity: 1,
+        unitPrice: upsell.price,
+        taxable: true,
+        discount: 0,
+        ourPrice: 0,
+        name: upsell.title,
+        price: upsell.price,
+        total: upsell.price
+      }));
+      
+      setLineItems(prev => [...prev, ...upsellLineItems]);
+      setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
+      
+      try {
+        const updatedInvoice = await saveInvoiceChanges();
+        if (updatedInvoice) {
+          setSavedInvoice(updatedInvoice);
+        }
+      } catch (error) {
+        console.error("Failed to save upsells:", error);
+        return;
+      }
     }
+    
+    const combinedNotes = [notes, upsellNotes].filter(Boolean).join('\n\n');
+    setNotes(combinedNotes);
+    
+    setCurrentStep("send");
   };
 
   const handleSaveAndSend = async () => {
@@ -98,15 +168,20 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
-  // Create wrapper function to convert field/value pattern to updates pattern
-  const handleLineItemUpdate = (id: string, field: string, value: any) => {
-    const updates = { [field]: value };
-    handleUpdateLineItem(id, updates);
+  const handleDialogClose = () => {
+    if (currentStep === "send") {
+      setCurrentStep("upsell");
+    } else if (currentStep === "upsell") {
+      setCurrentStep("items");
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const steps = [
     { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
-    { number: 2, title: "Send Invoice", description: "Review and send to client" }
+    { number: 2, title: "Additional Services", description: "Add warranties and extras" },
+    { number: 3, title: "Send Invoice", description: "Review and send to client" }
   ];
 
   const isStepComplete = (stepNumber: number) => {
@@ -114,6 +189,8 @@ export const SteppedInvoiceBuilder = ({
       case 1:
         return lineItems.length > 0;
       case 2:
+        return true; // Upsell step is always optional
+      case 3:
         return false; // Send step is never "complete" until actually sent
       default:
         return false;
@@ -121,15 +198,27 @@ export const SteppedInvoiceBuilder = ({
   };
 
   const canProceedToNext = () => {
-    return isStepComplete(currentStep);
+    return isStepComplete(currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3);
   };
 
+  const stepTitles = {
+    items: existingInvoice ? "Edit Invoice" : "Create Invoice",
+    upsell: "Enhance Your Invoice",
+    send: "Send Invoice"
+  };
+
+  const currentStepNumber = currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {existingInvoice ? "Edit Invoice" : estimateToConvert ? "Convert Estimate to Invoice" : "Create New Invoice"}
+          <DialogTitle className="flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+              Step {currentStepNumber} of 3
+            </span>
+            {stepTitles[currentStep]}
+            {invoiceNumber && <span className="text-sm text-muted-foreground">(#{invoiceNumber})</span>}
           </DialogTitle>
           
           {/* Step Indicator */}
@@ -137,7 +226,7 @@ export const SteppedInvoiceBuilder = ({
             {steps.map((step, index) => (
               <div key={step.number} className="flex items-center">
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  currentStep === step.number
+                  currentStepNumber === step.number
                     ? "border-primary bg-primary text-primary-foreground"
                     : isStepComplete(step.number)
                     ? "border-green-500 bg-green-500 text-white"
@@ -152,11 +241,11 @@ export const SteppedInvoiceBuilder = ({
                 
                 <div className="ml-3 text-left">
                   <div className={`text-sm font-medium ${
-                    currentStep === step.number ? "text-primary" : "text-gray-500"
+                    currentStepNumber === step.number ? "text-primary" : "text-gray-500"
                   }`}>
-                    Step {step.number} of {steps.length}
+                    {step.title}
                   </div>
-                  <div className="text-xs text-gray-500">{step.title}</div>
+                  <div className="text-xs text-gray-500">{step.description}</div>
                 </div>
                 
                 {index < steps.length - 1 && (
@@ -168,23 +257,57 @@ export const SteppedInvoiceBuilder = ({
         </DialogHeader>
         
         <div className="py-6">
-          {currentStep === 1 && (
-            <InvoiceItemsStep
-              lineItems={lineItems}
-              taxRate={taxRate}
-              notes={notes}
-              onAddProduct={handleAddProduct}
-              onRemoveLineItem={handleRemoveLineItem}
-              onUpdateLineItem={handleLineItemUpdate}
-              onTaxRateChange={setTaxRate}
-              onNotesChange={setNotes}
-              calculateSubtotal={calculateSubtotal}
-              calculateTotalTax={calculateTotalTax}
-              calculateGrandTotal={calculateGrandTotal}
-            />
+          {currentStep === "items" && (
+            <>
+              <UnifiedItemsStep
+                documentType="invoice"
+                documentNumber={invoiceNumber}
+                lineItems={lineItems}
+                taxRate={taxRate}
+                notes={notes}
+                onLineItemsChange={setLineItems}
+                onTaxRateChange={setTaxRate}
+                onNotesChange={setNotes}
+                onAddProduct={handleAddProduct}
+                onRemoveLineItem={handleRemoveLineItem}
+                onUpdateLineItem={handleUpdateLineItem}
+                calculateSubtotal={calculateSubtotal}
+                calculateTotalTax={calculateTotalTax}
+                calculateGrandTotal={calculateGrandTotal}
+              />
+
+              <div className="flex justify-between pt-4 border-t">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                
+                <Button 
+                  onClick={handleSaveAndContinue}
+                  disabled={isSubmitting || lineItems.length === 0}
+                  className="gap-2"
+                >
+                  {isSubmitting ? "Saving..." : "Save & Continue"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
           )}
           
-          {currentStep === 2 && (
+          {currentStep === "upsell" && (
+            <InvoiceUpsellStep
+              invoiceTotal={calculateGrandTotal()}
+              onContinue={handleUpsellContinue}
+              onBack={() => setCurrentStep("items")}
+              existingUpsellItems={selectedUpsells}
+            />
+          )}
+        </div>
+      </DialogContent>
+      
+      {/* Send Dialog - rendered outside the main dialog */}
+      {currentStep === "send" && (
+        <Dialog open={true} onOpenChange={() => setCurrentStep("upsell")}>
+          <DialogContent className="max-w-3xl">
             <InvoiceSendStep
               invoiceNumber={invoiceNumber}
               lineItems={lineItems}
@@ -194,45 +317,9 @@ export const SteppedInvoiceBuilder = ({
               onSave={handleSaveAndSend}
               onClose={() => onOpenChange(false)}
             />
-          )}
-        </div>
-        
-        {/* Navigation Footer */}
-        <div className="flex justify-between items-center pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          
-          <div className="text-sm text-gray-500">
-            Step {currentStep} of {steps.length}
-          </div>
-          
-          {currentStep < steps.length ? (
-            <Button
-              onClick={handleNext}
-              disabled={!canProceedToNext()}
-              className="gap-2"
-            >
-              Continue
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              disabled={isCompleting || isSubmitting}
-              className="gap-2"
-            >
-              {isCompleting || isSubmitting ? "Processing..." : "Complete"}
-              <Check className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </DialogContent>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 };

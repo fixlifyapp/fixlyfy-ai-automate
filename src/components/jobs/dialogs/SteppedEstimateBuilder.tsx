@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { LineItemsManager } from "./unified/LineItemsManager";
+import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
 import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
@@ -46,8 +47,8 @@ export const SteppedEstimateBuilder = ({
   const [savedEstimate, setSavedEstimate] = useState<any>(null);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
-  const [estimateCreated, setEstimateCreated] = useState(false); // Track if estimate was already created
-  const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set()); // Track added upsells
+  const [estimateCreated, setEstimateCreated] = useState(false);
+  const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
 
   // Create contactInfo object for compatibility - now loads much faster
   const contactInfo = {
@@ -55,17 +56,6 @@ export const SteppedEstimateBuilder = ({
     email: clientInfo?.email || '',
     phone: clientInfo?.phone || ''
   };
-  
-  console.log("=== STEPPED ESTIMATE BUILDER PROPS ===");
-  console.log("Job ID:", jobId);
-  console.log("Job ID type:", typeof jobId);
-  console.log("Existing estimate:", existingEstimate);
-  console.log("Dialog open:", open);
-  console.log("Current step:", currentStep);
-  console.log("Job data loading:", jobDataLoading);
-  console.log("Client info:", clientInfo);
-  console.log("Estimate created:", estimateCreated);
-  console.log("Added upsell IDs:", Array.from(addedUpsellIds));
   
   const {
     lineItems,
@@ -102,12 +92,11 @@ export const SteppedEstimateBuilder = ({
   // Reset step when dialog opens/closes
   useEffect(() => {
     if (open) {
-      console.log("Dialog opened, resetting state");
       setCurrentStep("items");
       setSavedEstimate(existingEstimate || null);
       setSelectedUpsells([]);
       setUpsellNotes("");
-      setEstimateCreated(!!existingEstimate); // If editing existing, mark as created
+      setEstimateCreated(!!existingEstimate);
       setAddedUpsellIds(new Set());
     }
   }, [open, existingEstimate]);
@@ -118,7 +107,6 @@ export const SteppedEstimateBuilder = ({
       if (open && !existingEstimate && !documentNumber) {
         try {
           const newNumber = await generateNextId('estimate');
-          console.log("Generated new estimate number:", newNumber);
           setDocumentNumber(newNumber);
         } catch (error) {
           console.error("Error generating estimate number:", error);
@@ -132,82 +120,49 @@ export const SteppedEstimateBuilder = ({
   }, [open, existingEstimate, documentNumber, setDocumentNumber]);
 
   const handleSaveAndContinue = async () => {
-    console.log("=== SAVE AND CONTINUE TO UPSELL ===");
-    console.log("Line items:", lineItems);
-    console.log("Line items count:", lineItems.length);
-    console.log("Job ID:", jobId);
-    console.log("Job ID type:", typeof jobId);
-    console.log("Document number:", documentNumber);
-    console.log("Subtotal:", calculateSubtotal());
-    console.log("Total tax:", calculateTotalTax());
-    console.log("Grand total:", calculateGrandTotal());
-    console.log("Estimate already created:", estimateCreated);
-    
     if (lineItems.length === 0) {
-      console.log("❌ No line items, showing error");
       toast.error("Please add at least one item to the estimate");
       return;
     }
 
     if (!jobId) {
-      console.log("❌ No job ID, showing error");
       toast.error("Job ID is required to save estimate");
       return;
     }
 
     if (typeof jobId !== 'string') {
-      console.log("❌ Job ID is not a string:", typeof jobId);
       toast.error("Invalid job ID format");
       return;
     }
-
-    console.log("✅ Starting save process...");
     
     try {
-      // Only create/save estimate if not already created
       if (!estimateCreated || !savedEstimate) {
-        console.log("📞 Calling saveDocumentChanges...");
         const estimate = await saveDocumentChanges();
         
-        console.log("📋 Save result:", estimate);
-        
         if (estimate) {
-          console.log("✅ Estimate saved successfully:", estimate);
           setSavedEstimate(estimate);
           setEstimateCreated(true);
           toast.success("Estimate saved! Choose additional services.");
         } else {
-          console.log("❌ Save returned null/undefined");
           toast.error("Failed to save estimate. Please try again.");
           return;
         }
-      } else {
-        console.log("✅ Using existing estimate:", savedEstimate);
       }
       
       setCurrentStep("upsell");
     } catch (error: any) {
-      console.error("❌ Error in handleSaveAndContinue:", error);
-      console.error("Error stack:", error.stack);
+      console.error("Error in handleSaveAndContinue:", error);
       toast.error("Failed to save estimate: " + (error.message || "Unknown error"));
     }
   };
 
   const handleUpsellContinue = async (upsells: UpsellItem[], notes: string) => {
-    console.log("=== UPSELL CONTINUE ===");
-    console.log("Selected upsells:", upsells);
-    console.log("Upsell notes:", notes);
-    console.log("Already added upsell IDs:", Array.from(addedUpsellIds));
-    
     setSelectedUpsells(prev => [...prev, ...upsells]);
     setUpsellNotes(notes);
     
-    // Only add new upsells that haven't been added before
     const newUpsells = upsells.filter(upsell => !addedUpsellIds.has(upsell.id));
     
     if (newUpsells.length > 0) {
-      console.log("Adding new upsells:", newUpsells);
-      
       const upsellLineItems = newUpsells.map(upsell => ({
         id: `upsell-${upsell.id}-${Date.now()}`,
         description: upsell.title + (upsell.description ? ` - ${upsell.description}` : ''),
@@ -222,23 +177,18 @@ export const SteppedEstimateBuilder = ({
       }));
       
       setLineItems(prev => [...prev, ...upsellLineItems]);
-      
-      // Mark these upsells as added
       setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
       
       try {
         const updatedEstimate = await saveDocumentChanges();
         if (updatedEstimate) {
           setSavedEstimate(updatedEstimate);
-          console.log("✅ Estimate updated with upsells");
         }
       } catch (error) {
         console.error("Failed to save upsells:", error);
         toast.error("Failed to save additional services");
         return;
       }
-    } else {
-      console.log("No new upsells to add");
     }
     
     const combinedNotes = [notes, upsellNotes].filter(Boolean).join('\n\n');
@@ -248,18 +198,13 @@ export const SteppedEstimateBuilder = ({
   };
 
   const handleSendSuccess = () => {
-    console.log("=== SEND SUCCESS ===");
-    console.log("Estimate sent successfully, closing builder and calling callback");
-    
     onOpenChange(false);
     
     if (onEstimateCreated) {
-      console.log("Calling onEstimateCreated callback");
       onEstimateCreated();
     }
 
     setTimeout(() => {
-      console.log("Navigating to estimates tab");
       navigate(`/jobs/${jobId}`, { 
         state: { activeTab: "estimates" },
         replace: true 
@@ -268,17 +213,14 @@ export const SteppedEstimateBuilder = ({
   };
 
   const handleSendCancel = () => {
-    console.log("Send cancelled, going back to upsell step");
     setCurrentStep("upsell");
   };
 
   const handleUpsellBack = () => {
-    console.log("Going back to items step");
     setCurrentStep("items");
   };
 
   const handleDialogClose = () => {
-    console.log("Dialog close requested, current step:", currentStep);
     if (currentStep === "send") {
       setCurrentStep("upsell");
     } else if (currentStep === "upsell") {
@@ -295,15 +237,6 @@ export const SteppedEstimateBuilder = ({
   };
 
   const currentStepNumber = currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3;
-
-  console.log("=== RENDERING STEPPED ESTIMATE BUILDER ===");
-  console.log("Current step:", currentStep);
-  console.log("Step number:", currentStepNumber);
-  console.log("Line items count:", lineItems.length);
-  console.log("Saved estimate:", !!savedEstimate);
-  console.log("Is submitting:", isSubmitting);
-  console.log("Document number:", documentNumber);
-  console.log("Contact info available:", !!contactInfo.name);
 
   return (
     <>
@@ -322,7 +255,9 @@ export const SteppedEstimateBuilder = ({
           <div className="space-y-6">
             {currentStep === "items" && (
               <>
-                <LineItemsManager
+                <UnifiedItemsStep
+                  documentType="estimate"
+                  documentNumber={documentNumber}
                   lineItems={lineItems}
                   taxRate={taxRate}
                   notes={notes}
@@ -335,7 +270,6 @@ export const SteppedEstimateBuilder = ({
                   calculateSubtotal={calculateSubtotal}
                   calculateTotalTax={calculateTotalTax}
                   calculateGrandTotal={calculateGrandTotal}
-                  documentType="estimate"
                 />
 
                 <div className="flex justify-between pt-4 border-t">
