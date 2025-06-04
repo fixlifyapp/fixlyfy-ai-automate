@@ -35,15 +35,15 @@ export const AIAgentDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Get total calls from Telnyx calls table
+      // Get total calls from Telnyx calls table using correct column names
       const { data: totalCallsData } = await supabase
         .from('telnyx_calls')
-        .select('id, call_duration, status, created_at')
+        .select('id, call_duration, call_status, created_at, to_number')
         .order('created_at', { ascending: false });
 
       if (totalCallsData) {
         const totalCalls = totalCallsData.length;
-        const completedCalls = totalCallsData.filter(call => call.status === 'completed');
+        const completedCalls = totalCallsData.filter(call => call.call_status === 'completed');
         const averageCallDuration = completedCalls.length > 0 
           ? completedCalls.reduce((sum, call) => sum + (call.call_duration || 0), 0) / completedCalls.length
           : 0;
@@ -54,7 +54,7 @@ export const AIAgentDashboard = () => {
         ).length;
         
         const activeCalls = totalCallsData.filter(call => 
-          ['initiated', 'ringing', 'streaming'].includes(call.status)
+          ['initiated', 'ringing', 'streaming'].includes(call.call_status)
         ).length;
         
         // For now, set appointments to 0 since we don't have that field in telnyx_calls
@@ -288,8 +288,8 @@ export const AIAgentDashboard = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={getStatusColor(call.status)}>
-                      {call.status}
+                    <Badge className={getStatusColor(call.call_status)}>
+                      {call.call_status}
                     </Badge>
                   </div>
                 </div>

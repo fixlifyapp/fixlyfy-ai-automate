@@ -12,7 +12,7 @@ interface CallLog {
   call_control_id: string;
   to_number: string;
   from_number?: string;
-  status: string;
+  call_status: string;  // Use call_status instead of status
   created_at: string;
   started_at?: string;
   ended_at?: string;
@@ -141,8 +141,8 @@ export const CallMonitoring = () => {
                 
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <Badge className={getStatusColor(call.status)}>
-                      {call.status}
+                    <Badge className={getStatusColor(call.call_status)}>
+                      {call.call_status}
                     </Badge>
                     <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                       <Clock className="h-3 w-3" />

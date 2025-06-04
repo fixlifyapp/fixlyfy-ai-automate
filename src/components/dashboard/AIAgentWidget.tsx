@@ -34,9 +34,9 @@ export const AIAgentWidget = () => {
       const today = new Date().toISOString().split('T')[0];
       
       const { data: callsData } = await supabase
-        .from('amazon_connect_calls')
-        .select('id, appointment_scheduled, call_status, started_at')
-        .gte('started_at', today);
+        .from('telnyx_calls')
+        .select('id, appointment_scheduled, call_status, created_at')
+        .gte('created_at', today);
 
       if (callsData) {
         const todaysCalls = callsData.length;
@@ -69,7 +69,7 @@ export const AIAgentWidget = () => {
 
   // Set up real-time sync
   useRealtimeSync({
-    tables: ['amazon_connect_calls', 'ai_agent_configs'],
+    tables: ['telnyx_calls', 'ai_agent_configs'],
     onUpdate: fetchStats,
     enabled: true
   });
@@ -100,7 +100,7 @@ export const AIAgentWidget = () => {
             <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-medium mb-2">AI Agent Not Configured</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Set up your Amazon Connect AI agent to start automated calling
+              Set up your Telnyx AI agent to start automated calling
             </p>
             <Button 
               onClick={() => navigate('/connect?tab=ai-settings')}
