@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { CheckCircle, FileText, Send } from "lucide-react";
 import { LineItem } from "../../builder/types";
 import { SendMethodStep } from "../estimate-builder/steps/SendMethodStep";
 import { useInvoiceSending } from "./hooks/useInvoiceSending";
+import { useJobData } from "../unified/hooks/useJobData";
 
 interface InvoiceSendStepProps {
   invoiceNumber: string;
@@ -31,12 +32,22 @@ export const InvoiceSendStep = ({
   jobId,
   onSave,
   onClose,
-  contactInfo
+  contactInfo: providedContactInfo
 }: InvoiceSendStepProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
   const [validationError, setValidationError] = useState("");
   const { sendInvoice, isProcessing } = useInvoiceSending();
+  
+  // Fetch job and client data
+  const { clientInfo, loading } = useJobData(jobId);
+
+  // Use the most complete contact information available
+  const contactInfo = providedContactInfo || {
+    name: clientInfo?.name || 'Client',
+    email: clientInfo?.email || '',
+    phone: clientInfo?.phone || ''
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -83,6 +94,22 @@ export const InvoiceSendStep = ({
   const handleBack = () => {
     onClose();
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full max-h-[85vh] overflow-hidden">
+        <div className="flex-shrink-0 p-6 border-b">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Send Invoice</h3>
+            <Badge variant="secondary">#{invoiceNumber}</Badge>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full max-h-[85vh] overflow-hidden">
