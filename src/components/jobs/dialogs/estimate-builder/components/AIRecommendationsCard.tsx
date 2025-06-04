@@ -18,14 +18,14 @@ interface AIRecommendationsCardProps {
     confidence_score: number;
     price: number;
   }>;
-  estimateId?: string; // Add this to make tips stable per estimate
+  estimateId?: string;
 }
 
-const dynamicProTips = [
+const staticProTips = [
   "Offer 1-year warranty for jobs under $500 - clients expect basic protection",
-  "2-year warranties convert 60% better on HVAC installations",
+  "2-year warranties convert 60% better on HVAC installations", 
   "Extended warranties increase customer retention by 40%",
-  "Emergency service warranty sells best during winter months", 
+  "Emergency service warranty sells best during winter months",
   "Mention warranty within first 5 minutes - increases sales by 35%",
   "Bundle warranties with maintenance plans for higher value",
   "Show warranty comparison chart - visual helps close deals",
@@ -45,7 +45,7 @@ export const AIRecommendationsCard = ({
   
   // Use useMemo to ensure tips are stable for this specific estimate
   const tips = useMemo(() => {
-    // Create a seed based on estimate ID or job context for consistent randomization
+    // Create a seed based on estimate ID for consistent selection
     const seed = estimateId || `${jobContext.job_type}-${jobContext.job_value}`;
     
     // Simple hash function to create consistent randomization
@@ -61,25 +61,27 @@ export const AIRecommendationsCard = ({
     
     const seedValue = hashCode(seed);
     
-    // Use seeded randomization to get consistent tips for this estimate
-    const getSeededRandomTips = () => {
-      const shuffled = [...dynamicProTips];
-      // Use seed to consistently shuffle
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = (seedValue + i) % (i + 1);
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    // Select consistent tips based on seed
+    const getConsistentTips = () => {
+      const tipCount = 2 + (seedValue % 2); // Always 2-3 tips
+      const startIndex = seedValue % staticProTips.length;
+      const selectedTips = [];
+      
+      for (let i = 0; i < tipCount; i++) {
+        const index = (startIndex + i) % staticProTips.length;
+        selectedTips.push(staticProTips[index]);
       }
-      const tipCount = 2 + (seedValue % 2); // 2-3 tips consistently
-      return shuffled.slice(0, tipCount);
+      
+      return selectedTips;
     };
 
     if (recommendations.length > 0) {
       return [
         ...recommendations.slice(0, 2).map(rec => `${rec.warranty_name} - ${rec.reasoning}`),
-        ...getSeededRandomTips().slice(0, 1)
+        ...getConsistentTips().slice(0, 1)
       ];
     } else {
-      return getSeededRandomTips();
+      return getConsistentTips();
     }
   }, [recommendations, estimateId, jobContext.job_type, jobContext.job_value]);
 
@@ -91,7 +93,7 @@ export const AIRecommendationsCard = ({
           Pro Tips
           <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 text-xs">
             <Sparkles className="h-3 w-3 mr-1" />
-            {recommendations.length > 0 ? 'AI + Dynamic' : 'Dynamic'}
+            {recommendations.length > 0 ? 'AI + Static' : 'Static'}
           </Badge>
         </CardTitle>
       </CardHeader>

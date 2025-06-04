@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 import { AIWarrantyRecommendationDialog } from "./AIWarrantyRecommendationDialog";
@@ -42,6 +42,11 @@ export const EstimateUpsellStep = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
+
+  // Create a stable estimate ID that doesn't change during the session
+  const stableEstimateId = useMemo(() => {
+    return `estimate-${jobContext?.job_type || 'unknown'}-${estimateTotal}`;
+  }, [jobContext?.job_type, estimateTotal]);
 
   // Convert warranty products to upsell items and restore previous selections
   useEffect(() => {
@@ -144,7 +149,7 @@ export const EstimateUpsellStep = ({
 
       <AIRecommendationsCard
         jobContext={jobContext}
-        estimateId={`estimate-${Date.now()}`} // Use a stable ID for this estimate session
+        estimateId={stableEstimateId}
       />
 
       <WarrantiesList
