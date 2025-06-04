@@ -24,14 +24,7 @@ interface AIRecommendationsCardProps {
 const staticProTips = [
   "Offer 1-year warranty for jobs under $500 - clients expect basic protection",
   "2-year warranties convert 60% better on HVAC installations", 
-  "Extended warranties increase customer retention by 40%",
-  "Emergency service warranty sells best during winter months",
-  "Mention warranty within first 5 minutes - increases sales by 35%",
-  "Bundle warranties with maintenance plans for higher value",
-  "Show warranty comparison chart - visual helps close deals",
-  "Follow up warranty calls generate 25% repeat business",
-  "Seasonal warranties (winter protection) have 80% acceptance rate",
-  "Warranty claims under $200 build massive customer loyalty"
+  "Extended warranties increase customer retention by 40%"
 ];
 
 export const AIRecommendationsCard = ({ 
@@ -43,47 +36,17 @@ export const AIRecommendationsCard = ({
 
   const sanitizedJobType = sanitizeHtml(jobContext.job_type || '');
   
-  // Use useMemo to ensure tips are stable for this specific estimate
+  // Always show the same static tips
   const tips = useMemo(() => {
-    // Create a seed based on estimate ID for consistent selection
-    const seed = estimateId || `${jobContext.job_type}-${jobContext.job_value}`;
-    
-    // Simple hash function to create consistent randomization
-    const hashCode = (str: string) => {
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      return Math.abs(hash);
-    };
-    
-    const seedValue = hashCode(seed);
-    
-    // Select consistent tips based on seed
-    const getConsistentTips = () => {
-      const tipCount = 2 + (seedValue % 2); // Always 2-3 tips
-      const startIndex = seedValue % staticProTips.length;
-      const selectedTips = [];
-      
-      for (let i = 0; i < tipCount; i++) {
-        const index = (startIndex + i) % staticProTips.length;
-        selectedTips.push(staticProTips[index]);
-      }
-      
-      return selectedTips;
-    };
-
     if (recommendations.length > 0) {
       return [
         ...recommendations.slice(0, 2).map(rec => `${rec.warranty_name} - ${rec.reasoning}`),
-        ...getConsistentTips().slice(0, 1)
+        staticProTips[0] // Always show the first static tip
       ];
     } else {
-      return getConsistentTips();
+      return staticProTips; // Always show all static tips
     }
-  }, [recommendations, estimateId, jobContext.job_type, jobContext.job_value]);
+  }, [recommendations]);
 
   return (
     <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
