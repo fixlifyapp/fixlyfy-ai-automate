@@ -138,7 +138,11 @@ const ConnectCenterPage = () => {
   const handleNewCommunication = () => {
     switch (activeTab) {
       case "messages":
-        openMessageDialog({ name: "New Client", phone: "" });
+        openMessageDialog({ 
+          id: "new-client", 
+          name: "New Client", 
+          phone: "" 
+        });
         break;
       case "calls":
         if (ownedNumbers.length === 0) {
