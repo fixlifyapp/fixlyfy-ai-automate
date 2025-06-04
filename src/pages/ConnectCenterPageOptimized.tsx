@@ -19,6 +19,8 @@ import { useConnectCenterData } from "@/components/connect/hooks/useConnectCente
 import { toast } from "sonner";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 import { supabase } from "@/integrations/supabase/client";
+import { AIAgentToggle } from "@/components/connect/AIAgentToggle";
+import { ActiveCallInterface } from "@/components/connect/ActiveCallInterface";
 
 const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("monitoring");
@@ -145,6 +147,12 @@ const ConnectCenterPageOptimized = () => {
       <div className="mb-6">
         <ConnectSearch onSearchResults={setSearchResults} />
       </div>
+
+      {/* AI Agent Toggle */}
+      <AIAgentToggle />
+
+      {/* Active Call Interface */}
+      <ActiveCallInterface />
       
       {isLoading ? (
         <LoadingSkeleton type="connect-tabs" />

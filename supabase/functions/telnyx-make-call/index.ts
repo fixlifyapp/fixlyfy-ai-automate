@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -6,130 +7,139 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const TELNYX_API_KEY = Deno.env.get('TELNYX_API_KEY')
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header provided');
-    }
-
-    const supabaseAdmin = createClient(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { to, clientId, jobId } = await req.json();
+    const { action = 'call', to, from, clientId, jobId, call_control_id } = await req.json()
 
-    if (!to) {
-      throw new Error('Phone number is required');
-    }
+    console.log('Telnyx action:', action, { to, from, clientId, jobId, call_control_id })
 
-    // Get user's active Telnyx phone number
-    const { data: phoneNumbers, error: phoneError } = await supabaseAdmin
-      .from('telnyx_phone_numbers')
-      .select('*')
-      .eq('status', 'active')
-      .order('purchased_at', { ascending: false })
-      .limit(1);
+    let response
+    let data
 
-    if (phoneError || !phoneNumbers || phoneNumbers.length === 0) {
-      throw new Error('No active Telnyx phone number found');
-    }
-
-    const fromNumber = phoneNumbers[0].phone_number;
-
-    // Format phone numbers
-    const formatForTelnyx = (phone: string) => {
-      const cleaned = phone.replace(/\D/g, '');
-      return cleaned.startsWith('1') ? `+${cleaned}` : `+1${cleaned}`;
-    };
-
-    const formattedFrom = formatForTelnyx(fromNumber);
-    const formattedTo = formatForTelnyx(to);
-
-    console.log('Making call from:', formattedFrom, 'to:', formattedTo);
-
-    // Get Telnyx API key
-    const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
-    if (!telnyxApiKey) {
-      throw new Error('Telnyx API key not configured');
-    }
-
-    // Make the call using Telnyx API
-    const callResponse = await fetch('https://api.telnyx.com/v2/calls', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${telnyxApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        connection_id: phoneNumbers[0].connection_id || 'default',
-        to: formattedTo,
-        from: formattedFrom,
-        webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/telnyx-voice-webhook`,
-        webhook_url_method: 'POST'
-      })
-    });
-
-    const callResult = await callResponse.json();
-
-    if (!callResponse.ok) {
-      console.error('Telnyx call API error:', callResult);
-      throw new Error(callResult.errors?.[0]?.detail || 'Failed to initiate call');
-    }
-
-    const callControlId = callResult.data?.call_control_id;
-
-    // Log the outbound call with proper column mapping
-    const { error: logError } = await supabaseAdmin
-      .from('telnyx_calls')
-      .insert({
-        call_control_id: callControlId,
-        // Use new column names
-        from_number: formattedFrom,
-        to_number: formattedTo,
-        direction: 'outbound',
-        status: 'initiated',
-        client_id: clientId || null,
-        job_id: jobId || null,
-        started_at: new Date().toISOString(),
-        // Keep old columns for backward compatibility
-        phone_number_id: phoneNumbers[0].id,
-        call_status: 'initiated',
-        metadata: {
-          telnyx_call_id: callResult.data?.id
+    switch (action) {
+      case 'call':
+        // Make outbound call
+        response = await fetch('https://api.telnyx.com/v2/calls', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${TELNYX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: to,
+            from: from || '+12345678900', // Default number - should be configured
+            connection_id: 'your-connection-id', // Should be configured
+            webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/telnyx-voice-webhook`
+          })
+        })
+        data = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(`Telnyx API error: ${data.errors?.[0]?.detail || 'Unknown error'}`)
         }
-      });
 
-    if (logError) {
-      console.error('Error logging outbound call:', logError);
+        // Log the call in database
+        await supabaseClient
+          .from('telnyx_calls')
+          .insert({
+            call_control_id: data.data.call_control_id,
+            from_number: from || '+12345678900',
+            to_number: to,
+            direction: 'outbound',
+            status: 'initiated',
+            client_id: clientId,
+            started_at: new Date().toISOString()
+          })
+
+        break
+
+      case 'hangup':
+        // End call
+        response = await fetch(`https://api.telnyx.com/v2/calls/${call_control_id}/actions/hangup`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${TELNYX_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        data = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(`Telnyx hangup error: ${data.errors?.[0]?.detail || 'Unknown error'}`)
+        }
+
+        // Update call status
+        await supabaseClient
+          .from('telnyx_calls')
+          .update({
+            status: 'completed',
+            ended_at: new Date().toISOString()
+          })
+          .eq('call_control_id', call_control_id)
+
+        break
+
+      case 'mute':
+        // Mute call
+        response = await fetch(`https://api.telnyx.com/v2/calls/${call_control_id}/actions/mute`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${TELNYX_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        data = await response.json()
+        break
+
+      case 'unmute':
+        // Unmute call
+        response = await fetch(`https://api.telnyx.com/v2/calls/${call_control_id}/actions/unmute`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${TELNYX_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        data = await response.json()
+        break
+
+      default:
+        throw new Error(`Unknown action: ${action}`)
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        callControlId,
-        message: 'Call initiated successfully' 
+        data: data?.data || data,
+        action
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
+
   } catch (error) {
-    console.error('Error making call:', error);
+    console.error('Error in telnyx-make-call function:', error)
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: error.message 
       }),
-      {
+      { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: 400
       }
     )
   }
