@@ -26,8 +26,13 @@ export const DispatcherMessagesView = ({ searchResults = [] }: DispatcherMessage
     console.log('Client selected from search:', client);
     setSelectedClientFromSearch(client);
     
-    // Open message dialog for the selected client
-    await openMessageDialog(client);
+    // Open message dialog for the selected client - ensure phone is provided
+    await openMessageDialog({
+      id: client.id,
+      name: client.name,
+      phone: client.phone || '', // Provide empty string if phone is undefined
+      email: client.email || ''
+    });
     
     // Try to find existing conversation for this client
     const existingConv = conversations.find(conv => conv.client.id === client.id);

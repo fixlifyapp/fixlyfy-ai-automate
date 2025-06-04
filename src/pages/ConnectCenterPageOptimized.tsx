@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -58,8 +57,8 @@ const ConnectCenterPageOptimized = () => {
         await openMessageDialog({
           id: clientId,
           name: clientName,
-          phone: clientPhone,
-          email: clientEmail || ""
+          phone: clientPhone || '', // Provide empty string if phone is undefined
+          email: clientEmail || ''
         });
       } else if (activeTab === "calls" && clientPhone) {
         // Auto-initiate call for calls tab
@@ -130,8 +129,13 @@ const ConnectCenterPageOptimized = () => {
       setActiveTab("messages");
     }
     
-    // Open message dialog for the selected client
-    await openMessageDialog(client);
+    // Open message dialog for the selected client - ensure phone is provided
+    await openMessageDialog({
+      id: client.id,
+      name: client.name,
+      phone: client.phone || '', // Provide empty string if phone is undefined
+      email: client.email || ''
+    });
   };
 
   const getActionButtonText = () => {
