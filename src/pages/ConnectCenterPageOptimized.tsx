@@ -19,11 +19,13 @@ import { useMessageContext } from "@/contexts/MessageContext";
 import { useConnectCenterData } from "@/components/connect/hooks/useConnectCenterData";
 import { toast } from "sonner";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
+import { supabase } from "@/integrations/supabase/client";
 
 const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("monitoring");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [isCallLoading, setIsCallLoading] = useState(false);
   
   const { openMessageDialog } = useMessageContext();
   const { unreadCounts, ownedNumbers, isLoading, refreshData } = useConnectCenterData();
@@ -43,18 +45,55 @@ const ConnectCenterPageOptimized = () => {
   }, [tabParam]);
   
   useEffect(() => {
-    if (clientId && clientName) {
-      if (activeTab === "emails" && clientEmail) {
-        setEmailComposerOpen(true);
-      } else {
-        openMessageDialog({
+    const handleClientActions = async () => {
+      if (!clientId || !clientName) return;
+
+      // Auto-trigger actions based on the active tab
+      if (activeTab === "messages" && clientPhone) {
+        await openMessageDialog({
           id: clientId,
           name: clientName,
-          phone: clientPhone || ""
+          phone: clientPhone,
+          email: clientEmail || ""
         });
+      } else if (activeTab === "calls" && clientPhone) {
+        // Auto-initiate call for calls tab
+        await handleAutoCall();
+      } else if (activeTab === "emails" && clientEmail) {
+        setEmailComposerOpen(true);
       }
-    }
+    };
+
+    // Delay to ensure tab is set first
+    const timer = setTimeout(handleClientActions, 100);
+    return () => clearTimeout(timer);
   }, [clientId, clientName, clientPhone, clientEmail, activeTab, openMessageDialog]);
+
+  const handleAutoCall = async () => {
+    if (!clientPhone || !clientId) return;
+
+    setIsCallLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
+        body: {
+          to: clientPhone,
+          clientId: clientId
+        }
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'Failed to initiate call');
+      }
+
+      toast.success(`Call initiated to ${clientName}`);
+    } catch (error) {
+      console.error('Error making call:', error);
+      toast.error('Failed to make call: ' + error.message);
+    } finally {
+      setIsCallLoading(false);
+    }
+  };
 
   const handleNewCommunication = () => {
     switch (activeTab) {
@@ -90,11 +129,12 @@ const ConnectCenterPageOptimized = () => {
       
       <PageHeader
         title="Connect Center"
-        subtitle="Communication hub and call monitoring"
+        subtitle={clientName ? `Communication with ${clientName}` : "Communication hub and call monitoring"}
         icon={MessageSquare}
         badges={[
           { text: "Telnyx", icon: Phone, variant: "fixlyfy" },
-          { text: "Real-time Sync", icon: MessageSquare, variant: "info" }
+          { text: "Real-time Sync", icon: MessageSquare, variant: "info" },
+          ...(isCallLoading ? [{ text: "Calling...", icon: Phone, variant: "destructive" }] : [])
         ]}
         actionButton={{
           text: getActionButtonText(),

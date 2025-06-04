@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -20,9 +21,7 @@ import { SteppedEstimateBuilder } from "./dialogs/SteppedEstimateBuilder";
 import { InvoiceBuilderDialog } from "./dialogs/InvoiceBuilderDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { useJobHistory } from "@/hooks/useJobHistory";
-import { useMessageContext } from "@/contexts/MessageContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface JobDetailsQuickActionsProps {
   jobId: string;
@@ -31,10 +30,9 @@ interface JobDetailsQuickActionsProps {
 export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) => {
   const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [isCallLoading, setIsCallLoading] = useState(false);
   const { jobs, isLoading } = useJobs();
   const { addHistoryItem } = useJobHistory(jobId);
-  const { openMessageDialog } = useMessageContext();
+  const navigate = useNavigate();
   
   const job = jobs.find(j => j.id === jobId);
 
@@ -62,45 +60,22 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
 
   const handleCallClient = async () => {
     if (!job?.client?.phone) {
-      toast.error('No phone number available for this client');
       return;
     }
 
-    setIsCallLoading(true);
-    
-    try {
-      await addHistoryItem({
-        job_id: jobId,
-        type: 'communication',
-        title: 'Call Initiated',
-        description: 'User initiated a call to the client',
-        meta: { action: 'call_initiated', client_phone: job.client.phone }
-      });
+    await addHistoryItem({
+      job_id: jobId,
+      type: 'communication',
+      title: 'Call Initiated',
+      description: 'User navigated to Connect Center to call client',
+      meta: { action: 'call_navigation', client_phone: job.client.phone }
+    });
 
-      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
-        body: {
-          to: job.client.phone,
-          clientId: job.client.id,
-          jobId: jobId
-        }
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || 'Failed to initiate call');
-      }
-
-      toast.success('Call initiated successfully');
-    } catch (error) {
-      console.error('Error making call:', error);
-      toast.error('Failed to make call: ' + error.message);
-    } finally {
-      setIsCallLoading(false);
-    }
+    navigate(`/connect?tab=calls&clientId=${job.client.id}&clientName=${encodeURIComponent(job.client.name)}&clientPhone=${encodeURIComponent(job.client.phone)}`);
   };
 
   const handleMessageClient = async () => {
     if (!job?.client) {
-      toast.error('No client information available');
       return;
     }
 
@@ -108,16 +83,11 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       job_id: jobId,
       type: 'communication',
       title: 'Message Started',
-      description: 'User started composing a message to the client',
-      meta: { action: 'message_initiated', client_phone: job.client.phone }
+      description: 'User navigated to Connect Center to message client',
+      meta: { action: 'message_navigation', client_phone: job.client.phone }
     });
 
-    await openMessageDialog({
-      id: job.client.id,
-      name: job.client.name,
-      phone: job.client.phone || "",
-      email: job.client.email || ""
-    });
+    navigate(`/connect?tab=messages&clientId=${job.client.id}&clientName=${encodeURIComponent(job.client.name)}&clientPhone=${encodeURIComponent(job.client.phone || "")}`);
   };
 
   const handleScheduleJob = async () => {
@@ -197,19 +167,10 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
               onClick={handleCallClient}
               variant="outline" 
               className="w-full justify-start h-10"
-              disabled={!job?.client?.phone || isCallLoading}
+              disabled={!job?.client?.phone}
             >
-              {isCallLoading ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border border-gray-300 border-t-gray-600 rounded-full mr-3" />
-                  <span>Calling...</span>
-                </>
-              ) : (
-                <>
-                  <Phone className="h-4 w-4 mr-3" />
-                  <span>Call Client</span>
-                </>
-              )}
+              <Phone className="h-4 w-4 mr-3" />
+              <span>Call Client</span>
               {job?.client?.phone && (
                 <Badge variant="secondary" className="ml-auto text-xs">
                   {job.client.phone}

@@ -1,12 +1,8 @@
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageSquare, Pencil, Mail } from "lucide-react";
 import { useJobDetails } from "../context/JobDetailsContext";
-import { useMessageContext } from "@/contexts/MessageContext";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface ClientContactButtonsProps {
   onCallClick: () => void;
@@ -14,62 +10,25 @@ interface ClientContactButtonsProps {
   onEditClient: () => void;
 }
 
-export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient }: ClientContactButtonsProps) => {
+export const ClientContactButtons = ({ onEditClient }: ClientContactButtonsProps) => {
   const { job } = useJobDetails();
-  const { openMessageDialog } = useMessageContext();
   const navigate = useNavigate();
-  const [isCallLoading, setIsCallLoading] = useState(false);
 
-  const handleCallClick = async () => {
-    if (!job?.phone) {
-      toast.error('No phone number available for this client');
-      return;
-    }
-
-    setIsCallLoading(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
-        body: {
-          to: job.phone,
-          clientId: job.clientId,
-          jobId: job.id
-        }
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || 'Failed to initiate call');
-      }
-
-      toast.success('Call initiated successfully');
-    } catch (error) {
-      console.error('Error making call:', error);
-      toast.error('Failed to make call: ' + error.message);
-    } finally {
-      setIsCallLoading(false);
+  const handleCallClick = () => {
+    if (job?.clientId && job?.client && job?.phone) {
+      navigate(`/connect?tab=calls&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientPhone=${encodeURIComponent(job.phone)}`);
     }
   };
 
-  const handleMessageClick = async () => {
-    if (job) {
-      console.log('Message button clicked for job:', job);
-      await openMessageDialog({
-        id: job.clientId,
-        name: job.client,
-        phone: job.phone || "",
-        email: job.email || ""
-      });
-    } else {
-      console.error('No job data available');
+  const handleMessageClick = () => {
+    if (job?.clientId && job?.client && job?.phone) {
+      navigate(`/connect?tab=messages&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientPhone=${encodeURIComponent(job.phone)}`);
     }
   };
 
   const handleEmailClick = () => {
-    if (job?.email) {
-      window.open(`mailto:${job.email}`, '_self');
-      toast.success(`Opening email to ${job.client}`);
-    } else {
-      toast.error('No email address available for this client');
+    if (job?.clientId && job?.client && job?.email) {
+      navigate(`/connect?tab=emails&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientEmail=${encodeURIComponent(job.email)}`);
     }
   };
 
@@ -89,14 +48,10 @@ export const ClientContactButtons = ({ onCallClick, onMessageClick, onEditClient
         size="sm"
         className="h-10 w-10 p-0 border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300 rounded-lg shadow-sm transition-all duration-200"
         onClick={handleCallClick}
-        disabled={!job?.phone || isCallLoading}
+        disabled={!job?.phone}
         title="Call Client"
       >
-        {isCallLoading ? (
-          <div className="animate-spin h-4 w-4 border border-green-300 border-t-green-600 rounded-full" />
-        ) : (
-          <Phone size={18} />
-        )}
+        <Phone size={18} />
       </Button>
 
       {/* Message Button */}
