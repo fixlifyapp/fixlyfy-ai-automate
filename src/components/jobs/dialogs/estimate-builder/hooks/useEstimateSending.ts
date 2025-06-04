@@ -109,23 +109,10 @@ export const useEstimateSending = () => {
         savedEstimate = estimate;
         console.log("Found existing estimate:", savedEstimate);
       } else {
-        // Only save if we don't have an existing estimate
-        console.log("Step 1: Saving new estimate...");
-        const success = await onSave();
+        // First check if estimate already exists with this number to prevent duplicates
+        console.log("Checking for existing estimate with number:", estimateNumber);
         
-        if (!success) {
-          console.error("Failed to save estimate");
-          toast.error("Failed to save estimate. Please try again.");
-          return { success: false, error: "Failed to save estimate" };
-        }
-
-        console.log("Step 2: Estimate saved successfully");
-        
-        // Wait a moment for the estimate to be fully saved
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Get the latest estimate details after saving
-        const { data: estimate, error: fetchError } = await supabase
+        const { data: existingEstimate, error: checkError } = await supabase
           .from('estimates')
           .select('id, estimate_number, total, status, notes, job_id')
           .eq('estimate_number', estimateNumber)
@@ -133,14 +120,47 @@ export const useEstimateSending = () => {
           .limit(1)
           .maybeSingle();
 
-        if (fetchError || !estimate) {
-          console.error("Failed to fetch saved estimate:", fetchError);
-          toast.error("Estimate not found after saving. Please try again.");
-          return { success: false, error: "Estimate not found after saving" };
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error("Error checking for existing estimate:", checkError);
         }
 
-        savedEstimate = estimate;
-        console.log("Step 3: Retrieved saved estimate:", savedEstimate);
+        if (existingEstimate) {
+          console.log("Found existing estimate with same number:", existingEstimate);
+          savedEstimate = existingEstimate;
+        } else {
+          // Only save if we don't have an existing estimate
+          console.log("Step 1: Saving new estimate...");
+          const success = await onSave();
+          
+          if (!success) {
+            console.error("Failed to save estimate");
+            toast.error("Failed to save estimate. Please try again.");
+            return { success: false, error: "Failed to save estimate" };
+          }
+
+          console.log("Step 2: Estimate saved successfully");
+          
+          // Wait a moment for the estimate to be fully saved
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Get the latest estimate details after saving
+          const { data: estimate, error: fetchError } = await supabase
+            .from('estimates')
+            .select('id, estimate_number, total, status, notes, job_id')
+            .eq('estimate_number', estimateNumber)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (fetchError || !estimate) {
+            console.error("Failed to fetch saved estimate:", fetchError);
+            toast.error("Estimate not found after saving. Please try again.");
+            return { success: false, error: "Estimate not found after saving" };
+          }
+
+          savedEstimate = estimate;
+          console.log("Step 3: Retrieved saved estimate:", savedEstimate);
+        }
       }
 
       let finalRecipient = sendTo;
