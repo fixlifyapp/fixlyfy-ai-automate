@@ -21,7 +21,7 @@ interface EstimateSendDialogProps {
     phone: string;
   };
   onSuccess?: () => void;
-  onSave: () => Promise<boolean>;
+  onSave?: () => Promise<boolean>; // Made optional
 }
 
 export const EstimateSendDialog = ({ 
@@ -95,8 +95,8 @@ export const EstimateSendDialog = ({
       contactInfo: contactInfo || { name: '', email: '', phone: '' },
       customNote: "",
       jobId: estimateId,
-      onSave,
-      existingEstimateId: estimateId // Pass existing estimate ID to prevent duplication
+      onSave: onSave || (() => Promise.resolve(true)), // Provide fallback function
+      existingEstimateId: estimateId
     });
 
     if (result.success) {
