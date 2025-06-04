@@ -247,79 +247,6 @@ export type Database = {
         }
         Relationships: []
       }
-      amazon_connect_calls: {
-        Row: {
-          ai_transcript: string | null
-          appointment_data: Json | null
-          appointment_scheduled: boolean | null
-          call_duration: number | null
-          call_status: string | null
-          client_id: string | null
-          contact_id: string
-          created_at: string
-          ended_at: string | null
-          id: string
-          instance_id: string
-          phone_number: string
-          started_at: string
-          user_id: string | null
-        }
-        Insert: {
-          ai_transcript?: string | null
-          appointment_data?: Json | null
-          appointment_scheduled?: boolean | null
-          call_duration?: number | null
-          call_status?: string | null
-          client_id?: string | null
-          contact_id: string
-          created_at?: string
-          ended_at?: string | null
-          id?: string
-          instance_id: string
-          phone_number: string
-          started_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          ai_transcript?: string | null
-          appointment_data?: Json | null
-          appointment_scheduled?: boolean | null
-          call_duration?: number | null
-          call_status?: string | null
-          client_id?: string | null
-          contact_id?: string
-          created_at?: string
-          ended_at?: string | null
-          id?: string
-          instance_id?: string
-          phone_number?: string
-          started_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "amazon_connect_calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "amazon_connect_calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "amazon_connect_calls_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "invoice_details_view"
-            referencedColumns: ["client_id"]
-          },
-        ]
-      }
       auth_rate_limits: {
         Row: {
           attempt_type: string
@@ -589,39 +516,6 @@ export type Database = {
           success_count?: number | null
           template_id?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      aws_credentials: {
-        Row: {
-          aws_access_key_id: string
-          aws_region: string | null
-          aws_secret_access_key: string
-          created_at: string
-          id: string
-          is_active: boolean | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          aws_access_key_id: string
-          aws_region?: string | null
-          aws_secret_access_key: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          aws_access_key_id?: string
-          aws_region?: string | null
-          aws_secret_access_key?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
