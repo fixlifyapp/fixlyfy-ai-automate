@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Sparkles, Shield, CheckCircle } from "lucide-react";
+import { TrendingUp, Sparkles } from "lucide-react";
 import { sanitizeHtml } from "@/utils/security";
 
 interface AIRecommendationsCardProps {
@@ -26,57 +26,36 @@ export const AIRecommendationsCard = ({
   if (!jobContext) return null;
 
   const sanitizedJobType = sanitizeHtml(jobContext.job_type || '');
-  const sanitizedServiceCategory = sanitizeHtml(jobContext.service_category || '');
 
-  // Default recommendations if no AI data available
-  const defaultRecommendations = [
-    {
-      warranty_name: "1-Year Extended Warranty",
-      reasoning: `For ${sanitizedJobType} work, clients often need peace of mind. This warranty covers unexpected issues after installation.`,
-      confidence_score: 85,
-      price: 89
-    },
-    {
-      warranty_name: "2-Year Protection Plan", 
-      reasoning: "Higher value jobs benefit from extended coverage. Show clients you stand behind your work.",
-      confidence_score: 78,
-      price: 149
-    }
-  ];
-
-  const displayRecommendations = recommendations.length > 0 ? recommendations : defaultRecommendations;
+  // Quick tips for warranty sales
+  const tips = recommendations.length > 0 
+    ? recommendations.slice(0, 2).map(rec => `${rec.warranty_name} ($${rec.price}) - ${rec.reasoning}`)
+    : [
+        `For ${sanitizedJobType} jobs: Always offer 1-year warranty ($89) - most clients expect protection`,
+        "Higher value jobs: Suggest 2-year plans ($149) - shows you stand behind your work"
+      ];
 
   return (
     <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-green-900 text-lg">
-          <TrendingUp className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-green-900 text-base">
+          <TrendingUp className="h-4 w-4" />
           Warranty Sales Tips
-          <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+          <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 text-xs">
             <Sparkles className="h-3 w-3 mr-1" />
-            AI Recommended
+            AI Tips
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {displayRecommendations.slice(0, 2).map((rec, index) => (
-          <div key={index} className="bg-white/60 p-3 rounded-lg border border-green-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-green-600" />
-                <span className="font-medium text-green-900">{rec.warranty_name}</span>
-                <span className="text-sm font-bold text-green-700">${rec.price}</span>
-              </div>
-              <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                {rec.confidence_score}% match
-              </Badge>
-            </div>
-            <p className="text-sm text-green-700 leading-relaxed">{rec.reasoning}</p>
+      <CardContent className="space-y-2">
+        {tips.map((tip, index) => (
+          <div key={index} className="text-sm text-green-700 bg-white/60 p-2 rounded border border-green-200">
+            • {tip}
           </div>
         ))}
         
-        <div className="bg-green-100 p-3 rounded-lg text-xs text-green-800">
-          💡 <strong>Pro Tip:</strong> Clients who purchase warranties are 3x more likely to call you for future services!
+        <div className="bg-green-100 p-2 rounded text-xs text-green-800">
+          💡 <strong>Pro Tip:</strong> Clients with warranties call back 3x more often!
         </div>
       </CardContent>
     </Card>

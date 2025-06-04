@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
@@ -145,7 +144,6 @@ export const EstimateUpsellStep = ({
 
       <AIRecommendationsCard
         jobContext={jobContext}
-        onShowRecommendations={() => setShowAIRecommendations(true)}
       />
 
       <WarrantiesList
