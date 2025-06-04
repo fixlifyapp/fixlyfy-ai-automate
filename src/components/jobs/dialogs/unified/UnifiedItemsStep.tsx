@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash, Search } from "lucide-react";
 import { LineItem } from "../../builder/types";
-import { ProductCatalogDialog } from "../../ProductCatalogDialog";
+import { ProductSearch } from "../../builder/ProductSearch";
 
 interface UnifiedItemsStepProps {
   documentType: "estimate" | "invoice";
@@ -229,7 +229,7 @@ export const UnifiedItemsStep = ({
       </div>
 
       {/* Product Catalog Dialog */}
-      <ProductCatalogDialog
+      <ProductSearch
         open={showCatalog}
         onOpenChange={setShowCatalog}
         onProductSelect={(product) => {
