@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { MessageSquare, Phone, Mail, Plus, Users, TestTube } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { useConnectCenterData } from "@/components/connect/hooks/useConnectCenterData";
@@ -34,6 +35,7 @@ const ConnectCenterPageOptimized = () => {
   const { unreadCounts, ownedNumbers, isLoading, refreshData } = useConnectCenterData();
 
   const location = useLocation();
+  const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
@@ -52,26 +54,57 @@ const ConnectCenterPageOptimized = () => {
     const handleClientActions = async () => {
       if (!clientId || !clientName) return;
 
+      console.log('Connect Center: Handling client actions', {
+        clientId,
+        clientName,
+        clientPhone,
+        clientEmail,
+        activeTab,
+        autoOpen
+      });
+
       // Auto-trigger actions based on the active tab and autoOpen parameter
       if (activeTab === "messages" && clientPhone && autoOpen) {
-        await openMessageDialog({
-          id: clientId,
-          name: clientName,
-          phone: clientPhone || '', // Provide empty string if phone is undefined
-          email: clientEmail || ''
-        });
+        console.log('Connect Center: Auto-opening message dialog for client:', clientName);
+        try {
+          await openMessageDialog({
+            id: clientId,
+            name: clientName,
+            phone: clientPhone || '',
+            email: clientEmail || ''
+          });
+          
+          // Clear the autoOpen parameter from URL to prevent re-triggering
+          const newSearchParams = new URLSearchParams(location.search);
+          newSearchParams.delete("autoOpen");
+          const newUrl = `${location.pathname}?${newSearchParams.toString()}`;
+          navigate(newUrl, { replace: true });
+          
+        } catch (error) {
+          console.error('Connect Center: Error opening message dialog:', error);
+          toast.error('Failed to open message dialog');
+        }
       } else if (activeTab === "calls" && clientPhone) {
         // Auto-initiate call for calls tab
         await handleAutoCall();
       } else if (activeTab === "emails" && clientEmail && autoOpen) {
         setEmailComposerOpen(true);
+        
+        // Clear the autoOpen parameter from URL
+        const newSearchParams = new URLSearchParams(location.search);
+        newSearchParams.delete("autoOpen");
+        const newUrl = `${location.pathname}?${newSearchParams.toString()}`;
+        navigate(newUrl, { replace: true });
       }
     };
 
-    // Delay to ensure tab is set first
-    const timer = setTimeout(handleClientActions, 100);
-    return () => clearTimeout(timer);
-  }, [clientId, clientName, clientPhone, clientEmail, activeTab, autoOpen, openMessageDialog]);
+    // Only trigger if we have the required parameters and the tab is set
+    if (clientId && clientName && activeTab && autoOpen) {
+      // Add a small delay to ensure components are mounted
+      const timer = setTimeout(handleClientActions, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [clientId, clientName, clientPhone, clientEmail, activeTab, autoOpen, openMessageDialog, navigate, location]);
 
   const handleAutoCall = async () => {
     if (!clientPhone || !clientId) return;
@@ -133,7 +166,7 @@ const ConnectCenterPageOptimized = () => {
     await openMessageDialog({
       id: client.id,
       name: client.name,
-      phone: client.phone || '', // Provide empty string if phone is undefined
+      phone: client.phone || '',
       email: client.email || ''
     });
   };

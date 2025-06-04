@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -5,7 +6,7 @@ import { toast } from 'sonner';
 interface Client {
   id: string;
   name: string;
-  phone?: string; // Make phone optional to match usage
+  phone?: string;
   email?: string;
 }
 
@@ -32,6 +33,7 @@ interface MessageContextType {
   conversations: Conversation[];
   activeConversation: Conversation | null;
   refreshConversations: () => Promise<void>;
+  setActiveConversation: (conversation: Conversation | null) => void;
   isLoading: boolean;
   isSending: boolean;
 }
@@ -201,37 +203,30 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         
         conversationId = newConversation.id;
         console.log('MessageContext: Created new conversation:', conversationId);
-        
-        // Refresh conversations to include the new one
-        await refreshConversations();
       }
 
-      // Set active conversation
-      const conversation = conversations.find(c => c.id === conversationId);
-      if (conversation) {
-        setActiveConversation(conversation);
-        console.log('MessageContext: Set active conversation from existing list');
-      } else {
-        // Create a basic conversation object if not found in current list
-        const tempConversation = {
-          id: conversationId,
-          client: client,
-          messages: [],
-          lastMessage: '',
-          lastMessageTime: ''
-        };
-        setActiveConversation(tempConversation);
-        console.log('MessageContext: Created temporary active conversation object');
-        
-        // Refresh to get the latest data
-        await refreshConversations();
-        
-        // Update active conversation with refreshed data
-        const refreshedConv = conversations.find(c => c.id === conversationId);
-        if (refreshedConv) {
-          setActiveConversation(refreshedConv);
+      // Refresh conversations to get the latest data
+      await refreshConversations();
+      
+      // Set active conversation after refresh
+      setTimeout(() => {
+        const conversation = conversations.find(c => c.id === conversationId);
+        if (conversation) {
+          setActiveConversation(conversation);
+          console.log('MessageContext: Set active conversation from refreshed list');
+        } else {
+          // Create a temporary conversation object if not found
+          const tempConversation = {
+            id: conversationId,
+            client: client,
+            messages: [],
+            lastMessage: '',
+            lastMessageTime: ''
+          };
+          setActiveConversation(tempConversation);
+          console.log('MessageContext: Created temporary active conversation object');
         }
-      }
+      }, 100);
 
       toast.success(`Message dialog opened for ${client.name}`);
       
@@ -258,7 +253,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
           to: activeConversation.client.phone,
           body: message,
           client_id: activeConversation.client.id,
-          job_id: 'message-context' // You might want to pass actual job_id if available
+          job_id: 'message-context'
         }
       });
 
@@ -293,6 +288,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       sendMessage, 
       conversations,
       activeConversation,
+      setActiveConversation,
       refreshConversations,
       isLoading,
       isSending
