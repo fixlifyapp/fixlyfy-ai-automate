@@ -24,29 +24,65 @@ export const InvoiceUpsellStep = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSavingWarranty, setIsSavingWarranty] = useState(false);
   const [hasExistingWarranties, setHasExistingWarranties] = useState(false);
+  const [isLoadingExistingWarranties, setIsLoadingExistingWarranties] = useState(true);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
 
   // Get invoice ID from jobContext or other source
   const invoiceId = jobContext?.invoiceId;
 
-  // Check if warranties were already added in the estimate
+  // Check if warranties were already added in the estimate OR already exist in the invoice
   useEffect(() => {
-    if (estimateToConvert) {
-      // Check if the estimate already contains warranty items
-      const estimateItems = estimateToConvert.line_items || [];
-      const hasWarranties = estimateItems.some((item: any) => 
-        item.description?.toLowerCase().includes('warranty') ||
-        item.name?.toLowerCase().includes('warranty') ||
-        warrantyProducts.some(wp => wp.name === item.name)
-      );
-      setHasExistingWarranties(hasWarranties);
+    const checkExistingWarranties = async () => {
+      if (!invoiceId) {
+        setIsLoadingExistingWarranties(false);
+        return;
+      }
+
+      try {
+        setIsLoadingExistingWarranties(true);
+        
+        // Check if the invoice already contains warranty items
+        const { data: invoiceLineItems, error } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_id', invoiceId)
+          .eq('parent_type', 'invoice');
+
+        if (error) {
+          console.error('Error fetching invoice line items:', error);
+          setIsLoadingExistingWarranties(false);
+          return;
+        }
+
+        // Check if any line items are warranties
+        const hasWarranties = invoiceLineItems?.some((item: any) => 
+          item.description?.toLowerCase().includes('warranty') ||
+          warrantyProducts.some(wp => item.description?.includes(wp.name))
+        ) || false;
+
+        console.log('Invoice line items:', invoiceLineItems);
+        console.log('Has existing warranties in invoice:', hasWarranties);
+        
+        setHasExistingWarranties(hasWarranties);
+      } catch (error) {
+        console.error('Error checking existing warranties:', error);
+      } finally {
+        setIsLoadingExistingWarranties(false);
+      }
+    };
+
+    // Only check after warranty products are loaded
+    if (!isLoading && warrantyProducts.length > 0) {
+      checkExistingWarranties();
+    } else if (!isLoading) {
+      setIsLoadingExistingWarranties(false);
     }
-  }, [estimateToConvert, warrantyProducts]);
+  }, [invoiceId, warrantyProducts, isLoading]);
 
   // Convert warranty products to upsell items and restore previous selections
   useEffect(() => {
-    if (hasExistingWarranties) {
-      // If warranties already exist, don't show them as options
+    if (hasExistingWarranties || isLoadingExistingWarranties) {
+      // If warranties already exist or we're still loading, don't show them as options
       setUpsellItems([]);
       return;
     }
@@ -64,7 +100,7 @@ export const InvoiceUpsellStep = ({
       };
     });
     setUpsellItems(warrantyUpsells);
-  }, [warrantyProducts, existingUpsellItems, hasExistingWarranties]);
+  }, [warrantyProducts, existingUpsellItems, hasExistingWarranties, isLoadingExistingWarranties]);
 
   const handleUpsellToggle = async (itemId: string) => {
     if (isProcessing || isSavingWarranty) return;
@@ -197,7 +233,7 @@ export const InvoiceUpsellStep = ({
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingExistingWarranties) {
     return (
       <div className="space-y-6">
         <div className="text-center">
@@ -221,8 +257,13 @@ export const InvoiceUpsellStep = ({
           <AlertDescription>
             <strong>Warranties Already Included</strong>
             <br />
-            This invoice already includes warranty services from the original estimate. 
+            This invoice already includes warranty services. 
             No additional warranty options are needed at this time.
+            {estimateToConvert && (
+              <span className="block mt-1 text-sm text-muted-foreground">
+                (Warranties were included from the original estimate)
+              </span>
+            )}
           </AlertDescription>
         </Alert>
       ) : (
@@ -232,7 +273,7 @@ export const InvoiceUpsellStep = ({
             <AlertDescription>
               <strong>Warranty Recommendation</strong>
               <br />
-              No warranty was added to the original estimate. Consider offering warranty protection 
+              No warranty was added to this invoice. Consider offering warranty protection 
               to provide additional value and peace of mind for your customer. Warranties help build 
               trust and can increase customer satisfaction while protecting your work.
             </AlertDescription>
