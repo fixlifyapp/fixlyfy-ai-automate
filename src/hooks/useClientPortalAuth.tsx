@@ -136,7 +136,6 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
       if (data.session_token) {
         localStorage.setItem('client_portal_session', data.session_token);
         
-        // Set user data immediately
         const userData = {
           id: data.client_id,
           clientId: data.client_id,

@@ -47,37 +47,27 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <AppProviders>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<AuthPage />} />
-              
-              {/* Client Portal Routes */}
-              <Route path="/portal/login" element={<PortalLoginPage />} />
-              <Route path="/portal/dashboard" element={
-                <ProtectedPortalRoute>
-                  <PortalDashboardPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/estimates" element={
-                <ProtectedPortalRoute>
-                  <PortalEstimatesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/invoices" element={
-                <ProtectedPortalRoute>
-                  <PortalInvoicesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/profile" element={
-                <ProtectedPortalRoute>
-                  <PortalProfilePage />
-                </ProtectedPortalRoute>
-              } />
-              
-              {/* Main App Routes */}
-              <Route path="/dashboard" element={
+        <AuthProvider>
+          <ClientPortalAuthProvider>
+            <RBACProvider>
+              <GlobalRealtimeProvider>
+                <MessageProvider>
+                  <ModalProvider>
+                    <BrowserRouter>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/auth" element={<AuthPage />} />
+                        
+                        {/* Client Portal Routes */}
+                        <Route path="/portal/login" element={<PortalLoginPage />} />
+                        <Route path="/portal/dashboard" element={
+                          <ProtectedPortalRoute>
+                            <PortalDashboardPage />
+                          </ProtectedPortalRoute>
+                        } />
+                        
+                        {/* Main App Routes */}
+                        <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>

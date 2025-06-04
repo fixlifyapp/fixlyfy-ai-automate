@@ -1,25 +1,29 @@
 
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
-import { useClientPortalAuth } from "@/hooks/useClientPortalAuth";
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
+import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 
 interface ProtectedPortalRouteProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export function ProtectedPortalRoute({ children }: ProtectedPortalRouteProps) {
   const { user, loading } = useClientPortalAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/portal/login');
+    }
+  }, [user, loading, navigate]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (!user) {
-    return <Navigate to="/portal/login" replace />;
+    return null;
   }
 
   return <>{children}</>;

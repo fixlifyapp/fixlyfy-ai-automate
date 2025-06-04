@@ -24,7 +24,6 @@ serve(async (req) => {
     if (action === 'generate_login_token') {
       console.log('client-portal-auth - Generating login token for email:', email)
       
-      // Generate login token for client
       const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
         p_email: email
       })
@@ -48,7 +47,6 @@ serve(async (req) => {
     if (action === 'verify_token') {
       console.log('client-portal-auth - Verifying token:', token ? token.substring(0, 20) + '...' : 'none')
       
-      // Verify login token and create session
       const { data: sessionData, error: sessionError } = await supabaseAdmin.rpc('verify_client_login_token', {
         p_token: token
       })

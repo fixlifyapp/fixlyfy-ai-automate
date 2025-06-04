@@ -625,93 +625,41 @@ export type Database = {
         }
         Relationships: []
       }
-      client_notifications: {
-        Row: {
-          client_id: string
-          created_at: string | null
-          data: Json | null
-          id: string
-          is_read: boolean | null
-          message: string
-          read_at: string | null
-          title: string
-          type: string
-        }
-        Insert: {
-          client_id: string
-          created_at?: string | null
-          data?: Json | null
-          id?: string
-          is_read?: boolean | null
-          message: string
-          read_at?: string | null
-          title: string
-          type: string
-        }
-        Update: {
-          client_id?: string
-          created_at?: string | null
-          data?: Json | null
-          id?: string
-          is_read?: boolean | null
-          message?: string
-          read_at?: string | null
-          title?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_notifications_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_notifications_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_details_view"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "client_notifications_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "invoice_details_view"
-            referencedColumns: ["client_id"]
-          },
-        ]
-      }
       client_portal_sessions: {
         Row: {
-          client_portal_user_id: string
           created_at: string | null
           expires_at: string
           id: string
+          ip_address: string | null
           last_accessed_at: string | null
           session_token: string
+          user_agent: string | null
+          user_id: string | null
         }
         Insert: {
-          client_portal_user_id: string
           created_at?: string | null
           expires_at: string
           id?: string
+          ip_address?: string | null
           last_accessed_at?: string | null
           session_token: string
+          user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
-          client_portal_user_id?: string
           created_at?: string | null
           expires_at?: string
           id?: string
+          ip_address?: string | null
           last_accessed_at?: string | null
           session_token?: string
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "client_portal_sessions_client_portal_user_id_fkey"
-            columns: ["client_portal_user_id"]
+            foreignKeyName: "client_portal_sessions_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "client_portal_users"
             referencedColumns: ["id"]
@@ -720,39 +668,30 @@ export type Database = {
       }
       client_portal_users: {
         Row: {
-          client_id: string
+          client_id: string | null
           created_at: string | null
           email: string
           id: string
           is_active: boolean | null
           last_login_at: string | null
-          login_token: string | null
-          phone: string | null
-          token_expires_at: string | null
           updated_at: string | null
         }
         Insert: {
-          client_id: string
+          client_id?: string | null
           created_at?: string | null
           email: string
           id?: string
           is_active?: boolean | null
           last_login_at?: string | null
-          login_token?: string | null
-          phone?: string | null
-          token_expires_at?: string | null
           updated_at?: string | null
         }
         Update: {
-          client_id?: string
+          client_id?: string | null
           created_at?: string | null
           email?: string
           id?: string
           is_active?: boolean | null
           last_login_at?: string | null
-          login_token?: string | null
-          phone?: string | null
-          token_expires_at?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2714,6 +2653,47 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_access_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_access_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -2942,15 +2922,7 @@ export type Database = {
           session_token?: string
           user_agent?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "secure_client_sessions_client_portal_user_id_fkey"
-            columns: ["client_portal_user_id"]
-            isOneToOne: false
-            referencedRelation: "client_portal_users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       security_audit_log: {
         Row: {
@@ -3609,8 +3581,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      set_client_portal_user_email: {
-        Args: { user_email: string }
+      set_client_portal_context: {
+        Args: { p_client_email: string }
         Returns: undefined
       }
       update_team_member_commission: {
@@ -3620,7 +3592,6 @@ export type Database = {
       validate_client_session: {
         Args: { p_session_token: string }
         Returns: {
-          valid: boolean
           client_id: string
           user_id: string
           client_name: string

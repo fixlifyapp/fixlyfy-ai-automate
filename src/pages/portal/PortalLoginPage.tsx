@@ -17,19 +17,15 @@ export default function PortalLoginPage() {
   const [tokenProcessing, setTokenProcessing] = useState(false);
 
   const token = searchParams.get('token');
-  const jobId = searchParams.get('jobId');
+  const redirectTo = searchParams.get('redirect');
 
-  // If user is already logged in, redirect to dashboard
+  // If user is already logged in, redirect
   useEffect(() => {
     if (user && !loading) {
-      if (jobId) {
-        // Redirect to specific job/estimate if jobId provided
-        navigate(`/portal/estimates?jobId=${jobId}`, { replace: true });
-      } else {
-        navigate('/portal/dashboard', { replace: true });
-      }
+      const destination = redirectTo || '/portal/dashboard';
+      navigate(destination, { replace: true });
     }
-  }, [user, loading, navigate, jobId]);
+  }, [user, loading, navigate, redirectTo]);
 
   // Handle token-based login
   useEffect(() => {
@@ -46,8 +42,11 @@ export default function PortalLoginPage() {
       const result = await verifyToken(token);
       if (result.success) {
         toast.success('Successfully logged in!');
-        // The user state will be updated by the verifyToken function
-        // and the useEffect above will handle the redirect
+        // Navigate after successful login
+        setTimeout(() => {
+          const destination = redirectTo || '/portal/dashboard';
+          navigate(destination, { replace: true });
+        }, 500);
       } else {
         toast.error(result.message);
       }
@@ -85,7 +84,7 @@ export default function PortalLoginPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-fixlyfy" />
           <p className="text-gray-600">
             {tokenProcessing ? 'Verifying login link...' : 'Loading...'}
           </p>
@@ -99,7 +98,7 @@ export default function PortalLoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Client Portal
+            Fixlyfy Client Portal
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Access your estimates, invoices, and project information
@@ -109,7 +108,7 @@ export default function PortalLoginPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
+              <Lock className="h-5 w-5 text-fixlyfy" />
               Sign In
             </CardTitle>
             <CardDescription>
@@ -143,7 +142,7 @@ export default function PortalLoginPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full" 
+                  className="w-full bg-fixlyfy hover:bg-fixlyfy/90" 
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -160,7 +159,7 @@ export default function PortalLoginPage() {
 
             {token && (
               <div className="text-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-fixlyfy" />
                 <p className="text-gray-600">Verifying your login link...</p>
               </div>
             )}
@@ -172,14 +171,6 @@ export default function PortalLoginPage() {
             </div>
           </CardContent>
         </Card>
-
-        {jobId && (
-          <div className="text-center">
-            <p className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
-              You'll be redirected to your estimate details after logging in.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
