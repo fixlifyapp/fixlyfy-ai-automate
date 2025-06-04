@@ -58,12 +58,6 @@ export const useInvoiceSending = () => {
         return { success: false };
       }
 
-      // Format phone number if SMS
-      let finalRecipient = sendTo;
-      if (sendMethod === "sms") {
-        finalRecipient = formatPhoneForTelnyx(sendTo);
-      }
-
       // Get invoice details
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -77,103 +71,48 @@ export const useInvoiceSending = () => {
         return { success: false };
       }
 
-      // Create communication record
-      const { data: commData, error: commError } = await supabase
-        .from('invoice_communications')
-        .insert({
-          invoice_id: invoice.id,
-          communication_type: sendMethod,
-          recipient: finalRecipient,
-          subject: sendMethod === 'email' ? `Invoice ${invoiceNumber}` : null,
-          content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your invoice ${invoiceNumber} is ready. Total: $${invoice.total.toFixed(2)}.`
-            : `Please find your invoice ${invoiceNumber} attached. Total: $${invoice.total.toFixed(2)}.`,
-          status: 'pending',
-          invoice_number: invoiceNumber,
-          client_name: contactInfo.name,
-          client_email: contactInfo.email,
-          client_phone: contactInfo.phone
-        })
-        .select()
-        .single();
+      console.log("📧 Sending via appropriate edge function...", { method: sendMethod, recipient: sendTo });
 
-      if (commError) {
-        console.error('Error creating communication record:', commError);
-        toast.error('Failed to create communication record');
-        return { success: false };
-      }
-
-      console.log("✅ Communication record created:", commData.id);
-
-      // Generate portal login link if email available
-      let portalLoginLink = '';
-      if (contactInfo.email) {
-        try {
-          const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
-            p_email: contactInfo.email
-          });
-
-          if (!tokenError && tokenData) {
-            portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
-            console.log("🔗 Portal login link generated");
+      let response;
+      
+      if (sendMethod === "email") {
+        // Use send-invoice function for email
+        response = await supabase.functions.invoke('send-invoice', {
+          body: {
+            invoiceId: invoice.id,
+            sendMethod: sendMethod,
+            recipientEmail: sendTo
           }
-        } catch (error) {
-          console.warn("Failed to generate portal login token:", error);
-        }
-      }
-
-      const invoiceData = {
-        lineItems: lineItems.map(item => ({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: Number(item.unitPrice || item.unit_price),
-          taxable: item.taxable,
-          total: item.quantity * Number(item.unitPrice || item.unit_price)
-        })),
-        total: invoice.total,
-        taxRate: 13,
-        notes: customNote || invoice.notes,
-        viewUrl: `${window.location.origin}/invoice/view/${invoiceNumber}`,
-        portalLoginLink: portalLoginLink
-      };
-
-      console.log("📧 Sending via edge function...", { method: sendMethod, recipient: finalRecipient });
-
-      // Send via edge function with proper payload structure
-      const { data, error } = await supabase.functions.invoke('send-invoice', {
-        body: {
-          method: sendMethod,
-          recipient: finalRecipient,
-          invoiceNumber: invoiceNumber,
-          invoiceData: invoiceData,
-          clientName: contactInfo.name,
-          communicationId: commData.id
-        }
-      });
-      
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(error.message);
+        });
+      } else {
+        // Use send-invoice-sms function for SMS
+        const formattedPhone = formatPhoneForTelnyx(sendTo);
+        const smsMessage = `Hi ${contactInfo.name}! Your invoice ${invoiceNumber} is ready. Total: $${invoice.total.toFixed(2)}.`;
+        
+        response = await supabase.functions.invoke('send-invoice-sms', {
+          body: {
+            invoiceId: invoice.id,
+            recipientPhone: formattedPhone,
+            message: smsMessage
+          }
+        });
       }
       
-      console.log("📬 Edge function response:", data);
+      if (response.error) {
+        console.error("Edge function error:", response.error);
+        throw new Error(response.error.message);
+      }
       
-      if (data?.success) {
+      console.log("📬 Edge function response:", response.data);
+      
+      if (response.data?.success) {
         const method = sendMethod === "email" ? "email" : "text message";
         toast.success(`Invoice ${invoiceNumber} sent to client via ${method}`);
         console.log("✅ Invoice sent successfully");
         return { success: true };
       } else {
-        console.error("Edge function returned error:", data);
-        await supabase
-          .from('invoice_communications')
-          .update({
-            status: 'failed',
-            error_message: data?.error || 'Unknown error'
-          })
-          .eq('id', commData.id);
-        
-        toast.error(`Failed to send invoice: ${data?.error || 'Unknown error'}`);
+        console.error("Edge function returned error:", response.data);
+        toast.error(`Failed to send invoice: ${response.data?.error || 'Unknown error'}`);
         return { success: false };
       }
 

@@ -7,257 +7,250 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Input validation functions
-const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return emailRegex.test(email) && email.length <= 254;
-};
-
-const validatePhone = (phone: string): boolean => {
-  const cleaned = phone.replace(/\D/g, '');
-  return cleaned.length >= 10;
-};
-
-const sanitizeInput = (input: string, maxLength: number = 255): string => {
-  if (typeof input !== 'string') return '';
-  return input.trim().slice(0, maxLength);
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    console.log('send-invoice - Email request received');
+    
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header provided');
+    }
+
+    // Use service role client for database access
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Get the current user
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !userData.user) {
+      throw new Error('Failed to authenticate user');
+    }
+
+    console.log('send-invoice - Authenticated user ID:', userData.user.id);
+
     const requestBody = await req.json()
-    const { 
-      method, 
-      recipient, 
-      invoiceNumber, 
-      invoiceData, 
-      clientName, 
-      communicationId 
-    } = requestBody
+    const { invoiceId, sendMethod, recipientEmail, recipientPhone } = requestBody;
     
-    console.log('send-invoice - Request:', { 
-      method, 
-      recipient: recipient?.substring(0, 10) + '...', 
-      invoiceNumber, 
-      clientName,
-      communicationId 
-    })
+    console.log('send-invoice - Request details:', {
+      invoiceId,
+      sendMethod,
+      recipientEmail,
+      recipientPhone
+    });
 
-    // Validate inputs
-    const sanitizedMethod = sanitizeInput(method, 10);
-    const sanitizedRecipient = sanitizeInput(recipient, 100);
-    const sanitizedInvoiceNumber = sanitizeInput(invoiceNumber, 50);
-    const sanitizedClientName = sanitizeInput(clientName, 100);
-
-    if (!sanitizedMethod || !sanitizedRecipient || !sanitizedInvoiceNumber) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+    if (!invoiceId || !sendMethod) {
+      throw new Error('Missing required fields');
     }
 
-    if (sanitizedMethod === 'email' && !validateEmail(sanitizedRecipient)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid email address' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+    // Get invoice details
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
+      .from('invoices')
+      .select(`
+        *,
+        jobs:job_id (
+          id,
+          title,
+          client_id,
+          clients:client_id (
+            id,
+            name,
+            email,
+            phone,
+            company
+          )
+        )
+      `)
+      .eq('id', invoiceId)
+      .single();
+
+    if (invoiceError || !invoice) {
+      console.error('Invoice not found:', invoiceError);
+      throw new Error('Invoice not found');
     }
 
-    if (sanitizedMethod === 'sms' && !validatePhone(sanitizedRecipient)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid phone number' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
+    console.log('send-invoice - Found invoice:', invoice.invoice_number);
+
+    const client = invoice.jobs?.clients;
 
     // Get company settings for email configuration
-    const { data: settings } = await supabaseAdmin
+    const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
-      .select('mailgun_domain, email_from_name, email_from_address, mailgun_settings')
-      .single()
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .single();
 
-    if (sanitizedMethod === 'email') {
-      // Send email via Mailgun
-      const mailgunDomain = settings?.mailgun_domain || Deno.env.get('MAILGUN_DOMAIN')
-      const mailgunApiKey = settings?.mailgun_settings?.api_key || Deno.env.get('MAILGUN_API_KEY')
-      const fromName = settings?.email_from_name || 'Support Team'
-      const fromAddress = settings?.email_from_address || `noreply@${mailgunDomain}`
-
-      if (!mailgunDomain || !mailgunApiKey) {
-        throw new Error('Mailgun not configured')
-      }
-
-      const emailSubject = `Invoice ${sanitizedInvoiceNumber}`
-      const emailContent = `
-        <h2>Invoice ${sanitizedInvoiceNumber}</h2>
-        <p>Hi ${sanitizedClientName},</p>
-        <p>Please find your invoice details below:</p>
-        
-        <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-          <h3>Invoice Summary</h3>
-          <p><strong>Invoice Number:</strong> ${sanitizedInvoiceNumber}</p>
-          <p><strong>Total Amount:</strong> $${invoiceData.total.toFixed(2)}</p>
-          
-          <h4>Items:</h4>
-          <ul>
-            ${invoiceData.lineItems.map(item => 
-              `<li>${item.description} - Qty: ${item.quantity} × $${item.unitPrice.toFixed(2)} = $${item.total.toFixed(2)}</li>`
-            ).join('')}
-          </ul>
-          
-          ${invoiceData.notes ? `<p><strong>Notes:</strong> ${invoiceData.notes}</p>` : ''}
-        </div>
-
-        ${invoiceData.viewUrl ? `<p><a href="${invoiceData.viewUrl}" style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invoice</a></p>` : ''}
-        
-        ${invoiceData.portalLoginLink ? `<p><a href="${invoiceData.portalLoginLink}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Access Client Portal</a></p>` : ''}
-        
-        <p>Thank you for your business!</p>
-      `
-
-      const formData = new FormData()
-      formData.append('from', `${fromName} <${fromAddress}>`)
-      formData.append('to', sanitizedRecipient)
-      formData.append('subject', emailSubject)
-      formData.append('html', emailContent)
-
-      const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
-        },
-        body: formData
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Mailgun error:', errorText)
-        throw new Error(`Failed to send email: ${response.status}`)
-      }
-
-      const result = await response.json()
-      console.log('Email sent successfully:', result.id)
-
-      // Update communication record
-      if (communicationId) {
-        await supabaseAdmin
-          .from('invoice_communications')
-          .update({
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            provider_message_id: result.id
-          })
-          .eq('id', communicationId)
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, messageId: result.id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-
-    } else if (sanitizedMethod === 'sms') {
-      // Send SMS via Telnyx
-      const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
-      
-      if (!telnyxApiKey) {
-        throw new Error('Telnyx not configured')
-      }
-
-      // Get from phone number
-      const { data: phoneNumbers } = await supabaseAdmin
-        .from('phone_number_assignments')
-        .select('phone_number')
-        .eq('is_active', true)
-        .limit(1)
-
-      const fromNumber = phoneNumbers?.[0]?.phone_number
-      if (!fromNumber) {
-        throw new Error('No active phone number available')
-      }
-
-      const smsContent = `Hi ${sanitizedClientName}! Your invoice ${sanitizedInvoiceNumber} is ready. Total: $${invoiceData.total.toFixed(2)}. ${invoiceData.portalLoginLink ? `View details: ${invoiceData.portalLoginLink}` : ''}`
-
-      const response = await fetch('https://api.telnyx.com/v2/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${telnyxApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: fromNumber,
-          to: sanitizedRecipient,
-          text: smsContent
-        })
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Telnyx error:', errorText)
-        throw new Error(`Failed to send SMS: ${response.status}`)
-      }
-
-      const result = await response.json()
-      console.log('SMS sent successfully:', result.data.id)
-
-      // Update communication record
-      if (communicationId) {
-        await supabaseAdmin
-          .from('invoice_communications')
-          .update({
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            provider_message_id: result.data.id
-          })
-          .eq('id', communicationId)
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, messageId: result.data.id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    return new Response(
-      JSON.stringify({ error: 'Invalid method' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    )
-
-  } catch (error) {
-    console.error('send-invoice - Error:', error)
+    console.log('send-invoice - Company settings found:', !!companySettings);
     
-    // Update communication record with error if we have the ID
-    const requestBody = await req.json().catch(() => ({}))
-    if (requestBody.communicationId) {
+    if (settingsError) {
+      console.warn('send-invoice - Settings error:', settingsError);
+    }
+
+    const companyName = companySettings?.company_name || 'our company';
+    console.log('send-invoice - Company name from database:', companyName);
+
+    // Generate client portal login token
+    let portalLoginLink = '';
+    if (client?.email) {
+      console.log('send-invoice - Generating portal login token for:', client.email);
       try {
-        const supabaseAdmin = createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        )
-        
-        await supabaseAdmin
-          .from('invoice_communications')
-          .update({
-            status: 'failed',
-            error_message: error.message
-          })
-          .eq('id', requestBody.communicationId)
-      } catch (updateError) {
-        console.error('Failed to update communication record:', updateError)
+        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
+          p_email: client.email
+        });
+
+        if (tokenError) {
+          console.error('send-invoice - Failed to generate portal token:', tokenError);
+        } else if (tokenData) {
+          portalLoginLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
+          console.log('send-invoice - Portal login link generated');
+        }
+      } catch (error) {
+        console.error('send-invoice - Portal token generation error:', error);
       }
     }
 
+    // Send email via Mailgun
+    const mailgunDomain = companySettings?.mailgun_domain || Deno.env.get('MAILGUN_DOMAIN') || 'fixlify.app';
+    const mailgunApiKey = companySettings?.mailgun_settings?.api_key || Deno.env.get('MAILGUN_API_KEY');
+    const fromName = companySettings?.email_from_name || companyName;
+    const fromEmail = companySettings?.email_from_address || `${companyName.toLowerCase().replace(/\s+/g, '')}@${mailgunDomain}`;
+
+    console.log('send-invoice - Final email configuration:');
+    console.log('send-invoice - User ID:', userData.user.id);
+    console.log('send-invoice - Company name used:', companyName);
+    console.log('send-invoice - Mailgun domain:', mailgunDomain);
+    console.log('send-invoice - From email:', fromEmail);
+
+    if (!mailgunApiKey) {
+      throw new Error('Mailgun API key not configured');
+    }
+
+    const emailSubject = `Invoice ${invoice.invoice_number}`;
+    const recipient = recipientEmail || client?.email;
+
+    if (!recipient) {
+      throw new Error('No recipient email provided');
+    }
+
+    console.log('send-invoice - Subject:', emailSubject);
+    console.log('send-invoice - From:', `${fromName} <${fromEmail}>`);
+    console.log('send-invoice - To:', recipient);
+
+    // Get line items for the invoice
+    const { data: lineItems } = await supabaseAdmin
+      .from('line_items')
+      .select('*')
+      .eq('parent_id', invoiceId)
+      .eq('parent_type', 'invoice');
+
+    const emailContent = `
+      <h2>Invoice ${invoice.invoice_number}</h2>
+      <p>Hi ${client?.name || 'valued customer'},</p>
+      <p>Please find your invoice details below:</p>
+      
+      <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h3>Invoice Summary</h3>
+        <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
+        <p><strong>Total Amount:</strong> $${invoice.total?.toFixed(2) || '0.00'}</p>
+        
+        ${lineItems && lineItems.length > 0 ? `
+        <h4>Items:</h4>
+        <ul>
+          ${lineItems.map(item => 
+            `<li>${item.description} - Qty: ${item.quantity} × $${item.unit_price?.toFixed(2)} = $${(item.quantity * item.unit_price)?.toFixed(2)}</li>`
+          ).join('')}
+        </ul>
+        ` : ''}
+        
+        ${invoice.notes ? `<p><strong>Notes:</strong> ${invoice.notes}</p>` : ''}
+      </div>
+
+      <p><a href="https://hub.fixlify.app/invoice/view/${invoice.invoice_number}" style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invoice</a></p>
+      
+      ${portalLoginLink ? `<p><a href="${portalLoginLink}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Access Client Portal</a></p>` : ''}
+      
+      <p>Thank you for your business!</p>
+      <p>Best regards,<br>${companyName}</p>
+    `;
+
+    console.log('send-invoice - Sending email via Mailgun URL:', `https://api.mailgun.net/v3/${mailgunDomain}/messages`);
+
+    const formData = new FormData();
+    formData.append('from', `${fromName} <${fromEmail}>`);
+    formData.append('to', recipient);
+    formData.append('subject', emailSubject);
+    formData.append('html', emailContent);
+
+    const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
+      },
+      body: formData
+    });
+
+    console.log('send-invoice - Email send response status:', response.status);
+
+    const responseBody = await response.json();
+    console.log('send-invoice - Email send response body:', responseBody);
+
+    if (!response.ok) {
+      console.error('send-invoice - Mailgun error:', responseBody);
+      throw new Error(`Failed to send email: ${response.status} - ${responseBody.message || 'Unknown error'}`);
+    }
+
+    console.log('send-invoice - Email sent successfully via Mailgun:', responseBody);
+
+    // Log the communication
+    try {
+      await supabaseAdmin
+        .from('invoice_communications')
+        .insert({
+          invoice_id: invoiceId,
+          communication_type: 'email',
+          recipient: recipient,
+          subject: emailSubject,
+          content: emailContent,
+          status: 'sent',
+          provider_message_id: responseBody.id,
+          invoice_number: invoice.invoice_number,
+          client_name: client?.name,
+          client_email: client?.email,
+          client_phone: client?.phone
+        });
+    } catch (logError) {
+      console.warn('Failed to log communication:', logError);
+    }
+
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ 
+        success: true, 
+        message: 'Email sent successfully',
+        messageId: responseBody.id,
+        portalLinkIncluded: !!portalLoginLink
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+  } catch (error) {
+    console.error('send-invoice - Error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
     )
   }
 })
