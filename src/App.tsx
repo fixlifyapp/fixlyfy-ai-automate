@@ -1,9 +1,9 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { RBACProvider } from "@/components/auth/RBACProvider";
 import { OnboardingModal } from "@/components/auth/OnboardingModal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ProtectedPortalRoute } from "@/components/portal/ProtectedPortalRoute";
@@ -34,7 +34,6 @@ import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
 import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
 import PortalProfilePage from "@/pages/portal/PortalProfilePage";
 import { useState } from "react";
-import { AuthProvider } from "@/hooks/use-auth";
 import { AppProviders } from "@/components/ui/AppProviders";
 
 const queryClient = new QueryClient();
@@ -47,27 +46,22 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <AuthProvider>
-          <ClientPortalAuthProvider>
-            <RBACProvider>
-              <GlobalRealtimeProvider>
-                <MessageProvider>
-                  <ModalProvider>
-                    <BrowserRouter>
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/auth" element={<AuthPage />} />
-                        
-                        {/* Client Portal Routes */}
-                        <Route path="/portal/login" element={<PortalLoginPage />} />
-                        <Route path="/portal/dashboard" element={
-                          <ProtectedPortalRoute>
-                            <PortalDashboardPage />
-                          </ProtectedPortalRoute>
-                        } />
-                        
-                        {/* Main App Routes */}
-                        <Route path="/dashboard" element={
+        <AppProviders>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<AuthPage />} />
+              
+              {/* Client Portal Routes */}
+              <Route path="/portal/login" element={<PortalLoginPage />} />
+              <Route path="/portal/dashboard" element={
+                <ProtectedPortalRoute>
+                  <PortalDashboardPage />
+                </ProtectedPortalRoute>
+              } />
+              
+              {/* Main App Routes */}
+              <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
