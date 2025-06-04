@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ConversationsList } from "./components/ConversationsList";
 import { ConversationThread } from "./components/ConversationThread";
 import { useConversations } from "./hooks/useConversations";
+import { useMessageContext } from "@/contexts/MessageContext";
 
 interface DispatcherMessagesViewProps {
   searchResults?: any[];
@@ -16,6 +17,24 @@ export const DispatcherMessagesView = ({ searchResults = [] }: DispatcherMessage
     activeConversation,
     handleConversationClick
   } = useConversations();
+
+  const { openMessageDialog } = useMessageContext();
+  const [selectedClientFromSearch, setSelectedClientFromSearch] = useState<any>(null);
+
+  // Handle client selection from search
+  const handleClientSelect = async (client: { id: string; name: string; phone?: string; email?: string }) => {
+    console.log('Client selected from search:', client);
+    setSelectedClientFromSearch(client);
+    
+    // Open message dialog for the selected client
+    await openMessageDialog(client);
+    
+    // Try to find existing conversation for this client
+    const existingConv = conversations.find(conv => conv.client.id === client.id);
+    if (existingConv) {
+      handleConversationClick(existingConv.id);
+    }
+  };
 
   // Filter conversations based on search results if provided
   const filteredConversations = searchResults.length > 0 
@@ -43,6 +62,7 @@ export const DispatcherMessagesView = ({ searchResults = [] }: DispatcherMessage
             activeConversation={activeConversation}
             isLoading={isLoading}
             onConversationClick={(conversation) => handleConversationClick(conversation.id)}
+            onClientSelect={handleClientSelect}
           />
         </div>
       </div>

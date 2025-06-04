@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, MessageSquare, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { useMessageContext } from "@/contexts/MessageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface ClientContactActionsProps {
   client: {
@@ -18,7 +18,7 @@ interface ClientContactActionsProps {
 }
 
 export const ClientContactActions = ({ client, compact = false }: ClientContactActionsProps) => {
-  const { openMessageDialog } = useMessageContext();
+  const navigate = useNavigate();
   const [isCallLoading, setIsCallLoading] = useState(false);
 
   const handleCall = async () => {
@@ -51,25 +51,23 @@ export const ClientContactActions = ({ client, compact = false }: ClientContactA
   };
 
   const handleEmail = () => {
-    if (client.email) {
-      window.open(`mailto:${client.email}`, '_self');
-      toast.success(`Opening email to ${client.name}`);
-    } else {
+    if (!client.email) {
       toast.error('No email address available');
+      return;
     }
+    
+    // Navigate to Connect Center with email tab and auto-open composer
+    navigate(`/connect?tab=emails&clientId=${client.id}&clientName=${encodeURIComponent(client.name)}&clientEmail=${encodeURIComponent(client.email)}&autoOpen=true`);
   };
 
-  const handleMessage = async () => {
-    if (client.phone) {
-      await openMessageDialog({
-        id: client.id,
-        name: client.name,
-        phone: client.phone,
-        email: client.email || ""
-      });
-    } else {
+  const handleMessage = () => {
+    if (!client.phone) {
       toast.error('No phone number available for messaging');
+      return;
     }
+    
+    // Navigate to Connect Center with messages tab and auto-open message dialog
+    navigate(`/connect?tab=messages&clientId=${client.id}&clientName=${encodeURIComponent(client.name)}&clientPhone=${encodeURIComponent(client.phone)}&autoOpen=true`);
   };
 
   const handleDirections = () => {

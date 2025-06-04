@@ -21,13 +21,15 @@ interface ConversationsListProps {
   activeConversation: string | null;
   isLoading: boolean;
   onConversationClick: (conversation: Conversation) => void;
+  onClientSelect?: (client: { id: string; name: string; phone?: string; email?: string }) => void;
 }
 
 export const ConversationsList = ({
   conversations,
   activeConversation,
   isLoading,
-  onConversationClick
+  onConversationClick,
+  onClientSelect
 }: ConversationsListProps) => {
   if (isLoading) {
     return (

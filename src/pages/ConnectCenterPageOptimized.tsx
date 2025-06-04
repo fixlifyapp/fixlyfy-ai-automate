@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -121,6 +122,18 @@ const ConnectCenterPageOptimized = () => {
     }
   };
 
+  const handleClientSelectFromSearch = async (client: { id: string; name: string; phone?: string; email?: string }) => {
+    console.log('Client selected from main search:', client);
+    
+    // Switch to messages tab if not already there
+    if (activeTab !== "messages") {
+      setActiveTab("messages");
+    }
+    
+    // Open message dialog for the selected client
+    await openMessageDialog(client);
+  };
+
   const getActionButtonText = () => {
     switch (activeTab) {
       case "messages": return "New Message";
@@ -153,7 +166,10 @@ const ConnectCenterPageOptimized = () => {
       
       <div className="mb-6 flex gap-4">
         <div className="flex-1">
-          <ConnectSearch onSearchResults={setSearchResults} />
+          <ConnectSearch 
+            onSearchResults={setSearchResults}
+            onClientSelect={handleClientSelectFromSearch}
+          />
         </div>
         <Dialog open={integrationTesterOpen} onOpenChange={setIntegrationTesterOpen}>
           <DialogTrigger asChild>

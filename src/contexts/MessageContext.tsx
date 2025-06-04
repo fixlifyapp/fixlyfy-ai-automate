@@ -196,6 +196,9 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         
         conversationId = newConversation.id;
         console.log('MessageContext: Created new conversation:', conversationId);
+        
+        // Refresh conversations to include the new one
+        await refreshConversations();
       }
 
       // Set active conversation
@@ -205,17 +208,24 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         console.log('MessageContext: Set active conversation from existing list');
       } else {
         // Create a basic conversation object if not found in current list
-        setActiveConversation({
+        const tempConversation = {
           id: conversationId,
           client: client,
           messages: [],
           lastMessage: '',
           lastMessageTime: ''
-        });
+        };
+        setActiveConversation(tempConversation);
         console.log('MessageContext: Created temporary active conversation object');
         
         // Refresh to get the latest data
         await refreshConversations();
+        
+        // Update active conversation with refreshed data
+        const refreshedConv = conversations.find(c => c.id === conversationId);
+        if (refreshedConv) {
+          setActiveConversation(refreshedConv);
+        }
       }
 
       toast.success(`Message dialog opened for ${client.name}`);
