@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,13 +31,15 @@ interface InvoicePreviewWindowProps {
   onOpenChange: (open: boolean) => void;
   invoice: Invoice;
   jobId: string;
+  onPaymentRecorded?: () => void;
 }
 
 export const InvoicePreviewWindow = ({
   open,
   onOpenChange,
   invoice,
-  jobId
+  jobId,
+  onPaymentRecorded
 }: InvoicePreviewWindowProps) => {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -96,6 +97,13 @@ export const InvoicePreviewWindow = ({
       case 'overdue': return 'bg-red-100 text-red-800';
       case 'cancelled': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleSendDialogSuccess = () => {
+    setShowSendDialog(false);
+    if (onPaymentRecorded) {
+      onPaymentRecorded();
     }
   };
 
@@ -327,7 +335,10 @@ export const InvoicePreviewWindow = ({
       <InvoiceSendDialog
         open={showSendDialog}
         onOpenChange={setShowSendDialog}
-        onSave={async () => true}
+        onSave={async () => {
+          handleSendDialogSuccess();
+          return true;
+        }}
         onAddWarranty={() => {}}
         invoiceNumber={invoice.invoice_number}
         jobId={jobId}
