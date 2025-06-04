@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -171,6 +170,12 @@ export const ScheduleJobModal = ({
     
     if (!formData.client_id) {
       errors.push("Please select a client");
+    } else {
+      // Validate that selected client has a phone number
+      const selectedClient = clients.find(c => c.id === formData.client_id);
+      if (!selectedClient?.phone) {
+        errors.push("Selected client must have a phone number for messaging and communication");
+      }
     }
     
     if (!formData.job_type) {
@@ -386,11 +391,26 @@ export const ScheduleJobModal = ({
                         <SelectItem value="" disabled>Loading clients...</SelectItem>
                       ) : (
                         clients.map(client => (
-                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                          <SelectItem key={client.id} value={client.id}>
+                            <div className="flex flex-col">
+                              <span>{client.name}</span>
+                              {!client.phone && (
+                                <span className="text-xs text-red-500">⚠️ No phone number</span>
+                              )}
+                            </div>
+                          </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
+                  {formData.client_id && (() => {
+                    const selectedClient = clients.find(c => c.id === formData.client_id);
+                    return !selectedClient?.phone ? (
+                      <p className="text-sm text-red-600 mt-1">
+                        ⚠️ This client has no phone number. Please add one for messaging and communication.
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
 
                 {/* Property Selection - Show only when client has multiple properties */}

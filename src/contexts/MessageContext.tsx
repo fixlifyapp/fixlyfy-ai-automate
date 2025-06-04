@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -6,7 +5,7 @@ import { toast } from 'sonner';
 interface Client {
   id: string;
   name: string;
-  phone: string;
+  phone?: string; // Make phone optional to match usage
   email?: string;
 }
 
@@ -78,8 +77,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
           client: {
             id: conv.clients?.id || '',
             name: conv.clients?.name || 'Unknown',
-            phone: conv.clients?.phone || '',
-            email: conv.clients?.email || ''
+            phone: conv.clients?.phone || undefined,
+            email: conv.clients?.email || undefined
           },
           messages: sortedMessages.map(msg => ({
             id: msg.id,
@@ -155,6 +154,12 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const openMessageDialog = async (client: Client, jobId?: string) => {
     try {
       console.log('MessageContext: Opening message dialog for client:', client);
+      
+      // Validate that client has phone number for messaging
+      if (!client.phone) {
+        toast.error(`Cannot send message: ${client.name} has no phone number`);
+        return;
+      }
       
       // Find existing conversation or create new one
       let conversationId;
@@ -238,6 +243,11 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
   const sendMessage = async (message: string) => {
     if (!activeConversation || !message.trim()) return;
+
+    if (!activeConversation.client.phone) {
+      toast.error('Cannot send message: Client has no phone number');
+      return;
+    }
 
     setIsSending(true);
     try {

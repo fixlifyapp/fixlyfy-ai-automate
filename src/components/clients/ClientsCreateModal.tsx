@@ -40,6 +40,7 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
     try {
       const formData = new FormData(e.target as HTMLFormElement);
       const name = formData.get('name') as string;
+      const phone = formData.get('phone') as string;
       
       // Ensure we have the required name field
       if (!name || name.trim() === '') {
@@ -48,11 +49,18 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
         return;
       }
       
-      // Create client data with required name field and optional fields
+      // Ensure we have phone number for messaging
+      if (!phone || phone.trim() === '') {
+        toast.error("Phone number is required for messaging and communication");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create client data with required name and phone fields and optional fields
       const clientData = {
         name,
+        phone,
         email: formData.get('email') as string,
-        phone: formData.get('phone') as string,
         address: formData.get('address') as string,
         city: formData.get('city') as string,
         state: formData.get('state') as string,
@@ -95,7 +103,7 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>Add New Client</DialogTitle>
           <DialogDescription>
-            Fill in the details below to add a new client to your database.
+            Fill in the details below to add a new client to your database. Phone number is required for messaging and communication.
           </DialogDescription>
         </DialogHeader>
         
@@ -138,7 +146,8 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input id="phone" name="phone" placeholder="Phone number" required />
+                <Input id="phone" name="phone" placeholder="Phone number (required for messaging)" required />
+                <p className="text-xs text-muted-foreground">Required for SMS messaging and communication</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="altPhone">Alternative Phone</Label>
@@ -177,14 +186,12 @@ export const ClientsCreateModal = ({ open, onOpenChange, onSuccess }: ClientsCre
             </div>
           </ScrollArea>
           
-          <DialogFooter className="px-6 py-4 border-t">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button 
-              type="submit" 
-              className="bg-fixlyfy hover:bg-fixlyfy/90"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Saving...' : 'Add Client'}
+          <DialogFooter className="px-6 pb-6">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Client"}
             </Button>
           </DialogFooter>
         </form>
