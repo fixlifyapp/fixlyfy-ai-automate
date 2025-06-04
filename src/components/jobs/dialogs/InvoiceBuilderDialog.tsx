@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { UnifiedDocumentBuilder } from './UnifiedDocumentBuilder';
+import { SteppedInvoiceBuilder } from './SteppedInvoiceBuilder';
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 
@@ -22,13 +22,13 @@ export const InvoiceBuilderDialog = ({
   onInvoiceCreated
 }: InvoiceBuilderDialogProps) => {
   return (
-    <UnifiedDocumentBuilder
+    <SteppedInvoiceBuilder
       open={open}
       onOpenChange={onOpenChange}
-      documentType="invoice"
-      existingDocument={estimate || invoice}
       jobId={jobId}
-      onDocumentCreated={onInvoiceCreated}
+      existingInvoice={invoice}
+      estimateToConvert={estimate}
+      onInvoiceCreated={onInvoiceCreated}
     />
   );
 };

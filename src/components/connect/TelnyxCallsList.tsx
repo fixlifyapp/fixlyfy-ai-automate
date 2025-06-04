@@ -11,7 +11,7 @@ import { toast } from "sonner";
 interface TelnyxCall {
   id: string;
   call_control_id: string;
-  phone_number_id?: string;
+  phone_number?: string;
   call_session_id?: string;
   call_status?: string;
   call_duration?: number;
@@ -19,18 +19,10 @@ interface TelnyxCall {
   appointment_scheduled?: boolean;
   appointment_data?: any;
   created_at: string;
-  // Map database fields to expected interface
-  from_number?: string;
+  // Database fields that exist
   to_number?: string;
-  direction?: 'inbound' | 'outbound';
-  status?: string;
   client_id?: string;
   job_id?: string;
-  started_at?: string;
-  answered_at?: string;
-  ended_at?: string;
-  duration_seconds?: number;
-  call_summary?: string;
   clients?: {
     id: string;
     name: string;
@@ -81,19 +73,7 @@ export const TelnyxCallsList = () => {
 
       if (error) throw error;
       
-      // Transform the data to match our interface
-      const transformedCalls = (data || []).map(call => ({
-        ...call,
-        // Map old fields to new interface for backward compatibility
-        from_number: call.from_number || call.phone_number_id || 'Unknown',
-        to_number: call.to_number || call.phone_number_id || 'Unknown',
-        direction: call.direction || 'inbound' as 'inbound',
-        status: call.status || call.call_status || 'completed',
-        started_at: call.started_at || call.created_at,
-        duration_seconds: call.duration_seconds || call.call_duration || 0
-      }));
-      
-      setCalls(transformedCalls);
+      setCalls(data || []);
     } catch (error) {
       console.error('Error loading Telnyx calls:', error);
       toast.error('Failed to load calls');
@@ -156,8 +136,8 @@ export const TelnyxCallsList = () => {
     }
   };
 
-  const getStatusIcon = (direction: string, status: string) => {
-    if (direction === 'outbound') {
+  const getStatusIcon = (isOutbound: boolean) => {
+    if (isOutbound) {
       return <PhoneCall className="h-4 w-4 text-green-600" />;
     }
     return <Phone className="h-4 w-4 text-blue-600" />;
@@ -168,11 +148,11 @@ export const TelnyxCallsList = () => {
       openMessageDialog({
         id: call.client_id || "",
         name: call.clients.name,
-        phone: call.from_number || call.phone_number_id || 'Unknown'
+        phone: call.to_number || 'Unknown'
       });
     } else {
       // Open message dialog with phone number
-      const phoneNumber = call.from_number || call.phone_number_id || 'Unknown';
+      const phoneNumber = call.to_number || 'Unknown';
       openMessageDialog({
         id: "",
         name: `Client ${formatPhoneNumber(phoneNumber)}`,
@@ -182,14 +162,11 @@ export const TelnyxCallsList = () => {
   };
 
   const getCallPhoneNumber = (call: TelnyxCall) => {
-    return call.from_number || call.phone_number_id || 'Unknown';
+    return call.to_number || call.phone_number || 'Unknown';
   };
 
   const getDisplayPhoneNumber = (call: TelnyxCall) => {
-    const phoneNumber = call.direction === 'inbound' 
-      ? (call.from_number || call.phone_number_id) 
-      : (call.to_number || call.phone_number_id);
-    return phoneNumber || 'Unknown';
+    return call.to_number || call.phone_number || 'Unknown';
   };
 
   if (loading) {
@@ -243,7 +220,7 @@ export const TelnyxCallsList = () => {
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full bg-blue-100">
-                    {getStatusIcon(call.direction || 'inbound', call.status || 'completed')}
+                    {getStatusIcon(false)}
                   </div>
                   
                   <div>
@@ -251,30 +228,27 @@ export const TelnyxCallsList = () => {
                       <span className="font-medium">
                         {call.clients?.name || formatPhoneNumber(getDisplayPhoneNumber(call))}
                       </span>
-                      <Badge variant={getStatusColor(call.status || 'completed')}>
-                        {(call.status || 'completed').toUpperCase()}
+                      <Badge variant={getStatusColor(call.call_status || 'completed')}>
+                        {(call.call_status || 'completed').toUpperCase()}
                       </Badge>
-                      <Badge variant={call.direction === 'inbound' ? "default" : "secondary"}>
-                        {(call.direction || 'inbound').toUpperCase()}
+                      <Badge variant="default">
+                        INBOUND
                       </Badge>
                     </div>
-                    <div className="text-sm text-gray-500 flex items-center gap-4">
+                    <div className="text-sm text-muted-foreground flex items-center gap-4">
                       <span>
-                        {call.direction === 'inbound' ? 'From' : 'To'}: {formatPhoneNumber(getDisplayPhoneNumber(call))}
+                        From: {formatPhoneNumber(getDisplayPhoneNumber(call))}
                       </span>
-                      {call.duration_seconds && (
+                      {call.call_duration && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {formatDuration(call.duration_seconds)}
+                          {formatDuration(call.call_duration)}
                         </span>
                       )}
-                      <span>{new Date(call.started_at || call.created_at).toLocaleString()}</span>
+                      <span>{new Date(call.created_at).toLocaleString()}</span>
                     </div>
                     {call.ai_transcript && (
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{call.ai_transcript}</p>
-                    )}
-                    {call.call_summary && (
-                      <p className="text-sm text-blue-600 mt-1 line-clamp-1">Summary: {call.call_summary}</p>
                     )}
                   </div>
                 </div>
