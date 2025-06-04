@@ -42,7 +42,8 @@ export const generatePortalLink = async (
     });
     
     if (tokenData && !tokenError) {
-      const portalDomain = getPortalDomain();
+      // Always use hub.fixlify.app for portal links
+      const portalDomain = 'https://hub.fixlify.app';
       
       // Validate the portal domain
       if (!validatePortalDomain(portalDomain)) {

@@ -124,7 +124,7 @@ serve(async (req) => {
       }
     }
 
-    // Create SMS message with portal link
+    // Create SMS message with portal link - use hub.fixlify.app for invoice view
     const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.invoice_number}`;
     const smsMessage = message || `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} is ready. Total: $${invoice.total?.toFixed(2) || '0.00'}. View: ${invoiceLink}${portalLink ? ` | Portal: ${portalLink}` : ''}`;
 

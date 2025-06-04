@@ -124,7 +124,7 @@ serve(async (req) => {
       }
     }
 
-    // Create SMS message with portal link
+    // Create SMS message with portal link - use hub.fixlify.app for estimate view
     const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.estimate_number}`;
     const smsMessage = message || `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. View: ${estimateLink}${portalLink ? ` | Portal: ${portalLink}` : ''}`;
 
