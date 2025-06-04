@@ -32,13 +32,14 @@ export const useInvoiceSending = () => {
       lineItems,
       contactInfo,
       customNote,
-      onSave
+      onSave,
+      existingInvoiceId
     } = params;
 
     setIsProcessing(true);
 
     try {
-      console.log("🚀 Starting invoice send process...", { sendMethod, sendTo, invoiceNumber });
+      console.log("🚀 Starting invoice send process...", { sendMethod, sendTo, invoiceNumber, existingInvoiceId });
 
       // First save the invoice
       const saveSuccess = await onSave();
@@ -58,20 +59,38 @@ export const useInvoiceSending = () => {
         return { success: false };
       }
 
-      // Get invoice details
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('invoice_number', invoiceNumber)
-        .single();
+      // Get invoice details using the invoice ID instead of invoice_number
+      let invoice;
+      if (existingInvoiceId) {
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', existingInvoiceId)
+          .single();
 
-      if (invoiceError || !invoice) {
-        console.error("Failed to find invoice:", invoiceError);
-        toast.error("Failed to find invoice");
-        return { success: false };
+        if (invoiceError || !invoiceData) {
+          console.error("Failed to find invoice by ID:", invoiceError);
+          toast.error("Failed to find invoice");
+          return { success: false };
+        }
+        invoice = invoiceData;
+      } else {
+        // Fallback to invoice_number lookup
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('invoice_number', invoiceNumber)
+          .maybeSingle();
+
+        if (invoiceError || !invoiceData) {
+          console.error("Failed to find invoice by number:", invoiceError);
+          toast.error("Failed to find invoice");
+          return { success: false };
+        }
+        invoice = invoiceData;
       }
 
-      console.log("📧 Sending via appropriate edge function...", { method: sendMethod, recipient: sendTo });
+      console.log("📧 Sending via appropriate edge function...", { method: sendMethod, recipient: sendTo, invoiceId: invoice.id });
 
       let response;
       

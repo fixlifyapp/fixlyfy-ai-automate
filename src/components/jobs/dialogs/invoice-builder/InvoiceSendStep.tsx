@@ -23,6 +23,7 @@ interface InvoiceSendStepProps {
     email: string;
     phone: string;
   };
+  invoiceId?: string; // Add invoice ID prop
 }
 
 export const InvoiceSendStep = ({
@@ -34,7 +35,8 @@ export const InvoiceSendStep = ({
   onSave,
   onClose,
   onBack,
-  contactInfo: providedContactInfo
+  contactInfo: providedContactInfo,
+  invoiceId
 }: InvoiceSendStepProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
@@ -85,7 +87,7 @@ export const InvoiceSendStep = ({
       customNote: notes,
       jobId,
       onSave,
-      existingInvoiceId: invoiceNumber
+      existingInvoiceId: invoiceId || '' // Pass the invoice ID
     });
 
     if (result.success) {

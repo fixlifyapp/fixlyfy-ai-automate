@@ -352,6 +352,7 @@ export const SteppedInvoiceBuilder = ({
               onSave={handleSaveAndSend}
               onClose={() => onOpenChange(false)}
               onBack={() => setCurrentStep("upsell")}
+              invoiceId={savedInvoice?.id || existingInvoice?.id} // Pass the invoice ID
             />
           </DialogContent>
         </Dialog>
