@@ -1,7 +1,7 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { TrendingUp, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 interface UpsellItem {
   id: string;
@@ -27,13 +27,7 @@ export const WarrantiesList = ({
 }: WarrantiesListProps) => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Available Warranties
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {upsellItems.length === 0 ? (
           <div className="text-center py-8">
             <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

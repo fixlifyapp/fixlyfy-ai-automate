@@ -1,4 +1,5 @@
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Sparkles } from "lucide-react";
@@ -17,6 +18,7 @@ interface AIRecommendationsCardProps {
     confidence_score: number;
     price: number;
   }>;
+  estimateId?: string; // Add this to make tips stable per estimate
 }
 
 const dynamicProTips = [
@@ -34,25 +36,52 @@ const dynamicProTips = [
 
 export const AIRecommendationsCard = ({ 
   jobContext, 
-  recommendations = []
+  recommendations = [],
+  estimateId 
 }: AIRecommendationsCardProps) => {
   if (!jobContext) return null;
 
   const sanitizedJobType = sanitizeHtml(jobContext.job_type || '');
   
-  // Get random pro tips (2-3 per invoice)
-  const getRandomTips = () => {
-    const shuffled = [...dynamicProTips].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, Math.floor(Math.random() * 2) + 2); // 2-3 tips
-  };
+  // Use useMemo to ensure tips are stable for this specific estimate
+  const tips = useMemo(() => {
+    // Create a seed based on estimate ID or job context for consistent randomization
+    const seed = estimateId || `${jobContext.job_type}-${jobContext.job_value}`;
+    
+    // Simple hash function to create consistent randomization
+    const hashCode = (str: string) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash);
+    };
+    
+    const seedValue = hashCode(seed);
+    
+    // Use seeded randomization to get consistent tips for this estimate
+    const getSeededRandomTips = () => {
+      const shuffled = [...dynamicProTips];
+      // Use seed to consistently shuffle
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = (seedValue + i) % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const tipCount = 2 + (seedValue % 2); // 2-3 tips consistently
+      return shuffled.slice(0, tipCount);
+    };
 
-  // Mix AI recommendations with basic tips
-  const tips = recommendations.length > 0 
-    ? [
+    if (recommendations.length > 0) {
+      return [
         ...recommendations.slice(0, 2).map(rec => `${rec.warranty_name} - ${rec.reasoning}`),
-        ...getRandomTips().slice(0, 1)
-      ]
-    : getRandomTips();
+        ...getSeededRandomTips().slice(0, 1)
+      ];
+    } else {
+      return getSeededRandomTips();
+    }
+  }, [recommendations, estimateId, jobContext.job_type, jobContext.job_value]);
 
   return (
     <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">

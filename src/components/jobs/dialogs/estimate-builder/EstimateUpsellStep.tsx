@@ -144,6 +144,7 @@ export const EstimateUpsellStep = ({
 
       <AIRecommendationsCard
         jobContext={jobContext}
+        estimateId={`estimate-${Date.now()}`} // Use a stable ID for this estimate session
       />
 
       <WarrantiesList
