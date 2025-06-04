@@ -179,17 +179,8 @@ export const UnifiedItemsStep = ({
         </div>
         <div className="flex justify-between text-sm items-center">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Tax:</span>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={taxRate}
-              onChange={(e) => onTaxRateChange(parseFloat(e.target.value) || 0)}
-              className="w-16 h-6 text-xs"
-            />
-            <span className="text-xs text-muted-foreground">%</span>
+            <span className="text-muted-foreground">Tax (13%):</span>
+            <span className="text-xs text-blue-600 font-medium">Fixed Rate</span>
           </div>
           <span>${calculateTotalTax().toFixed(2)}</span>
         </div>
