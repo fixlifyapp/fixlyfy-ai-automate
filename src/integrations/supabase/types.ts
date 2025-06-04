@@ -3440,6 +3440,98 @@ export type Database = {
         }
         Relationships: []
       }
+      warranty_analytics: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          job_id: string | null
+          job_type: string | null
+          job_value: number | null
+          purchased_at: string
+          service_category: string | null
+          user_id: string
+          warranty_id: string
+          warranty_name: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_type?: string | null
+          job_value?: number | null
+          purchased_at?: string
+          service_category?: string | null
+          user_id: string
+          warranty_id: string
+          warranty_name: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_type?: string | null
+          job_value?: number | null
+          purchased_at?: string
+          service_category?: string | null
+          user_id?: string
+          warranty_id?: string
+          warranty_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranty_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       estimate_details_view: {
@@ -3522,6 +3614,18 @@ export type Database = {
         }
         Relationships: []
       }
+      warranty_analytics_summary: {
+        Row: {
+          avg_job_value: number | null
+          job_type: string | null
+          month: string | null
+          purchase_count: number | null
+          service_category: string | null
+          warranty_id: string | null
+          warranty_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_rate_limit: {
@@ -3540,6 +3644,15 @@ export type Database = {
       generate_next_id: {
         Args: { p_entity_type: string }
         Returns: string
+      }
+      get_popular_warranties_by_job_type: {
+        Args: { p_job_type: string; p_limit?: number }
+        Returns: {
+          warranty_id: string
+          warranty_name: string
+          purchase_count: number
+          popularity_percentage: number
+        }[]
       }
       get_service_areas: {
         Args: { p_team_member_id: string }
