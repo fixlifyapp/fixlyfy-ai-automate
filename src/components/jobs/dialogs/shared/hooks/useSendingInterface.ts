@@ -29,7 +29,15 @@ export const useEstimateSendingInterface = (): SendingHookReturn => {
   
   return {
     sendDocument: async (params: SendDocumentParams) => {
-      return await sendDocument(params);
+      // Transform params to match estimate sending interface
+      const estimateParams = {
+        ...params,
+        documentDetails: {
+          estimate_number: params.documentNumber,
+          ...params.documentDetails
+        }
+      };
+      return await sendDocument(estimateParams);
     },
     isProcessing
   };
@@ -40,7 +48,15 @@ export const useInvoiceSendingInterface = (): SendingHookReturn => {
   
   return {
     sendDocument: async (params: SendDocumentParams) => {
-      return await sendDocument(params);
+      // Transform params to match invoice sending interface
+      const invoiceParams = {
+        ...params,
+        documentDetails: {
+          invoice_number: params.documentNumber,
+          ...params.documentDetails
+        }
+      };
+      return await sendDocument(invoiceParams);
     },
     isProcessing
   };

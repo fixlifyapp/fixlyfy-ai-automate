@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,7 +98,10 @@ export const SendDialog = ({
         sendMethod,
         sendTo: sendTo.trim(),
         documentNumber,
-        documentDetails: { [documentType + '_number']: documentNumber },
+        documentDetails: { 
+          [documentType + '_number']: documentNumber,
+          total: total
+        },
         lineItems: [],
         contactInfo,
         customNote: customNote.trim(),
