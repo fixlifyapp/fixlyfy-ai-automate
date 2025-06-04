@@ -1,249 +1,291 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, DollarSign, Send, Trash2, Edit, CreditCard } from "lucide-react";
+import { Plus, Send, Edit, CreditCard, Eye, FileText, Download } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
-import { useInvoiceActions } from "@/components/jobs/invoices/hooks/useInvoiceActions";
-import { InvoiceBuilderDialog } from "@/components/jobs/dialogs/InvoiceBuilderDialog";
-import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
-import { format } from "date-fns";
-import { PaymentMethod } from "@/types/payment";
+import { useEstimates } from "@/hooks/useEstimates";
+import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
+import { InvoiceSendDialog } from "../dialogs/InvoiceSendDialog";
+import { InvoicePaymentDialog } from "../dialogs/invoice-builder/InvoicePaymentDialog";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
-  onSwitchToPayments?: () => void;
 }
 
-export const ModernJobInvoicesTab = ({ jobId, onSwitchToPayments }: ModernJobInvoicesTabProps) => {
-  const { invoices, setInvoices, isLoading, refreshInvoices } = useInvoices(jobId);
-  const { state, actions } = useInvoiceActions(jobId, invoices, setInvoices, refreshInvoices);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState<any>(null);
+export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
+  const { invoices, loading, refetch } = useInvoices(jobId);
+  const { estimates } = useEstimates(jobId);
+  const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
 
-  const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      'paid': 'bg-green-100 text-green-800',
-      'unpaid': 'bg-red-100 text-red-800',
-      'partial': 'bg-yellow-100 text-yellow-800',
-      'sent': 'bg-blue-100 text-blue-800',
-      'draft': 'bg-gray-100 text-gray-800',
-      'overdue': 'bg-red-100 text-red-800'
-    };
-
-    return (
-      <Badge className={statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800'}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  const totalInvoiceValue = invoices.reduce((sum, invoice) => sum + (invoice.total || 0), 0);
-  const totalPaid = invoices.reduce((sum, invoice) => sum + (invoice.amount_paid || 0), 0);
-  const totalOutstanding = totalInvoiceValue - totalPaid;
-
-  const handleInvoiceCreated = () => {
-    refreshInvoices();
-    setShowCreateForm(false);
-    setEditingInvoice(null);
+  const handleCreateInvoice = () => {
+    setSelectedInvoice(null);
+    setSelectedEstimate(null);
+    setShowInvoiceBuilder(true);
   };
 
   const handleEditInvoice = (invoice: any) => {
-    setEditingInvoice(invoice);
-    setShowCreateForm(true);
+    setSelectedInvoice(invoice);
+    setSelectedEstimate(null);
+    setShowInvoiceBuilder(true);
   };
 
-  const handleCreateNew = () => {
-    setEditingInvoice(null);
-    setShowCreateForm(true);
+  const handleConvertEstimate = (estimate: any) => {
+    setSelectedEstimate(estimate);
+    setSelectedInvoice(null);
+    setShowInvoiceBuilder(true);
+  };
+
+  const handleSendInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setShowSendDialog(true);
   };
 
   const handlePayInvoice = (invoice: any) => {
-    setSelectedInvoiceForPayment(invoice);
+    setSelectedInvoice(invoice);
     setShowPaymentDialog(true);
   };
 
-  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
-    if (!selectedInvoiceForPayment) return;
+  const handleViewInvoice = (invoice: any) => {
+    const viewUrl = `/invoice/view/${invoice.invoice_number}`;
+    window.open(viewUrl, '_blank');
+  };
 
-    // Record the payment using the invoice actions
-    const success = await actions.markAsPaid(selectedInvoiceForPayment.id, amount);
+  const handleDownloadInvoice = (invoice: any) => {
+    toast.info("Download functionality coming soon");
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { label: "Draft", variant: "secondary" as const },
+      sent: { label: "Sent", variant: "default" as const },
+      paid: { label: "Paid", variant: "success" as const },
+      partial: { label: "Partial", variant: "warning" as const },
+      overdue: { label: "Overdue", variant: "destructive" as const },
+      cancelled: { label: "Cancelled", variant: "secondary" as const }
+    };
     
-    if (success) {
-      setShowPaymentDialog(false);
-      setSelectedInvoiceForPayment(null);
-      
-      // Switch to payments tab after a short delay
-      if (onSwitchToPayments) {
-        setTimeout(() => {
-          onSwitchToPayments();
-        }, 1000);
-      }
-    }
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const handleDialogClose = () => {
-    setShowCreateForm(false);
-    setEditingInvoice(null);
+  const canAcceptPayment = (invoice: any) => {
+    const status = invoice.status?.toLowerCase();
+    return status === 'sent' || status === 'partial' || status === 'overdue';
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-muted rounded w-1/3 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // Get approved estimates that can be converted to invoices
+  const convertibleEstimates = estimates?.filter(est => 
+    est.status === 'approved' && 
+    !invoices?.some(inv => inv.estimate_id === est.id)
+  ) || [];
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Invoices</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{invoices.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalInvoiceValue)}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Paid</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{formatCurrency(totalOutstanding)}</div>
-            </CardContent>
-          </Card>
+    <div className="space-y-6">
+      {/* Header with Create Button */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div>
+          <h3 className="text-lg font-semibold">Invoices</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage invoices and payments for this job
+          </p>
         </div>
+        <div className="flex gap-2">
+          <Button onClick={handleCreateInvoice}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
+        </div>
+      </div>
 
-        {/* Invoices List */}
+      {/* Convert Estimates Section */}
+      {convertibleEstimates.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Invoices ({invoices.length})
-              </CardTitle>
-              <Button onClick={handleCreateNew}>
+            <CardTitle className="text-base">Convert Estimates to Invoices</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {convertibleEstimates.map((estimate) => (
+              <div key={estimate.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Estimate #{estimate.estimate_number}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatCurrency(estimate.total)} • Approved
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleConvertEstimate(estimate)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Convert
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Invoices List */}
+      <div className="space-y-4">
+        {(!invoices || invoices.length === 0) ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No invoices yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first invoice or convert an approved estimate
+              </p>
+              <Button onClick={handleCreateInvoice}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Invoice
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Loading invoices...</div>
-            ) : invoices.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-lg font-medium">No invoices yet</p>
-                <p className="text-sm">Create your first invoice to get started</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {invoices.map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-medium">{invoice.invoice_number}</span>
-                        <span className="text-lg font-semibold text-blue-600">
-                          {formatCurrency(invoice.total || 0)}
-                        </span>
-                        {getStatusBadge(invoice.status)}
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>Created: {format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
-                        <p>Paid: {formatCurrency(invoice.amount_paid || 0)} | Balance: {formatCurrency(invoice.balance || 0)}</p>
-                        {invoice.notes && <p>Notes: {invoice.notes}</p>}
-                      </div>
+            </CardContent>
+          </Card>
+        ) : (
+          invoices.map((invoice) => (
+            <Card key={invoice.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="font-semibold">Invoice #{invoice.invoice_number}</h4>
+                      {getStatusBadge(invoice.status)}
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditInvoice(invoice)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => actions.handleSendInvoice(invoice.id)}
-                        disabled={state.isSending}
-                      >
-                        <Send className="h-4 w-4 mr-1" />
-                        Send
-                      </Button>
-                      
-                      {(invoice.status === 'unpaid' || invoice.status === 'partial') && invoice.balance > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePayInvoice(invoice)}
-                          disabled={state.isProcessing}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <CreditCard className="h-4 w-4 mr-1" />
-                          Pay
-                        </Button>
-                      )}
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          actions.setSelectedInvoice(invoice);
-                          actions.confirmDeleteInvoice();
-                        }}
-                        disabled={state.isDeleting}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Total</p>
+                        <p className="font-medium">{formatCurrency(invoice.total)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Balance</p>
+                        <p className="font-medium">
+                          {formatCurrency(invoice.balance || (invoice.total - (invoice.amount_paid || 0)))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Issue Date</p>
+                        <p>{new Date(invoice.issue_date).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Due Date</p>
+                        <p>{new Date(invoice.due_date).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewInvoice(invoice)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditInvoice(invoice)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendInvoice(invoice)}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send
+                    </Button>
+                    
+                    {canAcceptPayment(invoice) && (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePayInvoice(invoice)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadInvoice(invoice)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      {/* Invoice Builder Dialog */}
-      <InvoiceBuilderDialog
-        open={showCreateForm}
-        onOpenChange={handleDialogClose}
+      {/* Dialogs */}
+      <SteppedInvoiceBuilder
+        open={showInvoiceBuilder}
+        onOpenChange={setShowInvoiceBuilder}
         jobId={jobId}
-        invoice={editingInvoice}
-        onInvoiceCreated={handleInvoiceCreated}
+        existingInvoice={selectedInvoice}
+        estimateToConvert={selectedEstimate}
+        onInvoiceCreated={refetch}
       />
 
-      {/* Payment Dialog */}
-      <PaymentDialog
-        open={showPaymentDialog}
-        onOpenChange={setShowPaymentDialog}
-        balance={selectedInvoiceForPayment?.balance || 0}
-        onPaymentProcessed={handlePaymentProcessed}
-      />
-    </>
+      {selectedInvoice && (
+        <>
+          <InvoiceSendDialog
+            open={showSendDialog}
+            onOpenChange={setShowSendDialog}
+            onSave={async () => true}
+            onAddWarranty={() => {}}
+            clientInfo={{}}
+            invoiceNumber={selectedInvoice.invoice_number}
+            jobId={jobId}
+          />
+
+          <InvoicePaymentDialog
+            isOpen={showPaymentDialog}
+            onClose={() => setShowPaymentDialog(false)}
+            invoice={selectedInvoice}
+            jobId={jobId}
+            onPaymentAdded={() => {
+              refetch();
+              setShowPaymentDialog(false);
+            }}
+          />
+        </>
+      )}
+    </div>
   );
 };

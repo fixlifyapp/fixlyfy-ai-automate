@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -17,6 +16,7 @@ import { CheckCircle, Mail, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhoneForTelnyx, isValidPhoneNumber } from "@/utils/phoneUtils";
+import { useJobData } from "./unified/hooks/useJobData";
 
 interface InvoiceSendDialogProps {
   open: boolean;
@@ -83,7 +83,12 @@ export const InvoiceSendDialog = ({
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string>("");
-  const [clientInfo, setClientInfo] = useState(propClientInfo);
+  
+  // Fetch job and client data using the optimized hook
+  const { clientInfo: jobClientInfo, loading: jobDataLoading } = useJobData(jobId || '');
+  
+  // Use job client info if available, otherwise fall back to prop client info
+  const clientInfo = jobClientInfo || propClientInfo;
   
   // Fetch job and client details when dialog opens
   useEffect(() => {
@@ -211,9 +216,9 @@ export const InvoiceSendDialog = ({
 
   const getClientContactInfo = () => {
     const contactData = {
-      name: clientInfo?.name || invoiceDetails?.client_name || 'Unknown Client',
-      email: clientInfo?.email || invoiceDetails?.client_email || '',
-      phone: clientInfo?.phone || invoiceDetails?.client_phone || ''
+      name: clientInfo?.name || 'Unknown Client',
+      email: clientInfo?.email || '',
+      phone: clientInfo?.phone || ''
     };
     
     console.log("Final contact data:", contactData);
@@ -228,7 +233,7 @@ export const InvoiceSendDialog = ({
   console.log("Contact info:", contactInfo);
 
   useEffect(() => {
-    if (contactInfo.name !== 'Unknown Client') {
+    if (contactInfo.name !== 'Unknown Client' && !jobDataLoading) {
       setValidationError("");
       
       if (hasValidEmail && sendMethod === "email") {
@@ -246,7 +251,7 @@ export const InvoiceSendDialog = ({
         setSendTo(formattedPhone);
       }
     }
-  }, [contactInfo, sendMethod, hasValidEmail, hasValidPhone]);
+  }, [contactInfo, sendMethod, hasValidEmail, hasValidPhone, jobDataLoading]);
 
   const getInvoiceId = (): string | null => {
     if (invoiceDetails && 'invoice_id' in invoiceDetails) {
@@ -531,7 +536,7 @@ export const InvoiceSendDialog = ({
     }
   };
 
-  if (isLoading) {
+  if (isLoading || jobDataLoading) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-md">
@@ -540,6 +545,9 @@ export const InvoiceSendDialog = ({
           </DialogHeader>
           <div className="py-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {jobDataLoading ? "Loading client information..." : "Loading invoice details..."}
+            </p>
           </div>
         </DialogContent>
       </Dialog>

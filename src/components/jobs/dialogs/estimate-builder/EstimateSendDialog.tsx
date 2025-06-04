@@ -2,10 +2,9 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 import { SendMethodStep } from "./steps/SendMethodStep";
 import { useEstimateSendingInterface } from "../shared/hooks/useSendingInterface";
+import { useJobData } from "../unified/hooks/useJobData";
 
 interface EstimateSendDialogProps {
   isOpen: boolean;
@@ -13,11 +12,7 @@ interface EstimateSendDialogProps {
   estimateId: string;
   estimateNumber: string;
   total: number;
-  contactInfo?: {
-    name: string;
-    email: string;
-    phone: string;
-  };
+  jobId?: string;
   onSuccess?: () => void;
   onSave?: () => Promise<boolean>;
 }
@@ -28,7 +23,7 @@ export const EstimateSendDialog = ({
   estimateId, 
   estimateNumber, 
   total,
-  contactInfo,
+  jobId,
   onSuccess,
   onSave
 }: EstimateSendDialogProps) => {
@@ -38,20 +33,8 @@ export const EstimateSendDialog = ({
   const [sentMethods, setSentMethods] = useState<Set<string>>(new Set());
   const { sendDocument, isProcessing } = useEstimateSendingInterface();
 
-  // Fetch user's Telnyx phone numbers
-  const { data: userPhoneNumbers = [] } = useQuery({
-    queryKey: ['user-telnyx-numbers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('telnyx_phone_numbers')
-        .select('*')
-        .eq('status', 'active')
-        .order('purchased_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    }
-  });
+  // Fetch job and client data using the optimized hook
+  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId || '');
 
   // Helper functions for validation
   const isValidEmail = (email: string): boolean => {
@@ -65,23 +48,30 @@ export const EstimateSendDialog = ({
     return cleaned.length >= 10;
   };
 
+  // Create contact info from fetched data
+  const contactInfo = {
+    name: clientInfo?.name || 'Client',
+    email: clientInfo?.email || '',
+    phone: clientInfo?.phone || ''
+  };
+
   // Check if contact info has valid email/phone
   const hasValidEmail = contactInfo?.email && isValidEmail(contactInfo.email);
   const hasValidPhone = contactInfo?.phone && isValidPhoneNumber(contactInfo.phone);
 
   // Set default sendTo value when dialog opens or method changes
   React.useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !jobDataLoading) {
       if (sendMethod === "email" && hasValidEmail) {
-        setSendTo(contactInfo!.email);
+        setSendTo(contactInfo.email);
       } else if (sendMethod === "sms" && hasValidPhone) {
-        setSendTo(contactInfo!.phone);
+        setSendTo(contactInfo.phone);
       } else {
         setSendTo("");
       }
       setValidationError("");
     }
-  }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo]);
+  }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo, jobDataLoading]);
 
   const handleSend = async () => {
     const result = await sendDocument({
@@ -90,7 +80,7 @@ export const EstimateSendDialog = ({
       documentNumber: estimateNumber,
       documentDetails: { estimate_number: estimateNumber },
       lineItems: [],
-      contactInfo: contactInfo || { name: '', email: '', phone: '' },
+      contactInfo,
       customNote: "",
       jobId: estimateId,
       onSave: onSave || (() => Promise.resolve(true)),
@@ -125,6 +115,19 @@ export const EstimateSendDialog = ({
     setSentMethods(new Set());
     onClose();
   };
+
+  if (jobDataLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
+          <div className="py-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Loading client information...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -165,7 +168,7 @@ export const EstimateSendDialog = ({
             setSendTo={setSendTo}
             validationError={validationError}
             setValidationError={setValidationError}
-            contactInfo={contactInfo || { name: '', email: '', phone: '' }}
+            contactInfo={contactInfo}
             hasValidEmail={!!hasValidEmail}
             hasValidPhone={!!hasValidPhone}
             estimateNumber={estimateNumber}
