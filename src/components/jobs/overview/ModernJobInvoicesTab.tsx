@@ -9,6 +9,7 @@ import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
 import { InvoiceSendDialog } from "../dialogs/InvoiceSendDialog";
 import { InvoicePaymentDialog } from "../dialogs/invoice-builder/InvoicePaymentDialog";
+import { InvoicePreviewWindow } from "../dialogs/InvoicePreviewWindow";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -22,6 +23,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showPreviewWindow, setShowPreviewWindow] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
 
@@ -54,8 +56,8 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   };
 
   const handleViewInvoice = (invoice: any) => {
-    const viewUrl = `/invoice/view/${invoice.invoice_number}`;
-    window.open(viewUrl, '_blank');
+    setSelectedInvoice(invoice);
+    setShowPreviewWindow(true);
   };
 
   const handleDownloadInvoice = (invoice: any) => {
@@ -99,7 +101,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   // Get approved estimates that can be converted to invoices
   const convertibleEstimates = estimates?.filter(est => 
     est.status === 'approved' && 
-    !invoices?.some(inv => inv.job_id === est.job_id) // Use job_id instead of estimate_id
+    !invoices?.some(inv => inv.job_id === est.job_id)
   ) || [];
 
   return (
@@ -269,7 +271,6 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
             onOpenChange={setShowSendDialog}
             onSave={async () => true}
             onAddWarranty={() => {}}
-            clientInfo={{}}
             invoiceNumber={selectedInvoice.invoice_number}
             jobId={jobId}
           />
@@ -283,6 +284,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
               refreshInvoices();
               setShowPaymentDialog(false);
             }}
+          />
+
+          <InvoicePreviewWindow
+            open={showPreviewWindow}
+            onOpenChange={setShowPreviewWindow}
+            invoice={selectedInvoice}
+            jobId={jobId}
           />
         </>
       )}

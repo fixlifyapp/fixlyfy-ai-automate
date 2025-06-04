@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -129,24 +130,6 @@ export const InvoiceSendDialog = ({
 
         if (invoiceError) {
           console.error('Error fetching invoice directly:', invoiceError);
-        }
-
-        if (jobId || invoice?.job_id) {
-          const targetJobId = jobId || invoice?.job_id;
-          
-          const { data: job, error: jobError } = await supabase
-            .from('jobs')
-            .select(`
-              *,
-              client:clients(*)
-            `)
-            .eq('id', targetJobId)
-            .single();
-
-          if (!jobError && job?.client) {
-            const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
-            console.log("Client info fetched from job:", clientData);
-          }
         }
 
         if (invoice) {
@@ -351,18 +334,13 @@ export const InvoiceSendDialog = ({
         return;
       }
 
-      console.log("Step 2: Invoice saved, fetching updated details...");
-      await fetchInvoiceAndClientDetails();
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      console.log("Step 2: Invoice saved, getting invoice ID...");
       const invoiceId = getInvoiceId();
       const invoiceTotal = getInvoiceTotal();
-      const invoiceNotes = getInvoiceNotes();
 
       console.log("Step 3: Invoice details retrieved:", {
         invoiceId,
-        invoiceTotal,
-        invoiceNotes
+        invoiceTotal
       });
 
       if (!invoiceId) {
@@ -387,115 +365,48 @@ export const InvoiceSendDialog = ({
         }
       }
 
-      console.log("Step 4: Creating communication record...");
-      const { data: commData, error: commError } = await supabase
-        .from('invoice_communications')
-        .insert({
-          invoice_id: invoiceId,
-          communication_type: sendMethod,
-          recipient: finalRecipient,
-          subject: sendMethod === 'email' ? `Invoice ${invoiceNumber}` : null,
-          content: sendMethod === 'sms' 
-            ? `Hi ${contactInfo.name}! Your invoice ${invoiceNumber} is ready. Total: $${invoiceTotal.toFixed(2)}.`
-            : `Please find your invoice ${invoiceNumber} attached. Total: $${invoiceTotal.toFixed(2)}.`,
-          status: 'pending',
-          invoice_number: invoiceNumber,
-          client_name: contactInfo.name,
-          client_email: contactInfo.email,
-          client_phone: contactInfo.phone
-        })
-        .select()
-        .single();
+      console.log("Step 4: Sending via edge function...");
 
-      if (commError) {
-        console.error('Error creating communication record:', commError);
-        toast.error('Failed to create communication record');
-        setIsProcessing(false);
-        return;
-      }
-
-      console.log("Step 5: Communication record created:", commData);
-
-      // Generate client portal login token
-      let portalLoginLink = '';
-      if (contactInfo.email) {
-        try {
-          console.log("Step 6: Generating portal login token...");
-          const { data: tokenData, error: tokenError } = await supabase.rpc('generate_client_login_token', {
-            p_email: contactInfo.email
-          });
-
-          if (!tokenError && tokenData) {
-            portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
-            console.log("Portal login link generated");
-          } else {
-            console.warn("Failed to generate portal login token:", tokenError);
+      let response;
+      
+      if (sendMethod === "email") {
+        console.log("Calling send-invoice function for email...");
+        response = await supabase.functions.invoke('send-invoice', {
+          body: {
+            invoiceId: invoiceId,
+            sendMethod: sendMethod,
+            recipientEmail: finalRecipient
           }
-        } catch (error) {
-          console.error('Error generating portal login token:', error);
-        }
-      }
-
-      const invoiceData = {
-        lineItems: lineItems.map(item => ({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: Number(item.unit_price),
-          taxable: item.taxable,
-          total: item.quantity * Number(item.unit_price)
-        })),
-        total: invoiceTotal,
-        taxRate: 13,
-        notes: customNote || invoiceNotes,
-        viewUrl: `${window.location.origin}/invoice/view/${invoiceNumber}`,
-        portalLoginLink: portalLoginLink
-      };
-
-      console.log("Step 7: Calling send-invoice edge function...");
-      console.log("Request payload:", {
-        method: sendMethod,
-        recipient: finalRecipient,
-        invoiceNumber: invoiceNumber,
-        invoiceData: invoiceData,
-        clientName: contactInfo.name,
-        communicationId: commData.id
-      });
-
-      const { data, error } = await supabase.functions.invoke('send-invoice', {
-        body: {
-          method: sendMethod,
-          recipient: finalRecipient,
-          invoiceNumber: invoiceNumber,
-          invoiceData: invoiceData,
-          clientName: contactInfo.name,
-          communicationId: commData.id
-        }
-      });
-      
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(error.message);
+        });
+      } else {
+        console.log("Calling send-invoice-sms function for SMS...");
+        const smsMessage = `Hi ${contactInfo.name}! Your invoice ${invoiceNumber} is ready. Total: $${invoiceTotal.toFixed(2)}.`;
+        
+        response = await supabase.functions.invoke('send-invoice-sms', {
+          body: {
+            invoiceId: invoiceId,
+            recipientPhone: finalRecipient,
+            message: smsMessage
+          }
+        });
       }
       
-      console.log("Step 8: Edge function response:", data);
+      if (response.error) {
+        console.error("Edge function error:", response.error);
+        throw new Error(response.error.message);
+      }
       
-      if (data?.success) {
+      console.log("Step 5: Edge function response:", response.data);
+      
+      if (response.data?.success) {
         const method = sendMethod === "email" ? "email" : "text message";
         toast.success(`Invoice ${invoiceNumber} sent to client via ${method}`);
         console.log("SUCCESS: Invoice sent successfully");
         
         setCurrentStep("confirmation");
       } else {
-        console.error("Edge function returned error:", data);
-        await supabase
-          .from('invoice_communications')
-          .update({
-            status: 'failed',
-            error_message: data?.error || 'Unknown error'
-          })
-          .eq('id', commData.id);
-        
-        toast.error(`Failed to send invoice: ${data?.error || 'Unknown error'}`);
+        console.error("Edge function returned error:", response.data);
+        toast.error(`Failed to send invoice: ${response.data?.error || 'Unknown error'}`);
         setIsProcessing(false);
       }
     } catch (error: any) {
