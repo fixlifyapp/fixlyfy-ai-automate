@@ -14,18 +14,10 @@ interface RBACContextType {
   allRoles: UserRole[];
 }
 
-const defaultUser: User = {
-  id: "1",
-  name: "Admin User",
-  email: "admin@fixlyfy.com",
-  role: "admin",
-  avatar: "https://github.com/shadcn.png"
-};
-
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 export const RBACProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(defaultUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -47,8 +39,19 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
           
           if (error) {
             console.error("Error fetching user profile:", error);
-            // Fall back to default user in dev mode, otherwise null
-            setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+            // In production, don't fall back to default user
+            if (process.env.NODE_ENV === 'production') {
+              setCurrentUser(null);
+            } else {
+              console.warn("Development mode: Using default admin user");
+              setCurrentUser({
+                id: "dev-admin",
+                name: "Dev Admin",
+                email: "dev@fixlyfy.com",
+                role: "admin",
+                avatar: "https://github.com/shadcn.png"
+              });
+            }
           } else if (profile) {
             // Set the current user from profile data
             setCurrentUser({
@@ -59,20 +62,12 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
               avatar: profile.avatar_url || "https://github.com/shadcn.png"
             });
           }
-        } else if (process.env.NODE_ENV === 'development') {
-          // In dev mode, use the default admin user if not logged in
-          setCurrentUser(defaultUser);
         } else {
           setCurrentUser(null);
         }
       } catch (error) {
         console.error("Error in RBAC provider:", error);
-        // Fall back to default user in dev mode
-        if (process.env.NODE_ENV === 'development') {
-          setCurrentUser(defaultUser);
-        } else {
-          setCurrentUser(null);
-        }
+        setCurrentUser(null);
       } finally {
         setLoading(false);
       }
@@ -85,7 +80,7 @@ export const RBACProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         fetchCurrentUser();
       } else if (event === 'SIGNED_OUT') {
-        setCurrentUser(process.env.NODE_ENV === 'development' ? defaultUser : null);
+        setCurrentUser(null);
       }
     });
     
@@ -199,7 +194,7 @@ export const RoleRequired = ({
 export const TestModeIndicator = () => {
   return process.env.NODE_ENV === 'development' ? (
     <div className="fixed bottom-0 right-0 bg-amber-500 text-white px-3 py-1 text-xs font-medium m-2 rounded-full">
-      Test Mode (No Supabase)
+      Development Mode
     </div>
   ) : null;
 };

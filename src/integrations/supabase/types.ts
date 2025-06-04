@@ -3619,8 +3619,8 @@ export type Database = {
           avg_job_value: number | null
           job_type: string | null
           month: string | null
+          popularity_percentage: number | null
           purchase_count: number | null
-          service_category: string | null
           warranty_id: string | null
           warranty_name: string | null
         }

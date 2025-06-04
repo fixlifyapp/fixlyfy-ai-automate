@@ -1,4 +1,6 @@
 
+import { getPortalDomain, validatePortalDomain } from '../../../src/utils/security.ts';
+
 export const generatePortalLink = async (
   clientEmail: string,
   jobId: string,
@@ -40,7 +42,14 @@ export const generatePortalLink = async (
     });
     
     if (tokenData && !tokenError) {
-      const portalDomain = 'https://hub.fixlify.app';
+      const portalDomain = getPortalDomain();
+      
+      // Validate the portal domain
+      if (!validatePortalDomain(portalDomain)) {
+        console.error('Invalid portal domain:', portalDomain);
+        return '';
+      }
+      
       const portalLink = `${portalDomain}/portal/login?token=${tokenData}&jobId=${jobId}`;
       console.log('Generated portal link:', portalLink.substring(0, 50) + '...');
       return portalLink;

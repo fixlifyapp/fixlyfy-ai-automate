@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Sparkles } from "lucide-react";
+import { sanitizeHtml } from "@/utils/security";
 
 interface AIRecommendationsCardProps {
   jobContext?: {
@@ -20,6 +21,10 @@ export const AIRecommendationsCard = ({
 }: AIRecommendationsCardProps) => {
   if (!jobContext) return null;
 
+  // Sanitize job context data to prevent XSS
+  const sanitizedJobType = sanitizeHtml(jobContext.job_type || '');
+  const sanitizedServiceCategory = sanitizeHtml(jobContext.service_category || '');
+
   return (
     <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
       <CardHeader className="pb-4">
@@ -34,7 +39,7 @@ export const AIRecommendationsCard = ({
       </CardHeader>
       <CardContent>
         <p className="text-sm text-purple-700 mb-4">
-          Let AI analyze this job and suggest the most relevant warranties based on similar customer purchases and preferences.
+          Let AI analyze this {sanitizedJobType} {sanitizedServiceCategory} job and suggest the most relevant warranties based on similar customer purchases and preferences.
         </p>
         <Button 
           onClick={onShowRecommendations}

@@ -7,6 +7,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Input validation functions
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email) && email.length <= 254;
+};
+
+const sanitizeInput = (input: string, maxLength: number = 255): string => {
+  if (typeof input !== 'string') return '';
+  return input.trim().slice(0, maxLength);
+};
+
+const getPortalDomain = (): string => {
+  return Deno.env.get('PORTAL_DOMAIN') || 'https://hub.fixlify.app';
+};
+
+const validatePortalDomain = (domain: string): boolean => {
+  try {
+    const url = new URL(domain);
+    return url.protocol === 'https:' && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -18,12 +42,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { clientEmail, linkType, resourceId, jobId } = await req.json()
-    console.log('generate-portal-links - Request:', { clientEmail, linkType, resourceId, jobId })
+    const requestBody = await req.json()
+    const { clientEmail, linkType, resourceId, jobId } = requestBody
+    
+    // Enhanced input validation
+    const sanitizedEmail = sanitizeInput(clientEmail || '', 254);
+    const sanitizedLinkType = sanitizeInput(linkType || '', 50);
+    const sanitizedResourceId = sanitizeInput(resourceId || '', 100);
+    const sanitizedJobId = sanitizeInput(jobId || '', 100);
+    
+    console.log('generate-portal-links - Request:', { 
+      clientEmail: sanitizedEmail, 
+      linkType: sanitizedLinkType, 
+      resourceId: sanitizedResourceId, 
+      jobId: sanitizedJobId 
+    })
 
-    if (!clientEmail) {
+    if (!validateEmail(sanitizedEmail)) {
       return new Response(
-        JSON.stringify({ error: 'Client email is required' }),
+        JSON.stringify({ error: 'Valid client email is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -32,7 +69,7 @@ serve(async (req) => {
     const { data: existingPortalUser, error: portalUserError } = await supabaseAdmin
       .from('client_portal_users')
       .select('*')
-      .eq('email', clientEmail)
+      .eq('email', sanitizedEmail)
       .single()
 
     if (portalUserError && portalUserError.code === 'PGRST116') {
@@ -40,11 +77,11 @@ serve(async (req) => {
       const { error: createError } = await supabaseAdmin
         .from('client_portal_users')
         .insert({
-          email: clientEmail,
+          email: sanitizedEmail,
           client_id: (await supabaseAdmin
             .from('clients')
             .select('id')
-            .eq('email', clientEmail)
+            .eq('email', sanitizedEmail)
             .single()).data?.id,
           is_active: true
         })
@@ -60,7 +97,7 @@ serve(async (req) => {
 
     // Generate login token
     const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-      p_email: clientEmail
+      p_email: sanitizedEmail
     })
     
     if (tokenError || !tokenData) {
@@ -72,28 +109,37 @@ serve(async (req) => {
     }
 
     // Build portal URL based on link type
-    const portalDomain = 'https://hub.fixlify.app' // Update with your actual domain
+    const portalDomain = getPortalDomain()
+    
+    if (!validatePortalDomain(portalDomain)) {
+      console.error('Invalid portal domain configuration:', portalDomain)
+      return new Response(
+        JSON.stringify({ error: 'Portal configuration error' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+    
     let portalPath = '/portal/login'
     let queryParams = new URLSearchParams({ token: tokenData })
 
-    switch (linkType) {
+    switch (sanitizedLinkType) {
       case 'estimate':
-        if (resourceId) {
-          queryParams.set('redirect', `/portal/estimates?id=${resourceId}`)
+        if (sanitizedResourceId) {
+          queryParams.set('redirect', `/portal/estimates?id=${sanitizedResourceId}`)
         } else {
           queryParams.set('redirect', '/portal/estimates')
         }
         break
       case 'invoice':
-        if (resourceId) {
-          queryParams.set('redirect', `/portal/invoices?id=${resourceId}`)
+        if (sanitizedResourceId) {
+          queryParams.set('redirect', `/portal/invoices?id=${sanitizedResourceId}`)
         } else {
           queryParams.set('redirect', '/portal/invoices')
         }
         break
       case 'job':
-        if (jobId || resourceId) {
-          queryParams.set('redirect', `/portal/jobs?id=${jobId || resourceId}`)
+        if (sanitizedJobId || sanitizedResourceId) {
+          queryParams.set('redirect', `/portal/jobs?id=${sanitizedJobId || sanitizedResourceId}`)
         } else {
           queryParams.set('redirect', '/portal/jobs')
         }
@@ -110,8 +156,8 @@ serve(async (req) => {
       JSON.stringify({ 
         portalLink,
         token: tokenData,
-        linkType,
-        clientEmail 
+        linkType: sanitizedLinkType,
+        clientEmail: sanitizedEmail 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
@@ -119,7 +165,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('generate-portal-links - Error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
