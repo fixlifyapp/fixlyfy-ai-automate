@@ -4,6 +4,7 @@ import { LineItem } from "../../../builder/types";
 import { DocumentType } from "../../UnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseDocumentInitializationProps {
   documentType: DocumentType;
@@ -32,6 +33,10 @@ export const useDocumentInitialization = ({
     }
 
     const initializeDocument = async () => {
+      console.log("=== INITIALIZING DOCUMENT ===");
+      console.log("Document type:", documentType);
+      console.log("Existing document:", existingDocument);
+      
       if (existingDocument) {
         // Load existing document data
         setNotes(existingDocument.notes || "");
@@ -44,8 +49,37 @@ export const useDocumentInitialization = ({
           setDocumentNumber(invoice.invoice_number || invoice.number || "");
         }
 
-        // TODO: Load line items from database
-        setLineItems([]);
+        // Load line items from database
+        console.log("Loading line items for existing document:", existingDocument.id);
+        try {
+          const { data: items, error } = await supabase
+            .from('line_items')
+            .select('*')
+            .eq('parent_type', documentType)
+            .eq('parent_id', existingDocument.id);
+
+          if (error) {
+            console.error("Error loading line items:", error);
+          } else if (items) {
+            console.log("Loaded line items:", items.length, "items");
+            // Transform database items to LineItem format
+            const transformedItems: LineItem[] = items.map(item => ({
+              id: item.id,
+              description: item.description || '',
+              quantity: item.quantity || 1,
+              unitPrice: Number(item.unit_price) || 0,
+              taxable: item.taxable !== false,
+              discount: 0,
+              ourPrice: 0,
+              name: item.description || '',
+              price: Number(item.unit_price) || 0,
+              total: (item.quantity || 1) * (Number(item.unit_price) || 0)
+            }));
+            setLineItems(transformedItems);
+          }
+        } catch (error) {
+          console.error("Error fetching line items:", error);
+        }
       } else {
         // Generate new document number
         const prefix = documentType === 'estimate' ? 'EST' : 'INV';
@@ -55,6 +89,7 @@ export const useDocumentInitialization = ({
         setNotes("");
       }
       
+      console.log("Document initialization completed");
       setIsInitialized(true);
     };
 

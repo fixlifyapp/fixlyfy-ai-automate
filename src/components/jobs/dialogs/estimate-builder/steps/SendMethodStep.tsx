@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageSquare, CheckCircle, AlertCircle } from "lucide-react";
 
 interface SendMethodStepProps {
   sendMethod: "email" | "sms";
@@ -71,7 +72,7 @@ export const SendMethodStep = ({
     setSendMethod(value);
     setValidationError("");
     
-    // Only auto-fill if the current field is empty
+    // Auto-fill with client info only if the field is empty
     if (!sendTo.trim()) {
       if (value === "email" && hasValidEmail) {
         setSendTo(contactInfo.email);
@@ -85,43 +86,53 @@ export const SendMethodStep = ({
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground mb-4">
-        Send estimate {estimateNumber} to {contactInfo.name}:
+        Отправить estimate {estimateNumber} клиенту {contactInfo.name}:
       </div>
       
+      <div className="text-sm font-medium mb-3">Выберите способ отправки:</div>
+      
       <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
-        <div className={`flex items-start space-x-3 border rounded-md p-3 mb-3 hover:bg-muted/50 cursor-pointer ${
+        <div className={`flex items-start space-x-3 border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
           sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
         }`}>
           <RadioGroupItem value="email" id="email" className="mt-1" />
           <div className="flex-1">
             <Label htmlFor="email" className="flex items-center gap-2 font-medium cursor-pointer">
               <Mail size={16} />
-              Send via Email
+              Отправить по Email
+              {hasValidEmail && <CheckCircle size={14} className="text-green-600" />}
+              {!hasValidEmail && <AlertCircle size={14} className="text-amber-500" />}
             </Label>
             {hasValidEmail ? (
-              <p className="text-sm text-muted-foreground mt-1">Client email: {contactInfo.email}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Email клиента: <span className="font-medium">{contactInfo.email}</span>
+              </p>
             ) : (
-              <p className="text-sm text-amber-600 mt-1">No valid email available for this client</p>
+              <p className="text-sm text-amber-600 mt-1">Email клиента недоступен - можно ввести другой</p>
             )}
-            <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
+            <p className="text-xs text-blue-600 mt-1">Включает ссылку на защищенный портал клиента</p>
           </div>
         </div>
         
-        <div className={`flex items-start space-x-3 border rounded-md p-3 hover:bg-muted/50 cursor-pointer ${
+        <div className={`flex items-start space-x-3 border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
           sendMethod === "sms" ? "border-primary bg-primary/5" : "border-input"
         }`}>
           <RadioGroupItem value="sms" id="sms" className="mt-1" />
           <div className="flex-1">
             <Label htmlFor="sms" className="flex items-center gap-2 font-medium cursor-pointer">
               <MessageSquare size={16} />
-              Send via Text Message
+              Отправить по SMS
+              {hasValidPhone && <CheckCircle size={14} className="text-green-600" />}
+              {!hasValidPhone && <AlertCircle size={14} className="text-amber-500" />}
             </Label>
             {hasValidPhone ? (
-              <p className="text-sm text-muted-foreground mt-1">Client phone: {contactInfo.phone}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Телефон клиента: <span className="font-medium">{contactInfo.phone}</span>
+              </p>
             ) : (
-              <p className="text-sm text-amber-600 mt-1">No valid phone number available for this client</p>
+              <p className="text-sm text-amber-600 mt-1">Телефон клиента недоступен - можно ввести другой</p>
             )}
-            <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
+            <p className="text-xs text-blue-600 mt-1">Включает ссылку на защищенный портал клиента</p>
           </div>
         </div>
       </RadioGroup>
@@ -129,13 +140,13 @@ export const SendMethodStep = ({
       {/* Always show editable field */}
       <div className="space-y-2">
         <Label htmlFor="send-to">
-          {sendMethod === "email" ? "Email Address" : "Phone Number"}
+          {sendMethod === "email" ? "Email адрес" : "Номер телефона"}
         </Label>
         <Input
           id="send-to"
           value={sendTo}
           onChange={(e) => handleInputChange(e.target.value)}
-          placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
+          placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 или (555) 123-4567"}
           className={validationError ? "border-red-500" : ""}
         />
         {validationError && (
@@ -143,23 +154,23 @@ export const SendMethodStep = ({
         )}
         {sendMethod === "sms" && (
           <p className="text-xs text-muted-foreground mt-1">
-            Phone numbers will be automatically formatted for Telnyx delivery
+            Номера телефонов будут автоматически отформатированы для Telnyx
           </p>
         )}
         <p className="text-xs text-gray-500 mt-1">
-          💡 You can enter any {sendMethod === "email" ? "email address" : "phone number"} - this won't update the client's contact information
+          💡 Можете ввести любой {sendMethod === "email" ? "email адрес" : "номер телефона"} - это не изменит контактную информацию клиента
         </p>
       </div>
       
       <div className="pt-4 flex justify-end gap-2">
         <Button variant="outline" onClick={onBack}>
-          Back
+          Назад
         </Button>
         <Button 
           onClick={onSend} 
           disabled={!canSend || isProcessing || !!validationError}
         >
-          {isProcessing ? "Sending..." : "Send Estimate"}
+          {isProcessing ? "Отправляю..." : "Отправить Estimate"}
         </Button>
       </div>
     </div>
