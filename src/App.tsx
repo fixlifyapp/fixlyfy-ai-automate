@@ -35,6 +35,8 @@ import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
 import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
 import PortalProfilePage from "@/pages/portal/PortalProfilePage";
 import { useState } from "react";
+import { AppErrorBoundary } from "@/components/ui/AppErrorBoundary";
+import { AppInitializer } from "@/components/ui/AppInitializer";
 import { AppProviders } from "@/components/ui/AppProviders";
 
 const queryClient = new QueryClient();
@@ -43,146 +45,150 @@ const App = () => {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppProviders>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<AuthPage />} />
-              
-              {/* Client Portal Routes */}
-              <Route path="/portal/login" element={<PortalLoginPage />} />
-              <Route path="/portal/dashboard" element={
-                <ProtectedPortalRoute>
-                  <PortalDashboardPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/jobs" element={
-                <ProtectedPortalRoute>
-                  <PortalJobsPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/estimates" element={
-                <ProtectedPortalRoute>
-                  <PortalEstimatesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/invoices" element={
-                <ProtectedPortalRoute>
-                  <PortalInvoicesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/profile" element={
-                <ProtectedPortalRoute>
-                  <PortalProfilePage />
-                </ProtectedPortalRoute>
-              } />
-              
-              {/* Main App Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients" element={
-                <ProtectedRoute>
-                  <ClientsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients/:id" element={
-                <ProtectedRoute>
-                  <ClientDetailPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs" element={
-                <ProtectedRoute>
-                  <JobsPageOptimized />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs/:id" element={
-                <ProtectedRoute>
-                  <JobDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/products" element={
-                <ProtectedRoute>
-                  <ProductsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect" element={
-                <ProtectedRoute>
-                  <ConnectCenterPageOptimized />
-                </ProtectedRoute>
-              } />
-              <Route path="/schedule" element={
-                <ProtectedRoute>
-                  <SchedulePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/finance" element={
-                <ProtectedRoute>
-                  <FinancePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings/telnyx" element={
-                <ProtectedRoute>
-                  <TelnyxSettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile-company" element={
-                <ProtectedRoute>
-                  <ProfileCompanyPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/integrations" element={
-                <ProtectedRoute>
-                  <IntegrationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-settings" element={
-                <ProtectedRoute>
-                  <AISettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/team" element={
-                <ProtectedRoute>
-                  <TeamManagementPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/automations" element={
-                <ProtectedRoute>
-                  <AutomationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-center" element={
-                <ProtectedRoute>
-                  <AiCenterPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/configuration" element={
-                <ProtectedRoute>
-                  <ConfigurationPage />
-                </ProtectedRoute>
-              } />
-            </Routes>
-            <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
-          </BrowserRouter>
-        </AppProviders>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AppProviders>
+            <AppInitializer>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  
+                  {/* Client Portal Routes */}
+                  <Route path="/portal/login" element={<PortalLoginPage />} />
+                  <Route path="/portal/dashboard" element={
+                    <ProtectedPortalRoute>
+                      <PortalDashboardPage />
+                    </ProtectedPortalRoute>
+                  } />
+                  <Route path="/portal/jobs" element={
+                    <ProtectedPortalRoute>
+                      <PortalJobsPage />
+                    </ProtectedPortalRoute>
+                  } />
+                  <Route path="/portal/estimates" element={
+                    <ProtectedPortalRoute>
+                      <PortalEstimatesPage />
+                    </ProtectedPortalRoute>
+                  } />
+                  <Route path="/portal/invoices" element={
+                    <ProtectedPortalRoute>
+                      <PortalInvoicesPage />
+                    </ProtectedPortalRoute>
+                  } />
+                  <Route path="/portal/profile" element={
+                    <ProtectedPortalRoute>
+                      <PortalProfilePage />
+                    </ProtectedPortalRoute>
+                  } />
+                  
+                  {/* Main App Routes */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/clients" element={
+                    <ProtectedRoute>
+                      <ClientsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/clients/:id" element={
+                    <ProtectedRoute>
+                      <ClientDetailPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/jobs" element={
+                    <ProtectedRoute>
+                      <JobsPageOptimized />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/jobs/:id" element={
+                    <ProtectedRoute>
+                      <JobDetailsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/products" element={
+                    <ProtectedRoute>
+                      <ProductsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/connect" element={
+                    <ProtectedRoute>
+                      <ConnectCenterPageOptimized />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/schedule" element={
+                    <ProtectedRoute>
+                      <SchedulePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/finance" element={
+                    <ProtectedRoute>
+                      <FinancePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/analytics" element={
+                    <ProtectedRoute>
+                      <AnalyticsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings/telnyx" element={
+                    <ProtectedRoute>
+                      <TelnyxSettingsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile-company" element={
+                    <ProtectedRoute>
+                      <ProfileCompanyPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/integrations" element={
+                    <ProtectedRoute>
+                      <IntegrationsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/ai-settings" element={
+                    <ProtectedRoute>
+                      <AISettingsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/team" element={
+                    <ProtectedRoute>
+                      <TeamManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/automations" element={
+                    <ProtectedRoute>
+                      <AutomationsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/ai-center" element={
+                    <ProtectedRoute>
+                      <AiCenterPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/configuration" element={
+                    <ProtectedRoute>
+                      <ConfigurationPage />
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+                <OnboardingModal open={onboardingOpen} onOpenChange={setOnboardingOpen} />
+              </BrowserRouter>
+            </AppInitializer>
+          </AppProviders>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 };
 

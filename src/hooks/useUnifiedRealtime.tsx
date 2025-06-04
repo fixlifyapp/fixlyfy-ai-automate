@@ -1,6 +1,6 @@
 
 import { useEffect, useCallback } from 'react';
-import { useGlobalRealtime } from '@/contexts/GlobalRealtimeProvider';
+import { useGlobalRealtimeDefensive } from './useGlobalRealtimeDefensive';
 
 interface UseUnifiedRealtimeProps {
   tables: ('jobs' | 'clients' | 'messages' | 'invoices' | 'payments' | 'estimates' | 'line_items' | 'job_history' | 'job_custom_field_values' | 'tags' | 'job_types' | 'job_statuses' | 'custom_fields' | 'lead_sources' | 'invoice_communications' | 'estimate_communications')[];
@@ -9,7 +9,7 @@ interface UseUnifiedRealtimeProps {
 }
 
 export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnifiedRealtimeProps) => {
-  const globalRealtime = useGlobalRealtime();
+  const globalRealtime = useGlobalRealtimeDefensive();
   
   const handleUpdate = useCallback(() => {
     if (enabled) {
@@ -19,7 +19,7 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
   }, [onUpdate, enabled, tables]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !globalRealtime) return;
 
     // Register callback for each table
     const unsubscribeFunctions: (() => void)[] = [];
@@ -34,7 +34,7 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
         'payments': 'refreshPayments',
         'estimates': 'refreshEstimates',
         'line_items': 'refreshEstimates', // Line items trigger estimates refresh
-        'job_history': 'refreshJobHistory', // Fixed: use correct table name
+        'job_history': 'refreshJobHistory',
         'job_custom_field_values': 'refreshJobCustomFieldValues',
         'tags': 'refreshTags',
         'job_types': 'refreshJobTypes',
@@ -58,7 +58,7 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
         if (table === 'job_statuses') finalTableKey = 'jobstatuses';
         if (table === 'custom_fields') finalTableKey = 'customfields';
         if (table === 'lead_sources') finalTableKey = 'leadsources';
-        if (table === 'job_history') finalTableKey = 'jobhistory'; // Fixed: use correct mapping
+        if (table === 'job_history') finalTableKey = 'jobhistory';
 
         if (refreshCallbacks && refreshCallbacks[finalTableKey]) {
           refreshCallbacks[finalTableKey].add(handleUpdate);
@@ -76,6 +76,6 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
   }, [tables, handleUpdate, enabled, globalRealtime]);
 
   return {
-    isConnected: globalRealtime.isConnected
+    isConnected: globalRealtime?.isConnected || false
   };
 };
