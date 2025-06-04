@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 import { getBusinessConfig } from './utils/businessConfig.ts'
@@ -83,11 +82,16 @@ const logCallToTelnyxDatabase = async (supabaseClient: any, callControlId: strin
       .from('telnyx_calls')
       .insert({
         call_control_id: callControlId,
+        // Use new column names if they exist, fallback to old ones
         from_number: from,
         to_number: to,
         direction: 'inbound',
         status: 'initiated',
         client_id: client?.id || null,
+        started_at: new Date().toISOString(),
+        // Keep old columns for backward compatibility
+        phone_number_id: phoneNumberData?.id || null,
+        call_status: 'initiated',
         metadata: {
           phone_number_data: phoneNumberData
         }
@@ -105,12 +109,18 @@ const logCallToTelnyxDatabase = async (supabaseClient: any, callControlId: strin
 
 const updateTelnyxCallStatus = async (supabaseClient: any, callControlId: string, status: string, additionalData?: any) => {
   try {
-    const updateData: any = { status };
+    const updateData: any = { 
+      status,
+      call_status: status // Keep old column for backward compatibility
+    };
     
     if (additionalData) {
       if (additionalData.answered_at) updateData.answered_at = additionalData.answered_at;
       if (additionalData.ended_at) updateData.ended_at = additionalData.ended_at;
-      if (additionalData.duration_seconds) updateData.duration_seconds = additionalData.duration_seconds;
+      if (additionalData.duration_seconds) {
+        updateData.duration_seconds = additionalData.duration_seconds;
+        updateData.call_duration = additionalData.duration_seconds; // Keep old column
+      }
       if (additionalData.metadata) updateData.metadata = additionalData.metadata;
     }
 

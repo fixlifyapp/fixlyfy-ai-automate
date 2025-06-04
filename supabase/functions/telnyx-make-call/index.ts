@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -85,17 +84,22 @@ serve(async (req) => {
 
     const callControlId = callResult.data?.call_control_id;
 
-    // Log the outbound call
+    // Log the outbound call with proper column mapping
     const { error: logError } = await supabaseAdmin
       .from('telnyx_calls')
       .insert({
         call_control_id: callControlId,
+        // Use new column names
         from_number: formattedFrom,
         to_number: formattedTo,
         direction: 'outbound',
         status: 'initiated',
         client_id: clientId || null,
         job_id: jobId || null,
+        started_at: new Date().toISOString(),
+        // Keep old columns for backward compatibility
+        phone_number_id: phoneNumbers[0].id,
+        call_status: 'initiated',
         metadata: {
           telnyx_call_id: callResult.data?.id
         }

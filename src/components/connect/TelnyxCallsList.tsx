@@ -11,17 +11,25 @@ import { toast } from "sonner";
 interface TelnyxCall {
   id: string;
   call_control_id: string;
-  from_number: string;
-  to_number: string;
-  direction: 'inbound' | 'outbound';
-  status: string;
+  phone_number_id?: string;
+  call_session_id?: string;
+  call_status?: string;
+  call_duration?: number;
+  ai_transcript?: string;
+  appointment_scheduled?: boolean;
+  appointment_data?: any;
+  created_at: string;
+  // Map database fields to expected interface
+  from_number?: string;
+  to_number?: string;
+  direction?: 'inbound' | 'outbound';
+  status?: string;
   client_id?: string;
   job_id?: string;
-  started_at: string;
+  started_at?: string;
   answered_at?: string;
   ended_at?: string;
   duration_seconds?: number;
-  ai_transcript?: string;
   call_summary?: string;
   clients?: {
     id: string;
@@ -68,11 +76,24 @@ export const TelnyxCallsList = () => {
           *,
           clients:client_id(id, name, phone)
         `)
-        .order('started_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setCalls(data || []);
+      
+      // Transform the data to match our interface
+      const transformedCalls = (data || []).map(call => ({
+        ...call,
+        // Map old fields to new interface for backward compatibility
+        from_number: call.from_number || call.phone_number_id || 'Unknown',
+        to_number: call.to_number || call.phone_number_id || 'Unknown',
+        direction: call.direction || 'inbound' as 'inbound',
+        status: call.status || call.call_status || 'completed',
+        started_at: call.started_at || call.created_at,
+        duration_seconds: call.duration_seconds || call.call_duration || 0
+      }));
+      
+      setCalls(transformedCalls);
     } catch (error) {
       console.error('Error loading Telnyx calls:', error);
       toast.error('Failed to load calls');
@@ -147,16 +168,28 @@ export const TelnyxCallsList = () => {
       openMessageDialog({
         id: call.client_id || "",
         name: call.clients.name,
-        phone: call.from_number
+        phone: call.from_number || call.phone_number_id || 'Unknown'
       });
     } else {
       // Open message dialog with phone number
+      const phoneNumber = call.from_number || call.phone_number_id || 'Unknown';
       openMessageDialog({
         id: "",
-        name: `Client ${formatPhoneNumber(call.from_number)}`,
-        phone: call.from_number
+        name: `Client ${formatPhoneNumber(phoneNumber)}`,
+        phone: phoneNumber
       });
     }
+  };
+
+  const getCallPhoneNumber = (call: TelnyxCall) => {
+    return call.from_number || call.phone_number_id || 'Unknown';
+  };
+
+  const getDisplayPhoneNumber = (call: TelnyxCall) => {
+    const phoneNumber = call.direction === 'inbound' 
+      ? (call.from_number || call.phone_number_id) 
+      : (call.to_number || call.phone_number_id);
+    return phoneNumber || 'Unknown';
   };
 
   if (loading) {
@@ -210,28 +243,24 @@ export const TelnyxCallsList = () => {
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full bg-blue-100">
-                    {getStatusIcon(call.direction, call.status)}
+                    {getStatusIcon(call.direction || 'inbound', call.status || 'completed')}
                   </div>
                   
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {call.clients?.name || formatPhoneNumber(
-                          call.direction === 'inbound' ? call.from_number : call.to_number
-                        )}
+                        {call.clients?.name || formatPhoneNumber(getDisplayPhoneNumber(call))}
                       </span>
-                      <Badge variant={getStatusColor(call.status)}>
-                        {call.status.toUpperCase()}
+                      <Badge variant={getStatusColor(call.status || 'completed')}>
+                        {(call.status || 'completed').toUpperCase()}
                       </Badge>
                       <Badge variant={call.direction === 'inbound' ? "default" : "secondary"}>
-                        {call.direction.toUpperCase()}
+                        {(call.direction || 'inbound').toUpperCase()}
                       </Badge>
                     </div>
                     <div className="text-sm text-gray-500 flex items-center gap-4">
                       <span>
-                        {call.direction === 'inbound' ? 'From' : 'To'}: {formatPhoneNumber(
-                          call.direction === 'inbound' ? call.from_number : call.to_number
-                        )}
+                        {call.direction === 'inbound' ? 'From' : 'To'}: {formatPhoneNumber(getDisplayPhoneNumber(call))}
                       </span>
                       {call.duration_seconds && (
                         <span className="flex items-center gap-1">
@@ -239,7 +268,7 @@ export const TelnyxCallsList = () => {
                           {formatDuration(call.duration_seconds)}
                         </span>
                       )}
-                      <span>{new Date(call.started_at).toLocaleString()}</span>
+                      <span>{new Date(call.started_at || call.created_at).toLocaleString()}</span>
                     </div>
                     {call.ai_transcript && (
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{call.ai_transcript}</p>
@@ -265,14 +294,14 @@ export const TelnyxCallsList = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => makeCall(
-                      call.direction === 'inbound' ? call.from_number : call.to_number,
+                      getCallPhoneNumber(call),
                       call.client_id,
                       call.job_id
                     )}
-                    disabled={callingNumber === (call.direction === 'inbound' ? call.from_number : call.to_number)}
+                    disabled={callingNumber === getCallPhoneNumber(call)}
                     className="gap-1"
                   >
-                    {callingNumber === (call.direction === 'inbound' ? call.from_number : call.to_number) ? (
+                    {callingNumber === getCallPhoneNumber(call) ? (
                       <>
                         <div className="animate-spin h-3 w-3 border border-gray-300 border-t-gray-600 rounded-full" />
                         Calling...
