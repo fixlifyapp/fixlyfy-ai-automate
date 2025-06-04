@@ -45,11 +45,17 @@ export const LineItemsManager = ({
   calculateGrandTotal,
   documentType
 }: LineItemsManagerProps) => {
+  
   const handleAddLineItem = (newItem: LineItem) => {
-    onLineItemsChange([...lineItems, newItem]);
+    console.log('LineItemsManager: Adding line item:', newItem);
+    const updatedItems = [...lineItems, newItem];
+    console.log('LineItemsManager: Updated items list:', updatedItems);
+    onLineItemsChange(updatedItems);
+    toast.success(`Item added to ${documentType}`);
   };
 
   const handleProductSelect = (product: Product) => {
+    console.log('LineItemsManager: Adding product:', product);
     onAddProduct(product);
     toast.success(`${product.name} added to ${documentType}`);
   };
@@ -72,26 +78,26 @@ export const LineItemsManager = ({
           <CardTitle>Add Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="products" className="w-full">
+          <Tabs defaultValue="custom" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="custom" className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                Add Custom Item
+              </TabsTrigger>
               <TabsTrigger value="products" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
                 Add from Products
               </TabsTrigger>
-              <TabsTrigger value="custom" className="flex items-center gap-2">
-                <Edit className="h-4 w-4" />
-                Add Custom Product
-              </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="custom" className="mt-4">
+              <CustomItemForm onAddItem={handleAddLineItem} />
+            </TabsContent>
 
             <TabsContent value="products" className="mt-4">
               <div className="border rounded-lg p-4">
                 <ProductCatalog onAddProduct={handleProductSelect} />
               </div>
-            </TabsContent>
-
-            <TabsContent value="custom" className="mt-4">
-              <CustomItemForm onAddItem={handleAddLineItem} />
             </TabsContent>
           </Tabs>
         </CardContent>
