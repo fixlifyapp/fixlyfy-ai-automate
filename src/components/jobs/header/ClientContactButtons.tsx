@@ -22,13 +22,15 @@ export const ClientContactButtons = ({ onEditClient }: ClientContactButtonsProps
 
   const handleMessageClick = () => {
     if (job?.clientId && job?.client && job?.phone) {
-      navigate(`/connect?tab=messages&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientPhone=${encodeURIComponent(job.phone)}`);
+      // Navigate to Connect Center with messages tab and auto-open message dialog
+      navigate(`/connect?tab=messages&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientPhone=${encodeURIComponent(job.phone)}&autoOpen=true`);
     }
   };
 
   const handleEmailClick = () => {
     if (job?.clientId && job?.client && job?.email) {
-      navigate(`/connect?tab=emails&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientEmail=${encodeURIComponent(job.email)}`);
+      // Navigate to Connect Center with emails tab and auto-open email composer
+      navigate(`/connect?tab=emails&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientEmail=${encodeURIComponent(job.email)}&autoOpen=true`);
     }
   };
 

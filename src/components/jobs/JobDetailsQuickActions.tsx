@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -87,7 +86,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       meta: { action: 'message_navigation', client_phone: job.client.phone }
     });
 
-    navigate(`/connect?tab=messages&clientId=${job.client.id}&clientName=${encodeURIComponent(job.client.name)}&clientPhone=${encodeURIComponent(job.client.phone || "")}`);
+    navigate(`/connect?tab=messages&clientId=${job.client.id}&clientName=${encodeURIComponent(job.client.name)}&clientPhone=${encodeURIComponent(job.client.phone || "")}&autoOpen=true`);
   };
 
   const handleScheduleJob = async () => {

@@ -38,6 +38,7 @@ const ConnectCenterPageOptimized = () => {
   const clientPhone = searchParams.get("clientPhone");
   const clientEmail = searchParams.get("clientEmail");
   const tabParam = searchParams.get("tab") || "monitoring";
+  const autoOpen = searchParams.get("autoOpen") === "true";
   
   useEffect(() => {
     if (tabParam && ["monitoring", "messages", "calls", "emails"].includes(tabParam)) {
@@ -49,8 +50,8 @@ const ConnectCenterPageOptimized = () => {
     const handleClientActions = async () => {
       if (!clientId || !clientName) return;
 
-      // Auto-trigger actions based on the active tab
-      if (activeTab === "messages" && clientPhone) {
+      // Auto-trigger actions based on the active tab and autoOpen parameter
+      if (activeTab === "messages" && clientPhone && autoOpen) {
         await openMessageDialog({
           id: clientId,
           name: clientName,
@@ -60,7 +61,7 @@ const ConnectCenterPageOptimized = () => {
       } else if (activeTab === "calls" && clientPhone) {
         // Auto-initiate call for calls tab
         await handleAutoCall();
-      } else if (activeTab === "emails" && clientEmail) {
+      } else if (activeTab === "emails" && clientEmail && autoOpen) {
         setEmailComposerOpen(true);
       }
     };
@@ -68,7 +69,7 @@ const ConnectCenterPageOptimized = () => {
     // Delay to ensure tab is set first
     const timer = setTimeout(handleClientActions, 100);
     return () => clearTimeout(timer);
-  }, [clientId, clientName, clientPhone, clientEmail, activeTab, openMessageDialog]);
+  }, [clientId, clientName, clientPhone, clientEmail, activeTab, autoOpen, openMessageDialog]);
 
   const handleAutoCall = async () => {
     if (!clientPhone || !clientId) return;
