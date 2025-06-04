@@ -49,34 +49,34 @@ const validateRecipient = (method: "email" | "sms", recipient: string): string |
 export const useEstimateSending = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const sendEstimate = async ({
+  const sendDocument = async ({
     sendMethod,
     sendTo,
-    estimateNumber,
-    estimateDetails,
+    documentNumber,
+    documentDetails,
     lineItems,
     contactInfo,
     customNote,
     jobId,
     onSave,
-    existingEstimateId
+    existingDocumentId
   }: {
     sendMethod: "email" | "sms";
     sendTo: string;
-    estimateNumber: string;
-    estimateDetails: EstimateDetails;
+    documentNumber: string;
+    documentDetails: EstimateDetails;
     lineItems: LineItem[];
     contactInfo: ContactInfo;
     customNote: string;
     jobId?: string;
     onSave: () => Promise<boolean>;
-    existingEstimateId?: string;
+    existingDocumentId?: string;
   }) => {
     console.log("=== STARTING ESTIMATE SEND PROCESS ===");
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
-    console.log("Estimate number:", estimateNumber);
-    console.log("Existing estimate ID:", existingEstimateId);
+    console.log("Estimate number:", documentNumber);
+    console.log("Existing estimate ID:", existingDocumentId);
 
     const validationErrorMsg = validateRecipient(sendMethod, sendTo);
     if (validationErrorMsg) {
@@ -90,14 +90,14 @@ export const useEstimateSending = () => {
     try {
       let savedEstimate;
 
-      if (existingEstimateId) {
+      if (existingDocumentId) {
         // Use existing estimate - don't create a new one
-        console.log("Using existing estimate:", existingEstimateId);
+        console.log("Using existing estimate:", existingDocumentId);
         
         const { data: estimate, error: fetchError } = await supabase
           .from('estimates')
           .select('id, estimate_number, total, status, notes, job_id')
-          .eq('id', existingEstimateId)
+          .eq('id', existingDocumentId)
           .single();
 
         if (fetchError || !estimate) {
@@ -110,12 +110,12 @@ export const useEstimateSending = () => {
         console.log("Found existing estimate:", savedEstimate);
       } else {
         // First check if estimate already exists with this number to prevent duplicates
-        console.log("Checking for existing estimate with number:", estimateNumber);
+        console.log("Checking for existing estimate with number:", documentNumber);
         
         const { data: existingEstimate, error: checkError } = await supabase
           .from('estimates')
           .select('id, estimate_number, total, status, notes, job_id')
-          .eq('estimate_number', estimateNumber)
+          .eq('estimate_number', documentNumber)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -147,7 +147,7 @@ export const useEstimateSending = () => {
           const { data: estimate, error: fetchError } = await supabase
             .from('estimates')
             .select('id, estimate_number, total, status, notes, job_id')
-            .eq('estimate_number', estimateNumber)
+            .eq('estimate_number', documentNumber)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -186,7 +186,7 @@ export const useEstimateSending = () => {
           body: {
             estimateId: savedEstimate.id,
             recipientPhone: finalRecipient,
-            message: customNote || `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`
+            message: customNote || `Hi ${contactInfo.name}! Your estimate ${documentNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${documentNumber}`
           }
         });
 
@@ -197,7 +197,7 @@ export const useEstimateSending = () => {
         }
 
         console.log("SMS sent successfully:", smsData);
-        toast.success(`Estimate ${estimateNumber} sent via SMS to ${contactInfo.name}`);
+        toast.success(`Estimate ${documentNumber} sent via SMS to ${contactInfo.name}`);
       } else {
         // Call the send-estimate function for email
         const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
@@ -205,8 +205,8 @@ export const useEstimateSending = () => {
             estimateId: savedEstimate.id,
             sendMethod: sendMethod,
             recipientEmail: finalRecipient,
-            subject: `Estimate ${estimateNumber}`,
-            message: customNote || `Please find your estimate ${estimateNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
+            subject: `Estimate ${documentNumber}`,
+            message: customNote || `Please find your estimate ${documentNumber}. Total: $${savedEstimate.total.toFixed(2)}.`
           }
         });
         
@@ -217,7 +217,7 @@ export const useEstimateSending = () => {
         }
 
         console.log("Email sent successfully:", sendData);
-        toast.success(`Estimate ${estimateNumber} sent via email to ${contactInfo.name}`);
+        toast.success(`Estimate ${documentNumber} sent via email to ${contactInfo.name}`);
       }
       
       // Update estimate status to sent only once
@@ -241,7 +241,7 @@ export const useEstimateSending = () => {
   };
 
   return {
-    sendEstimate,
+    sendDocument,
     isProcessing
   };
 };

@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
-import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
+import { SendDialog } from "./shared/SendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
+import { useEstimateSending } from "./estimate-builder/hooks/useEstimateSending";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
@@ -182,6 +183,19 @@ export const SteppedEstimateBuilder = ({
     setCurrentStep("send");
   };
 
+  const handleSaveAndSend = async () => {
+    try {
+      const savedEstimate = await saveDocumentChanges();
+      if (savedEstimate && onEstimateCreated) {
+        onEstimateCreated();
+      }
+      return savedEstimate !== null;
+    } catch (error) {
+      console.error("Error saving estimate:", error);
+      return false;
+    }
+  };
+
   const handleSendSuccess = () => {
     onOpenChange(false);
     
@@ -312,15 +326,18 @@ export const SteppedEstimateBuilder = ({
         </DialogContent>
       </Dialog>
 
-      {/* Send Dialog */}
-      <EstimateSendDialog
+      {/* Send Dialog - using the generic SendDialog component */}
+      <SendDialog
         isOpen={currentStep === "send"}
         onClose={() => handleSendCancel()}
-        estimateId={savedEstimate?.id || ''}
-        estimateNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
+        documentId={savedEstimate?.id || existingEstimate?.id || ''}
+        documentNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
+        documentType="estimate"
         total={calculateGrandTotal()}
         contactInfo={contactInfo}
         onSuccess={handleSendSuccess}
+        onSave={handleSaveAndSend}
+        useSendingHook={useEstimateSending}
       />
     </>
   );
