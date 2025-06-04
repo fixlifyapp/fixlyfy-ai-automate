@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,6 +14,7 @@ import { InvoiceSendStep } from "./invoice-builder/InvoiceSendStep";
 import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
+import { UpsellItem } from "./shared/types";
 
 interface SteppedInvoiceBuilderProps {
   open: boolean;
@@ -24,15 +26,6 @@ interface SteppedInvoiceBuilderProps {
 }
 
 type BuilderStep = "items" | "upsell" | "send";
-
-interface UpsellItem {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  icon: any;
-  selected: boolean;
-}
 
 export const SteppedInvoiceBuilder = ({
   open,
@@ -71,12 +64,6 @@ export const SteppedInvoiceBuilder = ({
     initializeFromEstimate,
     initializeFromInvoice
   } = useInvoiceBuilder(jobId);
-
-  // Create a wrapper function to match the expected signature for UnifiedItemsStep
-  const handleUpdateLineItemWrapper = (id: string, field: string, value: any) => {
-    const updates = { [field]: value };
-    handleUpdateLineItem(id, updates);
-  };
 
   // Initialize form data when dialog opens
   useEffect(() => {
@@ -275,7 +262,7 @@ export const SteppedInvoiceBuilder = ({
                 onNotesChange={setNotes}
                 onAddProduct={handleAddProduct}
                 onRemoveLineItem={handleRemoveLineItem}
-                onUpdateLineItem={handleUpdateLineItemWrapper}
+                onUpdateLineItem={handleUpdateLineItem}
                 calculateSubtotal={calculateSubtotal}
                 calculateTotalTax={calculateTotalTax}
                 calculateGrandTotal={calculateGrandTotal}
@@ -300,7 +287,7 @@ export const SteppedInvoiceBuilder = ({
           
           {currentStep === "upsell" && (
             <InvoiceUpsellStep
-              invoiceTotal={calculateGrandTotal()}
+              documentTotal={calculateGrandTotal()}
               onContinue={handleUpsellContinue}
               onBack={() => setCurrentStep("items")}
               existingUpsellItems={selectedUpsells}

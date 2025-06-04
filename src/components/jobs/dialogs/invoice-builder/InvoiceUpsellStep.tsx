@@ -7,33 +7,17 @@ import { EstimateSummaryCard } from "../estimate-builder/components/EstimateSumm
 import { NotesSection } from "../estimate-builder/components/NotesSection";
 import { WarrantiesList } from "../estimate-builder/components/WarrantiesList";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface UpsellItem {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  icon: any;
-  selected: boolean;
-}
-
-interface InvoiceUpsellStepProps {
-  onContinue: (upsellItems: UpsellItem[], notes: string) => void;
-  onBack: () => void;
-  invoiceTotal: number;
-  existingUpsellItems?: UpsellItem[];
-  estimateToConvert?: any; // The estimate being converted to invoice
-}
+import { UpsellStepProps } from "../shared/types";
 
 export const InvoiceUpsellStep = ({ 
   onContinue, 
   onBack, 
-  invoiceTotal, 
+  documentTotal, 
   existingUpsellItems = [],
   estimateToConvert
-}: InvoiceUpsellStepProps) => {
+}: UpsellStepProps) => {
   const [notes, setNotes] = useState("");
-  const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([]);
+  const [upsellItems, setUpsellItems] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasExistingWarranties, setHasExistingWarranties] = useState(false);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
@@ -85,7 +69,7 @@ export const InvoiceUpsellStep = ({
 
   const selectedUpsells = upsellItems.filter(item => item.selected);
   const upsellTotal = selectedUpsells.reduce((sum, item) => sum + item.price, 0);
-  const grandTotal = invoiceTotal + upsellTotal;
+  const grandTotal = documentTotal + upsellTotal;
 
   const handleContinue = async () => {
     if (isProcessing) return;
@@ -161,7 +145,7 @@ export const InvoiceUpsellStep = ({
       />
 
       <EstimateSummaryCard
-        estimateTotal={invoiceTotal}
+        estimateTotal={documentTotal}
         selectedUpsells={selectedUpsells}
         upsellTotal={upsellTotal}
         grandTotal={grandTotal}

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
 import { useJobData } from "./unified/hooks/useJobData";
+import { UpsellItem } from "./shared/types";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -21,15 +22,6 @@ interface SteppedEstimateBuilderProps {
 }
 
 type BuilderStep = "items" | "upsell" | "send";
-
-interface UpsellItem {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  icon: any;
-  selected: boolean;
-}
 
 export const SteppedEstimateBuilder = ({
   open,
@@ -291,7 +283,7 @@ export const SteppedEstimateBuilder = ({
 
             {currentStep === "upsell" && (
               <EstimateUpsellStep
-                estimateTotal={calculateGrandTotal()}
+                documentTotal={calculateGrandTotal()}
                 onContinue={handleUpsellContinue}
                 onBack={handleUpsellBack}
                 existingUpsellItems={selectedUpsells}

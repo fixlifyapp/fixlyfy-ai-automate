@@ -1,57 +1,29 @@
-import { useState, useEffect, useMemo } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
-import { AIWarrantyRecommendationDialog } from "./AIWarrantyRecommendationDialog";
-import { AIRecommendationsCard } from "./components/AIRecommendationsCard";
-import { WarrantiesList } from "./components/WarrantiesList";
+import { Shield } from "lucide-react";
 import { EstimateSummaryCard } from "./components/EstimateSummaryCard";
 import { NotesSection } from "./components/NotesSection";
-import { Shield } from "lucide-react";
-
-interface UpsellItem {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  icon: any;
-  selected: boolean;
-}
-
-interface EstimateUpsellStepProps {
-  onContinue: (upsellItems: UpsellItem[], notes: string) => void;
-  onBack: () => void;
-  estimateTotal: number;
-  existingUpsellItems?: UpsellItem[];
-  jobContext?: {
-    job_type: string;
-    service_category: string;
-    job_value: number;
-    client_history?: any;
-  };
-}
+import { WarrantiesList } from "./components/WarrantiesList";
+import { AIRecommendationsCard } from "./components/AIRecommendationsCard";
+import { UpsellStepProps } from "../shared/types";
 
 export const EstimateUpsellStep = ({ 
   onContinue, 
   onBack, 
-  estimateTotal, 
+  documentTotal, 
   existingUpsellItems = [],
   jobContext
-}: EstimateUpsellStepProps) => {
+}: UpsellStepProps) => {
   const [notes, setNotes] = useState("");
-  const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([]);
+  const [upsellItems, setUpsellItems] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
-
-  // Create a stable estimate ID that doesn't change during the session
-  const stableEstimateId = useMemo(() => {
-    return `estimate-${jobContext?.job_type || 'unknown'}-${estimateTotal}`;
-  }, [jobContext?.job_type, estimateTotal]);
 
   // Convert warranty products to upsell items and restore previous selections
   useEffect(() => {
     const warrantyUpsells = warrantyProducts.map(product => {
-      // Check if this warranty was previously selected
       const existingSelection = existingUpsellItems.find(item => item.id === product.id);
       
       return {
@@ -67,7 +39,7 @@ export const EstimateUpsellStep = ({
   }, [warrantyProducts, existingUpsellItems]);
 
   const handleUpsellToggle = (itemId: string) => {
-    if (isProcessing) return; // Prevent changes during processing
+    if (isProcessing) return;
     
     setUpsellItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, selected: !item.selected } : item
@@ -76,25 +48,19 @@ export const EstimateUpsellStep = ({
 
   const selectedUpsells = upsellItems.filter(item => item.selected);
   const upsellTotal = selectedUpsells.reduce((sum, item) => sum + item.price, 0);
-  const grandTotal = estimateTotal + upsellTotal;
+  const grandTotal = documentTotal + upsellTotal;
 
   const handleContinue = async () => {
-    if (isProcessing) return; // Prevent double-clicks
+    if (isProcessing) return;
     
     setIsProcessing(true);
     
     try {
-      // Only pass newly selected upsells, not ones that were already added
       const newlySelectedUpsells = selectedUpsells.filter(upsell => 
         !existingUpsellItems.some(existing => 
           existing.id === upsell.id && existing.selected
         )
       );
-      
-      console.log("=== UPSELL STEP CONTINUE ===");
-      console.log("All selected upsells:", selectedUpsells);
-      console.log("Existing upsells:", existingUpsellItems);
-      console.log("Newly selected upsells (to be added):", newlySelectedUpsells);
       
       await onContinue(newlySelectedUpsells, notes);
     } finally {
@@ -102,38 +68,11 @@ export const EstimateUpsellStep = ({
     }
   };
 
-  const handleAIWarrantySelect = (warranty: any, aiMessage: string) => {
-    // Add the AI-recommended warranty to upsell items
-    const newUpsellItem: UpsellItem = {
-      id: warranty.warranty_id,
-      title: warranty.warranty_name,
-      description: warranty.description,
-      price: warranty.price,
-      icon: Shield,
-      selected: true
-    };
-
-    setUpsellItems(prev => {
-      const existing = prev.find(item => item.id === warranty.warranty_id);
-      if (existing) {
-        return prev.map(item => 
-          item.id === warranty.warranty_id ? { ...item, selected: true } : item
-        );
-      } else {
-        return [...prev, newUpsellItem];
-      }
-    });
-
-    // Add AI message to notes
-    const aiNote = `\n\nAI Recommended Warranty: ${warranty.warranty_name}\nSuggested pitch: ${aiMessage}`;
-    setNotes(prev => prev + aiNote);
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h3 className="text-lg font-semibold">Loading Warranties...</h3>
+          <h3 className="text-lg font-semibold">Loading Additional Services...</h3>
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mt-4"></div>
         </div>
       </div>
@@ -144,14 +83,15 @@ export const EstimateUpsellStep = ({
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">Enhance Your Service</h3>
-        <p className="text-muted-foreground">Add valuable warranty services to provide complete protection</p>
+        <p className="text-muted-foreground">Add valuable warranty services for complete protection</p>
       </div>
 
-      <AIRecommendationsCard
-        jobContext={jobContext}
-        estimateId={stableEstimateId}
-      />
+      {/* AI Recommendations */}
+      {jobContext && (
+        <AIRecommendationsCard jobContext={jobContext} />
+      )}
 
+      {/* Warranties List */}
       <WarrantiesList
         upsellItems={upsellItems}
         existingUpsellItems={existingUpsellItems}
@@ -159,18 +99,21 @@ export const EstimateUpsellStep = ({
         onUpsellToggle={handleUpsellToggle}
       />
 
+      {/* Notes Section */}
       <NotesSection
         notes={notes}
         onNotesChange={setNotes}
       />
 
+      {/* Summary */}
       <EstimateSummaryCard
-        estimateTotal={estimateTotal}
+        estimateTotal={documentTotal}
         selectedUpsells={selectedUpsells}
         upsellTotal={upsellTotal}
         grandTotal={grandTotal}
       />
 
+      {/* Navigation */}
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={onBack} disabled={isProcessing}>
           Back to Items
@@ -183,21 +126,6 @@ export const EstimateUpsellStep = ({
           {isProcessing ? "Processing..." : "Continue to Send"}
         </Button>
       </div>
-
-      {/* AI Warranty Recommendation Dialog */}
-      {jobContext && (
-        <AIWarrantyRecommendationDialog
-          isOpen={showAIRecommendations}
-          onClose={() => setShowAIRecommendations(false)}
-          onSelectWarranty={handleAIWarrantySelect}
-          jobContext={{
-            job_type: jobContext.job_type,
-            service_category: jobContext.service_category,
-            job_value: estimateTotal,
-            client_history: jobContext.client_history
-          }}
-        />
-      )}
     </div>
   );
 };

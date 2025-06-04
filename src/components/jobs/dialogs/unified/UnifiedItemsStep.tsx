@@ -7,25 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash, Search } from "lucide-react";
-import { LineItem } from "../../builder/types";
 import { ProductSearch } from "../../builder/ProductSearch";
-
-interface UnifiedItemsStepProps {
-  documentType: "estimate" | "invoice";
-  documentNumber: string;
-  lineItems: LineItem[];
-  taxRate: number;
-  notes: string;
-  onLineItemsChange: (items: LineItem[]) => void;
-  onTaxRateChange: (rate: number) => void;
-  onNotesChange: (notes: string) => void;
-  onAddProduct: (product: any) => void;
-  onRemoveLineItem: (id: string) => void;
-  onUpdateLineItem: (id: string, field: string, value: any) => void;
-  calculateSubtotal: () => number;
-  calculateTotalTax: () => number;
-  calculateGrandTotal: () => number;
-}
+import { UnifiedStepProps } from "../shared/types";
 
 export const UnifiedItemsStep = ({
   documentType,
@@ -42,11 +25,11 @@ export const UnifiedItemsStep = ({
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal
-}: UnifiedItemsStepProps) => {
+}: UnifiedStepProps) => {
   const [showCatalog, setShowCatalog] = useState(false);
 
   const addEmptyLineItem = () => {
-    const newItem: LineItem = {
+    const newItem = {
       id: `item-${Date.now()}`,
       description: "",
       quantity: 1,
@@ -61,7 +44,7 @@ export const UnifiedItemsStep = ({
     onLineItemsChange([...lineItems, newItem]);
   };
 
-  const calculateLineTotal = (item: LineItem): number => {
+  const calculateLineTotal = (item: any): number => {
     const subtotal = item.quantity * item.unitPrice;
     const discountAmount = item.discount ? subtotal * (item.discount / 100) : 0;
     return subtotal - discountAmount;
