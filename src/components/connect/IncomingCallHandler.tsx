@@ -11,7 +11,7 @@ interface IncomingCall {
   call_control_id: string;
   from_number: string;
   to_number: string;
-  status: string;
+  call_status: string;
   client?: {
     id: string;
     name: string;
@@ -22,9 +22,14 @@ interface IncomingCall {
 export const IncomingCallHandler = () => {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [isRinging, setIsRinging] = useState(false);
-  const [isAIEnabled, setIsAIEnabled] = useState(true);
 
   useEffect(() => {
+    // Load AI agent preference from localStorage
+    const getAIEnabled = () => {
+      const savedPreference = localStorage.getItem('ai-agent-enabled');
+      return savedPreference !== null ? JSON.parse(savedPreference) : true;
+    };
+
     // Listen for incoming Telnyx calls
     const channel = supabase
       .channel('incoming-telnyx-calls')
@@ -39,7 +44,7 @@ export const IncomingCallHandler = () => {
           console.log('Incoming Telnyx call detected:', payload);
           const newCall = payload.new as any;
           
-          if (newCall.direction === 'inbound' && newCall.status === 'initiated') {
+          if (newCall.direction === 'inbound' && newCall.call_status === 'initiated') {
             // Find client by phone number
             const client = await findClientByPhone(newCall.from_number);
             
@@ -48,7 +53,7 @@ export const IncomingCallHandler = () => {
               call_control_id: newCall.call_control_id,
               from_number: newCall.from_number,
               to_number: newCall.to_number,
-              status: newCall.status,
+              call_status: newCall.call_status,
               client
             };
 
@@ -57,6 +62,8 @@ export const IncomingCallHandler = () => {
             
             // Show notification
             const clientName = client?.name || formatPhoneNumber(newCall.from_number);
+            const isAIEnabled = getAIEnabled();
+            
             toast.info(`Incoming call from ${clientName}`, {
               duration: 15000,
               action: {
@@ -64,6 +71,13 @@ export const IncomingCallHandler = () => {
                 onClick: () => answerCall()
               }
             });
+
+            // Auto-answer if AI is enabled
+            if (isAIEnabled) {
+              setTimeout(() => {
+                answerCall();
+              }, 2000); // 2 second delay to show the incoming call UI briefly
+            }
           }
         }
       )
@@ -77,7 +91,7 @@ export const IncomingCallHandler = () => {
         (payload) => {
           const updatedCall = payload.new as any;
           if (incomingCall && updatedCall.call_control_id === incomingCall.call_control_id) {
-            if (updatedCall.status === 'completed' || updatedCall.status === 'failed') {
+            if (updatedCall.call_status === 'completed' || updatedCall.call_status === 'failed') {
               setIncomingCall(null);
               setIsRinging(false);
             }
@@ -122,7 +136,7 @@ export const IncomingCallHandler = () => {
       const { error } = await supabase
         .from('telnyx_calls')
         .update({ 
-          status: 'answered',
+          call_status: 'answered',
           answered_at: new Date().toISOString()
         })
         .eq('call_control_id', incomingCall.call_control_id);
@@ -132,11 +146,12 @@ export const IncomingCallHandler = () => {
       setIsRinging(false);
       setIncomingCall(null);
       
+      const isAIEnabled = localStorage.getItem('ai-agent-enabled') !== 'false';
+      
       if (isAIEnabled) {
         toast.success("Call answered - AI Agent handling the call");
       } else {
         toast.success("Call answered - Manual mode active");
-        // In manual mode, you would integrate with your preferred calling solution
       }
     } catch (error) {
       console.error('Error answering call:', error);
@@ -151,7 +166,7 @@ export const IncomingCallHandler = () => {
       const { error } = await supabase
         .from('telnyx_calls')
         .update({ 
-          status: 'completed',
+          call_status: 'completed',
           ended_at: new Date().toISOString()
         })
         .eq('call_control_id', incomingCall.call_control_id);
@@ -182,6 +197,7 @@ export const IncomingCallHandler = () => {
 
   const displayName = incomingCall.client?.name || formatPhoneNumber(incomingCall.from_number);
   const isKnownClient = !!incomingCall.client;
+  const isAIEnabled = localStorage.getItem('ai-agent-enabled') !== 'false';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
