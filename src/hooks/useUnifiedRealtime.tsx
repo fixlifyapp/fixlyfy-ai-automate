@@ -26,7 +26,7 @@ export const useUnifiedRealtime = ({ tables, onUpdate, enabled = true }: UseUnif
 
     tables.forEach(table => {
       // Map table names to correct callback names
-      const tableCallbackMap: Record<string, keyof typeof globalRealtime> = {
+      const tableCallbackMap: Record<string, string> = {
         'jobs': 'refreshJobs',
         'clients': 'refreshClients', 
         'messages': 'refreshMessages',

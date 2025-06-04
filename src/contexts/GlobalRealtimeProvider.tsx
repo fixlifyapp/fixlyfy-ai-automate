@@ -20,7 +20,8 @@ interface GlobalRealtimeContextType {
   isConnected: boolean;
 }
 
-const GlobalRealtimeContext = createContext<GlobalRealtimeContextType | undefined>(undefined);
+// Export the context for use in other files
+export const GlobalRealtimeContext = createContext<GlobalRealtimeContextType | undefined>(undefined);
 
 export const useGlobalRealtime = () => {
   const context = useContext(GlobalRealtimeContext);
