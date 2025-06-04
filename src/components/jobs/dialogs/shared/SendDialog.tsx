@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, MessageSquare, Send, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { SendingHookReturn } from "./hooks/useSendingInterface";
 
 interface SendDialogProps {
   isOpen: boolean;
@@ -22,10 +23,7 @@ interface SendDialogProps {
   };
   onSuccess?: () => void;
   onSave?: () => Promise<boolean>;
-  useSendingHook: () => {
-    sendDocument: (data: any) => Promise<{ success: boolean }>;
-    isProcessing: boolean;
-  };
+  useSendingHook: () => SendingHookReturn;
 }
 
 export const SendDialog = ({ 
@@ -41,13 +39,49 @@ export const SendDialog = ({
   useSendingHook
 }: SendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
-  const [sendTo, setSendTo] = useState(contactInfo?.email || contactInfo?.phone || "");
+  const [sendTo, setSendTo] = useState("");
   const [customNote, setCustomNote] = useState("");
   const { sendDocument, isProcessing } = useSendingHook();
+
+  // Validation helpers
+  const isValidEmail = (email: string): boolean => {
+    if (!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const isValidPhoneNumber = (phone: string): boolean => {
+    if (!phone) return false;
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10;
+  };
+
+  // Set default values when dialog opens or method changes
+  React.useEffect(() => {
+    if (isOpen) {
+      if (sendMethod === "email" && contactInfo?.email && isValidEmail(contactInfo.email)) {
+        setSendTo(contactInfo.email);
+      } else if (sendMethod === "sms" && contactInfo?.phone && isValidPhoneNumber(contactInfo.phone)) {
+        setSendTo(contactInfo.phone);
+      } else {
+        setSendTo("");
+      }
+    }
+  }, [isOpen, sendMethod, contactInfo]);
 
   const handleSend = async () => {
     if (!sendTo.trim()) {
       toast.error(`Please enter ${sendMethod === "email" ? "email address" : "phone number"}`);
+      return;
+    }
+
+    // Validate format
+    if (sendMethod === "email" && !isValidEmail(sendTo.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (sendMethod === "sms" && !isValidPhoneNumber(sendTo.trim())) {
+      toast.error("Please enter a valid phone number");
       return;
     }
 
@@ -66,7 +100,7 @@ export const SendDialog = ({
         sendTo: sendTo.trim(),
         documentNumber,
         documentDetails: { [documentType + '_number']: documentNumber },
-        lineItems: [], // Will be filled by parent component
+        lineItems: [],
         contactInfo,
         customNote: customNote.trim(),
         jobId: documentId,
@@ -87,10 +121,6 @@ export const SendDialog = ({
     }
   };
 
-  const handleBack = () => {
-    onClose();
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -98,7 +128,7 @@ export const SendDialog = ({
       <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
         <div className="p-6 border-b">
           <div className="flex items-center gap-2 mb-4">
-            <Button variant="ghost" size="sm" onClick={handleBack}>
+            <Button variant="ghost" size="sm" onClick={onClose}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Send className="h-5 w-5 text-blue-600" />

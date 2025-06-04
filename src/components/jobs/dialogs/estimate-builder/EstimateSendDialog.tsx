@@ -1,13 +1,11 @@
 
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { SendMethodStep } from "./steps/SendMethodStep";
-import { useEstimateSending } from "./hooks/useEstimateSending";
+import { useEstimateSendingInterface } from "../shared/hooks/useSendingInterface";
 
 interface EstimateSendDialogProps {
   isOpen: boolean;
@@ -38,7 +36,7 @@ export const EstimateSendDialog = ({
   const [sendTo, setSendTo] = useState("");
   const [validationError, setValidationError] = useState("");
   const [sentMethods, setSentMethods] = useState<Set<string>>(new Set());
-  const { sendDocument, isProcessing } = useEstimateSending();
+  const { sendDocument, isProcessing } = useEstimateSendingInterface();
 
   // Fetch user's Telnyx phone numbers
   const { data: userPhoneNumbers = [] } = useQuery({
@@ -75,9 +73,9 @@ export const EstimateSendDialog = ({
   React.useEffect(() => {
     if (isOpen) {
       if (sendMethod === "email" && hasValidEmail) {
-        setSendTo(contactInfo.email);
+        setSendTo(contactInfo!.email);
       } else if (sendMethod === "sms" && hasValidPhone) {
-        setSendTo(contactInfo.phone);
+        setSendTo(contactInfo!.phone);
       } else {
         setSendTo("");
       }
@@ -96,23 +94,17 @@ export const EstimateSendDialog = ({
       customNote: "",
       jobId: estimateId,
       onSave: onSave || (() => Promise.resolve(true)),
-      existingDocumentId: estimateId // Pass the existing estimate ID to prevent duplicates
+      existingDocumentId: estimateId
     });
 
     if (result.success) {
-      // Mark this method as sent
       setSentMethods(prev => new Set([...prev, sendMethod]));
       
-      // If both methods have been used, close dialog
       if (sentMethods.size === 1) {
-        // Show success message and option to send via other method
         const otherMethod = sendMethod === "email" ? "SMS" : "email";
         const hasOtherMethod = sendMethod === "email" ? hasValidPhone : hasValidEmail;
         
-        if (hasOtherMethod) {
-          toast.success(`Estimate sent via ${sendMethod}! You can also send via ${otherMethod} if needed.`);
-        } else {
-          // No other method available, close dialog
+        if (!hasOtherMethod) {
           if (onSuccess) {
             onSuccess();
           } else {
@@ -120,7 +112,6 @@ export const EstimateSendDialog = ({
           }
         }
       } else {
-        // Both methods used, close dialog
         if (onSuccess) {
           onSuccess();
         } else {
@@ -128,10 +119,6 @@ export const EstimateSendDialog = ({
         }
       }
     }
-  };
-
-  const handleBack = () => {
-    onClose();
   };
 
   const handleClose = () => {
@@ -184,7 +171,7 @@ export const EstimateSendDialog = ({
             estimateNumber={estimateNumber}
             isProcessing={isProcessing}
             onSend={handleSend}
-            onBack={handleBack}
+            onBack={onClose}
           />
         </div>
       </DialogContent>

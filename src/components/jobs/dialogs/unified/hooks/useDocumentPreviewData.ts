@@ -17,7 +17,7 @@ export const useDocumentPreviewData = ({
   documentType
 }: UseDocumentPreviewDataProps) => {
   const { companyInfo, loading: companyLoading } = useCompanySettings();
-  const { clientInfo: jobClientInfo, jobAddress, loading: jobLoading } = useJobData(jobId);
+  const { clientInfo: jobClientInfo, jobAddress, loading: jobLoading } = useJobData(jobId || '');
   
   const [enhancedClientInfo, setEnhancedClientInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,10 @@ export const useDocumentPreviewData = ({
 
     if (jobId && jobClientInfo) {
       // Use job client info if available (this is the primary source when we have a jobId)
-      finalClientInfo = jobClientInfo;
+      finalClientInfo = {
+        ...jobClientInfo,
+        fullAddress: jobAddress || jobClientInfo.fullAddress || 'Address not available'
+      };
       console.log('Using job client info:', finalClientInfo);
     } else if (providedClientInfo) {
       // Use provided client info as fallback
@@ -75,9 +78,9 @@ export const useDocumentPreviewData = ({
   }, [providedClientInfo, jobId, documentNumber, documentType, jobClientInfo, jobAddress, companyLoading, jobLoading]);
 
   return {
-    companyInfo,
     enhancedClientInfo,
-    jobAddress,
-    loading
+    companyInfo,
+    jobAddress: jobAddress || '',
+    loading: loading || companyLoading || (jobId ? jobLoading : false)
   };
 };

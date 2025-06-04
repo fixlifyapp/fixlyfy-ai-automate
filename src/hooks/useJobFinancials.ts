@@ -21,10 +21,13 @@ export const useJobFinancials = (jobId: string) => {
       try {
         console.log('Fetching financials for job:', jobId);
 
-        // Fetch invoices for this job
+        // Fetch invoices with their payments for this job
         const { data: invoices, error: invoicesError } = await supabase
           .from('invoices')
-          .select('*')
+          .select(`
+            *,
+            payments(amount)
+          `)
           .eq('job_id', jobId);
 
         if (invoicesError) {
@@ -33,22 +36,42 @@ export const useJobFinancials = (jobId: string) => {
           return;
         }
 
-        console.log('Fetched invoices:', invoices);
+        console.log('Fetched invoices with payments:', invoices);
 
-        // Calculate totals
+        // Calculate totals with proper payment linking
         const totalInvoiced = invoices?.reduce((sum, invoice) => sum + (invoice.total || 0), 0) || 0;
-        const totalPaidAmount = invoices?.reduce((sum, invoice) => sum + (invoice.amount_paid || 0), 0) || 0;
+        
+        // Calculate total paid from actual payment records
+        const totalPaidAmount = invoices?.reduce((sum, invoice) => {
+          const invoicePayments = invoice.payments || [];
+          const invoicePaid = invoicePayments.reduce((paySum: number, payment: any) => paySum + (payment.amount || 0), 0);
+          return sum + invoicePaid;
+        }, 0) || 0;
+
         const totalBalance = totalInvoiced - totalPaidAmount;
 
-        // Count paid and unpaid invoices
-        const paidCount = invoices?.filter(invoice => invoice.status === 'paid').length || 0;
-        const unpaidCount = invoices?.filter(invoice => invoice.status !== 'paid').length || 0;
+        // Count paid and unpaid invoices based on actual payment status
+        const paidCount = invoices?.filter(invoice => {
+          const invoicePayments = invoice.payments || [];
+          const invoicePaid = invoicePayments.reduce((sum: number, payment: any) => sum + (payment.amount || 0), 0);
+          return invoicePaid >= (invoice.total || 0);
+        }).length || 0;
+        
+        const unpaidCount = invoices?.filter(invoice => {
+          const invoicePayments = invoice.payments || [];
+          const invoicePaid = invoicePayments.reduce((sum: number, payment: any) => sum + (payment.amount || 0), 0);
+          return invoicePaid < (invoice.total || 0);
+        }).length || 0;
 
-        // Calculate overdue amount (simplified - invoices past due date)
+        // Calculate overdue amount (invoices past due date with remaining balance)
         const now = new Date();
         const overdueTotal = invoices?.reduce((sum, invoice) => {
-          if (invoice.status !== 'paid' && invoice.due_date && new Date(invoice.due_date) < now) {
-            return sum + ((invoice.total || 0) - (invoice.amount_paid || 0));
+          const invoicePayments = invoice.payments || [];
+          const invoicePaid = invoicePayments.reduce((paySum: number, payment: any) => paySum + (payment.amount || 0), 0);
+          const remainingBalance = (invoice.total || 0) - invoicePaid;
+          
+          if (remainingBalance > 0 && invoice.due_date && new Date(invoice.due_date) < now) {
+            return sum + remainingBalance;
           }
           return sum;
         }, 0) || 0;
@@ -78,9 +101,19 @@ export const useJobFinancials = (jobId: string) => {
 
     fetchFinancials();
 
-    // Set up real-time updates for invoices and payments
+    // Set up optimized real-time updates with debouncing
+    let timeoutId: NodeJS.Timeout;
+    
+    const debouncedRefresh = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log('Real-time update detected, refetching financials...');
+        fetchFinancials();
+      }, 500); // 500ms debounce
+    };
+
     const channel = supabase
-      .channel('job-financials')
+      .channel(`job-financials-${jobId}`)
       .on(
         'postgres_changes',
         {
@@ -89,10 +122,7 @@ export const useJobFinancials = (jobId: string) => {
           table: 'invoices',
           filter: `job_id=eq.${jobId}`
         },
-        () => {
-          console.log('Invoice update detected, refetching financials...');
-          fetchFinancials();
-        }
+        debouncedRefresh
       )
       .on(
         'postgres_changes',
@@ -101,14 +131,12 @@ export const useJobFinancials = (jobId: string) => {
           schema: 'public',
           table: 'payments'
         },
-        () => {
-          console.log('Payment update detected, refetching financials...');
-          fetchFinancials();
-        }
+        debouncedRefresh
       )
       .subscribe();
 
     return () => {
+      clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [jobId]);

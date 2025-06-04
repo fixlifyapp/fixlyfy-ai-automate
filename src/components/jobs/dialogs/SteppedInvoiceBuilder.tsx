@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,7 +11,7 @@ import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
 import { SendDialog } from "./shared/SendDialog";
 import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
-import { useInvoiceSending } from "./shared/hooks/useInvoiceSending";
+import { useInvoiceSendingInterface } from "./shared/hooks/useSendingInterface";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
@@ -45,7 +44,6 @@ export const SteppedInvoiceBuilder = ({
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
   const [invoiceCreated, setInvoiceCreated] = useState(false);
-  const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
 
   // Get job and client data
   const { clientInfo, loading: jobLoading } = useJobData(jobId);
@@ -92,7 +90,6 @@ export const SteppedInvoiceBuilder = ({
       setCurrentStep("items");
       setSelectedUpsells([]);
       setUpsellNotes("");
-      setAddedUpsellIds(new Set());
     }
   }, [open, existingInvoice, estimateToConvert, initializeFromEstimate, initializeFromInvoice, resetForm]);
 
@@ -359,7 +356,7 @@ export const SteppedInvoiceBuilder = ({
         </DialogContent>
       </Dialog>
       
-      {/* Send Dialog - using the generic SendDialog component */}
+      {/* Send Dialog using standardized interface */}
       <SendDialog
         isOpen={currentStep === "send"}
         onClose={() => onOpenChange(false)}
@@ -370,7 +367,7 @@ export const SteppedInvoiceBuilder = ({
         contactInfo={getClientInfo()}
         onSuccess={() => onOpenChange(false)}
         onSave={handleSaveAndSend}
-        useSendingHook={useInvoiceSending}
+        useSendingHook={useInvoiceSendingInterface}
       />
     </>
   );
