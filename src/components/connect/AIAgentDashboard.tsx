@@ -35,9 +35,9 @@ export const AIAgentDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Get total calls
+      // Get total calls from ai_dispatcher_call_logs
       const { data: totalCallsData } = await supabase
-        .from('amazon_connect_calls')
+        .from('ai_dispatcher_call_logs')
         .select('id, call_duration, appointment_scheduled, call_status, started_at')
         .order('started_at', { ascending: false });
 
@@ -51,11 +51,11 @@ export const AIAgentDashboard = () => {
         
         const today = new Date().toISOString().split('T')[0];
         const todaysCalls = totalCallsData.filter(call => 
-          call.started_at.startsWith(today)
+          call.started_at && call.started_at.startsWith(today)
         ).length;
         
         const activeCalls = totalCallsData.filter(call => 
-          ['initiated', 'ringing', 'in-progress'].includes(call.call_status)
+          ['initiated', 'ringing', 'in-progress'].includes(call.call_status || '')
         ).length;
         
         const successRate = totalCalls > 0 
@@ -88,7 +88,7 @@ export const AIAgentDashboard = () => {
 
   // Set up real-time sync for calls
   useRealtimeSync({
-    tables: ['amazon_connect_calls', 'ai_agent_configs'],
+    tables: ['ai_dispatcher_call_logs', 'ai_agent_configs'],
     onUpdate: fetchMetrics,
     enabled: true
   });
@@ -283,15 +283,15 @@ export const AIAgentDashboard = () => {
                       <Phone className="h-3 w-3 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium">{call.phone_number}</p>
+                      <p className="font-medium">{call.customer_phone || call.client_phone || 'Unknown'}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(call.started_at).toLocaleString()}
+                        {call.started_at ? new Date(call.started_at).toLocaleString() : 'N/A'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={getStatusColor(call.call_status)}>
-                      {call.call_status}
+                    <Badge className={getStatusColor(call.call_status || 'completed')}>
+                      {call.call_status || 'completed'}
                     </Badge>
                     {call.appointment_scheduled && (
                       <Badge className="bg-green-100 text-green-800">

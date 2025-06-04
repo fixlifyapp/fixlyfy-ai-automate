@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 interface TelnyxCall {
   id: string;
-  call_control_id: string;
+  call_control_id?: string;
   phone_number?: string;
   call_session_id?: string;
   call_status?: string;
@@ -19,7 +19,6 @@ interface TelnyxCall {
   appointment_scheduled?: boolean;
   appointment_data?: any;
   created_at: string;
-  // Database fields that actually exist
   to_number?: string;
   direction?: string;
   status?: string;
