@@ -15,7 +15,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Index from "./pages/Index";
 
 // Main pages
-import { TasksPage } from "./pages/TasksPage";
+import TasksPage from "./pages/TasksPage";
 import JobsPage from "./pages/JobsPage";
 import JobDetailsPage from "./pages/JobDetailsPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -34,7 +34,7 @@ import InvoiceViewPage from "./pages/InvoiceViewPage";
 import { ClientPortalAuthProvider } from "./hooks/useClientPortalAuth";
 
 // Import analytics and automation pages
-import { AnalyticsPage } from "./pages/AnalyticsPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import { AutomationsPage } from "./components/automations/AutomationsPage";
 
 function App() {
