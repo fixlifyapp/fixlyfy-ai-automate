@@ -21,6 +21,10 @@ export const DocumentInfoGrid = ({
   taxRate,
   companyInfo
 }: DocumentInfoGridProps) => {
+  console.log('=== DocumentInfoGrid Debug ===');
+  console.log('Enhanced client info:', enhancedClientInfo);
+  console.log('Job address:', jobAddress);
+
   return (
     <div className="px-8 py-6 bg-gray-50">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -43,7 +47,7 @@ export const DocumentInfoGrid = ({
               {enhancedClientInfo?.fullAddress && (
                 <div>
                   {enhancedClientInfo.fullAddress.split('\n').map((line: string, index: number) => (
-                    <p key={index}>{line}</p>
+                    <p key={index}>{line || 'Address not available'}</p>
                   ))}
                 </div>
               )}
@@ -56,7 +60,7 @@ export const DocumentInfoGrid = ({
                 </p>
                 <div className="text-gray-600">
                   {jobAddress.split('\n').map((line: string, index: number) => (
-                    <p key={index}>{line}</p>
+                    <p key={index}>{line || 'Service address not available'}</p>
                   ))}
                 </div>
               </div>

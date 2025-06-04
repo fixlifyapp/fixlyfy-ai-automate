@@ -8,7 +8,7 @@ interface AIAgentConfig {
   user_id: string;
   company_name: string;
   business_niche: string;
-  service_types: string[];
+  service_types: any; // Using any to match Json type from database
   service_areas: any[];
   diagnostic_price: number;
   emergency_surcharge: number;
@@ -19,6 +19,7 @@ interface AIAgentConfig {
   voice_id: string;
   greeting_template: string;
   aws_region: string;
+  connect_instance_arn?: string;
   created_at: string;
   updated_at: string;
 }
@@ -26,6 +27,7 @@ interface AIAgentConfig {
 export const useAIAgentConfig = () => {
   const [config, setConfig] = useState<AIAgentConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadConfig = async () => {
@@ -49,7 +51,15 @@ export const useAIAgentConfig = () => {
         throw error;
       }
 
-      setConfig(data);
+      // Transform the data to match our interface
+      if (data) {
+        setConfig({
+          ...data,
+          service_types: Array.isArray(data.service_types) ? data.service_types : []
+        } as AIAgentConfig);
+      } else {
+        setConfig(null);
+      }
     } catch (err: any) {
       console.error('Error in loadConfig:', err);
       setError(err.message);
@@ -60,6 +70,7 @@ export const useAIAgentConfig = () => {
 
   const saveConfig = async (configData: Partial<AIAgentConfig>) => {
     try {
+      setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('No authenticated user found');
@@ -80,14 +91,22 @@ export const useAIAgentConfig = () => {
         throw error;
       }
 
-      setConfig(data);
+      // Transform the data to match our interface
+      const transformedData = {
+        ...data,
+        service_types: Array.isArray(data.service_types) ? data.service_types : []
+      } as AIAgentConfig;
+
+      setConfig(transformedData);
       toast.success('AI agent configuration saved successfully');
-      return data;
+      return transformedData;
     } catch (err: any) {
       console.error('Error in saveConfig:', err);
       setError(err.message);
       toast.error('Failed to save AI agent configuration');
       throw err;
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -168,6 +187,16 @@ export const useAIAgentConfig = () => {
     }
   };
 
+  const saveAWSCredentials = async (credentials: any) => {
+    try {
+      // For now, just save to the config
+      return await saveConfig(credentials);
+    } catch (err: any) {
+      console.error('Error saving AWS credentials:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     loadConfig();
   }, []);
@@ -175,10 +204,13 @@ export const useAIAgentConfig = () => {
   return {
     config,
     loading,
+    saving,
     error,
     saveConfig,
     toggleActive,
     createDefaultConfig,
-    refreshConfig: loadConfig
+    refreshConfig: loadConfig,
+    saveAWSCredentials,
+    awsCredentials: config // Alias for backward compatibility
   };
 };
