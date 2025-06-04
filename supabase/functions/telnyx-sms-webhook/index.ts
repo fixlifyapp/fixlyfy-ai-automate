@@ -113,17 +113,24 @@ serve(async (req) => {
       console.log('Processing inbound SMS...');
 
       // Find client by phone number
-      const client = await findClientByPhone(supabaseAdmin, fromPhone);
+      let client = await findClientByPhone(supabaseAdmin, fromPhone);
       
       if (!client) {
         console.log('Creating new client for phone:', fromPhone);
+        
         // Create a new client if not found
         const { data: newClient, error: clientError } = await supabaseAdmin
           .from('clients')
           .insert({
             name: `Client ${fromPhone}`,
             phone: fromPhone,
-            status: 'active'
+            status: 'active',
+            type: 'residential',
+            address: '',
+            city: '',
+            state: '',
+            zip: '',
+            country: 'United States'
           })
           .select()
           .single();
@@ -134,7 +141,6 @@ serve(async (req) => {
         }
 
         console.log('Created new client:', newClient.id);
-        // Update client reference
         client = newClient;
       }
 
@@ -160,7 +166,10 @@ serve(async (req) => {
         // Update last_message_at
         await supabaseAdmin
           .from('conversations')
-          .update({ last_message_at: new Date().toISOString() })
+          .update({ 
+            last_message_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
           .eq('id', conversation.id);
       } else {
         console.log('Creating new conversation for client:', client.id);
@@ -169,7 +178,9 @@ serve(async (req) => {
           .insert({
             client_id: client.id,
             status: 'active',
-            last_message_at: new Date().toISOString()
+            last_message_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           })
           .select()
           .single();
@@ -193,7 +204,8 @@ serve(async (req) => {
           sender: fromPhone,
           recipient: toPhone,
           status: 'delivered',
-          message_sid: messageId
+          message_sid: messageId,
+          created_at: new Date().toISOString()
         });
 
       if (messageError) {
@@ -202,16 +214,18 @@ serve(async (req) => {
       }
 
       console.log('SMS message stored successfully');
+    } else {
+      console.log('Skipping event - not an inbound message or missing required data');
     }
 
-    return new Response('SMS webhook processed', {
-      headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+    return new Response(JSON.stringify({ success: true, message: 'SMS webhook processed' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Error processing SMS webhook:', error);
-    return new Response('Error processing webhook', {
-      headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
   } finally {

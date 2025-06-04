@@ -8,9 +8,10 @@ import { EmailManagement } from "@/components/connect/EmailManagement";
 import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
 import { EmailComposer } from "@/components/connect/EmailComposer";
+import { IntegrationTester } from "@/components/connect/IntegrationTester";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { MessageSquare, Phone, Mail, Plus, Users } from "lucide-react";
+import { MessageSquare, Phone, Mail, Plus, Users, TestTube } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "react-router-dom";
 import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
@@ -26,6 +27,7 @@ const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("monitoring");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [integrationTesterOpen, setIntegrationTesterOpen] = useState(false);
   const [isCallLoading, setIsCallLoading] = useState(false);
   
   const { openMessageDialog } = useMessageContext();
@@ -149,8 +151,21 @@ const ConnectCenterPageOptimized = () => {
         }}
       />
       
-      <div className="mb-6">
-        <ConnectSearch onSearchResults={setSearchResults} />
+      <div className="mb-6 flex gap-4">
+        <div className="flex-1">
+          <ConnectSearch onSearchResults={setSearchResults} />
+        </div>
+        <Dialog open={integrationTesterOpen} onOpenChange={setIntegrationTesterOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <TestTube className="h-4 w-4" />
+              Test Integrations
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <IntegrationTester />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* AI Agent Toggle */}
