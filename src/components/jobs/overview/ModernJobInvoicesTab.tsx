@@ -17,7 +17,7 @@ interface ModernJobInvoicesTabProps {
 }
 
 export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
-  const { invoices, loading, refetch } = useInvoices(jobId);
+  const { invoices, isLoading, refreshInvoices } = useInvoices(jobId);
   const { estimates } = useEstimates(jobId);
   const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
@@ -81,7 +81,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     return status === 'sent' || status === 'partial' || status === 'overdue';
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
@@ -99,7 +99,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   // Get approved estimates that can be converted to invoices
   const convertibleEstimates = estimates?.filter(est => 
     est.status === 'approved' && 
-    !invoices?.some(inv => inv.estimate_id === est.id)
+    !invoices?.some(inv => inv.job_id === est.job_id) // Use job_id instead of estimate_id
   ) || [];
 
   return (
@@ -187,12 +187,12 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Issue Date</p>
-                        <p>{new Date(invoice.issue_date).toLocaleDateString()}</p>
+                        <p className="text-muted-foreground">Date</p>
+                        <p>{new Date(invoice.date).toLocaleDateString()}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Due Date</p>
-                        <p>{new Date(invoice.due_date).toLocaleDateString()}</p>
+                        <p>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Not set'}</p>
                       </div>
                     </div>
                   </div>
@@ -259,7 +259,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         jobId={jobId}
         existingInvoice={selectedInvoice}
         estimateToConvert={selectedEstimate}
-        onInvoiceCreated={refetch}
+        onInvoiceCreated={refreshInvoices}
       />
 
       {selectedInvoice && (
@@ -280,7 +280,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
             invoice={selectedInvoice}
             jobId={jobId}
             onPaymentAdded={() => {
-              refetch();
+              refreshInvoices();
               setShowPaymentDialog(false);
             }}
           />

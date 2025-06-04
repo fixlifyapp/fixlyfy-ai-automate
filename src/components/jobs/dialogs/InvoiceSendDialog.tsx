@@ -117,18 +117,7 @@ export const InvoiceSendDialog = ({
 
       if (details) {
         setInvoiceDetails(details);
-        setClientInfo({
-          id: details.client_id,
-          name: details.client_name,
-          email: details.client_email,
-          phone: details.client_phone
-        });
-        console.log("Client info updated from invoice details:", {
-          id: details.client_id,
-          name: details.client_name,
-          email: details.client_email,
-          phone: details.client_phone
-        });
+        console.log("Invoice details updated:", details);
       } else {
         console.log("No data from view, trying direct fetch");
         
@@ -156,14 +145,6 @@ export const InvoiceSendDialog = ({
 
           if (!jobError && job?.client) {
             const clientData = Array.isArray(job.client) ? job.client[0] : job.client;
-            
-            setClientInfo({
-              id: clientData.id,
-              name: clientData.name,
-              email: clientData.email,
-              phone: clientData.phone
-            });
-            
             console.log("Client info fetched from job:", clientData);
           }
         }

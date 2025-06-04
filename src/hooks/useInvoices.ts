@@ -10,13 +10,15 @@ export interface Invoice {
   date: string;
   status: string;
   total: number;
-  amount_paid: number; // Make this required to match the actions hook
+  amount_paid: number;
   balance: number;
   notes?: string;
   items?: any[];
   created_at: string;
   updated_at: string;
   due_date?: string;
+  issue_date?: string; // Add this missing property
+  estimate_id?: string; // Add this missing property
 }
 
 export const useInvoices = (jobId: string) => {
@@ -41,7 +43,9 @@ export const useInvoices = (jobId: string) => {
         number: invoice.invoice_number, // Alias for compatibility
         amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
-        notes: invoice.notes || ''
+        notes: invoice.notes || '',
+        issue_date: invoice.date, // Add issue_date as alias for date
+        estimate_id: invoice.estimate_id || undefined // Add estimate_id
       })) || [];
       
       setInvoices(invoicesWithBalance);
@@ -56,14 +60,19 @@ export const useInvoices = (jobId: string) => {
     fetchInvoices();
   };
 
+  // Add alias method for compatibility
+  const refetch = refreshInvoices;
+
   useEffect(() => {
     fetchInvoices();
   }, [jobId]);
 
   return {
     invoices,
-    setInvoices, // Add this missing method
+    setInvoices,
     isLoading,
-    refreshInvoices
+    loading: isLoading, // Add alias for compatibility
+    refreshInvoices,
+    refetch // Add alias method for compatibility
   };
 };

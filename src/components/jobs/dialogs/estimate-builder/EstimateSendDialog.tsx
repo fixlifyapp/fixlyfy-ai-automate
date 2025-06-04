@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Send } from "lucide-react";
@@ -15,6 +14,11 @@ interface EstimateSendDialogProps {
   jobId?: string;
   onSuccess?: () => void;
   onSave?: () => Promise<boolean>;
+  contactInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 export const EstimateSendDialog = ({ 
@@ -25,7 +29,8 @@ export const EstimateSendDialog = ({
   total,
   jobId,
   onSuccess,
-  onSave
+  onSave,
+  contactInfo: propContactInfo
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
@@ -48,8 +53,8 @@ export const EstimateSendDialog = ({
     return cleaned.length >= 10;
   };
 
-  // Create contact info from fetched data
-  const contactInfo = {
+  // Use prop contactInfo if provided, otherwise use fetched clientInfo
+  const contactInfo = propContactInfo || {
     name: clientInfo?.name || 'Client',
     email: clientInfo?.email || '',
     phone: clientInfo?.phone || ''
