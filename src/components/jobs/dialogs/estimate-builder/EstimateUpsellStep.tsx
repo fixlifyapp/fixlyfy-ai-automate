@@ -5,8 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Shield, Calculator, DollarSign, Plus } from "lucide-react";
+import { TrendingUp, Shield, Calculator, DollarSign, Plus, Brain, Sparkles } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
+import { AIWarrantyRecommendationDialog } from "./AIWarrantyRecommendationDialog";
 
 interface UpsellItem {
   id: string;
@@ -21,18 +22,26 @@ interface EstimateUpsellStepProps {
   onContinue: (upsellItems: UpsellItem[], notes: string) => void;
   onBack: () => void;
   estimateTotal: number;
-  existingUpsellItems?: UpsellItem[]; // Add prop to track existing upsells
+  existingUpsellItems?: UpsellItem[];
+  jobContext?: {
+    job_type: string;
+    service_category: string;
+    job_value: number;
+    client_history?: any;
+  };
 }
 
 export const EstimateUpsellStep = ({ 
   onContinue, 
   onBack, 
   estimateTotal, 
-  existingUpsellItems = [] 
+  existingUpsellItems = [],
+  jobContext
 }: EstimateUpsellStepProps) => {
   const [notes, setNotes] = useState("");
   const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false); // Prevent multiple submissions
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
 
   // Convert warranty products to upsell items and restore previous selections
@@ -89,6 +98,33 @@ export const EstimateUpsellStep = ({
     }
   };
 
+  const handleAIWarrantySelect = (warranty: any, aiMessage: string) => {
+    // Add the AI-recommended warranty to upsell items
+    const newUpsellItem: UpsellItem = {
+      id: warranty.warranty_id,
+      title: warranty.warranty_name,
+      description: warranty.description,
+      price: warranty.price,
+      icon: Shield,
+      selected: true
+    };
+
+    setUpsellItems(prev => {
+      const existing = prev.find(item => item.id === warranty.warranty_id);
+      if (existing) {
+        return prev.map(item => 
+          item.id === warranty.warranty_id ? { ...item, selected: true } : item
+        );
+      } else {
+        return [...prev, newUpsellItem];
+      }
+    });
+
+    // Add AI message to notes
+    const aiNote = `\n\nAI Recommended Warranty: ${warranty.warranty_name}\nSuggested pitch: ${aiMessage}`;
+    setNotes(prev => prev + aiNote);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -106,6 +142,34 @@ export const EstimateUpsellStep = ({
         <h3 className="text-lg font-semibold">Enhance Your Service</h3>
         <p className="text-muted-foreground">Add valuable warranty services to provide complete protection</p>
       </div>
+
+      {/* AI Recommendations Button */}
+      {jobContext && (
+        <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-purple-900">
+              <Brain className="h-5 w-5" />
+              AI-Powered Recommendations
+              <Badge variant="secondary" className="ml-2">
+                <Sparkles className="h-3 w-3 mr-1" />
+                New
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-purple-700 mb-4">
+              Let AI analyze this job and suggest the most relevant warranties based on similar customer purchases and preferences.
+            </p>
+            <Button 
+              onClick={() => setShowAIRecommendations(true)}
+              className="bg-gradient-to-r from-purple-600 to-blue-600"
+            >
+              <Brain className="h-4 w-4 mr-2" />
+              Get AI Recommendations
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -259,6 +323,21 @@ export const EstimateUpsellStep = ({
           {isProcessing ? "Processing..." : "Continue to Send"}
         </Button>
       </div>
+
+      {/* AI Warranty Recommendation Dialog */}
+      {jobContext && (
+        <AIWarrantyRecommendationDialog
+          isOpen={showAIRecommendations}
+          onClose={() => setShowAIRecommendations(false)}
+          onSelectWarranty={handleAIWarrantySelect}
+          jobContext={{
+            job_type: jobContext.job_type,
+            service_category: jobContext.service_category,
+            job_value: estimateTotal,
+            client_history: jobContext.client_history
+          }}
+        />
+      )}
     </div>
   );
 };

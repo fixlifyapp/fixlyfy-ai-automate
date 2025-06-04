@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -91,6 +90,14 @@ export const SteppedEstimateBuilder = ({
     jobId,
     open
   });
+
+  // Create job context for AI recommendations
+  const jobContext = {
+    job_type: existingEstimate?.job_type || 'General Service',
+    service_category: existingEstimate?.service_category || 'Maintenance',
+    job_value: calculateGrandTotal(),
+    client_history: clientInfo
+  };
 
   // Reset step when dialog opens/closes
   useEffect(() => {
@@ -354,6 +361,7 @@ export const SteppedEstimateBuilder = ({
                 onContinue={handleUpsellContinue}
                 onBack={handleUpsellBack}
                 existingUpsellItems={selectedUpsells}
+                jobContext={jobContext}
               />
             )}
           </div>
