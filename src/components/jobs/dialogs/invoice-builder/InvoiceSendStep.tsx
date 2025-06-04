@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, FileText, Send } from "lucide-react";
 import { LineItem } from "../../builder/types";
-import { InvoiceSendDialog } from "../InvoiceSendDialog";
+import { SendMethodStep } from "../estimate-builder/steps/SendMethodStep";
+import { useInvoiceSending } from "./hooks/useInvoiceSending";
 
 interface InvoiceSendStepProps {
   invoiceNumber: string;
@@ -15,6 +16,11 @@ interface InvoiceSendStepProps {
   jobId: string;
   onSave: () => Promise<boolean>;
   onClose: () => void;
+  contactInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 export const InvoiceSendStep = ({
@@ -24,9 +30,13 @@ export const InvoiceSendStep = ({
   total,
   jobId,
   onSave,
-  onClose
+  onClose,
+  contactInfo
 }: InvoiceSendStepProps) => {
-  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
+  const [sendTo, setSendTo] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const { sendInvoice, isProcessing } = useInvoiceSending();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -35,11 +45,43 @@ export const InvoiceSendStep = ({
     }).format(amount);
   };
 
-  const handleSendInvoice = async () => {
-    const success = await onSave();
-    if (success) {
-      setShowSendDialog(true);
+  // Helper functions for validation
+  const isValidEmail = (email: string): boolean => {
+    if (!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const isValidPhoneNumber = (phone: string): boolean => {
+    if (!phone) return false;
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10;
+  };
+
+  // Check if contact info has valid email/phone
+  const hasValidEmail = contactInfo?.email && isValidEmail(contactInfo.email);
+  const hasValidPhone = contactInfo?.phone && isValidPhoneNumber(contactInfo.phone);
+
+  const handleSend = async () => {
+    const result = await sendInvoice({
+      sendMethod,
+      sendTo,
+      invoiceNumber,
+      invoiceDetails: { invoice_number: invoiceNumber },
+      lineItems,
+      contactInfo: contactInfo || { name: '', email: '', phone: '' },
+      customNote: notes,
+      jobId,
+      onSave,
+      existingInvoiceId: invoiceNumber
+    });
+
+    if (result.success) {
+      onClose();
     }
+  };
+
+  const handleBack = () => {
+    onClose();
   };
 
   return (
@@ -96,53 +138,21 @@ export const InvoiceSendStep = ({
         </CardContent>
       </Card>
 
-      {/* Send Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Send Invoice to Client</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-muted-foreground">
-              Ready to send your invoice? Choose how you'd like to deliver it to your client.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                onClick={handleSendInvoice}
-                className="flex-1 gap-2"
-                size="lg"
-              >
-                <Send className="h-4 w-4" />
-                Send Invoice
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1 gap-2"
-                size="lg"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Save & Close
-              </Button>
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              <p>💡 <strong>Pro tip:</strong> Your client will receive the invoice via email or SMS with a secure link to view and pay online through the client portal.</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Send Dialog */}
-      <InvoiceSendDialog
-        open={showSendDialog}
-        onOpenChange={setShowSendDialog}
-        onSave={onSave}
-        onAddWarranty={() => {}} // No warranty step for invoices
-        invoiceNumber={invoiceNumber}
-        jobId={jobId}
+      {/* Send Method Selection */}
+      <SendMethodStep
+        sendMethod={sendMethod}
+        setSendMethod={setSendMethod}
+        sendTo={sendTo}
+        setSendTo={setSendTo}
+        validationError={validationError}
+        setValidationError={setValidationError}
+        contactInfo={contactInfo || { name: '', email: '', phone: '' }}
+        hasValidEmail={!!hasValidEmail}
+        hasValidPhone={!!hasValidPhone}
+        estimateNumber={invoiceNumber}
+        isProcessing={isProcessing}
+        onSend={handleSend}
+        onBack={handleBack}
       />
     </div>
   );

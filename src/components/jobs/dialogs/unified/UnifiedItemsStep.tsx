@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { LineItem, Product } from "../../builder/types";
 import { ProductCatalog } from "../../builder/ProductCatalog";
 import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
@@ -73,7 +73,6 @@ export const UnifiedItemsStep = ({
         <CardContent>
           <DocumentLineItemsTable
             lineItems={lineItems}
-            onUpdateLineItem={onUpdateLineItem}
             onRemoveLineItem={onRemoveLineItem}
           />
           
@@ -90,7 +89,6 @@ export const UnifiedItemsStep = ({
       {/* Totals Section */}
       <DocumentTotalsSection
         taxRate={taxRate}
-        onTaxRateChange={onTaxRateChange}
         calculateSubtotal={calculateSubtotal}
         calculateTotalTax={calculateTotalTax}
         calculateGrandTotal={calculateGrandTotal}
@@ -105,8 +103,8 @@ export const UnifiedItemsStep = ({
       {/* Product Catalog Dialog */}
       {showProductCatalog && (
         <ProductCatalog
-          isOpen={showProductCatalog}
-          onClose={() => setShowProductCatalog(false)}
+          open={showProductCatalog}
+          onOpenChange={setShowProductCatalog}
           onSelectProduct={onAddProduct}
         />
       )}
