@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -496,22 +497,6 @@ export const InvoiceSendDialog = ({
         const method = sendMethod === "email" ? "email" : "text message";
         toast.success(`Invoice ${invoiceNumber} sent to client via ${method}`);
         console.log("SUCCESS: Invoice sent successfully");
-        
-        if (invoiceDetails?.client_id) {
-          await supabase
-            .from('client_notifications')
-            .insert({
-              client_id: invoiceDetails.client_id,
-              type: 'invoice_sent',
-              title: 'New Invoice Available',
-              message: `Invoice ${invoiceNumber} has been sent to you. Total: $${invoiceTotal.toFixed(2)}`,
-              data: { 
-                invoice_id: invoiceId, 
-                invoice_number: invoiceNumber,
-                portal_link: portalLoginLink 
-              }
-            });
-        }
         
         setCurrentStep("confirmation");
       } else {
