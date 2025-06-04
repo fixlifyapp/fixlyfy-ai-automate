@@ -2,10 +2,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
-import { Shield } from "lucide-react";
+import { Shield, Info } from "lucide-react";
 import { EstimateSummaryCard } from "../estimate-builder/components/EstimateSummaryCard";
 import { NotesSection } from "../estimate-builder/components/NotesSection";
 import { WarrantiesList } from "../estimate-builder/components/WarrantiesList";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UpsellItem {
   id: string;
@@ -21,21 +22,44 @@ interface InvoiceUpsellStepProps {
   onBack: () => void;
   invoiceTotal: number;
   existingUpsellItems?: UpsellItem[];
+  estimateToConvert?: any; // The estimate being converted to invoice
 }
 
 export const InvoiceUpsellStep = ({ 
   onContinue, 
   onBack, 
   invoiceTotal, 
-  existingUpsellItems = []
+  existingUpsellItems = [],
+  estimateToConvert
 }: InvoiceUpsellStepProps) => {
   const [notes, setNotes] = useState("");
   const [upsellItems, setUpsellItems] = useState<UpsellItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasExistingWarranties, setHasExistingWarranties] = useState(false);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
+
+  // Check if warranties were already added in the estimate
+  useEffect(() => {
+    if (estimateToConvert) {
+      // Check if the estimate already contains warranty items
+      const estimateItems = estimateToConvert.line_items || [];
+      const hasWarranties = estimateItems.some((item: any) => 
+        item.description?.toLowerCase().includes('warranty') ||
+        item.name?.toLowerCase().includes('warranty') ||
+        warrantyProducts.some(wp => wp.name === item.name)
+      );
+      setHasExistingWarranties(hasWarranties);
+    }
+  }, [estimateToConvert, warrantyProducts]);
 
   // Convert warranty products to upsell items and restore previous selections
   useEffect(() => {
+    if (hasExistingWarranties) {
+      // If warranties already exist, don't show them as options
+      setUpsellItems([]);
+      return;
+    }
+
     const warrantyUpsells = warrantyProducts.map(product => {
       const existingSelection = existingUpsellItems.find(item => item.id === product.id);
       
@@ -49,7 +73,7 @@ export const InvoiceUpsellStep = ({
       };
     });
     setUpsellItems(warrantyUpsells);
-  }, [warrantyProducts, existingUpsellItems]);
+  }, [warrantyProducts, existingUpsellItems, hasExistingWarranties]);
 
   const handleUpsellToggle = (itemId: string) => {
     if (isProcessing) return;
@@ -99,12 +123,37 @@ export const InvoiceUpsellStep = ({
         <p className="text-muted-foreground">Add valuable warranty services for complete protection</p>
       </div>
 
-      <WarrantiesList
-        upsellItems={upsellItems}
-        existingUpsellItems={existingUpsellItems}
-        isProcessing={isProcessing}
-        onUpsellToggle={handleUpsellToggle}
-      />
+      {hasExistingWarranties ? (
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Warranties Already Included</strong>
+            <br />
+            This invoice already includes warranty services from the original estimate. 
+            No additional warranty options are needed at this time.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Warranty Recommendation</strong>
+              <br />
+              No warranty was added to the original estimate. Consider offering warranty protection 
+              to provide additional value and peace of mind for your customer. Warranties help build 
+              trust and can increase customer satisfaction while protecting your work.
+            </AlertDescription>
+          </Alert>
+
+          <WarrantiesList
+            upsellItems={upsellItems}
+            existingUpsellItems={existingUpsellItems}
+            isProcessing={isProcessing}
+            onUpsellToggle={handleUpsellToggle}
+          />
+        </>
+      )}
 
       <NotesSection
         notes={notes}

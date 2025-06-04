@@ -304,6 +304,7 @@ export const SteppedInvoiceBuilder = ({
               onContinue={handleUpsellContinue}
               onBack={() => setCurrentStep("items")}
               existingUpsellItems={selectedUpsells}
+              estimateToConvert={estimateToConvert}
             />
           )}
         </div>
