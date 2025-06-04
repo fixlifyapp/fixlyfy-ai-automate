@@ -4,15 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 // Starting values for each entity type - simplified numbering
 const STARTING_VALUES = {
   job: 2000,
-  estimate: 2000,
-  invoice: 2000,
+  estimate: 100, // Shorter starting value for estimates
+  invoice: 1000, // Shorter starting value for invoices
   client: 2000
 };
 
 // Simple prefixes for each entity type
 const PREFIXES = {
   job: 'J',
-  estimate: 'E',
+  estimate: '', // No prefix for estimates - just numbers
   invoice: 'I',
   client: 'C'
 };
@@ -52,19 +52,23 @@ export const generateNextId = async (entityType: 'job' | 'estimate' | 'invoice' 
       throw new Error('Unexpected error fetching counter');
     }
 
-    // Return just the number for estimates (simpler format)
+    // Return formatted number based on entity type
     if (entityType === 'estimate') {
-      return nextNumber.toString();
+      return nextNumber.toString(); // Just the number (e.g., "101", "102")
+    } else if (entityType === 'invoice') {
+      return `INV-${nextNumber}`; // Invoice with prefix (e.g., "INV-1001")
     }
 
     return `${PREFIXES[entityType]}-${nextNumber}`;
   } catch (error) {
     console.error(`Error generating ${entityType} ID:`, error);
     // Fallback to random number if database operation fails
-    const fallbackNumber = Math.floor(Math.random() * 9999) + STARTING_VALUES[entityType];
+    const fallbackNumber = Math.floor(Math.random() * 999) + STARTING_VALUES[entityType];
     
     if (entityType === 'estimate') {
       return fallbackNumber.toString();
+    } else if (entityType === 'invoice') {
+      return `INV-${fallbackNumber}`;
     }
     
     return `${PREFIXES[entityType]}-${fallbackNumber}`;

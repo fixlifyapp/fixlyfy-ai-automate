@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { SendMethodStep } from "./steps/SendMethodStep";
+import { useEstimateSending } from "./hooks/useEstimateSending";
 
 interface EstimateSendDialogProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface EstimateSendDialogProps {
     phone: string;
   };
   onSuccess?: () => void;
+  onSave: () => Promise<boolean>;
 }
 
 export const EstimateSendDialog = ({ 
@@ -29,12 +31,14 @@ export const EstimateSendDialog = ({
   estimateNumber, 
   total,
   contactInfo,
-  onSuccess
+  onSuccess,
+  onSave
 }: EstimateSendDialogProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
   const [validationError, setValidationError] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [sentMethods, setSentMethods] = useState<Set<string>>(new Set());
+  const { sendEstimate, isProcessing } = useEstimateSending();
 
   // Fetch user's Telnyx phone numbers
   const { data: userPhoneNumbers = [] } = useQuery({
@@ -82,67 +86,47 @@ export const EstimateSendDialog = ({
   }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo]);
 
   const handleSend = async () => {
-    setValidationError("");
+    const result = await sendEstimate({
+      sendMethod,
+      sendTo,
+      estimateNumber,
+      estimateDetails: { estimate_number: estimateNumber },
+      lineItems: [],
+      contactInfo: contactInfo || { name: '', email: '', phone: '' },
+      customNote: "",
+      jobId: estimateId,
+      onSave,
+      existingEstimateId: estimateId // Pass existing estimate ID to prevent duplication
+    });
 
-    if (sendMethod === "email" && !isValidEmail(sendTo)) {
-      setValidationError("Please enter a valid email address");
-      return;
-    }
-    
-    if (sendMethod === "sms" && !isValidPhoneNumber(sendTo)) {
-      setValidationError("Please enter a valid phone number");
-      return;
-    }
-
-    if (sendMethod === "sms" && userPhoneNumbers.length === 0) {
-      setValidationError("No Telnyx phone numbers available. Please purchase a phone number first.");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      if (sendMethod === "email") {
-        const { data, error } = await supabase.functions.invoke('send-estimate', {
-          body: {
-            estimateId,
-            sendMethod: "email",
-            recipientEmail: sendTo,
-            subject: `Estimate #${estimateNumber}`,
-            message: ""
-          }
-        });
-
-        if (error) throw error;
-        toast.success("Estimate sent via email successfully!");
-      } else {
-        // Use the first available Telnyx phone number
-        const fromNumber = userPhoneNumbers[0]?.phone_number;
-        
-        const { data, error } = await supabase.functions.invoke('send-estimate-sms', {
-          body: {
-            estimateId,
-            recipientPhone: sendTo,
-            fromNumber,
-            message: `Hi ${contactInfo?.name || 'Customer'}! Your estimate #${estimateNumber} is ready. Total: $${total.toFixed(2)}. Please contact us if you have any questions.`
-          }
-        });
-
-        if (error) throw error;
-        toast.success("Estimate sent via SMS successfully!");
-      }
+    if (result.success) {
+      // Mark this method as sent
+      setSentMethods(prev => new Set([...prev, sendMethod]));
       
-      // Call the success callback to close the dialog and navigate
-      if (onSuccess) {
-        onSuccess();
+      // If both methods have been used, close dialog
+      if (sentMethods.size === 1) {
+        // Show success message and option to send via other method
+        const otherMethod = sendMethod === "email" ? "SMS" : "email";
+        const hasOtherMethod = sendMethod === "email" ? hasValidPhone : hasValidEmail;
+        
+        if (hasOtherMethod) {
+          toast.success(`Estimate sent via ${sendMethod}! You can also send via ${otherMethod} if needed.`);
+        } else {
+          // No other method available, close dialog
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            onClose();
+          }
+        }
       } else {
-        onClose();
+        // Both methods used, close dialog
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          onClose();
+        }
       }
-    } catch (error) {
-      console.error('Error sending estimate:', error);
-      toast.error('Failed to send estimate');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -150,8 +134,13 @@ export const EstimateSendDialog = ({
     onClose();
   };
 
+  const handleClose = () => {
+    setSentMethods(new Set());
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -168,6 +157,11 @@ export const EstimateSendDialog = ({
             {contactInfo?.name && (
               <p className="text-sm text-blue-800">
                 <strong>Customer:</strong> {contactInfo.name}
+              </p>
+            )}
+            {sentMethods.size > 0 && (
+              <p className="text-sm text-green-800 mt-2">
+                <strong>Sent via:</strong> {Array.from(sentMethods).join(", ")}
               </p>
             )}
           </div>

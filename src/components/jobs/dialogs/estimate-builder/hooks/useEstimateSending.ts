@@ -58,7 +58,8 @@ export const useEstimateSending = () => {
     contactInfo,
     customNote,
     jobId,
-    onSave
+    onSave,
+    existingEstimateId
   }: {
     sendMethod: "email" | "sms";
     sendTo: string;
@@ -69,11 +70,13 @@ export const useEstimateSending = () => {
     customNote: string;
     jobId?: string;
     onSave: () => Promise<boolean>;
+    existingEstimateId?: string;
   }) => {
     console.log("=== STARTING ESTIMATE SEND PROCESS ===");
     console.log("Send method:", sendMethod);
     console.log("Send to:", sendTo);
     console.log("Estimate number:", estimateNumber);
+    console.log("Existing estimate ID:", existingEstimateId);
 
     const validationErrorMsg = validateRecipient(sendMethod, sendTo);
     if (validationErrorMsg) {
@@ -85,36 +88,60 @@ export const useEstimateSending = () => {
     setIsProcessing(true);
     
     try {
-      console.log("Step 1: Saving estimate...");
-      const success = await onSave();
-      
-      if (!success) {
-        console.error("Failed to save estimate");
-        toast.error("Failed to save estimate. Please try again.");
-        return { success: false, error: "Failed to save estimate" };
+      let savedEstimate;
+
+      if (existingEstimateId) {
+        // Use existing estimate - don't create a new one
+        console.log("Using existing estimate:", existingEstimateId);
+        
+        const { data: estimate, error: fetchError } = await supabase
+          .from('estimates')
+          .select('id, estimate_number, total, status, notes, job_id')
+          .eq('id', existingEstimateId)
+          .single();
+
+        if (fetchError || !estimate) {
+          console.error("Failed to fetch existing estimate:", fetchError);
+          toast.error("Estimate not found. Please try again.");
+          return { success: false, error: "Estimate not found" };
+        }
+
+        savedEstimate = estimate;
+        console.log("Found existing estimate:", savedEstimate);
+      } else {
+        // Only save if we don't have an existing estimate
+        console.log("Step 1: Saving new estimate...");
+        const success = await onSave();
+        
+        if (!success) {
+          console.error("Failed to save estimate");
+          toast.error("Failed to save estimate. Please try again.");
+          return { success: false, error: "Failed to save estimate" };
+        }
+
+        console.log("Step 2: Estimate saved successfully");
+        
+        // Wait a moment for the estimate to be fully saved
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the latest estimate details after saving
+        const { data: estimate, error: fetchError } = await supabase
+          .from('estimates')
+          .select('id, estimate_number, total, status, notes, job_id')
+          .eq('estimate_number', estimateNumber)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (fetchError || !estimate) {
+          console.error("Failed to fetch saved estimate:", fetchError);
+          toast.error("Estimate not found after saving. Please try again.");
+          return { success: false, error: "Estimate not found after saving" };
+        }
+
+        savedEstimate = estimate;
+        console.log("Step 3: Retrieved saved estimate:", savedEstimate);
       }
-
-      console.log("Step 2: Estimate saved successfully");
-      
-      // Wait a moment for the estimate to be fully saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get the latest estimate details after saving
-      const { data: savedEstimate, error: fetchError } = await supabase
-        .from('estimates')
-        .select('id, estimate_number, total, status, notes, job_id')
-        .eq('estimate_number', estimateNumber)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (fetchError || !savedEstimate) {
-        console.error("Failed to fetch saved estimate:", fetchError);
-        toast.error("Estimate not found after saving. Please try again.");
-        return { success: false, error: "Estimate not found after saving" };
-      }
-
-      console.log("Step 3: Retrieved saved estimate:", savedEstimate);
 
       let finalRecipient = sendTo;
       if (sendMethod === "sms") {
@@ -158,14 +185,6 @@ export const useEstimateSending = () => {
 
         console.log("SMS sent successfully:", smsData);
         toast.success(`Estimate ${estimateNumber} sent via SMS to ${contactInfo.name}`);
-        
-        // Update estimate status
-        await supabase
-          .from('estimates')
-          .update({ status: 'sent' })
-          .eq('id', savedEstimate.id);
-
-        return { success: true };
       } else {
         // Call the send-estimate function for email
         const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
@@ -186,8 +205,17 @@ export const useEstimateSending = () => {
 
         console.log("Email sent successfully:", sendData);
         toast.success(`Estimate ${estimateNumber} sent via email to ${contactInfo.name}`);
-        return { success: true };
       }
+      
+      // Update estimate status to sent only once
+      if (savedEstimate.status !== 'sent') {
+        await supabase
+          .from('estimates')
+          .update({ status: 'sent' })
+          .eq('id', savedEstimate.id);
+      }
+
+      return { success: true, estimateId: savedEstimate.id };
         
     } catch (error: any) {
       console.error("CRITICAL ERROR in send estimate process:", error);
