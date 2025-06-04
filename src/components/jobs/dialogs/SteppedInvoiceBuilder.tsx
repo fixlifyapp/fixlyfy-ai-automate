@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -14,6 +15,7 @@ import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
+import { toast } from "sonner";
 
 interface SteppedInvoiceBuilderProps {
   open: boolean;
@@ -75,6 +77,7 @@ export const SteppedInvoiceBuilder = ({
       if (existingInvoice) {
         initializeFromInvoice(existingInvoice);
         setInvoiceCreated(true);
+        setSavedInvoice(existingInvoice);
       } else if (estimateToConvert) {
         initializeFromEstimate(estimateToConvert);
       } else {
@@ -89,22 +92,31 @@ export const SteppedInvoiceBuilder = ({
 
   const handleSaveAndContinue = async () => {
     if (lineItems.length === 0) {
+      toast.error("Please add at least one item to the invoice");
       return;
     }
 
     try {
-      if (!invoiceCreated || !savedInvoice) {
-        const invoice = await saveInvoiceChanges();
-        if (invoice) {
-          setSavedInvoice(invoice);
-          setInvoiceCreated(true);
-        } else {
-          return;
-        }
+      console.log("💾 Saving invoice before continuing to upsell step...");
+      
+      // Always save the invoice, whether it's new or existing
+      const invoice = await saveInvoiceChanges();
+      
+      if (invoice) {
+        setSavedInvoice(invoice);
+        setInvoiceCreated(true);
+        console.log("✅ Invoice saved successfully:", invoice.id);
+        toast.success("Invoice saved successfully!");
+        
+        // Move to upsell step
+        setCurrentStep("upsell");
+      } else {
+        toast.error("Failed to save invoice. Please try again.");
+        return;
       }
-      setCurrentStep("upsell");
-    } catch (error) {
-      console.error("Error saving invoice:", error);
+    } catch (error: any) {
+      console.error("Error in handleSaveAndContinue:", error);
+      toast.error("Failed to save invoice: " + (error.message || "Unknown error"));
     }
   };
 
@@ -132,12 +144,15 @@ export const SteppedInvoiceBuilder = ({
       setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
       
       try {
+        console.log("💾 Saving upsells to existing invoice...");
         const updatedInvoice = await saveInvoiceChanges();
         if (updatedInvoice) {
           setSavedInvoice(updatedInvoice);
+          console.log("✅ Upsells saved successfully");
         }
       } catch (error) {
         console.error("Failed to save upsells:", error);
+        toast.error("Failed to save additional services");
         return;
       }
     }
@@ -171,6 +186,30 @@ export const SteppedInvoiceBuilder = ({
       setCurrentStep("items");
     } else {
       onOpenChange(false);
+    }
+  };
+
+  // Function to save invoice without continuing (for cancel/close scenarios)
+  const handleSaveForLater = async () => {
+    if (lineItems.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+
+    try {
+      console.log("💾 Saving invoice for later...");
+      const invoice = await saveInvoiceChanges();
+      if (invoice) {
+        toast.success("Invoice saved as draft");
+        onOpenChange(false);
+        
+        if (onInvoiceCreated) {
+          onInvoiceCreated(invoice);
+        }
+      }
+    } catch (error) {
+      console.error("Error saving invoice:", error);
+      toast.error("Failed to save invoice");
     }
   };
 
@@ -273,8 +312,11 @@ export const SteppedInvoiceBuilder = ({
               />
 
               <div className="flex justify-between pt-4 border-t">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+                <Button 
+                  variant="outline" 
+                  onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                >
+                  {lineItems.length > 0 ? "Save for Later" : "Cancel"}
                 </Button>
                 
                 <Button 

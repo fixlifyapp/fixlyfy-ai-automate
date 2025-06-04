@@ -164,6 +164,11 @@ export const EstimateSendDialog = ({
                 <strong>Sent via:</strong> {Array.from(sentMethods).join(", ")}
               </p>
             )}
+            <div className="bg-green-50 border border-green-200 p-2 rounded mt-2">
+              <p className="text-xs text-green-700">
+                <strong>✅ Estimate Saved:</strong> This estimate has been saved and is available in your estimates list.
+              </p>
+            </div>
           </div>
 
           <SendMethodStep

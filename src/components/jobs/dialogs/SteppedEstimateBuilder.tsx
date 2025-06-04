@@ -128,20 +128,23 @@ export const SteppedEstimateBuilder = ({
     }
     
     try {
-      if (!estimateCreated || !savedEstimate) {
-        const estimate = await saveDocumentChanges();
-        
-        if (estimate) {
-          setSavedEstimate(estimate);
-          setEstimateCreated(true);
-          toast.success("Estimate saved! Choose additional services.");
-        } else {
-          toast.error("Failed to save estimate. Please try again.");
-          return;
-        }
-      }
+      console.log("💾 Saving estimate before continuing to upsell step...");
       
-      setCurrentStep("upsell");
+      // Always save the estimate, whether it's new or existing
+      const estimate = await saveDocumentChanges();
+      
+      if (estimate) {
+        setSavedEstimate(estimate);
+        setEstimateCreated(true);
+        console.log("✅ Estimate saved successfully:", estimate.id);
+        toast.success("Estimate saved successfully!");
+        
+        // Move to upsell step
+        setCurrentStep("upsell");
+      } else {
+        toast.error("Failed to save estimate. Please try again.");
+        return;
+      }
     } catch (error: any) {
       console.error("Error in handleSaveAndContinue:", error);
       toast.error("Failed to save estimate: " + (error.message || "Unknown error"));
@@ -172,9 +175,11 @@ export const SteppedEstimateBuilder = ({
       setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
       
       try {
+        console.log("💾 Saving upsells to existing estimate...");
         const updatedEstimate = await saveDocumentChanges();
         if (updatedEstimate) {
           setSavedEstimate(updatedEstimate);
+          console.log("✅ Upsells saved successfully");
         }
       } catch (error) {
         console.error("Failed to save upsells:", error);
@@ -222,6 +227,28 @@ export const SteppedEstimateBuilder = ({
     }
   };
 
+  // Function to save estimate without continuing (for cancel/close scenarios)
+  const handleSaveForLater = async () => {
+    if (lineItems.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+
+    try {
+      console.log("💾 Saving estimate for later...");
+      await saveDocumentChanges();
+      toast.success("Estimate saved as draft");
+      onOpenChange(false);
+      
+      if (onEstimateCreated) {
+        onEstimateCreated();
+      }
+    } catch (error) {
+      console.error("Error saving estimate:", error);
+      toast.error("Failed to save estimate");
+    }
+  };
+
   const stepTitles = {
     items: existingEstimate ? "Edit Estimate" : "Create Estimate",
     upsell: "Enhance Your Service",
@@ -265,8 +292,11 @@ export const SteppedEstimateBuilder = ({
                 />
 
                 <div className="flex justify-between pt-4 border-t">
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
+                  <Button 
+                    variant="outline" 
+                    onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                  >
+                    {lineItems.length > 0 ? "Save for Later" : "Cancel"}
                   </Button>
                   
                   <Button 
