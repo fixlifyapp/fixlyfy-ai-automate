@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -73,12 +72,13 @@ export const SteppedEstimateBuilder = ({
     open
   });
 
-  // Create job context for AI recommendations
+  // Create job context for AI recommendations - now includes estimateId
   const jobContext = {
     job_type: existingEstimate?.job_type || 'General Service',
     service_category: existingEstimate?.service_category || 'Maintenance',
     job_value: calculateGrandTotal(),
-    client_history: clientInfo
+    client_history: clientInfo,
+    estimateId: savedEstimate?.id || existingEstimate?.id
   };
 
   // Reset step when dialog opens/closes
@@ -155,41 +155,27 @@ export const SteppedEstimateBuilder = ({
     setSelectedUpsells(prev => [...prev, ...upsells]);
     setUpsellNotes(notes);
     
-    const newUpsells = upsells.filter(upsell => !addedUpsellIds.has(upsell.id));
-    
-    if (newUpsells.length > 0) {
-      const upsellLineItems = newUpsells.map(upsell => ({
-        id: `upsell-${upsell.id}-${Date.now()}`,
-        description: upsell.title + (upsell.description ? ` - ${upsell.description}` : ''),
-        quantity: 1,
-        unitPrice: upsell.price,
-        taxable: true,
-        discount: 0,
-        ourPrice: 0,
-        name: upsell.title,
-        price: upsell.price,
-        total: upsell.price
-      }));
-      
-      setLineItems(prev => [...prev, ...upsellLineItems]);
-      setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
-      
+    // Don't add line items here since they're already saved in the upsell step
+    // Just update notes if needed
+    if (notes.trim() && savedEstimate?.id) {
       try {
-        console.log("💾 Saving upsells to existing estimate...");
-        const updatedEstimate = await saveDocumentChanges();
-        if (updatedEstimate) {
-          setSavedEstimate(updatedEstimate);
-          console.log("✅ Upsells saved successfully");
+        console.log("💾 Updating estimate notes...");
+        const { error } = await supabase
+          .from('estimates')
+          .update({ notes: notes.trim() })
+          .eq('id', savedEstimate.id);
+          
+        if (error) {
+          console.error('Error updating notes:', error);
+          toast.error('Failed to save notes');
+          return;
         }
       } catch (error) {
-        console.error("Failed to save upsells:", error);
-        toast.error("Failed to save additional services");
+        console.error("Failed to save notes:", error);
+        toast.error("Failed to save notes");
         return;
       }
     }
-    
-    const combinedNotes = [notes, upsellNotes].filter(Boolean).join('\n\n');
-    setNotes(combinedNotes);
     
     setCurrentStep("send");
   };

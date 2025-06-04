@@ -8,19 +8,26 @@ import { NotesSection } from "../estimate-builder/components/NotesSection";
 import { WarrantiesList } from "../estimate-builder/components/WarrantiesList";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UpsellStepProps } from "../shared/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const InvoiceUpsellStep = ({ 
   onContinue, 
   onBack, 
   documentTotal, 
   existingUpsellItems = [],
-  estimateToConvert
+  estimateToConvert,
+  jobContext
 }: UpsellStepProps) => {
   const [notes, setNotes] = useState("");
   const [upsellItems, setUpsellItems] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSavingWarranty, setIsSavingWarranty] = useState(false);
   const [hasExistingWarranties, setHasExistingWarranties] = useState(false);
   const { products: warrantyProducts, isLoading } = useProducts("Warranties");
+
+  // Get invoice ID from jobContext or other source
+  const invoiceId = jobContext?.invoiceId;
 
   // Check if warranties were already added in the estimate
   useEffect(() => {
@@ -59,12 +66,101 @@ export const InvoiceUpsellStep = ({
     setUpsellItems(warrantyUpsells);
   }, [warrantyProducts, existingUpsellItems, hasExistingWarranties]);
 
-  const handleUpsellToggle = (itemId: string) => {
-    if (isProcessing) return;
+  const handleUpsellToggle = async (itemId: string) => {
+    if (isProcessing || isSavingWarranty) return;
     
-    setUpsellItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, selected: !item.selected } : item
-    ));
+    setIsSavingWarranty(true);
+    
+    try {
+      const item = upsellItems.find(item => item.id === itemId);
+      if (!item || !invoiceId) {
+        toast.error("Unable to save warranty - missing information");
+        return;
+      }
+
+      const newSelectedState = !item.selected;
+
+      if (newSelectedState) {
+        // Add warranty to database
+        const { error: lineItemError } = await supabase
+          .from('line_items')
+          .insert({
+            parent_id: invoiceId,
+            parent_type: 'invoice',
+            description: item.title + (item.description ? ` - ${item.description}` : ''),
+            quantity: 1,
+            unit_price: item.price,
+            taxable: false // Warranties are typically not taxed
+          });
+
+        if (lineItemError) {
+          console.error('Error adding warranty line item:', lineItemError);
+          toast.error(`Failed to add ${item.title}`);
+          return;
+        }
+
+        // Update invoice total and balance
+        const newTotal = documentTotal + item.price;
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({ 
+            total: newTotal,
+            balance: newTotal // Assuming no payments yet
+          })
+          .eq('id', invoiceId);
+
+        if (updateError) {
+          console.error('Error updating invoice total:', updateError);
+          toast.error('Failed to update invoice total');
+          return;
+        }
+
+        toast.success(`${item.title} added to invoice`);
+      } else {
+        // Remove warranty from database
+        const { error: deleteError } = await supabase
+          .from('line_items')
+          .delete()
+          .eq('parent_id', invoiceId)
+          .eq('parent_type', 'invoice')
+          .eq('description', item.title + (item.description ? ` - ${item.description}` : ''));
+
+        if (deleteError) {
+          console.error('Error removing warranty line item:', deleteError);
+          toast.error(`Failed to remove ${item.title}`);
+          return;
+        }
+
+        // Update invoice total and balance
+        const newTotal = Math.max(0, documentTotal - item.price);
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({ 
+            total: newTotal,
+            balance: newTotal // Assuming no payments yet
+          })
+          .eq('id', invoiceId);
+
+        if (updateError) {
+          console.error('Error updating invoice total:', updateError);
+          toast.error('Failed to update invoice total');
+          return;
+        }
+
+        toast.success(`${item.title} removed from invoice`);
+      }
+
+      // Update local state
+      setUpsellItems(prev => prev.map(upsellItem => 
+        upsellItem.id === itemId ? { ...upsellItem, selected: newSelectedState } : upsellItem
+      ));
+
+    } catch (error) {
+      console.error('Error toggling warranty:', error);
+      toast.error('Failed to update warranty');
+    } finally {
+      setIsSavingWarranty(false);
+    }
   };
 
   const selectedUpsells = upsellItems.filter(item => item.selected);
@@ -72,18 +168,30 @@ export const InvoiceUpsellStep = ({
   const grandTotal = documentTotal + upsellTotal;
 
   const handleContinue = async () => {
-    if (isProcessing) return;
+    if (isProcessing || isSavingWarranty) return;
     
     setIsProcessing(true);
     
     try {
-      const newlySelectedUpsells = selectedUpsells.filter(upsell => 
-        !existingUpsellItems.some(existing => 
-          existing.id === upsell.id && existing.selected
-        )
-      );
-      
-      await onContinue(newlySelectedUpsells, notes);
+      // Save notes if any
+      if (notes.trim() && invoiceId) {
+        const { error: notesError } = await supabase
+          .from('invoices')
+          .update({ notes: notes.trim() })
+          .eq('id', invoiceId);
+
+        if (notesError) {
+          console.error('Error saving notes:', notesError);
+          toast.error('Failed to save notes');
+          return;
+        }
+      }
+
+      // Continue with selected upsells (they're already saved to database)
+      await onContinue(selectedUpsells, notes);
+    } catch (error) {
+      console.error('Error in handleContinue:', error);
+      toast.error('Failed to continue');
     } finally {
       setIsProcessing(false);
     }
@@ -133,7 +241,7 @@ export const InvoiceUpsellStep = ({
           <WarrantiesList
             upsellItems={upsellItems}
             existingUpsellItems={existingUpsellItems}
-            isProcessing={isProcessing}
+            isProcessing={isProcessing || isSavingWarranty}
             onUpsellToggle={handleUpsellToggle}
           />
         </>
@@ -152,15 +260,19 @@ export const InvoiceUpsellStep = ({
       />
 
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onBack} disabled={isProcessing}>
+        <Button 
+          variant="outline" 
+          onClick={onBack} 
+          disabled={isProcessing || isSavingWarranty}
+        >
           Back to Items
         </Button>
         <Button 
           onClick={handleContinue} 
           className="gap-2"
-          disabled={isProcessing}
+          disabled={isProcessing || isSavingWarranty}
         >
-          {isProcessing ? "Processing..." : "Continue to Send"}
+          {isProcessing ? "Processing..." : isSavingWarranty ? "Saving..." : "Continue to Send"}
         </Button>
       </div>
     </div>
