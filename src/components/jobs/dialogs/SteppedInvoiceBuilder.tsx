@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -15,6 +16,7 @@ import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SteppedInvoiceBuilderProps {
   open: boolean;
@@ -121,8 +123,8 @@ export const SteppedInvoiceBuilder = ({
 
   // Create job context including invoiceId
   const jobContext = {
-    job_type: existingInvoice?.job_type || estimateToConvert?.job_type || 'General Service',
-    service_category: existingInvoice?.service_category || estimateToConvert?.service_category || 'Maintenance',
+    job_type: 'General Service',
+    service_category: 'Maintenance',
     job_value: calculateGrandTotal(),
     client_history: null,
     invoiceId: savedInvoice?.id || existingInvoice?.id
@@ -332,6 +334,7 @@ export const SteppedInvoiceBuilder = ({
               onBack={() => setCurrentStep("items")}
               existingUpsellItems={selectedUpsells}
               estimateToConvert={estimateToConvert}
+              jobContext={jobContext}
             />
           )}
         </div>

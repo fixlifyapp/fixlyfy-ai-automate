@@ -8,8 +8,10 @@ import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
 import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
 import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
+import { EstimateSendDialog } from "@/components/jobs/dialogs/estimate-builder/EstimateSendDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -23,6 +25,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const [editingEstimate, setEditingEstimate] = useState<any>(null);
   const [previewEstimate, setPreviewEstimate] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [sendingEstimate, setSendingEstimate] = useState<any>(null);
+  const [showSendDialog, setShowSendDialog] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -84,6 +88,24 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     console.log('Deleting estimate:', estimate);
     actions.setSelectedEstimate(estimate);
     await actions.confirmDeleteEstimate();
+  };
+
+  const handleSendEstimate = (estimate: any) => {
+    console.log('Sending estimate:', estimate);
+    setSendingEstimate(estimate);
+    setShowSendDialog(true);
+  };
+
+  const handleSendSuccess = () => {
+    setShowSendDialog(false);
+    setSendingEstimate(null);
+    refreshEstimates();
+    toast.success("Estimate sent successfully!");
+  };
+
+  const handleSendCancel = () => {
+    setShowSendDialog(false);
+    setSendingEstimate(null);
   };
 
   return (
@@ -182,7 +204,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => actions.handleSendEstimate(estimate.id)}
+                        onClick={() => handleSendEstimate(estimate)}
                         disabled={state.isSending}
                       >
                         <Send className="h-4 w-4 mr-1" />
@@ -256,6 +278,23 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send Estimate Dialog */}
+      {sendingEstimate && (
+        <EstimateSendDialog
+          isOpen={showSendDialog}
+          onClose={handleSendCancel}
+          estimateId={sendingEstimate.id}
+          estimateNumber={sendingEstimate.estimate_number}
+          total={sendingEstimate.total || 0}
+          contactInfo={{
+            name: 'Client', // Will be fetched from job data
+            email: '',
+            phone: ''
+          }}
+          onSuccess={handleSendSuccess}
+        />
+      )}
     </>
   );
 };
