@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Phone, User, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMessageContext } from "@/contexts/MessageContext";
+import { toast } from "sonner";
 
 interface Conversation {
   id: string;
@@ -36,6 +37,7 @@ interface MessagesListProps {
 export const MessagesList = ({ searchResults }: MessagesListProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [callingNumber, setCallingNumber] = useState<string | null>(null);
   const { openMessageDialog } = useMessageContext();
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
           table: 'messages'
         },
         () => {
-          loadConversations(); // Reload conversations when there are changes
+          loadConversations();
         }
       )
       .subscribe();
@@ -90,6 +92,30 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
       console.error('Error loading conversations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const makeCall = async (phoneNumber: string, clientId?: string) => {
+    setCallingNumber(phoneNumber);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
+        body: {
+          to: phoneNumber,
+          clientId
+        }
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'Failed to initiate call');
+      }
+
+      toast.success('Call initiated successfully');
+    } catch (error) {
+      console.error('Error making call:', error);
+      toast.error('Failed to make call: ' + error.message);
+    } finally {
+      setCallingNumber(null);
     }
   };
 
@@ -222,12 +248,22 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // TODO: Implement call functionality
+                        makeCall(conversation.clients.phone, conversation.clients.id);
                       }}
+                      disabled={callingNumber === conversation.clients.phone}
                       className="gap-1"
                     >
-                      <Phone className="h-3 w-3" />
-                      Call
+                      {callingNumber === conversation.clients.phone ? (
+                        <>
+                          <div className="animate-spin h-3 w-3 border border-gray-300 border-t-gray-600 rounded-full" />
+                          Calling...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="h-3 w-3" />
+                          Call
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

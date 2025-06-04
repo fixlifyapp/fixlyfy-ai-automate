@@ -116,7 +116,7 @@ serve(async (req) => {
         });
 
         if (!tokenError && tokenData) {
-          portalLink = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/portal/login?token=${tokenData}`;
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
           console.log('Portal link generated');
         }
       } catch (error) {
@@ -125,7 +125,7 @@ serve(async (req) => {
     }
 
     // Create SMS message with portal link
-    const estimateLink = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/estimate/view/${estimate.estimate_number}`;
+    const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.estimate_number}`;
     const smsMessage = message || `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. View: ${estimateLink}${portalLink ? ` | Portal: ${portalLink}` : ''}`;
 
     console.log('SMS message length:', smsMessage.length);

@@ -2,7 +2,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 import { getBusinessConfig } from './utils/businessConfig.ts'
-import { findOrCreatePhoneNumber, logCallToDatabase, updateCallStatus } from './utils/callHandling.ts'
+import { findOrCreatePhoneNumber, updateCallStatus } from './utils/callHandling.ts'
 
 interface TelnyxWebhookData {
   data?: {
@@ -17,9 +17,11 @@ interface TelnyxWebhookData {
       direction?: string;
       state?: string;
       previous_state?: string;
+      start_time?: string;
+      answer_time?: string;
+      end_time?: string;
     };
   };
-  // Legacy format support
   CallSid?: string;
   From?: string;
   To?: string;
@@ -37,6 +39,95 @@ const corsHeaders = {
 
 const TELNYX_API_KEY = Deno.env.get('TELNYX_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+
+const formatPhoneNumber = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('1') && cleaned.length === 11) {
+    return cleaned.substring(1);
+  }
+  return cleaned;
+};
+
+const findClientByPhone = async (supabase: any, phone: string) => {
+  const formattedPhone = formatPhoneNumber(phone);
+  
+  const phoneVariations = [
+    phone,
+    formattedPhone,
+    `+1${formattedPhone}`,
+    `(${formattedPhone.slice(0,3)}) ${formattedPhone.slice(3,6)}-${formattedPhone.slice(6)}`,
+    `${formattedPhone.slice(0,3)}-${formattedPhone.slice(3,6)}-${formattedPhone.slice(6)}`
+  ];
+
+  for (const phoneVar of phoneVariations) {
+    const { data: client, error } = await supabase
+      .from('clients')
+      .select('*')
+      .ilike('phone', `%${phoneVar}%`)
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && client) {
+      return client;
+    }
+  }
+  return null;
+};
+
+const logCallToTelnyxDatabase = async (supabaseClient: any, callControlId: string, from: string, to: string, phoneNumberData?: any) => {
+  try {
+    // Find client by phone number
+    const client = await findClientByPhone(supabaseClient, from);
+    
+    const { error } = await supabaseClient
+      .from('telnyx_calls')
+      .insert({
+        call_control_id: callControlId,
+        from_number: from,
+        to_number: to,
+        direction: 'inbound',
+        status: 'initiated',
+        client_id: client?.id || null,
+        metadata: {
+          phone_number_data: phoneNumberData
+        }
+      });
+
+    if (error) {
+      console.error('Error logging call to telnyx_calls:', error);
+    } else {
+      console.log('Call logged to telnyx_calls table');
+    }
+  } catch (error) {
+    console.error('Error in logCallToTelnyxDatabase:', error);
+  }
+};
+
+const updateTelnyxCallStatus = async (supabaseClient: any, callControlId: string, status: string, additionalData?: any) => {
+  try {
+    const updateData: any = { status };
+    
+    if (additionalData) {
+      if (additionalData.answered_at) updateData.answered_at = additionalData.answered_at;
+      if (additionalData.ended_at) updateData.ended_at = additionalData.ended_at;
+      if (additionalData.duration_seconds) updateData.duration_seconds = additionalData.duration_seconds;
+      if (additionalData.metadata) updateData.metadata = additionalData.metadata;
+    }
+
+    const { error } = await supabaseClient
+      .from('telnyx_calls')
+      .update(updateData)
+      .eq('call_control_id', callControlId);
+
+    if (error) {
+      console.error('Error updating telnyx call status:', error);
+    } else {
+      console.log(`Telnyx call status updated to: ${status}`);
+    }
+  } catch (error) {
+    console.error('Error in updateTelnyxCallStatus:', error);
+  }
+};
 
 const answerCall = async (callControlId: string) => {
   try {
@@ -122,12 +213,10 @@ serve(async (req) => {
     let rawBody: string = ''
     
     try {
-      // Get the raw body text first
       rawBody = await req.text()
       console.log('=== RAW BODY ===')
       console.log(rawBody)
       
-      // Try to parse as JSON first (Call Control API format)
       try {
         webhookData = JSON.parse(rawBody)
         console.log('=== PARSED JSON WEBHOOK DATA ===')
@@ -135,7 +224,6 @@ serve(async (req) => {
       } catch (jsonError) {
         console.log('JSON parse failed, trying form data format')
         
-        // If JSON parsing fails, try form data parsing
         const formData = new URLSearchParams(rawBody)
         console.log('=== PARSED FORM DATA ===')
         for (const [key, value] of formData.entries()) {
@@ -191,16 +279,12 @@ serve(async (req) => {
     if (eventType === 'call.initiated' || eventType === 'call.ringing' || (!eventType && from && to)) {
       console.log('=== NEW INCOMING CALL - REALTIME MODE ===')
 
-      // Find or create phone number entry
       const phoneNumberData = await findOrCreatePhoneNumber(supabaseClient, to || '')
-
-      // Get business configuration
       const businessConfig = await getBusinessConfig(supabaseClient)
 
-      // Log the call in database
-      await logCallToDatabase(supabaseClient, callControlId, from || '', to || '', phoneNumberData)
+      // Log the call in telnyx_calls database
+      await logCallToTelnyxDatabase(supabaseClient, callControlId, from || '', to || '', phoneNumberData)
 
-      // Answer the call using Call Control API
       console.log('Answering call with Call Control API...')
       const answerSuccess = await answerCall(callControlId)
       
@@ -209,7 +293,6 @@ serve(async (req) => {
         return new Response('Failed to answer call', { status: 500 })
       }
 
-      // Start audio streaming to our realtime endpoint
       console.log('Starting audio streaming...')
       const streamSuccess = await startAudioStreaming(callControlId)
       
@@ -218,10 +301,8 @@ serve(async (req) => {
         return new Response('Failed to start streaming', { status: 500 })
       }
 
-      // Update call status
-      await updateCallStatus(supabaseClient, callControlId, 'connected', {
-        realtime_mode: true,
-        business_config: businessConfig
+      await updateTelnyxCallStatus(supabaseClient, callControlId, 'connected', {
+        metadata: { realtime_mode: true, business_config: businessConfig }
       })
 
       return new Response('Call answered and streaming started', {
@@ -233,8 +314,8 @@ serve(async (req) => {
     if (eventType === 'call.answered') {
       console.log('=== CALL ANSWERED ===')
       
-      await updateCallStatus(supabaseClient, callControlId, 'connected', {
-        realtime_mode: true
+      await updateTelnyxCallStatus(supabaseClient, callControlId, 'answered', {
+        answered_at: new Date().toISOString()
       })
 
       return new Response('Call answered', {
@@ -246,8 +327,8 @@ serve(async (req) => {
     if (eventType === 'call.streaming.started') {
       console.log('=== STREAMING STARTED ===')
       
-      await updateCallStatus(supabaseClient, callControlId, 'streaming', {
-        streaming_active: true
+      await updateTelnyxCallStatus(supabaseClient, callControlId, 'streaming', {
+        metadata: { streaming_active: true }
       })
 
       return new Response('Streaming started', {
@@ -259,7 +340,7 @@ serve(async (req) => {
     if (eventType === 'call.hangup' || callState === 'completed' || callState === 'hangup') {
       console.log('=== CALL COMPLETED ===')
       
-      await updateCallStatus(supabaseClient, callControlId, 'completed', {
+      await updateTelnyxCallStatus(supabaseClient, callControlId, 'completed', {
         ended_at: new Date().toISOString()
       })
 
@@ -268,7 +349,6 @@ serve(async (req) => {
       })
     }
 
-    // Default response for unhandled events
     console.log('=== UNHANDLED WEBHOOK EVENT ===')
     console.log(`Event Type: ${eventType}, Call State: ${callState}`)
     
