@@ -31,11 +31,19 @@ export const useEstimateSendingInterface = (): SendingHookReturn => {
     sendDocument: async (params: SendDocumentParams) => {
       // Transform params to match estimate sending interface
       const estimateParams = {
-        ...params,
+        sendMethod: params.sendMethod,
+        sendTo: params.sendTo,
+        documentNumber: params.documentNumber,
         documentDetails: {
           estimate_number: params.documentNumber,
           ...params.documentDetails
-        }
+        },
+        lineItems: params.lineItems,
+        contactInfo: params.contactInfo,
+        customNote: params.customNote,
+        jobId: params.jobId,
+        existingDocumentId: params.existingDocumentId,
+        onSave: params.onSave || (() => Promise.resolve(true))
       };
       return await sendDocument(estimateParams);
     },
@@ -50,11 +58,19 @@ export const useInvoiceSendingInterface = (): SendingHookReturn => {
     sendDocument: async (params: SendDocumentParams) => {
       // Transform params to match invoice sending interface
       const invoiceParams = {
-        ...params,
+        sendMethod: params.sendMethod,
+        sendTo: params.sendTo,
+        documentNumber: params.documentNumber,
         documentDetails: {
           invoice_number: params.documentNumber,
           ...params.documentDetails
-        }
+        },
+        lineItems: params.lineItems,
+        contactInfo: params.contactInfo,
+        customNote: params.customNote,
+        jobId: params.jobId,
+        existingDocumentId: params.existingDocumentId,
+        onSave: params.onSave || (() => Promise.resolve(true))
       };
       return await sendDocument(invoiceParams);
     },

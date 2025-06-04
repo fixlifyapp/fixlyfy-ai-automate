@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
 import { SendDialog } from "./shared/SendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
-import { useEstimateSendingInterface } from "../shared/hooks/useSendingInterface";
+import { useEstimateSendingInterface } from "./shared/hooks/useSendingInterface";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
