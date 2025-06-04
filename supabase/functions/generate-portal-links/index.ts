@@ -19,8 +19,7 @@ const sanitizeInput = (input: string, maxLength: number = 255): string => {
 };
 
 const getPortalDomain = (): string => {
-  // Always use hub.fixlify.app as the portal domain
-  return 'https://hub.fixlify.app';
+  return Deno.env.get('PORTAL_DOMAIN') || 'https://hub.fixlify.app';
 };
 
 const validatePortalDomain = (domain: string): boolean => {
@@ -109,7 +108,7 @@ serve(async (req) => {
       )
     }
 
-    // Build portal URL based on link type - always use hub.fixlify.app
+    // Build portal URL based on link type
     const portalDomain = getPortalDomain()
     
     if (!validatePortalDomain(portalDomain)) {

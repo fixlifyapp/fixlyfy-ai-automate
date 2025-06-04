@@ -40,8 +40,8 @@ export const validateSessionToken = (token: string): boolean => {
 };
 
 export const getPortalDomain = (): string => {
-  // Use hub.fixlify.app as the main portal domain
-  return 'https://hub.fixlify.app';
+  // Make portal domain configurable with fallback
+  return process.env.PORTAL_DOMAIN || 'https://hub.fixlify.app';
 };
 
 export const validatePortalDomain = (domain: string): boolean => {
@@ -51,11 +51,4 @@ export const validatePortalDomain = (domain: string): boolean => {
   } catch {
     return false;
   }
-};
-
-export const getCurrentDomain = (): string => {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return 'https://hub.fixlify.app';
 };
