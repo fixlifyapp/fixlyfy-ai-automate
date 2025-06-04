@@ -73,7 +73,7 @@ export default function PortalDashboardPage() {
   if (loading) {
     return (
       <PortalLayout>
-        <LoadingSkeleton />
+        <LoadingSkeleton type="page" />
       </PortalLayout>
     );
   }

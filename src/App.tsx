@@ -30,6 +30,7 @@ import AiCenterPage from "@/pages/AiCenterPage";
 import ConfigurationPage from "@/pages/ConfigurationPage";
 import PortalLoginPage from "@/pages/portal/PortalLoginPage";
 import PortalDashboardPage from "@/pages/portal/PortalDashboardPage";
+import PortalJobsPage from "@/pages/portal/PortalJobsPage";
 import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
 import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
 import PortalProfilePage from "@/pages/portal/PortalProfilePage";
