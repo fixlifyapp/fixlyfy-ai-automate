@@ -19,9 +19,8 @@ interface TelnyxCall {
   appointment_scheduled?: boolean;
   appointment_data?: any;
   created_at: string;
-  // Database fields that exist
+  // Database fields that actually exist
   to_number?: string;
-  from_number?: string;
   direction?: string;
   status?: string;
   started_at?: string;
@@ -107,7 +106,7 @@ export const TelnyxCallsList = () => {
       // Enrich calls with client data
       const enrichedCalls = await Promise.all(
         (callsData || []).map(async (call) => {
-          const phoneToSearch = call.to_number || call.from_number;
+          const phoneToSearch = call.to_number || call.phone_number;
           const clientData = phoneToSearch ? await findClientByPhone(phoneToSearch) : null;
           
           return {
@@ -192,11 +191,11 @@ export const TelnyxCallsList = () => {
       openMessageDialog({
         id: call.clients.id,
         name: call.clients.name,
-        phone: call.to_number || call.from_number || 'Unknown'
+        phone: call.to_number || call.phone_number || 'Unknown'
       });
     } else {
       // Open message dialog with phone number
-      const phoneNumber = call.to_number || call.from_number || 'Unknown';
+      const phoneNumber = call.to_number || call.phone_number || 'Unknown';
       openMessageDialog({
         id: "",
         name: `Client ${formatPhoneNumber(phoneNumber)}`,
@@ -206,11 +205,11 @@ export const TelnyxCallsList = () => {
   };
 
   const getCallPhoneNumber = (call: TelnyxCall) => {
-    return call.to_number || call.from_number || call.phone_number || 'Unknown';
+    return call.to_number || call.phone_number || 'Unknown';
   };
 
   const getDisplayPhoneNumber = (call: TelnyxCall) => {
-    return call.to_number || call.from_number || call.phone_number || 'Unknown';
+    return call.to_number || call.phone_number || 'Unknown';
   };
 
   if (loading) {

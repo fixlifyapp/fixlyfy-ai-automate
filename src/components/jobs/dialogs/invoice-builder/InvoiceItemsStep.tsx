@@ -215,7 +215,7 @@ export const InvoiceItemsStep = ({
       <ProductSearch
         open={showProductSearch}
         onOpenChange={setShowProductSearch}
-        onSelectProduct={(product) => {
+        onProductSelect={(product) => {
           onAddProduct(product);
           setShowProductSearch(false);
         }}
