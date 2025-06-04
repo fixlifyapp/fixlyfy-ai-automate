@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { TrendingUp, Shield } from "lucide-react";
+import { TrendingUp, Shield, Lightbulb } from "lucide-react";
 
 interface UpsellItem {
   id: string;
@@ -34,6 +34,19 @@ export const WarrantiesList = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Warranty Sales Tips */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Lightbulb className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-900">Why warranties matter:</span>
+          </div>
+          <div className="space-y-1 text-xs text-blue-700">
+            <div>• Peace of mind for unexpected issues</div>
+            <div>• Shows you stand behind your work</div>
+            <div>• Builds long-term client relationships</div>
+          </div>
+        </div>
+
         {upsellItems.length === 0 ? (
           <div className="text-center py-8">
             <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
