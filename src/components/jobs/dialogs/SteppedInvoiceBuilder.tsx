@@ -340,10 +340,10 @@ export const SteppedInvoiceBuilder = ({
         </div>
       </DialogContent>
       
-      {/* Send Dialog - rendered outside the main dialog */}
+      {/* Send Dialog - rendered outside the main dialog with responsive sizing */}
       {currentStep === "send" && (
         <Dialog open={true} onOpenChange={() => setCurrentStep("upsell")}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="w-[95vw] max-w-4xl h-[90vh] max-h-[90vh] p-0 overflow-hidden">
             <InvoiceSendStep
               invoiceNumber={invoiceNumber}
               lineItems={lineItems}

@@ -85,75 +85,85 @@ export const InvoiceSendStep = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Invoice Preview */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full max-h-[85vh] overflow-hidden">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 p-6 border-b">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Send Invoice</h3>
+          <Badge variant="secondary">#{invoiceNumber}</Badge>
+        </div>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Invoice Preview */}
+        <Card>
+          <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Invoice Preview
             </CardTitle>
-            <Badge variant="secondary">#{invoiceNumber}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Line Items Summary */}
-            <div>
-              <h4 className="font-medium mb-3">Items ({lineItems.length})</h4>
-              <div className="space-y-2">
-                {lineItems.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                    <div>
-                      <div className="font-medium">{item.description}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Qty: {item.quantity} × {formatCurrency(item.unitPrice)}
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Line Items Summary - Mobile Responsive */}
+              <div>
+                <h4 className="font-medium mb-3">Items ({lineItems.length})</h4>
+                <div className="space-y-2">
+                  {lineItems.map((item) => (
+                    <div key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm sm:text-base break-words">{item.description}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">
+                          Qty: {item.quantity} × {formatCurrency(item.unitPrice)}
+                        </div>
+                      </div>
+                      <div className="font-medium text-sm sm:text-base self-end sm:self-auto">
+                        {formatCurrency(item.quantity * item.unitPrice)}
                       </div>
                     </div>
-                    <div className="font-medium">
-                      {formatCurrency(item.quantity * item.unitPrice)}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Total */}
-            <div className="pt-4 border-t">
-              <div className="flex justify-between items-center text-lg font-semibold">
-                <span>Total Amount:</span>
-                <span>{formatCurrency(total)}</span>
-              </div>
-            </div>
-
-            {/* Notes */}
-            {notes && (
+              {/* Total */}
               <div className="pt-4 border-t">
-                <h4 className="font-medium mb-2">Notes</h4>
-                <p className="text-sm text-muted-foreground">{notes}</p>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                  <span className="text-base sm:text-lg font-semibold">Total Amount:</span>
+                  <span className="text-base sm:text-lg font-semibold">{formatCurrency(total)}</span>
+                </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Send Method Selection */}
-      <SendMethodStep
-        sendMethod={sendMethod}
-        setSendMethod={setSendMethod}
-        sendTo={sendTo}
-        setSendTo={setSendTo}
-        validationError={validationError}
-        setValidationError={setValidationError}
-        contactInfo={contactInfo || { name: '', email: '', phone: '' }}
-        hasValidEmail={!!hasValidEmail}
-        hasValidPhone={!!hasValidPhone}
-        estimateNumber={invoiceNumber}
-        isProcessing={isProcessing}
-        onSend={handleSend}
-        onBack={handleBack}
-      />
+              {/* Notes */}
+              {notes && (
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-2">Notes</h4>
+                  <p className="text-sm text-muted-foreground break-words">{notes}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Send Method Selection */}
+        <div className="w-full">
+          <SendMethodStep
+            sendMethod={sendMethod}
+            setSendMethod={setSendMethod}
+            sendTo={sendTo}
+            setSendTo={setSendTo}
+            validationError={validationError}
+            setValidationError={setValidationError}
+            contactInfo={contactInfo || { name: '', email: '', phone: '' }}
+            hasValidEmail={!!hasValidEmail}
+            hasValidPhone={!!hasValidPhone}
+            estimateNumber={invoiceNumber}
+            isProcessing={isProcessing}
+            onSend={handleSend}
+            onBack={handleBack}
+          />
+        </div>
+      </div>
     </div>
   );
 };

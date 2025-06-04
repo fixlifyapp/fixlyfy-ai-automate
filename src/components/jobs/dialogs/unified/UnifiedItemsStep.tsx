@@ -73,7 +73,6 @@ export const UnifiedItemsStep = ({
         <CardContent>
           <DocumentLineItemsTable
             lineItems={lineItems}
-            onRemoveLineItem={onRemoveLineItem}
           />
           
           {lineItems.length === 0 && (
@@ -89,9 +88,9 @@ export const UnifiedItemsStep = ({
       {/* Totals Section */}
       <DocumentTotalsSection
         taxRate={taxRate}
-        calculateSubtotal={calculateSubtotal}
-        calculateTotalTax={calculateTotalTax}
-        calculateGrandTotal={calculateGrandTotal}
+        subtotal={calculateSubtotal()}
+        totalTax={calculateTotalTax()}
+        grandTotal={calculateGrandTotal()}
       />
 
       {/* Notes Section */}
@@ -103,8 +102,8 @@ export const UnifiedItemsStep = ({
       {/* Product Catalog Dialog */}
       {showProductCatalog && (
         <ProductCatalog
-          open={showProductCatalog}
-          onOpenChange={setShowProductCatalog}
+          isOpen={showProductCatalog}
+          onClose={() => setShowProductCatalog(false)}
           onSelectProduct={onAddProduct}
         />
       )}
