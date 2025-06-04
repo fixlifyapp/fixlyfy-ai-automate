@@ -5,17 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneOff, Mic, MicOff, Bot, Cloud } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Bot, Zap } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface PhoneNumber {
   id: string;
   phone_number: string;
-  friendly_name?: string;
   status: string;
-  connect_instance_id?: string;
-  connect_phone_number_arn?: string;
 }
 
 export const CallingInterface = () => {
@@ -24,7 +21,7 @@ export const CallingInterface = () => {
   const [toNumber, setToNumber] = useState<string>("");
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [currentContactId, setCurrentContactId] = useState<string | null>(null);
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [callType, setCallType] = useState<"regular" | "ai">("regular");
   const [loading, setLoading] = useState(true);
 
@@ -35,10 +32,9 @@ export const CallingInterface = () => {
   const loadOwnedNumbers = async () => {
     try {
       const { data, error } = await supabase
-        .from('phone_numbers')
+        .from('telnyx_phone_numbers')
         .select('*')
         .eq('status', 'owned')
-        .not('connect_instance_id', 'is', null) // Only show Connect-enabled numbers
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -49,7 +45,7 @@ export const CallingInterface = () => {
       }
     } catch (error) {
       console.error('Error loading phone numbers:', error);
-      toast.error('Failed to load Amazon Connect phone numbers');
+      toast.error('Failed to load Telnyx phone numbers');
     } finally {
       setLoading(false);
     }
@@ -73,64 +69,65 @@ export const CallingInterface = () => {
     try {
       setIsCallActive(true);
       
-      // Record the call in Amazon Connect calls table
+      // Record the call in Telnyx calls table
       const { data: callData, error: callError } = await supabase
-        .from('amazon_connect_calls')
+        .from('telnyx_calls')
         .insert({
-          phone_number: toNumber,
-          instance_id: 'demo-instance',
-          contact_id: `demo-${Date.now()}`,
-          call_status: 'initiated',
-          started_at: new Date().toISOString()
+          to_number: toNumber,
+          from_number: selectedFromNumber,
+          direction: 'outbound',
+          status: 'initiated',
+          created_at: new Date().toISOString()
         })
         .select()
         .single();
 
       if (callError) throw callError;
 
-      // Initiate call via Amazon Connect
-      const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
+      // Initiate call via Telnyx
+      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
         body: {
-          action: 'initiate',
-          fromNumber: selectedFromNumber,
-          toNumber: toNumber,
-          callType: callType,
-          callId: callData.id
+          action: 'call',
+          to: toNumber,
+          from: selectedFromNumber,
+          callType: callType
         }
       });
 
       if (error) throw error;
 
       if (data?.success) {
-        setCurrentContactId(data.contactId);
-        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated via Amazon Connect`);
+        setCurrentCallId(data.data?.call_control_id);
+        toast.success(`${callType === 'ai' ? 'AI call' : 'Call'} initiated via Telnyx`);
         
-        // Update the call record with the contact ID
-        await supabase
-          .from('amazon_connect_calls')
-          .update({ 
-            call_status: 'in-progress',
-            contact_id: data.contactId 
-          })
-          .eq('id', callData.id);
+        // Update the call record with the call control ID
+        if (data.data?.call_control_id) {
+          await supabase
+            .from('telnyx_calls')
+            .update({ 
+              status: 'streaming',
+              call_control_id: data.data.call_control_id 
+            })
+            .eq('id', callData.id);
+        }
       } else {
         throw new Error(data?.error || "Failed to initiate call");
       }
     } catch (error) {
-      console.error('Error initiating call:', error);
-      toast.error('Failed to initiate call via Amazon Connect');
+      console.error('Error initiating Telnyx call:', error);
+      toast.error('Failed to initiate call via Telnyx');
       setIsCallActive(false);
     }
   };
 
   const hangupCall = async () => {
-    if (!currentContactId) return;
+    if (!currentCallId) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('amazon-connect-calls', {
+      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
         body: {
           action: 'hangup',
-          contactId: currentContactId
+          call_control_id: currentCallId
         }
       });
 
@@ -138,15 +135,15 @@ export const CallingInterface = () => {
 
       // Update call record
       await supabase
-        .from('amazon_connect_calls')
+        .from('telnyx_calls')
         .update({ 
-          call_status: 'completed',
+          status: 'completed',
           ended_at: new Date().toISOString()
         })
-        .eq('contact_id', currentContactId);
+        .eq('call_control_id', currentCallId);
 
       setIsCallActive(false);
-      setCurrentContactId(null);
+      setCurrentCallId(null);
       setIsMuted(false);
       toast.success("Call ended");
     } catch (error) {
@@ -165,7 +162,7 @@ export const CallingInterface = () => {
       <Card className="border-fixlyfy-border">
         <CardContent className="p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy mx-auto"></div>
-          <p className="text-sm text-gray-500 mt-2">Loading Amazon Connect phone numbers...</p>
+          <p className="text-sm text-gray-500 mt-2">Loading Telnyx phone numbers...</p>
         </CardContent>
       </Card>
     );
@@ -176,19 +173,19 @@ export const CallingInterface = () => {
       <Card className="border-fixlyfy-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Cloud className="h-5 w-5 text-blue-600" />
-            Amazon Connect Calling
+            <Zap className="h-5 w-5 text-blue-600" />
+            Telnyx Calling
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <Cloud className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Amazon Connect Numbers</h3>
+            <Zap className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Telnyx Numbers</h3>
             <p className="text-gray-500 mb-4">
-              You need to configure Amazon Connect phone numbers before you can make calls.
+              You need to configure Telnyx phone numbers before you can make calls.
             </p>
             <Button onClick={() => window.location.href = '/connect?tab=phone-numbers'}>
-              Configure Amazon Connect
+              Configure Telnyx Numbers
             </Button>
           </div>
         </CardContent>
@@ -200,11 +197,11 @@ export const CallingInterface = () => {
     <Card className="border-fixlyfy-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Cloud className="h-5 w-5 text-blue-600" />
-          Amazon Connect Calling
+          <Zap className="h-5 w-5 text-blue-600" />
+          Telnyx Calling
           <Badge variant="outline" className="ml-auto text-blue-600 border-blue-200">
-            <Cloud className="h-3 w-3 mr-1" />
-            Connect Enabled
+            <Zap className="h-3 w-3 mr-1" />
+            Telnyx Enabled
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -235,18 +232,17 @@ export const CallingInterface = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">From Number (Amazon Connect)</label>
+              <label className="text-sm font-medium mb-2 block">From Number (Telnyx)</label>
               <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select your Connect phone number" />
+                  <SelectValue placeholder="Select your Telnyx phone number" />
                 </SelectTrigger>
                 <SelectContent>
                   {ownedNumbers.map((number) => (
                     <SelectItem key={number.id} value={number.phone_number}>
                       <div className="flex items-center gap-2">
-                        <Cloud size={14} className="text-blue-600" />
+                        <Zap size={14} className="text-blue-600" />
                         {formatPhoneNumber(number.phone_number)}
-                        {number.friendly_name && ` (${number.friendly_name})`}
                       </div>
                     </SelectItem>
                   ))}
@@ -272,12 +268,12 @@ export const CallingInterface = () => {
               {callType === "ai" ? (
                 <>
                   <Bot size={16} className="mr-2" />
-                  Start AI Call via Connect
+                  Start AI Call via Telnyx
                 </>
               ) : (
                 <>
-                  <Cloud size={16} className="mr-2" />
-                  Call via Amazon Connect
+                  <Zap size={16} className="mr-2" />
+                  Call via Telnyx
                 </>
               )}
             </Button>
@@ -287,7 +283,7 @@ export const CallingInterface = () => {
             <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-center gap-2 mb-2">
                 {callType === "ai" && <Bot size={20} className="text-blue-600" />}
-                <Cloud size={16} className="text-blue-600" />
+                <Zap size={16} className="text-blue-600" />
                 <div className="text-lg font-semibold text-blue-900">
                   {callType === "ai" ? "AI Call Active" : "Call Active"}
                 </div>
@@ -304,7 +300,7 @@ export const CallingInterface = () => {
                 </div>
               )}
               <div className="text-xs text-blue-600 mt-1 font-medium">
-                Powered by Amazon Connect
+                Powered by Telnyx
               </div>
             </div>
 

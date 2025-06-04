@@ -9,13 +9,15 @@ import { toast } from "@/hooks/use-toast";
 
 interface CallLog {
   id: string;
-  contact_id: string;
-  phone_number: string;
-  call_status: string;
-  started_at: string;
-  ended_at: string | null;
-  call_duration: number | null;
-  ai_transcript: string | null;
+  call_control_id: string;
+  to_number: string;
+  from_number?: string;
+  status: string;
+  created_at: string;
+  started_at?: string;
+  ended_at?: string;
+  call_duration?: number;
+  direction?: string;
 }
 
 export const CallMonitoring = () => {
@@ -29,7 +31,7 @@ export const CallMonitoring = () => {
     const channel = supabase
       .channel('call-monitoring')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'amazon_connect_calls' }, 
+        { event: '*', schema: 'public', table: 'telnyx_calls' }, 
         (payload) => {
           console.log('New call event:', payload);
           loadCallLogs();
@@ -45,9 +47,9 @@ export const CallMonitoring = () => {
   const loadCallLogs = async () => {
     try {
       const { data, error } = await supabase
-        .from('amazon_connect_calls')
+        .from('telnyx_calls')
         .select('*')
-        .order('started_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(10);
 
       if (error) throw error;
@@ -74,7 +76,8 @@ export const CallMonitoring = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'streaming': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'initiated': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'failed': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -96,7 +99,7 @@ export const CallMonitoring = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Phone className="h-5 w-5 text-blue-600" />
-          Real-time Call Monitoring
+          Real-time Call Monitoring (Telnyx)
           <Button 
             size="sm" 
             variant="outline" 
@@ -113,7 +116,7 @@ export const CallMonitoring = () => {
           <div className="text-center py-8 text-gray-500">
             <Phone className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium mb-2">No calls yet</h3>
-            <p className="text-sm">Call +1 833-574-3145 to test the AI dispatcher</p>
+            <p className="text-sm">Calls will appear here when made through Telnyx</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -124,13 +127,13 @@ export const CallMonitoring = () => {
                     <Phone className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium">{call.phone_number}</div>
+                    <div className="font-medium">{call.to_number}</div>
                     <div className="text-sm text-gray-500">
-                      {new Date(call.started_at).toLocaleString()}
+                      {new Date(call.created_at).toLocaleString()}
                     </div>
-                    {call.contact_id && (
+                    {call.call_control_id && (
                       <div className="text-xs text-gray-400">
-                        Contact ID: {call.contact_id}
+                        Call ID: {call.call_control_id}
                       </div>
                     )}
                   </div>
@@ -138,21 +141,19 @@ export const CallMonitoring = () => {
                 
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <Badge className={getStatusColor(call.call_status)}>
-                      {call.call_status}
+                    <Badge className={getStatusColor(call.status)}>
+                      {call.status}
                     </Badge>
                     <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                       <Clock className="h-3 w-3" />
                       {formatDuration(call.call_duration)}
                     </div>
+                    {call.direction && (
+                      <div className="text-xs text-gray-400">
+                        {call.direction}
+                      </div>
+                    )}
                   </div>
-                  
-                  {call.ai_transcript && (
-                    <Button size="sm" variant="outline">
-                      <MessageSquare className="h-3 w-3 mr-1" />
-                      Transcript
-                    </Button>
-                  )}
                 </div>
               </div>
             ))}
