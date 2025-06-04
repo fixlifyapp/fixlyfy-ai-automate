@@ -16,7 +16,6 @@ interface Job {
   title: string;
   description?: string;
   status: string;
-  priority: string;
   address?: string;
   schedule_start?: string;
   schedule_end?: string;
@@ -57,7 +56,6 @@ export default function PortalJobsPage() {
           title,
           description,
           status,
-          priority,
           address,
           schedule_start,
           schedule_end,
@@ -129,19 +127,6 @@ export default function PortalJobsPage() {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -155,7 +140,7 @@ export default function PortalJobsPage() {
   if (loading) {
     return (
       <PortalLayout>
-        <LoadingSkeleton type="page" />
+        <LoadingSkeleton type="card" />
       </PortalLayout>
     );
   }
@@ -212,9 +197,6 @@ export default function PortalJobsPage() {
                         <Badge className={getStatusColor(job.status)}>
                           {job.status}
                         </Badge>
-                        <Badge className={getPriorityColor(job.priority)}>
-                          {job.priority}
-                        </Badge>
                       </div>
                     </div>
                   </CardHeader>
@@ -264,9 +246,6 @@ export default function PortalJobsPage() {
                       <div className="flex gap-2">
                         <Badge className={getStatusColor(selectedJob.status)}>
                           {selectedJob.status}
-                        </Badge>
-                        <Badge className={getPriorityColor(selectedJob.priority)}>
-                          {selectedJob.priority}
                         </Badge>
                       </div>
                     </CardTitle>

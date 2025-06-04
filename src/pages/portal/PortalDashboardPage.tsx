@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Receipt, Briefcase, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { FileText, Receipt, Briefcase, DollarSign, Clock } from 'lucide-react';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 
 interface DashboardData {
@@ -73,7 +73,7 @@ export default function PortalDashboardPage() {
   if (loading) {
     return (
       <PortalLayout>
-        <LoadingSkeleton type="page" />
+        <LoadingSkeleton type="card" />
       </PortalLayout>
     );
   }

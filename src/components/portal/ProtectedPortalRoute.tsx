@@ -19,7 +19,7 @@ export function ProtectedPortalRoute({ children }: ProtectedPortalRouteProps) {
   }, [user, loading, navigate]);
 
   if (loading) {
-    return <LoadingSkeleton type="page" />;
+    return <LoadingSkeleton type="card" />;
   }
 
   if (!user) {
