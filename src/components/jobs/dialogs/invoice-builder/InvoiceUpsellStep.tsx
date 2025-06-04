@@ -25,50 +25,13 @@ export const InvoiceUpsellStep = ({
   // Check if warranties were already added in the estimate
   useEffect(() => {
     if (estimateToConvert) {
-      console.log("Checking estimate for warranties:", estimateToConvert);
-      
-      // Check multiple possible data structures for line items
-      const estimateItems = estimateToConvert.line_items || 
-                           estimateToConvert.items || 
-                           estimateToConvert.lineItems || 
-                           [];
-      
-      console.log("Estimate items to check:", estimateItems);
-      
-      // Check if any item is a warranty (multiple possible ways to identify)
-      const hasWarranties = estimateItems.some((item: any) => {
-        const description = (item.description || '').toLowerCase();
-        const name = (item.name || '').toLowerCase();
-        const title = (item.title || '').toLowerCase();
-        
-        // Check if it matches any warranty product names
-        const matchesWarrantyProduct = warrantyProducts.some(wp => 
-          wp.name.toLowerCase() === name || 
-          wp.name.toLowerCase() === description ||
-          wp.name.toLowerCase() === title
-        );
-        
-        // Check if description/name contains warranty keywords
-        const containsWarrantyKeyword = description.includes('warranty') || 
-                                      name.includes('warranty') ||
-                                      title.includes('warranty') ||
-                                      description.includes('protection') ||
-                                      name.includes('protection') ||
-                                      title.includes('protection');
-        
-        console.log("Item check:", {
-          item,
-          description,
-          name,
-          title,
-          matchesWarrantyProduct,
-          containsWarrantyKeyword
-        });
-        
-        return matchesWarrantyProduct || containsWarrantyKeyword;
-      });
-      
-      console.log("Has existing warranties:", hasWarranties);
+      // Check if the estimate already contains warranty items
+      const estimateItems = estimateToConvert.line_items || [];
+      const hasWarranties = estimateItems.some((item: any) => 
+        item.description?.toLowerCase().includes('warranty') ||
+        item.name?.toLowerCase().includes('warranty') ||
+        warrantyProducts.some(wp => wp.name === item.name)
+      );
       setHasExistingWarranties(hasWarranties);
     }
   }, [estimateToConvert, warrantyProducts]);

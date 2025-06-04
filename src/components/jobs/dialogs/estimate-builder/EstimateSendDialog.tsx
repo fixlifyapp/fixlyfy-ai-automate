@@ -86,12 +86,6 @@ export const EstimateSendDialog = ({
   }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo]);
 
   const handleSend = async () => {
-    // Ensure we have a valid estimate ID
-    if (!estimateId) {
-      toast.error("No estimate ID provided. Please save the estimate first.");
-      return;
-    }
-
     const result = await sendEstimate({
       sendMethod,
       sendTo,
@@ -100,9 +94,9 @@ export const EstimateSendDialog = ({
       lineItems: [],
       contactInfo: contactInfo || { name: '', email: '', phone: '' },
       customNote: "",
-      jobId: undefined, // Don't pass jobId since we're using existing estimate
+      jobId: estimateId,
       onSave: onSave || (() => Promise.resolve(true)),
-      existingEstimateId: estimateId // Always use the existing estimate ID
+      existingEstimateId: estimateId // Pass the existing estimate ID to prevent duplicates
     });
 
     if (result.success) {

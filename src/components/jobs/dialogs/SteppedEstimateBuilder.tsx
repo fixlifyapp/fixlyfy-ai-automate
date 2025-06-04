@@ -41,8 +41,6 @@ export const SteppedEstimateBuilder = ({
   const [upsellNotes, setUpsellNotes] = useState("");
   const [estimateCreated, setEstimateCreated] = useState(false);
   const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
-  // Store warranty items separately to prevent deletion
-  const [warrantyLineItems, setWarrantyLineItems] = useState<any[]>([]);
 
   // Create contactInfo object for compatibility - now loads much faster
   const contactInfo = {
@@ -92,17 +90,6 @@ export const SteppedEstimateBuilder = ({
       setUpsellNotes("");
       setEstimateCreated(!!existingEstimate);
       setAddedUpsellIds(new Set());
-      
-      // Extract warranty items from existing estimate if editing
-      if (existingEstimate && existingEstimate.line_items) {
-        const warranties = existingEstimate.line_items.filter((item: any) => 
-          item.description?.toLowerCase().includes('warranty') ||
-          item.name?.toLowerCase().includes('warranty')
-        );
-        setWarrantyLineItems(warranties);
-      } else {
-        setWarrantyLineItems([]);
-      }
     }
   }, [open, existingEstimate]);
 
@@ -141,13 +128,6 @@ export const SteppedEstimateBuilder = ({
     }
     
     try {
-      // Include warranty items when saving
-      const allItems = [...lineItems, ...warrantyLineItems];
-      const originalLineItems = lineItems;
-      
-      // Temporarily set all items for saving
-      setLineItems(allItems);
-      
       if (!estimateCreated || !savedEstimate) {
         const estimate = await saveDocumentChanges();
         
@@ -157,14 +137,9 @@ export const SteppedEstimateBuilder = ({
           toast.success("Estimate saved! Choose additional services.");
         } else {
           toast.error("Failed to save estimate. Please try again.");
-          // Restore original line items on failure
-          setLineItems(originalLineItems);
           return;
         }
       }
-      
-      // Restore original line items for UI (warranties will be managed separately)
-      setLineItems(originalLineItems);
       
       setCurrentStep("upsell");
     } catch (error: any) {
@@ -193,24 +168,14 @@ export const SteppedEstimateBuilder = ({
         total: upsell.price
       }));
       
-      // Store warranty items separately
-      setWarrantyLineItems(prev => [...prev, ...upsellLineItems]);
+      setLineItems(prev => [...prev, ...upsellLineItems]);
       setAddedUpsellIds(prev => new Set([...prev, ...newUpsells.map(u => u.id)]));
       
       try {
-        // Include all items (regular + warranties) for saving
-        const allItems = [...lineItems, ...warrantyLineItems, ...upsellLineItems];
-        const originalLineItems = lineItems;
-        
-        setLineItems(allItems);
         const updatedEstimate = await saveDocumentChanges();
-        
         if (updatedEstimate) {
           setSavedEstimate(updatedEstimate);
         }
-        
-        // Restore original line items
-        setLineItems(originalLineItems);
       } catch (error) {
         console.error("Failed to save upsells:", error);
         toast.error("Failed to save additional services");
@@ -265,13 +230,6 @@ export const SteppedEstimateBuilder = ({
 
   const currentStepNumber = currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3;
 
-  // Calculate total including warranties for display
-  const getTotalWithWarranties = () => {
-    const baseTotal = calculateGrandTotal();
-    const warrantyTotal = warrantyLineItems.reduce((sum, item) => sum + (item.unitPrice || item.price || 0), 0);
-    return baseTotal + warrantyTotal;
-  };
-
   return (
     <>
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
@@ -303,7 +261,7 @@ export const SteppedEstimateBuilder = ({
                   onUpdateLineItem={handleUpdateLineItem}
                   calculateSubtotal={calculateSubtotal}
                   calculateTotalTax={calculateTotalTax}
-                  calculateGrandTotal={getTotalWithWarranties}
+                  calculateGrandTotal={calculateGrandTotal}
                 />
 
                 <div className="flex justify-between pt-4 border-t">
@@ -325,7 +283,7 @@ export const SteppedEstimateBuilder = ({
 
             {currentStep === "upsell" && (
               <EstimateUpsellStep
-                documentTotal={getTotalWithWarranties()}
+                documentTotal={calculateGrandTotal()}
                 onContinue={handleUpsellContinue}
                 onBack={handleUpsellBack}
                 existingUpsellItems={selectedUpsells}
@@ -342,7 +300,7 @@ export const SteppedEstimateBuilder = ({
         onClose={() => handleSendCancel()}
         estimateId={savedEstimate?.id || ''}
         estimateNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
-        total={getTotalWithWarranties()}
+        total={calculateGrandTotal()}
         contactInfo={contactInfo}
         onSuccess={handleSendSuccess}
       />

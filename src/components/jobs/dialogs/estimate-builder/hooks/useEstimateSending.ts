@@ -77,7 +77,6 @@ export const useEstimateSending = () => {
     console.log("Send to:", sendTo);
     console.log("Estimate number:", estimateNumber);
     console.log("Existing estimate ID:", existingEstimateId);
-    console.log("Job ID:", jobId);
 
     const validationErrorMsg = validateRecipient(sendMethod, sendTo);
     if (validationErrorMsg) {
@@ -91,9 +90,9 @@ export const useEstimateSending = () => {
     try {
       let savedEstimate;
 
-      // Always prioritize existingEstimateId if provided
       if (existingEstimateId) {
-        console.log("Using existing estimate ID:", existingEstimateId);
+        // Use existing estimate - don't create a new one
+        console.log("Using existing estimate:", existingEstimateId);
         
         const { data: estimate, error: fetchError } = await supabase
           .from('estimates')
@@ -110,7 +109,7 @@ export const useEstimateSending = () => {
         savedEstimate = estimate;
         console.log("Found existing estimate:", savedEstimate);
       } else {
-        // If no existing estimate ID, check by estimate number to prevent duplicates
+        // First check if estimate already exists with this number to prevent duplicates
         console.log("Checking for existing estimate with number:", estimateNumber);
         
         const { data: existingEstimate, error: checkError } = await supabase
@@ -128,8 +127,8 @@ export const useEstimateSending = () => {
         if (existingEstimate) {
           console.log("Found existing estimate with same number:", existingEstimate);
           savedEstimate = existingEstimate;
-        } else if (jobId) {
-          // Only create new estimate if jobId is provided and no existing estimate found
+        } else {
+          // Only save if we don't have an existing estimate
           console.log("Step 1: Saving new estimate...");
           const success = await onSave();
           
@@ -161,10 +160,6 @@ export const useEstimateSending = () => {
 
           savedEstimate = estimate;
           console.log("Step 3: Retrieved saved estimate:", savedEstimate);
-        } else {
-          console.error("No existing estimate found and no job ID provided for creating new estimate");
-          toast.error("Cannot send estimate: No estimate found and no job information provided.");
-          return { success: false, error: "No estimate available to send" };
         }
       }
 
