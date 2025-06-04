@@ -18,6 +18,7 @@ import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useJobData } from "./unified/hooks/useJobData";
 
 interface SteppedInvoiceBuilderProps {
   open: boolean;
@@ -45,6 +46,9 @@ export const SteppedInvoiceBuilder = ({
   const [upsellNotes, setUpsellNotes] = useState("");
   const [invoiceCreated, setInvoiceCreated] = useState(false);
   const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
+
+  // Get job and client data
+  const { clientInfo, loading: jobLoading } = useJobData(jobId);
 
   const {
     formData,
@@ -212,11 +216,11 @@ export const SteppedInvoiceBuilder = ({
 
   // Get client info for sending
   const getClientInfo = () => {
-    if (formData?.client) {
+    if (clientInfo) {
       return {
-        name: formData.client.name || '',
-        email: formData.client.email || '',
-        phone: formData.client.phone || ''
+        name: clientInfo.name || '',
+        email: clientInfo.email || '',
+        phone: clientInfo.phone || ''
       };
     }
     return { name: '', email: '', phone: '' };

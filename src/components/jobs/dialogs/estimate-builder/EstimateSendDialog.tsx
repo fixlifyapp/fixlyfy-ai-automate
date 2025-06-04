@@ -38,7 +38,7 @@ export const EstimateSendDialog = ({
   const [sendTo, setSendTo] = useState("");
   const [validationError, setValidationError] = useState("");
   const [sentMethods, setSentMethods] = useState<Set<string>>(new Set());
-  const { sendEstimate, isProcessing } = useEstimateSending();
+  const { sendDocument, isProcessing } = useEstimateSending();
 
   // Fetch user's Telnyx phone numbers
   const { data: userPhoneNumbers = [] } = useQuery({
@@ -86,17 +86,17 @@ export const EstimateSendDialog = ({
   }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo]);
 
   const handleSend = async () => {
-    const result = await sendEstimate({
+    const result = await sendDocument({
       sendMethod,
       sendTo,
-      estimateNumber,
-      estimateDetails: { estimate_number: estimateNumber },
+      documentNumber: estimateNumber,
+      documentDetails: { estimate_number: estimateNumber },
       lineItems: [],
       contactInfo: contactInfo || { name: '', email: '', phone: '' },
       customNote: "",
       jobId: estimateId,
       onSave: onSave || (() => Promise.resolve(true)),
-      existingEstimateId: estimateId // Pass the existing estimate ID to prevent duplicates
+      existingDocumentId: estimateId // Pass the existing estimate ID to prevent duplicates
     });
 
     if (result.success) {

@@ -1,280 +1,170 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, AlertCircle, Phone, Bot, Database, Cloud, ExternalLink, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, RefreshCw, Phone, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-interface SystemStatus {
-  openai: boolean;
-  aws: boolean;
-  connect: boolean;
+interface ConnectionStatus {
+  telnyx: boolean;
   database: boolean;
-  phoneNumber: boolean;
-  connectFlow: boolean;
-}
-
-interface PhoneNumberConfig {
-  phone_number: string;
-  ai_dispatcher_enabled: boolean;
-  connect_instance_id: string;
-  ai_settings: any;
-}
-
-interface AISettings {
-  webhook_url?: string;
-  business_name?: string;
-  business_type?: string;
-  greeting?: string;
-  voice_selection?: string;
-  emergency_detection_enabled?: boolean;
+  phoneNumbers: number;
+  lastChecked: Date;
 }
 
 export const ConnectTestStatus = () => {
-  const [status, setStatus] = useState<SystemStatus>({
-    openai: false,
-    aws: false,
-    connect: false,
+  const [status, setStatus] = useState<ConnectionStatus>({
+    telnyx: false,
     database: false,
-    phoneNumber: false,
-    connectFlow: false
+    phoneNumbers: 0,
+    lastChecked: new Date()
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
 
-  const [phoneConfig, setPhoneConfig] = useState<PhoneNumberConfig | null>(null);
-  const [webhookUrl, setWebhookUrl] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    checkSystemStatus();
-  }, []);
-
-  const checkSystemStatus = async () => {
+  const checkConnections = async () => {
+    setIsTesting(true);
     try {
-      setLoading(true);
-      
-      // Check if phone number exists and is configured
-      const { data: phoneNumbers } = await supabase
-        .from('phone_numbers')
+      // Test database connection
+      const { data: dbTest, error: dbError } = await supabase
+        .from('company_settings')
+        .select('id')
+        .limit(1);
+
+      const databaseStatus = !dbError;
+
+      // Test Telnyx phone numbers
+      const { data: phoneNumbers, error: phoneError } = await supabase
+        .from('telnyx_phone_numbers')
         .select('*')
-        .eq('phone_number', '+18335743145')
-        .eq('ai_dispatcher_enabled', true);
+        .eq('status', 'purchased');
 
-      // Check if AI config exists
-      const { data: aiConfig } = await supabase
-        .from('ai_agent_configs')
-        .select('*')
-        .eq('is_active', true);
-
-      // Check if AWS credentials exist
-      const { data: awsCreds } = await supabase
-        .from('aws_credentials')
-        .select('*')
-        .eq('is_active', true);
-
-      const phoneConfigured = phoneNumbers && phoneNumbers.length > 0;
-      const phoneData = phoneNumbers?.[0];
-
-      if (phoneData) {
-        setPhoneConfig(phoneData);
-        
-        // Safely parse ai_settings JSON
-        let aiSettings: AISettings = {};
-        try {
-          if (phoneData.ai_settings && typeof phoneData.ai_settings === 'object') {
-            aiSettings = phoneData.ai_settings as AISettings;
-          } else if (typeof phoneData.ai_settings === 'string') {
-            aiSettings = JSON.parse(phoneData.ai_settings);
-          }
-        } catch (error) {
-          console.error('Error parsing ai_settings:', error);
-        }
-        
-        setWebhookUrl(aiSettings.webhook_url || "");
-      }
+      const telnyxStatus = !phoneError && (phoneNumbers?.length || 0) > 0;
+      const phoneCount = phoneNumbers?.length || 0;
 
       setStatus({
-        openai: true, // We know this is configured from secrets
-        aws: awsCreds && awsCreds.length > 0,
-        connect: phoneConfigured && phoneData?.connect_instance_id != null,
-        database: true, // Database is always available
-        phoneNumber: phoneConfigured,
-        connectFlow: webhookUrl != ""
+        telnyx: telnyxStatus,
+        database: databaseStatus,
+        phoneNumbers: phoneCount,
+        lastChecked: new Date()
       });
+
+      if (databaseStatus && telnyxStatus) {
+        toast.success("All connections are working properly!");
+      } else {
+        toast.warning("Some connections need attention");
+      }
     } catch (error) {
-      console.error('Error checking system status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to check system status",
-        variant: "destructive"
-      });
+      console.error("Error checking connections:", error);
+      toast.error("Failed to check connection status");
     } finally {
-      setLoading(false);
+      setIsTesting(false);
+      setIsLoading(false);
     }
   };
 
-  const StatusItem = ({ 
-    icon: Icon, 
-    label, 
-    status: isOk,
-    description,
-    action
-  }: { 
-    icon: any, 
-    label: string, 
-    status: boolean,
-    description?: string,
-    action?: () => void
-  }) => (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
-      <div className="flex items-center gap-3 flex-1">
-        <Icon className={`h-5 w-5 ${isOk ? 'text-green-600' : 'text-red-600'}`} />
-        <div className="flex-1">
-          <span className="font-medium">{label}</span>
-          {description && (
-            <p className="text-xs text-gray-500 mt-1">{description}</p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {isOk ? (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Ready
-          </Badge>
-        ) : (
-          <Badge variant="destructive">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Not Ready
-          </Badge>
-        )}
-        {action && (
-          <Button size="sm" variant="outline" onClick={action}>
-            <ExternalLink className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    checkConnections();
+  }, []);
 
-  const allReady = Object.values(status).every(Boolean);
+  const getStatusIcon = (isConnected: boolean) => {
+    if (isConnected) {
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    }
+    return <XCircle className="h-4 w-4 text-red-600" />;
+  };
 
-  if (loading) {
+  const getStatusBadge = (isConnected: boolean, label: string) => {
     return (
-      <Card className="border-blue-100">
-        <CardContent className="p-8 text-center">
+      <Badge 
+        variant={isConnected ? "default" : "destructive"}
+        className={isConnected ? "bg-green-100 text-green-800 border-green-200" : ""}
+      >
+        {isConnected ? `${label} Connected` : `${label} Disconnected`}
+      </Badge>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-sm text-gray-500 mt-2">Checking system status...</p>
+          <p className="text-sm text-gray-500 mt-2">Checking connections...</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-blue-100">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-        <CardTitle className="flex items-center gap-2">
-          <div className="p-2 bg-blue-100 rounded-full">
-            <Database className="h-5 w-5 text-blue-600" />
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-blue-600" />
+            Connection Status
           </div>
-          <span className="text-gray-900">AI Dispatcher System Status</span>
           <Button 
             size="sm" 
             variant="outline" 
-            onClick={checkSystemStatus}
-            className="ml-auto"
+            onClick={checkConnections}
+            disabled={isTesting}
           >
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
+            <RefreshCw className={`h-4 w-4 mr-1 ${isTesting ? 'animate-spin' : ''}`} />
+            Test
           </Button>
-          {allReady && (
-            <Badge className="bg-green-100 text-green-800 border-green-200">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              All Systems Ready
-            </Badge>
-          )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-6">
-        <div className="space-y-3">
-          <StatusItem 
-            icon={Bot} 
-            label="OpenAI API" 
-            status={status.openai}
-            description="AI conversation and text-to-speech generation"
-          />
-          <StatusItem 
-            icon={Cloud} 
-            label="AWS Credentials" 
-            status={status.aws}
-            description="Amazon Connect service authentication"
-          />
-          <StatusItem 
-            icon={Cloud} 
-            label="Amazon Connect Instance" 
-            status={status.connect}
-            description={phoneConfig?.connect_instance_id ? `Instance: ${phoneConfig.connect_instance_id}` : "Connect instance not configured"}
-          />
-          <StatusItem 
-            icon={Database} 
-            label="Database Schema" 
-            status={status.database}
-            description="All required tables and configurations"
-          />
-          <StatusItem 
-            icon={Phone} 
-            label="Phone Number (+1 833-574-3145)" 
-            status={status.phoneNumber}
-            description={status.phoneNumber ? "AI dispatcher enabled" : "Phone number not configured"}
-          />
-          <StatusItem 
-            icon={Bot} 
-            label="Connect Contact Flow" 
-            status={status.connectFlow}
-            description={webhookUrl ? `Webhook: ${webhookUrl}` : "Contact flow not configured"}
-            action={webhookUrl ? () => window.open('https://console.aws.amazon.com/connect/v2/app', '_blank') : undefined}
-          />
-        </div>
-
-        {!allReady && (
-          <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div className="text-sm text-amber-800">
-                <p className="font-semibold mb-2">Setup Required:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  {!status.connectFlow && (
-                    <li>Configure Amazon Connect contact flow to use webhook: <code className="text-xs bg-amber-100 px-1 py-0.5 rounded">{webhookUrl || 'Not available'}</code></li>
-                  )}
-                  {!status.phoneNumber && (
-                    <li>Configure phone number +1 833-574-3145 for AI dispatcher</li>
-                  )}
-                  {!status.connect && (
-                    <li>Set up Amazon Connect instance integration</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {allReady && (
-          <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+      <CardContent>
+        <div className="space-y-4">
+          {/* Database Connection */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
             <div className="flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+              {getStatusIcon(status.database)}
               <div>
-                <h3 className="font-semibold text-green-900">Ready to Receive Calls!</h3>
-                <p className="text-sm text-green-700">
-                  Call +1 833-574-3145 to test your AI dispatcher. The system will handle calls automatically.
-                </p>
-                <div className="mt-2 text-xs text-green-600">
-                  <p>Webhook URL: {webhookUrl}</p>
-                  <p>Instance: {phoneConfig?.connect_instance_id}</p>
-                </div>
+                <p className="font-medium">Database</p>
+                <p className="text-sm text-gray-500">Supabase connection</p>
               </div>
             </div>
+            {getStatusBadge(status.database, "Database")}
           </div>
-        )}
+
+          {/* Telnyx Connection */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center gap-3">
+              {getStatusIcon(status.telnyx)}
+              <div>
+                <p className="font-medium">Telnyx Service</p>
+                <p className="text-sm text-gray-500">
+                  {status.phoneNumbers} phone number{status.phoneNumbers !== 1 ? 's' : ''} configured
+                </p>
+              </div>
+            </div>
+            {getStatusBadge(status.telnyx, "Telnyx")}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="pt-4 border-t">
+            <h4 className="font-medium mb-3">Quick Actions</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Phone className="h-4 w-4" />
+                Test Call
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Test SMS
+              </Button>
+            </div>
+          </div>
+
+          {/* Last Checked */}
+          <div className="text-xs text-gray-500 text-center pt-2 border-t">
+            Last checked: {status.lastChecked.toLocaleTimeString()}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
