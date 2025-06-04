@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Sparkles } from "lucide-react";
+import { Brain, Sparkles, TrendingUp } from "lucide-react";
 import { sanitizeHtml } from "@/utils/security";
 
 interface AIRecommendationsCardProps {
@@ -26,27 +26,31 @@ export const AIRecommendationsCard = ({
   const sanitizedServiceCategory = sanitizeHtml(jobContext.service_category || '');
 
   return (
-    <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-purple-900">
-          <Brain className="h-5 w-5" />
-          AI-Powered Recommendations
-          <Badge variant="secondary" className="ml-2">
+        <CardTitle className="flex items-center gap-2 text-green-900">
+          <TrendingUp className="h-5 w-5" />
+          AI Sales Assistant - Boost Your Commission
+          <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
             <Sparkles className="h-3 w-3 mr-1" />
-            New
+            Sales Tips
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-purple-700 mb-4">
-          Let AI analyze this {sanitizedJobType} {sanitizedServiceCategory} job and suggest the most relevant warranties based on similar customer purchases and preferences.
+        <p className="text-sm text-green-700 mb-4">
+          Get AI-powered sales recommendations for this {sanitizedJobType} {sanitizedServiceCategory} job. 
+          Learn which warranties are most likely to sell to this client and get proven sales talking points to increase your commission.
         </p>
+        <div className="bg-green-100 p-3 rounded-lg mb-4 text-xs text-green-800">
+          💡 <strong>Pro Tip:</strong> Clients who purchase warranties are 3x more likely to call you for future services!
+        </div>
         <Button 
           onClick={onShowRecommendations}
-          className="bg-gradient-to-r from-purple-600 to-blue-600"
+          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
         >
           <Brain className="h-4 w-4 mr-2" />
-          Get AI Recommendations
+          Get Sales Recommendations
         </Button>
       </CardContent>
     </Card>
