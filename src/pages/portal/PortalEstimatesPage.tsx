@@ -1,27 +1,25 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { PortalLayout } from '@/components/portal/PortalLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useClientPortalAuth } from '@/hooks/useClientPortalAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Calendar, DollarSign, Eye, Download } from 'lucide-react';
+import { FileText, Calendar, DollarSign, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 
 interface Estimate {
   id: string;
   estimate_number: string;
-  total: number;
   status: string;
+  total: number;
   created_at: string;
+  job_id: string;
+  job_title: string;
   notes?: string;
-  job: {
-    id: string;
-    title: string;
-    description?: string;
-    address?: string;
-  };
 }
 
 export default function PortalEstimatesPage() {
@@ -31,13 +29,14 @@ export default function PortalEstimatesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
 
+  const estimateId = searchParams.get('id');
   const jobId = searchParams.get('jobId');
 
   useEffect(() => {
     if (user) {
       fetchEstimates();
     }
-  }, [user, jobId]);
+  }, [user, estimateId, jobId]);
 
   const fetchEstimates = async () => {
     if (!user?.clientId) return;
@@ -50,21 +49,24 @@ export default function PortalEstimatesPage() {
         .select(`
           id,
           estimate_number,
-          total,
           status,
+          total,
           created_at,
+          job_id,
           notes,
-          jobs:job_id (
+          jobs!inner(
             id,
             title,
-            description,
-            address
+            client_id
           )
         `)
         .eq('jobs.client_id', user.clientId)
         .order('created_at', { ascending: false });
 
-      // Filter by specific job if jobId provided
+      if (estimateId) {
+        query = query.eq('id', estimateId);
+      }
+
       if (jobId) {
         query = query.eq('job_id', jobId);
       }
@@ -77,15 +79,14 @@ export default function PortalEstimatesPage() {
         return;
       }
 
-      const formattedEstimates = data?.map(estimate => ({
+      const formattedEstimates = (data || []).map(estimate => ({
         ...estimate,
-        job: Array.isArray(estimate.jobs) ? estimate.jobs[0] : estimate.jobs
-      })) || [];
+        job_title: Array.isArray(estimate.jobs) ? estimate.jobs[0]?.title : estimate.jobs?.title
+      }));
 
       setEstimates(formattedEstimates);
 
-      // If there's a specific job, auto-select the first estimate
-      if (jobId && formattedEstimates.length > 0) {
+      if (estimateId && formattedEstimates.length > 0) {
         setSelectedEstimate(formattedEstimates[0]);
       }
     } catch (error) {
@@ -104,7 +105,7 @@ export default function PortalEstimatesPage() {
         return 'bg-blue-100 text-blue-800';
       case 'draft':
         return 'bg-gray-100 text-gray-800';
-      case 'declined':
+      case 'rejected':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -119,191 +120,158 @@ export default function PortalEstimatesPage() {
     });
   };
 
-  const handleViewEstimate = (estimate: Estimate) => {
-    setSelectedEstimate(estimate);
-  };
-
-  const handleDownloadEstimate = async (estimate: Estimate) => {
-    toast.info('Download functionality coming soon');
-  };
-
   if (loading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4"></div>
-          <div className="grid gap-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <PortalLayout>
+        <LoadingSkeleton type="card" />
+      </PortalLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Estimates</h1>
-        <p className="text-gray-600">
-          {jobId ? 'Estimate for your specific project' : 'View and manage all your project estimates'}
-        </p>
-      </div>
+    <PortalLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Estimates</h1>
+          <p className="text-gray-600">
+            {estimateId ? 'Estimate details' : 'View all your project estimates and quotes'}
+          </p>
+        </div>
 
-      {estimates.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No estimates found</h3>
-              <p className="text-gray-600">
-                {jobId ? 'No estimates available for this project yet.' : 'You don\'t have any estimates yet.'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Estimates List */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">
-              {estimates.length} Estimate{estimates.length !== 1 ? 's' : ''}
-            </h2>
-            
-            {estimates.map((estimate) => (
-              <Card 
-                key={estimate.id} 
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedEstimate?.id === estimate.id ? 'ring-2 ring-blue-500' : ''
-                }`}
-                onClick={() => handleViewEstimate(estimate)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">#{estimate.estimate_number}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {estimate.job?.title || 'Service Project'}
-                      </CardDescription>
+        {estimates.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center">
+                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No estimates found</h3>
+                <p className="text-gray-600">
+                  {estimateId || jobId ? 'No estimates found for this criteria.' : "You don't have any estimates yet."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Estimates List */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">
+                {estimates.length} Estimate{estimates.length !== 1 ? 's' : ''}
+              </h2>
+              
+              {estimates.map((estimate) => (
+                <Card 
+                  key={estimate.id} 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedEstimate?.id === estimate.id ? 'ring-2 ring-blue-500' : ''
+                  }`}
+                  onClick={() => setSelectedEstimate(estimate)}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">{estimate.estimate_number}</CardTitle>
+                        <CardDescription className="mt-1">
+                          Project: {estimate.job_title}
+                        </CardDescription>
+                      </div>
+                      <Badge className={getStatusColor(estimate.status)}>
+                        {estimate.status}
+                      </Badge>
                     </div>
-                    <Badge className={getStatusColor(estimate.status)}>
-                      {estimate.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2 text-gray-600">
                         <Calendar className="h-4 w-4" />
-                        {formatDate(estimate.created_at)}
+                        <span>{formatDate(estimate.created_at)}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2 font-semibold text-green-600">
                         <DollarSign className="h-4 w-4" />
-                        ${estimate.total?.toFixed(2) || '0.00'}
+                        <span>${estimate.total.toFixed(2)}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewEstimate(estimate);
-                      }}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownloadEstimate(estimate);
-                      }}>
-                        <Download className="h-4 w-4 mr-1" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-          {/* Estimate Details */}
-          <div>
-            {selectedEstimate ? (
-              <Card className="sticky top-4">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    Estimate #{selectedEstimate.estimate_number}
-                    <Badge className={getStatusColor(selectedEstimate.status)}>
-                      {selectedEstimate.status}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedEstimate.job?.title}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Project Details</h4>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p><strong>Job:</strong> {selectedEstimate.job?.title}</p>
-                      {selectedEstimate.job?.description && (
-                        <p><strong>Description:</strong> {selectedEstimate.job.description}</p>
-                      )}
-                      {selectedEstimate.job?.address && (
-                        <p><strong>Address:</strong> {selectedEstimate.job.address}</p>
-                      )}
-                      <p><strong>Date:</strong> {formatDate(selectedEstimate.created_at)}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Estimate Total</h4>
-                    <div className="text-2xl font-bold text-green-600">
-                      ${selectedEstimate.total?.toFixed(2) || '0.00'}
-                    </div>
-                  </div>
-
-                  {selectedEstimate.notes && (
+            {/* Estimate Details */}
+            <div>
+              {selectedEstimate ? (
+                <Card className="sticky top-4">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      {selectedEstimate.estimate_number}
+                      <Badge className={getStatusColor(selectedEstimate.status)}>
+                        {selectedEstimate.status}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Project: {selectedEstimate.job_title}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
-                      <p className="text-sm text-gray-600">{selectedEstimate.notes}</p>
+                      <h4 className="font-medium text-gray-900 mb-2">Estimate Details</h4>
+                      <div className="text-sm text-gray-600 space-y-2">
+                        <div className="flex justify-between">
+                          <span>Created:</span>
+                          <span>{formatDate(selectedEstimate.created_at)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Status:</span>
+                          <Badge className={getStatusColor(selectedEstimate.status)}>
+                            {selectedEstimate.status}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between font-semibold text-lg">
+                          <span>Total:</span>
+                          <span className="text-green-600">${selectedEstimate.total.toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="flex gap-2 pt-4">
-                    <Button className="flex-1">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Full Details
-                    </Button>
-                    <Button variant="outline" onClick={() => handleDownloadEstimate(selectedEstimate)}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download PDF
-                    </Button>
-                  </div>
+                    {selectedEstimate.notes && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
+                        <p className="text-sm text-gray-600">{selectedEstimate.notes}</p>
+                      </div>
+                    )}
 
-                  {selectedEstimate.status?.toLowerCase() === 'sent' && (
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">Next Steps</h4>
-                      <p className="text-sm text-blue-800">
-                        Please review the estimate details. Contact us if you have any questions or would like to proceed with the project.
+                    <div className="pt-4 space-y-2">
+                      <Button className="w-full" disabled>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Full Estimate
+                      </Button>
+                      <p className="text-xs text-gray-500 text-center">
+                        Full estimate viewing coming soon
                       </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="py-12">
-                  <div className="text-center text-gray-500">
-                    <FileText className="h-12 w-12 mx-auto mb-4" />
-                    <p>Select an estimate to view details</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+
+                    {selectedEstimate.status === 'sent' && (
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-blue-900 mb-2">Action Required</h4>
+                        <p className="text-sm text-blue-800">
+                          This estimate is awaiting your review and approval. Please contact us if you have any questions.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="py-12">
+                    <div className="text-center text-gray-500">
+                      <FileText className="h-12 w-12 mx-auto mb-4" />
+                      <p>Select an estimate to view details</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </PortalLayout>
   );
 }

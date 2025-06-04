@@ -60,6 +60,26 @@ const App = () => {
                   <PortalDashboardPage />
                 </ProtectedPortalRoute>
               } />
+              <Route path="/portal/jobs" element={
+                <ProtectedPortalRoute>
+                  <PortalJobsPage />
+                </ProtectedPortalRoute>
+              } />
+              <Route path="/portal/estimates" element={
+                <ProtectedPortalRoute>
+                  <PortalEstimatesPage />
+                </ProtectedPortalRoute>
+              } />
+              <Route path="/portal/invoices" element={
+                <ProtectedPortalRoute>
+                  <PortalInvoicesPage />
+                </ProtectedPortalRoute>
+              } />
+              <Route path="/portal/profile" element={
+                <ProtectedPortalRoute>
+                  <PortalProfilePage />
+                </ProtectedPortalRoute>
+              } />
               
               {/* Main App Routes */}
               <Route path="/dashboard" element={
