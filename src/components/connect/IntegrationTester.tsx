@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle, Phone, Mail, MessageSquare, Send, TestTube } from 'lucide-react';
+import { AlertCircle, CheckCircle, Phone, Mail, MessageSquare, Send, TestTube, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -49,7 +48,32 @@ export const IntegrationTester = () => {
       updateResult('Database Connection', 'error', `Database error: ${error.message}`);
     }
 
-    // Test 2: Telnyx SMS Configuration
+    // Test 2: Company Settings Check
+    try {
+      const { data: companySettings, error } = await supabase
+        .from('company_settings')
+        .select('company_phone, company_name, company_email')
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (companySettings?.company_phone) {
+        updateResult('Company Phone', 'success', `Company phone configured: ${companySettings.company_phone}`);
+      } else {
+        updateResult('Company Phone', 'error', 'Company phone not configured. Go to Settings > Company Settings to add your phone number.');
+      }
+
+      if (companySettings?.company_name) {
+        updateResult('Company Settings', 'success', `Company configured: ${companySettings.company_name}`);
+      } else {
+        updateResult('Company Settings', 'error', 'Company settings incomplete. Please configure in Settings.');
+      }
+    } catch (error) {
+      updateResult('Company Settings', 'error', `Company settings error: ${error.message}`);
+    }
+
+    // Test 3: Telnyx Configuration Test
     try {
       const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: { action: 'get_config' }
@@ -60,29 +84,10 @@ export const IntegrationTester = () => {
       if (data?.config?.api_key_configured) {
         updateResult('Telnyx Configuration', 'success', 'Telnyx API key is configured');
       } else {
-        updateResult('Telnyx Configuration', 'error', 'Telnyx API key not configured');
+        updateResult('Telnyx Configuration', 'error', 'Telnyx API key not configured. Please add TELNYX_API_KEY in project secrets.');
       }
     } catch (error) {
       updateResult('Telnyx Configuration', 'error', `Telnyx config error: ${error.message}`);
-    }
-
-    // Test 3: Company Settings for SMS
-    try {
-      const { data, error } = await supabase
-        .from('company_settings')
-        .select('company_phone')
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) throw error;
-      
-      if (data?.company_phone) {
-        updateResult('Company Phone', 'success', `Company phone configured: ${data.company_phone}`);
-      } else {
-        updateResult('Company Phone', 'error', 'Company phone not configured in settings');
-      }
-    } catch (error) {
-      updateResult('Company Phone', 'error', `Company settings error: ${error.message}`);
     }
 
     // Test 4: Test SMS Sending
@@ -154,7 +159,7 @@ export const IntegrationTester = () => {
 
     // Test 7: Webhook Endpoints Status
     try {
-      // Test if webhook functions exist
+      // Test if webhook functions exist by checking their availability
       const webhookTests = [
         'telnyx-sms-webhook',
         'mailgun-webhook'
@@ -162,14 +167,17 @@ export const IntegrationTester = () => {
       
       for (const webhook of webhookTests) {
         try {
-          // Just test that the webhook responds (even with error is fine)
+          // Simple ping test to verify endpoint exists
           const response = await fetch(`https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/${webhook}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ test: true })
+            method: 'OPTIONS',
+            headers: { 'Content-Type': 'application/json' }
           });
           
-          updateResult(`${webhook} Endpoint`, 'success', `Webhook endpoint is accessible`);
+          if (response.status === 200 || response.status === 405) {
+            updateResult(`${webhook} Endpoint`, 'success', `Webhook endpoint is accessible`);
+          } else {
+            updateResult(`${webhook} Endpoint`, 'error', `Webhook returned status: ${response.status}`);
+          }
         } catch (error) {
           updateResult(`${webhook} Endpoint`, 'error', `Webhook not accessible: ${error.message}`);
         }
@@ -179,7 +187,16 @@ export const IntegrationTester = () => {
     }
 
     setIsRunning(false);
-    toast.success('Integration tests completed');
+    
+    // Show summary
+    const successCount = results.filter(r => r.status === 'success').length;
+    const totalCount = results.length;
+    
+    if (successCount === totalCount) {
+      toast.success(`All ${totalCount} integration tests passed!`);
+    } else {
+      toast.warning(`${successCount}/${totalCount} tests passed. Check failed tests for configuration issues.`);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -206,6 +223,9 @@ export const IntegrationTester = () => {
             <TestTube className="h-5 w-5" />
             Integration Tester
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Test your messaging, email, and webhook integrations to ensure everything is working properly.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -255,6 +275,18 @@ export const IntegrationTester = () => {
               </>
             )}
           </Button>
+
+          {results.length > 0 && (
+            <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-medium mb-2">Quick Setup Guide:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li>• Configure company phone in Settings → Company Settings</li>
+                <li>• Add TELNYX_API_KEY and MAILGUN_API_KEY in Project Secrets</li>
+                <li>• Set up webhook URLs in your Telnyx and Mailgun dashboards</li>
+                <li>• Test with real phone numbers and email addresses</li>
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
 

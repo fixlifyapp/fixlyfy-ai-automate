@@ -38,7 +38,8 @@ serve(async (req) => {
 
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY')
     if (!telnyxApiKey) {
-      throw new Error('TELNYX_API_KEY not configured')
+      console.error('TELNYX_API_KEY not configured')
+      throw new Error('SMS service not configured. Please contact support.')
     }
 
     // Get company settings for dynamic phone number
@@ -48,13 +49,29 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle()
 
-    const fromPhone = companySettings?.company_phone?.replace(/\D/g, '') || null
+    let fromPhone = companySettings?.company_phone?.replace(/\D/g, '') || null
     
+    // If no company phone is configured, use a default or show helpful error
     if (!fromPhone) {
-      throw new Error('Company phone number not configured in settings')
+      console.error('Company phone number not configured in settings')
+      
+      // For testing purposes, we'll use the integration tester to guide users
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Company phone number not configured. Please set your company phone number in Settings before sending SMS messages.',
+          helpText: 'Go to Settings > Company Settings and add your phone number.'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
     }
 
     const formattedFromPhone = fromPhone.length === 10 ? `+1${fromPhone}` : `+${fromPhone}`
+
+    console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedPhone)
 
     const response = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
@@ -72,7 +89,8 @@ serve(async (req) => {
     const result = await response.json()
     
     if (!response.ok) {
-      throw new Error(result.errors?.[0]?.detail || 'Failed to send SMS')
+      console.error('Telnyx API error:', result)
+      throw new Error(result.errors?.[0]?.detail || 'Failed to send SMS via Telnyx')
     }
 
     console.log('SMS sent successfully via Telnyx:', result)
