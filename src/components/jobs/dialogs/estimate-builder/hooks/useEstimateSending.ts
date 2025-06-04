@@ -159,21 +159,14 @@ export const useEstimateSending = () => {
       console.log("Step 4: Sending estimate via", sendMethod);
       
       if (sendMethod === "sms") {
-        // Send directly via Telnyx SMS function
-        const smsMessage = customNote || `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. Please contact us if you have any questions.`;
+        // Send SMS using the send-estimate-sms function
+        console.log("Calling send-estimate-sms function...");
         
-        console.log("Sending SMS:", {
-          to: finalRecipient,
-          body: smsMessage,
-          jobId: jobId
-        });
-
-        const { data: smsData, error: smsError } = await supabase.functions.invoke('telnyx-sms', {
+        const { data: smsData, error: smsError } = await supabase.functions.invoke('send-estimate-sms', {
           body: {
-            to: finalRecipient,
-            body: smsMessage,
-            client_id: jobId || null,
-            job_id: jobId || null
+            estimateId: savedEstimate.id,
+            recipientPhone: finalRecipient,
+            message: customNote || `Hi ${contactInfo.name}! Your estimate ${estimateNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${estimateNumber}`
           }
         });
 
