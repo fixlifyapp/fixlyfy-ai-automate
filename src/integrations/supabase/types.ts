@@ -3588,6 +3588,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_client_portal_context: {
+        Args: { p_client_email: string }
+        Returns: undefined
+      }
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }
         Returns: undefined

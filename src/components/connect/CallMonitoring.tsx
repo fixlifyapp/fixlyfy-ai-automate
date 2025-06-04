@@ -9,14 +9,13 @@ import { toast } from "@/hooks/use-toast";
 
 interface CallLog {
   id: string;
-  contact_id?: string;
-  customer_phone?: string;
-  client_phone?: string;
+  contact_id: string;
+  phone_number: string;
   call_status: string;
-  started_at?: string;
-  ended_at?: string;
-  call_duration?: number;
-  ai_transcript?: string;
+  started_at: string;
+  ended_at: string | null;
+  call_duration: number | null;
+  ai_transcript: string | null;
 }
 
 export const CallMonitoring = () => {
@@ -30,7 +29,7 @@ export const CallMonitoring = () => {
     const channel = supabase
       .channel('call-monitoring')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'ai_dispatcher_call_logs' }, 
+        { event: '*', schema: 'public', table: 'amazon_connect_calls' }, 
         (payload) => {
           console.log('New call event:', payload);
           loadCallLogs();
@@ -46,27 +45,13 @@ export const CallMonitoring = () => {
   const loadCallLogs = async () => {
     try {
       const { data, error } = await supabase
-        .from('ai_dispatcher_call_logs')
+        .from('amazon_connect_calls')
         .select('*')
         .order('started_at', { ascending: false })
         .limit(10);
 
       if (error) throw error;
-      
-      // Transform the data to match our CallLog interface
-      const transformedCalls: CallLog[] = (data || []).map(call => ({
-        id: call.id,
-        contact_id: call.contact_id,
-        customer_phone: call.customer_phone || call.client_phone,
-        client_phone: call.client_phone,
-        call_status: call.call_status || 'completed',
-        started_at: call.started_at,
-        ended_at: call.ended_at,
-        call_duration: call.call_duration,
-        ai_transcript: call.ai_transcript
-      }));
-      
-      setCalls(transformedCalls);
+      setCalls(data || []);
     } catch (error) {
       console.error('Error loading call logs:', error);
       toast({
@@ -79,7 +64,7 @@ export const CallMonitoring = () => {
     }
   };
 
-  const formatDuration = (seconds: number | null | undefined) => {
+  const formatDuration = (seconds: number | null) => {
     if (!seconds) return 'N/A';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -128,7 +113,7 @@ export const CallMonitoring = () => {
           <div className="text-center py-8 text-gray-500">
             <Phone className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium mb-2">No calls yet</h3>
-            <p className="text-sm">AI dispatcher call logs will appear here</p>
+            <p className="text-sm">Call +1 833-574-3145 to test the AI dispatcher</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -139,9 +124,9 @@ export const CallMonitoring = () => {
                     <Phone className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium">{call.customer_phone || call.client_phone || 'Unknown'}</div>
+                    <div className="font-medium">{call.phone_number}</div>
                     <div className="text-sm text-gray-500">
-                      {call.started_at ? new Date(call.started_at).toLocaleString() : 'N/A'}
+                      {new Date(call.started_at).toLocaleString()}
                     </div>
                     {call.contact_id && (
                       <div className="text-xs text-gray-400">
