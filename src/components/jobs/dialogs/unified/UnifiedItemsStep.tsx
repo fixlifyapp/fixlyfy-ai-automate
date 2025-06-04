@@ -72,6 +72,7 @@ export const UnifiedItemsStep = ({
         </CardHeader>
         <CardContent>
           <DocumentLineItemsTable
+            documentType={documentType}
             lineItems={lineItems}
           />
           
@@ -87,10 +88,11 @@ export const UnifiedItemsStep = ({
 
       {/* Totals Section */}
       <DocumentTotalsSection
+        documentType={documentType}
         taxRate={taxRate}
         subtotal={calculateSubtotal()}
-        totalTax={calculateTotalTax()}
-        grandTotal={calculateGrandTotal()}
+        tax={calculateTotalTax()}
+        total={calculateGrandTotal()}
       />
 
       {/* Notes Section */}
@@ -99,13 +101,26 @@ export const UnifiedItemsStep = ({
         onNotesChange={onNotesChange}
       />
 
-      {/* Product Catalog Dialog */}
+      {/* Product Catalog - Conditional Render */}
       {showProductCatalog && (
-        <ProductCatalog
-          isOpen={showProductCatalog}
-          onClose={() => setShowProductCatalog(false)}
-          onSelectProduct={onAddProduct}
-        />
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Product Catalog</h3>
+              <Button variant="ghost" onClick={() => setShowProductCatalog(false)}>
+                ×
+              </Button>
+            </div>
+            <div className="p-4">
+              <ProductCatalog
+                onAddProduct={(product) => {
+                  onAddProduct(product);
+                  setShowProductCatalog(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
