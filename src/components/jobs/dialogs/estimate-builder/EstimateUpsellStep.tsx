@@ -88,7 +88,14 @@ export const EstimateUpsellStep = ({
 
       {/* AI Recommendations */}
       {jobContext && (
-        <AIRecommendationsCard jobContext={jobContext} />
+        <AIRecommendationsCard 
+          jobContext={{
+            job_type: jobContext.job_type || 'General Service',
+            service_category: jobContext.service_category || 'Maintenance',
+            job_value: jobContext.job_value || 0,
+            client_history: jobContext.client_history
+          }} 
+        />
       )}
 
       {/* Warranties List */}

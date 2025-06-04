@@ -55,7 +55,7 @@ export interface DocumentFormData {
 export interface JobContext {
   job_type?: string;
   service_category?: string;
-  job_value: number;
+  job_value?: number;
   client_history?: any;
 }
 

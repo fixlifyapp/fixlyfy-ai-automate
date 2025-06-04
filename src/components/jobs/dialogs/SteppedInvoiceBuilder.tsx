@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -55,7 +54,7 @@ export const SteppedInvoiceBuilder = ({
     setNotes,
     handleAddProduct,
     handleRemoveLineItem,
-    handleUpdateLineItem,
+    handleUpdateLineItem: originalHandleUpdateLineItem,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
@@ -64,6 +63,11 @@ export const SteppedInvoiceBuilder = ({
     initializeFromEstimate,
     initializeFromInvoice
   } = useInvoiceBuilder(jobId);
+
+  // Create a wrapper function to match the standardized interface
+  const handleUpdateLineItem = (id: string, field: string, value: any) => {
+    originalHandleUpdateLineItem(id, { [field]: value });
+  };
 
   // Initialize form data when dialog opens
   useEffect(() => {
