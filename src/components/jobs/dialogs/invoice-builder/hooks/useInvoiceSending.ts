@@ -38,6 +38,8 @@ export const useInvoiceSending = () => {
     setIsProcessing(true);
 
     try {
+      console.log("🚀 Starting invoice send process...", { sendMethod, sendTo, invoiceNumber });
+
       // First save the invoice
       const saveSuccess = await onSave();
       if (!saveSuccess) {
@@ -70,6 +72,7 @@ export const useInvoiceSending = () => {
         .single();
 
       if (invoiceError || !invoice) {
+        console.error("Failed to find invoice:", invoiceError);
         toast.error("Failed to find invoice");
         return { success: false };
       }
@@ -100,6 +103,8 @@ export const useInvoiceSending = () => {
         return { success: false };
       }
 
+      console.log("✅ Communication record created:", commData.id);
+
       // Generate portal login link if email available
       let portalLoginLink = '';
       if (contactInfo.email) {
@@ -110,6 +115,7 @@ export const useInvoiceSending = () => {
 
           if (!tokenError && tokenData) {
             portalLoginLink = `${window.location.origin}/portal/login?token=${tokenData}`;
+            console.log("🔗 Portal login link generated");
           }
         } catch (error) {
           console.warn("Failed to generate portal login token:", error);
@@ -131,7 +137,9 @@ export const useInvoiceSending = () => {
         portalLoginLink: portalLoginLink
       };
 
-      // Send via edge function
+      console.log("📧 Sending via edge function...", { method: sendMethod, recipient: finalRecipient });
+
+      // Send via edge function with proper payload structure
       const { data, error } = await supabase.functions.invoke('send-invoice', {
         body: {
           method: sendMethod,
@@ -144,14 +152,19 @@ export const useInvoiceSending = () => {
       });
       
       if (error) {
+        console.error("Edge function error:", error);
         throw new Error(error.message);
       }
+      
+      console.log("📬 Edge function response:", data);
       
       if (data?.success) {
         const method = sendMethod === "email" ? "email" : "text message";
         toast.success(`Invoice ${invoiceNumber} sent to client via ${method}`);
+        console.log("✅ Invoice sent successfully");
         return { success: true };
       } else {
+        console.error("Edge function returned error:", data);
         await supabase
           .from('invoice_communications')
           .update({
@@ -165,7 +178,7 @@ export const useInvoiceSending = () => {
       }
 
     } catch (error: any) {
-      console.error("Error sending invoice:", error);
+      console.error("💥 Error sending invoice:", error);
       toast.error(`Failed to send invoice: ${error.message}`);
       return { success: false };
     } finally {
