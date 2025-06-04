@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -352,6 +351,7 @@ export const SteppedInvoiceBuilder = ({
               jobId={jobId}
               onSave={handleSaveAndSend}
               onClose={() => onOpenChange(false)}
+              onBack={() => setCurrentStep("upsell")}
             />
           </DialogContent>
         </Dialog>

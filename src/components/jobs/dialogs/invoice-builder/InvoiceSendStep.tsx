@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, FileText, Send } from "lucide-react";
+import { CheckCircle, FileText, Send, ArrowLeft } from "lucide-react";
 import { LineItem } from "../../builder/types";
 import { SendMethodStep } from "../estimate-builder/steps/SendMethodStep";
 import { useInvoiceSending } from "./hooks/useInvoiceSending";
@@ -17,6 +17,7 @@ interface InvoiceSendStepProps {
   jobId: string;
   onSave: () => Promise<boolean>;
   onClose: () => void;
+  onBack?: () => void;
   contactInfo?: {
     name: string;
     email: string;
@@ -32,6 +33,7 @@ export const InvoiceSendStep = ({
   jobId,
   onSave,
   onClose,
+  onBack,
   contactInfo: providedContactInfo
 }: InvoiceSendStepProps) => {
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
@@ -92,7 +94,11 @@ export const InvoiceSendStep = ({
   };
 
   const handleBack = () => {
-    onClose();
+    if (onBack) {
+      onBack();
+    } else {
+      onClose();
+    }
   };
 
   if (loading) {
@@ -116,7 +122,14 @@ export const InvoiceSendStep = ({
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-6 border-b">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Send Invoice</h3>
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <Button variant="ghost" size="sm" onClick={handleBack}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <h3 className="text-lg font-semibold">Send Invoice</h3>
+          </div>
           <Badge variant="secondary">#{invoiceNumber}</Badge>
         </div>
       </div>
