@@ -21,13 +21,22 @@ interface TelnyxCall {
   created_at: string;
   // Database fields that exist
   to_number?: string;
-  client_id?: string;
-  job_id?: string;
+  from_number?: string;
+  direction?: string;
+  status?: string;
+  started_at?: string;
+  ended_at?: string;
   clients?: {
     id: string;
     name: string;
     phone: string;
-  };
+  } | null;
+}
+
+interface ClientData {
+  id: string;
+  name: string;
+  phone: string;
 }
 
 export const TelnyxCallsList = () => {
@@ -60,20 +69,55 @@ export const TelnyxCallsList = () => {
     };
   }, []);
 
+  const findClientByPhone = async (phoneNumber: string): Promise<ClientData | null> => {
+    if (!phoneNumber) return null;
+    
+    // Clean phone number for comparison
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    
+    try {
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('id, name, phone')
+        .ilike('phone', `%${cleanPhone.slice(-10)}%`); // Match last 10 digits
+      
+      if (error) {
+        console.error('Error searching for client:', error);
+        return null;
+      }
+      
+      return clients && clients.length > 0 ? clients[0] : null;
+    } catch (error) {
+      console.error('Error finding client by phone:', error);
+      return null;
+    }
+  };
+
   const loadCalls = async () => {
     try {
-      const { data, error } = await supabase
+      // Load calls without client join
+      const { data: callsData, error } = await supabase
         .from('telnyx_calls')
-        .select(`
-          *,
-          clients:client_id(id, name, phone)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
       
-      setCalls(data || []);
+      // Enrich calls with client data
+      const enrichedCalls = await Promise.all(
+        (callsData || []).map(async (call) => {
+          const phoneToSearch = call.to_number || call.from_number;
+          const clientData = phoneToSearch ? await findClientByPhone(phoneToSearch) : null;
+          
+          return {
+            ...call,
+            clients: clientData
+          };
+        })
+      );
+      
+      setCalls(enrichedCalls);
     } catch (error) {
       console.error('Error loading Telnyx calls:', error);
       toast.error('Failed to load calls');
@@ -136,8 +180,8 @@ export const TelnyxCallsList = () => {
     }
   };
 
-  const getStatusIcon = (isOutbound: boolean) => {
-    if (isOutbound) {
+  const getStatusIcon = (direction: string) => {
+    if (direction === 'outbound') {
       return <PhoneCall className="h-4 w-4 text-green-600" />;
     }
     return <Phone className="h-4 w-4 text-blue-600" />;
@@ -146,13 +190,13 @@ export const TelnyxCallsList = () => {
   const handleMessageClient = (call: TelnyxCall) => {
     if (call.clients) {
       openMessageDialog({
-        id: call.client_id || "",
+        id: call.clients.id,
         name: call.clients.name,
-        phone: call.to_number || 'Unknown'
+        phone: call.to_number || call.from_number || 'Unknown'
       });
     } else {
       // Open message dialog with phone number
-      const phoneNumber = call.to_number || 'Unknown';
+      const phoneNumber = call.to_number || call.from_number || 'Unknown';
       openMessageDialog({
         id: "",
         name: `Client ${formatPhoneNumber(phoneNumber)}`,
@@ -162,11 +206,11 @@ export const TelnyxCallsList = () => {
   };
 
   const getCallPhoneNumber = (call: TelnyxCall) => {
-    return call.to_number || call.phone_number || 'Unknown';
+    return call.to_number || call.from_number || call.phone_number || 'Unknown';
   };
 
   const getDisplayPhoneNumber = (call: TelnyxCall) => {
-    return call.to_number || call.phone_number || 'Unknown';
+    return call.to_number || call.from_number || call.phone_number || 'Unknown';
   };
 
   if (loading) {
@@ -220,7 +264,7 @@ export const TelnyxCallsList = () => {
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full bg-blue-100">
-                    {getStatusIcon(false)}
+                    {getStatusIcon(call.direction || 'inbound')}
                   </div>
                   
                   <div>
@@ -228,16 +272,16 @@ export const TelnyxCallsList = () => {
                       <span className="font-medium">
                         {call.clients?.name || formatPhoneNumber(getDisplayPhoneNumber(call))}
                       </span>
-                      <Badge variant={getStatusColor(call.call_status || 'completed')}>
-                        {(call.call_status || 'completed').toUpperCase()}
+                      <Badge variant={getStatusColor(call.call_status || call.status || 'completed')}>
+                        {(call.call_status || call.status || 'completed').toUpperCase()}
                       </Badge>
                       <Badge variant="default">
-                        INBOUND
+                        {(call.direction || 'INBOUND').toUpperCase()}
                       </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground flex items-center gap-4">
                       <span>
-                        From: {formatPhoneNumber(getDisplayPhoneNumber(call))}
+                        {call.direction === 'outbound' ? 'To:' : 'From:'} {formatPhoneNumber(getDisplayPhoneNumber(call))}
                       </span>
                       {call.call_duration && (
                         <span className="flex items-center gap-1">
@@ -245,7 +289,7 @@ export const TelnyxCallsList = () => {
                           {formatDuration(call.call_duration)}
                         </span>
                       )}
-                      <span>{new Date(call.created_at).toLocaleString()}</span>
+                      <span>{new Date(call.created_at || call.started_at).toLocaleString()}</span>
                     </div>
                     {call.ai_transcript && (
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{call.ai_transcript}</p>
@@ -269,8 +313,8 @@ export const TelnyxCallsList = () => {
                     size="sm"
                     onClick={() => makeCall(
                       getCallPhoneNumber(call),
-                      call.client_id,
-                      call.job_id
+                      call.clients?.id,
+                      undefined
                     )}
                     disabled={callingNumber === getCallPhoneNumber(call)}
                     className="gap-1"

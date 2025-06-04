@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus } from "lucide-react";
 import { LineItem, Product } from "../../builder/types";
-import { ProductSearchDialog } from "../../builder/ProductSearchDialog";
+import { ProductSearch } from "../../builder/ProductSearch";
 import { useState } from "react";
 
 interface InvoiceItemsStepProps {
@@ -53,7 +53,8 @@ export const InvoiceItemsStep = ({
       price: 0,
       cost: 0,
       quantity: 1,
-      taxable: true
+      taxable: true,
+      category: "Manual"
     };
     onAddProduct(newItem);
   };
@@ -211,7 +212,7 @@ export const InvoiceItemsStep = ({
         </Card>
       </div>
 
-      <ProductSearchDialog
+      <ProductSearch
         open={showProductSearch}
         onOpenChange={setShowProductSearch}
         onSelectProduct={(product) => {

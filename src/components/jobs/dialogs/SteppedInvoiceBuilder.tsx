@@ -98,6 +98,12 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
+  // Create wrapper function to convert field/value pattern to updates pattern
+  const handleLineItemUpdate = (id: string, field: string, value: any) => {
+    const updates = { [field]: value };
+    handleUpdateLineItem(id, updates);
+  };
+
   const steps = [
     { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
     { number: 2, title: "Send Invoice", description: "Review and send to client" }
@@ -169,7 +175,7 @@ export const SteppedInvoiceBuilder = ({
               notes={notes}
               onAddProduct={handleAddProduct}
               onRemoveLineItem={handleRemoveLineItem}
-              onUpdateLineItem={handleUpdateLineItem}
+              onUpdateLineItem={handleLineItemUpdate}
               onTaxRateChange={setTaxRate}
               onNotesChange={setNotes}
               calculateSubtotal={calculateSubtotal}
