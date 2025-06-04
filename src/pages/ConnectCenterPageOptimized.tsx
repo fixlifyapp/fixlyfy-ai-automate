@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -132,9 +131,9 @@ const ConnectCenterPageOptimized = () => {
         subtitle={clientName ? `Communication with ${clientName}` : "Communication hub and call monitoring"}
         icon={MessageSquare}
         badges={[
-          { text: "Telnyx", icon: Phone, variant: "fixlyfy" },
-          { text: "Real-time Sync", icon: MessageSquare, variant: "info" },
-          ...(isCallLoading ? [{ text: "Calling...", icon: Phone, variant: "destructive" }] : [])
+          { text: "Telnyx", icon: Phone, variant: "fixlyfy" as const },
+          { text: "Real-time Sync", icon: MessageSquare, variant: "info" as const },
+          ...(isCallLoading ? [{ text: "Calling...", icon: Phone, variant: "warning" as const }] : [])
         ]}
         actionButton={{
           text: getActionButtonText(),
