@@ -1,10 +1,10 @@
 
-import { useState } from "react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageSquare, CheckCircle, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Mail, MessageSquare, ArrowLeft } from "lucide-react";
 
 interface SendMethodStepProps {
   sendMethod: "email" | "sms";
@@ -26,23 +26,6 @@ interface SendMethodStepProps {
   onBack: () => void;
 }
 
-// Helper functions for validation
-const isValidEmail = (email: string): boolean => {
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
-
-const isValidPhoneNumber = (phone: string): boolean => {
-  if (!phone) return false;
-  const cleaned = phone.replace(/\D/g, '');
-  return cleaned.length >= 10;
-};
-
-const formatPhoneForTelnyx = (phone: string): string => {
-  const cleaned = phone.replace(/\D/g, '');
-  return `+1${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-};
-
 export const SendMethodStep = ({
   sendMethod,
   setSendMethod,
@@ -58,119 +41,121 @@ export const SendMethodStep = ({
   onSend,
   onBack
 }: SendMethodStepProps) => {
-  // Check if manual input is valid
-  const isManualEmailValid = sendMethod === "email" && isValidEmail(sendTo);
-  const isManualPhoneValid = sendMethod === "sms" && isValidPhoneNumber(sendTo);
-  const canSend = isManualEmailValid || isManualPhoneValid;
-
-  const handleInputChange = (value: string) => {
-    setSendTo(value);
-    setValidationError("");
-  };
-
   const handleSendMethodChange = (value: "email" | "sms") => {
     setSendMethod(value);
     setValidationError("");
     
-    // Auto-fill with client info only if the field is empty
-    if (!sendTo.trim()) {
-      if (value === "email" && hasValidEmail) {
-        setSendTo(contactInfo.email);
-      } else if (value === "sms" && hasValidPhone) {
-        const formattedPhone = formatPhoneForTelnyx(contactInfo.phone);
-        setSendTo(formattedPhone);
-      }
+    if (value === "email" && hasValidEmail) {
+      setSendTo(contactInfo.email);
+    } else if (value === "sms" && hasValidPhone) {
+      setSendTo(contactInfo.phone);
+    } else {
+      setSendTo("");
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 max-w-full">
       <div className="text-sm text-muted-foreground mb-4">
-        Отправить estimate {estimateNumber} клиенту {contactInfo.name}:
+        Send estimate {estimateNumber} to {contactInfo.name}:
       </div>
       
-      <div className="text-sm font-medium mb-3">Выберите способ отправки:</div>
-      
-      <RadioGroup value={sendMethod} onValueChange={handleSendMethodChange}>
-        <div className={`flex items-start space-x-3 border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
-          sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
-        }`}>
-          <RadioGroupItem value="email" id="email" className="mt-1" />
-          <div className="flex-1">
-            <Label htmlFor="email" className="flex items-center gap-2 font-medium cursor-pointer">
-              <Mail size={16} />
-              Отправить по Email
-              {hasValidEmail && <CheckCircle size={14} className="text-green-600" />}
-              {!hasValidEmail && <AlertCircle size={14} className="text-amber-500" />}
-            </Label>
-            {hasValidEmail ? (
-              <p className="text-sm text-muted-foreground mt-1">
-                Email клиента: <span className="font-medium">{contactInfo.email}</span>
-              </p>
-            ) : (
-              <p className="text-sm text-amber-600 mt-1">Email клиента недоступен - можно ввести другой</p>
-            )}
-            <p className="text-xs text-blue-600 mt-1">Включает ссылку на защищенный портал клиента</p>
-          </div>
-        </div>
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Choose sending method:</Label>
         
-        <div className={`flex items-start space-x-3 border rounded-md p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
-          sendMethod === "sms" ? "border-primary bg-primary/5" : "border-input"
-        }`}>
-          <RadioGroupItem value="sms" id="sms" className="mt-1" />
-          <div className="flex-1">
-            <Label htmlFor="sms" className="flex items-center gap-2 font-medium cursor-pointer">
-              <MessageSquare size={16} />
-              Отправить по SMS
-              {hasValidPhone && <CheckCircle size={14} className="text-green-600" />}
-              {!hasValidPhone && <AlertCircle size={14} className="text-amber-500" />}
-            </Label>
-            {hasValidPhone ? (
-              <p className="text-sm text-muted-foreground mt-1">
-                Телефон клиента: <span className="font-medium">{contactInfo.phone}</span>
-              </p>
-            ) : (
-              <p className="text-sm text-amber-600 mt-1">Телефон клиента недоступен - можно ввести другой</p>
-            )}
-            <p className="text-xs text-blue-600 mt-1">Включает ссылку на защищенный портал клиента</p>
+        <RadioGroup 
+          value={sendMethod} 
+          onValueChange={handleSendMethodChange}
+          className="space-y-3"
+        >
+          <div className={`flex items-start space-x-3 border rounded-lg p-3 transition-colors hover:bg-muted/50 cursor-pointer ${
+            sendMethod === "email" ? "border-primary bg-primary/5" : "border-input"
+          } ${!hasValidEmail ? "opacity-60" : ""}`}>
+            <RadioGroupItem 
+              value="email" 
+              id="email" 
+              className="mt-1 flex-shrink-0" 
+              disabled={!hasValidEmail} 
+            />
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="email" className="flex items-center gap-2 font-medium cursor-pointer text-sm">
+                <Mail size={16} className="flex-shrink-0" />
+                Send via Email
+              </Label>
+              {hasValidEmail ? (
+                <p className="text-xs text-muted-foreground mt-1 break-all">{contactInfo.email}</p>
+              ) : (
+                <p className="text-xs text-amber-600 mt-1">No valid email available for this client</p>
+              )}
+              <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
+            </div>
           </div>
-        </div>
-      </RadioGroup>
+          
+          <div className={`flex items-start space-x-3 border rounded-lg p-3 transition-colors hover:bg-muted/50 cursor-pointer ${
+            sendMethod === "sms" ? "border-primary bg-primary/5" : "border-input"
+          } ${!hasValidPhone ? "opacity-60" : ""}`}>
+            <RadioGroupItem 
+              value="sms" 
+              id="sms" 
+              className="mt-1 flex-shrink-0" 
+              disabled={!hasValidPhone} 
+            />
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="sms" className="flex items-center gap-2 font-medium cursor-pointer text-sm">
+                <MessageSquare size={16} className="flex-shrink-0" />
+                Send via Text Message
+              </Label>
+              {hasValidPhone ? (
+                <p className="text-xs text-muted-foreground mt-1">{contactInfo.phone}</p>
+              ) : (
+                <p className="text-xs text-amber-600 mt-1">No valid phone number available for this client</p>
+              )}
+              <p className="text-xs text-blue-600 mt-1">Includes secure portal access link</p>
+            </div>
+          </div>
+        </RadioGroup>
+      </div>
       
-      {/* Always show editable field */}
       <div className="space-y-2">
-        <Label htmlFor="send-to">
-          {sendMethod === "email" ? "Email адрес" : "Номер телефона"}
+        <Label htmlFor="send-to" className="text-sm font-medium">
+          {sendMethod === "email" ? "Email Address" : "Phone Number"}
         </Label>
         <Input
           id="send-to"
           value={sendTo}
-          onChange={(e) => handleInputChange(e.target.value)}
-          placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 или (555) 123-4567"}
-          className={validationError ? "border-red-500" : ""}
+          onChange={(e) => {
+            setSendTo(e.target.value);
+            setValidationError("");
+          }}
+          placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890 or (555) 123-4567"}
+          className={`${validationError ? "border-red-500" : ""} text-sm`}
         />
         {validationError && (
-          <p className="text-sm text-red-600 mt-1">{validationError}</p>
+          <p className="text-xs text-red-600 mt-1">{validationError}</p>
         )}
         {sendMethod === "sms" && (
           <p className="text-xs text-muted-foreground mt-1">
-            Номера телефонов будут автоматически отформатированы для Telnyx
+            Phone numbers will be automatically formatted for Telnyx delivery
           </p>
         )}
-        <p className="text-xs text-gray-500 mt-1">
-          💡 Можете ввести любой {sendMethod === "email" ? "email адрес" : "номер телефона"} - это не изменит контактную информацию клиента
-        </p>
       </div>
       
-      <div className="pt-4 flex justify-end gap-2">
-        <Button variant="outline" onClick={onBack}>
-          Назад
+      <div className="flex flex-col sm:flex-row gap-2 pt-4">
+        <Button 
+          variant="outline" 
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm"
+          disabled={isProcessing}
+        >
+          <ArrowLeft size={16} />
+          Back
         </Button>
         <Button 
           onClick={onSend} 
-          disabled={!canSend || isProcessing || !!validationError}
+          disabled={!sendTo || isProcessing || !!validationError}
+          className="flex-1 text-sm"
         >
-          {isProcessing ? "Отправляю..." : "Отправить Estimate"}
+          {isProcessing ? "Sending..." : "Send Estimate"}
         </Button>
       </div>
     </div>

@@ -141,11 +141,11 @@ export const EstimateSendDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-blue-600" />
-            Send Estimate #{estimateNumber}
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Send className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <span className="truncate">Send Estimate #{estimateNumber}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -155,7 +155,7 @@ export const EstimateSendDialog = ({
               <strong>Total:</strong> ${total.toFixed(2)}
             </p>
             {contactInfo?.name && (
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-blue-800 truncate">
                 <strong>Customer:</strong> {contactInfo.name}
               </p>
             )}
