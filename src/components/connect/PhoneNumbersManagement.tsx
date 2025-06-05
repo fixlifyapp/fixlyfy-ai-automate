@@ -19,7 +19,6 @@ export const PhoneNumbersManagement = () => {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [configuringWebhooks, setConfiguringWebhooks] = useState<string | null>(null);
-  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
 
   const fetchPhoneNumbers = async () => {
     try {
@@ -70,41 +69,6 @@ export const PhoneNumbersManagement = () => {
       toast.error('Failed to configure webhooks: ' + (error.message || 'Unknown error'));
     } finally {
       setConfiguringWebhooks(null);
-    }
-  };
-
-  const testWebhook = async (phoneNumber: string) => {
-    setTestingWebhook(phoneNumber);
-    
-    try {
-      console.log('Testing webhook for:', phoneNumber);
-      
-      const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
-        body: {
-          action: 'test_webhook',
-          phone_number: phoneNumber
-        }
-      });
-
-      console.log('Test webhook response:', data, error);
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
-
-      if (data?.success) {
-        toast.success('🎉 Webhook test successful! Check the console logs for details.');
-        console.log('Webhook test details:', data.details);
-      } else {
-        toast.warning('⚠️ Webhook test completed with issues: ' + (data?.message || 'Unknown issue'));
-        console.log('Webhook test details:', data?.details);
-      }
-    } catch (error: any) {
-      console.error('Error testing webhook:', error);
-      toast.error('❌ Webhook test failed: ' + (error.message || 'Unknown error'));
-    } finally {
-      setTestingWebhook(null);
     }
   };
 
@@ -179,21 +143,6 @@ export const PhoneNumbersManagement = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => testWebhook(phone.phone_number)}
-                    disabled={testingWebhook === phone.phone_number}
-                    className="gap-2"
-                  >
-                    {testingWebhook === phone.phone_number ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Test Webhook
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() => configureWebhooks(phone.id, phone.phone_number)}
                     disabled={configuringWebhooks === phone.id}
                     className="gap-2"
@@ -208,17 +157,6 @@ export const PhoneNumbersManagement = () => {
                 </div>
               </div>
             ))}
-            
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <h4 className="font-medium mb-2">Webhook Configuration</h4>
-              <p className="text-sm text-muted-foreground mb-2">
-                Your webhook URLs should be configured as:
-              </p>
-              <div className="space-y-1 text-sm font-mono bg-background p-2 rounded border">
-                <p><strong>SMS Webhook:</strong> https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook</p>
-                <p><strong>Voice Webhook:</strong> https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook</p>
-              </div>
-            </div>
           </div>
         )}
       </CardContent>
