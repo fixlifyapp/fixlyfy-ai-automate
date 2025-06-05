@@ -33,8 +33,8 @@ interface TelnyxSMSWebhook {
   };
 }
 
-// Updated public key from your screenshot
-const TELNYX_PUBLIC_KEY = 'e5jeBd2E62zcfqhmsfbYrllgfP06y84=';
+// Updated public key from your latest Telnyx dashboard
+const TELNYX_PUBLIC_KEY = 'NEWzv1Z5c+Fmc3WEKvpyDqUDdqGKxbLwCCPeGdFqiJA=';
 
 // Function to verify Telnyx webhook signature
 const verifyTelnyxSignature = async (
@@ -43,9 +43,11 @@ const verifyTelnyxSignature = async (
   timestamp: string
 ): Promise<boolean> => {
   try {
-    console.log('Verifying signature with public key:', TELNYX_PUBLIC_KEY);
+    console.log('=== SIGNATURE VERIFICATION START ===');
+    console.log('Public key being used:', TELNYX_PUBLIC_KEY);
     console.log('Signature received:', signature);
     console.log('Timestamp received:', timestamp);
+    console.log('Payload length:', payload.length);
     
     // Import the public key
     const publicKeyBytes = new Uint8Array(
@@ -65,6 +67,8 @@ const verifyTelnyxSignature = async (
 
     // Create the signed payload (timestamp + payload)
     const signedPayload = timestamp + '|' + payload;
+    console.log('Signed payload constructed:', signedPayload.substring(0, 100) + '...');
+    
     const encoder = new TextEncoder();
     const signedPayloadBytes = encoder.encode(signedPayload);
 
@@ -82,9 +86,11 @@ const verifyTelnyxSignature = async (
     );
 
     console.log('Signature verification result:', isValid);
+    console.log('=== SIGNATURE VERIFICATION END ===');
     return isValid;
   } catch (error) {
     console.error('Error verifying Telnyx signature:', error);
+    console.log('=== SIGNATURE VERIFICATION FAILED ===');
     return false;
   }
 };
@@ -184,15 +190,22 @@ const createClientForUser = async (supabase: any, fromPhone: string, userId: str
 };
 
 serve(async (req) => {
-  console.log('=== Telnyx SMS Webhook START ===');
+  console.log('=== TELNYX SMS WEBHOOK RECEIVED ===');
+  console.log('Timestamp:', new Date().toISOString());
   console.log('Request method:', req.method);
   console.log('Request URL:', req.url);
+  console.log('User-Agent:', req.headers.get('user-agent'));
+  console.log('Content-Type:', req.headers.get('content-type'));
   
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    console.log('=== PROCESSING WEBHOOK ===');
+    
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -201,42 +214,53 @@ serve(async (req) => {
     // Get the raw body for signature verification
     const rawBody = await req.text();
     console.log('Raw webhook body length:', rawBody.length);
-    console.log('Raw webhook body preview:', rawBody.substring(0, 200));
+    console.log('Raw webhook body preview:', rawBody.substring(0, 300));
 
     // Get signature headers
     const signature = req.headers.get('telnyx-signature-ed25519');
     const timestamp = req.headers.get('telnyx-timestamp');
 
-    console.log('Telnyx headers:', {
-      signature: signature ? 'present' : 'missing',
-      timestamp: timestamp ? 'present' : 'missing',
-      signatureValue: signature?.substring(0, 20) + '...',
-      timestampValue: timestamp
-    });
+    console.log('=== WEBHOOK HEADERS ===');
+    console.log('Signature header present:', !!signature);
+    console.log('Timestamp header present:', !!timestamp);
+    if (signature) console.log('Signature value (first 20 chars):', signature.substring(0, 20) + '...');
+    if (timestamp) console.log('Timestamp value:', timestamp);
 
-    // For debugging, let's be more lenient with signature validation initially
+    // For now, let's process without strict signature validation to debug connectivity
+    let signatureValid = false;
     if (signature && timestamp) {
       console.log('Attempting signature verification...');
       try {
-        const isValidSignature = await verifyTelnyxSignature(rawBody, signature, timestamp);
-        
-        if (!isValidSignature) {
-          console.error('Invalid Telnyx webhook signature - but continuing for debugging');
-          // Don't return error yet, let's see what data we're getting
+        signatureValid = await verifyTelnyxSignature(rawBody, signature, timestamp);
+        if (!signatureValid) {
+          console.warn('❌ Signature verification failed - but continuing for debugging');
         } else {
-          console.log('Webhook signature verified successfully');
+          console.log('✅ Signature verification successful');
         }
       } catch (sigError) {
-        console.error('Signature verification error:', sigError);
-        // Continue processing for debugging
+        console.error('Signature verification threw error:', sigError);
       }
     } else {
-      console.log('No signature headers found - continuing without verification for debugging');
+      console.warn('⚠️ No signature headers found - continuing without verification');
     }
 
     // Parse the webhook data
-    const webhookData: TelnyxSMSWebhook = JSON.parse(rawBody);
-    console.log('SMS webhook data:', JSON.stringify(webhookData, null, 2));
+    let webhookData: TelnyxSMSWebhook;
+    try {
+      webhookData = JSON.parse(rawBody);
+      console.log('✅ Webhook data parsed successfully');
+      console.log('Event type:', webhookData.event_type);
+      console.log('Record type:', webhookData.record_type);
+    } catch (parseError) {
+      console.error('❌ Failed to parse webhook JSON:', parseError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Invalid JSON payload' 
+      }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 
+      });
+    }
 
     // Extract data from the webhook payload
     const eventType = webhookData.event_type;
@@ -246,48 +270,64 @@ serve(async (req) => {
     const messageText = webhookData.payload?.text;
     const direction = webhookData.payload?.direction;
 
-    console.log('SMS Event Details:', {
-      eventType,
-      messageId,
-      fromPhone,
-      toPhone,
-      direction,
-      messageText: messageText?.substring(0, 100)
-    });
+    console.log('=== SMS EVENT DETAILS ===');
+    console.log('Event Type:', eventType);
+    console.log('Message ID:', messageId);
+    console.log('From Phone:', fromPhone);
+    console.log('To Phone:', toPhone);
+    console.log('Direction:', direction);
+    console.log('Message Text Length:', messageText?.length || 0);
+    console.log('Message Text Preview:', messageText?.substring(0, 100));
 
     // Only process received messages (incoming SMS)
     if (eventType === 'message.received' && direction === 'inbound' && fromPhone && toPhone && messageText) {
-      console.log('Processing inbound SMS...');
+      console.log('✅ Processing inbound SMS...');
 
       // STEP 1: Find which user owns the receiving phone number
       const userId = await findUserByReceivingNumber(supabaseAdmin, toPhone);
       if (!userId) {
-        console.error('No user found for receiving number:', toPhone);
+        console.error('❌ No user found for receiving number:', toPhone);
         return new Response(JSON.stringify({ 
           success: false, 
-          error: 'Receiving number not associated with any user' 
+          error: 'Receiving number not associated with any user',
+          debug: {
+            toPhone,
+            eventType,
+            direction
+          }
         }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
         });
       }
 
+      console.log('✅ Found user:', userId, 'for phone:', toPhone);
+
       // STEP 2: Find client by phone number within that user's clients
       let client = await findClientByPhone(supabaseAdmin, fromPhone, userId);
       
       // STEP 3: If no client found, create one for this user
       if (!client) {
+        console.log('📝 Creating new client for user:', userId);
         client = await createClientForUser(supabaseAdmin, fromPhone, userId);
         if (!client) {
+          console.error('❌ Failed to create client');
           return new Response(JSON.stringify({ 
             success: false, 
-            error: 'Error creating client' 
+            error: 'Error creating client',
+            debug: {
+              fromPhone,
+              userId,
+              eventType
+            }
           }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500 
           });
         }
       }
+
+      console.log('✅ Using client:', client.id, client.name);
 
       // STEP 4: Find or create conversation for this client
       let conversation;
@@ -301,12 +341,12 @@ serve(async (req) => {
         .maybeSingle();
 
       if (convError) {
-        console.error('Error finding conversation:', convError);
+        console.error('❌ Error finding conversation:', convError);
       }
 
       if (existingConversation) {
         conversation = existingConversation;
-        console.log('Using existing conversation:', conversation.id);
+        console.log('✅ Using existing conversation:', conversation.id);
         
         // Update last_message_at
         await supabaseAdmin
@@ -317,7 +357,7 @@ serve(async (req) => {
           })
           .eq('id', conversation.id);
       } else {
-        console.log('Creating new conversation for client:', client.id);
+        console.log('📝 Creating new conversation for client:', client.id);
         const { data: newConversation, error: newConvError } = await supabaseAdmin
           .from('conversations')
           .insert({
@@ -331,10 +371,14 @@ serve(async (req) => {
           .single();
 
         if (newConvError) {
-          console.error('Error creating conversation:', newConvError);
+          console.error('❌ Error creating conversation:', newConvError);
           return new Response(JSON.stringify({ 
             success: false, 
-            error: 'Error creating conversation' 
+            error: 'Error creating conversation',
+            debug: {
+              clientId: client.id,
+              error: newConvError
+            }
           }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500 
@@ -342,10 +386,11 @@ serve(async (req) => {
         }
 
         conversation = newConversation;
-        console.log('Created new conversation:', conversation.id);
+        console.log('✅ Created new conversation:', conversation.id);
       }
 
       // STEP 5: Store the message
+      console.log('📝 Storing message in conversation:', conversation.id);
       const { error: messageError } = await supabaseAdmin
         .from('messages')
         .insert({
@@ -360,17 +405,23 @@ serve(async (req) => {
         });
 
       if (messageError) {
-        console.error('Error storing message:', messageError);
+        console.error('❌ Error storing message:', messageError);
         return new Response(JSON.stringify({ 
           success: false, 
-          error: 'Error storing message' 
+          error: 'Error storing message',
+          debug: {
+            conversationId: conversation.id,
+            messageText: messageText.substring(0, 50),
+            error: messageError
+          }
         }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         });
       }
 
-      console.log('SMS message stored successfully for user:', userId, 'client:', client.id);
+      console.log('✅ SMS message stored successfully!');
+      console.log('=== WEBHOOK PROCESSING COMPLETE ===');
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -379,15 +430,21 @@ serve(async (req) => {
           user_id: userId,
           client_id: client.id,
           conversation_id: conversation.id,
-          message_id: messageId
+          message_id: messageId,
+          signature_valid: signatureValid,
+          from: fromPhone,
+          to: toPhone
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else {
-      console.log('Skipping event - not an inbound message or missing required data:', {
-        eventType,
-        direction,
+      console.log('⏭️ Skipping event - not an inbound message or missing required data');
+      console.log('Event check results:', {
+        eventType: eventType,
+        isMessageReceived: eventType === 'message.received',
+        direction: direction,
+        isInbound: direction === 'inbound',
         hasFromPhone: !!fromPhone,
         hasToPhone: !!toPhone,
         hasMessageText: !!messageText
@@ -395,23 +452,32 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'Event skipped - not an inbound message' 
+        message: 'Event skipped - not an inbound message',
+        details: {
+          eventType,
+          direction,
+          hasFromPhone: !!fromPhone,
+          hasToPhone: !!toPhone,
+          hasMessageText: !!messageText
+        }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
   } catch (error) {
-    console.error('Error processing SMS webhook:', error);
+    console.error('💥 CRITICAL ERROR processing SMS webhook:', error);
+    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message || 'Unknown error processing webhook',
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
   } finally {
-    console.log('=== Telnyx SMS Webhook END ===');
+    console.log('=== TELNYX SMS WEBHOOK END ===');
   }
 });

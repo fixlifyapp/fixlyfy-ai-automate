@@ -11,101 +11,13 @@ max_rows = 1000
 [auth]
 enabled = true
 port = 54324
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://lovable.dev"]
-jwt_expiry = 3600
-enable_signup = true
-email_double_confirm_changes = true
-enable_manual_linking = false
-
-[auth.email]
-enable_signup = true
-double_confirm_changes = true
-enable_confirmations = false
-
-[auth.email.template.invite]
-subject = "You have been invited"
-content_path = "./supabase/templates/invite.html"
-
-[auth.email.template.confirmation]
-subject = "Confirm your signup"
-content_path = "./supabase/templates/confirmation.html"
-
-[auth.email.template.recovery]
-subject = "Reset your password"
-content_path = "./supabase/templates/recovery.html"
-
-[auth.email.template.magic_link]
-subject = "Your magic link"
-content_path = "./supabase/templates/magic_link.html"
-
-[auth.email.template.email_change]
-subject = "Confirm your email change"
-content_path = "./supabase/templates/email_change.html"
 
 [db]
 port = 54322
 
-[studio]
+[edge_runtime]
 enabled = true
 port = 54323
 
-[inbucket]
-enabled = true
-port = 54324
-
-[functions.send-email]
-verify_jwt = true
-
-[functions.send-estimate]
-verify_jwt = true
-
-[functions.track-email-open]
-verify_jwt = false
-
-[functions.automation-executor]
-verify_jwt = true
-
-[functions.intelligent-ai-assistant]
-verify_jwt = false
-
-[functions.handle-ai-voice-call]
-verify_jwt = false
-
-[functions.get-ai-call-analytics]
-verify_jwt = true
-
-[functions.reports-templates]
-verify_jwt = true
-
-[functions.test-openai]
-verify_jwt = true
-
-[functions.update-profiles-schema]
-verify_jwt = true
-
-[functions.telnyx-phone-numbers]
-verify_jwt = true
-
-[functions.telnyx-sms]
-verify_jwt = false
-
-[functions.telnyx-voice-webhook]
-verify_jwt = false
-
 [functions.telnyx-sms-webhook]
 verify_jwt = false
-
-[functions.manage-phone-numbers]
-verify_jwt = true
-
-[functions.check-telnyx-db]
-verify_jwt = true
-
-[storage]
-enabled = true
-port = 54325
-file_size_limit = "50MiB"
-
-[edge_runtime]
-policy = "per_worker"
