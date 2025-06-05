@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,6 +22,7 @@ import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 import { supabase } from "@/integrations/supabase/client";
 import { AIAgentToggle } from "@/components/connect/AIAgentToggle";
 import { ActiveCallInterface } from "@/components/connect/ActiveCallInterface";
+import { PhoneNumbersManagement } from "@/components/connect/PhoneNumbersManagement";
 
 const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("monitoring");
@@ -226,6 +226,11 @@ const ConnectCenterPageOptimized = () => {
 
       {/* Active Call Interface */}
       <ActiveCallInterface />
+
+      {/* Phone Numbers Management */}
+      <div className="mb-6">
+        <PhoneNumbersManagement />
+      </div>
       
       {isLoading ? (
         <LoadingSkeleton type="connect-tabs" />

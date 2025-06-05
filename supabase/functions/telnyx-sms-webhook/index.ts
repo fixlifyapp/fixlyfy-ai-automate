@@ -37,10 +37,35 @@ const formatPhoneNumber = (phone: string): string => {
   return cleaned;
 };
 
-const findClientByPhone = async (supabase: any, phone: string) => {
+const findUserByReceivingNumber = async (supabase: any, toPhone: string) => {
+  console.log('Finding user for receiving number:', toPhone);
+  
+  // Find which user owns this Telnyx phone number
+  const { data: phoneNumber, error } = await supabase
+    .from('telnyx_phone_numbers')
+    .select('user_id, phone_number')
+    .eq('phone_number', toPhone)
+    .eq('status', 'active')
+    .single();
+
+  if (error) {
+    console.error('Error finding phone number owner:', error);
+    return null;
+  }
+
+  if (!phoneNumber) {
+    console.log('No active phone number found for:', toPhone);
+    return null;
+  }
+
+  console.log('Found phone number owner:', phoneNumber.user_id);
+  return phoneNumber.user_id;
+};
+
+const findClientByPhone = async (supabase: any, phone: string, userId: string) => {
   const formattedPhone = formatPhoneNumber(phone);
   
-  // Try multiple phone format variations
+  // Try multiple phone format variations, but ONLY for this user's clients
   const phoneVariations = [
     phone,
     formattedPhone,
@@ -50,24 +75,54 @@ const findClientByPhone = async (supabase: any, phone: string) => {
     `${formattedPhone.slice(0,3)}.${formattedPhone.slice(3,6)}.${formattedPhone.slice(6)}`
   ];
 
-  console.log('Searching for client with phone variations:', phoneVariations);
+  console.log('Searching for client with phone variations:', phoneVariations, 'for user:', userId);
 
   for (const phoneVar of phoneVariations) {
     const { data: client, error } = await supabase
       .from('clients')
       .select('*')
       .ilike('phone', `%${phoneVar}%`)
+      .eq('created_by', userId) // CRITICAL: Filter by user!
       .limit(1)
       .maybeSingle();
 
     if (!error && client) {
-      console.log('Found client:', client.id, client.name);
+      console.log('Found client:', client.id, client.name, 'for user:', userId);
       return client;
     }
   }
 
-  console.log('No client found for phone:', phone);
+  console.log('No client found for phone:', phone, 'under user:', userId);
   return null;
+};
+
+const createClientForUser = async (supabase: any, fromPhone: string, userId: string) => {
+  console.log('Creating new client for phone:', fromPhone, 'under user:', userId);
+  
+  const { data: newClient, error: clientError } = await supabase
+    .from('clients')
+    .insert({
+      name: `Client ${fromPhone}`,
+      phone: fromPhone,
+      status: 'active',
+      type: 'residential',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: 'United States',
+      created_by: userId // CRITICAL: Associate with the correct user!
+    })
+    .select()
+    .single();
+
+  if (clientError) {
+    console.error('Error creating client for user:', userId, clientError);
+    return null;
+  }
+
+  console.log('Created new client:', newClient.id, 'for user:', userId);
+  return newClient;
 };
 
 serve(async (req) => {
@@ -112,39 +167,25 @@ serve(async (req) => {
     if (eventType === 'message.received' && direction === 'inbound' && fromPhone && toPhone && messageText) {
       console.log('Processing inbound SMS...');
 
-      // Find client by phone number
-      let client = await findClientByPhone(supabaseAdmin, fromPhone);
-      
-      if (!client) {
-        console.log('Creating new client for phone:', fromPhone);
-        
-        // Create a new client if not found
-        const { data: newClient, error: clientError } = await supabaseAdmin
-          .from('clients')
-          .insert({
-            name: `Client ${fromPhone}`,
-            phone: fromPhone,
-            status: 'active',
-            type: 'residential',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            country: 'United States'
-          })
-          .select()
-          .single();
-
-        if (clientError) {
-          console.error('Error creating client:', clientError);
-          return new Response('Error creating client', { status: 500 });
-        }
-
-        console.log('Created new client:', newClient.id);
-        client = newClient;
+      // STEP 1: Find which user owns the receiving phone number
+      const userId = await findUserByReceivingNumber(supabaseAdmin, toPhone);
+      if (!userId) {
+        console.error('No user found for receiving number:', toPhone);
+        return new Response('Receiving number not associated with any user', { status: 404 });
       }
 
-      // Find or create conversation
+      // STEP 2: Find client by phone number within that user's clients
+      let client = await findClientByPhone(supabaseAdmin, fromPhone, userId);
+      
+      // STEP 3: If no client found, create one for this user
+      if (!client) {
+        client = await createClientForUser(supabaseAdmin, fromPhone, userId);
+        if (!client) {
+          return new Response('Error creating client', { status: 500 });
+        }
+      }
+
+      // STEP 4: Find or create conversation for this client
       let conversation;
       const { data: existingConversation, error: convError } = await supabaseAdmin
         .from('conversations')
@@ -194,7 +235,7 @@ serve(async (req) => {
         console.log('Created new conversation:', conversation.id);
       }
 
-      // Store the message
+      // STEP 5: Store the message
       const { error: messageError } = await supabaseAdmin
         .from('messages')
         .insert({
@@ -213,7 +254,7 @@ serve(async (req) => {
         return new Response('Error storing message', { status: 500 });
       }
 
-      console.log('SMS message stored successfully');
+      console.log('SMS message stored successfully for user:', userId, 'client:', client.id);
     } else {
       console.log('Skipping event - not an inbound message or missing required data');
     }
