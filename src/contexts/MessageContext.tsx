@@ -37,6 +37,9 @@ interface MessageContextType {
   refreshConversations: () => Promise<void>;
   openMessageDialog: (client: Client, jobId?: string) => void;
   isLoading: boolean;
+  activeConversation: Conversation | null;
+  sendMessage: (message: string) => Promise<void>;
+  isSending: boolean;
 }
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -54,6 +57,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   const fetchConversations = async () => {
     try {
@@ -105,7 +110,10 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
             phone: conv.clients?.phone || '',
             email: conv.clients?.email || ''
           },
-          messages: sortedMessages,
+          messages: sortedMessages.map(msg => ({
+            ...msg,
+            direction: msg.direction as 'inbound' | 'outbound'
+          })),
           lastMessage: lastMessage?.body || 'No messages',
           lastMessageTime: lastMessage?.created_at || conv.created_at,
           unreadCount: 0
@@ -130,6 +138,24 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     console.log('Opening message dialog for client:', client);
     setSelectedClient(client);
     setDialogOpen(true);
+    
+    // Find and set active conversation
+    const conversation = conversations.find(conv => conv.client.id === client.id);
+    setActiveConversation(conversation || null);
+  };
+
+  const sendMessage = async (message: string) => {
+    if (!selectedClient || !message.trim()) return;
+    
+    setIsSending(true);
+    try {
+      // Implementation will be handled by the useMessageSending hook
+      console.log('Sending message:', message, 'to client:', selectedClient.name);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Set up real-time subscription for messages and conversations
@@ -225,7 +251,10 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       conversations,
       refreshConversations,
       openMessageDialog,
-      isLoading
+      isLoading,
+      activeConversation,
+      sendMessage,
+      isSending
     }}>
       {children}
       
