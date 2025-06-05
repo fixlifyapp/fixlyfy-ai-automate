@@ -93,6 +93,12 @@ verify_jwt = false
 [functions.telnyx-voice-webhook]
 verify_jwt = false
 
+[functions.telnyx-sms-webhook]
+verify_jwt = false
+
+[functions.manage-phone-numbers]
+verify_jwt = true
+
 [storage]
 enabled = true
 port = 54325
