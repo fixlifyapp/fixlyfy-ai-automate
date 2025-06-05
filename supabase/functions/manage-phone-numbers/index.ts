@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -60,6 +59,30 @@ serve(async (req) => {
         throw new Error('Phone number not found or not owned by user')
       }
 
+      // First, configure the messaging profile to ensure SMS webhook is set properly
+      console.log('Configuring messaging profile webhook...')
+      const messagingResponse = await fetch('https://api.telnyx.com/v2/messaging_profiles/4001972b-8bcb-40d6-afe4-363fd5ccada1', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${telnyxApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          webhook_url: smsWebhookUrl,
+          webhook_failover_url: smsWebhookUrl,
+          webhook_api_version: "v2"
+        })
+      })
+
+      const messagingResult = await messagingResponse.json()
+      
+      if (!messagingResponse.ok) {
+        console.error('Messaging profile configuration error:', messagingResult)
+        throw new Error(messagingResult.errors?.[0]?.detail || 'Failed to configure messaging profile')
+      }
+
+      console.log('Messaging profile configured successfully:', messagingResult)
+
       // Configure SMS and Voice webhooks with correct URLs
       const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
       const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
@@ -75,8 +98,8 @@ serve(async (req) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            messaging_profile_id: "4001972b-8bcb-40d6-afe4-363fd5ccada1", // Your messaging profile ID
-            connection_id: "2467892542", // Your connection ID for voice
+            messaging_profile_id: "4001972b-8bcb-40d6-afe4-363fd5ccada1",
+            connection_id: "2467892542",
             voice_url: voiceWebhookUrl,
             voice_failover_url: voiceWebhookUrl,
             voice_method: "POST"
@@ -86,41 +109,22 @@ serve(async (req) => {
         const result = await response.json()
         
         if (!response.ok) {
-          console.error('Telnyx configuration error:', result)
-          throw new Error(result.errors?.[0]?.detail || 'Failed to configure webhooks')
+          console.error('Telnyx phone number configuration error:', result)
+          throw new Error(result.errors?.[0]?.detail || 'Failed to configure phone number webhooks')
         }
 
         console.log('Phone number configuration result:', result)
-
-        // Configure the messaging profile to ensure SMS webhook is set to v2
-        console.log('Configuring messaging profile webhook for v2...')
-        const messagingResponse = await fetch('https://api.telnyx.com/v2/messaging_profiles/4001972b-8bcb-40d6-afe4-363fd5ccada1', {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${telnyxApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            webhook_url: smsWebhookUrl,
-            webhook_failover_url: smsWebhookUrl,
-            webhook_api_version: "v2"  // Changed from "2" to "v2"
-          })
-        })
-
-        const messagingResult = await messagingResponse.json()
-        
-        if (!messagingResponse.ok) {
-          console.error('Messaging profile configuration error:', messagingResult)
-          throw new Error(messagingResult.errors?.[0]?.detail || 'Failed to configure messaging profile')
-        }
-
-        console.log('Messaging profile configured successfully for v2:', messagingResult)
       }
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'SMS and Voice webhooks configured successfully for v2'
+          message: 'SMS and Voice webhooks configured successfully',
+          details: {
+            messaging_profile: messagingResult,
+            sms_webhook: smsWebhookUrl,
+            voice_webhook: voiceWebhookUrl
+          }
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

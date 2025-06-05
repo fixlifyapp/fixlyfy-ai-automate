@@ -7,30 +7,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Updated interface for Telnyx API v2 format
-interface TelnyxSMSEventV2 {
+// Simplified interface for real Telnyx SMS webhook
+interface TelnyxSMSWebhook {
   record_type?: string;
   event_type?: string;
   id?: string;
-  from?: {
-    phone_number?: string;
-  };
-  to?: Array<{
-    phone_number?: string;
-  }>;
-  text?: string;
-  direction?: string;
-  completed_at?: string;
-  sent_at?: string;
-  received_at?: string;
-  webhook_failover_url?: string;
-}
-
-// Interface for nested webhook data
-interface NestedWebhookData {
-  data?: {
-    event_type?: string;
-    payload?: TelnyxSMSEventV2;
+  occurred_at?: string;
+  payload?: {
+    id?: string;
+    record_type?: string;
+    direction?: string;
+    from?: {
+      phone_number?: string;
+      carrier?: string;
+    };
+    to?: Array<{
+      phone_number?: string;
+      carrier?: string;
+    }>;
+    text?: string;
+    completed_at?: string;
+    sent_at?: string;
+    received_at?: string;
+    webhook_url?: string;
   };
 }
 
@@ -45,7 +44,6 @@ const formatPhoneNumber = (phone: string): string => {
 const findUserByReceivingNumber = async (supabase: any, toPhone: string) => {
   console.log('Finding user for receiving number:', toPhone);
   
-  // Find which user owns this Telnyx phone number
   const { data: phoneNumber, error } = await supabase
     .from('telnyx_phone_numbers')
     .select('user_id, phone_number')
@@ -70,7 +68,6 @@ const findUserByReceivingNumber = async (supabase: any, toPhone: string) => {
 const findClientByPhone = async (supabase: any, phone: string, userId: string) => {
   const formattedPhone = formatPhoneNumber(phone);
   
-  // Try multiple phone format variations, but ONLY for this user's clients
   const phoneVariations = [
     phone,
     formattedPhone,
@@ -87,7 +84,7 @@ const findClientByPhone = async (supabase: any, phone: string, userId: string) =
       .from('clients')
       .select('*')
       .ilike('phone', `%${phoneVar}%`)
-      .eq('created_by', userId) // CRITICAL: Filter by user!
+      .eq('created_by', userId)
       .limit(1)
       .maybeSingle();
 
@@ -116,7 +113,7 @@ const createClientForUser = async (supabase: any, fromPhone: string, userId: str
       state: '',
       zip: '',
       country: 'United States',
-      created_by: userId // CRITICAL: Associate with the correct user!
+      created_by: userId
     })
     .select()
     .single();
@@ -131,7 +128,7 @@ const createClientForUser = async (supabase: any, fromPhone: string, userId: str
 };
 
 serve(async (req) => {
-  console.log('=== Telnyx SMS Webhook v2 START ===');
+  console.log('=== Telnyx SMS Webhook START ===');
   
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -143,29 +140,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const webhookData: TelnyxSMSEventV2 | NestedWebhookData = await req.json();
-    console.log('SMS webhook v2 data:', JSON.stringify(webhookData, null, 2));
+    const webhookData: TelnyxSMSWebhook = await req.json();
+    console.log('Raw Telnyx SMS webhook data:', JSON.stringify(webhookData, null, 2));
 
-    // Handle both direct format and nested format
-    let eventData: TelnyxSMSEventV2;
-    
-    // Check if data is nested (from test webhook calls)
-    if ('data' in webhookData && webhookData.data?.payload) {
-      console.log('Processing nested webhook data format');
-      eventData = webhookData.data.payload;
-    } else {
-      console.log('Processing direct webhook data format');
-      eventData = webhookData as TelnyxSMSEventV2;
-    }
+    // Extract data from the webhook payload
+    const eventType = webhookData.event_type;
+    const messageId = webhookData.payload?.id;
+    const fromPhone = webhookData.payload?.from?.phone_number;
+    const toPhone = webhookData.payload?.to?.[0]?.phone_number;
+    const messageText = webhookData.payload?.text;
+    const direction = webhookData.payload?.direction;
 
-    const eventType = eventData.event_type;
-    const messageId = eventData.id;
-    const fromPhone = eventData.from?.phone_number;
-    const toPhone = eventData.to?.[0]?.phone_number;
-    const messageText = eventData.text;
-    const direction = eventData.direction;
-
-    console.log('SMS Event v2:', {
+    console.log('Extracted SMS data:', {
       eventType,
       messageId,
       fromPhone,
@@ -176,13 +162,19 @@ serve(async (req) => {
 
     // Only process received messages (incoming SMS)
     if (eventType === 'message.received' && direction === 'inbound' && fromPhone && toPhone && messageText) {
-      console.log('Processing inbound SMS v2...');
+      console.log('Processing inbound SMS...');
 
       // STEP 1: Find which user owns the receiving phone number
       const userId = await findUserByReceivingNumber(supabaseAdmin, toPhone);
       if (!userId) {
         console.error('No user found for receiving number:', toPhone);
-        return new Response('Receiving number not associated with any user', { status: 404 });
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Receiving number not associated with any user' 
+        }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        });
       }
 
       // STEP 2: Find client by phone number within that user's clients
@@ -192,7 +184,13 @@ serve(async (req) => {
       if (!client) {
         client = await createClientForUser(supabaseAdmin, fromPhone, userId);
         if (!client) {
-          return new Response('Error creating client', { status: 500 });
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Error creating client' 
+          }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          });
         }
       }
 
@@ -239,7 +237,13 @@ serve(async (req) => {
 
         if (newConvError) {
           console.error('Error creating conversation:', newConvError);
-          return new Response('Error creating conversation', { status: 500 });
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Error creating conversation' 
+          }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          });
         }
 
         conversation = newConversation;
@@ -262,25 +266,56 @@ serve(async (req) => {
 
       if (messageError) {
         console.error('Error storing message:', messageError);
-        return new Response('Error storing message', { status: 500 });
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Error storing message' 
+        }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        });
       }
 
       console.log('SMS message stored successfully for user:', userId, 'client:', client.id);
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'SMS webhook processed successfully',
+        details: {
+          user_id: userId,
+          client_id: client.id,
+          conversation_id: conversation.id,
+          message_id: messageId
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     } else {
-      console.log('Skipping event - not an inbound message or missing required data');
+      console.log('Skipping event - not an inbound message or missing required data:', {
+        eventType,
+        direction,
+        hasFromPhone: !!fromPhone,
+        hasToPhone: !!toPhone,
+        hasMessageText: !!messageText
+      });
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Event skipped - not an inbound message' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'SMS webhook v2 processed' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
   } catch (error) {
-    console.error('Error processing SMS webhook v2:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    console.error('Error processing SMS webhook:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message || 'Unknown error processing webhook'
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
   } finally {
-    console.log('=== Telnyx SMS Webhook v2 END ===');
+    console.log('=== Telnyx SMS Webhook END ===');
   }
 });
