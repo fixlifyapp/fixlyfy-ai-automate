@@ -29,6 +29,8 @@ export const UnifiedMessageList = ({
   clientName,
   clientInfo 
 }: UnifiedMessageListProps) => {
+  console.log('UnifiedMessageList rendering with messages:', messages);
+  
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -54,6 +56,8 @@ export const UnifiedMessageList = ({
         const senderInitials = isFromClient 
           ? clientName.substring(0, 2).toUpperCase()
           : 'ME';
+
+        console.log('Rendering message:', message.id, 'isFromClient:', isFromClient, 'sender:', senderName);
 
         return (
           <div 
