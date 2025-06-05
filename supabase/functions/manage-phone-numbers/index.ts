@@ -61,7 +61,7 @@ serve(async (req) => {
       }
 
       // Configure SMS and Voice webhooks with correct URLs
-      const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
+      const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/sms-receiver'
       const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
 
       // First, configure the messaging profile to ensure SMS webhook is set properly
@@ -116,6 +116,15 @@ serve(async (req) => {
 
         console.log('Phone number configuration result:', result)
       }
+
+      // Update the database record with the new webhook URL
+      await supabaseClient
+        .from('telnyx_phone_numbers')
+        .update({ 
+          webhook_url: smsWebhookUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', phone_number_id)
 
       return new Response(
         JSON.stringify({ 

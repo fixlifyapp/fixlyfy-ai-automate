@@ -21,3 +21,6 @@ port = 54323
 
 [functions.sms-receiver]
 verify_jwt = false
+
+[functions.update-webhook-url]
+verify_jwt = false
