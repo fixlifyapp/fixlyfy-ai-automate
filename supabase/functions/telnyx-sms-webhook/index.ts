@@ -26,6 +26,14 @@ interface TelnyxSMSEventV2 {
   webhook_failover_url?: string;
 }
 
+// Interface for nested webhook data
+interface NestedWebhookData {
+  data?: {
+    event_type?: string;
+    payload?: TelnyxSMSEventV2;
+  };
+}
+
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
   if (cleaned.startsWith('1') && cleaned.length === 11) {
@@ -135,16 +143,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const webhookData: TelnyxSMSEventV2 = await req.json();
+    const webhookData: TelnyxSMSEventV2 | NestedWebhookData = await req.json();
     console.log('SMS webhook v2 data:', JSON.stringify(webhookData, null, 2));
 
-    // For v2, the payload is at the root level, not nested under data.payload
-    const eventType = webhookData.event_type;
-    const messageId = webhookData.id;
-    const fromPhone = webhookData.from?.phone_number;
-    const toPhone = webhookData.to?.[0]?.phone_number;
-    const messageText = webhookData.text;
-    const direction = webhookData.direction;
+    // Handle both direct format and nested format
+    let eventData: TelnyxSMSEventV2;
+    
+    // Check if data is nested (from test webhook calls)
+    if ('data' in webhookData && webhookData.data?.payload) {
+      console.log('Processing nested webhook data format');
+      eventData = webhookData.data.payload;
+    } else {
+      console.log('Processing direct webhook data format');
+      eventData = webhookData as TelnyxSMSEventV2;
+    }
+
+    const eventType = eventData.event_type;
+    const messageId = eventData.id;
+    const fromPhone = eventData.from?.phone_number;
+    const toPhone = eventData.to?.[0]?.phone_number;
+    const messageText = eventData.text;
+    const direction = eventData.direction;
 
     console.log('SMS Event v2:', {
       eventType,
