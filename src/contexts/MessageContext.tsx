@@ -89,7 +89,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('📨 Raw conversations data from DB:', conversationsData?.length || 0, 'conversations');
-      console.log('📨 Detailed conversations data:', JSON.stringify(conversationsData, null, 2));
 
       const formattedConversations: Conversation[] = (conversationsData || []).map(conv => {
         const sortedMessages = (conv.messages || []).sort((a, b) => 
@@ -119,10 +118,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       });
 
       console.log('✅ Formatted conversations:', formattedConversations.length, 'total');
-      formattedConversations.forEach(conv => {
-        console.log(`📨 Conversation ${conv.id}: ${conv.client.name} - ${conv.messages.length} messages`);
-      });
-      
       setConversations(formattedConversations);
     } catch (error) {
       console.error('💥 Error in fetchConversations:', error);
@@ -139,7 +134,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const openMessageDialog = (client: Client, jobId?: string) => {
     console.log('💬 Setting active conversation for client:', client);
     
-    // Find and set active conversation for the right panel
     const conversation = conversations.find(conv => conv.client.id === client.id);
     setActiveConversation(conversation || {
       id: `temp-${client.id}`,
@@ -158,7 +152,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('📤 Sending message:', message, 'to client:', activeConversation.client.name);
       
-      // After sending, refresh conversations to get the updated data
       setTimeout(() => {
         refreshConversations();
       }, 1000);
@@ -186,7 +179,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         },
         (payload) => {
           console.log('🔔 Conversation change detected:', payload);
-          fetchConversations();
+          setTimeout(() => fetchConversations(), 500);
         }
       )
       .subscribe();
@@ -203,7 +196,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         },
         (payload) => {
           console.log('🔔 Message change detected:', payload);
-          fetchConversations();
+          setTimeout(() => fetchConversations(), 500);
         }
       )
       .subscribe();

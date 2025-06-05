@@ -1,24 +1,16 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Send, MessageSquare, Phone, Mail } from "lucide-react";
+import { Search, Send, MessageSquare, Phone, Mail, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-interface SimpleMessage {
-  id: string;
-  body: string;
-  direction: 'inbound' | 'outbound';
-  created_at: string;
-  sender?: string;
-  client_name?: string;
-}
+import { sendClientMessage } from "@/components/jobs/hooks/messaging/messagingUtils";
 
 export const SimpleMessagesInterface = () => {
   const { conversations, refreshConversations, isLoading } = useMessageContext();
@@ -29,6 +21,15 @@ export const SimpleMessagesInterface = () => {
 
   console.log('SimpleMessagesInterface conversations:', conversations);
 
+  // Auto-refresh conversations every 5 seconds to catch new messages
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshConversations();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [refreshConversations]);
+
   const filteredConversations = conversations.filter(conv =>
     conv.client.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -36,19 +37,40 @@ export const SimpleMessagesInterface = () => {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation || isSending) return;
 
+    if (!selectedConversation.client.phone) {
+      toast.error("No phone number available for this client");
+      return;
+    }
+
     setIsSending(true);
+    console.log('Sending message:', messageText, 'to:', selectedConversation.client.name, 'phone:', selectedConversation.client.phone);
+
     try {
-      // Simple message sending logic
-      console.log('Sending message:', messageText, 'to:', selectedConversation.client.name);
-      
-      // Here we would implement the actual sending logic
-      // For now, just show success and refresh
-      toast.success("Message sent successfully");
-      setMessageText("");
-      await refreshConversations();
+      const result = await sendClientMessage({
+        content: messageText.trim(),
+        clientPhone: selectedConversation.client.phone,
+        jobId: "",
+        clientId: selectedConversation.client.id,
+        existingConversationId: selectedConversation.id
+      });
+
+      console.log('Message send result:', result);
+
+      if (result.success) {
+        setMessageText("");
+        toast.success("Message sent successfully");
+        
+        // Refresh conversations immediately to show the new message
+        setTimeout(() => {
+          refreshConversations();
+        }, 1000);
+      } else {
+        console.error("Message sending failed:", result.error);
+        toast.error(`Failed to send message: ${result.error || 'Unknown error'}`);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error("Failed to send message");
+      toast.error("Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -61,6 +83,20 @@ export const SimpleMessagesInterface = () => {
     }
   };
 
+  const formatMessageTime = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      });
+    } catch {
+      return 'Unknown time';
+    }
+  };
+
   return (
     <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden bg-white">
       <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -69,7 +105,21 @@ export const SimpleMessagesInterface = () => {
           <div className="h-full flex flex-col border-r border-gray-200">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="font-semibold text-lg mb-3">Messages</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-lg">Messages</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshConversations}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Refresh"
+                  )}
+                </Button>
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -84,7 +134,10 @@ export const SimpleMessagesInterface = () => {
             {/* Conversations List */}
             <div className="flex-1 overflow-y-auto">
               {isLoading ? (
-                <div className="p-4">Loading conversations...</div>
+                <div className="p-4 text-center">
+                  <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+                  <p>Loading conversations...</p>
+                </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
                   <MessageSquare className="mx-auto mb-2 h-8 w-8" />
@@ -112,18 +165,23 @@ export const SimpleMessagesInterface = () => {
                             {conversation.client.name}
                           </h4>
                           <span className="text-xs text-gray-500">
-                            {conversation.lastMessageTime ? new Date(conversation.lastMessageTime).toLocaleDateString() : ''}
+                            {conversation.lastMessageTime ? formatMessageTime(conversation.lastMessageTime) : ''}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 truncate mt-1">
                           {conversation.lastMessage || 'No messages'}
                         </p>
-                        {conversation.client.phone && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <Phone className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">{conversation.client.phone}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {conversation.client.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-500">{conversation.client.phone}</span>
+                            </div>
+                          )}
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {conversation.messages.length} messages
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -190,6 +248,8 @@ export const SimpleMessagesInterface = () => {
                     ) : (
                       selectedConversation.messages.map((message: any) => {
                         const isFromClient = message.direction === 'inbound';
+                        const displaySender = isFromClient ? selectedConversation.client.name : 'You';
+                        
                         return (
                           <div
                             key={message.id}
@@ -223,7 +283,7 @@ export const SimpleMessagesInterface = () => {
                                 <p className="text-sm break-words">{message.body}</p>
                               </div>
                               <span className="text-xs text-gray-500 mt-1">
-                                {new Date(message.created_at).toLocaleString()}
+                                {displaySender} • {formatMessageTime(message.created_at)}
                               </span>
                             </div>
                           </div>
@@ -245,7 +305,7 @@ export const SimpleMessagesInterface = () => {
                         onChange={(e) => setMessageText(e.target.value)}
                         onKeyDown={handleKeyDown}
                         disabled={isSending}
-                        className="flex-1 resize-none"
+                        className="flex-1 resize-none min-h-[80px]"
                       />
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-500">
@@ -258,7 +318,7 @@ export const SimpleMessagesInterface = () => {
                         >
                           {isSending ? (
                             <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <Loader2 className="w-4 h-4 animate-spin" />
                               Sending...
                             </div>
                           ) : (
