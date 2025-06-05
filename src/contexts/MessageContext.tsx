@@ -1,11 +1,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MessageInput } from "@/components/messages/MessageInput";
-import { UnifiedMessageList } from "@/components/messages/UnifiedMessageList";
-import { useMessageDialog } from "@/components/messages/hooks/useMessageDialog";
-import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
 
 interface Client {
   id: string;
@@ -55,8 +50,6 @@ export const useMessageContext = () => {
 export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [isSending, setIsSending] = useState(false);
 
@@ -135,22 +128,32 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const openMessageDialog = (client: Client, jobId?: string) => {
-    console.log('Opening message dialog for client:', client);
-    setSelectedClient(client);
-    setDialogOpen(true);
+    console.log('Setting active conversation for client:', client);
     
-    // Find and set active conversation
+    // Find and set active conversation for the right panel
     const conversation = conversations.find(conv => conv.client.id === client.id);
-    setActiveConversation(conversation || null);
+    setActiveConversation(conversation || {
+      id: `temp-${client.id}`,
+      client,
+      messages: [],
+      lastMessage: 'No messages yet',
+      lastMessageTime: new Date().toISOString(),
+      unreadCount: 0
+    });
   };
 
   const sendMessage = async (message: string) => {
-    if (!selectedClient || !message.trim()) return;
+    if (!activeConversation || !message.trim()) return;
     
     setIsSending(true);
     try {
       // Implementation will be handled by the useMessageSending hook
-      console.log('Sending message:', message, 'to client:', selectedClient.name);
+      console.log('Sending message:', message, 'to client:', activeConversation.client.name);
+      
+      // After sending, refresh conversations to get the updated data
+      setTimeout(() => {
+        refreshConversations();
+      }, 1000);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -202,50 +205,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const {
-    message,
-    setMessage,
-    messages,
-    isLoading: isDialogLoading,
-    isLoadingMessages,
-    handleSendMessage,
-    conversationId
-  } = useMessageDialog({ 
-    client: selectedClient || { id: '', name: '', phone: '', email: '' }, 
-    open: dialogOpen 
-  });
-
-  const handleUseSuggestion = (content: string) => {
-    setMessage(content);
-  };
-
-  const { isAILoading, handleSuggestResponse } = useMessageAI({
-    messages: messages.map(msg => ({
-      id: msg.id,
-      body: msg.text,
-      direction: msg.isClient ? 'inbound' as const : 'outbound' as const,
-      created_at: msg.timestamp,
-      sender: msg.sender
-    })),
-    client: selectedClient || { id: '', name: '', phone: '', email: '' },
-    jobId: '',
-    onUseSuggestion: handleUseSuggestion
-  });
-
-  const handleDialogSendMessage = async () => {
-    await handleSendMessage();
-    // Refresh conversations after sending message
-    setTimeout(() => {
-      refreshConversations();
-    }, 1000);
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleDialogSendMessage();
-  };
-
   return (
     <MessageContext.Provider value={{
       conversations,
@@ -257,46 +216,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       isSending
     }}>
       {children}
-      
-      {/* Message Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              Message {selectedClient?.name}
-              {selectedClient?.phone && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({selectedClient.phone})
-                </span>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-hidden flex flex-col gap-4">
-            <div className="flex-1 overflow-y-auto">
-              <UnifiedMessageList 
-                messages={messages}
-                isLoading={isLoadingMessages}
-                clientName={selectedClient?.name || ''}
-              />
-            </div>
-            
-            <form onSubmit={handleFormSubmit} className="flex-shrink-0">
-              <MessageInput
-                message={message}
-                setMessage={setMessage}
-                handleSendMessage={handleDialogSendMessage}
-                isLoading={isDialogLoading}
-                showSuggestResponse={true}
-                onSuggestResponse={handleSuggestResponse}
-                isAILoading={isAILoading}
-                clientInfo={selectedClient || { id: '', name: '', phone: '', email: '' }}
-                messages={messages}
-              />
-            </form>
-          </div>
-        </DialogContent>
-      </Dialog>
     </MessageContext.Provider>
   );
 };
