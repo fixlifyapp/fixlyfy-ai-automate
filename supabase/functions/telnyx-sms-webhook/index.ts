@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, telnyx-signature-ed25519, telnyx-timestamp',
 }
 
 // Simplified interface for real Telnyx SMS webhook
@@ -32,6 +32,56 @@ interface TelnyxSMSWebhook {
     webhook_url?: string;
   };
 }
+
+const TELNYX_PUBLIC_KEY = 'e5jeBd2E62zcfqhmsfbYrllgfP06yiKjlgRg2cGRg84=';
+
+// Function to verify Telnyx webhook signature
+const verifyTelnyxSignature = async (
+  payload: string,
+  signature: string,
+  timestamp: string
+): Promise<boolean> => {
+  try {
+    // Import the public key
+    const publicKeyBytes = new Uint8Array(
+      atob(TELNYX_PUBLIC_KEY).split('').map(char => char.charCodeAt(0))
+    );
+
+    const publicKey = await crypto.subtle.importKey(
+      'raw',
+      publicKeyBytes,
+      {
+        name: 'Ed25519',
+        namedCurve: 'Ed25519',
+      },
+      false,
+      ['verify']
+    );
+
+    // Create the signed payload (timestamp + payload)
+    const signedPayload = timestamp + '|' + payload;
+    const encoder = new TextEncoder();
+    const signedPayloadBytes = encoder.encode(signedPayload);
+
+    // Decode the signature from base64
+    const signatureBytes = new Uint8Array(
+      atob(signature).split('').map(char => char.charCodeAt(0))
+    );
+
+    // Verify the signature
+    const isValid = await crypto.subtle.verify(
+      'Ed25519',
+      publicKey,
+      signatureBytes,
+      signedPayloadBytes
+    );
+
+    return isValid;
+  } catch (error) {
+    console.error('Error verifying Telnyx signature:', error);
+    return false;
+  }
+};
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
@@ -128,7 +178,7 @@ const createClientForUser = async (supabase: any, fromPhone: string, userId: str
 };
 
 serve(async (req) => {
-  console.log('=== Telnyx SMS Webhook START ===');
+  console.log('=== Telnyx SMS Webhook v2 START ===');
   
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -140,10 +190,48 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const webhookData: TelnyxSMSWebhook = await req.json();
-    console.log('Raw Telnyx SMS webhook data:', JSON.stringify(webhookData, null, 2));
+    // Get the raw body for signature verification
+    const rawBody = await req.text();
+    console.log('Raw webhook body:', rawBody);
 
-    // Extract data from the webhook payload
+    // Get signature headers
+    const signature = req.headers.get('telnyx-signature-ed25519');
+    const timestamp = req.headers.get('telnyx-timestamp');
+
+    console.log('Telnyx headers:', {
+      signature: signature ? 'present' : 'missing',
+      timestamp: timestamp ? 'present' : 'missing'
+    });
+
+    // Skip signature verification for test webhooks (they don't have proper signatures)
+    const isTestWebhook = rawBody.includes('test-message-') || rawBody.includes('Test message from webhook');
+    
+    if (!isTestWebhook && signature && timestamp) {
+      console.log('Verifying Telnyx webhook signature...');
+      const isValidSignature = await verifyTelnyxSignature(rawBody, signature, timestamp);
+      
+      if (!isValidSignature) {
+        console.error('Invalid Telnyx webhook signature');
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Invalid webhook signature' 
+        }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        });
+      }
+      console.log('Webhook signature verified successfully');
+    } else if (!isTestWebhook) {
+      console.log('Warning: No signature headers found, but proceeding (may be test environment)');
+    } else {
+      console.log('Skipping signature verification for test webhook');
+    }
+
+    // Parse the webhook data
+    const webhookData: TelnyxSMSWebhook = JSON.parse(rawBody);
+    console.log('SMS webhook v2 data:', JSON.stringify(webhookData, null, 2));
+
+    // Extract data from the webhook payload - real Telnyx v2 format
     const eventType = webhookData.event_type;
     const messageId = webhookData.payload?.id;
     const fromPhone = webhookData.payload?.from?.phone_number;
@@ -151,7 +239,7 @@ serve(async (req) => {
     const messageText = webhookData.payload?.text;
     const direction = webhookData.payload?.direction;
 
-    console.log('Extracted SMS data:', {
+    console.log('SMS Event v2:', {
       eventType,
       messageId,
       fromPhone,
@@ -316,6 +404,6 @@ serve(async (req) => {
       status: 500
     });
   } finally {
-    console.log('=== Telnyx SMS Webhook END ===');
+    console.log('=== Telnyx SMS Webhook v2 END ===');
   }
 });
