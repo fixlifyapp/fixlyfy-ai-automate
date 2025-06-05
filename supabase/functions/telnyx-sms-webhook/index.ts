@@ -7,26 +7,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface TelnyxSMSEvent {
-  data?: {
-    event_type?: string;
-    id?: string;
-    payload?: {
-      id?: string;
-      from?: {
-        phone_number?: string;
-      };
-      to?: Array<{
-        phone_number?: string;
-      }>;
-      text?: string;
-      direction?: string;
-      completed_at?: string;
-      sent_at?: string;
-      received_at?: string;
-      webhook_failover_url?: string;
-    };
+// Updated interface for Telnyx API v2 format
+interface TelnyxSMSEventV2 {
+  record_type?: string;
+  event_type?: string;
+  id?: string;
+  from?: {
+    phone_number?: string;
   };
+  to?: Array<{
+    phone_number?: string;
+  }>;
+  text?: string;
+  direction?: string;
+  completed_at?: string;
+  sent_at?: string;
+  received_at?: string;
+  webhook_failover_url?: string;
 }
 
 const formatPhoneNumber = (phone: string): string => {
@@ -126,7 +123,7 @@ const createClientForUser = async (supabase: any, fromPhone: string, userId: str
 };
 
 serve(async (req) => {
-  console.log('=== Telnyx SMS Webhook START ===');
+  console.log('=== Telnyx SMS Webhook v2 START ===');
   
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -138,23 +135,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const webhookData: TelnyxSMSEvent = await req.json();
-    console.log('SMS webhook data:', JSON.stringify(webhookData, null, 2));
+    const webhookData: TelnyxSMSEventV2 = await req.json();
+    console.log('SMS webhook v2 data:', JSON.stringify(webhookData, null, 2));
 
-    const payload = webhookData.data?.payload;
-    if (!payload) {
-      console.log('No payload in webhook data');
-      return new Response('No payload', { status: 400 });
-    }
+    // For v2, the payload is at the root level, not nested under data.payload
+    const eventType = webhookData.event_type;
+    const messageId = webhookData.id;
+    const fromPhone = webhookData.from?.phone_number;
+    const toPhone = webhookData.to?.[0]?.phone_number;
+    const messageText = webhookData.text;
+    const direction = webhookData.direction;
 
-    const eventType = webhookData.data?.event_type;
-    const messageId = payload.id;
-    const fromPhone = payload.from?.phone_number;
-    const toPhone = payload.to?.[0]?.phone_number;
-    const messageText = payload.text;
-    const direction = payload.direction;
-
-    console.log('SMS Event:', {
+    console.log('SMS Event v2:', {
       eventType,
       messageId,
       fromPhone,
@@ -165,7 +157,7 @@ serve(async (req) => {
 
     // Only process received messages (incoming SMS)
     if (eventType === 'message.received' && direction === 'inbound' && fromPhone && toPhone && messageText) {
-      console.log('Processing inbound SMS...');
+      console.log('Processing inbound SMS v2...');
 
       // STEP 1: Find which user owns the receiving phone number
       const userId = await findUserByReceivingNumber(supabaseAdmin, toPhone);
@@ -259,17 +251,17 @@ serve(async (req) => {
       console.log('Skipping event - not an inbound message or missing required data');
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'SMS webhook processed' }), {
+    return new Response(JSON.stringify({ success: true, message: 'SMS webhook v2 processed' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error processing SMS webhook:', error);
+    console.error('Error processing SMS webhook v2:', error);
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
   } finally {
-    console.log('=== Telnyx SMS Webhook END ===');
+    console.log('=== Telnyx SMS Webhook v2 END ===');
   }
 });

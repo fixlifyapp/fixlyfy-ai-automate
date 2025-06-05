@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -64,9 +63,9 @@ serve(async (req) => {
       const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
       const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
 
-      // Update the phone number configuration in Telnyx for SMS
+      // Update the phone number configuration in Telnyx for Voice
       if (phoneData.telnyx_number_id) {
-        console.log('Configuring SMS webhooks for Telnyx number:', phoneData.telnyx_number_id)
+        console.log('Configuring Voice webhooks for Telnyx number:', phoneData.telnyx_number_id)
         
         const response = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneData.telnyx_number_id}`, {
           method: 'PATCH',
@@ -92,8 +91,8 @@ serve(async (req) => {
 
         console.log('Phone number configuration result:', result)
 
-        // Also configure the messaging profile to ensure SMS webhook is set
-        console.log('Configuring messaging profile webhook...')
+        // Configure the messaging profile to ensure SMS webhook is set to v2
+        console.log('Configuring messaging profile webhook for v2...')
         const messagingResponse = await fetch('https://api.telnyx.com/v2/messaging_profiles/4001972b-8bcb-40d6-afe4-363fd5ccada1', {
           method: 'PATCH',
           headers: {
@@ -103,7 +102,7 @@ serve(async (req) => {
           body: JSON.stringify({
             webhook_url: smsWebhookUrl,
             webhook_failover_url: smsWebhookUrl,
-            webhook_api_version: "2"
+            webhook_api_version: "v2"  // Changed from "2" to "v2"
           })
         })
 
@@ -114,13 +113,13 @@ serve(async (req) => {
           throw new Error(messagingResult.errors?.[0]?.detail || 'Failed to configure messaging profile')
         }
 
-        console.log('Messaging profile configured successfully:', messagingResult)
+        console.log('Messaging profile configured successfully for v2:', messagingResult)
       }
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'SMS and Voice webhooks configured successfully'
+          message: 'SMS and Voice webhooks configured successfully for v2'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
