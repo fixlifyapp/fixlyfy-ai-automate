@@ -15,8 +15,24 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    // Get the authorization header to determine the user
+    const authHeader = req.headers.get('Authorization')
+    console.log('Authorization header present:', !!authHeader)
+    
+    // Verify the user token
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
+      authHeader?.replace('Bearer ', '') || ''
+    )
+    
+    if (authError || !user) {
+      console.error('Authentication error:', authError)
+      throw new Error('Authentication required')
+    }
+    
+    console.log('Authenticated user:', user.id)
 
     const { to, body, client_id, job_id } = await req.json()
     
@@ -42,34 +58,36 @@ serve(async (req) => {
       throw new Error('SMS service not configured. Please contact support.')
     }
 
-    // Get company settings for dynamic phone number
-    const { data: companySettings } = await supabaseClient
-      .from('company_settings')
-      .select('company_phone')
+    // Get user's active phone number from telnyx_phone_numbers
+    console.log('Fetching user phone numbers for user:', user.id)
+    const { data: phoneNumbers, error: phoneError } = await supabaseClient
+      .from('telnyx_phone_numbers')
+      .select('phone_number, status')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
       .limit(1)
-      .maybeSingle()
 
-    let fromPhone = companySettings?.company_phone?.replace(/\D/g, '') || null
-    
-    // If no company phone is configured, use a default or show helpful error
-    if (!fromPhone) {
-      console.error('Company phone number not configured in settings')
-      
-      // For testing purposes, we'll use the integration tester to guide users
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Company phone number not configured. Please set your company phone number in Settings before sending SMS messages.',
-          helpText: 'Go to Settings > Company Settings and add your phone number.'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      )
+    if (phoneError) {
+      console.error('Error fetching phone numbers:', phoneError)
+      throw new Error('Failed to fetch phone numbers')
     }
 
-    const formattedFromPhone = fromPhone.length === 10 ? `+1${fromPhone}` : `+${fromPhone}`
+    console.log('Found phone numbers:', phoneNumbers)
+
+    if (!phoneNumbers || phoneNumbers.length === 0) {
+      console.error('No active phone numbers found for user:', user.id)
+      throw new Error('No active phone numbers configured. Please purchase a phone number first.')
+    }
+
+    const fromPhone = phoneNumbers[0].phone_number
+    console.log('Using sender phone number:', fromPhone)
+
+    // Ensure the phone number is properly formatted
+    let formattedFromPhone = fromPhone
+    if (!fromPhone.startsWith('+')) {
+      const cleanFromPhone = fromPhone.replace(/\D/g, '')
+      formattedFromPhone = cleanFromPhone.length === 10 ? `+1${cleanFromPhone}` : `+${cleanFromPhone}`
+    }
 
     console.log('Sending SMS from:', formattedFromPhone, 'to:', formattedPhone)
 
@@ -94,6 +112,71 @@ serve(async (req) => {
     }
 
     console.log('SMS sent successfully via Telnyx:', result)
+
+    // Store the message in the database if we have conversation context
+    if (client_id) {
+      console.log('Storing message in database for client:', client_id)
+      
+      // Try to find or create a conversation
+      let conversationId = null
+      
+      const { data: existingConversation } = await supabaseClient
+        .from('conversations')
+        .select('id')
+        .eq('client_id', client_id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+
+      if (existingConversation) {
+        conversationId = existingConversation.id
+        console.log('Using existing conversation:', conversationId)
+      } else {
+        console.log('Creating new conversation for client:', client_id)
+        const { data: newConversation, error: convError } = await supabaseClient
+          .from('conversations')
+          .insert({
+            client_id: client_id,
+            job_id: job_id || null,
+            status: 'active',
+            last_message_at: new Date().toISOString()
+          })
+          .select('id')
+          .single()
+
+        if (!convError && newConversation) {
+          conversationId = newConversation.id
+          console.log('Created new conversation:', conversationId)
+        }
+      }
+
+      // Store the message
+      if (conversationId) {
+        const { error: msgError } = await supabaseClient
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            body: body,
+            direction: 'outbound',
+            sender: 'System',
+            recipient: formattedPhone,
+            status: 'delivered',
+            message_sid: result.data?.id || 'telnyx-' + Date.now()
+          })
+
+        if (msgError) {
+          console.error('Error storing message:', msgError)
+        } else {
+          console.log('Message stored successfully')
+        }
+
+        // Update conversation timestamp
+        await supabaseClient
+          .from('conversations')
+          .update({ last_message_at: new Date().toISOString() })
+          .eq('id', conversationId)
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, data: result }),
