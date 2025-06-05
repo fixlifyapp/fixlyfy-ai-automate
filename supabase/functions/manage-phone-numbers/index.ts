@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -59,6 +60,10 @@ serve(async (req) => {
         throw new Error('Phone number not found or not owned by user')
       }
 
+      // Configure SMS and Voice webhooks with correct URLs
+      const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
+      const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
+
       // First, configure the messaging profile to ensure SMS webhook is set properly
       console.log('Configuring messaging profile webhook...')
       const messagingResponse = await fetch('https://api.telnyx.com/v2/messaging_profiles/4001972b-8bcb-40d6-afe4-363fd5ccada1', {
@@ -82,10 +87,6 @@ serve(async (req) => {
       }
 
       console.log('Messaging profile configured successfully:', messagingResult)
-
-      // Configure SMS and Voice webhooks with correct URLs
-      const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
-      const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
 
       // Update the phone number configuration in Telnyx for Voice
       if (phoneData.telnyx_number_id) {
@@ -124,79 +125,6 @@ serve(async (req) => {
             messaging_profile: messagingResult,
             sms_webhook: smsWebhookUrl,
             voice_webhook: voiceWebhookUrl
-          }
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      )
-    }
-
-    if (action === 'test_webhook') {
-      // Test webhook connectivity with proper v2 format
-      console.log('Testing webhook for phone number:', phone_number)
-      
-      // Create a proper test payload that matches Telnyx v2 format
-      const testPayload = {
-        record_type: "event",
-        event_type: "message.received",
-        id: 'test-event-' + Date.now(),
-        occurred_at: new Date().toISOString(),
-        payload: {
-          id: 'test-message-' + Date.now(),
-          record_type: "message",
-          direction: "inbound",
-          from: { 
-            phone_number: "+1234567890",
-            carrier: "Test Carrier"
-          },
-          to: [{ 
-            phone_number: phone_number,
-            carrier: "Telnyx"
-          }],
-          text: "🧪 Test message from webhook configuration - this is a test!",
-          completed_at: new Date().toISOString(),
-          received_at: new Date().toISOString(),
-          sent_at: new Date().toISOString(),
-          webhook_url: "https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook"
-        }
-      }
-
-      console.log('Sending test payload to webhook:', JSON.stringify(testPayload, null, 2))
-
-      const webhookResponse = await fetch('https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'TelnyxWebhookTest/1.0'
-        },
-        body: JSON.stringify(testPayload)
-      })
-
-      const webhookResult = await webhookResponse.text()
-      
-      console.log('Webhook response status:', webhookResponse.status)
-      console.log('Webhook response body:', webhookResult)
-      
-      let webhookData
-      try {
-        webhookData = JSON.parse(webhookResult)
-      } catch (e) {
-        webhookData = { raw_response: webhookResult }
-      }
-
-      const success = webhookResponse.ok && (webhookData?.success !== false)
-      
-      return new Response(
-        JSON.stringify({ 
-          success: success,
-          message: success ? 'Webhook test completed successfully' : 'Webhook test completed with issues',
-          details: {
-            status: webhookResponse.status,
-            response: webhookData,
-            test_phone: phone_number,
-            webhook_url: 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
           }
         }),
         {

@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, telnyx-signature-ed25519, telnyx-timestamp',
 }
 
-// Simplified interface for real Telnyx SMS webhook
+// Interface for Telnyx SMS webhook v2
 interface TelnyxSMSWebhook {
   record_type?: string;
   event_type?: string;
@@ -178,7 +178,7 @@ const createClientForUser = async (supabase: any, fromPhone: string, userId: str
 };
 
 serve(async (req) => {
-  console.log('=== Telnyx SMS Webhook v2 START ===');
+  console.log('=== Telnyx SMS Webhook START ===');
   
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -203,10 +203,8 @@ serve(async (req) => {
       timestamp: timestamp ? 'present' : 'missing'
     });
 
-    // Skip signature verification for test webhooks (they don't have proper signatures)
-    const isTestWebhook = rawBody.includes('test-message-') || rawBody.includes('Test message from webhook');
-    
-    if (!isTestWebhook && signature && timestamp) {
+    // Verify webhook signature if headers are present
+    if (signature && timestamp) {
       console.log('Verifying Telnyx webhook signature...');
       const isValidSignature = await verifyTelnyxSignature(rawBody, signature, timestamp);
       
@@ -221,17 +219,15 @@ serve(async (req) => {
         });
       }
       console.log('Webhook signature verified successfully');
-    } else if (!isTestWebhook) {
-      console.log('Warning: No signature headers found, but proceeding (may be test environment)');
     } else {
-      console.log('Skipping signature verification for test webhook');
+      console.log('Warning: No signature headers found');
     }
 
     // Parse the webhook data
     const webhookData: TelnyxSMSWebhook = JSON.parse(rawBody);
-    console.log('SMS webhook v2 data:', JSON.stringify(webhookData, null, 2));
+    console.log('SMS webhook data:', JSON.stringify(webhookData, null, 2));
 
-    // Extract data from the webhook payload - real Telnyx v2 format
+    // Extract data from the webhook payload
     const eventType = webhookData.event_type;
     const messageId = webhookData.payload?.id;
     const fromPhone = webhookData.payload?.from?.phone_number;
@@ -239,7 +235,7 @@ serve(async (req) => {
     const messageText = webhookData.payload?.text;
     const direction = webhookData.payload?.direction;
 
-    console.log('SMS Event v2:', {
+    console.log('SMS Event:', {
       eventType,
       messageId,
       fromPhone,
@@ -404,6 +400,6 @@ serve(async (req) => {
       status: 500
     });
   } finally {
-    console.log('=== Telnyx SMS Webhook v2 END ===');
+    console.log('=== Telnyx SMS Webhook END ===');
   }
 });
