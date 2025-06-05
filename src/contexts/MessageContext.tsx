@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -105,7 +104,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions with improved error handling
   useEffect(() => {
     console.log('MessageContext: Setting up real-time subscriptions');
     
@@ -121,7 +120,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         },
         (payload) => {
           console.log('MessageContext: Conversation change detected:', payload);
-          refreshConversations();
+          // Debounce refresh to avoid too many updates
+          setTimeout(() => refreshConversations(), 100);
         }
       )
       .subscribe();
@@ -138,7 +138,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         },
         (payload) => {
           console.log('MessageContext: Message change detected:', payload);
-          refreshConversations();
+          // Debounce refresh to avoid too many updates
+          setTimeout(() => refreshConversations(), 100);
         }
       )
       .subscribe();
@@ -226,7 +227,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
           setActiveConversation(tempConversation);
           console.log('MessageContext: Created temporary active conversation object');
         }
-      }, 100);
+      }, 200);
 
       toast.success(`Message dialog opened for ${client.name}`);
       

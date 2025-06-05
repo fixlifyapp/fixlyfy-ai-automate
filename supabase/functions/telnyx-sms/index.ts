@@ -166,20 +166,34 @@ serve(async (req) => {
 
         if (msgError) {
           console.error('Error storing message:', msgError)
+          // Don't throw error here, message was sent successfully
         } else {
           console.log('Message stored successfully')
         }
 
-        // Update conversation timestamp
-        await supabaseClient
+        // Update conversation timestamp to trigger real-time updates
+        const { error: updateError } = await supabaseClient
           .from('conversations')
-          .update({ last_message_at: new Date().toISOString() })
+          .update({ 
+            last_message_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
           .eq('id', conversationId)
+
+        if (updateError) {
+          console.error('Error updating conversation timestamp:', updateError)
+        } else {
+          console.log('Conversation timestamp updated for real-time sync')
+        }
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: result }),
+      JSON.stringify({ 
+        success: true, 
+        data: result,
+        message: 'Message sent successfully'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -188,7 +202,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error sending SMS:', error)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Failed to send message'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

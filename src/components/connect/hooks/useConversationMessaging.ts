@@ -28,21 +28,30 @@ export const useConversationMessaging = ({
   const { refreshConversations } = useMessageContext();
 
   const handleSendMessage = async (): Promise<void> => {
-    console.log("handleSendMessage called", { messageText, isSending, clientPhone, clientId });
+    console.log("handleSendMessage called", { 
+      messageText: messageText.substring(0, 50) + "...", 
+      isSending, 
+      clientPhone, 
+      clientId,
+      conversationId 
+    });
     
     if (!messageText.trim() || isSending) {
-      console.log("Message validation failed", { messageText: messageText.trim(), isSending });
+      console.log("Message validation failed", { 
+        hasMessage: !!messageText.trim(), 
+        isSending 
+      });
       return;
     }
 
     if (!clientPhone) {
-      console.log("No client phone available");
+      console.error("No client phone available");
       toast.error("No phone number available for this client");
       return;
     }
 
     if (!clientId) {
-      console.log("No client ID available");
+      console.error("No client ID available");
       toast.error("Client information is missing");
       return;
     }
@@ -65,16 +74,15 @@ export const useConversationMessaging = ({
         setMessageText("");
         toast.success("Message sent successfully");
         
-        // Refresh conversations to show the new message
         console.log("Refreshing conversations...");
-        refreshConversations();
+        await refreshConversations();
       } else {
         console.error("Message sending failed:", result.error);
         toast.error(`Failed to send message: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error("Failed to send message");
+      toast.error("Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
       console.log("Message send process completed");

@@ -85,12 +85,12 @@ export const UnifiedMessageList = ({
                 <p className="text-sm break-words">{message.body}</p>
               </div>
               <span className="text-xs text-muted-foreground mt-1">
-                {senderName} • {new Date(message.created_at).toLocaleString('ru-RU', {
+                {senderName} • {new Date(message.created_at).toLocaleString('en-US', {
                   month: 'short',
                   day: 'numeric',
                   hour: 'numeric',
                   minute: 'numeric',
-                  hour12: false
+                  hour12: true
                 })}
               </span>
             </div>
