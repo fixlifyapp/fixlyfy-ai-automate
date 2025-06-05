@@ -60,12 +60,14 @@ serve(async (req) => {
         throw new Error('Phone number not found or not owned by user')
       }
 
-      // Configure SMS webhook
+      // Configure SMS and Voice webhooks with correct URLs
       const smsWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-sms-webhook'
       const voiceWebhookUrl = 'https://mqppvcrlvsgrsqelglod.supabase.co/functions/v1/telnyx-voice-webhook'
 
-      // Update the phone number configuration in Telnyx
+      // Update the phone number configuration in Telnyx for SMS
       if (phoneData.telnyx_number_id) {
+        console.log('Configuring SMS webhooks for Telnyx number:', phoneData.telnyx_number_id)
+        
         const response = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneData.telnyx_number_id}`, {
           method: 'PATCH',
           headers: {
@@ -76,7 +78,8 @@ serve(async (req) => {
             messaging_profile_id: "4001972b-8bcb-40d6-afe4-363fd5ccada1", // Your messaging profile ID
             connection_id: "2467892542", // Your connection ID for voice
             voice_url: voiceWebhookUrl,
-            sms_url: smsWebhookUrl
+            voice_failover_url: voiceWebhookUrl,
+            voice_method: "POST"
           })
         })
 
@@ -87,13 +90,37 @@ serve(async (req) => {
           throw new Error(result.errors?.[0]?.detail || 'Failed to configure webhooks')
         }
 
-        console.log('Webhooks configured successfully:', result)
+        console.log('Phone number configuration result:', result)
+
+        // Also configure the messaging profile to ensure SMS webhook is set
+        console.log('Configuring messaging profile webhook...')
+        const messagingResponse = await fetch('https://api.telnyx.com/v2/messaging_profiles/4001972b-8bcb-40d6-afe4-363fd5ccada1', {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${telnyxApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            webhook_url: smsWebhookUrl,
+            webhook_failover_url: smsWebhookUrl,
+            webhook_api_version: "2"
+          })
+        })
+
+        const messagingResult = await messagingResponse.json()
+        
+        if (!messagingResponse.ok) {
+          console.error('Messaging profile configuration error:', messagingResult)
+          throw new Error(messagingResult.errors?.[0]?.detail || 'Failed to configure messaging profile')
+        }
+
+        console.log('Messaging profile configured successfully:', messagingResult)
       }
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Webhooks configured successfully'
+          message: 'SMS and Voice webhooks configured successfully'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
