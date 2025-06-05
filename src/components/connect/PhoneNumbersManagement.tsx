@@ -19,6 +19,7 @@ export const PhoneNumbersManagement = () => {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [configuringWebhooks, setConfiguringWebhooks] = useState<string | null>(null);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
 
   const fetchPhoneNumbers = async () => {
     try {
@@ -41,6 +42,8 @@ export const PhoneNumbersManagement = () => {
     setConfiguringWebhooks(phoneNumberId);
     
     try {
+      console.log('Configuring webhooks for:', phoneNumber, 'ID:', phoneNumberId);
+      
       const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
         body: {
           action: 'configure_webhooks',
@@ -49,7 +52,12 @@ export const PhoneNumbersManagement = () => {
         }
       });
 
-      if (error) throw error;
+      console.log('Configure webhooks response:', data, error);
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
 
       if (data?.success) {
         toast.success('Webhooks configured successfully');
@@ -57,16 +65,20 @@ export const PhoneNumbersManagement = () => {
       } else {
         throw new Error(data?.error || 'Failed to configure webhooks');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error configuring webhooks:', error);
-      toast.error('Failed to configure webhooks: ' + error.message);
+      toast.error('Failed to configure webhooks: ' + (error.message || 'Unknown error'));
     } finally {
       setConfiguringWebhooks(null);
     }
   };
 
   const testWebhook = async (phoneNumber: string) => {
+    setTestingWebhook(phoneNumber);
+    
     try {
+      console.log('Testing webhook for:', phoneNumber);
+      
       const { data, error } = await supabase.functions.invoke('manage-phone-numbers', {
         body: {
           action: 'test_webhook',
@@ -74,16 +86,25 @@ export const PhoneNumbersManagement = () => {
         }
       });
 
-      if (error) throw error;
+      console.log('Test webhook response:', data, error);
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
 
       if (data?.success) {
-        toast.success('Webhook test successful! Check your logs.');
+        toast.success('🎉 Webhook test successful! Check the console logs for details.');
+        console.log('Webhook test details:', data.details);
       } else {
-        toast.warning('Webhook test may have issues: ' + (data?.error || 'Unknown issue'));
+        toast.warning('⚠️ Webhook test completed with issues: ' + (data?.message || 'Unknown issue'));
+        console.log('Webhook test details:', data?.details);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing webhook:', error);
-      toast.error('Webhook test failed: ' + error.message);
+      toast.error('❌ Webhook test failed: ' + (error.message || 'Unknown error'));
+    } finally {
+      setTestingWebhook(null);
     }
   };
 
@@ -159,9 +180,14 @@ export const PhoneNumbersManagement = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => testWebhook(phone.phone_number)}
+                    disabled={testingWebhook === phone.phone_number}
                     className="gap-2"
                   >
-                    <RefreshCw className="h-4 w-4" />
+                    {testingWebhook === phone.phone_number ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
                     Test Webhook
                   </Button>
                   
