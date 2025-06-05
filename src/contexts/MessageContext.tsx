@@ -55,7 +55,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchConversations = async () => {
     try {
-      console.log('Fetching conversations...');
+      console.log('🔄 Fetching conversations from database...');
+      
       const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
@@ -75,18 +76,20 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
             direction,
             created_at,
             sender,
-            recipient
+            recipient,
+            status
           )
         `)
         .eq('status', 'active')
         .order('last_message_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching conversations:', error);
+        console.error('❌ Error fetching conversations:', error);
         return;
       }
 
-      console.log('Raw conversations data:', conversationsData);
+      console.log('📨 Raw conversations data from DB:', conversationsData?.length || 0, 'conversations');
+      console.log('📨 Detailed conversations data:', JSON.stringify(conversationsData, null, 2));
 
       const formattedConversations: Conversation[] = (conversationsData || []).map(conv => {
         const sortedMessages = (conv.messages || []).sort((a, b) => 
@@ -94,6 +97,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         );
 
         const lastMessage = sortedMessages[sortedMessages.length - 1];
+        
+        console.log(`📨 Processing conversation ${conv.id}: ${sortedMessages.length} messages, client: ${conv.clients?.name}`);
         
         return {
           id: conv.id,
@@ -113,22 +118,26 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         };
       });
 
-      console.log('Formatted conversations:', formattedConversations);
+      console.log('✅ Formatted conversations:', formattedConversations.length, 'total');
+      formattedConversations.forEach(conv => {
+        console.log(`📨 Conversation ${conv.id}: ${conv.client.name} - ${conv.messages.length} messages`);
+      });
+      
       setConversations(formattedConversations);
     } catch (error) {
-      console.error('Error in fetchConversations:', error);
+      console.error('💥 Error in fetchConversations:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const refreshConversations = async () => {
-    console.log('Refreshing conversations...');
+    console.log('🔄 Refreshing conversations...');
     await fetchConversations();
   };
 
   const openMessageDialog = (client: Client, jobId?: string) => {
-    console.log('Setting active conversation for client:', client);
+    console.log('💬 Setting active conversation for client:', client);
     
     // Find and set active conversation for the right panel
     const conversation = conversations.find(conv => conv.client.id === client.id);
@@ -147,15 +156,14 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     
     setIsSending(true);
     try {
-      // Implementation will be handled by the useMessageSending hook
-      console.log('Sending message:', message, 'to client:', activeConversation.client.name);
+      console.log('📤 Sending message:', message, 'to client:', activeConversation.client.name);
       
       // After sending, refresh conversations to get the updated data
       setTimeout(() => {
         refreshConversations();
       }, 1000);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
     } finally {
       setIsSending(false);
     }
@@ -163,6 +171,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
   // Set up real-time subscription for messages and conversations
   useEffect(() => {
+    console.log('🔄 Initial fetch of conversations...');
     fetchConversations();
 
     // Subscribe to conversation changes
@@ -175,8 +184,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
           schema: 'public',
           table: 'conversations'
         },
-        () => {
-          console.log('Conversation change detected, refreshing...');
+        (payload) => {
+          console.log('🔔 Conversation change detected:', payload);
           fetchConversations();
         }
       )
@@ -192,8 +201,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
           schema: 'public',
           table: 'messages'
         },
-        () => {
-          console.log('Message change detected, refreshing...');
+        (payload) => {
+          console.log('🔔 Message change detected:', payload);
           fetchConversations();
         }
       )

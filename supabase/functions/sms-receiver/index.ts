@@ -132,8 +132,6 @@ serve(async (req) => {
   console.log('Timestamp:', new Date().toISOString());
   console.log('Request method:', req.method);
   console.log('Request URL:', req.url);
-  console.log('User-Agent:', req.headers.get('user-agent'));
-  console.log('Content-Type:', req.headers.get('content-type'));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -152,7 +150,6 @@ serve(async (req) => {
     // Get the raw body
     const rawBody = await req.text();
     console.log('Raw webhook body received, length:', rawBody.length);
-    console.log('Raw webhook body preview:', rawBody.substring(0, 500));
 
     // Parse the webhook data
     let webhookData: TelnyxSMSWebhook;
@@ -160,7 +157,6 @@ serve(async (req) => {
       webhookData = JSON.parse(rawBody);
       console.log('✅ Webhook data parsed successfully');
       console.log('Event type:', webhookData.event_type);
-      console.log('Record type:', webhookData.record_type);
     } catch (parseError) {
       console.error('❌ Failed to parse webhook JSON:', parseError);
       return new Response(JSON.stringify({ 
@@ -186,8 +182,7 @@ serve(async (req) => {
     console.log('From Phone:', fromPhone);
     console.log('To Phone:', toPhone);
     console.log('Direction:', direction);
-    console.log('Message Text Length:', messageText?.length || 0);
-    console.log('Message Text Preview:', messageText?.substring(0, 100));
+    console.log('Message Text:', messageText);
 
     // Only process received messages (incoming SMS)
     if (eventType === 'message.received' && direction === 'inbound' && fromPhone && toPhone && messageText) {
@@ -199,12 +194,7 @@ serve(async (req) => {
         console.error('❌ No user found for receiving number:', toPhone);
         return new Response(JSON.stringify({ 
           success: false, 
-          error: 'Receiving number not associated with any user',
-          debug: {
-            toPhone,
-            eventType,
-            direction
-          }
+          error: 'Receiving number not associated with any user'
         }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
@@ -224,12 +214,7 @@ serve(async (req) => {
           console.error('❌ Failed to create client');
           return new Response(JSON.stringify({ 
             success: false, 
-            error: 'Error creating client',
-            debug: {
-              fromPhone,
-              userId,
-              eventType
-            }
+            error: 'Error creating client'
           }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500 
@@ -284,11 +269,7 @@ serve(async (req) => {
           console.error('❌ Error creating conversation:', newConvError);
           return new Response(JSON.stringify({ 
             success: false, 
-            error: 'Error creating conversation',
-            debug: {
-              clientId: client.id,
-              error: newConvError
-            }
+            error: 'Error creating conversation'
           }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500 
@@ -301,7 +282,7 @@ serve(async (req) => {
 
       // STEP 5: Store the message
       console.log('📝 Storing message in conversation:', conversation.id);
-      const { error: messageError } = await supabaseAdmin
+      const { data: savedMessage, error: messageError } = await supabaseAdmin
         .from('messages')
         .insert({
           conversation_id: conversation.id,
@@ -312,25 +293,22 @@ serve(async (req) => {
           status: 'delivered',
           message_sid: messageId,
           created_at: new Date().toISOString()
-        });
+        })
+        .select()
+        .single();
 
       if (messageError) {
         console.error('❌ Error storing message:', messageError);
         return new Response(JSON.stringify({ 
           success: false, 
-          error: 'Error storing message',
-          debug: {
-            conversationId: conversation.id,
-            messageText: messageText.substring(0, 50),
-            error: messageError
-          }
+          error: 'Error storing message'
         }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         });
       }
 
-      console.log('✅ SMS message stored successfully!');
+      console.log('✅ SMS message stored successfully!', savedMessage);
       console.log('=== WEBHOOK PROCESSING COMPLETE ===');
       
       return new Response(JSON.stringify({ 
@@ -341,6 +319,7 @@ serve(async (req) => {
           client_id: client.id,
           conversation_id: conversation.id,
           message_id: messageId,
+          saved_message_id: savedMessage.id,
           from: fromPhone,
           to: toPhone
         }
@@ -349,15 +328,6 @@ serve(async (req) => {
       });
     } else {
       console.log('⏭️ Skipping event - not an inbound message or missing required data');
-      console.log('Event check results:', {
-        eventType: eventType,
-        isMessageReceived: eventType === 'message.received',
-        direction: direction,
-        isInbound: direction === 'inbound',
-        hasFromPhone: !!fromPhone,
-        hasToPhone: !!toPhone,
-        hasMessageText: !!messageText
-      });
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -376,12 +346,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 CRITICAL ERROR processing SMS webhook:', error);
-    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message || 'Unknown error processing webhook',
-      stack: error.stack,
-      timestamp: new Date().toISOString()
+      error: error.message || 'Unknown error processing webhook'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
