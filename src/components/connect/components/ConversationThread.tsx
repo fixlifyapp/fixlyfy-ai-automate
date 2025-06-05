@@ -126,7 +126,7 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
       <div className="flex-1 bg-fixlyfy-bg-interface overflow-hidden">
         <ResizablePanelGroup direction="vertical" className="h-full">
           {/* Messages Area */}
-          <ResizablePanel defaultSize={70} minSize={40} maxSize={85}>
+          <ResizablePanel defaultSize={60} minSize={30} maxSize={80}>
             <div className="h-full overflow-y-auto bg-gradient-to-b from-fixlyfy-bg-interface/50 to-white">
               <div className="p-4">
                 <UnifiedMessageList 
@@ -141,46 +141,45 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
           <ResizableHandle withHandle className="bg-fixlyfy-border/50 hover:bg-fixlyfy/20 transition-colors" />
 
           {/* Message Input Area */}
-          <ResizablePanel defaultSize={30} minSize={15} maxSize={60}>
+          <ResizablePanel defaultSize={40} minSize={20} maxSize={70}>
             <div className="h-full bg-gradient-to-r from-white to-fixlyfy-bg-interface border-t border-fixlyfy-border/50 p-4 flex flex-col">
-              <form onSubmit={handleFormSubmit} className="h-full flex flex-col">
-                <div className="flex-1 flex gap-3">
-                  <div className="flex-1 relative flex flex-col">
-                    <textarea 
-                      className="flex-1 w-full p-4 pr-12 border border-fixlyfy-border/50 rounded-lg focus:ring-2 focus:ring-fixlyfy/50 focus:border-fixlyfy focus:outline-none resize-none transition-all duration-200 bg-white shadow-sm min-h-[100px]" 
-                      placeholder="Type your message..."
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
+              <form onSubmit={handleFormSubmit} className="h-full flex flex-col gap-3">
+                <div className="flex-1 relative">
+                  <textarea 
+                    className="w-full h-full p-4 pr-12 border border-fixlyfy-border/50 rounded-lg focus:ring-2 focus:ring-fixlyfy/50 focus:border-fixlyfy focus:outline-none resize-none transition-all duration-200 bg-white shadow-sm min-h-[120px]" 
+                    placeholder="Type your message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    disabled={isSending}
+                    onKeyDown={handleKeyDown}
+                  />
+                  <div className="absolute right-3 top-3">
+                    <MessageTextEnhancer 
+                      messageText={messageText}
+                      setMessageText={setMessageText}
                       disabled={isSending}
-                      onKeyDown={handleKeyDown}
                     />
-                    <div className="absolute right-3 top-3">
-                      <MessageTextEnhancer 
-                        messageText={messageText}
-                        setMessageText={setMessageText}
-                        disabled={isSending}
-                      />
-                    </div>
                   </div>
-                  <div className="flex flex-col justify-end">
-                    <Button 
-                      type="submit"
-                      disabled={isSending || !messageText.trim()}
-                      className="px-6 py-4 bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy-light hover:to-fixlyfy text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-                    >
-                      {isSending ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Sending...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Send className="h-4 w-4" />
-                          Send
-                        </div>
-                      )}
-                    </Button>
-                  </div>
+                </div>
+                
+                <div className="flex justify-end">
+                  <Button 
+                    type="submit"
+                    disabled={isSending || !messageText.trim()}
+                    className="px-8 py-3 bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy-light hover:to-fixlyfy text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    {isSending ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Sending...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Send className="h-4 w-4" />
+                        Send
+                      </div>
+                    )}
+                  </Button>
                 </div>
               </form>
             </div>
