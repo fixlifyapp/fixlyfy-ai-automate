@@ -1,7 +1,6 @@
 
-import { MessageSquare, Sparkles, Bot, Send } from "lucide-react";
+import { MessageSquare, Send, Phone, Mail, User } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useConversationMessaging } from "../hooks/useConversationMessaging";
 import { MessageTextEnhancer } from "./MessageTextEnhancer";
@@ -58,24 +57,16 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
   if (!conversation) {
     return (
       <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-fixlyfy-border">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="h-8 w-8 text-fixlyfy-text-muted" />
-            <div>
-              <h3 className="font-medium">Start a new conversation</h3>
-              <p className="text-sm text-fixlyfy-text-secondary">
-                Select a conversation to view messages
-              </p>
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50">
+          <div className="text-center max-w-md px-6">
+            <div className="bg-white rounded-full p-6 mb-6 shadow-lg inline-block">
+              <MessageSquare className="h-12 w-12 text-gray-400" />
             </div>
-          </div>
-        </div>
-
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <MessageSquare className="h-16 w-16 mb-4 text-fixlyfy-text-muted mx-auto" />
-            <h3 className="text-xl font-medium mb-2">No conversation selected</h3>
-            <p className="text-fixlyfy-text-secondary max-w-sm">
-              Select a conversation from the list to view and send messages.
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Select a conversation
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Choose a conversation from the left panel to start viewing and sending messages to your clients.
             </p>
           </div>
         </div>
@@ -85,56 +76,87 @@ export const ConversationThread = ({ conversation }: ConversationThreadProps) =>
 
   return (
     <>
-      <div className="p-4 border-b border-fixlyfy-border">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback>{conversation.client.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+              {conversation.client.name.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
-          <div>
-            <h3 className="font-medium">{conversation.client.name}</h3>
-            <p className="text-xs text-fixlyfy-text-secondary">
-              {conversation.client.phone || "No phone number"}
-            </p>
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg text-gray-900">{conversation.client.name}</h3>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              {conversation.client.phone && (
+                <div className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  <span>{conversation.client.phone}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {conversation.client.phone && (
+              <Button variant="outline" size="sm" className="gap-2">
+                <Phone className="h-4 w-4" />
+                Call
+              </Button>
+            )}
           </div>
         </div>
       </div>
       
-      <div className="flex-1 p-4 overflow-y-auto">
-        <UnifiedMessageList 
-          messages={formattedMessages}
-          isLoading={false}
-          clientName={conversation.client.name}
-        />
+      {/* Messages Area */}
+      <div className="flex-1 bg-gray-50 overflow-y-auto">
+        <div className="p-4">
+          <UnifiedMessageList 
+            messages={formattedMessages}
+            isLoading={false}
+            clientName={conversation.client.name}
+          />
+        </div>
       </div>
       
-      <div className="p-4 border-t border-fixlyfy-border">
-        <form onSubmit={handleFormSubmit} className="flex gap-2">
-          <div className="flex-1 relative">
-            <textarea 
-              className="w-full p-2 pr-10 border rounded-md focus:ring-2 focus:ring-fixlyfy focus:outline-none resize-none" 
-              placeholder="Type your message..."
-              rows={2}
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              disabled={isSending}
-              onKeyDown={handleKeyDown}
-            />
-            <div className="absolute right-2 top-2">
-              <MessageTextEnhancer 
-                messageText={messageText}
-                setMessageText={setMessageText}
+      {/* Message Input */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <form onSubmit={handleFormSubmit}>
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <textarea 
+                className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none resize-none transition-all duration-200" 
+                placeholder="Type your message..."
+                rows={3}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
                 disabled={isSending}
+                onKeyDown={handleKeyDown}
               />
+              <div className="absolute right-3 top-3">
+                <MessageTextEnhancer 
+                  messageText={messageText}
+                  setMessageText={setMessageText}
+                  disabled={isSending}
+                />
+              </div>
             </div>
+            <Button 
+              type="submit"
+              disabled={isSending || !messageText.trim()}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+            >
+              {isSending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Sending...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  Send
+                </div>
+              )}
+            </Button>
           </div>
-          <Button 
-            type="submit"
-            disabled={isSending || !messageText.trim()}
-            size="sm"
-            className="px-3"
-          >
-            <Send size={16} />
-          </Button>
         </form>
       </div>
     </>

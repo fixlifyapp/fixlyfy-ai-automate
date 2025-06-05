@@ -4,6 +4,7 @@ import { ConversationsList } from "./components/ConversationsList";
 import { ConversationThread } from "./components/ConversationThread";
 import { useConversations } from "./hooks/useConversations";
 import { useMessageContext } from "@/contexts/MessageContext";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface DispatcherMessagesViewProps {
   searchResults?: any[];
@@ -51,31 +52,39 @@ export const DispatcherMessagesView = ({ searchResults = [] }: DispatcherMessage
   const activeConv = conversations.find(c => c.id === activeConversation);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[600px]">
-      {/* Left Panel - Conversations List */}
-      <div className="fixlyfy-card p-0 flex flex-col">
-        <div className="p-4 border-b border-fixlyfy-border">
-          <h3 className="font-medium">Conversations</h3>
-          <p className="text-sm text-fixlyfy-text-secondary">
-            {filteredConversations.length} active conversations
-          </p>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto">
-          <ConversationsList
-            conversations={filteredConversations}
-            activeConversation={activeConversation}
-            isLoading={isLoading}
-            onConversationClick={(conversation) => handleConversationClick(conversation.id)}
-            onClientSelect={handleClientSelect}
-          />
-        </div>
-      </div>
+    <div className="h-[600px] border border-fixlyfy-border rounded-lg overflow-hidden bg-white">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/* Left Panel - Conversations List */}
+        <ResizablePanel defaultSize={30} minSize={25} maxSize={45}>
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b border-fixlyfy-border bg-gray-50">
+              <h3 className="font-semibold text-lg text-gray-900">Conversations</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {filteredConversations.length} active conversations
+              </p>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              <ConversationsList
+                conversations={filteredConversations}
+                activeConversation={activeConversation}
+                isLoading={isLoading}
+                onConversationClick={(conversation) => handleConversationClick(conversation.id)}
+                onClientSelect={handleClientSelect}
+              />
+            </div>
+          </div>
+        </ResizablePanel>
 
-      {/* Right Panel - Message Thread */}
-      <div className="fixlyfy-card p-0 flex flex-col">
-        <ConversationThread conversation={activeConv} />
-      </div>
+        <ResizableHandle withHandle />
+
+        {/* Right Panel - Message Thread */}
+        <ResizablePanel defaultSize={70} minSize={55} maxSize={75}>
+          <div className="h-full flex flex-col bg-gray-50">
+            <ConversationThread conversation={activeConv} />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
