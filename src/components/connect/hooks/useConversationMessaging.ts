@@ -28,21 +28,27 @@ export const useConversationMessaging = ({
   const { refreshConversations } = useMessageContext();
 
   const handleSendMessage = async (): Promise<void> => {
+    console.log("handleSendMessage called", { messageText, isSending, clientPhone, clientId });
+    
     if (!messageText.trim() || isSending) {
+      console.log("Message validation failed", { messageText: messageText.trim(), isSending });
       return;
     }
 
     if (!clientPhone) {
+      console.log("No client phone available");
       toast.error("No phone number available for this client");
       return;
     }
 
     if (!clientId) {
+      console.log("No client ID available");
       toast.error("Client information is missing");
       return;
     }
 
     setIsSending(true);
+    console.log("Starting message send process...");
 
     try {
       const result = await sendClientMessage({
@@ -53,13 +59,17 @@ export const useConversationMessaging = ({
         existingConversationId: conversationId || null
       });
 
+      console.log("sendClientMessage result:", result);
+
       if (result.success) {
         setMessageText("");
         toast.success("Message sent successfully");
         
         // Refresh conversations to show the new message
+        console.log("Refreshing conversations...");
         refreshConversations();
       } else {
+        console.error("Message sending failed:", result.error);
         toast.error(`Failed to send message: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
@@ -67,12 +77,14 @@ export const useConversationMessaging = ({
       toast.error("Failed to send message");
     } finally {
       setIsSending(false);
+      console.log("Message send process completed");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      console.log("Enter key pressed, sending message...");
       handleSendMessage();
     }
   };

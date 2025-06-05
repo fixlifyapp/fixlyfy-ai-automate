@@ -52,14 +52,14 @@ export const DispatcherMessagesView = ({ searchResults = [] }: DispatcherMessage
   const activeConv = conversations.find(c => c.id === activeConversation);
 
   return (
-    <div className="h-[600px] border border-fixlyfy-border rounded-lg overflow-hidden bg-white">
+    <div className="h-[600px] border border-fixlyfy-border rounded-lg overflow-hidden bg-white shadow-card">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel - Conversations List */}
         <ResizablePanel defaultSize={30} minSize={25} maxSize={45}>
           <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-fixlyfy-border bg-gray-50">
-              <h3 className="font-semibold text-lg text-gray-900">Conversations</h3>
-              <p className="text-sm text-gray-600 mt-1">
+            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy-bg-interface to-fixlyfy-bg-sidebar">
+              <h3 className="font-semibold text-lg text-fixlyfy-text">Conversations</h3>
+              <p className="text-sm text-fixlyfy-text-secondary mt-1">
                 {filteredConversations.length} active conversations
               </p>
             </div>
@@ -76,11 +76,11 @@ export const DispatcherMessagesView = ({ searchResults = [] }: DispatcherMessage
           </div>
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors" />
 
         {/* Right Panel - Message Thread */}
         <ResizablePanel defaultSize={70} minSize={55} maxSize={75}>
-          <div className="h-full flex flex-col bg-gray-50">
+          <div className="h-full flex flex-col bg-fixlyfy-bg-interface">
             <ConversationThread conversation={activeConv} />
           </div>
         </ResizablePanel>
