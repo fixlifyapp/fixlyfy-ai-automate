@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { sendClientMessage } from "@/components/jobs/hooks/messaging/messagingUtils";
 
@@ -69,37 +69,49 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
   }
 
   return (
-    <div className="p-4 border-t border-gray-200 bg-gray-50">
+    <div className="p-4 border-t border-gray-200 bg-white">
       <div className="flex flex-col gap-3">
-        <Textarea
-          placeholder="Type your message..."
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isSending}
-          className="resize-none min-h-[80px]"
-        />
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">
-            Press Enter to send, Shift+Enter for new line
-          </span>
-          <Button 
-            onClick={handleSendMessage}
-            disabled={isSending || !messageText.trim()}
-            className="px-6"
-          >
-            {isSending ? (
-              <div className="flex items-center gap-2">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Textarea
+              placeholder={`Type your message to ${selectedConversation.client.name}...`}
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isSending}
+              className="resize-none min-h-[80px] border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              className="p-2"
+              disabled={isSending}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button 
+              onClick={handleSendMessage}
+              disabled={isSending || !messageText.trim()}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white"
+              size="sm"
+            >
+              {isSending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Sending...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
+              ) : (
                 <Send className="h-4 w-4" />
-                Send
-              </div>
-            )}
-          </Button>
+              )}
+            </Button>
+          </div>
+        </div>
+        <div className="flex justify-between items-center text-xs text-gray-500">
+          <span>Press Enter to send, Shift+Enter for new line</span>
+          {selectedConversation.client.phone && (
+            <span className="bg-gray-100 px-2 py-1 rounded">
+              SMS to {selectedConversation.client.phone}
+            </span>
+          )}
         </div>
       </div>
     </div>
