@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -261,9 +262,9 @@ export const EmailManagement = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full overflow-hidden">
         {/* Conversations List */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 h-full">
           <Card className="h-full flex flex-col">
             <CardHeader className="flex-shrink-0 pb-3">
               <CardTitle className="flex items-center gap-2 justify-between">
@@ -284,7 +285,7 @@ export const EmailManagement = () => {
                 </Button>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-1 min-h-0">
+            <CardContent className="p-0 flex-1 overflow-hidden">
               <ScrollArea className="h-full">
                 {conversations.length === 0 ? (
                   <div className="p-4 text-center text-fixlyfy-text-secondary">
@@ -336,10 +337,10 @@ export const EmailManagement = () => {
         </div>
 
         {/* Email Detail */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-full">
           <Card className="h-full flex flex-col">
-            <CardContent className="p-0 h-full flex flex-col min-h-0">
-              <div className="flex-1 min-h-0">
+            <CardContent className="p-0 h-full flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-hidden">
                 <EmailThread selectedConversation={selectedConversation} />
               </div>
               {selectedConversation && (

@@ -59,7 +59,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
 
   if (!selectedConversation) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-fixlyfy-bg-interface to-fixlyfy/5">
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-fixlyfy-bg-interface to-fixlyfy/5">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="bg-fixlyfy/10 rounded-full p-6 mx-auto mb-6 w-24 h-24 flex items-center justify-center">
             <Mail className="h-12 w-12 text-fixlyfy" />
@@ -74,27 +74,27 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 flex flex-col h-full">
       {/* Email Header */}
       <div className="flex-shrink-0 p-4 border-b border-fixlyfy-border bg-gradient-to-r from-white to-fixlyfy/5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12 border-2 border-fixlyfy/20">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <Avatar className="h-12 w-12 border-2 border-fixlyfy/20 flex-shrink-0">
               <AvatarFallback className="bg-gradient-primary text-white font-semibold text-lg">
-                {selectedConversation.client.name.substring(0, 2).toUpperCase()}
+                {selectedConversation.client?.name?.substring(0, 2).toUpperCase() || 'NC'}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg text-fixlyfy-text truncate">
-                {selectedConversation.client.name}
+                {selectedConversation.client?.name || 'New Client'}
               </h3>
-              {selectedConversation.client.email && (
+              {selectedConversation.client?.email && (
                 <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1 truncate">
                   <Mail className="h-3 w-3 flex-shrink-0" />
                   <span className="truncate">{selectedConversation.client.email}</span>
                 </p>
               )}
-              {selectedConversation.client.phone && (
+              {selectedConversation.client?.phone && (
                 <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1 truncate">
                   <Phone className="h-3 w-3 flex-shrink-0" />
                   <span className="truncate">{selectedConversation.client.phone}</span>
@@ -103,7 +103,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            {selectedConversation.client.phone && (
+            {selectedConversation.client?.phone && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -124,19 +124,23 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
       </div>
 
       {/* Email Display Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface min-h-0">
-        {selectedConversation.emails && selectedConversation.emails.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-full p-6 mx-auto mb-4 w-16 h-16 flex items-center justify-center shadow-sm">
-              <Mail className="h-8 w-8 text-fixlyfy-text-muted" />
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface">
+        {(!selectedConversation.emails || selectedConversation.emails.length === 0) ? (
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="bg-white rounded-full p-6 mx-auto mb-4 w-16 h-16 flex items-center justify-center shadow-sm">
+                <Mail className="h-8 w-8 text-fixlyfy-text-muted" />
+              </div>
+              <h4 className="font-medium text-fixlyfy-text mb-2">Start the email conversation</h4>
+              <p className="text-fixlyfy-text-secondary text-sm">
+                Send your first email to {selectedConversation.client?.name || 'this client'}
+              </p>
             </div>
-            <h4 className="font-medium text-fixlyfy-text mb-2">Start the email conversation</h4>
-            <p className="text-fixlyfy-text-secondary text-sm">Send your first email to {selectedConversation.client.name}</p>
           </div>
         ) : (
-          selectedConversation.emails?.map((email: any) => {
+          selectedConversation.emails.map((email: any) => {
             const isFromClient = email.direction === 'inbound';
-            const displaySender = isFromClient ? selectedConversation.client.name : 'You';
+            const displaySender = isFromClient ? (selectedConversation.client?.name || 'Client') : 'You';
             
             return (
               <div
@@ -154,7 +158,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
                       : "bg-fixlyfy text-white"
                   )}>
                     {isFromClient 
-                      ? selectedConversation.client.name.substring(0, 2).toUpperCase()
+                      ? (selectedConversation.client?.name?.substring(0, 2).toUpperCase() || 'CL')
                       : 'ME'
                     }
                   </AvatarFallback>
