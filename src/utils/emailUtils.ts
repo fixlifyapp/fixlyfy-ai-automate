@@ -10,6 +10,15 @@ export const generateFromEmail = (companyName: string): string => {
   return `${cleanName}@fixlify.app`;
 };
 
+export const formatCompanyNameForEmail = (companyName: string): string => {
+  // Format company name for email display (clean but readable)
+  return companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .substring(0, 20); // Limit length
+};
+
 export const formatEmailPreview = (content: string, maxLength: number = 100): string => {
   if (!content) return 'No content';
   

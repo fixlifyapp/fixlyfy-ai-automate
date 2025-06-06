@@ -191,7 +191,8 @@ export const SimpleEmailInterface = () => {
         const { data: clientData, error } = await supabase
           .from('clients')
           .select('id, name, phone, email')
-          .and(`email.neq.NULL,or(name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%)`)
+          .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+          .not('email', 'is', null)
           .limit(5);
 
         if (error) throw error;
