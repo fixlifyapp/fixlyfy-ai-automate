@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   BrowserRouter as Router,
@@ -5,33 +6,33 @@ import {
   Route,
   Navigate
 } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 
-import { DashboardPage } from '@/pages/DashboardPage';
-import { ClientsPage } from '@/pages/ClientsPage';
-import { ClientDetailsPage } from '@/pages/ClientDetailsPage';
-import { JobsPage } from '@/pages/JobsPage';
-import { JobDetailsPage } from '@/pages/JobDetailsPage';
-import { EstimatesPage } from '@/pages/EstimatesPage';
-import { EstimateDetailsPage } from '@/pages/EstimateDetailsPage';
-import { InvoicesPage } from '@/pages/InvoicesPage';
-import { InvoiceDetailsPage } from '@/pages/InvoiceDetailsPage';
-import { TeamPage } from '@/pages/TeamPage';
-import { TeamMemberDetailsPage } from '@/pages/TeamMemberDetailsPage';
-import { SettingsPage } from '@/pages/SettingsPage';
+import DashboardPage from '@/pages/Dashboard';
+import ClientsPage from '@/pages/ClientsPage';
+import ClientDetailsPage from '@/pages/ClientDetailPage';
+import JobsPage from '@/pages/JobsPage';
+import JobDetailsPage from '@/pages/JobDetailsPage';
+import EstimatesPage from '@/pages/EstimatesPage';
+import EstimateDetailsPage from '@/pages/EstimateViewPage';
+import InvoicesPage from '@/pages/InvoicesPage';
+import InvoiceDetailsPage from '@/pages/InvoiceDetailsPage';
+import TeamPage from '@/pages/TeamManagementPage';
+import TeamMemberDetailsPage from '@/pages/TeamMemberProfilePage';
+import SettingsPage from '@/pages/SettingsPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { RBACProvider } from '@/contexts/RBACContext';
-import { ConnectCenterPageOptimized } from '@/pages/ConnectCenterPageOptimized';
+import { RBACProvider } from '@/hooks/use-auth';
+import ConnectCenterPageOptimized from '@/pages/ConnectCenterPageOptimized';
 import { PhoneNumberAdmin } from '@/components/admin/PhoneNumberAdmin';
-import { PortalLoginPage } from '@/pages/portal/PortalLoginPage';
-import { PortalDashboardPage } from '@/pages/portal/PortalDashboardPage';
-import { PortalEstimatesPage } from '@/pages/portal/PortalEstimatesPage';
-import { PortalInvoicesPage } from '@/pages/portal/PortalInvoicesPage';
-import { PortalProfilePage } from '@/pages/portal/PortalProfilePage';
+import PortalLoginPage from '@/pages/portal/PortalLoginPage';
+import PortalDashboardPage from '@/pages/portal/PortalDashboardPage';
+import PortalEstimatesPage from '@/pages/portal/PortalEstimatesPage';
+import PortalInvoicesPage from '@/pages/portal/PortalInvoicesPage';
+import PortalProfilePage from '@/pages/portal/PortalProfilePage';
 import { PortalLayout } from '@/components/portal/PortalLayout';
 import { ProtectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
-import { PortalJobsPage } from '@/pages/portal/PortalJobsPage';
+import PortalJobsPage from '@/pages/portal/PortalJobsPage';
 import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import PortalAccessPage from '@/pages/portal/PortalAccessPage';
 
@@ -89,7 +90,7 @@ function App() {
               } />
               <Route path="/invoices/:id" element={
                 <ProtectedRoute>
-                  <InvoiceDetailsPage />
+                  <InvoicesPage />
                 </ProtectedRoute>
               } />
               <Route path="/team" element={
@@ -108,7 +109,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/admin/phone-numbers" element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <PhoneNumberAdmin />
                 </ProtectedRoute>
               } />
