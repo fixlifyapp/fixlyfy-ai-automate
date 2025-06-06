@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
-import { SendDialog } from "./shared/SendDialog";
+import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
-import { useEstimateSendingInterface } from "./shared/hooks/useSendingInterface";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
@@ -43,6 +42,7 @@ export const SteppedEstimateBuilder = ({
   const [upsellNotes, setUpsellNotes] = useState("");
   const [estimateCreated, setEstimateCreated] = useState(false);
   const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
+  const [showSendDialog, setShowSendDialog] = useState(false);
 
   // Create contactInfo object for compatibility - now loads much faster
   const contactInfo = {
@@ -93,6 +93,7 @@ export const SteppedEstimateBuilder = ({
       setUpsellNotes("");
       setEstimateCreated(!!existingEstimate);
       setAddedUpsellIds(new Set());
+      setShowSendDialog(false);
     }
   }, [open, existingEstimate]);
 
@@ -181,6 +182,7 @@ export const SteppedEstimateBuilder = ({
     }
     
     setCurrentStep("send");
+    setShowSendDialog(true);
   };
 
   const handleSaveAndSend = async () => {
@@ -213,6 +215,7 @@ export const SteppedEstimateBuilder = ({
 
   const handleSendCancel = () => {
     setCurrentStep("upsell");
+    setShowSendDialog(false);
   };
 
   const handleUpsellBack = () => {
@@ -222,6 +225,7 @@ export const SteppedEstimateBuilder = ({
   const handleDialogClose = () => {
     if (currentStep === "send") {
       setCurrentStep("upsell");
+      setShowSendDialog(false);
     } else if (currentStep === "upsell") {
       setCurrentStep("items");
     } else {
@@ -326,19 +330,18 @@ export const SteppedEstimateBuilder = ({
         </DialogContent>
       </Dialog>
 
-      {/* Send Dialog - using the generic SendDialog component */}
-      <SendDialog
-        isOpen={currentStep === "send"}
-        onClose={() => handleSendCancel()}
-        documentId={savedEstimate?.id || existingEstimate?.id || ''}
-        documentNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
-        documentType="estimate"
-        total={calculateGrandTotal()}
-        contactInfo={contactInfo}
-        onSuccess={handleSendSuccess}
-        onSave={handleSaveAndSend}
-        useSendingHook={useEstimateSendingInterface}
-      />
+      {/* Old EstimateSendDialog instead of new SendDialog */}
+      {savedEstimate && (
+        <EstimateSendDialog
+          isOpen={showSendDialog}
+          onClose={handleSendCancel}
+          estimateId={savedEstimate.id}
+          estimateNumber={savedEstimate.estimate_number || savedEstimate.number || documentNumber}
+          total={calculateGrandTotal()}
+          contactInfo={contactInfo}
+          onSuccess={handleSendSuccess}
+        />
+      )}
     </>
   );
 };
