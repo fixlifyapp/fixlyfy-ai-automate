@@ -22,6 +22,7 @@ import TeamMemberDetailsPage from '@/pages/TeamMemberProfilePage';
 import SettingsPage from '@/pages/SettingsPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RBACProvider } from '@/components/auth/RBACProvider';
+import { AuthProvider } from '@/hooks/use-auth';
 import ConnectCenterPageOptimized from '@/pages/ConnectCenterPageOptimized';
 import PortalLoginPage from '@/pages/portal/PortalLoginPage';
 import PortalDashboardPage from '@/pages/portal/PortalDashboardPage';
@@ -39,110 +40,112 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
-      <RBACProvider>
-        <ClientPortalAuthProvider>
-          <Router>
-            <Routes>
-              {/* Main application routes */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients" element={
-                <ProtectedRoute>
-                  <ClientsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/clients/:id" element={
-                <ProtectedRoute>
-                  <ClientDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs" element={
-                <ProtectedRoute>
-                  <JobsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/jobs/:id" element={
-                <ProtectedRoute>
-                  <JobDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/estimates" element={
-                <ProtectedRoute>
-                  <EstimatesPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/estimates/:id" element={
-                <ProtectedRoute>
-                  <EstimateDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/invoices" element={
-                <ProtectedRoute>
-                  <InvoicesPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/invoices/:id" element={
-                <ProtectedRoute>
-                  <InvoicesPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/team" element={
-                <ProtectedRoute>
-                  <TeamPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/team/:id" element={
-                <ProtectedRoute>
-                  <TeamMemberDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/connect-center" element={
-                <ProtectedRoute>
-                  <ConnectCenterPageOptimized />
-                </ProtectedRoute>
-              } />
+      <AuthProvider>
+        <RBACProvider>
+          <ClientPortalAuthProvider>
+            <Router>
+              <Routes>
+                {/* Main application routes */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients" element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients/:id" element={
+                  <ProtectedRoute>
+                    <ClientDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/jobs" element={
+                  <ProtectedRoute>
+                    <JobsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/jobs/:id" element={
+                  <ProtectedRoute>
+                    <JobDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/estimates" element={
+                  <ProtectedRoute>
+                    <EstimatesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/estimates/:id" element={
+                  <ProtectedRoute>
+                    <EstimateDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/invoices" element={
+                  <ProtectedRoute>
+                    <InvoicesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/invoices/:id" element={
+                  <ProtectedRoute>
+                    <InvoicesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/team" element={
+                  <ProtectedRoute>
+                    <TeamPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/team/:id" element={
+                  <ProtectedRoute>
+                    <TeamMemberDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect-center" element={
+                  <ProtectedRoute>
+                    <ConnectCenterPageOptimized />
+                  </ProtectedRoute>
+                } />
 
-              {/* Client Portal Routes */}
-              <Route path="/portal/login" element={<PortalLoginPage />} />
-              <Route path="/portal/access" element={<PortalAccessPage />} />
-              <Route path="/portal/dashboard" element={
-                <ProtectedPortalRoute>
-                  <PortalDashboardPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/jobs" element={
-                <ProtectedPortalRoute>
-                  <PortalJobsPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/estimates" element={
-                <ProtectedPortalRoute>
-                  <PortalEstimatesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/invoices" element={
-                <ProtectedPortalRoute>
-                  <PortalInvoicesPage />
-                </ProtectedPortalRoute>
-              } />
-              <Route path="/portal/profile" element={
-                <ProtectedPortalRoute>
-                  <PortalProfilePage />
-                </ProtectedPortalRoute>
-              } />
-            </Routes>
-          </Router>
-        </ClientPortalAuthProvider>
-      </RBACProvider>
+                {/* Client Portal Routes */}
+                <Route path="/portal/login" element={<PortalLoginPage />} />
+                <Route path="/portal/access" element={<PortalAccessPage />} />
+                <Route path="/portal/dashboard" element={
+                  <ProtectedPortalRoute>
+                    <PortalDashboardPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/jobs" element={
+                  <ProtectedPortalRoute>
+                    <PortalJobsPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/estimates" element={
+                  <ProtectedPortalRoute>
+                    <PortalEstimatesPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/invoices" element={
+                  <ProtectedPortalRoute>
+                    <PortalInvoicesPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/profile" element={
+                  <ProtectedPortalRoute>
+                    <PortalProfilePage />
+                  </ProtectedPortalRoute>
+                } />
+              </Routes>
+            </Router>
+          </ClientPortalAuthProvider>
+        </RBACProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
