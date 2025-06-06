@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { toast } from "sonner";
@@ -259,22 +258,6 @@ export const SimpleEmailInterface = () => {
     fetchConversations();
   };
 
-  const handleNewEmail = () => {
-    const newConversation: EmailConversation = {
-      id: 'new_email_conversation_' + Date.now(),
-      subject: 'New Email',
-      last_message_at: new Date().toISOString(),
-      status: 'active',
-      client: {
-        id: 'new_client',
-        name: 'New Client',
-        email: '',
-      },
-      emails: []
-    };
-    setSelectedConversation(newConversation);
-  };
-
   // Filter conversations based on search term
   const filteredConversations = conversations.filter(conv =>
     conv.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -340,7 +323,7 @@ export const SimpleEmailInterface = () => {
                 onConversationSelect={setSelectedConversation}
                 isLoading={loading}
                 onRefresh={fetchConversations}
-                onNewEmail={handleNewEmail}
+                onNewEmail={() => {}} // This is now handled internally
               />
             </div>
           </div>

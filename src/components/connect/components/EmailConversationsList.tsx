@@ -6,6 +6,7 @@ import { Mail, Plus, RefreshCw, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ClientSelectionDialog } from "./ClientSelectionDialog";
 
 interface EmailConversation {
   id: string;
@@ -40,6 +41,7 @@ export const EmailConversationsList = ({
   onNewEmail
 }: EmailConversationsListProps) => {
   const [archivedConversations, setArchivedConversations] = useState<Set<string>>(new Set());
+  const [showClientDialog, setShowClientDialog] = useState(false);
   
   const getConversationPreview = (conversation: EmailConversation) => {
     const latestEmail = conversation.emails?.[conversation.emails.length - 1];
@@ -90,6 +92,31 @@ export const EmailConversationsList = ({
     }
   };
 
+  const handleNewEmailClick = () => {
+    setShowClientDialog(true);
+  };
+
+  const handleClientSelect = (client: { id: string; name: string; email?: string; phone?: string; company?: string }) => {
+    // Create a new conversation with the selected client
+    const newConversation = {
+      id: `new_email_${client.id}_${Date.now()}`,
+      subject: `New conversation with ${client.name}`,
+      last_message_at: new Date().toISOString(),
+      status: 'active',
+      client_id: client.id,
+      client: {
+        id: client.id,
+        name: client.name,
+        email: client.email || '',
+        phone: client.phone || undefined
+      },
+      emails: []
+    };
+    
+    onConversationSelect(newConversation);
+    toast.success(`Started new email conversation with ${client.name}`);
+  };
+
   // Filter out archived conversations
   const activeConversations = conversations.filter(conv => !archivedConversations.has(conv.id));
 
@@ -124,7 +151,7 @@ export const EmailConversationsList = ({
             </Button>
             <Button
               size="sm"
-              onClick={onNewEmail}
+              onClick={handleNewEmailClick}
               className="gap-1 bg-fixlyfy hover:bg-fixlyfy-light text-white h-8 px-3"
             >
               <Plus className="h-3 w-3" />
@@ -220,6 +247,13 @@ export const EmailConversationsList = ({
           </div>
         )}
       </ScrollArea>
+
+      {/* Client Selection Dialog */}
+      <ClientSelectionDialog
+        open={showClientDialog}
+        onOpenChange={setShowClientDialog}
+        onClientSelect={handleClientSelect}
+      />
     </div>
   );
 };
