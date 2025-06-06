@@ -13,6 +13,7 @@ interface MessageThreadProps {
 
 export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
   const [isCallingLoading, setIsCallingLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
   const navigate = useNavigate();
 
   const formatMessageTime = (timestamp: string) => {
@@ -64,6 +65,8 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
       return;
     }
 
+    setIsEmailLoading(true);
+    
     // Navigate to Connect Center emails tab with client information
     const params = new URLSearchParams({
       tab: 'emails',
@@ -75,6 +78,9 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
 
     navigate(`/connect?${params.toString()}`);
     toast.success(`Opening email conversation with ${selectedConversation.client.name}`);
+    
+    // Reset loading state after navigation
+    setTimeout(() => setIsEmailLoading(false), 1000);
   };
 
   if (!selectedConversation) {
