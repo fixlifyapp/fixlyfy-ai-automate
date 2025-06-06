@@ -174,34 +174,32 @@ export const SimpleEmailInterface = () => {
                 <h2 className="text-lg font-semibold text-fixlyfy-text">Email Conversations</h2>
               </div>
               
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
-                  <Input
-                    placeholder="Search conversations..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                  className="border-fixlyfy-border hover:bg-fixlyfy/5"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleNewEmail}
-                  className="bg-fixlyfy hover:bg-fixlyfy-light text-white"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  New
-                </Button>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
+                <Input
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
+                />
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="border-fixlyfy-border hover:bg-fixlyfy/5 mt-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleNewEmail}
+                className="bg-fixlyfy hover:bg-fixlyfy-light text-white mt-2 ml-2"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New
+              </Button>
             </div>
 
             {/* Conversations List */}
