@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useMessageContext } from "@/contexts/MessageContext";
@@ -177,26 +176,37 @@ export const SimpleMessagesInterface = () => {
   };
 
   const handleMessageSent = () => {
-    // Force refresh conversations to show the restored conversation
+    console.log('📨 Message sent, refreshing conversations...');
+    
+    // Force refresh conversations to show the new/updated conversation
     refreshConversations();
     
-    // Clear selection temporarily to force re-render
+    // Clear selection temporarily to force re-render, then restore after refresh
     const currentConversation = selectedConversation;
-    setSelectedConversation(null);
-    
-    // After a short delay, try to restore the selection with updated conversation
-    setTimeout(() => {
-      if (currentConversation) {
-        // Find the conversation in the updated list
-        const updatedConversation = conversations.find(conv => 
-          conv.client.id === currentConversation.client.id
-        );
-        
-        if (updatedConversation) {
-          setSelectedConversation(updatedConversation);
-        }
-      }
-    }, 1000);
+    if (currentConversation) {
+      setSelectedConversation(null);
+      
+      // After refresh, try to restore the selection with updated conversation
+      setTimeout(() => {
+        // Find the conversation in the updated list by client ID
+        refreshConversations().then(() => {
+          setTimeout(() => {
+            const updatedConversation = conversations.find(conv => 
+              conv.client.id === currentConversation.client.id
+            );
+            
+            if (updatedConversation) {
+              setSelectedConversation(updatedConversation);
+              console.log('✅ Restored selection to updated conversation');
+            } else {
+              // If still not found, keep the original selection
+              setSelectedConversation(currentConversation);
+              console.log('⚠️ Could not find updated conversation, keeping original');
+            }
+          }, 500);
+        });
+      }, 100);
+    }
   };
 
   // Filter conversations based on search term

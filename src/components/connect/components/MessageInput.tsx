@@ -33,6 +33,7 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
           .from('conversations')
           .select('id')
           .eq('client_id', selectedConversation.client.id)
+          .eq('status', 'active')
           .single();
 
         if (!checkError && existingConv) {
@@ -94,9 +95,10 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
       setMessage("");
       
       // Call the callback to refresh conversations and force list update
+      // Add a longer delay to ensure the database has time to update
       setTimeout(() => {
         onMessageSent();
-      }, 500);
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
