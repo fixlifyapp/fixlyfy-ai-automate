@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
-import { SendDialog } from "./shared/SendDialog";
+import { InvoiceSendDialog } from "./InvoiceSendDialog";
 import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
-import { useInvoiceSendingInterface } from "./shared/hooks/useSendingInterface";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
@@ -44,6 +43,7 @@ export const SteppedInvoiceBuilder = ({
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
   const [invoiceCreated, setInvoiceCreated] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
 
   // Get job and client data
   const { clientInfo, loading: jobLoading } = useJobData(jobId);
@@ -90,6 +90,7 @@ export const SteppedInvoiceBuilder = ({
       setCurrentStep("items");
       setSelectedUpsells([]);
       setUpsellNotes("");
+      setShowSendDialog(false);
     }
   }, [open, existingInvoice, estimateToConvert, initializeFromEstimate, initializeFromInvoice, resetForm]);
 
@@ -159,6 +160,7 @@ export const SteppedInvoiceBuilder = ({
     }
     
     setCurrentStep("send");
+    setShowSendDialog(true);
   };
 
   const handleSaveAndSend = async () => {
@@ -180,6 +182,7 @@ export const SteppedInvoiceBuilder = ({
   const handleDialogClose = () => {
     if (currentStep === "send") {
       setCurrentStep("upsell");
+      setShowSendDialog(false);
     } else if (currentStep === "upsell") {
       setCurrentStep("items");
     } else {
@@ -221,6 +224,11 @@ export const SteppedInvoiceBuilder = ({
       };
     }
     return { name: '', email: '', phone: '' };
+  };
+
+  const handleAddWarranty = (warranty: any, note: string) => {
+    // Handle warranty addition logic here if needed
+    console.log("Adding warranty:", warranty, "with note:", note);
   };
 
   const steps = [
@@ -356,19 +364,23 @@ export const SteppedInvoiceBuilder = ({
         </DialogContent>
       </Dialog>
       
-      {/* Send Dialog using standardized interface */}
-      <SendDialog
-        isOpen={currentStep === "send"}
-        onClose={() => onOpenChange(false)}
-        documentId={savedInvoice?.id || existingInvoice?.id || ''}
-        documentNumber={invoiceNumber}
-        documentType="invoice"
-        total={calculateGrandTotal()}
-        contactInfo={getClientInfo()}
-        onSuccess={() => onOpenChange(false)}
-        onSave={handleSaveAndSend}
-        useSendingHook={useInvoiceSendingInterface}
-      />
+      {/* Old InvoiceSendDialog instead of new SendDialog */}
+      {savedInvoice && (
+        <InvoiceSendDialog
+          open={showSendDialog}
+          onOpenChange={(open) => {
+            setShowSendDialog(open);
+            if (!open) {
+              onOpenChange(false);
+            }
+          }}
+          onSave={handleSaveAndSend}
+          onAddWarranty={handleAddWarranty}
+          clientInfo={getClientInfo()}
+          invoiceNumber={invoiceNumber}
+          jobId={jobId}
+        />
+      )}
     </>
   );
 };
