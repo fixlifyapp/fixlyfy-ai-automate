@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,11 +81,11 @@ export function TelnyxPhoneNumbersPage() {
     }
   });
 
-  const isNumberFullyConfigured = (number: OwnedNumber) => {
-    return number.configured_at && 
+  const isNumberFullyConfigured = (number: OwnedNumber): boolean => {
+    return !!(number.configured_at && 
            number.webhook_url && 
            number.webhook_url.includes('sms-receiver') &&
-           number.messaging_profile_id;
+           number.messaging_profile_id);
   };
 
   // Auto-setup unconfigured numbers
