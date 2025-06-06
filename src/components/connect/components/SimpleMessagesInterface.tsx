@@ -198,16 +198,21 @@ export const SimpleMessagesInterface = () => {
 
         <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors w-1" />
 
-        {/* Right Panel - Message Thread and Input */}
+        {/* Right Panel - Structured Conversation View */}
         <ResizablePanel defaultSize={65} minSize={50} maxSize={75}>
           <div className="h-full flex flex-col bg-fixlyfy-bg-interface">
+            {/* Conversation Display Area */}
             <div className="flex-1">
               <MessageThread selectedConversation={selectedConversation} />
             </div>
-            <MessageInput 
-              selectedConversation={selectedConversation}
-              onMessageSent={handleMessageSent}
-            />
+            
+            {/* Message Input at Bottom */}
+            <div className="border-t border-fixlyfy-border/50">
+              <MessageInput 
+                selectedConversation={selectedConversation}
+                onMessageSent={handleMessageSent}
+              />
+            </div>
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
