@@ -28,7 +28,7 @@ import PortalDashboardPage from '@/pages/portal/PortalDashboardPage';
 import PortalEstimatesPage from '@/pages/portal/PortalEstimatesPage';
 import PortalInvoicesPage from '@/pages/portal/PortalInvoicesPage';
 import PortalProfilePage from '@/pages/portal/PortalProfilePage';
-import { PortectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
+import { ProtectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
 import PortalJobsPage from '@/pages/portal/PortalJobsPage';
 import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import PortalAccessPage from '@/pages/portal/PortalAccessPage';
