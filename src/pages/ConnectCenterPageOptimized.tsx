@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ActiveCallInterface } from "@/components/connect/ActiveCallInterface";
 
 const ConnectCenterPageOptimized = () => {
-  const [activeTab, setActiveTab] = useState("monitoring");
+  const [activeTab, setActiveTab] = useState("messages");
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [isCallLoading, setIsCallLoading] = useState(false);
   
@@ -36,11 +36,11 @@ const ConnectCenterPageOptimized = () => {
   const clientName = searchParams.get("clientName");
   const clientPhone = searchParams.get("clientPhone");
   const clientEmail = searchParams.get("clientEmail");
-  const tabParam = searchParams.get("tab") || "monitoring";
+  const tabParam = searchParams.get("tab") || "messages";
   const autoOpen = searchParams.get("autoOpen") === "true";
   
   useEffect(() => {
-    if (tabParam && ["monitoring", "messages", "calls", "emails"].includes(tabParam)) {
+    if (tabParam && ["messages", "calls", "emails"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -150,7 +150,6 @@ const ConnectCenterPageOptimized = () => {
       case "messages": return "New Message";
       case "calls": return "New Call";
       case "emails": return "New Email";
-      case "monitoring": return "Monitor Calls";
       default: return "New Action";
     }
   };
@@ -182,11 +181,7 @@ const ConnectCenterPageOptimized = () => {
         <LoadingSkeleton type="connect-tabs" />
       ) : (
         <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 mb-6">
-            <TabsTrigger value="monitoring" className="flex items-center gap-2">
-              <Phone size={16} />
-              <span className="hidden sm:inline">Monitor</span>
-            </TabsTrigger>
+          <TabsList className="grid grid-cols-3 mb-6">
             <TabsTrigger value="messages" className="flex items-center gap-2">
               <MessageSquare size={16} />
               <span className="hidden sm:inline">Messages</span>
@@ -209,10 +204,6 @@ const ConnectCenterPageOptimized = () => {
               )}
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="monitoring" className="mt-0">
-            <CallMonitoring />
-          </TabsContent>
           
           <TabsContent value="messages" className="mt-0">
             <DispatcherMessagesView searchResults={[]} />
