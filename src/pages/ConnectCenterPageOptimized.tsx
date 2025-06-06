@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -82,13 +83,8 @@ const ConnectCenterPageOptimized = () => {
         // Auto-initiate call for calls tab
         await handleAutoCall();
       } else if (activeTab === "emails" && clientEmail && autoOpen) {
-        setEmailComposerOpen(true);
-        
-        // Clear the autoOpen parameter from URL
-        const newSearchParams = new URLSearchParams(location.search);
-        newSearchParams.delete("autoOpen");
-        const newUrl = `${location.pathname}?${newSearchParams.toString()}`;
-        navigate(newUrl, { replace: true });
+        // Email tab auto-open is handled by EmailManagement component
+        console.log('Connect Center: Email auto-open will be handled by EmailManagement component');
       }
     };
 
@@ -143,7 +139,8 @@ const ConnectCenterPageOptimized = () => {
         }
         break;
       case "emails":
-        setEmailComposerOpen(true);
+        // Email new conversation is handled by EmailManagement component
+        toast.info("Use the 'New' button in the email conversations list");
         break;
     }
   };
