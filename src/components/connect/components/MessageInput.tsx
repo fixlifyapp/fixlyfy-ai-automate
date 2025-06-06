@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,17 +27,37 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
       // Handle temporary conversation IDs (new conversations)
       if (conversationId.startsWith('temp-')) {
         console.log('📝 Creating new conversation for temporary ID');
-        // First check if conversation already exists for this client
+        // First check if conversation already exists for this client (including archived ones)
         const { data: existingConv, error: checkError } = await supabase
           .from('conversations')
-          .select('id')
+          .select('id, status')
           .eq('client_id', selectedConversation.client.id)
-          .eq('status', 'active')
+          .order('last_message_at', { ascending: false })
+          .limit(1)
           .single();
 
         if (!checkError && existingConv) {
           conversationId = existingConv.id;
-          console.log('✅ Found existing conversation:', conversationId);
+          console.log('✅ Found existing conversation:', conversationId, 'with status:', existingConv.status);
+          
+          // If it's archived, restore it
+          if (existingConv.status === 'archived') {
+            console.log('🔄 Restoring archived conversation:', conversationId);
+            const { error: restoreError } = await supabase
+              .from('conversations')
+              .update({ 
+                status: 'active',
+                last_message_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', conversationId);
+
+            if (restoreError) {
+              console.error('⚠️ Error restoring conversation:', restoreError);
+            } else {
+              console.log('✅ Conversation restored to active status');
+            }
+          }
         } else {
           // Create new conversation
           const { data: newConv, error: createError } = await supabase
@@ -58,8 +77,8 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
           console.log('🆕 Created new conversation:', conversationId);
         }
       } else {
-        // Restore archived conversation by updating status to active
-        console.log('🔄 Restoring conversation from archive:', conversationId);
+        // For existing conversation IDs, ensure they're active
+        console.log('🔄 Ensuring conversation is active:', conversationId);
         const { error: restoreError } = await supabase
           .from('conversations')
           .update({ 
@@ -70,9 +89,9 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
           .eq('id', conversationId);
 
         if (restoreError) {
-          console.error('⚠️ Error restoring conversation:', restoreError);
+          console.error('⚠️ Error updating conversation:', restoreError);
         } else {
-          console.log('✅ Conversation restored to active status');
+          console.log('✅ Conversation ensured active status');
         }
       }
 
@@ -95,7 +114,6 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
       setMessage("");
       
       // Call the callback to refresh conversations and force list update
-      // Add a longer delay to ensure the database has time to update
       setTimeout(() => {
         onMessageSent();
       }, 1000);
