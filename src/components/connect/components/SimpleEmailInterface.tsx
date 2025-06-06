@@ -1,13 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Search, Mail, Plus, RefreshCw } from "lucide-react";
-import { EmailConversationsList } from "./EmailConversationsList";
-import { EmailMessageInput } from "./EmailMessageInput";
+import { EmailConversationsPanel } from "./EmailConversationsPanel";
+import { EmailThreadPanel } from "./EmailThreadPanel";
 import { ClientSelectionDialog } from "./ClientSelectionDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -164,137 +159,27 @@ export const SimpleEmailInterface = () => {
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel - Email Conversations */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
-          <div className="h-full flex flex-col">
-            {/* Header with search and new email */}
-            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gradient-primary rounded-lg">
-                  <Mail className="h-5 w-5 text-white" />
-                </div>
-                <h2 className="text-lg font-semibold text-fixlyfy-text">Email Conversations</h2>
-              </div>
-              
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
-                <Input
-                  placeholder="Search conversations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
-                />
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isLoading}
-                className="border-fixlyfy-border hover:bg-fixlyfy/5 mt-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleNewEmail}
-                className="bg-fixlyfy hover:bg-fixlyfy-light text-white mt-2 ml-2"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                New
-              </Button>
-            </div>
-
-            {/* Conversations List */}
-            <div className="flex-1">
-              <EmailConversationsList
-                conversations={searchTerm ? filteredConversations : conversations}
-                selectedConversation={selectedConversation}
-                onConversationSelect={setSelectedConversation}
-                isLoading={isLoading}
-                onRefresh={handleRefresh}
-                onNewEmail={handleNewEmail}
-              />
-            </div>
-          </div>
+          <EmailConversationsPanel
+            conversations={conversations}
+            selectedConversation={selectedConversation}
+            onConversationSelect={setSelectedConversation}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            isLoading={isLoading}
+            onRefresh={handleRefresh}
+            onNewEmail={handleNewEmail}
+            filteredConversations={filteredConversations}
+          />
         </ResizablePanel>
 
         <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors w-1" />
 
         {/* Right Panel - Email Thread View */}
         <ResizablePanel defaultSize={65} minSize={50} maxSize={75}>
-          <div className="h-full flex flex-col bg-fixlyfy-bg-interface">
-            {/* Email Thread Display */}
-            <div className="flex-1 overflow-hidden">
-              {selectedConversation ? (
-                <div className="h-full flex flex-col">
-                  {/* Thread Header */}
-                  <div className="p-4 border-b border-fixlyfy-border/50 bg-white">
-                    <h3 className="font-semibold text-fixlyfy-text mb-1">
-                      {selectedConversation.client?.name || 'Unknown Client'}
-                    </h3>
-                    <p className="text-sm text-fixlyfy-text-secondary mb-2">
-                      {selectedConversation.client?.email}
-                    </p>
-                    <p className="text-sm font-medium text-fixlyfy-text">
-                      {selectedConversation.subject}
-                    </p>
-                  </div>
-                  
-                  {/* Email Messages */}
-                  <ScrollArea className="flex-1 p-4">
-                    {selectedConversation.emails.length === 0 ? (
-                      <div className="text-center py-8 text-fixlyfy-text-muted">
-                        <Mail className="h-8 w-8 mx-auto mb-3 text-fixlyfy-text-muted" />
-                        <p>No emails yet</p>
-                        <p className="text-xs mt-1">Start the conversation below</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {selectedConversation.emails.map((email, index) => (
-                          <Card key={index} className="max-w-2xl">
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-fixlyfy-text">
-                                  {email.direction === 'inbound' ? email.sender_email : 'You'}
-                                </span>
-                                <span className="text-xs text-fixlyfy-text-muted">
-                                  {new Date(email.created_at).toLocaleString()}
-                                </span>
-                              </div>
-                              {email.subject && (
-                                <p className="text-sm font-medium text-fixlyfy-text mb-2">
-                                  Subject: {email.subject}
-                                </p>
-                              )}
-                              <div className="text-sm text-fixlyfy-text-secondary">
-                                {email.body_text || email.body_html?.replace(/<[^>]*>/g, '') || 'No content'}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </div>
-              ) : (
-                <div className="h-full flex items-center justify-center text-center p-8">
-                  <div>
-                    <Mail className="h-12 w-12 mx-auto mb-4 text-fixlyfy-text-muted" />
-                    <h3 className="text-lg font-medium text-fixlyfy-text mb-2">No conversation selected</h3>
-                    <p className="text-fixlyfy-text-secondary">
-                      Select an email conversation from the list or start a new one
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Email Input */}
-            <div className="border-t border-fixlyfy-border/50">
-              <EmailMessageInput 
-                selectedConversation={selectedConversation}
-                onMessageSent={handleMessageSent}
-              />
-            </div>
-          </div>
+          <EmailThreadPanel
+            selectedConversation={selectedConversation}
+            onMessageSent={handleMessageSent}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
 
