@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Send, Loader2, Paperclip, Bot, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MessageInputProps {
   selectedConversation: any;
@@ -37,16 +38,43 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
     console.log('- Conversation ID:', selectedConversation.id);
 
     try {
-      // For now, just simulate message sending
+      // Actually send SMS via Telnyx edge function
+      console.log('📤 Calling telnyx-sms function...');
+      const { data, error } = await supabase.functions.invoke('telnyx-sms', {
+        body: {
+          to: selectedConversation.client.phone,
+          body: messageText.trim(),
+          client_id: selectedConversation.client.id,
+          job_id: '' // Optional job ID
+        }
+      });
+
+      console.log('📨 telnyx-sms response:', { data, error });
+
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw new Error(error.message || 'Failed to send message');
+      }
+
+      if (!data?.success) {
+        console.error('❌ SMS sending failed:', data);
+        throw new Error(data?.error || 'Failed to send message');
+      }
+
+      console.log('✅ Message sent successfully via telnyx-sms');
+      setMessageText("");
+      toast.success("Message sent successfully");
+      
+      // Trigger refresh to show the new message
       setTimeout(() => {
-        setMessageText("");
-        toast.success("Message sent successfully");
         onMessageSent();
-        setIsSending(false);
-      }, 1000);
+      }, 500);
+
     } catch (error) {
       console.error('💥 Error sending message:', error);
-      toast.error("Failed to send message. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to send message: ${errorMessage}`);
+    } finally {
       setIsSending(false);
     }
   };
