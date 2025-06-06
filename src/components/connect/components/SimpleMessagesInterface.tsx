@@ -133,46 +133,48 @@ export const SimpleMessagesInterface = () => {
   );
 
   return (
-    <div className="h-[700px] border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+    <div className="h-[700px] border border-fixlyfy-border rounded-xl overflow-hidden bg-white shadow-card">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel - Conversations List with Search */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
           <div className="h-full flex flex-col">
             {/* Header with unified search */}
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
               <div className="flex items-center gap-3 mb-4">
-                <MessageSquare className="h-6 w-6 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Messages</h2>
+                <div className="p-2 bg-gradient-primary rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-lg font-semibold text-fixlyfy-text">Messages</h2>
               </div>
               
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
                 <Input
                   placeholder="Search conversations or find new clients..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
                 />
               </div>
 
               {/* Client search results dropdown */}
               {showClientResults && searchResults.length > 0 && (
-                <div className="absolute left-4 right-4 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                  <div className="p-2 text-xs font-medium text-gray-500 border-b">New clients:</div>
+                <div className="absolute left-4 right-4 mt-2 bg-white border border-fixlyfy-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                  <div className="p-2 text-xs font-medium text-fixlyfy-text-muted border-b border-fixlyfy-border">New clients:</div>
                   {searchResults.map((client) => (
                     <div
                       key={client.id}
                       onClick={() => handleClientSelect(client)}
-                      className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                      className="p-3 hover:bg-fixlyfy/5 cursor-pointer border-b border-fixlyfy-border/50 last:border-b-0 transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-gray-900">{client.name}</div>
+                          <div className="font-medium text-fixlyfy-text">{client.name}</div>
                           {client.phone && (
-                            <div className="text-sm text-gray-500">{client.phone}</div>
+                            <div className="text-sm text-fixlyfy-text-secondary">{client.phone}</div>
                           )}
                         </div>
-                        <Plus className="h-4 w-4 text-blue-500" />
+                        <Plus className="h-4 w-4 text-fixlyfy" />
                       </div>
                     </div>
                   ))}
@@ -194,11 +196,11 @@ export const SimpleMessagesInterface = () => {
           </div>
         </ResizablePanel>
 
-        <ResizableHandle withHandle className="bg-gray-300 hover:bg-blue-300 transition-colors w-1" />
+        <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors w-1" />
 
         {/* Right Panel - Message Thread and Input */}
         <ResizablePanel defaultSize={65} minSize={50} maxSize={75}>
-          <div className="h-full flex flex-col bg-gray-50">
+          <div className="h-full flex flex-col bg-fixlyfy-bg-interface">
             <div className="flex-1">
               <MessageThread selectedConversation={selectedConversation} />
             </div>

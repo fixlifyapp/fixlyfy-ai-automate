@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Paperclip } from "lucide-react";
+import { Send, Loader2, Paperclip, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { sendClientMessage } from "@/components/jobs/hooks/messaging/messagingUtils";
 
@@ -14,6 +14,7 @@ interface MessageInputProps {
 export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInputProps) => {
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation || isSending) return;
@@ -24,9 +25,18 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
     }
 
     setIsSending(true);
-    console.log('Sending message:', messageText, 'to:', selectedConversation.client.name, 'phone:', selectedConversation.client.phone);
+    setDebugInfo("Initiating SMS send...");
+    
+    console.log('🚀 SMS Send Debug Info:');
+    console.log('- Message:', messageText);
+    console.log('- To:', selectedConversation.client.name);
+    console.log('- Phone:', selectedConversation.client.phone);
+    console.log('- Client ID:', selectedConversation.client.id);
+    console.log('- Conversation ID:', selectedConversation.id);
 
     try {
+      setDebugInfo("Calling sendClientMessage function...");
+      
       const result = await sendClientMessage({
         content: messageText.trim(),
         clientPhone: selectedConversation.client.phone,
@@ -35,23 +45,28 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
         existingConversationId: selectedConversation.id.startsWith('temp-') ? undefined : selectedConversation.id
       });
 
-      console.log('Message send result:', result);
+      console.log('📱 SMS Send Result:', result);
+      setDebugInfo(`Send result: ${JSON.stringify(result)}`);
 
       if (result.success) {
         setMessageText("");
         toast.success("Message sent successfully");
+        setDebugInfo("Message sent - refreshing conversations...");
         
         // Notify parent to refresh conversations
         setTimeout(() => {
           onMessageSent();
+          setDebugInfo("");
         }, 1000);
       } else {
-        console.error("Message sending failed:", result.error);
+        console.error("❌ Message sending failed:", result.error);
         toast.error(`Failed to send message: ${result.error || 'Unknown error'}`);
+        setDebugInfo(`Error: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('💥 Error sending message:', error);
       toast.error("Failed to send message. Please try again.");
+      setDebugInfo(`Exception: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSending(false);
     }
@@ -69,8 +84,16 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
   }
 
   return (
-    <div className="p-4 border-t border-gray-200 bg-white">
+    <div className="p-4 border-t border-fixlyfy-border bg-white">
       <div className="flex flex-col gap-3">
+        {/* Debug Info Panel */}
+        {debugInfo && (
+          <div className="p-2 bg-fixlyfy-warning/10 border border-fixlyfy-warning/20 rounded-lg text-xs text-fixlyfy-warning flex items-center gap-2">
+            <AlertCircle className="h-3 w-3" />
+            <span>Debug: {debugInfo}</span>
+          </div>
+        )}
+        
         <div className="flex gap-3">
           <div className="flex-1">
             <Textarea
@@ -79,14 +102,14 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
               onChange={(e) => setMessageText(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSending}
-              className="resize-none min-h-[80px] border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="resize-none min-h-[80px] border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
             />
           </div>
           <div className="flex flex-col gap-2">
             <Button 
               variant="outline"
               size="sm"
-              className="p-2"
+              className="p-2 border-fixlyfy-border hover:bg-fixlyfy/5"
               disabled={isSending}
             >
               <Paperclip className="h-4 w-4" />
@@ -94,7 +117,7 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
             <Button 
               onClick={handleSendMessage}
               disabled={isSending || !messageText.trim()}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white"
+              className="px-4 py-2 bg-fixlyfy hover:bg-fixlyfy-light text-white"
               size="sm"
             >
               {isSending ? (
@@ -105,13 +128,27 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
             </Button>
           </div>
         </div>
-        <div className="flex justify-between items-center text-xs text-gray-500">
+        <div className="flex justify-between items-center text-xs text-fixlyfy-text-muted">
           <span>Press Enter to send, Shift+Enter for new line</span>
           {selectedConversation.client.phone && (
-            <span className="bg-gray-100 px-2 py-1 rounded">
+            <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
               SMS to {selectedConversation.client.phone}
             </span>
           )}
+        </div>
+        
+        {/* SMS Debugging Panel */}
+        <div className="p-3 bg-fixlyfy-bg-interface rounded-lg border border-fixlyfy-border/50">
+          <h4 className="text-sm font-medium text-fixlyfy-text mb-2">SMS Debug Info:</h4>
+          <div className="space-y-1 text-xs text-fixlyfy-text-secondary">
+            <div>Client Phone: <span className="font-mono">{selectedConversation.client.phone || 'Not set'}</span></div>
+            <div>Conversation ID: <span className="font-mono">{selectedConversation.id}</span></div>
+            <div>Message Count: <span className="font-mono">{selectedConversation.messages.length}</span></div>
+            <div>Last Message: <span className="font-mono">{selectedConversation.lastMessageTime ? new Date(selectedConversation.lastMessageTime).toLocaleString() : 'None'}</span></div>
+          </div>
+          <div className="mt-2 p-2 bg-fixlyfy-info/10 rounded text-xs text-fixlyfy-info">
+            💡 Check the browser console for detailed SMS send/receive logs
+          </div>
         </div>
       </div>
     </div>
