@@ -1,61 +1,40 @@
 
-/**
- * Utility functions for email formatting and generation
- */
-
-/**
- * Converts a company name to an email-safe format
- * Examples:
- * "Fixlify AI" -> "fixlify_ai"
- * "Bob's Plumbing & HVAC" -> "bobs_plumbing_hvac"
- * "ABC-123 Services LLC" -> "abc_123_services_llc"
- */
-export const formatCompanyNameForEmail = (companyName: string): string => {
-  if (!companyName || typeof companyName !== 'string') {
-    return 'support';
-  }
-
-  return companyName
-    .toLowerCase()
-    .trim()
-    // Replace spaces and common separators with underscores
-    .replace(/[\s\-&+.,()]+/g, '_')
-    // Remove any characters that aren't letters, numbers, or underscores
-    .replace(/[^a-z0-9_]/g, '')
-    // Remove multiple consecutive underscores
-    .replace(/_+/g, '_')
-    // Remove leading/trailing underscores
-    .replace(/^_+|_+$/g, '')
-    // Limit length to 30 characters for reasonable email addresses
-    .substring(0, 30)
-    // Fallback if result is empty
-    || 'support';
-};
-
-/**
- * Generates the FROM email address based on company name
- */
 export const generateFromEmail = (companyName: string): string => {
-  const formattedName = formatCompanyNameForEmail(companyName);
-  return `${formattedName}@fixlify.app`;
+  // Generate a clean email format from company name
+  const cleanName = companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, '') // Remove spaces
+    .substring(0, 20); // Limit length
+  
+  return `${cleanName}@fixlify.app`;
 };
 
-/**
- * Generates professional subject lines for estimates and invoices
- */
-export const generateEmailSubject = (
-  companyName: string,
-  documentType: 'estimate' | 'invoice',
-  documentNumber: string
-): string => {
-  const cleanCompanyName = companyName?.trim() || 'Fixlify Services';
-  const capitalizedType = documentType.charAt(0).toUpperCase() + documentType.slice(1);
-  return `[${cleanCompanyName}] - ${capitalizedType} #${documentNumber}`;
+export const formatEmailPreview = (content: string, maxLength: number = 100): string => {
+  if (!content) return 'No content';
+  
+  // Strip HTML tags
+  const textContent = content.replace(/<[^>]*>/g, '');
+  
+  // Truncate if necessary
+  if (textContent.length > maxLength) {
+    return textContent.substring(0, maxLength) + '...';
+  }
+  
+  return textContent;
 };
 
-/**
- * Gets the FROM name for emails (company name or fallback)
- */
-export const generateFromName = (companyName: string, fallback: string = 'Support Team'): string => {
-  return companyName?.trim() || fallback;
+export const getEmailStatusColor = (status: string): string => {
+  switch (status?.toLowerCase()) {
+    case 'delivered':
+      return 'bg-fixlyfy-success/20 text-fixlyfy-success';
+    case 'sent':
+      return 'bg-fixlyfy-info/20 text-fixlyfy-info';
+    case 'failed':
+      return 'bg-fixlyfy-error/20 text-fixlyfy-error';
+    case 'pending':
+      return 'bg-fixlyfy-warning/20 text-fixlyfy-warning';
+    default:
+      return 'bg-fixlyfy-text-muted/20 text-fixlyfy-text-muted';
+  }
 };
