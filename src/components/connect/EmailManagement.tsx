@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -261,86 +260,100 @@ export const EmailManagement = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-300px)]">
-      {/* Conversations List */}
-      <Card className="lg:col-span-1 flex flex-col">
-        <CardHeader className="flex-shrink-0">
-          <CardTitle className="flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Email Conversations
-              <Badge variant="secondary">{conversations.length}</Badge>
-            </div>
-            <Button size="sm" onClick={handleNewEmail} className="gap-1 bg-fixlyfy hover:bg-fixlyfy-light">
-              <Plus className="h-4 w-4" />
-              New
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 flex-1">
-          <ScrollArea className="h-full">
-            {conversations.length === 0 ? (
-              <div className="p-4 text-center text-fixlyfy-text-secondary">
-                No email conversations yet
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {conversations.map((conversation) => {
-                  const unreadCount = getUnreadCount(conversation);
-                  const isSelected = selectedConversation?.id === conversation.id;
-                  
-                  return (
-                    <div
-                      key={conversation.id}
-                      className={`p-4 cursor-pointer border-b border-fixlyfy-border/50 hover:bg-fixlyfy/5 transition-colors ${
-                        isSelected ? 'bg-fixlyfy/10 border-fixlyfy/30' : ''
-                      }`}
-                      onClick={() => setSelectedConversation(conversation)}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-sm truncate flex-1 text-fixlyfy-text">
-                          {conversation.client?.name || 'Unknown Client'}
+    <div className="h-full flex flex-col">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+        {/* Conversations List */}
+        <div className="lg:col-span-1">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0 pb-3">
+              <CardTitle className="flex items-center gap-2 justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-fixlyfy" />
+                  <span className="text-fixlyfy-text">Email Conversations</span>
+                  <Badge variant="secondary" className="bg-fixlyfy/10 text-fixlyfy">
+                    {conversations.length}
+                  </Badge>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={handleNewEmail} 
+                  className="gap-1 bg-fixlyfy hover:bg-fixlyfy-light text-white"
+                >
+                  <Plus className="h-4 w-4" />
+                  New
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                {conversations.length === 0 ? (
+                  <div className="p-4 text-center text-fixlyfy-text-secondary">
+                    <Mail className="h-8 w-8 mx-auto mb-3 text-fixlyfy-text-muted" />
+                    <p className="text-sm">No email conversations yet</p>
+                    <p className="text-xs mt-1">Click "New" to start</p>
+                  </div>
+                ) : (
+                  <div className="space-y-0">
+                    {conversations.map((conversation) => {
+                      const unreadCount = getUnreadCount(conversation);
+                      const isSelected = selectedConversation?.id === conversation.id;
+                      
+                      return (
+                        <div
+                          key={conversation.id}
+                          className={`p-3 cursor-pointer border-b border-fixlyfy-border/30 hover:bg-fixlyfy/5 transition-colors ${
+                            isSelected ? 'bg-fixlyfy/10 border-l-2 border-l-fixlyfy' : ''
+                          }`}
+                          onClick={() => setSelectedConversation(conversation)}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-medium text-sm truncate flex-1 text-fixlyfy-text">
+                              {conversation.client?.name || 'Unknown Client'}
+                            </div>
+                            {unreadCount > 0 && (
+                              <Badge className="ml-2 bg-fixlyfy text-white text-xs">
+                                {unreadCount}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-fixlyfy-text-secondary mb-1 font-medium truncate">
+                            {conversation.subject}
+                          </div>
+                          <div className="text-xs text-fixlyfy-text-muted line-clamp-2">
+                            {getConversationPreview(conversation)}
+                          </div>
+                          <div className="text-xs text-fixlyfy-text-muted mt-1">
+                            {new Date(conversation.last_message_at).toLocaleDateString()}
+                          </div>
                         </div>
-                        {unreadCount > 0 && (
-                          <Badge className="ml-2 bg-fixlyfy text-white">
-                            {unreadCount}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-fixlyfy-text-secondary mb-1 font-medium">
-                        {conversation.subject}
-                      </div>
-                      <div className="text-xs text-fixlyfy-text-muted">
-                        {getConversationPreview(conversation)}
-                      </div>
-                      <div className="text-xs text-fixlyfy-text-muted mt-1">
-                        {new Date(conversation.last_message_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Email Detail */}
-      <Card className="lg:col-span-2 flex flex-col">
-        <CardContent className="p-0 h-full flex flex-col">
-          <div className="flex-1 min-h-0">
-            <EmailThread selectedConversation={selectedConversation} />
-          </div>
-          {selectedConversation && (
-            <div className="flex-shrink-0">
-              <EmailInput 
-                selectedConversation={selectedConversation}
-                onEmailSent={fetchConversations}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Email Detail */}
+        <div className="lg:col-span-2">
+          <Card className="h-full flex flex-col">
+            <CardContent className="p-0 h-full flex flex-col min-h-0">
+              <div className="flex-1 min-h-0">
+                <EmailThread selectedConversation={selectedConversation} />
+              </div>
+              {selectedConversation && (
+                <div className="flex-shrink-0 border-t border-fixlyfy-border/50">
+                  <EmailInput 
+                    selectedConversation={selectedConversation}
+                    onEmailSent={fetchConversations}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
