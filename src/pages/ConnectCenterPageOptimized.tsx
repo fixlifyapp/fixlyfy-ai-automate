@@ -1,305 +1,158 @@
-import { useState, useEffect } from "react";
-import { PageLayout } from "@/components/layout/PageLayout";
-import { PageHeader } from "@/components/ui/page-header";
+
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
-import { DispatcherMessagesView } from "@/components/connect/DispatcherMessagesView";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MessageSquare, Phone, Mail, Users, Settings, BarChart3 } from "lucide-react";
+import { SimpleMessagesInterface } from "@/components/connect/components/SimpleMessagesInterface";
+import { CallingInterface } from "@/components/connect/CallingInterface";
 import { EmailManagement } from "@/components/connect/EmailManagement";
-import { IncomingCallHandler } from "@/components/connect/IncomingCallHandler";
+import { AIAgentDashboard } from "@/components/connect/AIAgentDashboard";
 import { CallMonitoring } from "@/components/connect/CallMonitoring";
-import { EmailComposer } from "@/components/connect/EmailComposer";
-import { IntegrationTester } from "@/components/connect/IntegrationTester";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { MessageSquare, Phone, Mail, Plus, Users, TestTube } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useLocation, useNavigate } from "react-router-dom";
-import { ConnectSearch } from "@/components/connect/components/ConnectSearch";
-import { useMessageContext } from "@/contexts/MessageContext";
-import { useConnectCenterData } from "@/components/connect/hooks/useConnectCenterData";
-import { toast } from "sonner";
-import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
-import { supabase } from "@/integrations/supabase/client";
-import { AIAgentToggle } from "@/components/connect/AIAgentToggle";
-import { ActiveCallInterface } from "@/components/connect/ActiveCallInterface";
-import { PhoneNumbersManagement } from "@/components/connect/PhoneNumbersManagement";
+import { AICallAnalytics } from "@/components/connect/AICallAnalytics";
 
 const ConnectCenterPageOptimized = () => {
-  const [activeTab, setActiveTab] = useState("monitoring");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
-  const [integrationTesterOpen, setIntegrationTesterOpen] = useState(false);
-  const [isCallLoading, setIsCallLoading] = useState(false);
-  
-  const { openMessageDialog } = useMessageContext();
-  const { unreadCounts, ownedNumbers, isLoading, refreshData } = useConnectCenterData();
-
-  const location = useLocation();
-  const navigate = useNavigate();
-  const searchParams = new URLSearchParams(location.search);
-  const clientId = searchParams.get("clientId");
-  const clientName = searchParams.get("clientName");
-  const clientPhone = searchParams.get("clientPhone");
-  const clientEmail = searchParams.get("clientEmail");
-  const tabParam = searchParams.get("tab") || "monitoring";
-  const autoOpen = searchParams.get("autoOpen") === "true";
-  
-  useEffect(() => {
-    if (tabParam && ["monitoring", "messages", "calls", "emails"].includes(tabParam)) {
-      setActiveTab(tabParam);
-    }
-  }, [tabParam]);
-  
-  useEffect(() => {
-    const handleClientActions = async () => {
-      if (!clientId || !clientName) return;
-
-      console.log('Connect Center: Handling client actions', {
-        clientId,
-        clientName,
-        clientPhone,
-        clientEmail,
-        activeTab,
-        autoOpen
-      });
-
-      // Auto-trigger actions based on the active tab and autoOpen parameter
-      if (activeTab === "messages" && clientPhone && autoOpen) {
-        console.log('Connect Center: Auto-opening message dialog for client:', clientName);
-        try {
-          await openMessageDialog({
-            id: clientId,
-            name: clientName,
-            phone: clientPhone || '',
-            email: clientEmail || ''
-          });
-          
-          // Clear the autoOpen parameter from URL to prevent re-triggering
-          const newSearchParams = new URLSearchParams(location.search);
-          newSearchParams.delete("autoOpen");
-          const newUrl = `${location.pathname}?${newSearchParams.toString()}`;
-          navigate(newUrl, { replace: true });
-          
-        } catch (error) {
-          console.error('Connect Center: Error opening message dialog:', error);
-          toast.error('Failed to open message dialog');
-        }
-      } else if (activeTab === "calls" && clientPhone) {
-        // Auto-initiate call for calls tab
-        await handleAutoCall();
-      } else if (activeTab === "emails" && clientEmail && autoOpen) {
-        setEmailComposerOpen(true);
-        
-        // Clear the autoOpen parameter from URL
-        const newSearchParams = new URLSearchParams(location.search);
-        newSearchParams.delete("autoOpen");
-        const newUrl = `${location.pathname}?${newSearchParams.toString()}`;
-        navigate(newUrl, { replace: true });
-      }
-    };
-
-    // Only trigger if we have the required parameters and the tab is set
-    if (clientId && clientName && activeTab && autoOpen) {
-      // Add a small delay to ensure components are mounted
-      const timer = setTimeout(handleClientActions, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [clientId, clientName, clientPhone, clientEmail, activeTab, autoOpen, openMessageDialog, navigate, location]);
-
-  const handleAutoCall = async () => {
-    if (!clientPhone || !clientId) return;
-
-    setIsCallLoading(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('telnyx-make-call', {
-        body: {
-          to: clientPhone,
-          clientId: clientId
-        }
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || 'Failed to initiate call');
-      }
-
-      toast.success(`Call initiated to ${clientName}`);
-    } catch (error) {
-      console.error('Error making call:', error);
-      toast.error('Failed to make call: ' + error.message);
-    } finally {
-      setIsCallLoading(false);
-    }
-  };
-
-  const handleNewCommunication = () => {
-    switch (activeTab) {
-      case "messages":
-        openMessageDialog({ 
-          id: "new-client", 
-          name: "New Client", 
-          phone: "" 
-        });
-        break;
-      case "calls":
-        if (ownedNumbers.length === 0) {
-          toast.error("Please configure phone numbers first");
-        } else {
-          toast.info("Use the call monitoring interface below to manage calls");
-        }
-        break;
-      case "emails":
-        setEmailComposerOpen(true);
-        break;
-    }
-  };
-
-  const handleClientSelectFromSearch = async (client: { id: string; name: string; phone?: string; email?: string }) => {
-    console.log('Client selected from main search:', client);
-    
-    // Switch to messages tab if not already there
-    if (activeTab !== "messages") {
-      setActiveTab("messages");
-    }
-    
-    // Open message dialog for the selected client - ensure phone is provided
-    await openMessageDialog({
-      id: client.id,
-      name: client.name,
-      phone: client.phone || '',
-      email: client.email || ''
-    });
-  };
-
-  const getActionButtonText = () => {
-    switch (activeTab) {
-      case "messages": return "New Message";
-      case "calls": return "New Call";
-      case "emails": return "New Email";
-      case "monitoring": return "Monitor Calls";
-      default: return "New Action";
-    }
-  };
+  const [activeTab, setActiveTab] = useState("messages");
 
   return (
-    <PageLayout>
-      <IncomingCallHandler />
-      
-      <PageHeader
-        title="Connect Center"
-        subtitle={clientName ? `Communication with ${clientName}` : "Communication hub and call monitoring"}
-        icon={MessageSquare}
-        badges={[
-          { text: "Telnyx", icon: Phone, variant: "fixlyfy" as const },
-          { text: "Real-time Sync", icon: MessageSquare, variant: "info" as const },
-          ...(isCallLoading ? [{ text: "Calling...", icon: Phone, variant: "warning" as const }] : [])
-        ]}
-        actionButton={{
-          text: getActionButtonText(),
-          icon: Plus,
-          onClick: handleNewCommunication
-        }}
-      />
-      
-      <div className="mb-6 flex gap-4">
-        <div className="flex-1">
-          <ConnectSearch 
-            onSearchResults={setSearchResults}
-            onClientSelect={handleClientSelectFromSearch}
-          />
-        </div>
-        <Dialog open={integrationTesterOpen} onOpenChange={setIntegrationTesterOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <TestTube className="h-4 w-4" />
-              Test Integrations
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <IntegrationTester />
-          </DialogContent>
-        </Dialog>
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-fixlyfy-text mb-2">Connect Center</h1>
+        <p className="text-fixlyfy-text-secondary">
+          Manage all your customer communications in one place
+        </p>
       </div>
 
-      {/* AI Agent Toggle */}
-      <AIAgentToggle />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
+          <TabsTrigger value="messages" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Messages
+          </TabsTrigger>
+          <TabsTrigger value="calls" className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            Calls
+          </TabsTrigger>
+          <TabsTrigger value="emails" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Emails
+          </TabsTrigger>
+          <TabsTrigger value="ai-agent" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            AI Agent
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Monitoring
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Active Call Interface */}
-      <ActiveCallInterface />
+        <TabsContent value="messages" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-fixlyfy" />
+                SMS & Messaging
+              </CardTitle>
+              <CardDescription>
+                Send and receive text messages with your customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SimpleMessagesInterface />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Phone Numbers Management */}
-      <div className="mb-6">
-        <PhoneNumbersManagement />
-      </div>
-      
-      {isLoading ? (
-        <LoadingSkeleton type="connect-tabs" />
-      ) : (
-        <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 mb-6">
-            <TabsTrigger value="monitoring" className="flex items-center gap-2">
-              <Phone size={16} />
-              <span className="hidden sm:inline">Monitor</span>
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="flex items-center gap-2">
-              <MessageSquare size={16} />
-              <span className="hidden sm:inline">Messages</span>
-              {unreadCounts.messages > 0 && (
-                <Badge className="ml-1 bg-fixlyfy">{unreadCounts.messages}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="calls" className="flex items-center gap-2">
-              <Phone size={16} />
-              <span className="hidden sm:inline">Calls</span>
-              {unreadCounts.calls > 0 && (
-                <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="emails" className="flex items-center gap-2">
-              <Mail size={16} />
-              <span className="hidden sm:inline">Emails</span>
-              {unreadCounts.emails > 0 && (
-                <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="monitoring" className="mt-0">
-            <CallMonitoring />
-          </TabsContent>
-          
-          <TabsContent value="messages" className="mt-0">
-            <DispatcherMessagesView searchResults={searchResults} />
-          </TabsContent>
-          
-          <TabsContent value="calls" className="mt-0">
-            <TelnyxCallsView />
-          </TabsContent>
-          
-          <TabsContent value="emails" className="mt-0">
-            <EmailManagement />
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value="calls" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5 text-fixlyfy" />
+                Voice Communications
+              </CardTitle>
+              <CardDescription>
+                Make and receive calls with advanced features
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CallingInterface />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Email Composer Dialog */}
-      <Dialog open={emailComposerOpen} onOpenChange={setEmailComposerOpen}>
-        <DialogContent className="max-w-3xl">
-          <EmailComposer 
-            recipient={clientId && clientName && clientEmail ? {
-              id: clientId,
-              name: clientName,
-              email: clientEmail
-            } : undefined}
-            onClose={() => setEmailComposerOpen(false)}
-            onSent={() => {
-              refreshData();
-              setEmailComposerOpen(false);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-    </PageLayout>
+        <TabsContent value="emails" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-fixlyfy" />
+                Email Management
+              </CardTitle>
+              <CardDescription>
+                Send and manage email communications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-agent" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-fixlyfy" />
+                AI Agent Dashboard
+              </CardTitle>
+              <CardDescription>
+                Configure and monitor your AI assistant
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AIAgentDashboard />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-fixlyfy" />
+                Call Monitoring
+              </CardTitle>
+              <CardDescription>
+                Monitor active calls and system status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CallMonitoring />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-fixlyfy" />
+                AI Call Analytics
+              </CardTitle>
+              <CardDescription>
+                View detailed analytics and insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AICallAnalytics />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
