@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { Bot, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
 
@@ -27,7 +27,7 @@ export const AIWritingAssistant = ({
 
   const quickSuggestions = [
     {
-      label: "Friendly greeting",
+      label: "Greeting",
       prompt: `Generate a friendly professional greeting message to ${clientName}`
     },
     {
@@ -35,7 +35,7 @@ export const AIWritingAssistant = ({
       prompt: `Generate a polite follow-up message to ${clientName} asking about their service needs`
     },
     {
-      label: "Appointment reminder",
+      label: "Reminder",
       prompt: `Generate a professional appointment reminder message for ${clientName}`
     },
     {
@@ -84,25 +84,30 @@ export const AIWritingAssistant = ({
 
   return (
     <div className="border-t border-fixlyfy-border/50 bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-2">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-fixlyfy" />
-            <span className="text-sm font-medium text-fixlyfy-text">AI Writing Assistant</span>
+            <Bot className="h-3 w-3 text-fixlyfy" />
+            <span className="text-xs font-medium text-fixlyfy-text">AI Assistant</span>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="h-6 w-6 p-0"
+            className="h-5 w-5 p-0"
             disabled={disabled}
           >
-            <RefreshCw className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            {isExpanded ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
           </Button>
         </div>
 
-        {/* Quick Suggestions */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        {/* Compact Quick Suggestions - Always visible */}
+        <div className="grid grid-cols-4 gap-1 mb-2">
           {quickSuggestions.map((suggestion, index) => (
             <Button
               key={index}
@@ -110,19 +115,19 @@ export const AIWritingAssistant = ({
               size="sm"
               onClick={() => handleQuickSuggestion(suggestion.prompt)}
               disabled={isLoading || disabled}
-              className="text-xs h-8 gap-1 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
+              className="text-xs h-6 px-1 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
             >
               {isLoading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-2 w-2 animate-spin" />
               ) : (
-                <Sparkles className="h-3 w-3" />
+                <Sparkles className="h-2 w-2" />
               )}
-              {suggestion.label}
+              <span className="ml-1 truncate">{suggestion.label}</span>
             </Button>
           ))}
         </div>
 
-        {/* Custom Prompt */}
+        {/* Custom Prompt - Only when expanded */}
         {isExpanded && (
           <div className="space-y-2">
             <Textarea
@@ -130,22 +135,22 @@ export const AIWritingAssistant = ({
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               disabled={isLoading || disabled}
-              className="min-h-[60px] text-sm border-fixlyfy-border/50 focus:ring-fixlyfy/20 focus:border-fixlyfy"
+              className="min-h-[50px] text-xs border-fixlyfy-border/50 focus:ring-fixlyfy/20 focus:border-fixlyfy"
             />
             <Button
               onClick={handleCustomPrompt}
               disabled={!customPrompt.trim() || isLoading || disabled}
               size="sm"
-              className="w-full bg-fixlyfy hover:bg-fixlyfy-light text-white"
+              className="w-full h-7 bg-fixlyfy hover:bg-fixlyfy-light text-white text-xs"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                  <Loader2 className="h-2 w-2 animate-spin mr-1" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <Bot className="h-3 w-3 mr-2" />
+                  <Bot className="h-2 w-2 mr-1" />
                   Generate Custom Message
                 </>
               )}

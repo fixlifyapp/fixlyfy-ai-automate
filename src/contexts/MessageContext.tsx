@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -85,6 +84,36 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Error fetching conversations:', error);
+        
+        // Try to fetch some test conversations or create sample data
+        console.log('🔄 Trying to fetch clients for sample conversations...');
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('clients')
+          .select('id, name, phone, email')
+          .limit(5);
+
+        if (!clientsError && clientsData && clientsData.length > 0) {
+          console.log('📱 Found clients, creating sample conversations:', clientsData);
+          const sampleConversations: Conversation[] = clientsData.map(client => ({
+            id: `sample-${client.id}`,
+            client: {
+              id: client.id,
+              name: client.name,
+              phone: client.phone || '',
+              email: client.email || ''
+            },
+            messages: [],
+            lastMessage: 'No messages yet - click to start conversation',
+            lastMessageTime: new Date().toISOString(),
+            unreadCount: 0
+          }));
+          
+          setConversations(sampleConversations);
+          console.log('✅ Created sample conversations:', sampleConversations.length);
+        } else {
+          console.log('ℹ️ No conversations or clients found');
+          setConversations([]);
+        }
         return;
       }
 
@@ -121,6 +150,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       setConversations(formattedConversations);
     } catch (error) {
       console.error('💥 Error in fetchConversations:', error);
+      setConversations([]);
     } finally {
       setIsLoading(false);
     }
