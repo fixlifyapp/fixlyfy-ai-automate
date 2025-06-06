@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PhoneNumberPurchase } from '../connect/PhoneNumberPurchase';
+import { TelnyxPhoneConfiguration } from './TelnyxPhoneConfiguration';
 import { formatPhoneForDisplay } from '@/utils/phoneUtils';
 
 interface OwnedNumber {
@@ -22,6 +23,7 @@ interface OwnedNumber {
   user_id?: string;
   monthly_cost?: number;
   setup_cost?: number;
+  messaging_profile_id?: string;
 }
 
 export function TelnyxPhoneNumbersPage() {
@@ -50,39 +52,49 @@ export function TelnyxPhoneNumbersPage() {
     }
   });
 
-  // Configure number mutation
-  const configureNumberMutation = useMutation({
-    mutationFn: async (phoneNumber: string) => {
-      console.log('Configuring number:', phoneNumber);
-      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-        body: {
-          action: 'configure',
-          phone_number: phoneNumber
-        }
-      });
-
-      if (error) {
-        console.error('Configure error:', error);
-        throw error;
-      }
-      console.log('Configure response:', data);
-      return data;
-    },
-    onSuccess: (data) => {
-      console.log('Successfully configured:', data);
-      toast.success('Number configured for AI calls');
-      queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
-    },
-    onError: (error) => {
-      console.error('Configure error:', error);
-      toast.error(`Failed to configure number: ${error.message}`);
-    }
-  });
+  const isNumberFullyConfigured = (number: OwnedNumber) => {
+    return number.configured_at && 
+           number.webhook_url && 
+           number.webhook_url.includes('sms-receiver') &&
+           number.messaging_profile_id;
+  };
 
   return (
     <div className="space-y-6">
       {/* Purchase Numbers Section */}
       <PhoneNumberPurchase />
+
+      {/* Configuration Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configuration Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <h5 className="font-medium text-blue-600">📞 What Gets Configured</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• <strong>SMS Messaging:</strong> Two-way text messaging</li>
+                <li>• <strong>Voice Calls:</strong> Incoming and outgoing calls</li>
+                <li>• <strong>AI Dispatcher:</strong> AI agent answers calls</li>
+                <li>• <strong>Webhooks:</strong> Real-time message delivery</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <h5 className="font-medium text-green-600">🚀 After Configuration</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• Customers can text your number</li>
+                <li>• You receive SMS in your dashboard</li>
+                <li>• AI answers incoming calls 24/7</li>
+                <li>• Call transcripts and recordings</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Owned Numbers */}
       <Card>
@@ -107,100 +119,92 @@ export function TelnyxPhoneNumbersPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {ownedNumbers.map((number: OwnedNumber) => (
-                <div
-                  key={number.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-medium text-lg">
-                        {formatPhoneForDisplay(number.phone_number)}
-                      </h3>
-                      <Badge variant={number.status === 'active' ? 'default' : 'secondary'}>
-                        {number.status}
-                      </Badge>
-                      {(number.monthly_cost === 0 && number.setup_cost === 0) && (
-                        <Badge variant="outline" className="text-green-600">
-                          🧪 Test Number
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1 space-y-1">
-                      {number.purchased_at && (
-                        <div>Added: {new Date(number.purchased_at).toLocaleDateString()}</div>
-                      )}
-                      {number.configured_at && (
-                        <div>Configured: {new Date(number.configured_at).toLocaleDateString()}</div>
-                      )}
-                      {(number.monthly_cost !== undefined && number.setup_cost !== undefined) && (
-                        <div>
-                          Cost: ${number.setup_cost} setup + ${number.monthly_cost}/month
-                          {number.monthly_cost === 0 && number.setup_cost === 0 && ' (Free!)'}
+            <div className="space-y-6">
+              {ownedNumbers.map((number: OwnedNumber) => {
+                const isConfigured = isNumberFullyConfigured(number);
+                
+                return (
+                  <div key={number.id}>
+                    <div className="flex items-center justify-between p-4 border rounded-lg mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-medium text-lg">
+                            {formatPhoneForDisplay(number.phone_number)}
+                          </h3>
+                          <Badge variant={number.status === 'active' ? 'default' : 'secondary'}>
+                            {number.status}
+                          </Badge>
+                          {(number.monthly_cost === 0 && number.setup_cost === 0) && (
+                            <Badge variant="outline" className="text-green-600">
+                              🧪 Test Number
+                            </Badge>
+                          )}
+                          {isConfigured ? (
+                            <Badge variant="outline" className="text-green-600">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Fully Configured
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-orange-600">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Needs Configuration
+                            </Badge>
+                          )}
                         </div>
-                      )}
+                        <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                          {number.purchased_at && (
+                            <div>Added: {new Date(number.purchased_at).toLocaleDateString()}</div>
+                          )}
+                          {number.configured_at && (
+                            <div>Last configured: {new Date(number.configured_at).toLocaleDateString()}</div>
+                          )}
+                          {(number.monthly_cost !== undefined && number.setup_cost !== undefined) && (
+                            <div>
+                              Cost: ${number.setup_cost} setup + ${number.monthly_cost}/month
+                              {number.monthly_cost === 0 && number.setup_cost === 0 && ' (Free!)'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                    
+                    {/* Configuration Component */}
+                    <TelnyxPhoneConfiguration 
+                      phoneNumber={number.phone_number}
+                      isConfigured={isConfigured}
+                    />
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {number.configured_at ? (
-                      <Badge variant="outline" className="text-green-600">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        AI Ready
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => configureNumberMutation.mutate(number.phone_number)}
-                        disabled={configureNumberMutation.isPending}
-                      >
-                        <Settings className="h-4 w-4 mr-1" />
-                        Configure AI
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Configuration Status */}
+      {/* Help Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Next Steps</CardTitle>
+          <CardTitle>Testing Your Setup</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <h5 className="font-medium text-blue-600">📞 For Test Numbers</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• Perfect for development and testing</li>
-                <li>• Configure AI dispatcher for free</li>
-                <li>• Test call flows and responses</li>
-                <li>• No real costs involved</li>
-              </ul>
-            </div>
-            <div className="space-y-3">
-              <h5 className="font-medium text-green-600">🚀 For Production</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• Purchase real Telnyx numbers</li>
-                <li>• Configure webhooks in Telnyx dashboard</li>
-                <li>• Set up AI dispatcher for live calls</li>
-                <li>• Monitor call logs and performance</li>
-              </ul>
-            </div>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-medium text-blue-800 mb-2">🧪 How to Test</h5>
+            <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+              <li>Configure your number using the "Setup Full Configuration" button above</li>
+              <li><strong>Test SMS:</strong> Send a text message to your configured number</li>
+              <li><strong>Test Voice:</strong> Call your number to test the AI dispatcher</li>
+              <li>Check the logs in your Supabase dashboard for debugging</li>
+            </ol>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h5 className="font-medium text-blue-800 mb-2">🧪 Testing Your Setup</h5>
-            <p className="text-sm text-blue-700">
-              After purchasing and configuring a test number, you can test the AI dispatcher by calling the number. 
-              Check the "Call History" tab to see call logs and transcripts.
-            </p>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h5 className="font-medium text-green-800 mb-2">✅ What Should Happen</h5>
+            <ul className="text-sm text-green-700 space-y-1">
+              <li>• SMS messages appear in your Connect → Messages tab</li>
+              <li>• Incoming calls are answered by AI dispatcher</li>
+              <li>• Call transcripts are logged in the system</li>
+              <li>• Customer information is captured automatically</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
