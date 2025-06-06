@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Send, MessageSquare, Phone, Mail, Loader2 } from "lucide-react";
+import { Search, Send, MessageSquare, Phone, Mail, Loader2, X, Plus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sendClientMessage } from "@/components/jobs/hooks/messaging/messagingUtils";
+import { supabase } from "@/integrations/supabase/client";
+
+interface SearchResult {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+}
 
 export const SimpleMessagesInterface = () => {
   const { conversations, refreshConversations, isLoading } = useMessageContext();
@@ -18,6 +26,12 @@ export const SimpleMessagesInterface = () => {
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isSending, setIsSending] = useState(false);
+  
+  // Client search states
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [clientSearchResults, setClientSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   console.log('SimpleMessagesInterface conversations:', conversations);
 
@@ -29,6 +43,82 @@ export const SimpleMessagesInterface = () => {
 
     return () => clearInterval(interval);
   }, [refreshConversations]);
+
+  // Client search functionality
+  useEffect(() => {
+    const searchClients = async () => {
+      if (!clientSearchTerm.trim()) {
+        setClientSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const { data: clientData, error } = await supabase
+          .from('clients')
+          .select('id, name, phone, email')
+          .or(`name.ilike.%${clientSearchTerm}%,phone.ilike.%${clientSearchTerm}%`)
+          .limit(10);
+
+        if (error) throw error;
+
+        const results = clientData?.map(client => ({
+          id: client.id,
+          name: client.name,
+          phone: client.phone,
+          email: client.email
+        })) || [];
+
+        setClientSearchResults(results);
+        setShowSearchResults(results.length > 0);
+      } catch (error) {
+        console.error('Error searching clients:', error);
+        toast.error("Failed to search clients");
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchClients, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [clientSearchTerm]);
+
+  const handleClientSelect = async (client: SearchResult) => {
+    console.log('Selected client:', client);
+    
+    // Check if conversation already exists
+    let existingConversation = conversations.find(conv => conv.client.id === client.id);
+    
+    if (existingConversation) {
+      // Use existing conversation
+      setSelectedConversation(existingConversation);
+      console.log('Using existing conversation:', existingConversation.id);
+    } else {
+      // Create a new conversation placeholder
+      const newConversation = {
+        id: `temp-${client.id}`,
+        client: {
+          id: client.id,
+          name: client.name,
+          phone: client.phone || '',
+          email: client.email || ''
+        },
+        messages: [],
+        lastMessage: 'No messages yet',
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0
+      };
+      
+      setSelectedConversation(newConversation);
+      console.log('Created new conversation placeholder for client:', client.name);
+    }
+    
+    // Clear search
+    setClientSearchTerm("");
+    setShowSearchResults(false);
+    toast.success(`Opening conversation with ${client.name}`);
+  };
 
   const filteredConversations = conversations.filter(conv =>
     conv.client.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -51,7 +141,7 @@ export const SimpleMessagesInterface = () => {
         clientPhone: selectedConversation.client.phone,
         jobId: "",
         clientId: selectedConversation.client.id,
-        existingConversationId: selectedConversation.id
+        existingConversationId: selectedConversation.id.startsWith('temp-') ? undefined : selectedConversation.id
       });
 
       console.log('Message send result:', result);
@@ -99,6 +189,59 @@ export const SimpleMessagesInterface = () => {
 
   return (
     <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden bg-white">
+      {/* Client Search Header */}
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search clients to start messaging (e.g., TESTCLIENT2)..."
+            value={clientSearchTerm}
+            onChange={(e) => setClientSearchTerm(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+          )}
+          {clientSearchTerm && (
+            <button
+              onClick={() => {
+                setClientSearchTerm("");
+                setShowSearchResults(false);
+              }}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        
+        {/* Search Results Dropdown */}
+        {showSearchResults && (
+          <div className="absolute top-full left-4 right-4 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+            {clientSearchResults.map((client) => (
+              <div
+                key={client.id}
+                onClick={() => handleClientSelect(client)}
+                className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{client.name}</div>
+                    {client.phone && (
+                      <div className="text-sm text-gray-500">{client.phone}</div>
+                    )}
+                    {client.email && (
+                      <div className="text-sm text-gray-500">{client.email}</div>
+                    )}
+                  </div>
+                  <Plus className="h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left Panel - Conversations List */}
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
@@ -200,7 +343,7 @@ export const SimpleMessagesInterface = () => {
               <div className="text-center">
                 <MessageSquare className="mx-auto mb-4 h-12 w-12" />
                 <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
-                <p>Choose a conversation from the left to start messaging</p>
+                <p>Choose a conversation from the left or search for a client above to start messaging</p>
               </div>
             </div>
           ) : (
