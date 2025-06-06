@@ -23,9 +23,42 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
     try {
       console.log('🚀 Sending message to:', selectedConversation.client.name);
       
-      // First, restore conversation if it's archived
-      if (selectedConversation.id && selectedConversation.id !== `temp-${selectedConversation.client.id}`) {
-        console.log('🔄 Checking if conversation needs to be restored from archive');
+      let conversationId = selectedConversation.id;
+      
+      // Handle temporary conversation IDs (new conversations)
+      if (conversationId.startsWith('temp-')) {
+        console.log('📝 Creating new conversation for temporary ID');
+        // First check if conversation already exists for this client
+        const { data: existingConv, error: checkError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', selectedConversation.client.id)
+          .single();
+
+        if (!checkError && existingConv) {
+          conversationId = existingConv.id;
+          console.log('✅ Found existing conversation:', conversationId);
+        } else {
+          // Create new conversation
+          const { data: newConv, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: selectedConversation.client.id,
+              status: 'active',
+              last_message_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          conversationId = newConv.id;
+          console.log('🆕 Created new conversation:', conversationId);
+        }
+      } else {
+        // Restore archived conversation
+        console.log('🔄 Restoring conversation from archive:', conversationId);
         const { error: restoreError } = await supabase
           .from('conversations')
           .update({ 
@@ -33,7 +66,7 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
             last_message_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', selectedConversation.id);
+          .eq('id', conversationId);
 
         if (restoreError) {
           console.error('⚠️ Error restoring conversation:', restoreError);
@@ -47,7 +80,8 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
         body: {
           to: selectedConversation.client.phone,
           body: message,
-          client_id: selectedConversation.client.id
+          client_id: selectedConversation.client.id,
+          conversation_id: conversationId
         }
       });
 
@@ -59,7 +93,7 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
       toast.success('Message sent successfully');
       setMessage("");
       
-      // Call the callback to refresh conversations
+      // Call the callback to refresh conversations and force list update
       setTimeout(() => {
         onMessageSent();
       }, 500);

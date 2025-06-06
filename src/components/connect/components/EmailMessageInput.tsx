@@ -25,9 +25,43 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
     try {
       console.log('📧 Sending email to:', selectedConversation.client?.name);
       
-      // First, restore email conversation if it's archived
-      if (selectedConversation.id && !selectedConversation.id.startsWith('new_email_')) {
-        console.log('🔄 Checking if email conversation needs to be restored from archive');
+      let conversationId = selectedConversation.id;
+      
+      // Handle new email conversations
+      if (conversationId.startsWith('new_email_')) {
+        console.log('📝 Creating new email conversation');
+        // First check if email conversation already exists for this client
+        const { data: existingConv, error: checkError } = await supabase
+          .from('email_conversations')
+          .select('id')
+          .eq('client_id', selectedConversation.client.id)
+          .single();
+
+        if (!checkError && existingConv) {
+          conversationId = existingConv.id;
+          console.log('✅ Found existing email conversation:', conversationId);
+        } else {
+          // Create new email conversation
+          const { data: newConv, error: createError } = await supabase
+            .from('email_conversations')
+            .insert({
+              client_id: selectedConversation.client.id,
+              subject: subject || `Email conversation with ${selectedConversation.client.name}`,
+              status: 'active',
+              last_message_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          conversationId = newConv.id;
+          console.log('🆕 Created new email conversation:', conversationId);
+        }
+      } else {
+        // Restore archived email conversation
+        console.log('🔄 Restoring email conversation from archive:', conversationId);
         const { error: restoreError } = await supabase
           .from('email_conversations')
           .update({ 
@@ -35,7 +69,7 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
             last_message_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', selectedConversation.id);
+          .eq('id', conversationId);
 
         if (restoreError) {
           console.error('⚠️ Error restoring email conversation:', restoreError);
@@ -50,7 +84,8 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
           to: selectedConversation.client?.email,
           subject: subject || 'Message from Fixlyfy',
           text: message,
-          client_id: selectedConversation.client?.id
+          client_id: selectedConversation.client?.id,
+          conversation_id: conversationId
         }
       });
 
@@ -63,7 +98,7 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
       setSubject("");
       setMessage("");
       
-      // Call the callback to refresh conversations
+      // Call the callback to refresh conversations and force list update
       setTimeout(() => {
         onMessageSent();
       }, 500);

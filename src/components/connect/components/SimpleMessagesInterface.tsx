@@ -177,7 +177,26 @@ export const SimpleMessagesInterface = () => {
   };
 
   const handleMessageSent = () => {
+    // Force refresh conversations to show the restored conversation
     refreshConversations();
+    
+    // Clear selection temporarily to force re-render
+    const currentConversation = selectedConversation;
+    setSelectedConversation(null);
+    
+    // After a short delay, try to restore the selection with updated conversation
+    setTimeout(() => {
+      if (currentConversation) {
+        // Find the conversation in the updated list
+        const updatedConversation = conversations.find(conv => 
+          conv.client.id === currentConversation.client.id
+        );
+        
+        if (updatedConversation) {
+          setSelectedConversation(updatedConversation);
+        }
+      }
+    }, 1000);
   };
 
   // Filter conversations based on search term
