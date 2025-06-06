@@ -27,19 +27,54 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
       
       let conversationId = selectedConversation.id;
       
-      // Handle new email conversations
+      // Handle new email conversations or check for archived ones
       if (conversationId.startsWith('new_email_')) {
-        console.log('📝 Creating new email conversation');
-        // First check if email conversation already exists for this client
+        console.log('📝 Creating new email conversation or checking for archived');
+        
+        // First check if ANY email conversation exists for this client (including archived ones)
         const { data: existingConv, error: checkError } = await supabase
           .from('email_conversations')
-          .select('id')
+          .select('id, status')
           .eq('client_id', selectedConversation.client.id)
+          .order('last_message_at', { ascending: false })
+          .limit(1)
           .single();
 
         if (!checkError && existingConv) {
           conversationId = existingConv.id;
-          console.log('✅ Found existing email conversation:', conversationId);
+          console.log('✅ Found existing email conversation:', conversationId, 'with status:', existingConv.status);
+          
+          // If it's archived, restore it
+          if (existingConv.status === 'archived') {
+            console.log('🔄 Restoring archived email conversation:', conversationId);
+            const { error: restoreError } = await supabase
+              .from('email_conversations')
+              .update({ 
+                status: 'active',
+                last_message_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', conversationId);
+
+            if (restoreError) {
+              console.error('⚠️ Error restoring email conversation:', restoreError);
+            } else {
+              console.log('✅ Email conversation restored to active status');
+            }
+          } else {
+            // Update last_message_at for active conversation
+            const { error: updateError } = await supabase
+              .from('email_conversations')
+              .update({ 
+                last_message_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', conversationId);
+
+            if (updateError) {
+              console.error('⚠️ Error updating email conversation:', updateError);
+            }
+          }
         } else {
           // Create new email conversation
           const { data: newConv, error: createError } = await supabase
@@ -60,8 +95,8 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
           console.log('🆕 Created new email conversation:', conversationId);
         }
       } else {
-        // Restore archived email conversation
-        console.log('🔄 Restoring email conversation from archive:', conversationId);
+        // For existing conversation IDs, ensure they're active
+        console.log('🔄 Ensuring email conversation is active:', conversationId);
         const { error: restoreError } = await supabase
           .from('email_conversations')
           .update({ 
@@ -72,9 +107,9 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
           .eq('id', conversationId);
 
         if (restoreError) {
-          console.error('⚠️ Error restoring email conversation:', restoreError);
+          console.error('⚠️ Error updating email conversation:', restoreError);
         } else {
-          console.log('✅ Email conversation restored to active status');
+          console.log('✅ Email conversation ensured active status');
         }
       }
 
@@ -98,7 +133,7 @@ export const EmailMessageInput = ({ selectedConversation, onMessageSent }: Email
       setSubject("");
       setMessage("");
       
-      // Call the callback to refresh conversations and force list update
+      // Call the callback to refresh conversations
       setTimeout(() => {
         onMessageSent();
       }, 500);

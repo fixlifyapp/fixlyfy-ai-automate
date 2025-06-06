@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { EmailConversationsPanel } from "./EmailConversationsPanel";
@@ -97,11 +96,124 @@ export const SimpleEmailInterface = () => {
     }
   };
 
+  const restoreArchivedEmailConversation = async (clientId: string) => {
+    console.log('🔄 Restoring archived email conversation for client:', clientId);
+    
+    try {
+      // Check if there's an archived email conversation for this client
+      const { data: archivedConv, error } = await supabase
+        .from('email_conversations')
+        .select(`
+          id,
+          status,
+          subject,
+          last_message_at,
+          created_at,
+          clients:client_id (
+            id,
+            name,
+            email,
+            phone
+          ),
+          email_messages (
+            id,
+            subject,
+            body_text,
+            body_html,
+            direction,
+            delivery_status,
+            created_at,
+            sender_email,
+            recipient_email
+          )
+        `)
+        .eq('client_id', clientId)
+        .eq('status', 'archived')
+        .order('last_message_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && archivedConv) {
+        console.log('Found archived email conversation:', archivedConv.id);
+        
+        // Restore it to active status
+        const { error: restoreError } = await supabase
+          .from('email_conversations')
+          .update({ 
+            status: 'active',
+            last_message_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', archivedConv.id);
+
+        if (restoreError) {
+          console.error('Error restoring email conversation:', restoreError);
+          throw restoreError;
+        }
+
+        console.log('✅ Successfully restored archived email conversation');
+        
+        // Format the restored conversation with emails
+        const sortedEmails = (archivedConv.email_messages || []).sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+
+        const restoredConversation: EmailConversation = {
+          id: archivedConv.id,
+          subject: archivedConv.subject,
+          last_message_at: archivedConv.last_message_at,
+          status: 'active',
+          client_id: archivedConv.clients?.id || clientId,
+          client: archivedConv.clients ? {
+            id: archivedConv.clients.id,
+            name: archivedConv.clients.name,
+            email: archivedConv.clients.email,
+            phone: archivedConv.clients.phone
+          } : undefined,
+          emails: sortedEmails
+        };
+
+        // Add to conversations list and set as selected
+        setConversations(prev => [restoredConversation, ...prev]);
+        setSelectedConversation(restoredConversation);
+        
+        return restoredConversation;
+      } else {
+        console.log('No archived email conversation found for client:', clientId);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error in restoreArchivedEmailConversation:', error);
+      return null;
+    }
+  };
+
   const handleNewEmail = () => {
     setShowNewEmailDialog(true);
   };
 
-  const handleClientSelect = (client: { id: string; name: string; email?: string; phone?: string; company?: string }) => {
+  const handleClientSelect = async (client: { id: string; name: string; email?: string; phone?: string; company?: string }) => {
+    console.log('Selected client for email:', client);
+    
+    // First try to restore archived conversation
+    const restoredConversation = await restoreArchivedEmailConversation(client.id);
+    
+    if (restoredConversation) {
+      toast.success(`Restored email conversation with ${client.name} including history`);
+      setShowNewEmailDialog(false);
+      return;
+    }
+
+    // Check if there's an active conversation
+    const existingConversation = conversations.find(conv => conv.client?.id === client.id);
+    
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+      setShowNewEmailDialog(false);
+      return;
+    }
+
+    // Create new conversation placeholder
     const newConversation: EmailConversation = {
       id: `new_email_${client.id}_${Date.now()}`,
       subject: `New conversation with ${client.name}`,
@@ -123,13 +235,36 @@ export const SimpleEmailInterface = () => {
   };
 
   const handleMessageSent = () => {
-    // Refresh conversations and clear selection to show updated list
+    console.log('📧 Email sent, refreshing conversations...');
+    
+    // Force refresh conversations to show the new/updated conversation
     loadConversations();
     
-    // Clear the selection to force user to see the updated conversation in the list
-    setTimeout(() => {
+    // Clear selection temporarily to force re-render, then restore after refresh
+    const currentConversation = selectedConversation;
+    if (currentConversation) {
       setSelectedConversation(null);
-    }, 1000);
+      
+      // After refresh, try to restore the selection with updated conversation
+      setTimeout(() => {
+        loadConversations().then(() => {
+          setTimeout(() => {
+            const updatedConversation = conversations.find(conv => 
+              conv.client?.id === currentConversation.client?.id
+            );
+            
+            if (updatedConversation) {
+              setSelectedConversation(updatedConversation);
+              console.log('✅ Restored selection to updated email conversation');
+            } else {
+              // If still not found, keep the original selection
+              setSelectedConversation(currentConversation);
+              console.log('⚠️ Could not find updated email conversation, keeping original');
+            }
+          }, 500);
+        });
+      }, 100);
+    }
   };
 
   const handleRefresh = () => {
