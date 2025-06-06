@@ -34,7 +34,7 @@ import { ProtectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
 import PortalJobsPage from '@/pages/portal/PortalJobsPage';
 import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import PortalAccessPage from '@/pages/portal/PortalAccessPage';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,7 +47,7 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ErrorBoundary>
+    <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Toaster />
         <AuthProvider>
@@ -58,141 +58,141 @@ function App() {
                   {/* Main application routes */}
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <DashboardPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/clients" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <ClientsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/clients/:id" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <ClientDetailsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/jobs" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <JobsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/jobs/:id" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <JobDetailsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/estimates" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <EstimatesPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/estimates/:id" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <EstimateDetailsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/invoices" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <InvoicesPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/invoices/:id" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <InvoicesPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/finance" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <FinancePage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/team" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <TeamPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/team/:id" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <TeamMemberDetailsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/settings" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <SettingsPage />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/connect-center" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedRoute>
                         <ConnectCenterPageOptimized />
                       </ProtectedRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
 
                   {/* Client Portal Routes */}
                   <Route path="/portal/login" element={<PortalLoginPage />} />
                   <Route path="/portal/access" element={<PortalAccessPage />} />
                   <Route path="/portal/dashboard" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalDashboardPage />
                       </ProtectedPortalRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/portal/jobs" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalJobsPage />
                       </ProtectedPortalRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/portal/estimates" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalEstimatesPage />
                       </ProtectedPortalRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/portal/invoices" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalInvoicesPage />
                       </ProtectedPortalRoute>
-                    </ErrorBoundary>
+                    </AppErrorBoundary>
                   } />
                   <Route path="/portal/profile" element={
-                    <ErrorBoundary>
+                    <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalProfilePage />
-                      </ProtectedRoute>
-                    </ErrorBoundary>
+                      </ProtectedPortalRoute>
+                    </AppErrorBoundary>
                   } />
                 </Routes>
               </Router>
@@ -200,7 +200,7 @@ function App() {
           </RBACProvider>
         </AuthProvider>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </AppErrorBoundary>
   );
 }
 
