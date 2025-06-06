@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface MessageThreadProps {
   selectedConversation: any;
@@ -68,7 +69,6 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
     try {
       console.log('Opening email composer for:', selectedConversation.client.email);
       
-      // You can implement your email composer here or use mailto
       const subject = `Message from your service provider`;
       const body = `Hello ${selectedConversation.client.name},\n\n`;
       const mailtoUrl = `mailto:${selectedConversation.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -163,79 +163,93 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
         </div>
       </div>
 
-      {/* Messages Display */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface">
-        {selectedConversation.messages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-full p-6 mx-auto mb-4 w-16 h-16 flex items-center justify-center shadow-sm">
-              <MessageSquare className="h-8 w-8 text-fixlyfy-text-muted" />
-            </div>
-            <h4 className="font-medium text-fixlyfy-text mb-2">Start the conversation</h4>
-            <p className="text-fixlyfy-text-secondary text-sm">Send your first message to {selectedConversation.client.name}</p>
-          </div>
-        ) : (
-          selectedConversation.messages.map((message: any) => {
-            const isFromClient = message.direction === 'inbound';
-            const displaySender = isFromClient ? selectedConversation.client.name : 'You';
-            
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-3 animate-fade-in",
-                  !isFromClient && "flex-row-reverse"
-                )}
-              >
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback className={cn(
-                    "text-xs font-medium",
-                    isFromClient 
-                      ? "bg-fixlyfy-text-muted/20 text-fixlyfy-text" 
-                      : "bg-fixlyfy text-white"
-                  )}>
-                    {isFromClient 
-                      ? selectedConversation.client.name.substring(0, 2).toUpperCase()
-                      : 'ME'
-                    }
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className={cn(
-                  "flex flex-col max-w-[75%]",
-                  !isFromClient && "items-end"
-                )}>
-                  <div className={cn(
-                    "p-3 rounded-2xl shadow-sm",
-                    isFromClient 
-                      ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
-                      : "bg-fixlyfy text-white rounded-br-md"
-                  )}>
-                    <p className="text-sm break-words leading-relaxed">{message.body}</p>
+      {/* Resizable Messages Display and Input */}
+      <div className="flex-1 overflow-hidden">
+        <ResizablePanelGroup direction="vertical" className="h-full">
+          {/* Messages History Panel */}
+          <ResizablePanel defaultSize={70} minSize={40} maxSize={85}>
+            <div className="h-full overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface">
+              {selectedConversation.messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="bg-white rounded-full p-6 mx-auto mb-4 w-16 h-16 flex items-center justify-center shadow-sm">
+                    <MessageSquare className="h-8 w-8 text-fixlyfy-text-muted" />
                   </div>
-                  <div className={cn(
-                    "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted",
-                    !isFromClient && "flex-row-reverse"
-                  )}>
-                    <span className="font-medium">{displaySender}</span>
-                    <Clock className="h-3 w-3" />
-                    <span>{formatMessageTime(message.created_at)}</span>
-                    {!isFromClient && (
-                      <span className={cn(
-                        "ml-1 px-1.5 py-0.5 rounded text-xs",
-                        message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
-                        message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
-                        message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :
-                        "bg-fixlyfy-warning/20 text-fixlyfy-warning"
-                      )}>
-                        {message.status || 'sending'}
-                      </span>
-                    )}
-                  </div>
+                  <h4 className="font-medium text-fixlyfy-text mb-2">Start the conversation</h4>
+                  <p className="text-fixlyfy-text-secondary text-sm">Send your first message to {selectedConversation.client.name}</p>
                 </div>
-              </div>
-            );
-          })
-        )}
+              ) : (
+                selectedConversation.messages.map((message: any) => {
+                  const isFromClient = message.direction === 'inbound';
+                  const displaySender = isFromClient ? selectedConversation.client.name : 'You';
+                  
+                  return (
+                    <div
+                      key={message.id}
+                      className={cn(
+                        "flex gap-3 animate-fade-in",
+                        !isFromClient && "flex-row-reverse"
+                      )}
+                    >
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className={cn(
+                          "text-xs font-medium",
+                          isFromClient 
+                            ? "bg-fixlyfy-text-muted/20 text-fixlyfy-text" 
+                            : "bg-fixlyfy text-white"
+                        )}>
+                          {isFromClient 
+                            ? selectedConversation.client.name.substring(0, 2).toUpperCase()
+                            : 'ME'
+                          }
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className={cn(
+                        "flex flex-col max-w-[75%]",
+                        !isFromClient && "items-end"
+                      )}>
+                        <div className={cn(
+                          "p-3 rounded-2xl shadow-sm",
+                          isFromClient 
+                            ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
+                            : "bg-fixlyfy text-white rounded-br-md"
+                        )}>
+                          <p className="text-sm break-words leading-relaxed">{message.body}</p>
+                        </div>
+                        <div className={cn(
+                          "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted",
+                          !isFromClient && "flex-row-reverse"
+                        )}>
+                          <span className="font-medium">{displaySender}</span>
+                          <Clock className="h-3 w-3" />
+                          <span>{formatMessageTime(message.created_at)}</span>
+                          {!isFromClient && (
+                            <span className={cn(
+                              "ml-1 px-1.5 py-0.5 rounded text-xs",
+                              message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
+                              message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
+                              message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :
+                              "bg-fixlyfy-warning/20 text-fixlyfy-warning"
+                            )}>
+                              {message.status || 'sending'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors" />
+
+          {/* Message Input Panel */}
+          <ResizablePanel defaultSize={30} minSize={15} maxSize={60}>
+            {/* This will be populated by MessageInput component */}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );
