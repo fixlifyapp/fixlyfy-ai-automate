@@ -57,7 +57,7 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
           console.log('🆕 Created new conversation:', conversationId);
         }
       } else {
-        // Restore archived conversation
+        // Restore archived conversation by updating status to active
         console.log('🔄 Restoring conversation from archive:', conversationId);
         const { error: restoreError } = await supabase
           .from('conversations')
