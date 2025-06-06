@@ -1,3 +1,4 @@
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ClientSelectionDialog } from "./ClientSelectionDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmailConversation {
   id: string;
@@ -40,7 +42,6 @@ export const EmailConversationsList = ({
   onRefresh,
   onNewEmail
 }: EmailConversationsListProps) => {
-  const [archivedConversations, setArchivedConversations] = useState<Set<string>>(new Set());
   const [showClientDialog, setShowClientDialog] = useState(false);
   
   const getConversationPreview = (conversation: EmailConversation) => {
@@ -82,13 +83,32 @@ export const EmailConversationsList = ({
     }
   };
 
-  const handleArchiveConversation = (conversationId: string, clientName: string) => {
-    setArchivedConversations(prev => new Set([...prev, conversationId]));
-    toast.success(`Email conversation with ${clientName} archived`);
-    
-    // If the archived conversation was selected, clear the selection
-    if (selectedConversation?.id === conversationId) {
-      onConversationSelect(null);
+  const handleArchiveConversation = async (conversationId: string, clientName: string) => {
+    try {
+      // Update the conversation status to archived in the database
+      const { error } = await supabase
+        .from('email_conversations')
+        .update({ status: 'archived' })
+        .eq('id', conversationId);
+
+      if (error) {
+        console.error('Error archiving conversation:', error);
+        toast.error('Failed to archive conversation');
+        return;
+      }
+
+      toast.success(`Email conversation with ${clientName} archived`);
+      
+      // If the archived conversation was selected, clear the selection
+      if (selectedConversation?.id === conversationId) {
+        onConversationSelect(null);
+      }
+
+      // Refresh the conversations list to remove the archived conversation
+      onRefresh();
+    } catch (error) {
+      console.error('Error archiving conversation:', error);
+      toast.error('Failed to archive conversation');
     }
   };
 
@@ -117,8 +137,8 @@ export const EmailConversationsList = ({
     toast.success(`Started new email conversation with ${client.name}`);
   };
 
-  // Filter out archived conversations
-  const activeConversations = conversations.filter(conv => !archivedConversations.has(conv.id));
+  // Filter out archived conversations (they should be excluded from the main query)
+  const activeConversations = conversations.filter(conv => conv.status !== 'archived');
 
   if (isLoading) {
     return (

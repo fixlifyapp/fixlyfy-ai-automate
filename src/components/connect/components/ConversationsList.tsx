@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ConversationsListProps {
   conversations: any[];
@@ -23,8 +24,6 @@ export const ConversationsList = ({
   onRefresh,
   hideSearch = false
 }: ConversationsListProps) => {
-  const [archivedConversations, setArchivedConversations] = useState<Set<string>>(new Set());
-
   const formatMessageTime = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
@@ -48,18 +47,37 @@ export const ConversationsList = ({
     }
   };
 
-  const handleArchiveConversation = (conversationId: string, clientName: string) => {
-    setArchivedConversations(prev => new Set([...prev, conversationId]));
-    toast.success(`Conversation with ${clientName} archived`);
-    
-    // If the archived conversation was selected, clear the selection
-    if (selectedConversation?.id === conversationId) {
-      onConversationSelect(null);
+  const handleArchiveConversation = async (conversationId: string, clientName: string) => {
+    try {
+      // Update the conversation status to archived in the database
+      const { error } = await supabase
+        .from('conversations')
+        .update({ status: 'archived' })
+        .eq('id', conversationId);
+
+      if (error) {
+        console.error('Error archiving conversation:', error);
+        toast.error('Failed to archive conversation');
+        return;
+      }
+
+      toast.success(`Conversation with ${clientName} archived`);
+      
+      // If the archived conversation was selected, clear the selection
+      if (selectedConversation?.id === conversationId) {
+        onConversationSelect(null);
+      }
+
+      // Refresh the conversations list to remove the archived conversation
+      onRefresh();
+    } catch (error) {
+      console.error('Error archiving conversation:', error);
+      toast.error('Failed to archive conversation');
     }
   };
 
   // Filter out archived conversations
-  const activeConversations = conversations.filter(conv => !archivedConversations.has(conv.id));
+  const activeConversations = conversations.filter(conv => conv.status !== 'archived');
 
   return (
     <div className="h-full flex flex-col">

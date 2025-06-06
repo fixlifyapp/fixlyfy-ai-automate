@@ -55,7 +55,7 @@ export const SimpleEmailInterface = () => {
 
       if (!companySettings) return;
 
-      // Fetch conversations with messages
+      // Fetch conversations with messages, excluding archived ones
       const { data: conversationsData, error } = await supabase
         .from('email_conversations')
         .select(`
@@ -77,6 +77,7 @@ export const SimpleEmailInterface = () => {
           )
         `)
         .eq('company_id', companySettings.id)
+        .neq('status', 'archived') // Exclude archived conversations
         .order('last_message_at', { ascending: false });
 
       if (error) throw error;
@@ -154,6 +155,13 @@ export const SimpleEmailInterface = () => {
         event: '*', 
         schema: 'public', 
         table: 'email_messages' 
+      }, () => {
+        fetchConversations();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'email_conversations' 
       }, () => {
         fetchConversations();
       })
