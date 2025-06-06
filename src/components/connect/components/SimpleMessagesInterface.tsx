@@ -18,7 +18,12 @@ interface SearchResult {
 }
 
 export const SimpleMessagesInterface = () => {
-  const { conversations, refreshConversations, isLoading } = useMessageContext();
+  const { 
+    conversations, 
+    refreshConversations, 
+    isLoading, 
+    restoreArchivedConversation 
+  } = useMessageContext();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -26,6 +31,55 @@ export const SimpleMessagesInterface = () => {
   const [showClientResults, setShowClientResults] = useState(false);
 
   console.log('SimpleMessagesInterface conversations:', conversations);
+
+  // Check URL for specific client and restore if needed
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('clientId');
+    const clientName = urlParams.get('clientName');
+    const clientPhone = urlParams.get('clientPhone');
+
+    if (clientId && clientName) {
+      console.log('🔗 URL contains client info, checking for conversation:', { clientId, clientName, clientPhone });
+      
+      // Check if conversation exists in current list
+      const existingConversation = conversations.find(conv => conv.client.id === clientId);
+      
+      if (existingConversation) {
+        setSelectedConversation(existingConversation);
+        console.log('✅ Found existing conversation for client:', clientName);
+      } else {
+        // Try to restore archived conversation or create new one
+        console.log('🔄 Attempting to restore conversation for client:', clientName);
+        restoreArchivedConversation(clientId).then(() => {
+          // After restoration attempt, check again
+          const restoredConversation = conversations.find(conv => conv.client.id === clientId);
+          if (restoredConversation) {
+            setSelectedConversation(restoredConversation);
+            toast.success(`Restored conversation with ${clientName}`);
+          } else {
+            // Create a new conversation placeholder if none exists
+            const newConversation = {
+              id: `temp-${clientId}`,
+              client: {
+                id: clientId,
+                name: decodeURIComponent(clientName),
+                phone: clientPhone ? decodeURIComponent(clientPhone) : '',
+                email: ''
+              },
+              messages: [],
+              lastMessage: 'No messages yet',
+              lastMessageTime: new Date().toISOString(),
+              unreadCount: 0
+            };
+            
+            setSelectedConversation(newConversation);
+            console.log('📝 Created new conversation placeholder for client:', clientName);
+          }
+        });
+      }
+    }
+  }, [conversations, restoreArchivedConversation]);
 
   // Auto-refresh conversations every 5 seconds to catch new messages
   useEffect(() => {
@@ -198,15 +252,15 @@ export const SimpleMessagesInterface = () => {
 
         <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors w-1" />
 
-        {/* Right Panel - Structured Conversation View */}
+        {/* Right Panel - Conversation View with AI Assistant at Bottom */}
         <ResizablePanel defaultSize={65} minSize={50} maxSize={75}>
           <div className="h-full flex flex-col bg-fixlyfy-bg-interface">
             {/* Conversation Display Area */}
-            <div className="flex-1">
+            <div className="flex-1 overflow-hidden">
               <MessageThread selectedConversation={selectedConversation} />
             </div>
             
-            {/* Message Input at Bottom */}
+            {/* Message Input and AI Assistant */}
             <div className="border-t border-fixlyfy-border/50">
               <MessageInput 
                 selectedConversation={selectedConversation}

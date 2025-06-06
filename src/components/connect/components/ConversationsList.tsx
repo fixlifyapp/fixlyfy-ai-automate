@@ -1,8 +1,10 @@
 
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Phone, Loader2, RefreshCw } from "lucide-react";
+import { MessageSquare, Phone, Loader2, RefreshCw, Archive } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface ConversationsListProps {
   conversations: any[];
@@ -21,6 +23,7 @@ export const ConversationsList = ({
   onRefresh,
   hideSearch = false
 }: ConversationsListProps) => {
+  const [archivedConversations, setArchivedConversations] = useState<Set<string>>(new Set());
 
   const formatMessageTime = (timestamp: string) => {
     try {
@@ -44,6 +47,19 @@ export const ConversationsList = ({
       return '';
     }
   };
+
+  const handleArchiveConversation = (conversationId: string, clientName: string) => {
+    setArchivedConversations(prev => new Set([...prev, conversationId]));
+    toast.success(`Conversation with ${clientName} archived`);
+    
+    // If the archived conversation was selected, clear the selection
+    if (selectedConversation?.id === conversationId) {
+      onConversationSelect(null);
+    }
+  };
+
+  // Filter out archived conversations
+  const activeConversations = conversations.filter(conv => !archivedConversations.has(conv.id));
 
   return (
     <div className="h-full flex flex-col">
@@ -73,7 +89,7 @@ export const ConversationsList = ({
             <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-fixlyfy" />
             <p className="text-fixlyfy-text-secondary">Loading conversations...</p>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : activeConversations.length === 0 ? (
           <div className="p-6 text-center text-fixlyfy-text-secondary">
             <MessageSquare className="mx-auto mb-3 h-12 w-12 text-fixlyfy-text-muted" />
             <h3 className="font-medium text-fixlyfy-text mb-1">No conversations</h3>
@@ -81,47 +97,67 @@ export const ConversationsList = ({
           </div>
         ) : (
           <div className="divide-y divide-fixlyfy-border/50">
-            {conversations.map((conversation) => (
+            {activeConversations.map((conversation) => (
               <div
                 key={conversation.id}
-                onClick={() => onConversationSelect(conversation)}
                 className={cn(
-                  "p-4 cursor-pointer hover:bg-fixlyfy/5 transition-all duration-200",
+                  "group relative transition-all duration-200",
                   selectedConversation?.id === conversation.id && "bg-fixlyfy/10 border-r-4 border-fixlyfy"
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                    <AvatarFallback className="bg-gradient-primary text-white font-semibold">
-                      {conversation.client.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold text-fixlyfy-text truncate">
-                        {conversation.client.name}
-                      </h4>
-                      <span className="text-xs text-fixlyfy-text-muted flex-shrink-0 ml-2">
-                        {conversation.lastMessageTime ? formatMessageTime(conversation.lastMessageTime) : ''}
-                      </span>
-                    </div>
-                    <p className="text-sm text-fixlyfy-text-secondary truncate mb-2">
-                      {conversation.lastMessage || 'No messages'}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {conversation.client.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-fixlyfy-text-muted" />
-                            <span className="text-xs text-fixlyfy-text-muted">{conversation.client.phone}</span>
-                          </div>
-                        )}
+                <div
+                  onClick={() => onConversationSelect(conversation)}
+                  className="p-4 cursor-pointer hover:bg-fixlyfy/5 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                      <AvatarFallback className="bg-gradient-primary text-white font-semibold">
+                        {conversation.client.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-fixlyfy-text truncate">
+                          {conversation.client.name}
+                        </h4>
+                        <span className="text-xs text-fixlyfy-text-muted flex-shrink-0 ml-2">
+                          {conversation.lastMessageTime ? formatMessageTime(conversation.lastMessageTime) : ''}
+                        </span>
                       </div>
-                      <span className="text-xs bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded-full font-medium">
-                        {conversation.messages.length} messages
-                      </span>
+                      <p className="text-sm text-fixlyfy-text-secondary truncate mb-2">
+                        {conversation.lastMessage || 'No messages'}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {conversation.client.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-fixlyfy-text-muted" />
+                              <span className="text-xs text-fixlyfy-text-muted">{conversation.client.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded-full font-medium">
+                          {conversation.messages.length} messages
+                        </span>
+                      </div>
                     </div>
                   </div>
+                </div>
+                
+                {/* Archive button - appears on hover */}
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleArchiveConversation(conversation.id, conversation.client.name);
+                    }}
+                    className="h-8 w-8 p-0 bg-white/80 hover:bg-white shadow-sm"
+                    title="Archive conversation"
+                  >
+                    <Archive className="h-4 w-4 text-fixlyfy-text-muted" />
+                  </Button>
                 </div>
               </div>
             ))}

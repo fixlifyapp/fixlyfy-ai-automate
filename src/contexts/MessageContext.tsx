@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,6 +35,7 @@ interface MessageContextType {
   activeConversation: Conversation | null;
   sendMessage: (message: string) => Promise<void>;
   isSending: boolean;
+  restoreArchivedConversation: (clientId: string) => Promise<void>;
 }
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -175,6 +177,24 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const restoreArchivedConversation = async (clientId: string) => {
+    console.log('🔄 Restoring archived conversation for client:', clientId);
+    
+    // Find the conversation for this client
+    const conversation = conversations.find(conv => conv.client.id === clientId);
+    if (conversation) {
+      setActiveConversation(conversation);
+      console.log('✅ Restored conversation:', conversation.id);
+    } else {
+      // If conversation doesn't exist in current list, try to fetch it
+      await refreshConversations();
+      const restoredConversation = conversations.find(conv => conv.client.id === clientId);
+      if (restoredConversation) {
+        setActiveConversation(restoredConversation);
+      }
+    }
+  };
+
   const sendMessage = async (message: string) => {
     if (!activeConversation || !message.trim()) return;
     
@@ -245,7 +265,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       isLoading,
       activeConversation,
       sendMessage,
-      isSending
+      isSending,
+      restoreArchivedConversation
     }}>
       {children}
     </MessageContext.Provider>
