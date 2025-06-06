@@ -1,4 +1,3 @@
-
 import { EmailInterfaceHeader } from "./EmailInterfaceHeader";
 import { EmailConversationsList } from "./EmailConversationsList";
 import { useState, useEffect } from "react";
@@ -226,7 +225,7 @@ export const EmailConversationsPanel = ({
       toast.error('Failed to check email conversation history');
     }
 
-    setSearchTerm("");
+    onSearchChange("");
     setShowClientResults(false);
   };
 

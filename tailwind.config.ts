@@ -19,6 +19,12 @@ export default {
 			}
 		},
 		extend: {
+			screens: {
+				'xs': '475px',
+			},
+			spacing: {
+				'safe': 'env(safe-area-inset-bottom)',
+			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
 			},
