@@ -13,6 +13,7 @@ import { ServiceAreasCard } from "./components/ServiceAreasCard";
 import { ApplianceTypesCard } from "./components/ApplianceTypesCard";
 import { BusinessHoursEditor } from "../connect/BusinessHoursEditor";
 import { CustomInstructionsCard } from "./components/CustomInstructionsCard";
+import { AIAgentToggle } from "../connect/AIAgentToggle";
 import { BusinessHours } from "@/types/businessHours";
 
 export const SimplifiedAISettings = () => {
@@ -152,6 +153,9 @@ export const SimplifiedAISettings = () => {
 
   return (
     <div className="space-y-6">
+      {/* AI Agent Control */}
+      <AIAgentToggle />
+
       <AIStatusCard 
         isActive={config.is_active}
         onToggle={(checked) => setConfig(prev => ({ ...prev, is_active: checked }))}

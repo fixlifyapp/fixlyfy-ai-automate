@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,7 +18,6 @@ import { useConnectCenterData } from "@/components/connect/hooks/useConnectCente
 import { toast } from "sonner";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 import { supabase } from "@/integrations/supabase/client";
-import { AIAgentToggle } from "@/components/connect/AIAgentToggle";
 import { ActiveCallInterface } from "@/components/connect/ActiveCallInterface";
 
 const ConnectCenterPageOptimized = () => {
@@ -179,9 +177,6 @@ const ConnectCenterPageOptimized = () => {
           onClick: handleNewCommunication
         }}
       />
-
-      {/* AI Agent Toggle */}
-      <AIAgentToggle />
 
       {/* Active Call Interface */}
       <ActiveCallInterface />
