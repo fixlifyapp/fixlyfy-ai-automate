@@ -1,10 +1,11 @@
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Plus, RefreshCw } from "lucide-react";
+import { Mail, Plus, RefreshCw, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface EmailConversation {
   id: string;
@@ -38,6 +39,7 @@ export const EmailConversationsList = ({
   onRefresh,
   onNewEmail
 }: EmailConversationsListProps) => {
+  const [archivedConversations, setArchivedConversations] = useState<Set<string>>(new Set());
   
   const getConversationPreview = (conversation: EmailConversation) => {
     const latestEmail = conversation.emails?.[conversation.emails.length - 1];
@@ -78,6 +80,19 @@ export const EmailConversationsList = ({
     }
   };
 
+  const handleArchiveConversation = (conversationId: string, clientName: string) => {
+    setArchivedConversations(prev => new Set([...prev, conversationId]));
+    toast.success(`Email conversation with ${clientName} archived`);
+    
+    // If the archived conversation was selected, clear the selection
+    if (selectedConversation?.id === conversationId) {
+      onConversationSelect(null);
+    }
+  };
+
+  // Filter out archived conversations
+  const activeConversations = conversations.filter(conv => !archivedConversations.has(conv.id));
+
   if (isLoading) {
     return (
       <div className="p-4 text-center">
@@ -94,7 +109,7 @@ export const EmailConversationsList = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="bg-fixlyfy/10 text-fixlyfy">
-              {conversations.length}
+              {activeConversations.length}
             </Badge>
             <span className="text-sm text-fixlyfy-text-secondary">conversations</span>
           </div>
@@ -121,7 +136,7 @@ export const EmailConversationsList = ({
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
-        {conversations.length === 0 ? (
+        {activeConversations.length === 0 ? (
           <div className="p-6 text-center text-fixlyfy-text-secondary">
             <Mail className="h-8 w-8 mx-auto mb-3 text-fixlyfy-text-muted" />
             <p className="text-sm">No email conversations yet</p>
@@ -129,7 +144,7 @@ export const EmailConversationsList = ({
           </div>
         ) : (
           <div className="space-y-0">
-            {conversations.map((conversation) => {
+            {activeConversations.map((conversation) => {
               const unreadCount = getUnreadCount(conversation);
               const isSelected = selectedConversation?.id === conversation.id;
               
@@ -137,7 +152,7 @@ export const EmailConversationsList = ({
                 <div
                   key={conversation.id}
                   className={cn(
-                    "p-3 cursor-pointer border-b border-fixlyfy-border/30 hover:bg-fixlyfy/5 transition-colors",
+                    "group relative p-3 cursor-pointer border-b border-fixlyfy-border/30 hover:bg-fixlyfy/5 transition-colors",
                     isSelected && "bg-fixlyfy/10 border-l-2 border-l-fixlyfy"
                   )}
                   onClick={() => onConversationSelect(conversation)}
@@ -182,6 +197,22 @@ export const EmailConversationsList = ({
                         </div>
                       )}
                     </div>
+                  </div>
+                  
+                  {/* Archive button - appears on hover */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchiveConversation(conversation.id, conversation.client?.name || 'Unknown Client');
+                      }}
+                      className="h-8 w-8 p-0 bg-white/80 hover:bg-white shadow-sm"
+                      title="Archive conversation"
+                    >
+                      <Archive className="h-4 w-4 text-fixlyfy-text-muted" />
+                    </Button>
                   </div>
                 </div>
               );
