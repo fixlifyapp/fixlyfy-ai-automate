@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -182,33 +181,33 @@ const ConnectCenterPageOptimized = () => {
       {isLoading ? (
         <LoadingSkeleton type="connect-tabs" />
       ) : (
-        <div className={`w-full ${isMobile ? 'space-y-2' : ''}`}>
+        <div className={`w-full ${isMobile ? 'space-y-3' : 'space-y-4'}`}>
           <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-            <div className={`${isMobile ? 'sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-2' : 'mb-6'}`}>
-              <TabsList className={`grid grid-cols-3 w-full ${isMobile ? 'h-12' : ''}`}>
-                <TabsTrigger value="messages" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-                  <MessageSquare size={isMobile ? 14 : 16} />
-                  <span className={isMobile ? 'hidden xs:inline' : 'hidden sm:inline'}>Messages</span>
+            <div className={`${isMobile ? 'sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3' : 'mb-6'}`}>
+              <TabsList className={`grid grid-cols-3 w-full ${isMobile ? 'h-14' : 'h-16'} max-w-md mx-auto`}>
+                <TabsTrigger value="messages" className={`flex items-center gap-2 ${isMobile ? 'text-xs px-3 py-2' : 'text-sm px-4 py-3'} group`}>
+                  <MessageSquare size={isMobile ? 16 : 18} className="transition-transform group-hover:scale-110" />
+                  <span className={isMobile ? 'hidden xs:inline font-medium' : 'font-medium'}>Messages</span>
                   {unreadCounts.messages > 0 && (
-                    <Badge className={`ml-1 bg-fixlyfy text-xs ${isMobile ? 'px-1 py-0 text-[10px] min-w-[16px] h-4' : ''}`}>
+                    <Badge className={`ml-1 bg-fixlyfy text-white font-bold ${isMobile ? 'px-1.5 py-0.5 text-[10px] min-w-[18px] h-5' : 'px-2 py-0.5 text-xs min-w-[20px] h-5'} rounded-full shadow-md`}>
                       {unreadCounts.messages}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="calls" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-                  <Phone size={isMobile ? 14 : 16} />
-                  <span className={isMobile ? 'hidden xs:inline' : 'hidden sm:inline'}>Calls</span>
+                <TabsTrigger value="calls" className={`flex items-center gap-2 ${isMobile ? 'text-xs px-3 py-2' : 'text-sm px-4 py-3'} group`}>
+                  <Phone size={isMobile ? 16 : 18} className="transition-transform group-hover:scale-110" />
+                  <span className={isMobile ? 'hidden xs:inline font-medium' : 'font-medium'}>Calls</span>
                   {unreadCounts.calls > 0 && (
-                    <Badge className={`ml-1 bg-fixlyfy text-xs ${isMobile ? 'px-1 py-0 text-[10px] min-w-[16px] h-4' : ''}`}>
+                    <Badge className={`ml-1 bg-fixlyfy text-white font-bold ${isMobile ? 'px-1.5 py-0.5 text-[10px] min-w-[18px] h-5' : 'px-2 py-0.5 text-xs min-w-[20px] h-5'} rounded-full shadow-md`}>
                       {unreadCounts.calls}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="emails" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-                  <Mail size={isMobile ? 14 : 16} />
-                  <span className={isMobile ? 'hidden xs:inline' : 'hidden sm:inline'}>Emails</span>
+                <TabsTrigger value="emails" className={`flex items-center gap-2 ${isMobile ? 'text-xs px-3 py-2' : 'text-sm px-4 py-3'} group`}>
+                  <Mail size={isMobile ? 16 : 18} className="transition-transform group-hover:scale-110" />
+                  <span className={isMobile ? 'hidden xs:inline font-medium' : 'font-medium'}>Emails</span>
                   {unreadCounts.emails > 0 && (
-                    <Badge className={`ml-1 bg-fixlyfy text-xs ${isMobile ? 'px-1 py-0 text-[10px] min-w-[16px] h-4' : ''}`}>
+                    <Badge className={`ml-1 bg-fixlyfy text-white font-bold ${isMobile ? 'px-1.5 py-0.5 text-[10px] min-w-[18px] h-5' : 'px-2 py-0.5 text-xs min-w-[20px] h-5'} rounded-full shadow-md`}>
                       {unreadCounts.emails}
                     </Badge>
                   )}
@@ -216,20 +215,20 @@ const ConnectCenterPageOptimized = () => {
               </TabsList>
             </div>
             
-            <TabsContent value="messages" className="mt-0">
-              <div className={isMobile ? 'min-h-[calc(100vh-200px)]' : ''}>
+            <TabsContent value="messages" className="mt-0 animate-fade-in">
+              <div className={isMobile ? 'min-h-[calc(100vh-220px)]' : 'min-h-[calc(100vh-200px)]'}>
                 <DispatcherMessagesView searchResults={[]} />
               </div>
             </TabsContent>
             
-            <TabsContent value="calls" className="mt-0">
-              <div className={isMobile ? 'min-h-[calc(100vh-200px)]' : ''}>
+            <TabsContent value="calls" className="mt-0 animate-fade-in">
+              <div className={isMobile ? 'min-h-[calc(100vh-220px)]' : 'min-h-[calc(100vh-200px)]'}>
                 <TelnyxCallsView />
               </div>
             </TabsContent>
             
-            <TabsContent value="emails" className="mt-0">
-              <div className={isMobile ? 'min-h-[calc(100vh-200px)]' : ''}>
+            <TabsContent value="emails" className="mt-0 animate-fade-in">
+              <div className={isMobile ? 'min-h-[calc(100vh-220px)]' : 'min-h-[calc(100vh-200px)]'}>
                 <EmailManagement />
               </div>
             </TabsContent>
