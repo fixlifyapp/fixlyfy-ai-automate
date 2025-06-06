@@ -29,6 +29,12 @@ const generateFromEmail = (companyName: string): string => {
   return `${formattedName}@fixlify.app`;
 };
 
+// UUID validation function
+const isValidUUID = (uuid: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 interface SendEmailRequest {
   to: string;
   subject: string;
@@ -84,7 +90,7 @@ serve(async (req) => {
       useSandbox = false
     }: SendEmailRequest = await req.json();
 
-    console.log('send-email - Request details:', { to, subject, from, useSandbox });
+    console.log('send-email - Request details:', { to, subject, from, conversationId, useSandbox });
 
     // Get company settings for the AUTHENTICATED USER with explicit filtering
     const { data: companySettings, error: settingsError } = await supabaseClient
@@ -97,16 +103,8 @@ serve(async (req) => {
       console.error('send-email - Error fetching company settings:', settingsError);
     }
 
-    console.log('send-email - Fetching company settings for user_id:', userData.user.id);
     console.log('send-email - Company settings found:', !!companySettings);
     console.log('send-email - Company name from database:', companySettings?.company_name || 'NULL');
-
-    // Validate we have the correct user's data
-    if (companySettings && companySettings.user_id !== userData.user.id) {
-      console.error('send-email - CRITICAL: Company settings user_id mismatch!');
-      console.error('send-email - Expected user_id:', userData.user.id);
-      console.error('send-email - Got user_id:', companySettings.user_id);
-    }
 
     let fromEmail = from;
     let mailgunDomain = 'fixlify.app';
@@ -212,8 +210,10 @@ serve(async (req) => {
 
     console.log('send-email - Email sent successfully via Mailgun:', mailgunResult);
 
-    // Store email in database for tracking if conversation ID provided
-    if (conversationId) {
+    // Store email in database for tracking if conversation ID provided and valid
+    if (conversationId && isValidUUID(conversationId)) {
+      console.log('send-email - Storing email message with conversation ID:', conversationId);
+      
       const { error: insertError } = await supabaseClient
         .from('email_messages')
         .insert({
@@ -230,7 +230,11 @@ serve(async (req) => {
 
       if (insertError) {
         console.error('send-email - Error storing email message:', insertError);
+      } else {
+        console.log('send-email - Email message stored successfully');
       }
+    } else {
+      console.log('send-email - Skipping email storage - invalid or missing conversation ID:', conversationId);
     }
 
     return new Response(

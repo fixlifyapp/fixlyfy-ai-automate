@@ -34,19 +34,55 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
     }
 
     setIsSending(true);
-    
-    console.log('🚀 Email Send Debug Info:');
-    console.log('- Subject:', subject);
-    console.log('- Message:', messageText);
-    console.log('- To:', selectedConversation.client.name);
-    console.log('- Email:', selectedConversation.client.email);
-    console.log('- Client ID:', selectedConversation.client.id);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get company settings
+      const { data: companySettings } = await supabase
+        .from('company_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!companySettings) {
+        throw new Error('Company settings not found');
+      }
+
+      let conversationId = selectedConversation.id;
+
+      // If this is a new conversation (starts with 'new_'), create it first
+      if (conversationId.startsWith('new_')) {
+        console.log('Creating new email conversation...');
+
+        const { data: newConversation, error: conversationError } = await supabase
+          .from('email_conversations')
+          .insert({
+            company_id: companySettings.id,
+            client_id: selectedConversation.client.id !== 'new_client' ? selectedConversation.client.id : null,
+            subject: subject || `Message from ${settings.company_name || 'Fixlify Services'}`,
+            status: 'active'
+          })
+          .select('id')
+          .single();
+
+        if (conversationError) {
+          console.error('Error creating conversation:', conversationError);
+          throw new Error('Failed to create email conversation');
+        }
+
+        conversationId = newConversation.id;
+        console.log('Created conversation with ID:', conversationId);
+      }
+
       const companyName = settings.company_name || 'Fixlify Services';
       const fromEmail = generateFromEmail(companyName);
       
-      console.log('📤 Calling send-email function...');
+      console.log('Sending email with conversation ID:', conversationId);
+
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to: selectedConversation.client.email,
@@ -68,24 +104,21 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
             </div>
           `,
           text: `Hello ${selectedConversation.client.name},\n\n${messageText}\n\nBest regards,\n${companyName}`,
-          companyId: selectedConversation.client.id,
-          conversationId: selectedConversation.id
+          conversationId: conversationId
         }
       });
 
-      console.log('📨 send-email response:', { data, error });
-
       if (error) {
-        console.error('❌ Supabase function error:', error);
+        console.error('Supabase function error:', error);
         throw new Error(error.message || 'Failed to send email');
       }
 
       if (!data?.success) {
-        console.error('❌ Email sending failed:', data);
+        console.error('Email sending failed:', data);
         throw new Error(data?.error || 'Failed to send email');
       }
 
-      console.log('✅ Email sent successfully via send-email');
+      console.log('Email sent successfully');
       setSubject("");
       setMessageText("");
       toast.success("Email sent successfully");
@@ -96,7 +129,7 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
       }, 500);
 
     } catch (error) {
-      console.error('💥 Error sending email:', error);
+      console.error('Error sending email:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast.error(`Failed to send email: ${errorMessage}`);
     } finally {
@@ -128,8 +161,7 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
   }
 
   return (
-    <div className="bg-white">
-      {/* Email Input Area */}
+    <div className="border-t border-fixlyfy-border/50 bg-white">
       <div className="p-4">
         <div className="space-y-3">
           <Input
@@ -178,16 +210,15 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
           <span>Professional email communication</span>
           {selectedConversation.client.email && (
             <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
-              Email to {selectedConversation.client.email}
+              To: {selectedConversation.client.email}
             </span>
           )}
         </div>
       </div>
 
-      {/* AI Writing Assistant - Bottom Section */}
+      {/* AI Writing Assistant */}
       <div className="border-t border-fixlyfy-border/50 bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
         <div className="p-3">
-          {/* AI Toggle */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-fixlyfy" />
@@ -203,7 +234,6 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
             </Button>
           </div>
 
-          {/* AI Quick Actions */}
           {showAI && (
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
@@ -214,11 +244,7 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
                   disabled={isAILoading || isSending}
                   className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
                 >
-                  {isAILoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    "Greeting"
-                  )}
+                  {isAILoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Greeting"}
                 </Button>
                 <Button
                   variant="outline"
@@ -227,11 +253,7 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
                   disabled={isAILoading || isSending}
                   className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
                 >
-                  {isAILoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    "Follow Up"
-                  )}
+                  {isAILoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Follow Up"}
                 </Button>
                 <Button
                   variant="outline"
@@ -240,11 +262,7 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
                   disabled={isAILoading || isSending}
                   className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
                 >
-                  {isAILoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    "Reminder"
-                  )}
+                  {isAILoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reminder"}
                 </Button>
                 <Button
                   variant="outline"
@@ -253,11 +271,7 @@ export const EmailInput = ({ selectedConversation, onEmailSent }: EmailInputProp
                   disabled={isAILoading || isSending}
                   className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
                 >
-                  {isAILoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    "Thank You"
-                  )}
+                  {isAILoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Thank You"}
                 </Button>
               </div>
             </div>

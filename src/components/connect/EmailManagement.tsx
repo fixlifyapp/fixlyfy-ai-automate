@@ -56,7 +56,7 @@ export const EmailManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get company settings to find company_id
+      // Get company settings
       const { data: companySettings } = await supabase
         .from('company_settings')
         .select('id')
@@ -180,23 +180,32 @@ export const EmailManagement = () => {
 
       console.log('Email Management: Auto-opening email for client:', clientName);
 
-      // Create a mock conversation for new client
-      const mockConversation: EmailConversation = {
-        id: 'new_' + clientId,
-        subject: `New conversation with ${clientName}`,
-        last_message_at: new Date().toISOString(),
-        status: 'active',
-        client_id: clientId,
-        client: {
-          id: clientId,
-          name: clientName,
-          email: clientEmail,
-          phone: searchParams.get("clientPhone") || undefined
-        },
-        emails: []
-      };
+      // Check if there's already a conversation with this client
+      const existingConversation = conversations.find(conv => 
+        conv.client?.email === clientEmail || conv.client_id === clientId
+      );
 
-      setSelectedConversation(mockConversation);
+      if (existingConversation) {
+        setSelectedConversation(existingConversation);
+      } else {
+        // Create a new conversation placeholder
+        const newConversation: EmailConversation = {
+          id: 'new_' + Date.now(),
+          subject: `New conversation with ${clientName}`,
+          last_message_at: new Date().toISOString(),
+          status: 'active',
+          client_id: clientId,
+          client: {
+            id: clientId,
+            name: clientName,
+            email: clientEmail,
+            phone: searchParams.get("clientPhone") || undefined
+          },
+          emails: []
+        };
+
+        setSelectedConversation(newConversation);
+      }
 
       // Clear the autoOpen parameter from URL
       const newSearchParams = new URLSearchParams(location.search);
@@ -214,9 +223,8 @@ export const EmailManagement = () => {
     const latestMessage = conversation.emails?.[conversation.emails.length - 1];
     if (!latestMessage) return 'No messages';
     
-    return latestMessage.body_text?.substring(0, 100) + '...' || 
-           latestMessage.body_html?.substring(0, 100) + '...' || 
-           'No content';
+    const content = latestMessage.body_text || latestMessage.body_html || 'No content';
+    return content.replace(/<[^>]*>/g, '').substring(0, 100) + (content.length > 100 ? '...' : '');
   };
 
   const getUnreadCount = (conversation: EmailConversation) => {
@@ -226,9 +234,8 @@ export const EmailManagement = () => {
   };
 
   const handleNewEmail = () => {
-    // Create a new conversation placeholder
     const newConversation: EmailConversation = {
-      id: 'new_conversation',
+      id: 'new_conversation_' + Date.now(),
       subject: 'New Email',
       last_message_at: new Date().toISOString(),
       status: 'active',
@@ -243,30 +250,37 @@ export const EmailManagement = () => {
   };
 
   if (loading) {
-    return <div>Loading email conversations...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy mx-auto mb-4"></div>
+          <p className="text-fixlyfy-text-secondary">Loading email conversations...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-300px)]">
       {/* Conversations List */}
-      <Card className="lg:col-span-1">
-        <CardHeader>
+      <Card className="lg:col-span-1 flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
               Email Conversations
               <Badge variant="secondary">{conversations.length}</Badge>
             </div>
-            <Button size="sm" onClick={handleNewEmail} className="gap-1">
+            <Button size="sm" onClick={handleNewEmail} className="gap-1 bg-fixlyfy hover:bg-fixlyfy-light">
               <Plus className="h-4 w-4" />
               New
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[500px]">
+        <CardContent className="p-0 flex-1">
+          <ScrollArea className="h-full">
             {conversations.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
+              <div className="p-4 text-center text-fixlyfy-text-secondary">
                 No email conversations yet
               </div>
             ) : (
@@ -278,28 +292,28 @@ export const EmailManagement = () => {
                   return (
                     <div
                       key={conversation.id}
-                      className={`p-4 cursor-pointer border-b hover:bg-gray-50 ${
-                        isSelected ? 'bg-blue-50 border-blue-200' : ''
+                      className={`p-4 cursor-pointer border-b border-fixlyfy-border/50 hover:bg-fixlyfy/5 transition-colors ${
+                        isSelected ? 'bg-fixlyfy/10 border-fixlyfy/30' : ''
                       }`}
                       onClick={() => setSelectedConversation(conversation)}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-sm truncate flex-1">
+                        <div className="font-medium text-sm truncate flex-1 text-fixlyfy-text">
                           {conversation.client?.name || 'Unknown Client'}
                         </div>
                         {unreadCount > 0 && (
-                          <Badge variant="default" className="ml-2">
+                          <Badge className="ml-2 bg-fixlyfy text-white">
                             {unreadCount}
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground mb-1">
+                      <div className="text-xs text-fixlyfy-text-secondary mb-1 font-medium">
                         {conversation.subject}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-fixlyfy-text-muted">
                         {getConversationPreview(conversation)}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-xs text-fixlyfy-text-muted mt-1">
                         {new Date(conversation.last_message_at).toLocaleDateString()}
                       </div>
                     </div>
@@ -312,13 +326,13 @@ export const EmailManagement = () => {
       </Card>
 
       {/* Email Detail */}
-      <Card className="lg:col-span-2">
-        <CardContent className="p-0 h-[600px] flex flex-col">
-          <div className="flex-1">
+      <Card className="lg:col-span-2 flex flex-col">
+        <CardContent className="p-0 h-full flex flex-col">
+          <div className="flex-1 min-h-0">
             <EmailThread selectedConversation={selectedConversation} />
           </div>
           {selectedConversation && (
-            <div className="border-t">
+            <div className="flex-shrink-0">
               <EmailInput 
                 selectedConversation={selectedConversation}
                 onEmailSent={fetchConversations}
