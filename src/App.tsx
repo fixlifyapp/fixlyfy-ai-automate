@@ -17,21 +17,18 @@ import JobDetailsPage from '@/pages/JobDetailsPage';
 import EstimatesPage from '@/pages/EstimatesPage';
 import EstimateDetailsPage from '@/pages/EstimateViewPage';
 import InvoicesPage from '@/pages/InvoicesPage';
-import InvoiceDetailsPage from '@/pages/InvoiceDetailsPage';
 import TeamPage from '@/pages/TeamManagementPage';
 import TeamMemberDetailsPage from '@/pages/TeamMemberProfilePage';
 import SettingsPage from '@/pages/SettingsPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { RBACProvider } from '@/hooks/use-auth';
+import { RBACProvider } from '@/components/auth/RBACProvider';
 import ConnectCenterPageOptimized from '@/pages/ConnectCenterPageOptimized';
-import { PhoneNumberAdmin } from '@/components/admin/PhoneNumberAdmin';
 import PortalLoginPage from '@/pages/portal/PortalLoginPage';
 import PortalDashboardPage from '@/pages/portal/PortalDashboardPage';
 import PortalEstimatesPage from '@/pages/portal/PortalEstimatesPage';
 import PortalInvoicesPage from '@/pages/portal/PortalInvoicesPage';
 import PortalProfilePage from '@/pages/portal/PortalProfilePage';
-import { PortalLayout } from '@/components/portal/PortalLayout';
-import { ProtectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
+import { PortectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
 import PortalJobsPage from '@/pages/portal/PortalJobsPage';
 import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import PortalAccessPage from '@/pages/portal/PortalAccessPage';
@@ -106,11 +103,6 @@ function App() {
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <SettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin/phone-numbers" element={
-                <ProtectedRoute>
-                  <PhoneNumberAdmin />
                 </ProtectedRoute>
               } />
               <Route path="/connect-center" element={
