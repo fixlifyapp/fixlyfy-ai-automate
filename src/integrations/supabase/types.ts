@@ -3532,7 +3532,7 @@ export type Database = {
         Returns: boolean
       }
       generate_client_login_token: {
-        Args: { p_email: string }
+        Args: { p_email: string } | { p_email: string; p_expiry_hours?: number }
         Returns: string
       }
       generate_next_id: {

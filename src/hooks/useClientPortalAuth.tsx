@@ -83,7 +83,8 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
       const { data, error } = await supabase.functions.invoke('client-portal-auth', {
         body: {
           action: 'generate_login_token',
-          email: email
+          email: email,
+          expiry_hours: 8760 // 1 year expiry
         }
       });
 
