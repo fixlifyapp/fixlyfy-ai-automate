@@ -161,11 +161,30 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
 
       const companyName = companySettings.company_name || 'Fixlify Services';
       
+      // Get last message ID for threading if this is a reply
+      let replyToMessageId = null;
+      if (selectedConversation.emails && selectedConversation.emails.length > 0) {
+        const lastMessage = selectedConversation.emails[selectedConversation.emails.length - 1];
+        if (lastMessage.direction === 'inbound') {
+          // This is a reply to an inbound message
+          const { data: messageData } = await supabase
+            .from('email_messages')
+            .select('mailgun_message_id')
+            .eq('id', lastMessage.id)
+            .single();
+          
+          if (messageData?.mailgun_message_id) {
+            replyToMessageId = messageData.mailgun_message_id;
+          }
+        }
+      }
+      
       console.log('Sending email with conversation ID:', conversationId);
       console.log('Email details:', {
         to: selectedConversation.client.email,
         subject: subject || `Message from ${companyName}`,
-        companyName
+        companyName,
+        replyToMessageId
       });
 
       const { data, error } = await supabase.functions.invoke('send-email', {
@@ -189,7 +208,8 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
             </div>
           `,
           text: `Hello ${selectedConversation.client.name},\n\n${messageText}\n\nBest regards,\n${companyName}`,
-          conversationId: conversationId
+          conversationId: conversationId,
+          replyToMessageId: replyToMessageId
         }
       });
 
@@ -253,6 +273,7 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
   }
 
   const isNewConversation = selectedConversation.emails.length === 0;
+  const companyEmail = generateFromEmail(settings.company_name || 'Fixlify Services');
 
   return (
     <div className="border-t border-fixlyfy-border/50 bg-white">
@@ -335,7 +356,9 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
         </div>
         
         <div className="flex justify-between items-center text-xs text-fixlyfy-text-muted mt-2">
-          <span>Professional email communication</span>
+          <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
+            From: {companyEmail}
+          </span>
           {selectedConversation.client?.email && (
             <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
               To: {selectedConversation.client.email}

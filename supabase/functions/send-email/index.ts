@@ -29,6 +29,14 @@ const generateFromEmail = (companyName: string): string => {
   return `${formattedName}@fixlify.app`;
 };
 
+// Generate unique Message-ID for email threading
+const generateMessageId = (conversationId: string, companyName: string): string => {
+  const timestamp = Date.now();
+  const domain = 'fixlify.app';
+  const formattedName = formatCompanyNameForEmail(companyName);
+  return `<${conversationId}-${timestamp}@${formattedName}.${domain}>`;
+};
+
 // UUID validation function
 const isValidUUID = (uuid: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -45,6 +53,7 @@ interface SendEmailRequest {
   companyId?: string;
   conversationId?: string;
   useSandbox?: boolean;
+  replyToMessageId?: string;
 }
 
 serve(async (req) => {
@@ -87,7 +96,8 @@ serve(async (req) => {
       templateData = {}, 
       companyId,
       conversationId,
-      useSandbox = false
+      useSandbox = false,
+      replyToMessageId
     }: SendEmailRequest = await req.json();
 
     console.log('send-email - Request details:', { to, subject, from, conversationId, useSandbox });
@@ -140,13 +150,6 @@ serve(async (req) => {
       });
     }
 
-    console.log('send-email - Final email configuration:');
-    console.log('send-email - User ID:', userData.user.id);
-    console.log('send-email - Company name from DB:', companySettings?.company_name);
-    console.log('send-email - Domain:', mailgunDomain);
-    console.log('send-email - FROM:', fromEmail);
-    console.log('send-email - TO:', to);
-
     // Prepare email data
     const formData = new FormData();
     formData.append('from', fromEmail);
@@ -159,6 +162,34 @@ serve(async (req) => {
     formData.append('o:tracking', 'yes');
     formData.append('o:tracking-clicks', 'yes');
     formData.append('o:tracking-opens', 'yes');
+
+    // Add email threading headers for proper conversation handling
+    if (conversationId && companySettings?.company_name) {
+      const messageId = generateMessageId(conversationId, companySettings.company_name);
+      formData.append('h:Message-ID', messageId);
+      
+      // Add Reply-To header pointing to the same email for consistency
+      const replyToEmail = generateFromEmail(companySettings.company_name);
+      formData.append('h:Reply-To', `${companySettings.company_name} <${replyToEmail}>`);
+      
+      // If this is a reply to another message, add In-Reply-To header
+      if (replyToMessageId) {
+        formData.append('h:In-Reply-To', replyToMessageId);
+        formData.append('h:References', replyToMessageId);
+      }
+      
+      // Add custom headers for tracking
+      formData.append('h:X-Conversation-ID', conversationId);
+      formData.append('h:X-Company-ID', companySettings.id);
+      formData.append('h:X-User-ID', userData.user.id);
+    }
+
+    console.log('send-email - Final email configuration:');
+    console.log('send-email - User ID:', userData.user.id);
+    console.log('send-email - Company name from DB:', companySettings?.company_name);
+    console.log('send-email - Domain:', mailgunDomain);
+    console.log('send-email - FROM:', fromEmail);
+    console.log('send-email - TO:', to);
 
     const mailgunUrl = `https://api.mailgun.net/v3/${mailgunDomain}/messages`;
     const basicAuth = btoa(`api:${mailgunApiKey}`);
