@@ -66,7 +66,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
           </div>
           <h3 className="text-xl font-semibold text-fixlyfy-text mb-3">Welcome to Email</h3>
           <p className="text-fixlyfy-text-secondary leading-relaxed">
-            Select an existing email conversation from the left sidebar, or click "New" to start a new email conversation.
+            Select an existing email conversation from the left sidebar, or search for a client above to start a new email conversation.
           </p>
         </div>
       </div>
@@ -74,9 +74,9 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-white">
       {/* Email Header */}
-      <div className="flex-shrink-0 p-4 border-b border-fixlyfy-border bg-gradient-to-r from-white to-fixlyfy/5">
+      <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-white to-fixlyfy/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-fixlyfy/20">
@@ -84,25 +84,23 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
                 {selectedConversation.client.name.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-lg text-fixlyfy-text truncate">
-                {selectedConversation.client.name}
-              </h3>
+            <div>
+              <h3 className="font-semibold text-lg text-fixlyfy-text">{selectedConversation.client.name}</h3>
               {selectedConversation.client.email && (
-                <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1 truncate">
-                  <Mail className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{selectedConversation.client.email}</span>
+                <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {selectedConversation.client.email}
                 </p>
               )}
               {selectedConversation.client.phone && (
-                <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1 truncate">
-                  <Phone className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{selectedConversation.client.phone}</span>
+                <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {selectedConversation.client.phone}
                 </p>
               )}
             </div>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2">
             {selectedConversation.client.phone && (
               <Button 
                 variant="outline" 
@@ -124,7 +122,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
       </div>
 
       {/* Email Display Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface">
         {selectedConversation.emails && selectedConversation.emails.length === 0 ? (
           <div className="text-center py-12">
             <div className="bg-white rounded-full p-6 mx-auto mb-4 w-16 h-16 flex items-center justify-center shadow-sm">
@@ -161,7 +159,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
                 </Avatar>
                 
                 <div className={cn(
-                  "flex flex-col max-w-[75%] min-w-0",
+                  "flex flex-col max-w-[75%]",
                   !isFromClient && "items-end"
                 )}>
                   <div className={cn(
@@ -179,7 +177,7 @@ export const EmailThread = ({ selectedConversation }: EmailThreadProps) => {
                       </div>
                     )}
                     <div 
-                      className="text-sm break-words leading-relaxed overflow-hidden"
+                      className="text-sm break-words leading-relaxed"
                       dangerouslySetInnerHTML={{ 
                         __html: email.body_html || email.body_text || email.body || 'No content'
                       }}
