@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   BrowserRouter as Router,
@@ -16,18 +17,9 @@ import JobDetailsPage from '@/pages/JobDetailsPage';
 import EstimatesPage from '@/pages/EstimatesPage';
 import EstimateDetailsPage from '@/pages/EstimateViewPage';
 import InvoicesPage from '@/pages/InvoicesPage';
-import FinancePage from '@/pages/FinancePage';
 import TeamPage from '@/pages/TeamManagementPage';
 import TeamMemberDetailsPage from '@/pages/TeamMemberProfilePage';
 import SettingsPage from '@/pages/SettingsPage';
-import ProfileCompanyPage from '@/pages/ProfileCompanyPage';
-import ProductsPage from '@/pages/ProductsPage';
-import SchedulePage from '@/pages/SchedulePage';
-import AnalyticsPage from '@/pages/AnalyticsPage';
-import AutomationsPage from '@/pages/AutomationsPage';
-import IntegrationsPage from '@/pages/IntegrationsPage';
-import ConfigurationPage from '@/pages/ConfigurationPage';
-import TelnyxSettingsPage from '@/pages/TelnyxSettingsPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RBACProvider } from '@/components/auth/RBACProvider';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -41,256 +33,120 @@ import { ProtectedPortalRoute } from '@/components/portal/ProtectedPortalRoute';
 import PortalJobsPage from '@/pages/portal/PortalJobsPage';
 import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import PortalAccessPage from '@/pages/portal/PortalAccessPage';
-import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary';
-import { MessageProvider } from '@/contexts/MessageContext';
-import AICenterPage from '@/pages/AICenterPage';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <Toaster />
-        <AuthProvider>
-          <RBACProvider>
-            <ClientPortalAuthProvider>
-              <MessageProvider>
-                <Router>
-                  <Routes>
-                    {/* Main application routes */}
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <DashboardPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/clients" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ClientsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/clients/:id" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ClientDetailsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/jobs" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <JobsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/jobs/:id" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <JobDetailsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/estimates" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <EstimatesPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/estimates/:id" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <EstimateDetailsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/invoices" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <InvoicesPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/invoices/:id" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <InvoicesPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/products" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ProductsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/finance" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <FinancePage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/team" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <TeamPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/team/:id" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <TeamMemberDetailsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/settings" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <SettingsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/settings/telnyx" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <TelnyxSettingsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/profile-company" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ProfileCompanyPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/schedule" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <SchedulePage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/analytics" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <AnalyticsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/automations" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <AutomationsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/integrations" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <IntegrationsPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/configuration" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ConfigurationPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/connect" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ConnectCenterPageOptimized />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/connect-center" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <ConnectCenterPageOptimized />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
+    <QueryClientProvider client={queryClient}>
+      <Toaster />
+      <AuthProvider>
+        <RBACProvider>
+          <ClientPortalAuthProvider>
+            <Router>
+              <Routes>
+                {/* Main application routes */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients" element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients/:id" element={
+                  <ProtectedRoute>
+                    <ClientDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/jobs" element={
+                  <ProtectedRoute>
+                    <JobsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/jobs/:id" element={
+                  <ProtectedRoute>
+                    <JobDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/estimates" element={
+                  <ProtectedRoute>
+                    <EstimatesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/estimates/:id" element={
+                  <ProtectedRoute>
+                    <EstimateDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/invoices" element={
+                  <ProtectedRoute>
+                    <InvoicesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/invoices/:id" element={
+                  <ProtectedRoute>
+                    <InvoicesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/team" element={
+                  <ProtectedRoute>
+                    <TeamPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/team/:id" element={
+                  <ProtectedRoute>
+                    <TeamMemberDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/connect-center" element={
+                  <ProtectedRoute>
+                    <ConnectCenterPageOptimized />
+                  </ProtectedRoute>
+                } />
 
-                    {/* Client Portal Routes */}
-                    <Route path="/portal/login" element={<PortalLoginPage />} />
-                    <Route path="/portal/access" element={<PortalAccessPage />} />
-                    <Route path="/portal/dashboard" element={
-                      <AppErrorBoundary>
-                        <ProtectedPortalRoute>
-                          <PortalDashboardPage />
-                        </ProtectedPortalRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/portal/jobs" element={
-                      <AppErrorBoundary>
-                        <ProtectedPortalRoute>
-                          <PortalJobsPage />
-                        </ProtectedPortalRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/portal/estimates" element={
-                      <AppErrorBoundary>
-                        <ProtectedPortalRoute>
-                          <PortalEstimatesPage />
-                        </ProtectedPortalRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/portal/invoices" element={
-                      <AppErrorBoundary>
-                        <ProtectedPortalRoute>
-                          <PortalInvoicesPage />
-                        </ProtectedPortalRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/portal/profile" element={
-                      <AppErrorBoundary>
-                        <ProtectedPortalRoute>
-                          <PortalProfilePage />
-                        </ProtectedPortalRoute>
-                      </AppErrorBoundary>
-                    } />
-
-                    <Route path="/ai-center" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <AICenterPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-                    <Route path="/ai-settings" element={
-                      <AppErrorBoundary>
-                        <ProtectedRoute>
-                          <AICenterPage />
-                        </ProtectedRoute>
-                      </AppErrorBoundary>
-                    } />
-
-                  </Routes>
-                </Router>
-              </MessageProvider>
-            </ClientPortalAuthProvider>
-          </RBACProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </AppErrorBoundary>
+                {/* Client Portal Routes */}
+                <Route path="/portal/login" element={<PortalLoginPage />} />
+                <Route path="/portal/access" element={<PortalAccessPage />} />
+                <Route path="/portal/dashboard" element={
+                  <ProtectedPortalRoute>
+                    <PortalDashboardPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/jobs" element={
+                  <ProtectedPortalRoute>
+                    <PortalJobsPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/estimates" element={
+                  <ProtectedPortalRoute>
+                    <PortalEstimatesPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/invoices" element={
+                  <ProtectedPortalRoute>
+                    <PortalInvoicesPage />
+                  </ProtectedPortalRoute>
+                } />
+                <Route path="/portal/profile" element={
+                  <ProtectedPortalRoute>
+                    <PortalProfilePage />
+                  </ProtectedPortalRoute>
+                } />
+              </Routes>
+            </Router>
+          </ClientPortalAuthProvider>
+        </RBACProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
