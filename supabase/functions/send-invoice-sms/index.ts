@@ -1,7 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
-import { generatePortalLink } from './portal.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,13 +107,17 @@ serve(async (req) => {
 
     console.log('Formatted phones - From:', formattedFromPhone, 'To:', formattedToPhone);
 
-    // Generate client portal login link using the new direct access approach
+    // Generate client portal login token and create portal link
     let portalLink = '';
     if (client?.email) {
       try {
-        portalLink = await generatePortalLink(client.email, job?.id || '', supabaseAdmin);
-        if (portalLink) {
-          console.log('Portal link generated for SMS');
+        const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
+          p_email: client.email
+        });
+
+        if (!tokenError && tokenData) {
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
+          console.log('Portal link generated');
         }
       } catch (error) {
         console.warn('Failed to generate portal login token:', error);

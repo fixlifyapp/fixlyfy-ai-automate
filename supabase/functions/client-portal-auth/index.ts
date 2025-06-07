@@ -53,7 +53,7 @@ serve(async (req) => {
     )
 
     const requestBody = await req.json()
-    const { action, token, email, expiry_hours } = requestBody
+    const { action, token, email } = requestBody
     
     // Enhanced input validation
     if (action && typeof action !== 'string') {
@@ -69,7 +69,6 @@ serve(async (req) => {
 
     if (action === 'generate_login_token') {
       const sanitizedEmail = sanitizeInput(email || '', 254);
-      const expiryHours = expiry_hours || 8760; // Default to 1 year
       
       if (!validateEmail(sanitizedEmail)) {
         return new Response(
@@ -87,11 +86,10 @@ serve(async (req) => {
         )
       }
 
-      console.log('client-portal-auth - Generating login token for email:', sanitizedEmail, 'with expiry hours:', expiryHours)
+      console.log('client-portal-auth - Generating login token for email:', sanitizedEmail)
       
       const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-        p_email: sanitizedEmail,
-        p_expiry_hours: expiryHours
+        p_email: sanitizedEmail
       })
 
       console.log('client-portal-auth - Token generation result:', tokenData ? 'success' : 'failed', tokenError)

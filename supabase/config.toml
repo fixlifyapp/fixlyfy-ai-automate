@@ -24,9 +24,3 @@ verify_jwt = false
 
 [functions.update-webhook-url]
 verify_jwt = false
-
-[functions.mailgun-webhook]
-verify_jwt = false
-
-[functions.telnyx-messaging-profile]
-verify_jwt = false

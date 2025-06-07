@@ -1,9 +1,9 @@
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Send, Loader2, Paperclip, Bot, Sparkles, X } from "lucide-react";
+import { Send, Loader2, Paperclip, Bot, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAI } from "@/hooks/use-ai";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,51 +30,15 @@ interface EmailInputPanelProps {
   onEmailSent: () => void;
 }
 
-interface Attachment {
-  file: File;
-  url: string;
-}
-
 export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInputPanelProps) => {
   const [subject, setSubject] = useState("");
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showAI, setShowAI] = useState(false);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { settings } = useCompanySettings();
   const { generateText, isLoading: isAILoading } = useAI({
     systemContext: `You are a professional customer service assistant. Generate helpful, polite, and professional emails for business communication. Keep responses concise and actionable.`
   });
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach(file => {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
-        return;
-      }
-
-      const url = URL.createObjectURL(file);
-      setAttachments(prev => [...prev, { file, url }]);
-    });
-
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => {
-      const updated = [...prev];
-      URL.revokeObjectURL(updated[index].url);
-      updated.splice(index, 1);
-      return updated;
-    });
-  };
 
   const handleSendEmail = async () => {
     if (!messageText.trim() || !selectedConversation || isSending) return;
@@ -87,26 +51,21 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
     setIsSending(true);
 
     try {
-      console.log('Starting email send process...');
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      // Get company settings first
-      const { data: companySettings, error: settingsError } = await supabase
+      // Get company settings
+      const { data: companySettings } = await supabase
         .from('company_settings')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (settingsError) {
-        console.error('Error fetching company settings:', settingsError);
+      if (!companySettings) {
         throw new Error('Company settings not found');
       }
-
-      console.log('Company settings loaded:', companySettings?.company_name);
 
       let conversationId = selectedConversation.id;
 
@@ -114,37 +73,12 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
       if (conversationId.startsWith('new_email_')) {
         console.log('Creating new email conversation...');
 
-        // Ensure client exists or create placeholder
-        let clientId = selectedConversation.client.id;
-        
-        if (clientId === 'new_client') {
-          console.log('Creating new client record...');
-          
-          const { data: newClient, error: clientError } = await supabase
-            .from('clients')
-            .insert({
-              name: selectedConversation.client.name,
-              email: selectedConversation.client.email,
-              created_by: user.id
-            })
-            .select('id')
-            .single();
-
-          if (clientError) {
-            console.error('Error creating client:', clientError);
-            throw new Error('Failed to create client record');
-          }
-
-          clientId = newClient.id;
-          console.log('Created client with ID:', clientId);
-        }
-
         const { data: newConversation, error: conversationError } = await supabase
           .from('email_conversations')
           .insert({
             company_id: companySettings.id,
-            client_id: clientId,
-            subject: subject || `Message from ${companySettings.company_name || 'Fixlify Services'}`,
+            client_id: selectedConversation.client.id !== 'new_client' ? selectedConversation.client.id : null,
+            subject: subject || `Message from ${settings.company_name || 'Fixlify Services'}`,
             status: 'active'
           })
           .select('id')
@@ -159,33 +93,10 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
         console.log('Created conversation with ID:', conversationId);
       }
 
-      const companyName = companySettings.company_name || 'Fixlify Services';
-      
-      // Get last message ID for threading if this is a reply
-      let replyToMessageId = null;
-      if (selectedConversation.emails && selectedConversation.emails.length > 0) {
-        const lastMessage = selectedConversation.emails[selectedConversation.emails.length - 1];
-        if (lastMessage.direction === 'inbound') {
-          // This is a reply to an inbound message
-          const { data: messageData } = await supabase
-            .from('email_messages')
-            .select('mailgun_message_id')
-            .eq('id', lastMessage.id)
-            .single();
-          
-          if (messageData?.mailgun_message_id) {
-            replyToMessageId = messageData.mailgun_message_id;
-          }
-        }
-      }
+      const companyName = settings.company_name || 'Fixlify Services';
+      const fromEmail = generateFromEmail(companyName);
       
       console.log('Sending email with conversation ID:', conversationId);
-      console.log('Email details:', {
-        to: selectedConversation.client.email,
-        subject: subject || `Message from ${companyName}`,
-        companyName,
-        replyToMessageId
-      });
 
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
@@ -208,8 +119,7 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
             </div>
           `,
           text: `Hello ${selectedConversation.client.name},\n\n${messageText}\n\nBest regards,\n${companyName}`,
-          conversationId: conversationId,
-          replyToMessageId: replyToMessageId
+          conversationId: conversationId
         }
       });
 
@@ -223,16 +133,9 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
         throw new Error(data?.error || 'Failed to send email');
       }
 
-      console.log('Email sent successfully:', data);
+      console.log('Email sent successfully');
       setSubject("");
       setMessageText("");
-      setAttachments([]);
-      
-      // Revoke object URLs
-      attachments.forEach(attachment => {
-        URL.revokeObjectURL(attachment.url);
-      });
-      
       toast.success("Email sent successfully");
       
       // Trigger refresh to show the new email
@@ -273,7 +176,6 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
   }
 
   const isNewConversation = selectedConversation.emails.length === 0;
-  const companyEmail = generateFromEmail(settings.company_name || 'Fixlify Services');
 
   return (
     <div className="border-t border-fixlyfy-border/50 bg-white">
@@ -288,29 +190,6 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
               className="border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
             />
           )}
-          
-          {/* Attachments Display */}
-          {attachments.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-fixlyfy-text">Attachments:</div>
-              <div className="flex flex-wrap gap-2">
-                {attachments.map((attachment, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-fixlyfy/10 px-3 py-1 rounded-lg text-sm">
-                    <Paperclip className="h-3 w-3" />
-                    <span className="truncate max-w-32">{attachment.file.name}</span>
-                    <button
-                      onClick={() => removeAttachment(index)}
-                      className="text-fixlyfy-text-muted hover:text-fixlyfy"
-                      disabled={isSending}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
           <div className="flex gap-3">
             <div className="flex-1">
               <Textarea
@@ -322,20 +201,11 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
               />
             </div>
             <div className="flex flex-col gap-2">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                multiple
-                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                className="hidden"
-              />
               <Button 
                 variant="outline"
                 size="sm"
                 className="p-2 border-fixlyfy-border hover:bg-fixlyfy/5"
                 disabled={isSending}
-                onClick={() => fileInputRef.current?.click()}
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
@@ -356,9 +226,7 @@ export const EmailInputPanel = ({ selectedConversation, onEmailSent }: EmailInpu
         </div>
         
         <div className="flex justify-between items-center text-xs text-fixlyfy-text-muted mt-2">
-          <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
-            From: {companyEmail}
-          </span>
+          <span>Professional email communication</span>
           {selectedConversation.client?.email && (
             <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
               To: {selectedConversation.client.email}

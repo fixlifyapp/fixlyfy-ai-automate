@@ -29,16 +29,16 @@ export const PageLayout = ({ children }: PageLayoutProps) => {
         <AppSidebar />
         <SidebarInset className="flex-1 flex flex-col overflow-hidden">
           <Header />
-          <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-2 pb-safe' : 'p-6'}`}>
-            <div className={`flex items-center gap-2 mb-4 ${isMobile ? 'sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2' : ''}`}>
+          <main className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center gap-2 mb-4">
               <Button 
                 variant="outline" 
-                size={isMobile ? "sm" : "sm"}
+                size="sm" 
                 onClick={handleBack}
-                className={`gap-2 ${isMobile ? 'px-2 py-1 h-8' : ''}`}
+                className="gap-2"
               >
-                <ArrowLeft size={isMobile ? 14 : 16} />
-                <span className={isMobile ? 'hidden xs:inline' : ''}>Back</span>
+                <ArrowLeft size={16} />
+                Back
               </Button>
             </div>
             {children}

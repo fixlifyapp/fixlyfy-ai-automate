@@ -3,12 +3,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Plus, RefreshCw, Archive } from "lucide-react";
+import { Mail, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import { toast } from "sonner";
-import { ClientSelectionDialog } from "./ClientSelectionDialog";
-import { supabase } from "@/integrations/supabase/client";
 
 interface EmailConversation {
   id: string;
@@ -42,7 +38,6 @@ export const EmailConversationsList = ({
   onRefresh,
   onNewEmail
 }: EmailConversationsListProps) => {
-  const [showClientDialog, setShowClientDialog] = useState(false);
   
   const getConversationPreview = (conversation: EmailConversation) => {
     const latestEmail = conversation.emails?.[conversation.emails.length - 1];
@@ -83,63 +78,6 @@ export const EmailConversationsList = ({
     }
   };
 
-  const handleArchiveConversation = async (conversationId: string, clientName: string) => {
-    try {
-      // Update the conversation status to archived in the database
-      const { error } = await supabase
-        .from('email_conversations')
-        .update({ status: 'archived' })
-        .eq('id', conversationId);
-
-      if (error) {
-        console.error('Error archiving conversation:', error);
-        toast.error('Failed to archive conversation');
-        return;
-      }
-
-      toast.success(`Email conversation with ${clientName} archived`);
-      
-      // If the archived conversation was selected, clear the selection
-      if (selectedConversation?.id === conversationId) {
-        onConversationSelect(null);
-      }
-
-      // Refresh the conversations list to remove the archived conversation
-      onRefresh();
-    } catch (error) {
-      console.error('Error archiving conversation:', error);
-      toast.error('Failed to archive conversation');
-    }
-  };
-
-  const handleNewEmailClick = () => {
-    setShowClientDialog(true);
-  };
-
-  const handleClientSelect = (client: { id: string; name: string; email?: string; phone?: string; company?: string }) => {
-    // Create a new conversation with the selected client
-    const newConversation = {
-      id: `new_email_${client.id}_${Date.now()}`,
-      subject: `New conversation with ${client.name}`,
-      last_message_at: new Date().toISOString(),
-      status: 'active',
-      client_id: client.id,
-      client: {
-        id: client.id,
-        name: client.name,
-        email: client.email || '',
-        phone: client.phone || undefined
-      },
-      emails: []
-    };
-    
-    onConversationSelect(newConversation);
-    toast.success(`Started new email conversation with ${client.name}`);
-  };
-
-  // Filter out archived conversations (they should be excluded from the main query)
-  const activeConversations = conversations.filter(conv => conv.status !== 'archived');
-
   if (isLoading) {
     return (
       <div className="p-4 text-center">
@@ -156,7 +94,7 @@ export const EmailConversationsList = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="bg-fixlyfy/10 text-fixlyfy">
-              {activeConversations.length}
+              {conversations.length}
             </Badge>
             <span className="text-sm text-fixlyfy-text-secondary">conversations</span>
           </div>
@@ -171,7 +109,7 @@ export const EmailConversationsList = ({
             </Button>
             <Button
               size="sm"
-              onClick={handleNewEmailClick}
+              onClick={onNewEmail}
               className="gap-1 bg-fixlyfy hover:bg-fixlyfy-light text-white h-8 px-3"
             >
               <Plus className="h-3 w-3" />
@@ -183,7 +121,7 @@ export const EmailConversationsList = ({
 
       {/* Conversations List */}
       <ScrollArea className="flex-1">
-        {activeConversations.length === 0 ? (
+        {conversations.length === 0 ? (
           <div className="p-6 text-center text-fixlyfy-text-secondary">
             <Mail className="h-8 w-8 mx-auto mb-3 text-fixlyfy-text-muted" />
             <p className="text-sm">No email conversations yet</p>
@@ -191,7 +129,7 @@ export const EmailConversationsList = ({
           </div>
         ) : (
           <div className="space-y-0">
-            {activeConversations.map((conversation) => {
+            {conversations.map((conversation) => {
               const unreadCount = getUnreadCount(conversation);
               const isSelected = selectedConversation?.id === conversation.id;
               
@@ -199,7 +137,7 @@ export const EmailConversationsList = ({
                 <div
                   key={conversation.id}
                   className={cn(
-                    "group relative p-3 cursor-pointer border-b border-fixlyfy-border/30 hover:bg-fixlyfy/5 transition-colors",
+                    "p-3 cursor-pointer border-b border-fixlyfy-border/30 hover:bg-fixlyfy/5 transition-colors",
                     isSelected && "bg-fixlyfy/10 border-l-2 border-l-fixlyfy"
                   )}
                   onClick={() => onConversationSelect(conversation)}
@@ -245,35 +183,12 @@ export const EmailConversationsList = ({
                       )}
                     </div>
                   </div>
-                  
-                  {/* Archive button - appears on hover */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchiveConversation(conversation.id, conversation.client?.name || 'Unknown Client');
-                      }}
-                      className="h-8 w-8 p-0 bg-white/80 hover:bg-white shadow-sm"
-                      title="Archive conversation"
-                    >
-                      <Archive className="h-4 w-4 text-fixlyfy-text-muted" />
-                    </Button>
-                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </ScrollArea>
-
-      {/* Client Selection Dialog */}
-      <ClientSelectionDialog
-        open={showClientDialog}
-        onOpenChange={setShowClientDialog}
-        onClientSelect={handleClientSelect}
-      />
     </div>
   );
 };

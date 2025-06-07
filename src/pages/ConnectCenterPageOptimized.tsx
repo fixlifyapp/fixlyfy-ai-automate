@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import { TelnyxCallsView } from "@/components/telnyx/TelnyxCallsView";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveCallInterface } from "@/components/connect/ActiveCallInterface";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const ConnectCenterPageOptimized = () => {
   const [activeTab, setActiveTab] = useState("messages");
@@ -29,7 +28,6 @@ const ConnectCenterPageOptimized = () => {
   
   const { openMessageDialog } = useMessageContext();
   const { unreadCounts, ownedNumbers, isLoading, refreshData } = useConnectCenterData();
-  const isMobile = useIsMobile();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -149,10 +147,10 @@ const ConnectCenterPageOptimized = () => {
 
   const getActionButtonText = () => {
     switch (activeTab) {
-      case "messages": return isMobile ? "New" : "New Message";
-      case "calls": return isMobile ? "Call" : "New Call";
-      case "emails": return isMobile ? "Email" : "New Email";
-      default: return isMobile ? "New" : "New Action";
+      case "messages": return "New Message";
+      case "calls": return "New Call";
+      case "emails": return "New Email";
+      default: return "New Action";
     }
   };
 
@@ -162,11 +160,11 @@ const ConnectCenterPageOptimized = () => {
       
       <PageHeader
         title="Connect Center"
-        subtitle={clientName ? `Communication with ${clientName}` : (isMobile ? "Communication hub" : "Communication hub and call monitoring")}
+        subtitle={clientName ? `Communication with ${clientName}` : "Communication hub and call monitoring"}
         icon={MessageSquare}
         badges={[
           { text: "Telnyx", icon: Phone, variant: "fixlyfy" as const },
-          ...(isMobile ? [] : [{ text: "Real-time Sync", icon: MessageSquare, variant: "info" as const }]),
+          { text: "Real-time Sync", icon: MessageSquare, variant: "info" as const },
           ...(isCallLoading ? [{ text: "Calling...", icon: Phone, variant: "warning" as const }] : [])
         ]}
         actionButton={{
@@ -182,64 +180,48 @@ const ConnectCenterPageOptimized = () => {
       {isLoading ? (
         <LoadingSkeleton type="connect-tabs" />
       ) : (
-        <div className={`w-full ${isMobile ? 'space-y-2' : ''}`}>
-          <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
-            <div className={`${isMobile ? 'sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-2' : 'mb-6'}`}>
-              <TabsList className={`grid grid-cols-3 w-full ${isMobile ? 'h-12' : ''}`}>
-                <TabsTrigger value="messages" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-                  <MessageSquare size={isMobile ? 14 : 16} />
-                  <span className={isMobile ? 'hidden xs:inline' : 'hidden sm:inline'}>Messages</span>
-                  {unreadCounts.messages > 0 && (
-                    <Badge className={`ml-1 bg-fixlyfy text-xs ${isMobile ? 'px-1 py-0 text-[10px] min-w-[16px] h-4' : ''}`}>
-                      {unreadCounts.messages}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="calls" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-                  <Phone size={isMobile ? 14 : 16} />
-                  <span className={isMobile ? 'hidden xs:inline' : 'hidden sm:inline'}>Calls</span>
-                  {unreadCounts.calls > 0 && (
-                    <Badge className={`ml-1 bg-fixlyfy text-xs ${isMobile ? 'px-1 py-0 text-[10px] min-w-[16px] h-4' : ''}`}>
-                      {unreadCounts.calls}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="emails" className={`flex items-center gap-1 ${isMobile ? 'text-xs px-2' : 'gap-2'}`}>
-                  <Mail size={isMobile ? 14 : 16} />
-                  <span className={isMobile ? 'hidden xs:inline' : 'hidden sm:inline'}>Emails</span>
-                  {unreadCounts.emails > 0 && (
-                    <Badge className={`ml-1 bg-fixlyfy text-xs ${isMobile ? 'px-1 py-0 text-[10px] min-w-[16px] h-4' : ''}`}>
-                      {unreadCounts.emails}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <TabsContent value="messages" className="mt-0">
-              <div className={isMobile ? 'min-h-[calc(100vh-200px)]' : ''}>
-                <DispatcherMessagesView searchResults={[]} />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="calls" className="mt-0">
-              <div className={isMobile ? 'min-h-[calc(100vh-200px)]' : ''}>
-                <TelnyxCallsView />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="emails" className="mt-0">
-              <div className={isMobile ? 'min-h-[calc(100vh-200px)]' : ''}>
-                <EmailManagement />
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+        <Tabs defaultValue={activeTab} value={activeTab} className="w-full" onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-3 mb-6">
+            <TabsTrigger value="messages" className="flex items-center gap-2">
+              <MessageSquare size={16} />
+              <span className="hidden sm:inline">Messages</span>
+              {unreadCounts.messages > 0 && (
+                <Badge className="ml-1 bg-fixlyfy">{unreadCounts.messages}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="calls" className="flex items-center gap-2">
+              <Phone size={16} />
+              <span className="hidden sm:inline">Calls</span>
+              {unreadCounts.calls > 0 && (
+                <Badge className="ml-1 bg-fixlyfy">{unreadCounts.calls}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="emails" className="flex items-center gap-2">
+              <Mail size={16} />
+              <span className="hidden sm:inline">Emails</span>
+              {unreadCounts.emails > 0 && (
+                <Badge className="ml-1 bg-fixlyfy">{unreadCounts.emails}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="messages" className="mt-0">
+            <DispatcherMessagesView searchResults={[]} />
+          </TabsContent>
+          
+          <TabsContent value="calls" className="mt-0">
+            <TelnyxCallsView />
+          </TabsContent>
+          
+          <TabsContent value="emails" className="mt-0">
+            <EmailManagement />
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Email Composer Dialog */}
       <Dialog open={emailComposerOpen} onOpenChange={setEmailComposerOpen}>
-        <DialogContent className={`${isMobile ? 'max-w-[95vw] h-[90vh]' : 'max-w-3xl'}`}>
+        <DialogContent className="max-w-3xl">
           <EmailComposer 
             recipient={clientId && clientName && clientEmail ? {
               id: clientId,

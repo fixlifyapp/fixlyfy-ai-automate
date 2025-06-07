@@ -109,12 +109,12 @@ export default function PortalLoginPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-fixlyfy" />
-              Request Access Link
+              Sign In
             </CardTitle>
             <CardDescription>
               {token 
                 ? 'Processing your login link...' 
-                : 'Enter your email to receive a secure access link. Links are valid for one year for your convenience.'
+                : 'Enter your email to receive a secure login link'
               }
             </CardDescription>
           </CardHeader>
@@ -148,10 +148,10 @@ export default function PortalLoginPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending Access Link...
+                      Sending Login Link...
                     </>
                   ) : (
-                    'Send Access Link'
+                    'Send Login Link'
                   )}
                 </Button>
               </form>

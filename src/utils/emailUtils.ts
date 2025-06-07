@@ -3,31 +3,20 @@ export const generateFromEmail = (companyName: string): string => {
   // Generate a clean email format from company name
   const cleanName = companyName
     .toLowerCase()
-    .trim()
-    .replace(/[\s\-&+.,()]+/g, '_')
-    .replace(/[^a-z0-9_]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .substring(0, 30);
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, '') // Remove spaces
+    .substring(0, 20); // Limit length
   
-  return `${cleanName || 'support'}@fixlify.app`;
+  return `${cleanName}@fixlify.app`;
 };
 
 export const formatCompanyNameForEmail = (companyName: string): string => {
   // Format company name for email display (clean but readable)
-  if (!companyName || typeof companyName !== 'string') {
-    return 'support';
-  }
-
   return companyName
     .toLowerCase()
-    .trim()
-    .replace(/[\s\-&+.,()]+/g, '_')
-    .replace(/[^a-z0-9_]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .substring(0, 30)
-    || 'support';
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .substring(0, 20); // Limit length
 };
 
 export const formatEmailPreview = (content: string, maxLength: number = 100): string => {
@@ -57,30 +46,4 @@ export const getEmailStatusColor = (status: string): string => {
     default:
       return 'bg-fixlyfy-text-muted/20 text-fixlyfy-text-muted';
   }
-};
-
-// Validate that two companies don't have conflicting email addresses
-export const checkEmailAddressConflict = async (companyName: string, excludeUserId?: string) => {
-  const proposedEmail = generateFromEmail(companyName);
-  
-  // This would be used in a validation function to check against existing companies
-  // Implementation would depend on your specific validation requirements
-  
-  return {
-    email: proposedEmail,
-    hasConflict: false, // Would check against database in real implementation
-    conflictsWith: null
-  };
-};
-
-// Parse email address to extract company identifier
-export const parseFixlifyEmail = (emailAddress: string) => {
-  const [localPart, domain] = emailAddress.split('@');
-  
-  return {
-    localPart: localPart?.toLowerCase(),
-    domain: domain?.toLowerCase(),
-    isFixlifyEmail: domain?.toLowerCase() === 'fixlify.app',
-    companyIdentifier: localPart?.toLowerCase()
-  };
 };

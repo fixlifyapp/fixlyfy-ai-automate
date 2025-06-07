@@ -145,153 +145,39 @@ export const SimpleMessagesInterface = () => {
   const handleClientSelect = async (client: SearchResult) => {
     console.log('Selected client:', client);
     
-    // First check if there's an archived conversation for this client
-    try {
-      const { data: archivedConv, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          status,
-          last_message_at,
-          created_at,
-          clients:client_id (
-            id,
-            name,
-            phone,
-            email
-          ),
-          messages (
-            id,
-            body,
-            direction,
-            created_at,
-            sender,
-            recipient,
-            status
-          )
-        `)
-        .eq('client_id', client.id)
-        .order('last_message_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!error && archivedConv) {
-        console.log('Found existing conversation for client:', archivedConv.status);
-        
-        if (archivedConv.status === 'archived') {
-          console.log('🔄 Restoring archived conversation for:', client.name);
-          
-          // Restore the conversation
-          const { error: restoreError } = await supabase
-            .from('conversations')
-            .update({ 
-              status: 'active',
-              last_message_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', archivedConv.id);
-
-          if (restoreError) {
-            console.error('Error restoring conversation:', restoreError);
-            toast.error('Failed to restore conversation');
-            return;
-          }
-
-          // Format the restored conversation with messages
-          const sortedMessages = (archivedConv.messages || []).sort((a, b) => 
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-
-          const restoredConversation = {
-            id: archivedConv.id,
-            client: {
-              id: archivedConv.clients?.id || client.id,
-              name: archivedConv.clients?.name || client.name,
-              phone: archivedConv.clients?.phone || client.phone || '',
-              email: archivedConv.clients?.email || client.email || ''
-            },
-            messages: sortedMessages.map(msg => ({
-              ...msg,
-              direction: msg.direction as 'inbound' | 'outbound'
-            })),
-            lastMessage: sortedMessages[sortedMessages.length - 1]?.body || 'No messages',
-            lastMessageTime: sortedMessages[sortedMessages.length - 1]?.created_at || archivedConv.created_at,
-            unreadCount: 0
-          };
-
-          setSelectedConversation(restoredConversation);
-          toast.success(`Restored conversation with ${client.name} including message history`);
-          
-          // Refresh the conversations list to show the restored conversation
-          setTimeout(() => {
-            refreshConversations();
-          }, 500);
-        } else {
-          // Conversation is already active, select it
-          const activeConversation = conversations.find(conv => conv.client.id === client.id);
-          if (activeConversation) {
-            setSelectedConversation(activeConversation);
-          }
-        }
-      } else {
-        // No existing conversation, create a new one
-        const newConversation = {
-          id: `temp-${client.id}`,
-          client: {
-            id: client.id,
-            name: client.name,
-            phone: client.phone || '',
-            email: client.email || ''
-          },
-          messages: [],
-          lastMessage: 'No messages yet',
-          lastMessageTime: new Date().toISOString(),
-          unreadCount: 0
-        };
-        
-        setSelectedConversation(newConversation);
-        console.log('Created new conversation placeholder for client:', client.name);
-      }
-    } catch (error) {
-      console.error('Error checking for existing conversation:', error);
-      toast.error('Failed to check conversation history');
+    // Check if conversation already exists
+    let existingConversation = conversations.find(conv => conv.client.id === client.id);
+    
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+      console.log('Using existing conversation:', existingConversation.id);
+    } else {
+      // Create a new conversation placeholder
+      const newConversation = {
+        id: `temp-${client.id}`,
+        client: {
+          id: client.id,
+          name: client.name,
+          phone: client.phone || '',
+          email: client.email || ''
+        },
+        messages: [],
+        lastMessage: 'No messages yet',
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0
+      };
+      
+      setSelectedConversation(newConversation);
+      console.log('Created new conversation placeholder for client:', client.name);
     }
 
     setSearchTerm("");
     setShowClientResults(false);
+    toast.success(`Opening conversation with ${client.name}`);
   };
 
   const handleMessageSent = () => {
-    console.log('📨 Message sent, refreshing conversations...');
-    
-    // Force refresh conversations to show the new/updated conversation
     refreshConversations();
-    
-    // Clear selection temporarily to force re-render, then restore after refresh
-    const currentConversation = selectedConversation;
-    if (currentConversation) {
-      setSelectedConversation(null);
-      
-      // After refresh, try to restore the selection with updated conversation
-      setTimeout(() => {
-        refreshConversations().then(() => {
-          setTimeout(() => {
-            const updatedConversation = conversations.find(conv => 
-              conv.client.id === currentConversation.client.id
-            );
-            
-            if (updatedConversation) {
-              setSelectedConversation(updatedConversation);
-              console.log('✅ Restored selection to updated conversation');
-            } else {
-              // If still not found, keep the original selection
-              setSelectedConversation(currentConversation);
-              console.log('⚠️ Could not find updated conversation, keeping original');
-            }
-          }, 500);
-        });
-      }, 100);
-    }
   };
 
   // Filter conversations based on search term

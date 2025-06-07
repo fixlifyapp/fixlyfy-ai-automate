@@ -36,10 +36,9 @@ export const generatePortalLink = async (
       }
     }
 
-    // Generate long-lived login token (1 year expiry)
+    // Generate login token
     const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
-      p_email: clientEmail,
-      p_expiry_hours: 8760 // 1 year
+      p_email: clientEmail
     });
     
     if (tokenData && !tokenError) {
@@ -51,9 +50,8 @@ export const generatePortalLink = async (
         return '';
       }
       
-      // Use the new direct access route
-      const portalLink = `${portalDomain}/portal/access?token=${tokenData}&jobId=${jobId}`;
-      console.log('Generated direct portal access link:', portalLink.substring(0, 50) + '...');
+      const portalLink = `${portalDomain}/portal/login?token=${tokenData}&jobId=${jobId}`;
+      console.log('Generated portal link:', portalLink.substring(0, 50) + '...');
       return portalLink;
     } else {
       console.error('Failed to generate portal login token:', tokenError);

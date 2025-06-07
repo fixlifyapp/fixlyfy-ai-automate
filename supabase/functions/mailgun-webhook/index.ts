@@ -8,35 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Email utility function to match send-email function
-const formatCompanyNameForEmail = (companyName: string): string => {
-  if (!companyName || typeof companyName !== 'string') {
-    return 'support';
-  }
-
-  return companyName
-    .toLowerCase()
-    .trim()
-    .replace(/[\s\-&+.,()]+/g, '_')
-    .replace(/[^a-z0-9_]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .substring(0, 30)
-    || 'support';
-};
-
-const parseEmailAddress = (emailAddress: string) => {
-  // Extract the local part (before @) from email address
-  const localPart = emailAddress.split('@')[0];
-  const domain = emailAddress.split('@')[1];
-  
-  return {
-    localPart: localPart.toLowerCase(),
-    domain: domain.toLowerCase(),
-    isFixlifyDomain: domain === 'fixlify.app'
-  };
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -120,195 +91,71 @@ async function handleInboundEmail(supabaseClient: any, eventData: any) {
   const message = eventData.message
   if (!message) return
 
-  console.log('Processing inbound email:', {
-    from: message.headers.from,
-    to: message.headers.to,
-    subject: message.headers.subject
-  })
-
-  // Parse recipient email to find company
-  const recipientInfo = parseEmailAddress(message.headers.to)
+  // Extract domain from recipient to find company
+  const recipientDomain = message.headers.to.split('@')[1]
   
-  if (!recipientInfo.isFixlifyDomain) {
-    console.log('Email not for fixlify.app domain:', message.headers.to)
-    return
-  }
-
-  // Find company by matching email format
-  const { data: companies } = await supabaseClient
+  const { data: companySettings } = await supabaseClient
     .from('company_settings')
-    .select('*')
-
-  let targetCompany = null
-  
-  for (const company of companies || []) {
-    if (company.company_name) {
-      const expectedLocalPart = formatCompanyNameForEmail(company.company_name)
-      if (expectedLocalPart === recipientInfo.localPart) {
-        targetCompany = company
-        break
-      }
-    }
-  }
-
-  if (!targetCompany) {
-    console.log('No company found for email address:', message.headers.to)
-    return
-  }
-
-  console.log('Found target company:', targetCompany.company_name)
-
-  // Extract sender email for client matching
-  const senderEmail = message.headers.from
-  const senderEmailOnly = senderEmail.includes('<') 
-    ? senderEmail.split('<')[1].replace('>', '') 
-    : senderEmail
-
-  // Find or create client
-  let clientId = null
-  const { data: existingClient } = await supabaseClient
-    .from('clients')
-    .select('id')
-    .eq('email', senderEmailOnly)
-    .eq('created_by', targetCompany.user_id)
+    .select('*, id')
+    .eq('mailgun_domain', recipientDomain)
     .single()
 
-  if (existingClient) {
-    clientId = existingClient.id
-  } else {
-    // Create new client
-    const senderName = senderEmail.includes('<') 
-      ? senderEmail.split('<')[0].trim().replace(/"/g, '')
-      : senderEmailOnly.split('@')[0]
-
-    const { data: newClient, error: clientError } = await supabaseClient
-      .from('clients')
-      .insert({
-        name: senderName,
-        email: senderEmailOnly,
-        created_by: targetCompany.user_id
-      })
-      .select('id')
-      .single()
-
-    if (clientError) {
-      console.error('Error creating client:', clientError)
-      return
-    }
-
-    clientId = newClient.id
-    console.log('Created new client:', senderName)
+  if (!companySettings) {
+    console.log('No company found for domain:', recipientDomain)
+    return
   }
 
-  // Look for existing conversation using threading headers
+  // Find or create conversation
   const subject = message.headers.subject || 'No Subject'
-  const inReplyTo = message.headers['in-reply-to']
-  const references = message.headers.references
-  const conversationId = message.headers['x-conversation-id']
+  const threadId = message.headers['in-reply-to'] || message.headers['message-id']
   
-  let targetConversationId = null
+  let conversationId
+  
+  // Try to find existing conversation by thread ID
+  const { data: existingConversation } = await supabaseClient
+    .from('email_conversations')
+    .select('id')
+    .eq('company_id', companySettings.id)
+    .eq('thread_id', threadId)
+    .single()
 
-  // Try to find conversation by custom header first
-  if (conversationId) {
-    const { data: existingByHeader } = await supabaseClient
-      .from('email_conversations')
-      .select('id')
-      .eq('id', conversationId)
-      .eq('company_id', targetCompany.id)
-      .single()
-    
-    if (existingByHeader) {
-      targetConversationId = existingByHeader.id
-    }
-  }
-
-  // Try to find by Message-ID threading
-  if (!targetConversationId && (inReplyTo || references)) {
-    const threadingIds = [inReplyTo, references].filter(Boolean).join(' ')
-    
-    const { data: existingByThread } = await supabaseClient
-      .from('email_messages')
-      .select('conversation_id')
-      .textSearch('mailgun_message_id', threadingIds.replace(/[<>]/g, ''))
-      .limit(1)
-      .single()
-    
-    if (existingByThread) {
-      targetConversationId = existingByThread.conversation_id
-    }
-  }
-
-  // Try to find by client and subject similarity
-  if (!targetConversationId && clientId) {
-    const cleanSubject = subject.replace(/^(re|fwd?):\s*/i, '').trim()
-    
-    const { data: existingBySubject } = await supabaseClient
-      .from('email_conversations')
-      .select('id')
-      .eq('company_id', targetCompany.id)
-      .eq('client_id', clientId)
-      .ilike('subject', `%${cleanSubject}%`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-    
-    if (existingBySubject) {
-      targetConversationId = existingBySubject.id
-    }
-  }
-
-  // Create new conversation if none found
-  if (!targetConversationId) {
-    const { data: newConversation, error: conversationError } = await supabaseClient
+  if (existingConversation) {
+    conversationId = existingConversation.id
+  } else {
+    // Create new conversation
+    const { data: newConversation, error } = await supabaseClient
       .from('email_conversations')
       .insert({
-        company_id: targetCompany.id,
-        client_id: clientId,
-        subject: subject,
+        company_id: companySettings.id,
+        subject,
+        thread_id: threadId,
         status: 'active'
       })
       .select('id')
       .single()
 
-    if (conversationError) {
-      console.error('Error creating conversation:', conversationError)
+    if (error) {
+      console.error('Error creating conversation:', error)
       return
     }
     
-    targetConversationId = newConversation.id
-    console.log('Created new conversation:', targetConversationId)
-  } else {
-    console.log('Using existing conversation:', targetConversationId)
+    conversationId = newConversation.id
   }
 
   // Store the inbound email
-  const { error: messageError } = await supabaseClient
+  await supabaseClient
     .from('email_messages')
     .insert({
-      conversation_id: targetConversationId,
+      conversation_id: conversationId,
       mailgun_message_id: message.headers['message-id'],
       direction: 'inbound',
-      sender_email: senderEmailOnly,
+      sender_email: message.headers.from,
       recipient_email: message.headers.to,
-      subject: subject,
+      subject,
       body_html: message['body-html'] || '',
       body_text: message['body-plain'] || '',
       delivery_status: 'received'
     })
 
-  if (messageError) {
-    console.error('Error storing email message:', messageError)
-    return
-  }
-
-  // Update conversation timestamp
-  await supabaseClient
-    .from('email_conversations')
-    .update({ 
-      last_message_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', targetConversationId)
-
-  console.log('Successfully processed inbound email for:', targetCompany.company_name)
+  console.log('Stored inbound email for conversation:', conversationId)
 }

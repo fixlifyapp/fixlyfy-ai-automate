@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PhoneNumberPurchase } from '../connect/PhoneNumberPurchase';
-import { TelnyxPhoneConfiguration } from './TelnyxPhoneConfiguration';
 import { formatPhoneForDisplay } from '@/utils/phoneUtils';
 
 interface OwnedNumber {
@@ -22,7 +22,6 @@ interface OwnedNumber {
   user_id?: string;
   monthly_cost?: number;
   setup_cost?: number;
-  messaging_profile_id?: string;
 }
 
 export function TelnyxPhoneNumbersPage() {
@@ -51,92 +50,39 @@ export function TelnyxPhoneNumbersPage() {
     }
   });
 
-  // Auto-setup mutation for new numbers
-  const autoSetupMutation = useMutation({
+  // Configure number mutation
+  const configureNumberMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
-      console.log('Auto-setting up configuration for:', phoneNumber);
-      const { data, error } = await supabase.functions.invoke('telnyx-messaging-profile', {
+      console.log('Configuring number:', phoneNumber);
+      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
         body: {
-          action: 'setup_full_configuration',
+          action: 'configure',
           phone_number: phoneNumber
         }
       });
 
       if (error) {
-        console.error('Auto-configuration error:', error);
+        console.error('Configure error:', error);
         throw error;
       }
-      
-      console.log('Auto-configuration response:', data);
+      console.log('Configure response:', data);
       return data;
     },
-    onSuccess: (data, phoneNumber) => {
-      console.log('Successfully auto-configured:', data);
-      toast.success(`Phone number ${phoneNumber} automatically configured for SMS + Voice + AI`);
+    onSuccess: (data) => {
+      console.log('Successfully configured:', data);
+      toast.success('Number configured for AI calls');
       queryClient.invalidateQueries({ queryKey: ['telnyx-owned-numbers'] });
     },
-    onError: (error, phoneNumber) => {
-      console.error('Auto-configuration error:', error);
-      toast.error(`Failed to auto-configure ${phoneNumber}: ${error.message}`);
+    onError: (error) => {
+      console.error('Configure error:', error);
+      toast.error(`Failed to configure number: ${error.message}`);
     }
   });
-
-  const isNumberFullyConfigured = (number: OwnedNumber): boolean => {
-    return !!(number.configured_at && 
-           number.webhook_url && 
-           number.webhook_url.includes('sms-receiver') &&
-           number.messaging_profile_id);
-  };
-
-  // Auto-setup unconfigured numbers
-  React.useEffect(() => {
-    if (ownedNumbers.length > 0) {
-      ownedNumbers.forEach((number: OwnedNumber) => {
-        const isConfigured = isNumberFullyConfigured(number);
-        if (!isConfigured && !autoSetupMutation.isPending) {
-          console.log('Auto-configuring unconfigured number:', number.phone_number);
-          autoSetupMutation.mutate(number.phone_number);
-        }
-      });
-    }
-  }, [ownedNumbers]);
 
   return (
     <div className="space-y-6">
       {/* Purchase Numbers Section */}
       <PhoneNumberPurchase />
-
-      {/* Configuration Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Automatic Configuration Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <h5 className="font-medium text-blue-600">🤖 Automatic Setup</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• <strong>SMS Messaging:</strong> Auto-configured for two-way texts</li>
-                <li>• <strong>Voice Calls:</strong> Auto-configured for incoming/outgoing</li>
-                <li>• <strong>AI Dispatcher:</strong> Auto-enabled to answer calls</li>
-                <li>• <strong>Webhooks:</strong> Auto-configured for real-time delivery</li>
-              </ul>
-            </div>
-            <div className="space-y-3">
-              <h5 className="font-medium text-green-600">🚀 Ready to Use</h5>
-              <ul className="space-y-1 text-sm">
-                <li>• No manual setup required</li>
-                <li>• Works immediately after purchase</li>
-                <li>• AI answers calls automatically 24/7</li>
-                <li>• SMS and calls are logged in dashboard</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Owned Numbers */}
       <Card>
@@ -157,96 +103,104 @@ export function TelnyxPhoneNumbersPage() {
               <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No phone numbers yet</h3>
               <p className="text-muted-foreground mb-4">
-                Search and purchase a phone number above - it will be automatically configured for AI dispatcher
+                Search and purchase a phone number above to get started with AI dispatcher
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {ownedNumbers.map((number: OwnedNumber) => {
-                const isConfigured = isNumberFullyConfigured(number);
-                
-                return (
-                  <div key={number.id}>
-                    <div className="flex items-center justify-between p-4 border rounded-lg mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-medium text-lg">
-                            {formatPhoneForDisplay(number.phone_number)}
-                          </h3>
-                          <Badge variant={number.status === 'active' ? 'default' : 'secondary'}>
-                            {number.status}
-                          </Badge>
-                          {(number.monthly_cost === 0 && number.setup_cost === 0) && (
-                            <Badge variant="outline" className="text-green-600">
-                              🧪 Test Number
-                            </Badge>
-                          )}
-                          {isConfigured ? (
-                            <Badge variant="outline" className="text-green-600">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Auto-Configured ✅
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-orange-600">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              {autoSetupMutation.isPending ? 'Auto-Configuring...' : 'Configuring...'}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1 space-y-1">
-                          {number.purchased_at && (
-                            <div>Added: {new Date(number.purchased_at).toLocaleDateString()}</div>
-                          )}
-                          {number.configured_at && (
-                            <div>Auto-configured: {new Date(number.configured_at).toLocaleDateString()}</div>
-                          )}
-                          {(number.monthly_cost !== undefined && number.setup_cost !== undefined) && (
-                            <div>
-                              Cost: ${number.setup_cost} setup + ${number.monthly_cost}/month
-                              {number.monthly_cost === 0 && number.setup_cost === 0 && ' (Free!)'}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+            <div className="space-y-4">
+              {ownedNumbers.map((number: OwnedNumber) => (
+                <div
+                  key={number.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-medium text-lg">
+                        {formatPhoneForDisplay(number.phone_number)}
+                      </h3>
+                      <Badge variant={number.status === 'active' ? 'default' : 'secondary'}>
+                        {number.status}
+                      </Badge>
+                      {(number.monthly_cost === 0 && number.setup_cost === 0) && (
+                        <Badge variant="outline" className="text-green-600">
+                          🧪 Test Number
+                        </Badge>
+                      )}
                     </div>
-                    
-                    {/* Configuration Component */}
-                    <TelnyxPhoneConfiguration 
-                      phoneNumber={number.phone_number}
-                      isConfigured={isConfigured}
-                    />
+                    <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                      {number.purchased_at && (
+                        <div>Added: {new Date(number.purchased_at).toLocaleDateString()}</div>
+                      )}
+                      {number.configured_at && (
+                        <div>Configured: {new Date(number.configured_at).toLocaleDateString()}</div>
+                      )}
+                      {(number.monthly_cost !== undefined && number.setup_cost !== undefined) && (
+                        <div>
+                          Cost: ${number.setup_cost} setup + ${number.monthly_cost}/month
+                          {number.monthly_cost === 0 && number.setup_cost === 0 && ' (Free!)'}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="flex items-center gap-2">
+                    {number.configured_at ? (
+                      <Badge variant="outline" className="text-green-600">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        AI Ready
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => configureNumberMutation.mutate(number.phone_number)}
+                        disabled={configureNumberMutation.isPending}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Configure AI
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Help Section */}
+      {/* Configuration Status */}
       <Card>
         <CardHeader>
-          <CardTitle>Testing Your Auto-Configured System</CardTitle>
+          <CardTitle>Next Steps</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h5 className="font-medium text-blue-800 mb-2">🧪 How to Test</h5>
-            <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-              <li>Your numbers are automatically configured when purchased</li>
-              <li><strong>Test SMS:</strong> Send a text message to your number</li>
-              <li><strong>Test Voice:</strong> Call your number to test the AI dispatcher</li>
-              <li>Check the logs in your Supabase dashboard for debugging</li>
-            </ol>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <h5 className="font-medium text-blue-600">📞 For Test Numbers</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• Perfect for development and testing</li>
+                <li>• Configure AI dispatcher for free</li>
+                <li>• Test call flows and responses</li>
+                <li>• No real costs involved</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <h5 className="font-medium text-green-600">🚀 For Production</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• Purchase real Telnyx numbers</li>
+                <li>• Configure webhooks in Telnyx dashboard</li>
+                <li>• Set up AI dispatcher for live calls</li>
+                <li>• Monitor call logs and performance</li>
+              </ul>
+            </div>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h5 className="font-medium text-green-800 mb-2">✅ What Should Happen Automatically</h5>
-            <ul className="text-sm text-green-700 space-y-1">
-              <li>• SMS messages appear in your Connect → Messages tab</li>
-              <li>• Incoming calls are answered by AI dispatcher immediately</li>
-              <li>• Call transcripts are logged automatically</li>
-              <li>• Customer information is captured without manual setup</li>
-            </ul>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-medium text-blue-800 mb-2">🧪 Testing Your Setup</h5>
+            <p className="text-sm text-blue-700">
+              After purchasing and configuring a test number, you can test the AI dispatcher by calling the number. 
+              Check the "Call History" tab to see call logs and transcripts.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -179,50 +180,18 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const restoreArchivedConversation = async (clientId: string) => {
     console.log('🔄 Restoring archived conversation for client:', clientId);
     
-    try {
-      // First check if there's an archived conversation for this client
-      const { data: archivedConv, error } = await supabase
-        .from('conversations')
-        .select('id, status')
-        .eq('client_id', clientId)
-        .eq('status', 'archived')
-        .order('last_message_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!error && archivedConv) {
-        console.log('Found archived conversation:', archivedConv.id);
-        
-        // Restore it to active status
-        const { error: restoreError } = await supabase
-          .from('conversations')
-          .update({ 
-            status: 'active',
-            last_message_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', archivedConv.id);
-
-        if (restoreError) {
-          console.error('Error restoring conversation:', restoreError);
-          throw restoreError;
-        }
-
-        console.log('✅ Successfully restored archived conversation');
-        
-        // Refresh conversations to show the restored one
-        await refreshConversations();
-        
-        // Find and set the restored conversation as active
-        const restoredConversation = conversations.find(conv => conv.client.id === clientId);
-        if (restoredConversation) {
-          setActiveConversation(restoredConversation);
-        }
-      } else {
-        console.log('No archived conversation found for client:', clientId);
+    // Find the conversation for this client
+    const conversation = conversations.find(conv => conv.client.id === clientId);
+    if (conversation) {
+      setActiveConversation(conversation);
+      console.log('✅ Restored conversation:', conversation.id);
+    } else {
+      // If conversation doesn't exist in current list, try to fetch it
+      await refreshConversations();
+      const restoredConversation = conversations.find(conv => conv.client.id === clientId);
+      if (restoredConversation) {
+        setActiveConversation(restoredConversation);
       }
-    } catch (error) {
-      console.error('Error in restoreArchivedConversation:', error);
     }
   };
 
