@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   BrowserRouter as Router,
@@ -24,6 +23,11 @@ import SettingsPage from '@/pages/SettingsPage';
 import ProfileCompanyPage from '@/pages/ProfileCompanyPage';
 import ProductsPage from '@/pages/ProductsPage';
 import SchedulePage from '@/pages/SchedulePage';
+import AnalyticsPage from '@/pages/AnalyticsPage';
+import AutomationsPage from '@/pages/AutomationsPage';
+import IntegrationsPage from '@/pages/IntegrationsPage';
+import ConfigurationPage from '@/pages/ConfigurationPage';
+import TelnyxSettingsPage from '@/pages/TelnyxSettingsPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RBACProvider } from '@/components/auth/RBACProvider';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -39,6 +43,7 @@ import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import PortalAccessPage from '@/pages/portal/PortalAccessPage';
 import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary';
 import { MessageProvider } from '@/contexts/MessageContext';
+import AICenterPage from '@/pages/AICenterPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -160,6 +165,13 @@ function App() {
                         </ProtectedRoute>
                       </AppErrorBoundary>
                     } />
+                    <Route path="/settings/telnyx" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <TelnyxSettingsPage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
                     <Route path="/profile-company" element={
                       <AppErrorBoundary>
                         <ProtectedRoute>
@@ -171,6 +183,34 @@ function App() {
                       <AppErrorBoundary>
                         <ProtectedRoute>
                           <SchedulePage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
+                    <Route path="/analytics" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <AnalyticsPage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
+                    <Route path="/automations" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <AutomationsPage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
+                    <Route path="/integrations" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <IntegrationsPage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
+                    <Route path="/configuration" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <ConfigurationPage />
                         </ProtectedRoute>
                       </AppErrorBoundary>
                     } />
@@ -227,6 +267,22 @@ function App() {
                         </ProtectedPortalRoute>
                       </AppErrorBoundary>
                     } />
+
+                    <Route path="/ai-center" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <AICenterPage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
+                    <Route path="/ai-settings" element={
+                      <AppErrorBoundary>
+                        <ProtectedRoute>
+                          <AICenterPage />
+                        </ProtectedRoute>
+                      </AppErrorBoundary>
+                    } />
+
                   </Routes>
                 </Router>
               </MessageProvider>
