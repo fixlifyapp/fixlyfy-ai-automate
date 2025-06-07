@@ -519,6 +519,42 @@ export type Database = {
         }
         Relationships: []
       }
+      call_routing_logs: {
+        Row: {
+          ai_enabled: boolean
+          call_control_id: string | null
+          caller_phone: string
+          company_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          phone_number: string
+          routing_decision: string
+        }
+        Insert: {
+          ai_enabled: boolean
+          call_control_id?: string | null
+          caller_phone: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          phone_number: string
+          routing_decision: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          call_control_id?: string | null
+          caller_phone?: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          phone_number?: string
+          routing_decision?: string
+        }
+        Relationships: []
+      }
       client_portal_sessions: {
         Row: {
           created_at: string | null
@@ -3093,11 +3129,15 @@ export type Database = {
       }
       telnyx_phone_numbers: {
         Row: {
+          ai_dispatcher_config: Json | null
+          ai_dispatcher_enabled: boolean | null
           area_code: string | null
+          call_routing_stats: Json | null
           configured_at: string | null
           country_code: string | null
           created_at: string | null
           id: string
+          last_call_routed_to: string | null
           locality: string | null
           monthly_cost: number | null
           order_id: string | null
@@ -3110,11 +3150,15 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          ai_dispatcher_config?: Json | null
+          ai_dispatcher_enabled?: boolean | null
           area_code?: string | null
+          call_routing_stats?: Json | null
           configured_at?: string | null
           country_code?: string | null
           created_at?: string | null
           id?: string
+          last_call_routed_to?: string | null
           locality?: string | null
           monthly_cost?: number | null
           order_id?: string | null
@@ -3127,11 +3171,15 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          ai_dispatcher_config?: Json | null
+          ai_dispatcher_enabled?: boolean | null
           area_code?: string | null
+          call_routing_stats?: Json | null
           configured_at?: string | null
           country_code?: string | null
           created_at?: string | null
           id?: string
+          last_call_routed_to?: string | null
           locality?: string | null
           monthly_cost?: number | null
           order_id?: string | null

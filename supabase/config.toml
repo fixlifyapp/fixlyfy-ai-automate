@@ -1,4 +1,5 @@
 
+
 project_id = "mqppvcrlvsgrsqelglod"
 
 [api]
@@ -24,3 +25,16 @@ verify_jwt = false
 
 [functions.update-webhook-url]
 verify_jwt = false
+
+[functions.telnyx-webhook-router]
+verify_jwt = false
+
+[functions.ai-dispatcher-webhook]
+verify_jwt = false
+
+[functions.basic-telephony-webhook]
+verify_jwt = false
+
+[functions.manage-ai-dispatcher]
+verify_jwt = false
+
