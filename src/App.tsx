@@ -23,6 +23,7 @@ import TeamMemberDetailsPage from '@/pages/TeamMemberProfilePage';
 import SettingsPage from '@/pages/SettingsPage';
 import ProfileCompanyPage from '@/pages/ProfileCompanyPage';
 import ProductsPage from '@/pages/ProductsPage';
+import SchedulePage from '@/pages/SchedulePage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RBACProvider } from '@/components/auth/RBACProvider';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -161,6 +162,20 @@ function App() {
                     <AppErrorBoundary>
                       <ProtectedRoute>
                         <ProfileCompanyPage />
+                      </ProtectedRoute>
+                    </AppErrorBoundary>
+                  } />
+                  <Route path="/schedule" element={
+                    <AppErrorBoundary>
+                      <ProtectedRoute>
+                        <SchedulePage />
+                      </ProtectedRoute>
+                    </AppErrorBoundary>
+                  } />
+                  <Route path="/connect" element={
+                    <AppErrorBoundary>
+                      <ProtectedRoute>
+                        <ConnectCenterPageOptimized />
                       </ProtectedRoute>
                     </AppErrorBoundary>
                   } />
