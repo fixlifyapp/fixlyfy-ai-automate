@@ -207,7 +207,7 @@ function App() {
                     <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalProfilePage />
-                      </ProtectedRoute>
+                      </ProtectedPortalRoute>
                     </AppErrorBoundary>
                   } />
                 </Routes>
