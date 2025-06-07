@@ -13,6 +13,30 @@ interface TelnyxSMSWebhook {
   event_type?: string;
   id?: string;
   occurred_at?: string;
+  data?: {
+    event_type?: string;
+    id?: string;
+    occurred_at?: string;
+    payload?: {
+      id?: string;
+      record_type?: string;
+      direction?: string;
+      from?: {
+        phone_number?: string;
+        carrier?: string;
+      };
+      to?: Array<{
+        phone_number?: string;
+        carrier?: string;
+      }>;
+      text?: string;
+      completed_at?: string;
+      sent_at?: string;
+      received_at?: string;
+      webhook_url?: string;
+    };
+  };
+  // Legacy format support
   payload?: {
     id?: string;
     record_type?: string;
@@ -150,13 +174,14 @@ serve(async (req) => {
     // Get the raw body
     const rawBody = await req.text();
     console.log('Raw webhook body received, length:', rawBody.length);
+    console.log('Raw webhook body preview:', rawBody.substring(0, 500) + '...');
 
     // Parse the webhook data
     let webhookData: TelnyxSMSWebhook;
     try {
       webhookData = JSON.parse(rawBody);
       console.log('✅ Webhook data parsed successfully');
-      console.log('Event type:', webhookData.event_type);
+      console.log('Full webhook structure:', JSON.stringify(webhookData, null, 2));
     } catch (parseError) {
       console.error('❌ Failed to parse webhook JSON:', parseError);
       return new Response(JSON.stringify({ 
@@ -168,13 +193,46 @@ serve(async (req) => {
       });
     }
 
-    // Extract data from the webhook payload
-    const eventType = webhookData.event_type;
-    const messageId = webhookData.payload?.id;
-    const fromPhone = webhookData.payload?.from?.phone_number;
-    const toPhone = webhookData.payload?.to?.[0]?.phone_number;
-    const messageText = webhookData.payload?.text;
-    const direction = webhookData.payload?.direction;
+    // Extract data from the webhook payload - handle both new and legacy formats
+    let eventType: string | undefined;
+    let messageId: string | undefined;
+    let fromPhone: string | undefined;
+    let toPhone: string | undefined;
+    let messageText: string | undefined;
+    let direction: string | undefined;
+
+    // Try new format first (data.event_type and data.payload)
+    if (webhookData.data?.event_type && webhookData.data?.payload) {
+      console.log('📋 Using NEW Telnyx webhook format (data.event_type)');
+      eventType = webhookData.data.event_type;
+      messageId = webhookData.data.payload.id;
+      fromPhone = webhookData.data.payload.from?.phone_number;
+      toPhone = webhookData.data.payload.to?.[0]?.phone_number;
+      messageText = webhookData.data.payload.text;
+      direction = webhookData.data.payload.direction;
+    }
+    // Try legacy format (direct event_type and payload)
+    else if (webhookData.event_type && webhookData.payload) {
+      console.log('📋 Using LEGACY Telnyx webhook format (direct event_type)');
+      eventType = webhookData.event_type;
+      messageId = webhookData.payload.id;
+      fromPhone = webhookData.payload.from?.phone_number;
+      toPhone = webhookData.payload.to?.[0]?.phone_number;
+      messageText = webhookData.payload.text;
+      direction = webhookData.payload.direction;
+    }
+    // Try top-level format 
+    else if (webhookData.event_type) {
+      console.log('📋 Using TOP-LEVEL Telnyx webhook format');
+      eventType = webhookData.event_type;
+      // For top-level format, the message data might be directly in the webhook
+      messageId = webhookData.id;
+      // We'll need to extract other data differently for this format
+    }
+    else {
+      console.log('❓ Unknown webhook format, logging full structure for debugging');
+      console.log('Webhook keys:', Object.keys(webhookData));
+    }
 
     console.log('=== SMS EVENT DETAILS ===');
     console.log('Event Type:', eventType);
@@ -321,13 +379,22 @@ serve(async (req) => {
           message_id: messageId,
           saved_message_id: savedMessage.id,
           from: fromPhone,
-          to: toPhone
+          to: toPhone,
+          format_detected: webhookData.data?.event_type ? 'new_format' : 'legacy_format'
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else {
       console.log('⏭️ Skipping event - not an inbound message or missing required data');
+      console.log('Event details for debugging:', {
+        eventType,
+        direction,
+        hasFromPhone: !!fromPhone,
+        hasToPhone: !!toPhone,
+        hasMessageText: !!messageText,
+        webhookKeys: Object.keys(webhookData)
+      });
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -337,7 +404,8 @@ serve(async (req) => {
           direction,
           hasFromPhone: !!fromPhone,
           hasToPhone: !!toPhone,
-          hasMessageText: !!messageText
+          hasMessageText: !!messageText,
+          format_attempted: webhookData.data?.event_type ? 'new_format' : 'legacy_format'
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
