@@ -21,6 +21,8 @@ import FinancePage from '@/pages/FinancePage';
 import TeamPage from '@/pages/TeamManagementPage';
 import TeamMemberDetailsPage from '@/pages/TeamMemberProfilePage';
 import SettingsPage from '@/pages/SettingsPage';
+import ProfileCompanyPage from '@/pages/ProfileCompanyPage';
+import ProductsPage from '@/pages/ProductsPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RBACProvider } from '@/components/auth/RBACProvider';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -120,6 +122,13 @@ function App() {
                       </ProtectedRoute>
                     </AppErrorBoundary>
                   } />
+                  <Route path="/products" element={
+                    <AppErrorBoundary>
+                      <ProtectedRoute>
+                        <ProductsPage />
+                      </ProtectedRoute>
+                    </AppErrorBoundary>
+                  } />
                   <Route path="/finance" element={
                     <AppErrorBoundary>
                       <ProtectedRoute>
@@ -145,6 +154,13 @@ function App() {
                     <AppErrorBoundary>
                       <ProtectedRoute>
                         <SettingsPage />
+                      </ProtectedRoute>
+                    </AppErrorBoundary>
+                  } />
+                  <Route path="/profile-company" element={
+                    <AppErrorBoundary>
+                      <ProtectedRoute>
+                        <ProfileCompanyPage />
                       </ProtectedRoute>
                     </AppErrorBoundary>
                   } />
@@ -191,7 +207,7 @@ function App() {
                     <AppErrorBoundary>
                       <ProtectedPortalRoute>
                         <PortalProfilePage />
-                      </ProtectedPortalRoute>
+                      </ProtectedRoute>
                     </AppErrorBoundary>
                   } />
                 </Routes>
