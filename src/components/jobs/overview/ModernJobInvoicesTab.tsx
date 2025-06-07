@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Send, Edit, CreditCard, Eye, FileText, Download, MoreHorizontal } from "lucide-react";
+import { Plus, Send, Edit, CreditCard, Eye, FileText, Download } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
@@ -65,15 +64,18 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     toast.info("Download functionality coming soon");
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'sent': return 'bg-blue-100 text-blue-800';
-      case 'partial': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      case 'cancelled': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { label: "Draft", variant: "secondary" as const },
+      sent: { label: "Sent", variant: "default" as const },
+      paid: { label: "Paid", variant: "success" as const },
+      partial: { label: "Partial", variant: "warning" as const },
+      overdue: { label: "Overdue", variant: "destructive" as const },
+      cancelled: { label: "Cancelled", variant: "secondary" as const }
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const canAcceptPayment = (invoice: any) => {
@@ -83,8 +85,15 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-muted rounded w-1/3 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
@@ -144,82 +153,99 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
       {/* Invoices List */}
       <div className="space-y-4">
         {(!invoices || invoices.length === 0) ? (
-          <div className="text-center py-8 text-gray-500">
-            <div className="text-lg mb-2">No invoices yet</div>
-            <div className="text-sm">Create your first invoice or convert an approved estimate</div>
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No invoices yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first invoice or convert an approved estimate
+              </p>
+              <Button onClick={handleCreateInvoice}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Invoice
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           invoices.map((invoice) => (
             <Card key={invoice.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-lg">
-                      Invoice #{invoice.invoice_number}
-                    </CardTitle>
-                    <Badge className={getStatusColor(invoice.status)}>
-                      {invoice.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleViewInvoice(invoice)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
-                    <div className="text-right">
-                      <div className="font-semibold text-lg">
-                        {formatCurrency(invoice.total)}
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="font-semibold">Invoice #{invoice.invoice_number}</h4>
+                      {getStatusBadge(invoice.status)}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Total</p>
+                        <p className="font-medium">{formatCurrency(invoice.total)}</p>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(invoice.date).toLocaleDateString()}
+                      <div>
+                        <p className="text-muted-foreground">Balance</p>
+                        <p className="font-medium">
+                          {formatCurrency(invoice.balance || (invoice.total - (invoice.amount_paid || 0)))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Date</p>
+                        <p>{new Date(invoice.date).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Due Date</p>
+                        <p>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Not set'}</p>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditInvoice(invoice)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSendInvoice(invoice)}>
-                          <Send className="h-4 w-4 mr-2" />
-                          Send
-                        </DropdownMenuItem>
-                        {canAcceptPayment(invoice) && (
-                          <DropdownMenuItem onClick={() => handlePayInvoice(invoice)}>
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            Pay
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice)}>
-                          <Download className="h-4 w-4 mr-2" />
-                          PDF
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Balance</p>
-                    <p className="font-medium">
-                      {formatCurrency(invoice.balance || (invoice.total - (invoice.amount_paid || 0)))}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Due Date</p>
-                    <p>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Not set'}</p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewInvoice(invoice)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditInvoice(invoice)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendInvoice(invoice)}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send
+                    </Button>
+                    
+                    {canAcceptPayment(invoice) && (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePayInvoice(invoice)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadInvoice(invoice)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      PDF
+                    </Button>
                   </div>
                 </div>
               </CardContent>
