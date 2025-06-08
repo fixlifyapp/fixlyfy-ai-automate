@@ -12,6 +12,7 @@ import { EstimateSendDialog } from "@/components/jobs/dialogs/estimate-builder/E
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -27,6 +28,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const [showPreview, setShowPreview] = useState(false);
   const [sendingEstimate, setSendingEstimate] = useState<any>(null);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const isMobile = useIsMobile();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -110,54 +112,60 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Estimates</CardTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Estimates</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estimates.length}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-lg sm:text-2xl font-bold">{estimates.length}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Value</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalEstimateValue)}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600 break-all">{formatCurrency(totalEstimateValue)}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{pendingApproval}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-lg sm:text-2xl font-bold text-orange-600">{pendingApproval}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Estimates List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader className="px-3 pt-3 pb-3 sm:px-6 sm:pt-6 sm:pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                 Estimates ({estimates.length})
               </CardTitle>
-              <Button onClick={handleCreateNew}>
+              <Button 
+                onClick={handleCreateNew}
+                className={`w-full sm:w-auto ${isMobile ? 'h-11 text-sm' : ''}`}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Estimate
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
             {isLoading ? (
-              <div className="text-center py-8">Loading estimates...</div>
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading estimates...</p>
+              </div>
             ) : estimates.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -165,76 +173,83 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                 <p className="text-sm">Create your first estimate to get started</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {estimates.map((estimate) => (
-                  <div key={estimate.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-medium">{estimate.estimate_number}</span>
-                        <span className="text-lg font-semibold text-blue-600">
-                          {formatCurrency(estimate.total || 0)}
-                        </span>
-                        {getStatusBadge(estimate.status)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>Created: {format(new Date(estimate.created_at), 'MMM dd, yyyy')}</p>
-                        {estimate.notes && <p>Notes: {estimate.notes}</p>}
+                  <div key={estimate.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                          <span className="font-medium text-sm sm:text-base break-all">{estimate.estimate_number}</span>
+                          <span className="text-lg sm:text-xl font-semibold text-blue-600 break-all">
+                            {formatCurrency(estimate.total || 0)}
+                          </span>
+                          {getStatusBadge(estimate.status)}
+                        </div>
+                        <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
+                          <p>Created: {format(new Date(estimate.created_at), 'MMM dd, yyyy')}</p>
+                          {estimate.notes && <p className="break-words">Notes: {estimate.notes}</p>}
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    {/* Action Buttons */}
+                    <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-wrap gap-2'}`}>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                         onClick={() => handleViewEstimate(estimate)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
 
                       <Button
                         variant="outline"
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                         onClick={() => handleEditEstimate(estimate)}
                       >
-                        <Edit className="h-4 w-4 mr-1" />
+                        <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
 
                       <Button
                         variant="outline"
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                         onClick={() => handleSendEstimate(estimate)}
                         disabled={state.isSending}
                       >
-                        <Send className="h-4 w-4 mr-1" />
+                        <Send className="h-4 w-4 mr-2" />
                         Send
                       </Button>
                       
                       {estimate.status !== 'converted' && (
                         <Button
                           variant="outline"
-                          size="sm"
+                          size={isMobile ? "default" : "sm"}
+                          className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-green-600 hover:text-green-700 border-green-200 hover:border-green-300`}
                           onClick={() => {
                             actions.setSelectedEstimate(estimate);
                             actions.confirmConvertToInvoice();
                           }}
                           disabled={state.isConverting}
-                          className="text-green-600 hover:text-green-700"
                         >
-                          <DollarSign className="h-4 w-4 mr-1" />
+                          <DollarSign className="h-4 w-4 mr-2" />
                           Convert
                         </Button>
                       )}
                       
                       <Button
                         variant="outline"
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-red-600 hover:text-red-700 border-red-200 hover:border-red-300`}
                         onClick={() => handleDeleteEstimate(estimate)}
                         disabled={state.isDeleting}
-                        className="text-red-600 hover:text-red-700"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
                       </Button>
                     </div>
                   </div>
@@ -245,7 +260,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         </Card>
       </div>
 
-      {/* Stepped Estimate Builder Dialog */}
+      {/* Dialogs */}
       <SteppedEstimateBuilder
         open={showCreateForm}
         onOpenChange={handleDialogClose}
@@ -254,18 +269,19 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         onEstimateCreated={handleEstimateCreated}
       />
 
-      {/* Estimate Preview Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Estimate Preview - {previewEstimate?.estimate_number}</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base break-all">
+              Estimate Preview - {previewEstimate?.estimate_number}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-auto max-h-[80vh]">
             {previewEstimate && (
               <UnifiedDocumentPreview
                 documentType="estimate"
                 documentNumber={previewEstimate.estimate_number}
-                lineItems={[]} // TODO: Load actual line items
+                lineItems={[]}
                 taxRate={8.5}
                 calculateSubtotal={() => previewEstimate.total * 0.92}
                 calculateTotalTax={() => previewEstimate.total * 0.08}
@@ -279,7 +295,6 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         </DialogContent>
       </Dialog>
 
-      {/* Send Estimate Dialog */}
       {sendingEstimate && (
         <EstimateSendDialog
           isOpen={showSendDialog}
@@ -288,7 +303,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
           estimateNumber={sendingEstimate.estimate_number}
           total={sendingEstimate.total || 0}
           contactInfo={{
-            name: 'Client', // Will be fetched from job data
+            name: 'Client',
             email: '',
             phone: ''
           }}

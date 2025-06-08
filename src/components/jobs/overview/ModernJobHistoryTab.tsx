@@ -1,224 +1,209 @@
-import React, { useState, useEffect } from "react";
-import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useJobHistory } from "@/hooks/useJobHistory";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  History, 
-  FileText, 
-  CreditCard, 
-  Send, 
-  User, 
-  Settings,
-  Calendar,
-  Phone,
-  Mail,
-  MessageSquare
-} from "lucide-react";
+import { Clock, User, FileText, CreditCard, Calendar, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModernJobHistoryTabProps {
   jobId: string;
 }
 
+interface HistoryItem {
+  id: string;
+  type: 'status_change' | 'estimate_created' | 'invoice_created' | 'payment_received' | 'appointment_scheduled' | 'note_added';
+  title: string;
+  description: string;
+  timestamp: string;
+  user?: string;
+  amount?: number;
+}
+
 export const ModernJobHistoryTab = ({ jobId }: ModernJobHistoryTabProps) => {
-  const { historyItems, isLoading, refreshHistory } = useJobHistory(jobId);
+  const isMobile = useIsMobile();
 
-  // Real-time updates for job history
-  useEffect(() => {
-    if (!jobId) return;
+  // Mock history data - in real app this would come from an API
+  const historyItems: HistoryItem[] = [
+    {
+      id: '1',
+      type: 'payment_received',
+      title: 'Payment Received',
+      description: 'Payment of $536.52 received via credit card',
+      timestamp: '2024-01-15T10:30:00Z',
+      user: 'System',
+      amount: 536.52
+    },
+    {
+      id: '2',
+      type: 'invoice_created',
+      title: 'Invoice Created',
+      description: 'Invoice #INV-2024-001 created for $536.52',
+      timestamp: '2024-01-14T14:20:00Z',
+      user: 'John Doe'
+    },
+    {
+      id: '3',
+      type: 'status_change',
+      title: 'Status Updated',
+      description: 'Job status changed from "In Progress" to "Completed"',
+      timestamp: '2024-01-14T11:15:00Z',
+      user: 'Mike Smith'
+    },
+    {
+      id: '4',
+      type: 'note_added',
+      title: 'Note Added',
+      description: 'Customer requested additional warranty coverage',
+      timestamp: '2024-01-13T16:45:00Z',
+      user: 'Sarah Johnson'
+    },
+    {
+      id: '5',
+      type: 'appointment_scheduled',
+      title: 'Appointment Scheduled',
+      description: 'Service appointment scheduled for Jan 12, 2024 at 9:00 AM',
+      timestamp: '2024-01-10T08:30:00Z',
+      user: 'Lisa Wilson'
+    },
+    {
+      id: '6',
+      type: 'estimate_created',
+      title: 'Estimate Created',
+      description: 'Initial estimate #EST-2024-001 created for $536.52',
+      timestamp: '2024-01-09T13:20:00Z',
+      user: 'John Doe'
+    }
+  ];
 
-    const channel = supabase
-      .channel('job-history-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'job_history', // Fixed: use correct table name
-          filter: `job_id=eq.${jobId}`
-        },
-        (payload) => {
-          console.log('Real-time job history update:', payload);
-          refreshHistory();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+  const getIcon = (type: HistoryItem['type']) => {
+    const iconProps = {
+      className: `h-4 w-4 ${isMobile ? 'flex-shrink-0' : ''}`,
+      'aria-hidden': true
     };
-  }, [jobId, refreshHistory]);
 
-  const getHistoryIcon = (type: string) => {
     switch (type) {
-      case 'estimate':
-      case 'estimate-created':
-      case 'estimate-status-change':
-      case 'estimate-updated':
-        return <FileText className="h-4 w-4" />;
-      case 'invoice':
-      case 'invoice-created':
-      case 'invoice-status-change':
-        return <FileText className="h-4 w-4" />;
-      case 'payment':
-      case 'payment-recorded':
-      case 'payment-received':
-        return <CreditCard className="h-4 w-4" />;
-      case 'communication':
-        return <Send className="h-4 w-4" />;
-      case 'status-change':
-        return <Settings className="h-4 w-4" />;
-      case 'technician-assigned':
-        return <User className="h-4 w-4" />;
-      case 'call':
-        return <Phone className="h-4 w-4" />;
-      case 'email':
-        return <Mail className="h-4 w-4" />;
-      case 'message':
-        return <MessageSquare className="h-4 w-4" />;
+      case 'status_change':
+        return <Clock {...iconProps} />;
+      case 'estimate_created':
+        return <FileText {...iconProps} />;
+      case 'invoice_created':
+        return <FileText {...iconProps} />;
+      case 'payment_received':
+        return <CreditCard {...iconProps} />;
+      case 'appointment_scheduled':
+        return <Calendar {...iconProps} />;
+      case 'note_added':
+        return <MessageSquare {...iconProps} />;
       default:
-        return <History className="h-4 w-4" />;
+        return <Clock {...iconProps} />;
     }
   };
 
-  const getHistoryColor = (type: string) => {
+  const getBadgeColor = (type: HistoryItem['type']) => {
     switch (type) {
-      case 'estimate':
-      case 'estimate-created':
-      case 'estimate-status-change':
-      case 'estimate-updated':
-        return 'bg-blue-100 text-blue-700 border-blue-300';
-      case 'invoice':
-      case 'invoice-created':
-      case 'invoice-status-change':
-        return 'bg-purple-100 text-purple-700 border-purple-300';
-      case 'payment':
-      case 'payment-recorded':
-      case 'payment-received':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-300';
-      case 'communication':
-        return 'bg-orange-100 text-orange-700 border-orange-300';
-      case 'status-change':
-        return 'bg-slate-100 text-slate-700 border-slate-300';
-      case 'technician-assigned':
-        return 'bg-indigo-100 text-indigo-700 border-indigo-300';
-      case 'call':
-        return 'bg-green-100 text-green-700 border-green-300';
-      case 'email':
-        return 'bg-cyan-100 text-cyan-700 border-cyan-300';
-      case 'message':
-        return 'bg-pink-100 text-pink-700 border-pink-300';
+      case 'status_change':
+        return 'bg-blue-100 text-blue-800';
+      case 'estimate_created':
+        return 'bg-purple-100 text-purple-800';
+      case 'invoice_created':
+        return 'bg-orange-100 text-orange-800';
+      case 'payment_received':
+        return 'bg-green-100 text-green-800';
+      case 'appointment_scheduled':
+        return 'bg-cyan-100 text-cyan-800';
+      case 'note_added':
+        return 'bg-gray-100 text-gray-800';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-300';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // Group history by date
-  const groupedHistory = historyItems.reduce((groups, item) => {
-    const date = new Date(item.created_at).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(item);
-    return groups;
-  }, {} as Record<string, typeof historyItems>);
-
-  const sortedDates = Object.keys(groupedHistory).sort((a, b) => 
-    new Date(b).getTime() - new Date(a).getTime()
-  );
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
 
   return (
-    <div className="space-y-6">
-      <ModernCard className="border border-slate-200 bg-white">
-        <ModernCardHeader className="border-b border-slate-200">
-          <ModernCardTitle icon={History} className="text-slate-800 text-xl font-semibold">
-            <div className="flex items-center gap-2">
-              <span>Job History</span>
-              <Badge variant="outline" className="font-semibold">
-                {historyItems.length} events
-              </Badge>
-            </div>
-          </ModernCardTitle>
-        </ModernCardHeader>
-        
-        <ModernCardContent className="space-y-6">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="flex items-start gap-3">
-                  <Skeleton className="w-8 h-8 rounded-full bg-slate-200" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="w-3/4 h-4 bg-slate-200" />
-                    <Skeleton className="w-1/2 h-3 bg-slate-200" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : historyItems.length === 0 ? (
-            <div className="text-center py-12">
-              <History className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-700 mb-2">No history yet</h3>
-              <p className="text-slate-500">
-                Job activities and changes will appear here as they happen
-              </p>
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      {/* Header */}
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold">Job History</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Complete timeline of all activities for this job
+        </p>
+      </div>
+
+      {/* History Timeline */}
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardHeader className="px-3 pt-3 pb-3 sm:px-6 sm:pt-6 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+            Activity Timeline ({historyItems.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+          {historyItems.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-base sm:text-lg font-medium">No history yet</p>
+              <p className="text-xs sm:text-sm">Job activities will appear here as they occur</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {sortedDates.map((date) => (
-                <div key={date} className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(date).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}</span>
-                  </div>
+            <div className="space-y-3 sm:space-y-4">
+              {historyItems.map((item, index) => (
+                <div 
+                  key={item.id} 
+                  className={`relative ${index !== historyItems.length - 1 ? 'pb-4' : ''}`}
+                >
+                  {/* Timeline line */}
+                  {index !== historyItems.length - 1 && (
+                    <div className="absolute left-5 top-8 bottom-0 w-0.5 bg-muted" />
+                  )}
                   
-                  <div className="space-y-3 ml-6 border-l-2 border-slate-200 pl-4">
-                    {groupedHistory[date].map((item, index) => (
-                      <div key={item.id} className="flex items-start gap-3 group">
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white ${getHistoryColor(item.type)}`}>
-                          {getHistoryIcon(item.type)}
+                  <div className="flex gap-3 sm:gap-4">
+                    {/* Icon */}
+                    <div className="flex-shrink-0 w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                      {getIcon(item.type)}
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 border rounded-lg p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                            <h4 className="font-medium text-sm sm:text-base break-words">{item.title}</h4>
+                            <Badge className={getBadgeColor(item.type)}>
+                              {item.type.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <p className="text-xs sm:text-sm text-muted-foreground break-words">
+                            {item.description}
+                          </p>
                         </div>
                         
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-slate-900 text-sm">
-                                {item.title}
-                              </h4>
-                              <p className="text-sm text-slate-600 mt-1">
-                                {item.description}
-                              </p>
-                              {item.user_name && (
-                                <div className="flex items-center gap-1 mt-2 text-xs text-slate-500">
-                                  <User className="h-3 w-3" />
-                                  <span>by {item.user_name}</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-2 text-xs text-slate-500 flex-shrink-0">
-                              <span>
-                                {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-                              </span>
-                            </div>
+                        {item.amount && (
+                          <div className="text-base sm:text-lg font-semibold text-green-600 flex-shrink-0">
+                            {formatCurrency(item.amount)}
                           </div>
-                        </div>
+                        )}
                       </div>
-                    ))}
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <User className="h-3 w-3" />
+                          <span>{item.user || 'System'}</span>
+                        </div>
+                        <span>
+                          {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </ModernCardContent>
-      </ModernCard>
+        </CardContent>
+      </Card>
     </div>
   );
 };

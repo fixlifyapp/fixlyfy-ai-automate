@@ -10,6 +10,7 @@ import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
 import { formatDistanceToNow } from "date-fns";
 import { PaymentMethod } from "@/types/payment";
 import { formatCurrency, roundToCurrency } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface JobPaymentsProps {
   jobId: string;
@@ -20,6 +21,7 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const { invoices } = useInvoices(jobId);
   const { addPayment, refundPayment, deletePayment, isProcessing } = usePaymentActions(jobId, refreshPayments);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const isMobile = useIsMobile();
 
   const getPaymentMethodBadge = (method: string) => {
     const colors = {
@@ -93,100 +95,108 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const outstandingBalance = roundToCurrency(invoices.reduce((sum, invoice) => sum + (invoice.balance || 0), 0));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Paid</CardTitle>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Paid</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</div>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="text-lg sm:text-2xl font-bold text-green-600 break-all">{formatCurrency(totalPaid)}</div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Refunded</CardTitle>
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Refunded</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalRefunded)}</div>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="text-lg sm:text-2xl font-bold text-red-600 break-all">{formatCurrency(totalRefunded)}</div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Net Amount</CardTitle>
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Net Amount</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(netAmount)}</div>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <div className="text-lg sm:text-2xl font-bold break-all">{formatCurrency(netAmount)}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Payments List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardHeader className="px-3 pt-3 pb-3 sm:px-6 sm:pt-6 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
               Payments ({payments.length})
             </CardTitle>
-            <Button onClick={handleAddPayment} disabled={outstandingBalance <= 0}>
+            <Button 
+              onClick={handleAddPayment} 
+              disabled={outstandingBalance <= 0}
+              className={`w-full sm:w-auto ${isMobile ? 'h-11' : ''}`}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Payment
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
           {isLoading ? (
-            <div className="text-center py-8">Loading payments...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-sm text-muted-foreground">Loading payments...</p>
+            </div>
           ) : payments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No payments yet</p>
-              <p className="text-sm">Record the first payment to get started</p>
+              <p className="text-base sm:text-lg font-medium">No payments yet</p>
+              <p className="text-xs sm:text-sm">Record the first payment to get started</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {payments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={payment.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-medium">{formatCurrency(Math.abs(payment.amount))}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                      <span className="font-medium text-sm sm:text-base break-all">{formatCurrency(Math.abs(payment.amount))}</span>
                       {getPaymentMethodBadge(payment.method)}
                       {getStatusBadge(payment.amount)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
                       <p>Date: {new Date(payment.date).toLocaleDateString()}</p>
-                      {payment.reference && <p>Reference: {payment.reference}</p>}
-                      {payment.notes && <p>Notes: {payment.notes}</p>}
+                      {payment.reference && <p className="break-words">Reference: {payment.reference}</p>}
+                      {payment.notes && <p className="break-words">Notes: {payment.notes}</p>}
                       <p>Recorded {formatDistanceToNow(new Date(payment.created_at || payment.date), { addSuffix: true })}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  {/* Action Buttons */}
+                  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'gap-2'}`}>
                     {payment.amount > 0 && (
                       <Button
                         variant="outline"
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300`}
                         onClick={() => handleRefundPayment(payment.id)}
                         disabled={isProcessing}
-                        className="text-orange-600 hover:text-orange-700"
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <RotateCcw className="h-4 w-4 mr-2" />
                         Refund
                       </Button>
                     )}
                     
                     <Button
                       variant="outline"
-                      size="sm"
+                      size={isMobile ? "default" : "sm"}
+                      className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-red-600 hover:text-red-700 border-red-200 hover:border-red-300`}
                       onClick={() => handleDeletePayment(payment.id)}
                       disabled={isProcessing}
-                      className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-2" />
                       Delete
                     </Button>
                   </div>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { InvoicePaymentDialog } from "../dialogs/invoice-builder/InvoicePaymentD
 import { InvoicePreviewWindow } from "../dialogs/InvoicePreviewWindow";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
@@ -26,6 +26,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const [showPreviewWindow, setShowPreviewWindow] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const isMobile = useIsMobile();
 
   const handleCreateInvoice = () => {
     setSelectedInvoice(null);
@@ -85,10 +86,10 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 px-2 sm:px-0">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
+          <Card key={i} className="animate-pulse border-fixlyfy-border">
+            <CardContent className="p-3 sm:p-6">
               <div className="h-4 bg-muted rounded w-1/3 mb-2"></div>
               <div className="h-3 bg-muted rounded w-1/2"></div>
             </CardContent>
@@ -98,47 +99,48 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     );
   }
 
-  // Get approved estimates that can be converted to invoices
   const convertibleEstimates = estimates?.filter(est => 
     est.status === 'approved' && 
     !invoices?.some(inv => inv.job_id === est.job_id)
   ) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header with Create Button */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h3 className="text-lg font-semibold">Invoices</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="text-base sm:text-lg font-semibold">Invoices</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Manage invoices and payments for this job
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleCreateInvoice}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
-        </div>
+        <Button 
+          onClick={handleCreateInvoice}
+          className={`w-full sm:w-auto ${isMobile ? 'h-11' : ''}`}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
       </div>
 
       {/* Convert Estimates Section */}
       {convertibleEstimates.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Convert Estimates to Invoices</CardTitle>
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader className="px-3 pt-3 pb-3 sm:px-6 sm:pt-6 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base">Convert Estimates to Invoices</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 px-3 pb-3 sm:px-6 sm:pb-6">
             {convertibleEstimates.map((estimate) => (
-              <div key={estimate.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Estimate #{estimate.estimate_number}</p>
-                  <p className="text-sm text-muted-foreground">
+              <div key={estimate.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm sm:text-base break-all">Estimate #{estimate.estimate_number}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {formatCurrency(estimate.total)} • Approved
                   </p>
                 </div>
                 <Button
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
+                  className={`${isMobile ? 'w-full h-11' : ''}`}
                   onClick={() => handleConvertEstimate(estimate)}
                 >
                   <FileText className="h-4 w-4 mr-2" />
@@ -151,16 +153,19 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
       )}
 
       {/* Invoices List */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {(!invoices || invoices.length === 0) ? (
-          <Card>
-            <CardContent className="p-8 text-center">
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardContent className="p-6 sm:p-8 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No invoices yet</h3>
-              <p className="text-muted-foreground mb-4">
+              <h3 className="text-base sm:text-lg font-medium mb-2">No invoices yet</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                 Create your first invoice or convert an approved estimate
               </p>
-              <Button onClick={handleCreateInvoice}>
+              <Button 
+                onClick={handleCreateInvoice}
+                className={`${isMobile ? 'w-full h-11' : ''}`}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Invoice
               </Button>
@@ -168,23 +173,23 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
           </Card>
         ) : (
           invoices.map((invoice) => (
-            <Card key={invoice.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+            <Card key={invoice.id} className="hover:shadow-md transition-shadow border-fixlyfy-border">
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex flex-col gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="font-semibold">Invoice #{invoice.invoice_number}</h4>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
+                      <h4 className="font-semibold text-sm sm:text-base break-all">Invoice #{invoice.invoice_number}</h4>
                       {getStatusBadge(invoice.status)}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <p className="text-muted-foreground">Total</p>
-                        <p className="font-medium">{formatCurrency(invoice.total)}</p>
+                        <p className="font-medium break-all">{formatCurrency(invoice.total)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Balance</p>
-                        <p className="font-medium">
+                        <p className="font-medium break-all">
                           {formatCurrency(invoice.balance || (invoice.total - (invoice.amount_paid || 0)))}
                         </p>
                       </div>
@@ -199,10 +204,12 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  {/* Action Buttons */}
+                  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-wrap gap-2'}`}>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size={isMobile ? "default" : "sm"}
+                      className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                       onClick={() => handleViewInvoice(invoice)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -211,7 +218,8 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     
                     <Button
                       variant="outline"
-                      size="sm"
+                      size={isMobile ? "default" : "sm"}
+                      className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                       onClick={() => handleEditInvoice(invoice)}
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -220,7 +228,8 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     
                     <Button
                       variant="outline"
-                      size="sm"
+                      size={isMobile ? "default" : "sm"}
+                      className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                       onClick={() => handleSendInvoice(invoice)}
                     >
                       <Send className="h-4 w-4 mr-2" />
@@ -229,9 +238,9 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     
                     {canAcceptPayment(invoice) && (
                       <Button
-                        size="sm"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''} bg-green-600 hover:bg-green-700`}
                         onClick={() => handlePayInvoice(invoice)}
-                        className="bg-green-600 hover:bg-green-700"
                       >
                         <CreditCard className="h-4 w-4 mr-2" />
                         Pay
@@ -240,7 +249,8 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     
                     <Button
                       variant="outline"
-                      size="sm"
+                      size={isMobile ? "default" : "sm"}
+                      className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
                       onClick={() => handleDownloadInvoice(invoice)}
                     >
                       <Download className="h-4 w-4 mr-2" />
