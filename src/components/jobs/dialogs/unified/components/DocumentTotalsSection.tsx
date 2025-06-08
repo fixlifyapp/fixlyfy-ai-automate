@@ -42,7 +42,7 @@ export const DocumentTotalsSection = ({
             {/* Tax */}
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">
-                Tax (13%):
+                Tax ({taxRate}%):
               </span>
               <span className={`font-medium ${isMobile ? 'text-base' : ''}`}>
                 ${tax.toFixed(2)}
