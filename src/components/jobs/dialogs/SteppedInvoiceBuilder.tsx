@@ -245,10 +245,6 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
-  const canProceedToNext = () => {
-    return isStepComplete(currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3);
-  };
-
   const stepTitles = {
     items: existingInvoice ? "Edit Invoice" : "Create Invoice",
     upsell: "Enhance Your Invoice",
@@ -260,8 +256,14 @@ export const SteppedInvoiceBuilder = ({
   return (
     <>
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
-        <DialogContent className={`${isMobile ? 'max-w-[95vw] max-h-[95vh] w-full m-2' : 'max-w-6xl max-h-[90vh]'} overflow-y-auto`}>
-          <DialogHeader className={`${isMobile ? 'px-2 py-3' : 'px-6 py-4'}`}>
+        <DialogContent className={`
+          ${isMobile 
+            ? 'max-w-[100vw] max-h-[100vh] w-full h-full m-0 rounded-none border-0' 
+            : 'max-w-6xl max-h-[90vh]'
+          } 
+          overflow-hidden flex flex-col p-0
+        `}>
+          <DialogHeader className={`${isMobile ? 'px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95' : 'px-6 py-4'} flex-shrink-0`}>
             <DialogTitle className={`flex flex-col gap-3 ${isMobile ? 'text-base' : 'text-lg'}`}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
@@ -277,10 +279,10 @@ export const SteppedInvoiceBuilder = ({
             </DialogTitle>
             
             {/* Step Indicator - Mobile Responsive */}
-            <div className={`flex items-center justify-center space-x-2 py-3 ${isMobile ? 'overflow-x-auto' : ''}`}>
+            <div className={`flex items-center justify-center space-x-1 py-2 ${isMobile ? 'overflow-x-auto scrollbar-hide' : ''}`}>
               {steps.map((step, index) => (
                 <div key={step.number} className={`flex items-center ${isMobile ? 'flex-shrink-0' : ''}`}>
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                  <div className={`flex items-center justify-center ${isMobile ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 ${
                     currentStepNumber === step.number
                       ? "border-primary bg-primary text-primary-foreground"
                       : isStepComplete(step.number)
@@ -288,9 +290,9 @@ export const SteppedInvoiceBuilder = ({
                       : "border-gray-300 bg-white text-gray-500"
                   }`}>
                     {isStepComplete(step.number) ? (
-                      <Check className="h-4 w-4" />
+                      <Check className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                     ) : (
-                      <span className="text-sm font-medium">{step.number}</span>
+                      <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>{step.number}</span>
                     )}
                   </div>
                   
@@ -306,7 +308,7 @@ export const SteppedInvoiceBuilder = ({
                   )}
                   
                   {index < steps.length - 1 && (
-                    <ArrowRight className={`h-4 w-4 text-gray-400 ${isMobile ? 'mx-2' : 'mx-4'}`} />
+                    <ArrowRight className={`h-3 w-3 text-gray-400 ${isMobile ? 'mx-1' : 'mx-4'}`} />
                   )}
                 </div>
               ))}
@@ -325,9 +327,9 @@ export const SteppedInvoiceBuilder = ({
             )}
           </DialogHeader>
           
-          <div className={`${isMobile ? 'px-2 pb-3' : 'px-6 pb-6'}`}>
+          <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4 pb-20' : 'px-6 pb-6'}`}>
             {currentStep === "items" && (
-              <>
+              <div className="space-y-4 pt-4">
                 <UnifiedItemsStep
                   documentType="invoice"
                   documentNumber={invoiceNumber}
@@ -344,39 +346,52 @@ export const SteppedInvoiceBuilder = ({
                   calculateTotalTax={calculateTotalTax}
                   calculateGrandTotal={calculateGrandTotal}
                 />
-
-                <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4 border-t`}>
-                  <Button 
-                    variant="outline" 
-                    onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
-                    className={`${isMobile ? 'w-full h-11' : ''}`}
-                  >
-                    {lineItems.length > 0 ? "Save for Later" : "Cancel"}
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleSaveAndContinue}
-                    disabled={isSubmitting || lineItems.length === 0}
-                    className={`gap-2 ${isMobile ? 'w-full h-11' : ''}`}
-                  >
-                    {isSubmitting ? "Saving..." : "Save & Continue"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </>
+              </div>
             )}
             
             {currentStep === "upsell" && (
-              <InvoiceUpsellStep
-                documentTotal={calculateGrandTotal()}
-                onContinue={handleUpsellContinue}
-                onBack={() => setCurrentStep("items")}
-                existingUpsellItems={selectedUpsells}
-                estimateToConvert={estimateToConvert}
-                jobContext={jobContext}
-              />
+              <div className="pt-4">
+                <InvoiceUpsellStep
+                  documentTotal={calculateGrandTotal()}
+                  onContinue={handleUpsellContinue}
+                  onBack={() => setCurrentStep("items")}
+                  existingUpsellItems={selectedUpsells}
+                  estimateToConvert={estimateToConvert}
+                  jobContext={jobContext}
+                />
+              </div>
             )}
           </div>
+
+          {/* Fixed bottom action bar for mobile */}
+          {currentStep === "items" && (
+            <div className={`
+              ${isMobile 
+                ? 'fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 border-t px-4 py-3' 
+                : 'px-6 pb-6 border-t bg-background'
+              } 
+              flex-shrink-0
+            `}>
+              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'}`}>
+                <Button 
+                  variant="outline" 
+                  onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                  className={`${isMobile ? 'w-full h-12 text-base' : ''}`}
+                >
+                  {lineItems.length > 0 ? "Save for Later" : "Cancel"}
+                </Button>
+                
+                <Button 
+                  onClick={handleSaveAndContinue}
+                  disabled={isSubmitting || lineItems.length === 0}
+                  className={`gap-2 ${isMobile ? 'w-full h-12 text-base' : ''}`}
+                >
+                  {isSubmitting ? "Saving..." : "Save & Continue"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       

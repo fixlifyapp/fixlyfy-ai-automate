@@ -8,6 +8,7 @@ import { ProductCatalog } from "../../builder/ProductCatalog";
 import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
 import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
 import { NotesSection } from "./components/NotesSection";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UnifiedItemsStepProps {
   documentType: "estimate" | "invoice";
@@ -43,22 +44,23 @@ export const UnifiedItemsStep = ({
   calculateGrandTotal
 }: UnifiedItemsStepProps) => {
   const [showProductCatalog, setShowProductCatalog] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Document Header */}
-      <div className="flex items-center justify-between">
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
         <div>
-          <h3 className="text-lg font-semibold">
+          <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
             {documentType === "estimate" ? "Estimate" : "Invoice"} Items
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
             Add line items and configure pricing for this {documentType}
           </p>
         </div>
         <Button 
           onClick={() => setShowProductCatalog(true)}
-          className="gap-2"
+          className={`gap-2 ${isMobile ? 'w-full h-12 text-base' : ''}`}
         >
           <Plus className="h-4 w-4" />
           Add Product
@@ -67,20 +69,24 @@ export const UnifiedItemsStep = ({
 
       {/* Line Items Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
+        <CardHeader className={isMobile ? 'px-3 py-3' : 'px-6 py-4'}>
+          <CardTitle className={isMobile ? 'text-base' : 'text-lg'}>Line Items</CardTitle>
         </CardHeader>
-        <CardContent>
-          <DocumentLineItemsTable
-            documentType={documentType}
-            lineItems={lineItems}
-          />
+        <CardContent className={isMobile ? 'px-0 py-0' : 'px-6 pb-6'}>
+          <div className={isMobile ? 'overflow-x-auto' : ''}>
+            <DocumentLineItemsTable
+              documentType={documentType}
+              lineItems={lineItems}
+              onRemoveLineItem={onRemoveLineItem}
+              onUpdateLineItem={onUpdateLineItem}
+            />
+          </div>
           
           {lineItems.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Plus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No items added yet</p>
-              <p className="text-sm">Add products to get started</p>
+            <div className={`text-center text-muted-foreground ${isMobile ? 'py-6 px-3' : 'py-8'}`}>
+              <Plus className={`mx-auto text-gray-400 mb-3 ${isMobile ? 'h-8 w-8' : 'h-12 w-12'}`} />
+              <p className={`font-medium ${isMobile ? 'text-base' : 'text-lg'}`}>No items added yet</p>
+              <p className={isMobile ? 'text-xs' : 'text-sm'}>Add products to get started</p>
             </div>
           )}
         </CardContent>
@@ -90,6 +96,7 @@ export const UnifiedItemsStep = ({
       <DocumentTotalsSection
         documentType={documentType}
         taxRate={taxRate}
+        onTaxRateChange={onTaxRateChange}
         subtotal={calculateSubtotal()}
         tax={calculateTotalTax()}
         total={calculateGrandTotal()}
@@ -101,17 +108,25 @@ export const UnifiedItemsStep = ({
         onNotesChange={onNotesChange}
       />
 
-      {/* Product Catalog - Conditional Render */}
+      {/* Product Catalog - Mobile Responsive */}
       {showProductCatalog && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Product Catalog</h3>
-              <Button variant="ghost" onClick={() => setShowProductCatalog(false)}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2">
+          <div className={`bg-white rounded-lg overflow-hidden ${
+            isMobile 
+              ? 'w-full h-full max-w-none max-h-none' 
+              : 'max-w-4xl w-full max-h-[80vh]'
+          }`}>
+            <div className={`border-b flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'}`}>
+              <h3 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>Product Catalog</h3>
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowProductCatalog(false)}
+                className={isMobile ? 'h-10 w-10' : ''}
+              >
                 ×
               </Button>
             </div>
-            <div className="p-4">
+            <div className={`overflow-y-auto ${isMobile ? 'h-[calc(100%-60px)] p-3' : 'p-4 max-h-[calc(80vh-60px)]'}`}>
               <ProductCatalog
                 onAddProduct={(product) => {
                   onAddProduct(product);

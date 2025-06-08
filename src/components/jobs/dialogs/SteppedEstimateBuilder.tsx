@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -263,8 +264,14 @@ export const SteppedEstimateBuilder = ({
   return (
     <>
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
-        <DialogContent className={`${isMobile ? 'max-w-[95vw] max-h-[95vh] w-full m-2' : 'max-w-6xl max-h-[90vh]'} overflow-y-auto`}>
-          <DialogHeader className={`${isMobile ? 'px-2 py-3' : 'px-6 py-4'}`}>
+        <DialogContent className={`
+          ${isMobile 
+            ? 'max-w-[100vw] max-h-[100vh] w-full h-full m-0 rounded-none border-0' 
+            : 'max-w-6xl max-h-[90vh]'
+          } 
+          overflow-hidden flex flex-col p-0
+        `}>
+          <DialogHeader className={`${isMobile ? 'px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95' : 'px-6 py-4'} flex-shrink-0`}>
             <DialogTitle className={`flex flex-col gap-2 ${isMobile ? 'text-base' : 'text-lg'}`}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
@@ -280,9 +287,9 @@ export const SteppedEstimateBuilder = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className={`space-y-4 ${isMobile ? 'px-2 pb-3' : 'px-6 pb-6'}`}>
+          <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4 pb-20' : 'px-6 pb-6'}`}>
             {currentStep === "items" && (
-              <>
+              <div className="space-y-4 pt-4">
                 <UnifiedItemsStep
                   documentType="estimate"
                   documentNumber={documentNumber}
@@ -299,38 +306,51 @@ export const SteppedEstimateBuilder = ({
                   calculateTotalTax={calculateTotalTax}
                   calculateGrandTotal={calculateGrandTotal}
                 />
-
-                <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4 border-t`}>
-                  <Button 
-                    variant="outline" 
-                    onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
-                    className={`${isMobile ? 'w-full h-11' : ''}`}
-                  >
-                    {lineItems.length > 0 ? "Save for Later" : "Cancel"}
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleSaveAndContinue}
-                    disabled={isSubmitting || lineItems.length === 0}
-                    className={`gap-2 ${isMobile ? 'w-full h-11' : ''}`}
-                  >
-                    {isSubmitting ? "Saving..." : "Save & Continue"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </>
+              </div>
             )}
 
             {currentStep === "upsell" && (
-              <EstimateUpsellStep
-                documentTotal={calculateGrandTotal()}
-                onContinue={handleUpsellContinue}
-                onBack={handleUpsellBack}
-                existingUpsellItems={selectedUpsells}
-                jobContext={jobContext}
-              />
+              <div className="pt-4">
+                <EstimateUpsellStep
+                  documentTotal={calculateGrandTotal()}
+                  onContinue={handleUpsellContinue}
+                  onBack={handleUpsellBack}
+                  existingUpsellItems={selectedUpsells}
+                  jobContext={jobContext}
+                />
+              </div>
             )}
           </div>
+
+          {/* Fixed bottom action bar for mobile */}
+          {currentStep === "items" && (
+            <div className={`
+              ${isMobile 
+                ? 'fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 border-t px-4 py-3' 
+                : 'px-6 pb-6 border-t bg-background'
+              } 
+              flex-shrink-0
+            `}>
+              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'}`}>
+                <Button 
+                  variant="outline" 
+                  onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                  className={`${isMobile ? 'w-full h-12 text-base' : ''}`}
+                >
+                  {lineItems.length > 0 ? "Save for Later" : "Cancel"}
+                </Button>
+                
+                <Button 
+                  onClick={handleSaveAndContinue}
+                  disabled={isSubmitting || lineItems.length === 0}
+                  className={`gap-2 ${isMobile ? 'w-full h-12 text-base' : ''}`}
+                >
+                  {isSubmitting ? "Saving..." : "Save & Continue"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
