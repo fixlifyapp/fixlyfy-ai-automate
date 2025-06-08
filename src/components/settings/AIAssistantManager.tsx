@@ -67,7 +67,18 @@ export const AIAssistantManager = () => {
         .order('category', { ascending: true });
 
       if (error) throw error;
-      setTemplates(data || []);
+      
+      // Properly handle the Json type for variables
+      const processedTemplates: AITemplate[] = (data || []).map(template => ({
+        ...template,
+        variables: Array.isArray(template.variables) 
+          ? template.variables as string[]
+          : typeof template.variables === 'string'
+          ? JSON.parse(template.variables)
+          : []
+      }));
+      
+      setTemplates(processedTemplates);
     } catch (error) {
       console.error('Error loading templates:', error);
       toast.error('Failed to load AI templates');
