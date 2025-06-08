@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -90,19 +89,19 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
       if (error) throw error;
 
       setAiEnabled(enabled);
-      toast.success(`AI Dispatcher ${enabled ? 'enabled' : 'disabled'} for ${formatPhoneForDisplay(phoneNumber.phone_number)}`);
+      toast.success(`AI Assistant ${enabled ? 'enabled' : 'disabled'} for ${formatPhoneForDisplay(phoneNumber.phone_number)}`);
       
       if (onSave) onSave();
     } catch (error: any) {
       console.error('Error toggling AI:', error);
-      toast.error(`Failed to ${enabled ? 'enable' : 'disable'} AI Dispatcher: ${error.message}`);
+      toast.error(`Failed to ${enabled ? 'enable' : 'disable'} AI Assistant: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const formatRoutingDecision = (decision: string) => {
-    return decision === 'ai_dispatcher' ? 'AI Dispatcher' : 'Basic Telephony';
+    return decision === 'ai_dispatcher' ? 'AI Assistant' : 'Basic Telephony';
   };
 
   const getRoutingBadgeColor = (decision: string) => {
@@ -127,15 +126,15 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5" />
-                AI Dispatcher
+                AI Assistant
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium">Enable AI Dispatcher</h4>
+                  <h4 className="font-medium">Enable AI Assistant</h4>
                   <p className="text-sm text-muted-foreground">
-                    When enabled, calls will be handled by AI. When disabled, calls use basic telephony.
+                    When enabled, calls will be handled by your AI Assistant with dynamic prompts and business data integration.
                   </p>
                 </div>
                 <Switch
@@ -150,7 +149,7 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
                   {aiEnabled ? (
                     <>
                       <Bot className="h-3 w-3 mr-1" />
-                      AI Dispatcher Active
+                      AI Assistant Active
                     </>
                   ) : (
                     <>
@@ -164,6 +163,19 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
               {phoneNumber.last_call_routed_to && (
                 <div className="text-sm text-muted-foreground">
                   Last call routed to: <span className="font-medium">{formatRoutingDecision(phoneNumber.last_call_routed_to)}</span>
+                </div>
+              )}
+
+              {aiEnabled && (
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <h5 className="font-medium text-green-800 mb-1">✨ AI Assistant Features</h5>
+                  <ul className="text-sm text-green-700 space-y-1">
+                    <li>• Dynamic prompts with business data</li>
+                    <li>• Appointment scheduling capabilities</li>
+                    <li>• Service pricing information</li>
+                    <li>• Emergency detection and routing</li>
+                    <li>• Professional voice synthesis</li>
+                  </ul>
                 </div>
               )}
             </CardContent>
@@ -191,7 +203,7 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">{stats.ai_calls}</div>
-                      <div className="text-sm text-muted-foreground">AI Dispatcher</div>
+                      <div className="text-sm text-muted-foreground">AI Assistant</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-600">{stats.basic_calls}</div>
@@ -234,7 +246,7 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
           {/* Configuration Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Webhook Configuration</CardTitle>
+              <CardTitle>System Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div>
@@ -246,11 +258,11 @@ export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: P
               <div>
                 <span className="font-medium">Current Mode:</span> 
                 <span className="ml-2">
-                  {aiEnabled ? 'AI Dispatcher' : 'Basic Telephony'}
+                  {aiEnabled ? 'AI Assistant (Telnyx AI)' : 'Basic Telephony'}
                 </span>
               </div>
               <div className="text-muted-foreground">
-                The router automatically directs calls to the appropriate handler based on your AI Dispatcher setting.
+                The router automatically directs calls to the appropriate handler. AI Assistant mode uses Telnyx AI with dynamic business data integration.
               </div>
             </CardContent>
           </Card>

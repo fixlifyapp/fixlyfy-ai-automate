@@ -12,7 +12,9 @@ export type Database = {
       ai_agent_configs: {
         Row: {
           agent_name: string | null
+          ai_assistant_id: string | null
           aws_region: string | null
+          base_prompt: string | null
           business_hours: Json | null
           business_niche: string
           company_name: string | null
@@ -26,13 +28,16 @@ export type Database = {
           is_active: boolean | null
           service_areas: Json | null
           service_types: Json | null
+          telnyx_assistant_config: Json | null
           updated_at: string
           user_id: string
           voice_id: string | null
         }
         Insert: {
           agent_name?: string | null
+          ai_assistant_id?: string | null
           aws_region?: string | null
+          base_prompt?: string | null
           business_hours?: Json | null
           business_niche?: string
           company_name?: string | null
@@ -46,13 +51,16 @@ export type Database = {
           is_active?: boolean | null
           service_areas?: Json | null
           service_types?: Json | null
+          telnyx_assistant_config?: Json | null
           updated_at?: string
           user_id: string
           voice_id?: string | null
         }
         Update: {
           agent_name?: string | null
+          ai_assistant_id?: string | null
           aws_region?: string | null
+          base_prompt?: string | null
           business_hours?: Json | null
           business_niche?: string
           company_name?: string | null
@@ -66,9 +74,46 @@ export type Database = {
           is_active?: boolean | null
           service_areas?: Json | null
           service_types?: Json | null
+          telnyx_assistant_config?: Json | null
           updated_at?: string
           user_id?: string
           voice_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_assistant_templates: {
+        Row: {
+          base_prompt: string
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          base_prompt: string
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          base_prompt?: string
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string | null
+          variables?: Json | null
         }
         Relationships: []
       }

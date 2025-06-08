@@ -23,13 +23,13 @@ interface TelnyxWebhookData {
   };
 }
 
-const getAIConfig = async (supabase: any, phoneNumber: string) => {
-  console.log('Getting AI config for:', phoneNumber);
+const getBusinessData = async (supabase: any, phoneNumber: string) => {
+  console.log('Loading business data for:', phoneNumber);
   
   // Get phone number settings
   const { data: phoneSettings, error: phoneError } = await supabase
     .from('telnyx_phone_numbers')
-    .select('*, ai_dispatcher_config')
+    .select('*, user_id')
     .eq('phone_number', phoneNumber)
     .single();
 
@@ -45,15 +45,199 @@ const getAIConfig = async (supabase: any, phoneNumber: string) => {
     .eq('user_id', phoneSettings.user_id)
     .single();
 
-  if (aiError) {
-    console.error('Error getting AI config:', aiError);
-    return null;
-  }
+  // Get company settings
+  const { data: companySettings, error: companyError } = await supabase
+    .from('company_settings')
+    .select('*')
+    .eq('user_id', phoneSettings.user_id)
+    .single();
+
+  // Get job types
+  const { data: jobTypes, error: jobTypesError } = await supabase
+    .from('job_types')
+    .select('name')
+    .eq('created_by', phoneSettings.user_id);
+
+  // Get default AI template
+  const { data: template, error: templateError } = await supabase
+    .from('ai_assistant_templates')
+    .select('*')
+    .eq('is_default', true)
+    .eq('category', 'scheduling')
+    .single();
 
   return {
     phoneSettings,
-    aiConfig
+    aiConfig: aiConfig || {},
+    companySettings: companySettings || {},
+    jobTypes: jobTypes || [],
+    template: template || null
   };
+};
+
+const buildPromptWithVariables = (template: string, variables: any) => {
+  let prompt = template;
+  
+  // Replace variables in the template
+  Object.keys(variables).forEach(key => {
+    const placeholder = `{${key}}`;
+    prompt = prompt.replace(new RegExp(placeholder, 'g'), variables[key] || '');
+  });
+  
+  return prompt;
+};
+
+const prepareVariables = (businessData: any) => {
+  const { aiConfig, companySettings, jobTypes } = businessData;
+  
+  // Format business hours
+  const formatBusinessHours = (hours: any) => {
+    if (!hours) return 'Monday-Friday 8AM-5PM';
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const activeDays = days.filter(day => hours[day]?.enabled);
+    
+    if (activeDays.length === 0) return '24/7';
+    
+    const firstDay = activeDays[0];
+    const lastDay = activeDays[activeDays.length - 1];
+    const openTime = hours[firstDay]?.open || '8:00';
+    const closeTime = hours[firstDay]?.close || '17:00';
+    
+    return `${firstDay.charAt(0).toUpperCase() + firstDay.slice(1)}-${lastDay.charAt(0).toUpperCase() + lastDay.slice(1)} ${openTime}-${closeTime}`;
+  };
+
+  // Format service areas
+  const formatServiceAreas = (areas: any) => {
+    if (!areas || areas.length === 0) return 'our local area';
+    return Array.isArray(areas) ? areas.join(', ') : areas;
+  };
+
+  return {
+    company_name: companySettings.company_name || 'our company',
+    agent_name: aiConfig.agent_name || 'AI Assistant',
+    business_type: companySettings.business_type || aiConfig.business_niche || 'General Service',
+    diagnostic_price: aiConfig.diagnostic_price || '75',
+    emergency_surcharge: aiConfig.emergency_surcharge || '50',
+    service_areas: formatServiceAreas(aiConfig.service_areas),
+    business_hours: formatBusinessHours(companySettings.business_hours),
+    job_types: jobTypes.map((jt: any) => jt.name).join(', ') || 'various services'
+  };
+};
+
+const createOrUpdateTelnyxAssistant = async (businessData: any, callControlId: string) => {
+  try {
+    const { aiConfig, template } = businessData;
+    
+    // Prepare variables for the prompt
+    const variables = prepareVariables(businessData);
+    
+    // Use template prompt or fallback to aiConfig prompt
+    const basePrompt = template?.base_prompt || aiConfig.base_prompt || 
+      'Hello, thank you for calling {company_name}. This is {agent_name}. We provide {business_type} services. Our diagnostic fee is ${diagnostic_price}. How can I help you today?';
+    
+    // Build the final prompt with variables
+    const finalPrompt = buildPromptWithVariables(basePrompt, variables);
+    
+    console.log('🤖 Creating AI Assistant with prompt:', finalPrompt);
+
+    // Create AI Assistant configuration
+    const assistantConfig = {
+      webhook_url: `${SUPABASE_URL}/functions/v1/ai-dispatcher-webhook`,
+      webhook_url_method: 'POST',
+      voice: aiConfig.voice_id || 'alloy',
+      language: 'en',
+      initial_message: finalPrompt,
+      max_duration: 300, // 5 minutes max
+      interruption_threshold: 500,
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'schedule_appointment',
+            description: 'Schedule a service appointment with the customer',
+            parameters: {
+              type: 'object',
+              properties: {
+                customer_name: { type: 'string' },
+                phone_number: { type: 'string' },
+                service_type: { type: 'string' },
+                preferred_date: { type: 'string' },
+                preferred_time: { type: 'string' },
+                address: { type: 'string' },
+                issue_description: { type: 'string' }
+              },
+              required: ['customer_name', 'phone_number', 'service_type']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'get_service_pricing',
+            description: 'Get pricing information for services',
+            parameters: {
+              type: 'object',
+              properties: {
+                service_type: { type: 'string' }
+              },
+              required: ['service_type']
+            }
+          }
+        }
+      ]
+    };
+
+    // Start AI Assistant
+    const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/ai_assistant_start`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TELNYX_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(assistantConfig)
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Failed to start AI Assistant:', error);
+      return false;
+    }
+    
+    const result = await response.json();
+    console.log('✅ AI Assistant started successfully:', result);
+    
+    // Store assistant ID in aiConfig for future reference
+    if (result.data?.assistant_id) {
+      await updateAIAssistantId(businessData.phoneSettings.user_id, result.data.assistant_id);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating AI Assistant:', error);
+    return false;
+  }
+};
+
+const updateAIAssistantId = async (userId: string, assistantId: string) => {
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    await supabaseClient
+      .from('ai_agent_configs')
+      .update({ 
+        ai_assistant_id: assistantId,
+        telnyx_assistant_config: { assistant_id: assistantId, updated_at: new Date().toISOString() }
+      })
+      .eq('user_id', userId);
+
+    console.log('✅ AI Assistant ID updated in database');
+  } catch (error) {
+    console.error('Error updating AI Assistant ID:', error);
+  }
 };
 
 const logAICall = async (supabase: any, callData: any) => {
@@ -80,7 +264,7 @@ const logAICall = async (supabase: any, callData: any) => {
   }
 };
 
-const answerCallWithAI = async (callControlId: string, aiConfig: any) => {
+const answerCallWithAI = async (callControlId: string) => {
   try {
     console.log('🤖 Answering call with AI for call:', callControlId);
     
@@ -102,48 +286,10 @@ const answerCallWithAI = async (callControlId: string, aiConfig: any) => {
       return false;
     }
     
-    console.log('✅ Call answered successfully, starting AI processing...');
+    console.log('✅ Call answered successfully');
     return true;
   } catch (error) {
-    console.error('Error answering call with AI:', error);
-    return false;
-  }
-};
-
-const startAIInteraction = async (callControlId: string, aiConfig: any) => {
-  try {
-    // Generate AI greeting based on config
-    const greeting = aiConfig.greeting_template
-      .replace('{agent_name}', aiConfig.agent_name || 'AI Assistant')
-      .replace('{company_name}', aiConfig.company_name || 'our company');
-
-    console.log('🎤 Starting AI interaction with greeting:', greeting);
-
-    // Here you would integrate with your AI voice service
-    // For now, we'll use Telnyx's speak action as a placeholder
-    const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/speak`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${TELNYX_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        payload: greeting,
-        voice: aiConfig.voice_id || 'alice',
-        language: 'en'
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Failed to start AI interaction:', error);
-      return false;
-    }
-    
-    console.log('✅ AI interaction started successfully');
-    return true;
-  } catch (error) {
-    console.error('Error starting AI interaction:', error);
+    console.error('Error answering call:', error);
     return false;
   }
 };
@@ -179,22 +325,22 @@ serve(async (req) => {
     if (eventType === 'call.initiated' && direction === 'inbound') {
       console.log('🤖 New incoming call for AI Dispatcher');
 
-      // Get AI configuration
-      const config = await getAIConfig(supabaseClient, to || '');
-      if (!config) {
-        console.error('No AI config found for phone number:', to);
-        return new Response('AI config not found', { status: 404, headers: corsHeaders });
+      // Get business data including AI config, company settings, and templates
+      const businessData = await getBusinessData(supabaseClient, to || '');
+      if (!businessData) {
+        console.error('No business data found for phone number:', to);
+        return new Response('Business data not found', { status: 404, headers: corsHeaders });
       }
 
       // Log the AI call
       await logAICall(supabaseClient, {
-        phone_number_id: config.phoneSettings.id,
+        phone_number_id: businessData.phoneSettings.id,
         from: from || '',
         to: to || ''
       });
 
-      // Answer the call with AI
-      const answerSuccess = await answerCallWithAI(call_control_id || '', config.aiConfig);
+      // Answer the call
+      const answerSuccess = await answerCallWithAI(call_control_id || '');
       if (!answerSuccess) {
         return new Response('Failed to answer call', { status: 500, headers: corsHeaders });
       }
@@ -202,19 +348,39 @@ serve(async (req) => {
       return new Response('AI call initiated', { headers: corsHeaders });
     }
 
-    // Handle call answered
+    // Handle call answered - start AI Assistant
     if (eventType === 'call.answered') {
-      console.log('🤖 AI call answered, starting interaction...');
+      console.log('🤖 AI call answered, starting AI Assistant...');
 
-      const config = await getAIConfig(supabaseClient, to || '');
-      if (config) {
-        await startAIInteraction(call_control_id || '', config.aiConfig);
+      const businessData = await getBusinessData(supabaseClient, to || '');
+      if (businessData) {
+        await createOrUpdateTelnyxAssistant(businessData, call_control_id || '');
       }
 
-      return new Response('AI interaction started', { headers: corsHeaders });
+      return new Response('AI Assistant started', { headers: corsHeaders });
     }
 
-    // Handle other AI-specific events
+    // Handle AI Assistant function calls
+    if (eventType === 'ai_assistant.function_call') {
+      console.log('🤖 AI Assistant function call received');
+      
+      // Handle function calls like schedule_appointment, get_service_pricing etc.
+      // For now, just acknowledge
+      const response = await fetch(`https://api.telnyx.com/v2/calls/${call_control_id}/actions/ai_assistant_function_call_result`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${TELNYX_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          result: 'Function executed successfully'
+        })
+      });
+
+      return new Response('Function call handled', { headers: corsHeaders });
+    }
+
+    // Handle call completion
     if (eventType === 'call.hangup') {
       console.log('🤖 AI call ended');
       
