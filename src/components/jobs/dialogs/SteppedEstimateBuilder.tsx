@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { generateNextId } from "@/utils/idGeneration";
 import { useJobData } from "./unified/hooks/useJobData";
 import { UpsellItem } from "./shared/types";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -33,6 +33,7 @@ export const SteppedEstimateBuilder = ({
   onEstimateCreated
 }: SteppedEstimateBuilderProps) => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   // Use the optimized useJobData hook instead of fetching all jobs
   const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId);
@@ -262,18 +263,24 @@ export const SteppedEstimateBuilder = ({
   return (
     <>
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                Step {currentStepNumber} of 3
-              </span>
-              {stepTitles[currentStep]}
-              {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
+        <DialogContent className={`${isMobile ? 'max-w-[95vw] max-h-[95vh] w-full m-2' : 'max-w-6xl max-h-[90vh]'} overflow-y-auto`}>
+          <DialogHeader className={`${isMobile ? 'px-2 py-3' : 'px-6 py-4'}`}>
+            <DialogTitle className={`flex flex-col gap-2 ${isMobile ? 'text-base' : 'text-lg'}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                  Step {currentStepNumber} of 3
+                </span>
+                <span className={`${isMobile ? 'text-sm' : 'text-base'} truncate`}>{stepTitles[currentStep]}</span>
+                {documentNumber && (
+                  <span className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'} truncate`}>
+                    (#{documentNumber})
+                  </span>
+                )}
+              </div>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className={`space-y-4 ${isMobile ? 'px-2 pb-3' : 'px-6 pb-6'}`}>
             {currentStep === "items" && (
               <>
                 <UnifiedItemsStep
@@ -293,10 +300,11 @@ export const SteppedEstimateBuilder = ({
                   calculateGrandTotal={calculateGrandTotal}
                 />
 
-                <div className="flex justify-between pt-4 border-t">
+                <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4 border-t`}>
                   <Button 
                     variant="outline" 
                     onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                    className={`${isMobile ? 'w-full h-11' : ''}`}
                   >
                     {lineItems.length > 0 ? "Save for Later" : "Cancel"}
                   </Button>
@@ -304,7 +312,7 @@ export const SteppedEstimateBuilder = ({
                   <Button 
                     onClick={handleSaveAndContinue}
                     disabled={isSubmitting || lineItems.length === 0}
-                    className="gap-2"
+                    className={`gap-2 ${isMobile ? 'w-full h-11' : ''}`}
                   >
                     {isSubmitting ? "Saving..." : "Save & Continue"}
                     <ArrowRight className="h-4 w-4" />
