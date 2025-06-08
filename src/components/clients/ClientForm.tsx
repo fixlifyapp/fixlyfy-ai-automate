@@ -58,7 +58,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl shadow p-8 text-center">
+      <div className="bg-white rounded-xl shadow p-4 sm:p-8 text-center mx-2 sm:mx-0">
         <div className="flex flex-col items-center justify-center">
           <Loader className="h-8 w-8 animate-spin text-primary mb-4" />
           <div className="text-muted-foreground">Loading client details...</div>
@@ -69,7 +69,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   
   if (!client) {
     return (
-      <div className="bg-white rounded-xl shadow p-8 text-center">
+      <div className="bg-white rounded-xl shadow p-4 sm:p-8 text-center mx-2 sm:mx-0">
         <div className="text-muted-foreground">Client not found</div>
         <Button 
           variant="outline" 
@@ -83,8 +83,8 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
   }
   
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow p-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
         <ClientFormHeader
           client={client}
           isSaving={isSaving}
@@ -94,7 +94,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
         />
 
         {/* Client Contact Actions */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+        <div className="mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
           <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Actions</h3>
           <ClientContactActions client={client} />
         </div>
@@ -112,24 +112,27 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1">
-            <TabsTrigger value="details" className="relative">
-              <User size={16} className="mr-2" />
-              Details
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 gap-1 w-full h-auto p-1">
+            <TabsTrigger value="details" className="relative text-xs sm:text-sm py-2">
+              <User size={14} className="mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Details</span>
+              <span className="xs:hidden">Info</span>
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="relative">
-              Jobs
+            <TabsTrigger value="jobs" className="relative text-xs sm:text-sm py-2">
+              <span>Jobs</span>
             </TabsTrigger>
-            <TabsTrigger value="payments" className="relative">
-              Payments
+            <TabsTrigger value="payments" className="relative text-xs sm:text-sm py-2">
+              <span className="hidden xs:inline">Payments</span>
+              <span className="xs:hidden">Pay</span>
             </TabsTrigger>
-            <TabsTrigger value="properties" className="relative">
-              Properties
+            <TabsTrigger value="properties" className="relative text-xs sm:text-sm py-2">
+              <span className="hidden xs:inline">Properties</span>
+              <span className="xs:hidden">Props</span>
             </TabsTrigger>
           </TabsList>
           
           {/* Details Tab */}
-          <TabsContent value="details" className="space-y-6">
+          <TabsContent value="details" className="space-y-4 sm:space-y-6">
             {/* Client Statistics */}
             {!statsLoading && (
               <ClientStatsCard clientId={clientId || ''} stats={stats} />
@@ -144,12 +147,12 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           </TabsContent>
           
           {/* Jobs Tab */}
-          <TabsContent value="jobs" className="space-y-6">
+          <TabsContent value="jobs" className="space-y-4 sm:space-y-6">
             <ClientJobs clientId={clientId} />
           </TabsContent>
           
           {/* Payments Tab */}
-          <TabsContent value="payments" className="space-y-6">
+          <TabsContent value="payments" className="space-y-4 sm:space-y-6">
             <PaymentsTab 
               clientId={clientId} 
               onCreateInvoice={handleCreateInvoice} 
@@ -157,7 +160,7 @@ export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
           </TabsContent>
           
           {/* Properties Tab */}
-          <TabsContent value="properties" className="space-y-6">
+          <TabsContent value="properties" className="space-y-4 sm:space-y-6">
             <PropertiesTab clientId={clientId} />
           </TabsContent>
         </Tabs>
