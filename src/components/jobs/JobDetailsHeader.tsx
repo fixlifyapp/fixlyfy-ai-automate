@@ -38,11 +38,11 @@ export const JobDetailsHeader = () => {
   if (isLoading) {
     return (
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           <div className="max-w-5xl mx-auto">
             <div className="space-y-4">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-32 w-full rounded-2xl" />
+              <Skeleton className="h-4 sm:h-6 w-24 sm:w-32" />
+              <Skeleton className="h-24 sm:h-32 w-full rounded-2xl" />
             </div>
           </div>
         </div>
@@ -53,7 +53,7 @@ export const JobDetailsHeader = () => {
   if (!job) {
     return (
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center text-gray-500">
               Job not found
@@ -66,7 +66,7 @@ export const JobDetailsHeader = () => {
 
   return (
     <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="max-w-5xl mx-auto">
           <JobInfoSection
             job={job}
