@@ -1,7 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DocumentTotalsSectionProps {
@@ -32,25 +30,6 @@ export const DocumentTotalsSection = ({
       </CardHeader>
       <CardContent className={isMobile ? 'px-3 pb-3' : 'px-6 pb-6'}>
         <div className={`space-y-3 ${isMobile ? 'text-sm' : ''}`}>
-          {/* Tax Rate Input */}
-          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
-            <Label htmlFor="taxRate" className={isMobile ? 'text-sm' : ''}>
-              Tax Rate (%)
-            </Label>
-            <div className={isMobile ? 'w-full' : 'w-24'}>
-              <Input
-                id="taxRate"
-                type="number"
-                value={taxRate}
-                onChange={(e) => onTaxRateChange?.(Number(e.target.value) || 0)}
-                min="0"
-                max="100"
-                step="0.25"
-                className={`text-right ${isMobile ? 'h-10' : 'h-8'}`}
-              />
-            </div>
-          </div>
-
           <div className="border-t pt-3 space-y-2">
             {/* Subtotal */}
             <div className="flex justify-between items-center">
@@ -63,7 +42,7 @@ export const DocumentTotalsSection = ({
             {/* Tax */}
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">
-                Tax ({taxRate}%):
+                Tax (13%):
               </span>
               <span className={`font-medium ${isMobile ? 'text-base' : ''}`}>
                 ${tax.toFixed(2)}

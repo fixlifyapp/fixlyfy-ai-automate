@@ -2,6 +2,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Edit3 } from "lucide-react";
 import { LineItem } from "../../../builder/types";
 import { useState } from "react";
@@ -90,18 +91,61 @@ export const DocumentLineItemsTable = ({
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-muted-foreground block">Quantity</span>
-                <span className="font-medium">{item.quantity}</span>
+                {editingId === item.id ? (
+                  <Input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => handleFieldChange(item.id, "quantity", Number(e.target.value))}
+                    className="text-xs h-8"
+                    min="1"
+                  />
+                ) : (
+                  <span className="font-medium">{item.quantity}</span>
+                )}
               </div>
               <div>
                 <span className="text-muted-foreground block">Unit Price</span>
-                <span className="font-medium">${item.unitPrice.toFixed(2)}</span>
+                {editingId === item.id ? (
+                  <Input
+                    type="number"
+                    value={item.unitPrice}
+                    onChange={(e) => handleFieldChange(item.id, "unitPrice", Number(e.target.value))}
+                    className="text-xs h-8"
+                    min="0"
+                    step="0.01"
+                  />
+                ) : (
+                  <span className="font-medium">${item.unitPrice.toFixed(2)}</span>
+                )}
               </div>
               {item.discount && item.discount > 0 && (
                 <div>
                   <span className="text-muted-foreground block">Discount</span>
-                  <span className="font-medium">{item.discount}%</span>
+                  {editingId === item.id ? (
+                    <Input
+                      type="number"
+                      value={item.discount || 0}
+                      onChange={(e) => handleFieldChange(item.id, "discount", Number(e.target.value))}
+                      className="text-xs h-8"
+                      min="0"
+                      max="100"
+                    />
+                  ) : (
+                    <span className="font-medium">{item.discount}%</span>
+                  )}
                 </div>
               )}
+              <div>
+                <span className="text-muted-foreground block">Taxable</span>
+                <div className="flex items-center space-x-1 mt-1">
+                  <Checkbox
+                    checked={item.taxable !== false}
+                    onCheckedChange={(checked) => handleFieldChange(item.id, "taxable", checked)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-xs">{item.taxable !== false ? 'Yes' : 'No'}</span>
+                </div>
+              </div>
               <div>
                 <span className="text-muted-foreground block">Total</span>
                 <span className="font-semibold text-green-600">
@@ -128,10 +172,11 @@ export const DocumentLineItemsTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%]">Description</TableHead>
+            <TableHead className="w-[35%]">Description</TableHead>
             <TableHead className="w-[80px] text-center">Qty</TableHead>
             <TableHead className="w-[120px] text-right">Unit Price</TableHead>
             <TableHead className="w-[100px] text-center">Discount</TableHead>
+            <TableHead className="w-[80px] text-center">Taxable</TableHead>
             <TableHead className="w-[120px] text-right">Total</TableHead>
             <TableHead className="w-[100px]">Actions</TableHead>
           </TableRow>
@@ -195,6 +240,15 @@ export const DocumentLineItemsTable = ({
                   `${item.discount || 0}%`
                 )}
               </TableCell>
+              <TableCell className="text-center">
+                <div className="flex justify-center">
+                  <Checkbox
+                    checked={item.taxable !== false}
+                    onCheckedChange={(checked) => handleFieldChange(item.id, "taxable", checked)}
+                    className="h-4 w-4"
+                  />
+                </div>
+              </TableCell>
               <TableCell className="text-right font-medium">
                 ${calculateLineTotal(item).toFixed(2)}
               </TableCell>
@@ -224,7 +278,7 @@ export const DocumentLineItemsTable = ({
           ))}
           {lineItems.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 No items added yet. Add products to get started.
               </TableCell>
             </TableRow>

@@ -11,7 +11,9 @@ export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalcu
   const calculateSubtotal = useMemo(() => {
     return () => {
       return lineItems.reduce((total, item) => {
-        return total + (item.quantity * item.unitPrice);
+        const lineTotal = item.quantity * item.unitPrice;
+        const discountAmount = item.discount ? lineTotal * (item.discount / 100) : 0;
+        return total + (lineTotal - discountAmount);
       }, 0);
     };
   }, [lineItems]);
@@ -19,8 +21,11 @@ export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalcu
   const calculateTotalTax = useMemo(() => {
     return () => {
       const taxableTotal = lineItems.reduce((total, item) => {
-        if (item.taxable) {
-          return total + (item.quantity * item.unitPrice);
+        // Only apply tax if item is explicitly taxable (default to true if not specified)
+        if (item.taxable !== false) {
+          const lineTotal = item.quantity * item.unitPrice;
+          const discountAmount = item.discount ? lineTotal * (item.discount / 100) : 0;
+          return total + (lineTotal - discountAmount);
         }
         return total;
       }, 0);
@@ -38,7 +43,9 @@ export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalcu
     return () => {
       return lineItems.reduce((total, item) => {
         const cost = item.ourPrice || 0;
-        const revenue = item.quantity * item.unitPrice;
+        const lineTotal = item.quantity * item.unitPrice;
+        const discountAmount = item.discount ? lineTotal * (item.discount / 100) : 0;
+        const revenue = lineTotal - discountAmount;
         return total + (revenue - (cost * item.quantity));
       }, 0);
     };
