@@ -6,7 +6,6 @@ export interface LineItem {
   quantity: number;
   unitPrice: number;
   taxable: boolean;
-  isWarranty?: boolean;
 }
 
 export interface Product {
@@ -17,8 +16,5 @@ export interface Product {
   category: string;
   taxable?: boolean;
   tags?: string[];
-  quantity?: number;
-  cost?: number;
-  ourPrice?: number;
   sku?: string;
 }
