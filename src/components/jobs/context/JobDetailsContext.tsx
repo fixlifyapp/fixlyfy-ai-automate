@@ -20,6 +20,7 @@ interface JobDetailsContextType {
   refreshJobData: () => void;
   currentStatus: string;
   setCurrentStatus: (status: string) => void;
+  updateJobStatus?: (status: string) => void;
   invoiceAmount: number;
   balance: number;
   jobInfo: JobInfo | null;
@@ -40,6 +41,12 @@ export const JobDetailsProvider = ({ jobId, children }: JobDetailsProviderProps)
   const setCurrentStatus = (status: string) => {
     console.log('Status update:', status);
   };
+  
+  const updateJobStatus = (status: string) => {
+    console.log('Update job status:', status);
+    setCurrentStatus(status);
+  };
+  
   const invoiceAmount = 0;
   const balance = 0;
 
@@ -48,9 +55,9 @@ export const JobDetailsProvider = ({ jobId, children }: JobDetailsProviderProps)
     id: job.id,
     title: job.title,
     clientId: job.client_id,
-    client: job.client_name || 'Unknown Client',
-    service: job.description || 'No description',
-    phone: '', // Not available in current JobData
+    client: job.client_name || job.client || 'Unknown Client',
+    service: job.service || job.description || 'No description',
+    phone: job.client_phone || job.phone || '',
     status: job.status,
     address: job.address
   } : null;
@@ -64,6 +71,7 @@ export const JobDetailsProvider = ({ jobId, children }: JobDetailsProviderProps)
         refreshJobData,
         currentStatus,
         setCurrentStatus,
+        updateJobStatus,
         invoiceAmount,
         balance,
         jobInfo
