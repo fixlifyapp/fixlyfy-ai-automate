@@ -68,14 +68,7 @@ export const JobDetailsHeader = () => {
     <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
       <div className="p-3 sm:p-6">
         <div className="max-w-5xl mx-auto">
-          <JobInfoSection
-            job={job}
-            status={job.status || 'scheduled'}
-            onStatusChange={handleStatusChange}
-            onCallClick={handleCallClick}
-            onMessageClick={handleMessageClick}
-            onEditClient={handleEditClient}
-          />
+          <JobInfoSection job={job} />
         </div>
       </div>
     </div>

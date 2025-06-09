@@ -13,13 +13,17 @@ export interface Estimate {
 }
 
 export const useEstimates = (jobId?: string) => {
-  const [estimates] = useState<Estimate[]>([]);
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [isLoading] = useState(false);
+
+  const refreshEstimates = () => Promise.resolve();
 
   return {
     estimates,
+    setEstimates,
     isLoading,
     error: null,
-    refetch: () => Promise.resolve()
+    refetch: refreshEstimates,
+    refreshEstimates
   };
 };

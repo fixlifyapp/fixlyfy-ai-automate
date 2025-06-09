@@ -6,6 +6,8 @@ export interface UpsellItem {
   price: number;
   category: string;
   selected?: boolean;
+  reasoning?: string;
+  priority?: 'high' | 'medium' | 'low';
 }
 
 export interface SendingOptions {
