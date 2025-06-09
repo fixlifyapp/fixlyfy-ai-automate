@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { MessageTextEnhancer } from "./MessageTextEnhancer";
 import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { sendClientMessage } from "@/components/jobs/hooks/messaging/messagingUtils";
 
 interface MessageInputProps {
   selectedConversation: any;
@@ -17,7 +16,7 @@ interface MessageInputProps {
 export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInputProps) => {
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const { refreshConversations } = useMessageContext();
+  const { sendMessage } = useMessageContext();
   const isMobile = useIsMobile();
 
   const messages = selectedConversation?.messages || [];
@@ -51,21 +50,19 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
         message: messageText
       });
 
-      const result = await sendClientMessage({
-        content: messageText.trim(),
-        clientPhone: selectedConversation.client.phone,
+      const success = await sendMessage({
         clientId: selectedConversation.client.id,
-        jobId: '', // No job context in connect center
-        existingConversationId: selectedConversation.id || null
+        clientPhone: selectedConversation.client.phone,
+        clientName: selectedConversation.client.name,
+        message: messageText
       });
 
-      if (result.success) {
+      if (success) {
         setMessageText("");
         onMessageSent();
-        await refreshConversations();
         toast.success("Message sent successfully!");
       } else {
-        toast.error(`Failed to send message: ${result.error || 'Unknown error'}`);
+        toast.error("Failed to send message");
       }
     } catch (error) {
       console.error('Error sending message:', error);

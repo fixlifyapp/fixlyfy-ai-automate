@@ -1,135 +1,109 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { LineItemsTable } from './LineItemsTable';
-import { LineItem } from '@/components/jobs/builder/types';
-import { formatCurrency } from '@/lib/utils';
+import { LineItemsTable } from "./LineItemsTable";
+import { Button } from "@/components/ui/button";
+import { LineItem } from "@/components/jobs/builder/types";
+import { PlusCircle } from "lucide-react";
 
-export interface EstimateFormProps {
+interface EstimateFormProps {
   estimateNumber: string;
   lineItems: LineItem[];
-  taxRate: number;
-  setTaxRate: (rate: number) => void;
   onRemoveLineItem: (id: string) => void;
   onUpdateLineItem: (id: string, field: string, value: any) => void;
   onEditLineItem: (id: string) => boolean;
   onAddEmptyLineItem: () => void;
   onAddCustomLine: () => void;
+  taxRate: number;
+  setTaxRate: (rate: number) => void;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
-  calculateTotalMargin: () => number;
-  calculateMarginPercentage: () => number;
+  calculateTotalMargin?: () => number;
+  calculateMarginPercentage?: () => number;
+  showMargin?: boolean;
 }
 
 export const EstimateForm = ({
   estimateNumber,
   lineItems,
-  taxRate,
-  setTaxRate,
   onRemoveLineItem,
   onUpdateLineItem,
   onEditLineItem,
   onAddEmptyLineItem,
   onAddCustomLine,
+  taxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
   calculateTotalMargin,
-  calculateMarginPercentage
+  calculateMarginPercentage,
+  showMargin = false,
 }: EstimateFormProps) => {
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Estimate #{estimateNumber}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="estimate-number">Estimate Number</Label>
-              <Input id="estimate-number" value={estimateNumber} readOnly />
-            </div>
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input id="date" value={new Date().toLocaleDateString()} readOnly />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold">Estimate #{estimateNumber}</h2>
+          <p className="text-sm text-muted-foreground">
+            Add items to your estimate below
+          </p>
+        </div>
+      </div>
 
-      {/* Line Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LineItemsTable
-            lineItems={lineItems}
-            onUpdateLineItem={onUpdateLineItem}
-            onEditLineItem={onEditLineItem}
-            onRemoveLineItem={onRemoveLineItem}
-          />
+      <div className="space-y-4">
+        <LineItemsTable
+          lineItems={lineItems}
+          onRemoveLineItem={onRemoveLineItem}
+          onUpdateLineItem={onUpdateLineItem}
+          onEditLineItem={onEditLineItem}
+          showMargin={showMargin}
+          showOurPrice={showMargin}
+        />
+
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={onAddEmptyLineItem}
+          >
+            <PlusCircle size={16} />
+            <span>Add Product</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={onAddCustomLine}
+          >
+            <PlusCircle size={16} />
+            <span>Custom Line</span>
+          </Button>
+        </div>
+
+        <div className="bg-muted/30 rounded-md p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal:</span>
+            <span>${calculateSubtotal().toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <span>Tax ({taxRate}%):</span>
+            </span>
+            <span>${calculateTotalTax().toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between font-medium pt-2 border-t">
+            <span>Total:</span>
+            <span>${calculateGrandTotal().toFixed(2)}</span>
+          </div>
           
-          <div className="mt-4 flex gap-2">
-            <Button variant="outline" onClick={onAddEmptyLineItem}>
-              Add Item
-            </Button>
-            <Button variant="outline" onClick={onAddCustomLine}>
-              Add Custom Line
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tax Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tax Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="tax-rate">Tax Rate (%)</Label>
-            <Input
-              id="tax-rate"
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={taxRate * 100}
-              onChange={(e) => setTaxRate(parseFloat(e.target.value) / 100 || 0)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Totals */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(calculateSubtotal())}</span>
+          {showMargin && calculateTotalMargin && calculateMarginPercentage && (
+            <div className="flex justify-between text-sm text-green-600 pt-2 border-t border-green-100">
+              <span>Total Margin:</span>
+              <span>${calculateTotalMargin().toFixed(2)} ({calculateMarginPercentage().toFixed(0)}%)</span>
             </div>
-            <div className="flex justify-between">
-              <span>Tax:</span>
-              <span>{formatCurrency(calculateTotalTax())}</span>
-            </div>
-            <div className="flex justify-between font-bold border-t pt-2">
-              <span>Total:</span>
-              <span>{formatCurrency(calculateGrandTotal())}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

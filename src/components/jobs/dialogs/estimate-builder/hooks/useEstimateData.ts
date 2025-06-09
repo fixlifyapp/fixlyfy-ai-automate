@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EstimateDetails {
   estimate_id: string;
@@ -39,42 +40,112 @@ export const useEstimateData = (estimateNumber: string, jobId?: string) => {
       console.log("Estimate number:", estimateNumber);
       console.log("Job ID:", jobId);
       
-      // Mock estimate data for now since we don't have estimates table in current schema
-      const mockEstimateDetails: EstimateDetails = {
-        estimate_id: 'est-001',
-        estimate_number: estimateNumber,
-        total: 250.00,
-        status: 'draft',
-        notes: 'Standard maintenance estimate',
-        job_id: jobId || 'job-001',
-        job_title: 'HVAC Maintenance',
-        job_description: 'Annual HVAC system inspection and maintenance',
-        client_id: 'client-001',
-        client_name: 'John Smith',
-        client_email: 'john.smith@email.com',
-        client_phone: '(555) 123-4567',
-        client_company: 'Smith Residence'
-      };
+      // First try the view
+      const { data: details, error: detailsError } = await supabase
+        .from('estimate_details_view')
+        .select('*')
+        .eq('estimate_number', estimateNumber)
+        .maybeSingle();
 
-      const mockLineItems: LineItem[] = [
-        {
-          id: 'item-1',
-          description: 'HVAC System Inspection',
-          quantity: 1,
-          unit_price: 75.00,
-          taxable: true
-        },
-        {
-          id: 'item-2', 
-          description: 'Filter Replacement',
-          quantity: 2,
-          unit_price: 25.00,
-          taxable: true
+      console.log("View query result:", details);
+
+      if (details) {
+        console.log("Found estimate details from view:", details);
+        setEstimateDetails(details);
+        
+        // Fetch line items immediately when we have estimate details
+        console.log("Fetching line items for estimate ID:", details.estimate_id);
+        const { data: items, error: itemsError } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_type', 'estimate')
+          .eq('parent_id', details.estimate_id);
+
+        console.log("Line items fetch result:", items);
+        
+        if (!itemsError && items) {
+          console.log("Line items loaded:", items.length, "items");
+          setLineItems(items);
+        } else {
+          console.error("Error fetching line items:", itemsError);
         }
-      ];
+      } else {
+        console.log("No data from view, trying direct fetch approach");
+        
+        // Get the most recent estimate with this number
+        const { data: estimate, error: estimateError } = await supabase
+          .from('estimates')
+          .select('*')
+          .eq('estimate_number', estimateNumber)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      setEstimateDetails(mockEstimateDetails);
-      setLineItems(mockLineItems);
+        console.log("Direct estimate fetch result:", estimate);
+
+        if (estimate) {
+          // Get job and client details separately
+          const targetJobId = jobId || estimate.job_id;
+          console.log("Target job ID for lookup:", targetJobId);
+          
+          if (targetJobId) {
+            const { data: job, error: jobError } = await supabase
+              .from('jobs')
+              .select(`
+                *,
+                clients:client_id(*)
+              `)
+              .eq('id', targetJobId)
+              .single();
+
+            console.log("Job fetch result:", job);
+
+            if (!jobError && job?.clients) {
+              const clientData = Array.isArray(job.clients) ? job.clients[0] : job.clients;
+              console.log("Client data extracted:", clientData);
+              
+              // Build estimate details
+              const estimateDetailsData: EstimateDetails = {
+                estimate_id: estimate.id,
+                estimate_number: estimate.estimate_number,
+                total: estimate.total || 0,
+                status: estimate.status || 'draft',
+                notes: estimate.notes,
+                job_id: estimate.job_id || '',
+                job_title: job.title || '',
+                job_description: job.description || '',
+                client_id: clientData.id || '',
+                client_name: clientData.name || 'Unknown Client',
+                client_email: clientData.email,
+                client_phone: clientData.phone,
+                client_company: clientData.company || ''
+              };
+
+              console.log("Final estimate details built:", estimateDetailsData);
+              setEstimateDetails(estimateDetailsData);
+              
+              // Fetch line items for this estimate
+              console.log("Fetching line items for estimate ID:", estimate.id);
+              const { data: items, error: itemsError } = await supabase
+                .from('line_items')
+                .select('*')
+                .eq('parent_type', 'estimate')
+                .eq('parent_id', estimate.id);
+
+              console.log("Line items fetch result:", items);
+              
+              if (!itemsError && items) {
+                console.log("Line items loaded:", items.length, "items");
+                setLineItems(items);
+              } else {
+                console.error("Error fetching line items:", itemsError);
+              }
+            } else {
+              console.error("Error fetching job or no client found:", jobError);
+            }
+          }
+        }
+      }
 
       console.log("=== ESTIMATE DATA FETCH COMPLETED ===");
 

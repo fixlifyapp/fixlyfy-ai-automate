@@ -1,155 +1,225 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Search, Plus } from 'lucide-react';
-import { LineItem, Product } from '@/components/jobs/builder/types';
-import { LineItemsTable } from '../estimate-builder/LineItemsTable';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2, Plus } from "lucide-react";
+import { LineItem, Product } from "../../builder/types";
+import { ProductSearch } from "../../builder/ProductSearch";
+import { useState } from "react";
 
 interface InvoiceItemsStepProps {
   lineItems: LineItem[];
-  onLineItemsChange: (items: LineItem[]) => void;
-  onContinue: () => void;
-  onBack?: () => void;
+  taxRate: number;
+  notes: string;
+  onAddProduct: (product: Product) => void;
+  onRemoveLineItem: (id: string) => void;
+  onUpdateLineItem: (id: string, field: string, value: any) => void;
+  onTaxRateChange: (rate: number) => void;
+  onNotesChange: (notes: string) => void;
+  calculateSubtotal: () => number;
+  calculateTotalTax: () => number;
+  calculateGrandTotal: () => number;
 }
 
 export const InvoiceItemsStep = ({
   lineItems,
-  onLineItemsChange,
-  onContinue,
-  onBack
+  taxRate,
+  notes,
+  onAddProduct,
+  onRemoveLineItem,
+  onUpdateLineItem,
+  onTaxRateChange,
+  onNotesChange,
+  calculateSubtotal,
+  calculateTotalTax,
+  calculateGrandTotal
 }: InvoiceItemsStepProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showProductSearch, setShowProductSearch] = useState(false);
 
-  // Mock products for now
-  const mockProducts: Product[] = [
-    { id: '1', name: 'Labor Hour', description: 'Standard labor charge', price: 85, category: 'Labor', taxable: true },
-    { id: '2', name: 'Service Call', description: 'Diagnostic fee', price: 125, category: 'Service', taxable: true },
-    { id: '3', name: 'Filter Replacement', description: 'HVAC filter replacement', price: 45, category: 'Parts', taxable: true }
-  ];
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
 
-  const filteredProducts = mockProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleAddProduct = (product: Product) => {
-    const newLineItem: LineItem = {
-      id: Date.now().toString(),
-      name: product.name,
-      description: product.description,
+  const handleAddManualItem = () => {
+    const newItem: Product = {
+      id: `manual-${Date.now()}`,
+      name: "New Item",
+      description: "Description",
+      price: 0,
+      cost: 0,
       quantity: 1,
-      unitPrice: product.price,
-      taxable: product.taxable
+      taxable: true,
+      category: "Manual"
     };
-    onLineItemsChange([...lineItems, newLineItem]);
-  };
-
-  const handleAddCustomItem = () => {
-    const newLineItem: LineItem = {
-      id: Date.now().toString(),
-      name: 'Custom Item',
-      description: '',
-      quantity: 1,
-      unitPrice: 0,
-      taxable: true
-    };
-    onLineItemsChange([...lineItems, newLineItem]);
-  };
-
-  const handleRemoveLineItem = (id: string) => {
-    onLineItemsChange(lineItems.filter(item => item.id !== id));
-  };
-
-  const handleUpdateLineItem = (id: string, field: string, value: any) => {
-    onLineItemsChange(
-      lineItems.map(item =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
-  };
-
-  const handleEditLineItem = (id: string) => {
-    // For now, just return true to indicate edit was handled
-    return true;
+    onAddProduct(newItem);
   };
 
   return (
     <div className="space-y-6">
+      {/* Line Items */}
       <Card>
         <CardHeader>
-          <CardTitle>Add Products & Services</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Invoice Items</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowProductSearch(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Product
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddManualItem}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          {lineItems.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No items added yet</p>
+              <p className="text-sm">Add products or manual items to get started</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => handleAddProduct(product)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{product.name}</h4>
-                      <p className="text-sm text-muted-foreground">{product.description}</p>
-                    </div>
-                    <span className="font-bold">${product.price}</span>
+          ) : (
+            <div className="space-y-4">
+              {lineItems.map((item) => (
+                <div key={item.id} className="grid grid-cols-12 gap-4 items-center p-4 border rounded-lg">
+                  <div className="col-span-4">
+                    <Input
+                      value={item.description}
+                      onChange={(e) => onUpdateLineItem(item.id, 'description', e.target.value)}
+                      placeholder="Item description"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => onUpdateLineItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                      placeholder="Qty"
+                      min="0"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      value={item.unitPrice}
+                      onChange={(e) => onUpdateLineItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      placeholder="Unit Price"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      value={formatCurrency(item.quantity * item.unitPrice)}
+                      readOnly
+                      className="bg-gray-50"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={item.taxable}
+                        onChange={(e) => onUpdateLineItem(item.id, 'taxable', e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Tax</span>
+                    </label>
+                  </div>
+                  <div className="col-span-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onRemoveLineItem(item.id)}
+                      className="p-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
-
-            <Button variant="outline" onClick={handleAddCustomItem} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Custom Item
-            </Button>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {lineItems.length > 0 && (
+      {/* Totals and Settings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Selected Items</CardTitle>
+            <CardTitle>Settings</CardTitle>
           </CardHeader>
-          <CardContent>
-            <LineItemsTable
-              lineItems={lineItems}
-              onUpdateLineItem={handleUpdateLineItem}
-              onEditLineItem={handleEditLineItem}
-              onRemoveLineItem={handleRemoveLineItem}
-            />
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="tax-rate">Tax Rate (%)</Label>
+              <Input
+                id="tax-rate"
+                type="number"
+                value={taxRate}
+                onChange={(e) => onTaxRateChange(parseFloat(e.target.value) || 0)}
+                min="0"
+                max="100"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => onNotesChange(e.target.value)}
+                placeholder="Add any notes for this invoice..."
+                rows={3}
+              />
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      <div className="flex justify-between">
-        {onBack && (
-          <Button variant="outline" onClick={onBack}>
-            Back
-          </Button>
-        )}
-        <Button
-          onClick={onContinue}
-          disabled={lineItems.length === 0}
-          className="ml-auto"
-        >
-          Continue
-        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Total</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(calculateSubtotal())}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax ({taxRate}%):</span>
+              <span>{formatCurrency(calculateTotalTax())}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-lg border-t pt-3">
+              <span>Total:</span>
+              <span>{formatCurrency(calculateGrandTotal())}</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <ProductSearch
+        open={showProductSearch}
+        onOpenChange={setShowProductSearch}
+        onProductSelect={(product) => {
+          onAddProduct(product);
+          setShowProductSearch(false);
+        }}
+      />
     </div>
   );
 };
