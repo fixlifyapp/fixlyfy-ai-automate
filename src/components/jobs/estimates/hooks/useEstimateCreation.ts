@@ -80,11 +80,12 @@ export const useEstimateCreation = (
   // Add a product to the estimate
   const addProductToEstimate = (product: Product) => {
     // Ensure ourPrice is set to 0 for any product added to estimates
-    const productWithZeroOurPrice = {
+    const productWithDefaults = {
       ...product,
-      ourPrice: 0
+      ourPrice: product.ourPrice || 0,
+      quantity: product.quantity || 1
     };
-    setEstimateItems(prev => [...prev, productWithZeroOurPrice]);
+    setEstimateItems(prev => [...prev, productWithDefaults]);
   };
 
   // Remove a product from the estimate - MOCK IMPLEMENTATION
@@ -99,7 +100,8 @@ export const useEstimateCreation = (
         // Mock update estimate total
         const estimate = estimates.find(est => est.id === selectedEstimateId);
         if (estimate) {
-          const newTotal = Math.max(0, estimate.total - itemToRemove.price);
+          const itemTotal = (itemToRemove.price || 0) * (itemToRemove.quantity || 1);
+          const newTotal = Math.max(0, estimate.total - itemTotal);
           
           // Update the local estimates array
           setEstimates(estimates.map(est => 
@@ -120,7 +122,11 @@ export const useEstimateCreation = (
 
   // Calculate total amount based on products
   const calculateEstimateTotal = () => {
-    return estimateItems.reduce((total, item) => total + item.price, 0);
+    return estimateItems.reduce((total, item) => {
+      const itemPrice = item.price || 0;
+      const itemQuantity = item.quantity || 1;
+      return total + (itemPrice * itemQuantity);
+    }, 0);
   };
 
   // Handle estimate creation from the dialog - MOCK IMPLEMENTATION

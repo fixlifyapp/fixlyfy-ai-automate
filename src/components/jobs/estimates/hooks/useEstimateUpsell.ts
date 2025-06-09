@@ -1,8 +1,20 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Product } from "../../builder/types";
-import { Estimate } from "./useEstimateData";
+
+// Define a simple Estimate interface since useEstimateData doesn't exist
+interface Estimate {
+  id: string;
+  estimate_number?: string;
+  number?: string;
+  total: number;
+  status: string;
+  notes?: string;
+  viewed?: boolean;
+  techniciansNote?: string;
+  items?: any[];
+}
 
 export const useEstimateUpsell = (
   estimates: Estimate[],
@@ -46,25 +58,15 @@ export const useEstimateUpsell = (
     return false; // No upsell needed
   };
 
-  // Update estimate viewed status in local state only
+  // Update estimate viewed status in local state only - MOCK IMPLEMENTATION
   const updateEstimateViewed = async (estimateId: string) => {
     try {
-      // Update local state only, since 'viewed' is not in the database schema
+      // Update local state only, since we don't have the estimates table
       setEstimates(estimates.map(e => 
         e.id === estimateId ? {...e, viewed: true} : e
       ));
       
-      // We could store this in notes if needed in the future
-      const { error } = await supabase
-        .from('estimates')
-        .update({ 
-          notes: 'Viewed by customer' // Store viewing state in notes
-        })
-        .eq('id', estimateId);
-      
-      if (error) {
-        console.error('Error updating estimate viewed status:', error);
-      }
+      console.log('Mock: Estimate marked as viewed:', estimateId);
     } catch (error) {
       console.error('Error updating estimate viewed status:', error);
     }

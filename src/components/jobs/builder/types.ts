@@ -17,4 +17,8 @@ export interface Product {
   category: string;
   taxable?: boolean;
   tags?: string[];
+  quantity?: number;
+  cost?: number;
+  ourPrice?: number;
+  sku?: string;
 }

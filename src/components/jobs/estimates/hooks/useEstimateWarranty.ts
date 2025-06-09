@@ -1,52 +1,36 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Product } from "../../builder/types";
-import { Estimate } from "./useEstimateData";
+
+// Define simple interfaces since useEstimateData doesn't exist
+interface Estimate {
+  id: string;
+  estimate_number?: string;
+  number?: string;
+  total: number;
+  status: string;
+  notes?: string;
+  viewed?: boolean;
+  techniciansNote?: string;
+  items?: any[];
+}
 
 export const useEstimateWarranty = (
   estimates: Estimate[],
   setEstimates: (estimates: Estimate[]) => void,
   selectedEstimate: Estimate | null
 ) => {
-  // Handle warranty selection and addition
+  // Handle warranty selection and addition - MOCK IMPLEMENTATION
   const handleWarrantySelection = async (selectedWarranty: Product | null, customNote: string) => {
     if (selectedWarranty && selectedEstimate) {
       try {
-        // Add the warranty to the line_items table - not estimate_items
-        const { data: newItem, error: itemError } = await supabase
-          .from('line_items')
-          .insert({
-            parent_id: selectedEstimate.id,
-            parent_type: 'estimate',
-            description: selectedWarranty.name,
-            unit_price: selectedWarranty.price,
-            quantity: 1,
-            taxable: false // Warranties are typically not taxed
-          })
-          .select()
-          .single();
-          
-        if (itemError) {
-          throw itemError;
-        }
+        console.log("Mock: Adding warranty to estimate:", selectedWarranty.name);
         
-        // Update the estimate total
+        // Mock warranty addition logic
         const newTotal = selectedEstimate.total + selectedWarranty.price;
-        const { error: updateError } = await supabase
-          .from('estimates')
-          .update({ 
-            total: newTotal,
-            notes: customNote.trim() ? customNote : selectedEstimate.notes 
-          })
-          .eq('id', selectedEstimate.id);
-          
-        if (updateError) {
-          throw updateError;
-        }
         
-        // Update local state with the newly created item
+        // Update the local state with the newly created item
         const updatedEstimates = estimates.map(est => 
           est.id === selectedEstimate.id 
             ? {
@@ -54,7 +38,7 @@ export const useEstimateWarranty = (
                 items: [
                   ...(est.items || []),
                   {
-                    id: newItem.id, // Use the actual DB id
+                    id: `warranty-${Date.now()}`,
                     description: selectedWarranty.name,
                     quantity: 1,
                     unitPrice: selectedWarranty.price,
@@ -64,7 +48,7 @@ export const useEstimateWarranty = (
                     price: selectedWarranty.price
                   }
                 ],
-                total: est.total + selectedWarranty.price,
+                total: newTotal,
                 notes: customNote || est.notes,
                 techniciansNote: customNote || est.techniciansNote || ""
               } 
@@ -80,7 +64,7 @@ export const useEstimateWarranty = (
     }
   };
 
-  // Handle removing a warranty from an estimate
+  // Handle removing a warranty from an estimate - MOCK IMPLEMENTATION
   const removeWarrantyFromEstimate = async (itemId: string) => {
     if (!selectedEstimate) return;
     
@@ -93,27 +77,13 @@ export const useEstimateWarranty = (
         return;
       }
       
-      // Delete the item from the database - use line_items, not estimate_items
-      const { error: deleteError } = await supabase
-        .from('line_items')
-        .delete()
-        .eq('id', itemId)
-        .eq('parent_id', selectedEstimate.id);
-        
-      if (deleteError) throw deleteError;
+      console.log("Mock: Removing warranty from estimate:", itemId);
       
       // Calculate item price
       const itemPrice = itemToRemove.unitPrice * itemToRemove.quantity;
       
       // Update the estimate total
       const newTotal = Math.max(0, selectedEstimate.total - itemPrice);
-      
-      const { error: updateError } = await supabase
-        .from('estimates')
-        .update({ total: newTotal })
-        .eq('id', selectedEstimate.id);
-        
-      if (updateError) throw updateError;
       
       // Update the local state
       const updatedEstimates = estimates.map(est => 
