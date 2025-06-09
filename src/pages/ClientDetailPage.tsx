@@ -36,24 +36,19 @@ const ClientDetailPage = () => {
 
   return (
     <PageLayout>
-      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 sm:px-0">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold truncate">Client Details</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Client Details</h1>
+          <p className="text-muted-foreground">
             View and manage client information.
           </p>
         </div>
-        <Button 
-          onClick={() => setIsCreateJobModalOpen(true)} 
-          className="bg-primary hover:bg-primary/90 w-full sm:w-auto flex-shrink-0"
-          size="sm"
-        >
-          <Plus size={16} className="mr-2" /> 
-          <span>Create Job</span>
+        <Button onClick={() => setIsCreateJobModalOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Plus size={18} className="mr-2" /> Create Job
         </Button>
       </div>
       
-      <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-8">
         <ClientForm clientId={id} onCreateJob={() => setIsCreateJobModalOpen(true)} />
       </div>
       

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Phone, Mail, Clock, Loader2 } from "lucide-react";
@@ -7,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageThreadProps {
   selectedConversation: any;
@@ -17,7 +15,6 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
   const [isCallingLoading, setIsCallingLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   const formatMessageTime = (timestamp: string) => {
     try {
@@ -88,15 +85,13 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
 
   if (!selectedConversation) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-fixlyfy-bg-interface to-fixlyfy/5 p-4">
-        <div className="text-center max-w-md mx-auto">
-          <div className="bg-fixlyfy/10 rounded-full p-6 mx-auto mb-6 w-20 h-20 flex items-center justify-center">
-            <MessageSquare className="h-10 w-10 text-fixlyfy" />
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-fixlyfy-bg-interface to-fixlyfy/5">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="bg-fixlyfy/10 rounded-full p-6 mx-auto mb-6 w-24 h-24 flex items-center justify-center">
+            <MessageSquare className="h-12 w-12 text-fixlyfy" />
           </div>
-          <h3 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-fixlyfy-text mb-3`}>
-            Welcome to Messages
-          </h3>
-          <p className={`${isMobile ? 'text-sm' : 'text-base'} text-fixlyfy-text-secondary leading-relaxed`}>
+          <h3 className="text-xl font-semibold text-fixlyfy-text mb-3">Welcome to Messages</h3>
+          <p className="text-fixlyfy-text-secondary leading-relaxed">
             Select an existing conversation from the left sidebar, or search for a client above to start a new conversation.
           </p>
         </div>
@@ -107,38 +102,36 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Message Header */}
-      <div className={`${isMobile ? 'p-3' : 'p-4'} border-b border-fixlyfy-border bg-gradient-to-r from-white to-fixlyfy/5 flex-shrink-0`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Avatar className={`${isMobile ? 'h-10 w-10' : 'h-12 w-12'} border-2 border-fixlyfy/20 flex-shrink-0`}>
-              <AvatarFallback className="bg-gradient-primary text-white font-semibold text-sm">
+      <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-white to-fixlyfy/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12 border-2 border-fixlyfy/20">
+              <AvatarFallback className="bg-gradient-primary text-white font-semibold text-lg">
                 {selectedConversation.client.name.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-fixlyfy-text truncate`}>
-                {selectedConversation.client.name}
-              </h3>
+            <div>
+              <h3 className="font-semibold text-lg text-fixlyfy-text">{selectedConversation.client.name}</h3>
               {selectedConversation.client.phone && (
-                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-fixlyfy-text-secondary flex items-center gap-1 truncate`}>
-                  <Phone className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{selectedConversation.client.phone}</span>
+                <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {selectedConversation.client.phone}
                 </p>
               )}
               {selectedConversation.client.email && (
-                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-fixlyfy-text-secondary flex items-center gap-1 truncate`}>
-                  <Mail className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{selectedConversation.client.email}</span>
+                <p className="text-sm text-fixlyfy-text-secondary flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {selectedConversation.client.email}
                 </p>
               )}
             </div>
           </div>
-          <div className={`flex gap-1 flex-shrink-0 ${isMobile ? 'flex-col' : 'flex-row'}`}>
+          <div className="flex gap-2">
             {selectedConversation.client.phone && (
               <Button 
                 variant="outline" 
-                size={isMobile ? "sm" : "sm"} 
-                className={`gap-2 border-fixlyfy-border hover:bg-fixlyfy/5 ${isMobile ? 'min-h-[44px] px-3' : ''}`}
+                size="sm" 
+                className="gap-2 border-fixlyfy-border hover:bg-fixlyfy/5"
                 onClick={handleCall}
                 disabled={isCallingLoading}
               >
@@ -147,14 +140,14 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
                 ) : (
                   <Phone className="h-4 w-4" />
                 )}
-                {!isMobile && "Call"}
+                Call
               </Button>
             )}
             {selectedConversation.client.email && (
               <Button 
                 variant="outline" 
-                size={isMobile ? "sm" : "sm"} 
-                className={`gap-2 border-fixlyfy-border hover:bg-fixlyfy/5 ${isMobile ? 'min-h-[44px] px-3' : ''}`}
+                size="sm" 
+                className="gap-2 border-fixlyfy-border hover:bg-fixlyfy/5"
                 onClick={handleEmail}
                 disabled={isEmailLoading}
               >
@@ -163,7 +156,7 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
                 ) : (
                   <Mail className="h-4 w-4" />
                 )}
-                {!isMobile && "Email"}
+                Email
               </Button>
             )}
           </div>
@@ -171,18 +164,14 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
       </div>
 
       {/* Messages Display Area */}
-      <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-4'} space-y-3 bg-fixlyfy-bg-interface`}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-fixlyfy-bg-interface">
         {selectedConversation.messages.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="bg-white rounded-full p-4 mx-auto mb-4 w-12 h-12 flex items-center justify-center shadow-sm">
-              <MessageSquare className="h-6 w-6 text-fixlyfy-text-muted" />
+          <div className="text-center py-12">
+            <div className="bg-white rounded-full p-6 mx-auto mb-4 w-16 h-16 flex items-center justify-center shadow-sm">
+              <MessageSquare className="h-8 w-8 text-fixlyfy-text-muted" />
             </div>
-            <h4 className={`${isMobile ? 'text-sm' : 'text-base'} font-medium text-fixlyfy-text mb-2`}>
-              Start the conversation
-            </h4>
-            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-fixlyfy-text-secondary`}>
-              Send your first message to {selectedConversation.client.name}
-            </p>
+            <h4 className="font-medium text-fixlyfy-text mb-2">Start the conversation</h4>
+            <p className="text-fixlyfy-text-secondary text-sm">Send your first message to {selectedConversation.client.name}</p>
           </div>
         ) : (
           selectedConversation.messages.map((message: any) => {
@@ -193,11 +182,11 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
               <div
                 key={message.id}
                 className={cn(
-                  "flex gap-2 animate-fade-in",
+                  "flex gap-3 animate-fade-in",
                   !isFromClient && "flex-row-reverse"
                 )}
               >
-                <Avatar className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} flex-shrink-0`}>
+                <Avatar className="h-8 w-8 flex-shrink-0">
                   <AvatarFallback className={cn(
                     "text-xs font-medium",
                     isFromClient 
@@ -212,30 +201,27 @@ export const MessageThread = ({ selectedConversation }: MessageThreadProps) => {
                 </Avatar>
                 
                 <div className={cn(
-                  "flex flex-col max-w-[85%]",
+                  "flex flex-col max-w-[75%]",
                   !isFromClient && "items-end"
                 )}>
                   <div className={cn(
-                    "p-3 rounded-2xl shadow-sm break-words",
-                    isMobile ? "max-w-[280px]" : "max-w-none",
+                    "p-3 rounded-2xl shadow-sm",
                     isFromClient 
                       ? "bg-white text-fixlyfy-text rounded-bl-md border border-fixlyfy-border/50" 
                       : "bg-fixlyfy text-white rounded-br-md"
                   )}>
-                    <p className={`${isMobile ? 'text-sm' : 'text-sm'} break-words leading-relaxed`}>
-                      {message.body}
-                    </p>
+                    <p className="text-sm break-words leading-relaxed">{message.body}</p>
                   </div>
                   <div className={cn(
-                    "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted flex-wrap",
+                    "flex items-center gap-1 mt-1 text-xs text-fixlyfy-text-muted",
                     !isFromClient && "flex-row-reverse"
                   )}>
-                    <span className="font-medium whitespace-nowrap">{displaySender}</span>
-                    <Clock className="h-3 w-3 flex-shrink-0" />
-                    <span className="whitespace-nowrap">{formatMessageTime(message.created_at)}</span>
+                    <span className="font-medium">{displaySender}</span>
+                    <Clock className="h-3 w-3" />
+                    <span>{formatMessageTime(message.created_at)}</span>
                     {!isFromClient && (
                       <span className={cn(
-                        "ml-1 px-1.5 py-0.5 rounded text-xs whitespace-nowrap",
+                        "ml-1 px-1.5 py-0.5 rounded text-xs",
                         message.status === 'delivered' ? "bg-fixlyfy-success/20 text-fixlyfy-success" :
                         message.status === 'sent' ? "bg-fixlyfy-info/20 text-fixlyfy-info" :
                         message.status === 'failed' ? "bg-fixlyfy-error/20 text-fixlyfy-error" :

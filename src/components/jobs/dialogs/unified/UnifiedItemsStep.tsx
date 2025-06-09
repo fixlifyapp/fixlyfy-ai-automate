@@ -1,12 +1,16 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineItemsManager } from './LineItemsManager';
-import { DocumentTotalsSection } from './components/DocumentTotalsSection';
-import { LineItem, Product } from '@/components/jobs/builder/types';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus } from "lucide-react";
+import { LineItem, Product } from "../../builder/types";
+import { ProductCatalog } from "../../builder/ProductCatalog";
+import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
+import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
+import { NotesSection } from "./components/NotesSection";
 
 interface UnifiedItemsStepProps {
-  documentType: 'estimate' | 'invoice';
+  documentType: "estimate" | "invoice";
   documentNumber: string;
   lineItems: LineItem[];
   taxRate: number;
@@ -38,52 +42,86 @@ export const UnifiedItemsStep = ({
   calculateTotalTax,
   calculateGrandTotal
 }: UnifiedItemsStepProps) => {
+  const [showProductCatalog, setShowProductCatalog] = useState(false);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Document Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">
+            {documentType === "estimate" ? "Estimate" : "Invoice"} Items
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Add line items and configure pricing for this {documentType}
+          </p>
+        </div>
+        <Button 
+          onClick={() => setShowProductCatalog(true)}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
+
+      {/* Line Items Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {documentType === 'estimate' ? 'Estimate' : 'Invoice'} #{documentNumber}
-          </CardTitle>
+          <CardTitle>Line Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">
-                {documentType === 'estimate' ? 'Estimate' : 'Invoice'} Number
-              </label>
-              <div className="text-sm text-muted-foreground">{documentNumber}</div>
+          <DocumentLineItemsTable
+            documentType={documentType}
+            lineItems={lineItems}
+          />
+          
+          {lineItems.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Plus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-medium">No items added yet</p>
+              <p className="text-sm">Add products to get started</p>
             </div>
-            <div>
-              <label className="text-sm font-medium">Date</label>
-              <div className="text-sm text-muted-foreground">
-                {new Date().toLocaleDateString()}
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Line Items Manager */}
-      <LineItemsManager
-        lineItems={lineItems}
-        onLineItemsChange={onLineItemsChange}
-        onAddProduct={onAddProduct}
-        onRemoveLineItem={onRemoveLineItem}
-        onUpdateLineItem={onUpdateLineItem}
-        taxRate={taxRate}
-        onTaxRateChange={onTaxRateChange}
-        notes={notes}
-        onNotesChange={onNotesChange}
-      />
-
-      {/* Totals */}
+      {/* Totals Section */}
       <DocumentTotalsSection
+        documentType={documentType}
+        taxRate={taxRate}
         subtotal={calculateSubtotal()}
         tax={calculateTotalTax()}
         total={calculateGrandTotal()}
       />
+
+      {/* Notes Section */}
+      <NotesSection
+        notes={notes}
+        onNotesChange={onNotesChange}
+      />
+
+      {/* Product Catalog - Conditional Render */}
+      {showProductCatalog && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Product Catalog</h3>
+              <Button variant="ghost" onClick={() => setShowProductCatalog(false)}>
+                ×
+              </Button>
+            </div>
+            <div className="p-4">
+              <ProductCatalog
+                onAddProduct={(product) => {
+                  onAddProduct(product);
+                  setShowProductCatalog(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

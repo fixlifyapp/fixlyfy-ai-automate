@@ -1,146 +1,188 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface Estimate {
   id: string;
-  estimate_number: string;
   job_id: string;
-  client_id?: string;
-  title?: string;
-  description?: string;
-  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
+  estimate_number: string;
+  number: string; // alias for estimate_number
+  date: string;
   total: number;
-  subtotal: number;
-  tax_rate?: number;
-  tax_amount?: number;
-  discount_amount?: number;
-  items: any[];
+  amount: number; // alias for total
+  status: string;
   notes?: string;
-  terms?: string;
-  valid_until?: string;
-  sent_at?: string;
-  approved_at?: string;
-  created_by?: string;
   created_at: string;
   updated_at: string;
+  items?: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxable: boolean;
+    total: number;
+    name?: string;
+    price?: number;
+  }>;
+  viewed?: boolean;
+  techniciansNote?: string;
 }
 
 export const useEstimates = (jobId?: string) => {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchEstimates = async () => {
-    if (!jobId) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
+  const refreshEstimates = async () => {
+    console.log('Refreshing estimates for job:', jobId);
     try {
-      let query = supabase
-        .from('estimates')
-        .select('*')
-        .order('created_at', { ascending: false });
+      setIsLoading(true);
+      let query = supabase.from('estimates').select('*').order('created_at', { ascending: false });
       
       if (jobId) {
         query = query.eq('job_id', jobId);
       }
       
-      const { data, error: fetchError } = await query;
+      const { data, error } = await query;
       
-      if (fetchError) throw fetchError;
+      if (error) {
+        console.error('Error fetching estimates:', error);
+        throw error;
+      }
       
-      setEstimates(data || []);
-    } catch (err) {
-      console.error('Error fetching estimates:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch estimates');
+      console.log('Fetched estimates:', data);
+      
+      // Map the data to include the alias properties
+      const mappedData = (data || []).map(item => ({
+        ...item,
+        number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Add alias with fallback
+        amount: item.total || 0, // Add alias
+        date: item.date || item.created_at, // Ensure date is present
+        estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
+      }));
+      
+      setEstimates(mappedData);
+    } catch (error: any) {
+      console.error('Error fetching estimates:', error);
+      toast.error('Failed to fetch estimates');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refreshEstimates = async () => {
-    await fetchEstimates();
-  };
-
-  const createEstimate = async (estimateData: Partial<Estimate>) => {
+  const convertEstimateToInvoice = async (estimateId: string): Promise<boolean> => {
+    console.log('Converting estimate to invoice:', estimateId);
     try {
-      // Generate estimate number
-      const { data: nextIdData } = await supabase.rpc('generate_next_id', { 
-        p_entity_type: 'estimate' 
-      });
-      
-      const newEstimate = {
-        ...estimateData,
-        estimate_number: nextIdData || `EST-${Date.now()}`,
-        job_id: jobId || estimateData.job_id,
-      };
-
-      const { data, error } = await supabase
+      // Get the estimate data
+      const { data: estimate, error: estimateError } = await supabase
         .from('estimates')
-        .insert([newEstimate])
+        .select('*')
+        .eq('id', estimateId)
+        .single();
+
+      if (estimateError) {
+        console.error('Error fetching estimate:', estimateError);
+        throw estimateError;
+      }
+
+      console.log('Found estimate for conversion:', estimate);
+
+      // Get line items for the estimate
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('line_items')
+        .select('*')
+        .eq('parent_id', estimateId)
+        .eq('parent_type', 'estimate');
+
+      if (lineItemsError) {
+        console.error('Error fetching line items:', lineItemsError);
+        throw lineItemsError;
+      }
+
+      console.log('Found line items:', lineItems);
+
+      // Create invoice
+      const invoiceNumber = `INV-${Date.now()}`;
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          job_id: estimate.job_id,
+          estimate_id: estimateId,
+          invoice_number: invoiceNumber,
+          total: estimate.total || 0,
+          amount_paid: 0,
+          balance: estimate.total || 0,
+          status: 'unpaid',
+          notes: estimate.notes,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        })
         .select()
         .single();
 
-      if (error) throw error;
-      
-      await refreshEstimates();
-      return data;
-    } catch (err) {
-      console.error('Error creating estimate:', err);
-      throw err;
-    }
-  };
+      if (invoiceError) {
+        console.error('Error creating invoice:', invoiceError);
+        throw invoiceError;
+      }
 
-  const updateEstimate = async (id: string, updates: Partial<Estimate>) => {
-    try {
-      const { data, error } = await supabase
+      console.log('Created invoice:', invoice);
+
+      // Copy line items to invoice
+      if (lineItems && lineItems.length > 0) {
+        const invoiceLineItems = lineItems.map(item => ({
+          parent_id: invoice.id,
+          parent_type: 'invoice',
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          taxable: item.taxable
+        }));
+
+        const { error: lineItemError } = await supabase
+          .from('line_items')
+          .insert(invoiceLineItems);
+
+        if (lineItemError) {
+          console.error('Error copying line items:', lineItemError);
+          throw lineItemError;
+        }
+
+        console.log('Copied line items to invoice');
+      }
+
+      // Update estimate status
+      const { error: updateError } = await supabase
         .from('estimates')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+        .update({ status: 'converted' })
+        .eq('id', estimateId);
 
-      if (error) throw error;
-      
+      if (updateError) {
+        console.error('Error updating estimate status:', updateError);
+        throw updateError;
+      }
+
+      console.log('Updated estimate status to converted');
+
+      toast.success('Estimate converted to invoice successfully');
       await refreshEstimates();
-      return data;
-    } catch (err) {
-      console.error('Error updating estimate:', err);
-      throw err;
-    }
-  };
-
-  const deleteEstimate = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('estimates')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      await refreshEstimates();
-    } catch (err) {
-      console.error('Error deleting estimate:', err);
-      throw err;
+      return true;
+    } catch (error: any) {
+      console.error('Error converting estimate to invoice:', error);
+      toast.error('Failed to convert estimate to invoice');
+      return false;
     }
   };
 
   useEffect(() => {
-    fetchEstimates();
+    if (jobId) {
+      refreshEstimates();
+    }
   }, [jobId]);
 
   return {
     estimates,
     setEstimates,
     isLoading,
-    error,
-    refetch: refreshEstimates,
     refreshEstimates,
-    createEstimate,
-    updateEstimate,
-    deleteEstimate
+    convertEstimateToInvoice
   };
 };

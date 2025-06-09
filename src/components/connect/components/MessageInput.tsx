@@ -1,13 +1,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Sparkles, Loader2 } from "lucide-react";
-import { useMessageContext } from "@/contexts/MessageContext";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, Loader2, Paperclip, Bot, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { MessageTextEnhancer } from "./MessageTextEnhancer";
-import { useMessageAI } from "@/components/jobs/hooks/messaging/useMessageAI";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { sendClientMessage } from "@/components/jobs/hooks/messaging/messagingUtils";
+import { useAI } from "@/hooks/use-ai";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MessageInputProps {
   selectedConversation: any;
@@ -17,59 +15,65 @@ interface MessageInputProps {
 export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInputProps) => {
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const { refreshConversations } = useMessageContext();
-  const isMobile = useIsMobile();
-
-  const messages = selectedConversation?.messages || [];
-  const formattedMessages = messages.map((msg: any) => ({
-    id: msg.id,
-    body: msg.body,
-    direction: msg.direction,
-    created_at: msg.created_at,
-    sender: msg.sender
-  }));
-
-  const { isAILoading, handleSuggestResponse } = useMessageAI({
-    messages: formattedMessages,
-    client: selectedConversation?.client || {},
-    jobId: '', // No job context in message interface
-    onUseSuggestion: (content: string) => setMessageText(content)
+  const [showAI, setShowAI] = useState(false);
+  const { generateText, isLoading: isAILoading } = useAI({
+    systemContext: `You are a professional customer service assistant. Generate helpful, polite, and professional messages for business communication. Keep responses concise and actionable.`
   });
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedConversation?.client.phone || isSending) {
-      if (!selectedConversation?.client.phone) {
-        toast.error("No phone number available for this client");
-      }
+    if (!messageText.trim() || !selectedConversation || isSending) return;
+
+    if (!selectedConversation.client.phone) {
+      toast.error("No phone number available for this client");
       return;
     }
 
     setIsSending(true);
+    
+    console.log('🚀 SMS Send Debug Info:');
+    console.log('- Message:', messageText);
+    console.log('- To:', selectedConversation.client.name);
+    console.log('- Phone:', selectedConversation.client.phone);
+    console.log('- Client ID:', selectedConversation.client.id);
+    console.log('- Conversation ID:', selectedConversation.id);
+
     try {
-      console.log('Sending message via MessageInput:', {
-        client: selectedConversation.client,
-        message: messageText
+      // Actually send SMS via Telnyx edge function
+      console.log('📤 Calling telnyx-sms function...');
+      const { data, error } = await supabase.functions.invoke('telnyx-sms', {
+        body: {
+          to: selectedConversation.client.phone,
+          body: messageText.trim(),
+          client_id: selectedConversation.client.id,
+          job_id: '' // Optional job ID
+        }
       });
 
-      const result = await sendClientMessage({
-        content: messageText.trim(),
-        clientPhone: selectedConversation.client.phone,
-        clientId: selectedConversation.client.id,
-        jobId: '', // No job context in connect center
-        existingConversationId: selectedConversation.id || null
-      });
+      console.log('📨 telnyx-sms response:', { data, error });
 
-      if (result.success) {
-        setMessageText("");
-        onMessageSent();
-        await refreshConversations();
-        toast.success("Message sent successfully!");
-      } else {
-        toast.error(`Failed to send message: ${result.error || 'Unknown error'}`);
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw new Error(error.message || 'Failed to send message');
       }
+
+      if (!data?.success) {
+        console.error('❌ SMS sending failed:', data);
+        throw new Error(data?.error || 'Failed to send message');
+      }
+
+      console.log('✅ Message sent successfully via telnyx-sms');
+      setMessageText("");
+      toast.success("Message sent successfully");
+      
+      // Trigger refresh to show the new message
+      setTimeout(() => {
+        onMessageSent();
+      }, 500);
+
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error("Failed to send message");
+      console.error('💥 Error sending message:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to send message: ${errorMessage}`);
     } finally {
       setIsSending(false);
     }
@@ -82,95 +86,158 @@ export const MessageInput = ({ selectedConversation, onMessageSent }: MessageInp
     }
   };
 
-  const canSuggestResponse = messages.length > 0;
-  const lastMessage = messages[messages.length - 1];
-  const shouldShowSuggest = canSuggestResponse && lastMessage?.direction === 'inbound';
+  const handleAISuggestion = async (prompt: string) => {
+    if (isAILoading || isSending) return;
+
+    try {
+      const clientName = selectedConversation?.client.name || "the client";
+      const contextualPrompt = `${prompt} for ${clientName}`;
+
+      const suggestion = await generateText(contextualPrompt);
+      
+      if (suggestion) {
+        setMessageText(suggestion);
+        toast.success("AI suggestion applied!");
+      }
+    } catch (error) {
+      console.error("AI suggestion error:", error);
+      toast.error("Failed to generate suggestion");
+    }
+  };
 
   if (!selectedConversation) {
-    return (
-      <div className={`${isMobile ? 'p-3' : 'p-4'} text-center text-fixlyfy-text-secondary`}>
-        <p className={isMobile ? 'text-sm' : 'text-base'}>
-          Select a conversation to start messaging
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className={`${isMobile ? 'p-3' : 'p-4'} bg-gradient-to-r from-white to-fixlyfy-bg-interface`}>
-      {/* AI Suggest Response Button */}
-      {shouldShowSuggest && (
-        <div className="mb-3 flex justify-end">
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={handleSuggestResponse}
-            disabled={isAILoading || isSending}
-            className={`gap-2 text-purple-600 border-purple-200 hover:bg-purple-50 ${isMobile ? 'min-h-[44px] text-sm' : ''}`}
-          >
-            {isAILoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                AI Response
-              </>
-            )}
-          </Button>
-        </div>
-      )}
-
-      <div className="flex gap-2 items-end">
-        <div className="flex-1 relative">
-          <textarea 
-            className={cn(
-              "w-full p-3 pr-12 border border-fixlyfy-border/50 rounded-lg focus:ring-2 focus:ring-fixlyfy/50 focus:border-fixlyfy focus:outline-none resize-none transition-all duration-200 bg-white shadow-sm",
-              isMobile ? "min-h-[44px] max-h-[120px] text-sm" : "min-h-[60px] max-h-[120px]"
-            )}
-            placeholder="Type your message..."
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            disabled={isSending}
-            onKeyDown={handleKeyDown}
-            rows={isMobile ? 2 : 2}
-          />
-          <div className="absolute right-3 top-3">
-            <MessageTextEnhancer 
-              messageText={messageText}
-              setMessageText={setMessageText}
+    <div className="bg-white">
+      {/* Message Input Area */}
+      <div className="p-4">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Textarea
+              placeholder={`Type your message to ${selectedConversation.client.name}...`}
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyDown={handleKeyDown}
               disabled={isSending}
+              className="min-h-[80px] max-h-[120px] resize-none border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              className="p-2 border-fixlyfy-border hover:bg-fixlyfy/5"
+              disabled={isSending}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Button 
+              onClick={handleSendMessage}
+              disabled={isSending || !messageText.trim()}
+              className="px-4 py-2 bg-fixlyfy hover:bg-fixlyfy-light text-white"
+              size="sm"
+            >
+              {isSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
         
-        <Button 
-          onClick={handleSendMessage}
-          disabled={isSending || !messageText.trim()}
-          className={cn(
-            "bg-gradient-to-r from-fixlyfy to-fixlyfy-light hover:from-fixlyfy-light hover:to-fixlyfy text-white transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0",
-            isMobile ? "min-h-[44px] min-w-[44px] px-3" : "px-6 py-3"
+        <div className="flex justify-between items-center text-xs text-fixlyfy-text-muted mt-2">
+          <span>Press Enter to send, Shift+Enter for new line</span>
+          {selectedConversation.client.phone && (
+            <span className="bg-fixlyfy/10 text-fixlyfy px-2 py-1 rounded">
+              SMS to {selectedConversation.client.phone}
+            </span>
           )}
-        >
-          {isSending ? (
+        </div>
+      </div>
+
+      {/* AI Writing Assistant - Bottom Section */}
+      <div className="border-t border-fixlyfy-border/50 bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
+        <div className="p-3">
+          {/* AI Toggle */}
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {!isMobile && "Sending..."}
+              <Bot className="h-4 w-4 text-fixlyfy" />
+              <span className="text-sm font-medium text-fixlyfy-text">AI Writing Assistant</span>
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Send className="h-4 w-4" />
-              {!isMobile && "Send"}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAI(!showAI)}
+              className="h-6 w-6 p-0"
+            >
+              <Sparkles className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {/* AI Quick Actions */}
+          {showAI && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAISuggestion("Generate a friendly professional greeting message")}
+                  disabled={isAILoading || isSending}
+                  className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
+                >
+                  {isAILoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    "Greeting"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAISuggestion("Generate a polite follow-up message asking about service needs")}
+                  disabled={isAILoading || isSending}
+                  className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
+                >
+                  {isAILoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    "Follow Up"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAISuggestion("Generate a professional appointment reminder message")}
+                  disabled={isAILoading || isSending}
+                  className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
+                >
+                  {isAILoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    "Reminder"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAISuggestion("Generate a professional thank you message for business")}
+                  disabled={isAILoading || isSending}
+                  className="text-xs h-8 border-fixlyfy-border/50 hover:bg-fixlyfy/5"
+                >
+                  {isAILoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    "Thank You"
+                  )}
+                </Button>
+              </div>
             </div>
           )}
-        </Button>
+        </div>
       </div>
     </div>
   );
 };
-
-function cn(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
-}

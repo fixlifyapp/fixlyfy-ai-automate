@@ -1,50 +1,79 @@
 
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { useEstimateSending } from "../../../dialogs/estimate-builder/hooks/useEstimateSending";
+import { useInvoiceSending } from "./useInvoiceSending";
 
-export interface SendingInterfaceReturn {
-  isSending: boolean;
-  sendDocument: (documentId: string, method: 'email' | 'sms', recipient: string) => Promise<boolean>;
+export interface SendDocumentParams {
+  sendMethod: "email" | "sms";
+  sendTo: string;
+  documentNumber: string;
+  documentDetails: Record<string, any>;
+  lineItems: any[];
+  contactInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  customNote: string;
+  jobId: string;
+  existingDocumentId?: string;
+  onSave?: () => Promise<boolean>;
 }
 
-export const useEstimateSendingInterface = (): SendingInterfaceReturn => {
-  const [isSending, setIsSending] = useState(false);
+export interface SendingHookReturn {
+  sendDocument: (params: SendDocumentParams) => Promise<{ success: boolean }>;
+  isProcessing: boolean;
+}
 
-  const sendDocument = async (documentId: string, method: 'email' | 'sms', recipient: string): Promise<boolean> => {
-    setIsSending(true);
-    try {
-      // Mock sending functionality
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success(`Estimate sent via ${method} to ${recipient}`);
-      return true;
-    } catch (error) {
-      toast.error(`Failed to send estimate via ${method}`);
-      return false;
-    } finally {
-      setIsSending(false);
-    }
+export const useEstimateSendingInterface = (): SendingHookReturn => {
+  const { sendDocument, isProcessing } = useEstimateSending();
+  
+  return {
+    sendDocument: async (params: SendDocumentParams) => {
+      // Transform params to match estimate sending interface
+      const estimateParams = {
+        sendMethod: params.sendMethod,
+        sendTo: params.sendTo,
+        documentNumber: params.documentNumber,
+        documentDetails: {
+          estimate_number: params.documentNumber,
+          ...params.documentDetails
+        },
+        lineItems: params.lineItems,
+        contactInfo: params.contactInfo,
+        customNote: params.customNote,
+        jobId: params.jobId,
+        existingDocumentId: params.existingDocumentId,
+        onSave: params.onSave || (() => Promise.resolve(true))
+      };
+      return await sendDocument(estimateParams);
+    },
+    isProcessing
   };
-
-  return { isSending, sendDocument };
 };
 
-export const useInvoiceSendingInterface = (): SendingInterfaceReturn => {
-  const [isSending, setIsSending] = useState(false);
-
-  const sendDocument = async (documentId: string, method: 'email' | 'sms', recipient: string): Promise<boolean> => {
-    setIsSending(true);
-    try {
-      // Mock sending functionality
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success(`Invoice sent via ${method} to ${recipient}`);
-      return true;
-    } catch (error) {
-      toast.error(`Failed to send invoice via ${method}`);
-      return false;
-    } finally {
-      setIsSending(false);
-    }
+export const useInvoiceSendingInterface = (): SendingHookReturn => {
+  const { sendDocument, isProcessing } = useInvoiceSending();
+  
+  return {
+    sendDocument: async (params: SendDocumentParams) => {
+      // Transform params to match invoice sending interface
+      const invoiceParams = {
+        sendMethod: params.sendMethod,
+        sendTo: params.sendTo,
+        documentNumber: params.documentNumber,
+        documentDetails: {
+          invoice_number: params.documentNumber,
+          ...params.documentDetails
+        },
+        lineItems: params.lineItems,
+        contactInfo: params.contactInfo,
+        customNote: params.customNote,
+        jobId: params.jobId,
+        existingDocumentId: params.existingDocumentId,
+        onSave: params.onSave || (() => Promise.resolve(true))
+      };
+      return await sendDocument(invoiceParams);
+    },
+    isProcessing
   };
-
-  return { isSending, sendDocument };
 };

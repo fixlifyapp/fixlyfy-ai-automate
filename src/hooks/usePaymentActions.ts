@@ -24,7 +24,7 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
           method: paymentData.method,
           reference: paymentData.reference,
           notes: paymentData.notes,
-          payment_date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString()
         });
 
       if (error) throw error;
@@ -38,12 +38,14 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
 
       if (invoice) {
         const newAmountPaid = (invoice.amount_paid || 0) + paymentData.amount;
-        const newStatus = newAmountPaid >= invoice.total ? 'paid' : 'partial';
+        const newBalance = invoice.total - newAmountPaid;
+        const newStatus = newBalance <= 0 ? 'paid' : 'partial';
 
         await supabase
           .from('invoices')
           .update({
             amount_paid: newAmountPaid,
+            balance: newBalance,
             status: newStatus
           })
           .eq('id', paymentData.invoiceId);
@@ -81,7 +83,7 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
           amount: -payment.amount,
           method: 'refund',
           reference: `Refund for payment ${paymentId}`,
-          payment_date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString()
         });
 
       if (refundError) throw refundError;
@@ -94,13 +96,15 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
         .single();
 
       if (invoice) {
-        const newAmountPaid = Math.max(0, (invoice.amount_paid || 0) - payment.amount);
-        const newStatus = newAmountPaid <= 0 ? 'sent' : newAmountPaid >= invoice.total ? 'paid' : 'partial';
+        const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
+        const newBalance = invoice.total - newAmountPaid;
+        const newStatus = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
 
         await supabase
           .from('invoices')
           .update({
-            amount_paid: newAmountPaid,
+            amount_paid: Math.max(0, newAmountPaid),
+            balance: newBalance,
             status: newStatus
           })
           .eq('id', payment.invoice_id);
@@ -148,12 +152,14 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
 
         if (invoice) {
           const newAmountPaid = Math.max(0, (invoice.amount_paid || 0) - payment.amount);
-          const newStatus = newAmountPaid <= 0 ? 'sent' : newAmountPaid >= invoice.total ? 'paid' : 'partial';
+          const newBalance = invoice.total - newAmountPaid;
+          const newStatus = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
 
           await supabase
             .from('invoices')
             .update({
               amount_paid: newAmountPaid,
+              balance: newBalance,
               status: newStatus
             })
             .eq('id', payment.invoice_id);

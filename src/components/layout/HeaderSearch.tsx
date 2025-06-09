@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Search, FileText, Users, Briefcase, Receipt } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -81,24 +82,57 @@ export const HeaderSearch = () => {
         });
       }
 
-      // Mock estimates and invoices since they don't exist in database
-      if (searchTerm.toLowerCase().includes('est')) {
-        searchResults.push({
-          id: 'est-1',
-          type: 'estimate',
-          title: 'Estimate EST-001',
-          subtitle: 'Mock estimate',
-          icon: <FileText className="h-4 w-4 text-orange-500" />
+      // Search estimates
+      const { data: estimates } = await supabase
+        .from('estimates')
+        .select(`
+          id,
+          estimate_number,
+          total,
+          jobs:job_id(
+            title,
+            clients:client_id(name)
+          )
+        `)
+        .or(`estimate_number.ilike.%${searchTerm}%`)
+        .limit(5);
+
+      if (estimates) {
+        estimates.forEach(estimate => {
+          searchResults.push({
+            id: estimate.id,
+            type: 'estimate',
+            title: `Estimate ${estimate.estimate_number}`,
+            subtitle: estimate.jobs?.clients?.name || `$${estimate.total}`,
+            icon: <FileText className="h-4 w-4 text-orange-500" />
+          });
         });
       }
 
-      if (searchTerm.toLowerCase().includes('inv')) {
-        searchResults.push({
-          id: 'inv-1',
-          type: 'invoice',
-          title: 'Invoice INV-001',
-          subtitle: 'Mock invoice',
-          icon: <Receipt className="h-4 w-4 text-purple-500" />
+      // Search invoices
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          invoice_number,
+          total,
+          jobs:job_id(
+            title,
+            clients:client_id(name)
+          )
+        `)
+        .or(`invoice_number.ilike.%${searchTerm}%`)
+        .limit(5);
+
+      if (invoices) {
+        invoices.forEach(invoice => {
+          searchResults.push({
+            id: invoice.id,
+            type: 'invoice',
+            title: `Invoice ${invoice.invoice_number}`,
+            subtitle: invoice.jobs?.clients?.name || `$${invoice.total}`,
+            icon: <Receipt className="h-4 w-4 text-purple-500" />
+          });
         });
       }
 

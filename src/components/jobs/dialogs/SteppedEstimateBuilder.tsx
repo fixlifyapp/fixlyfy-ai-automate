@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
 import { useJobData } from "./unified/hooks/useJobData";
 import { UpsellItem } from "./shared/types";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -33,7 +33,6 @@ export const SteppedEstimateBuilder = ({
   onEstimateCreated
 }: SteppedEstimateBuilderProps) => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   
   // Use the optimized useJobData hook instead of fetching all jobs
   const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId);
@@ -164,8 +163,16 @@ export const SteppedEstimateBuilder = ({
     if (notes.trim() && savedEstimate?.id) {
       try {
         console.log("💾 Updating estimate notes...");
-        // Mock update since we don't have estimates table
-        console.log('Notes updated:', notes);
+        const { error } = await supabase
+          .from('estimates')
+          .update({ notes: notes.trim() })
+          .eq('id', savedEstimate.id);
+          
+        if (error) {
+          console.error('Error updating notes:', error);
+          toast.error('Failed to save notes');
+          return;
+        }
       } catch (error) {
         console.error("Failed to save notes:", error);
         toast.error("Failed to save notes");
@@ -255,32 +262,20 @@ export const SteppedEstimateBuilder = ({
   return (
     <>
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
-        <DialogContent className={`
-          ${isMobile 
-            ? 'max-w-[100vw] max-h-[100vh] w-full h-full m-0 rounded-none border-0' 
-            : 'max-w-6xl max-h-[90vh]'
-          } 
-          overflow-hidden flex flex-col p-0
-        `}>
-          <DialogHeader className={`${isMobile ? 'px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95' : 'px-6 py-4'} flex-shrink-0`}>
-            <DialogTitle className={`flex flex-col gap-2 ${isMobile ? 'text-base' : 'text-lg'}`}>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                  Step {currentStepNumber} of 3
-                </span>
-                <span className={`${isMobile ? 'text-sm' : 'text-base'} truncate`}>{stepTitles[currentStep]}</span>
-                {documentNumber && (
-                  <span className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'} truncate`}>
-                    (#{documentNumber})
-                  </span>
-                )}
-              </div>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+                Step {currentStepNumber} of 3
+              </span>
+              {stepTitles[currentStep]}
+              {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
             </DialogTitle>
           </DialogHeader>
 
-          <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4 pb-20' : 'px-6 pb-6'}`}>
+          <div className="space-y-6">
             {currentStep === "items" && (
-              <div className="space-y-4 pt-4">
+              <>
                 <UnifiedItemsStep
                   documentType="estimate"
                   documentNumber={documentNumber}
@@ -297,51 +292,37 @@ export const SteppedEstimateBuilder = ({
                   calculateTotalTax={calculateTotalTax}
                   calculateGrandTotal={calculateGrandTotal}
                 />
-              </div>
+
+                <div className="flex justify-between pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                  >
+                    {lineItems.length > 0 ? "Save for Later" : "Cancel"}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleSaveAndContinue}
+                    disabled={isSubmitting || lineItems.length === 0}
+                    className="gap-2"
+                  >
+                    {isSubmitting ? "Saving..." : "Save & Continue"}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
             )}
 
             {currentStep === "upsell" && (
-              <div className="pt-4">
-                <EstimateUpsellStep
-                  documentTotal={calculateGrandTotal()}
-                  onContinue={handleUpsellContinue}
-                  onBack={handleUpsellBack}
-                  existingUpsellItems={selectedUpsells}
-                  jobContext={jobContext}
-                />
-              </div>
+              <EstimateUpsellStep
+                documentTotal={calculateGrandTotal()}
+                onContinue={handleUpsellContinue}
+                onBack={handleUpsellBack}
+                existingUpsellItems={selectedUpsells}
+                jobContext={jobContext}
+              />
             )}
           </div>
-
-          {/* Fixed bottom action bar for mobile */}
-          {currentStep === "items" && (
-            <div className={`
-              ${isMobile 
-                ? 'fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 border-t px-4 py-3' 
-                : 'px-6 pb-6 border-t bg-background'
-              } 
-              flex-shrink-0
-            `}>
-              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'}`}>
-                <Button 
-                  variant="outline" 
-                  onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
-                  className={`${isMobile ? 'w-full h-12 text-base' : ''}`}
-                >
-                  {lineItems.length > 0 ? "Save for Later" : "Cancel"}
-                </Button>
-                
-                <Button 
-                  onClick={handleSaveAndContinue}
-                  disabled={isSubmitting || lineItems.length === 0}
-                  className={`gap-2 ${isMobile ? 'w-full h-12 text-base' : ''}`}
-                >
-                  {isSubmitting ? "Saving..." : "Save & Continue"}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
 

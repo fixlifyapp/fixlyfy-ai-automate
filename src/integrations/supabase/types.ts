@@ -12,9 +12,7 @@ export type Database = {
       ai_agent_configs: {
         Row: {
           agent_name: string | null
-          ai_assistant_id: string | null
           aws_region: string | null
-          base_prompt: string | null
           business_hours: Json | null
           business_niche: string
           company_name: string | null
@@ -28,16 +26,13 @@ export type Database = {
           is_active: boolean | null
           service_areas: Json | null
           service_types: Json | null
-          telnyx_assistant_config: Json | null
           updated_at: string
           user_id: string
           voice_id: string | null
         }
         Insert: {
           agent_name?: string | null
-          ai_assistant_id?: string | null
           aws_region?: string | null
-          base_prompt?: string | null
           business_hours?: Json | null
           business_niche?: string
           company_name?: string | null
@@ -51,16 +46,13 @@ export type Database = {
           is_active?: boolean | null
           service_areas?: Json | null
           service_types?: Json | null
-          telnyx_assistant_config?: Json | null
           updated_at?: string
           user_id: string
           voice_id?: string | null
         }
         Update: {
           agent_name?: string | null
-          ai_assistant_id?: string | null
           aws_region?: string | null
-          base_prompt?: string | null
           business_hours?: Json | null
           business_niche?: string
           company_name?: string | null
@@ -74,46 +66,9 @@ export type Database = {
           is_active?: boolean | null
           service_areas?: Json | null
           service_types?: Json | null
-          telnyx_assistant_config?: Json | null
           updated_at?: string
           user_id?: string
           voice_id?: string | null
-        }
-        Relationships: []
-      }
-      ai_assistant_templates: {
-        Row: {
-          base_prompt: string
-          category: string | null
-          created_at: string | null
-          description: string | null
-          id: string
-          is_default: boolean | null
-          name: string
-          updated_at: string | null
-          variables: Json | null
-        }
-        Insert: {
-          base_prompt: string
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_default?: boolean | null
-          name: string
-          updated_at?: string | null
-          variables?: Json | null
-        }
-        Update: {
-          base_prompt?: string
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_default?: boolean | null
-          name?: string
-          updated_at?: string | null
-          variables?: Json | null
         }
         Relationships: []
       }
@@ -564,42 +519,6 @@ export type Database = {
         }
         Relationships: []
       }
-      call_routing_logs: {
-        Row: {
-          ai_enabled: boolean
-          call_control_id: string | null
-          caller_phone: string
-          company_id: string | null
-          created_at: string | null
-          id: string
-          metadata: Json | null
-          phone_number: string
-          routing_decision: string
-        }
-        Insert: {
-          ai_enabled: boolean
-          call_control_id?: string | null
-          caller_phone: string
-          company_id?: string | null
-          created_at?: string | null
-          id?: string
-          metadata?: Json | null
-          phone_number: string
-          routing_decision: string
-        }
-        Update: {
-          ai_enabled?: boolean
-          call_control_id?: string | null
-          caller_phone?: string
-          company_id?: string | null
-          created_at?: string | null
-          id?: string
-          metadata?: Json | null
-          phone_number?: string
-          routing_decision?: string
-        }
-        Relationships: []
-      }
       client_portal_sessions: {
         Row: {
           created_at: string | null
@@ -677,6 +596,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_properties: {
@@ -732,6 +665,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -976,11 +923,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
             foreignKeyName: "conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "conversations_job_id_fkey"
@@ -1076,6 +1051,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "email_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "email_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "email_conversations_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -1086,8 +1075,22 @@ export type Database = {
             foreignKeyName: "email_conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "email_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "email_conversations_job_id_fkey"
@@ -1258,79 +1261,161 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "emails_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      estimate_communications: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          communication_type: string
+          content: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          estimate_id: string | null
+          estimate_number: string | null
+          id: string
+          provider_message_id: string | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type: string
+          content: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          estimate_id?: string | null
+          estimate_number?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type?: string
+          content?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          estimate_id?: string | null
+          estimate_number?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_communications_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["estimate_id"]
+          },
+          {
+            foreignKeyName: "estimate_communications_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
         ]
       }
       estimates: {
         Row: {
-          approved_at: string | null
-          client_id: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          discount_amount: number | null
+          created_at: string | null
+          date: string | null
           estimate_number: string
           id: string
-          items: Json | null
-          job_id: string
+          job_id: string | null
           notes: string | null
-          sent_at: string | null
-          status: string
-          subtotal: number
-          tax_amount: number | null
-          tax_rate: number | null
-          terms: string | null
-          title: string | null
-          total: number
-          updated_at: string
-          valid_until: string | null
+          status: string | null
+          total: number | null
+          updated_at: string | null
         }
         Insert: {
-          approved_at?: string | null
-          client_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_amount?: number | null
+          created_at?: string | null
+          date?: string | null
           estimate_number: string
           id?: string
-          items?: Json | null
-          job_id: string
+          job_id?: string | null
           notes?: string | null
-          sent_at?: string | null
-          status?: string
-          subtotal?: number
-          tax_amount?: number | null
-          tax_rate?: number | null
-          terms?: string | null
-          title?: string | null
-          total?: number
-          updated_at?: string
-          valid_until?: string | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
         }
         Update: {
-          approved_at?: string | null
-          client_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_amount?: number | null
+          created_at?: string | null
+          date?: string | null
           estimate_number?: string
           id?: string
-          items?: Json | null
-          job_id?: string
+          job_id?: string | null
           notes?: string | null
-          sent_at?: string | null
-          status?: string
-          subtotal?: number
-          tax_amount?: number | null
-          tax_rate?: number | null
-          terms?: string | null
-          title?: string | null
-          total?: number
-          updated_at?: string
-          valid_until?: string | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "estimates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       id_counters: {
         Row: {
@@ -1362,94 +1447,168 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_communications: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          communication_type: string
+          content: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          provider_message_id: string | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type: string
+          content: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type?: string
+          content?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_communications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_communications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount_paid: number | null
-          balance_due: number | null
-          client_id: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          discount_amount: number | null
+          balance: number | null
+          created_at: string | null
+          date: string | null
           due_date: string | null
           estimate_id: string | null
           id: string
           invoice_number: string
-          issue_date: string
-          items: Json | null
-          job_id: string
+          job_id: string | null
           notes: string | null
-          paid_at: string | null
-          sent_at: string | null
-          status: string
-          subtotal: number
-          tax_amount: number | null
-          tax_rate: number | null
-          terms: string | null
-          title: string | null
-          total: number
-          updated_at: string
+          status: string | null
+          total: number | null
+          updated_at: string | null
         }
         Insert: {
           amount_paid?: number | null
-          balance_due?: number | null
-          client_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_amount?: number | null
+          balance?: number | null
+          created_at?: string | null
+          date?: string | null
           due_date?: string | null
           estimate_id?: string | null
           id?: string
           invoice_number: string
-          issue_date?: string
-          items?: Json | null
-          job_id: string
+          job_id?: string | null
           notes?: string | null
-          paid_at?: string | null
-          sent_at?: string | null
-          status?: string
-          subtotal?: number
-          tax_amount?: number | null
-          tax_rate?: number | null
-          terms?: string | null
-          title?: string | null
-          total?: number
-          updated_at?: string
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
         }
         Update: {
           amount_paid?: number | null
-          balance_due?: number | null
-          client_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_amount?: number | null
+          balance?: number | null
+          created_at?: string | null
+          date?: string | null
           due_date?: string | null
           estimate_id?: string | null
           id?: string
           invoice_number?: string
-          issue_date?: string
-          items?: Json | null
-          job_id?: string
+          job_id?: string | null
           notes?: string | null
-          paid_at?: string | null
-          sent_at?: string | null
-          status?: string
-          subtotal?: number
-          tax_amount?: number | null
-          tax_rate?: number | null
-          terms?: string | null
-          title?: string | null
-          total?: number
-          updated_at?: string
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "invoices_estimate_id_fkey"
             columns: ["estimate_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["estimate_id"]
+          },
+          {
+            foreignKeyName: "invoices_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
             referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -1490,8 +1649,22 @@ export type Database = {
             foreignKeyName: "job_attachments_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_attachments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_attachments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_attachments_job_id_fkey"
@@ -1597,8 +1770,22 @@ export type Database = {
             foreignKeyName: "job_history_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_history_job_id_fkey"
@@ -1611,8 +1798,22 @@ export type Database = {
             foreignKeyName: "job_history_job_id_idx"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_idx"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_history_job_id_idx"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_history_job_id_idx"
@@ -1668,8 +1869,22 @@ export type Database = {
             foreignKeyName: "job_overview_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_overview_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_overview_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "job_overview_job_id_fkey"
@@ -1822,6 +2037,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "jobs_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
@@ -1854,6 +2083,39 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+        }
+        Relationships: []
+      }
+      line_items: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          parent_id: string
+          parent_type: string
+          quantity: number | null
+          taxable: boolean | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          parent_id: string
+          parent_type: string
+          quantity?: number | null
+          taxable?: boolean | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          parent_id?: string
+          parent_type?: string
+          quantity?: number | null
+          taxable?: boolean | null
+          unit_price?: number
         }
         Relationships: []
       }
@@ -1910,53 +2172,42 @@ export type Database = {
       payments: {
         Row: {
           amount: number
-          client_id: string | null
-          created_at: string
+          created_at: string | null
+          date: string | null
           id: string
           invoice_id: string | null
-          job_id: string | null
-          method: string
+          method: string | null
           notes: string | null
-          payment_date: string
-          payment_number: string
-          processed_by: string | null
           reference: string | null
-          status: string
-          updated_at: string
         }
         Insert: {
           amount: number
-          client_id?: string | null
-          created_at?: string
+          created_at?: string | null
+          date?: string | null
           id?: string
           invoice_id?: string | null
-          job_id?: string | null
-          method: string
+          method?: string | null
           notes?: string | null
-          payment_date?: string
-          payment_number: string
-          processed_by?: string | null
           reference?: string | null
-          status?: string
-          updated_at?: string
         }
         Update: {
           amount?: number
-          client_id?: string | null
-          created_at?: string
+          created_at?: string | null
+          date?: string | null
           id?: string
           invoice_id?: string | null
-          job_id?: string | null
-          method?: string
+          method?: string | null
           notes?: string | null
-          payment_date?: string
-          payment_number?: string
-          processed_by?: string | null
           reference?: string | null
-          status?: string
-          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["invoice_id"]
+          },
           {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
@@ -2842,15 +3093,11 @@ export type Database = {
       }
       telnyx_phone_numbers: {
         Row: {
-          ai_dispatcher_config: Json | null
-          ai_dispatcher_enabled: boolean | null
           area_code: string | null
-          call_routing_stats: Json | null
           configured_at: string | null
           country_code: string | null
           created_at: string | null
           id: string
-          last_call_routed_to: string | null
           locality: string | null
           monthly_cost: number | null
           order_id: string | null
@@ -2863,15 +3110,11 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
-          ai_dispatcher_config?: Json | null
-          ai_dispatcher_enabled?: boolean | null
           area_code?: string | null
-          call_routing_stats?: Json | null
           configured_at?: string | null
           country_code?: string | null
           created_at?: string | null
           id?: string
-          last_call_routed_to?: string | null
           locality?: string | null
           monthly_cost?: number | null
           order_id?: string | null
@@ -2884,15 +3127,11 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
-          ai_dispatcher_config?: Json | null
-          ai_dispatcher_enabled?: boolean | null
           area_code?: string | null
-          call_routing_stats?: Json | null
           configured_at?: string | null
           country_code?: string | null
           created_at?: string | null
           id?: string
-          last_call_routed_to?: string | null
           locality?: string | null
           monthly_cost?: number | null
           order_id?: string | null
@@ -3144,11 +3383,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "warranty_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["job_id"]
+          },
+          {
             foreignKeyName: "warranty_analytics_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "fact_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warranty_analytics_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "warranty_analytics_job_id_fkey"
@@ -3161,6 +3428,25 @@ export type Database = {
       }
     }
     Views: {
+      estimate_details_view: {
+        Row: {
+          client_company: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          estimate_id: string | null
+          estimate_number: string | null
+          job_description: string | null
+          job_id: string | null
+          job_title: string | null
+          notes: string | null
+          status: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
       fact_jobs: {
         Row: {
           client_id: string | null
@@ -3187,7 +3473,40 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_details_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_details_view"
+            referencedColumns: ["client_id"]
+          },
         ]
+      }
+      invoice_details_view: {
+        Row: {
+          client_company: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          invoice_id: string | null
+          invoice_number: string | null
+          job_description: string | null
+          job_id: string | null
+          job_title: string | null
+          notes: string | null
+          status: string | null
+          total: number | null
+        }
+        Relationships: []
       }
       warranty_analytics_summary: {
         Row: {

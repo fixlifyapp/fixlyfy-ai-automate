@@ -128,23 +128,23 @@ export const ClientContactActions = ({ client, compact = false }: ClientContactA
   }
 
   return (
-    <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2">
+    <div className="flex items-center gap-2">
       <Button
         variant="outline"
         size="sm"
         onClick={handleCall}
         disabled={!client.phone || isCallLoading}
-        className="flex items-center justify-center gap-2 min-h-[40px] text-xs sm:text-sm"
+        className="flex items-center gap-2"
       >
         {isCallLoading ? (
           <>
             <div className="animate-spin h-4 w-4 border border-gray-300 border-t-gray-600 rounded-full" />
-            <span className="hidden sm:inline">Calling...</span>
+            Calling...
           </>
         ) : (
           <>
             <Phone className="h-4 w-4" />
-            <span>Call</span>
+            Call
           </>
         )}
       </Button>
@@ -153,31 +153,30 @@ export const ClientContactActions = ({ client, compact = false }: ClientContactA
         size="sm"
         onClick={handleMessage}
         disabled={!client.phone}
-        className="flex items-center justify-center gap-2 min-h-[40px] text-xs sm:text-sm"
+        className="flex items-center gap-2"
       >
         <MessageSquare className="h-4 w-4" />
-        <span>Message</span>
+        Message
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={handleEmail}
         disabled={!client.email}
-        className="flex items-center justify-center gap-2 min-h-[40px] text-xs sm:text-sm"
+        className="flex items-center gap-2"
       >
         <Mail className="h-4 w-4" />
-        <span>Email</span>
+        Email
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={handleDirections}
         disabled={!client.address}
-        className="flex items-center justify-center gap-2 min-h-[40px] text-xs sm:text-sm"
+        className="flex items-center gap-2"
       >
         <MapPin className="h-4 w-4" />
-        <span className="hidden sm:inline">Directions</span>
-        <span className="sm:hidden">Maps</span>
+        Directions
       </Button>
     </div>
   );

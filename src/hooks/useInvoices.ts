@@ -4,133 +4,64 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Invoice {
   id: string;
-  invoice_number: string;
   job_id: string;
-  client_id?: string;
-  estimate_id?: string;
-  title?: string;
-  description?: string;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partial';
+  invoice_number: string;
+  number: string; // Alias for compatibility
+  date: string;
+  status: string;
   total: number;
-  subtotal: number;
-  tax_rate?: number;
-  tax_amount?: number;
-  discount_amount?: number;
   amount_paid: number;
-  balance_due: number;
-  items: any[];
+  balance: number;
   notes?: string;
-  terms?: string;
-  issue_date: string;
-  due_date?: string;
-  sent_at?: string;
-  paid_at?: string;
-  created_by?: string;
+  items?: any[];
   created_at: string;
   updated_at: string;
+  due_date?: string;
+  issue_date?: string; // Add this missing property
+  estimate_id?: string; // Add this missing property
 }
 
-export const useInvoices = (jobId?: string) => {
+export const useInvoices = (jobId: string) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchInvoices = async () => {
     if (!jobId) return;
     
-    setIsLoading(true);
-    setError(null);
-    
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('invoices')
         .select('*')
+        .eq('job_id', jobId)
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
       
-      if (jobId) {
-        query = query.eq('job_id', jobId);
-      }
+      // Calculate balance for each invoice and add alias properties
+      const invoicesWithBalance = data?.map(invoice => ({
+        ...invoice,
+        number: invoice.invoice_number, // Alias for compatibility
+        amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
+        notes: invoice.notes || '',
+        issue_date: invoice.date, // Add issue_date as alias for date
+        estimate_id: invoice.estimate_id || undefined // Add estimate_id
+      })) || [];
       
-      const { data, error: fetchError } = await query;
-      
-      if (fetchError) throw fetchError;
-      
-      setInvoices(data || []);
-    } catch (err) {
-      console.error('Error fetching invoices:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch invoices');
+      setInvoices(invoicesWithBalance);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refreshInvoices = async () => {
-    await fetchInvoices();
+  const refreshInvoices = () => {
+    fetchInvoices();
   };
 
-  const createInvoice = async (invoiceData: Partial<Invoice>) => {
-    try {
-      // Generate invoice number
-      const { data: nextIdData } = await supabase.rpc('generate_next_id', { 
-        p_entity_type: 'invoice' 
-      });
-      
-      const newInvoice = {
-        ...invoiceData,
-        invoice_number: nextIdData || `INV-${Date.now()}`,
-        job_id: jobId || invoiceData.job_id,
-      };
-
-      const { data, error } = await supabase
-        .from('invoices')
-        .insert([newInvoice])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      await refreshInvoices();
-      return data;
-    } catch (err) {
-      console.error('Error creating invoice:', err);
-      throw err;
-    }
-  };
-
-  const updateInvoice = async (id: string, updates: Partial<Invoice>) => {
-    try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      await refreshInvoices();
-      return data;
-    } catch (err) {
-      console.error('Error updating invoice:', err);
-      throw err;
-    }
-  };
-
-  const deleteInvoice = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      await refreshInvoices();
-    } catch (err) {
-      console.error('Error deleting invoice:', err);
-      throw err;
-    }
-  };
+  // Add alias method for compatibility
+  const refetch = refreshInvoices;
 
   useEffect(() => {
     fetchInvoices();
@@ -140,11 +71,8 @@ export const useInvoices = (jobId?: string) => {
     invoices,
     setInvoices,
     isLoading,
-    error,
-    refetch: refreshInvoices,
+    loading: isLoading, // Add alias for compatibility
     refreshInvoices,
-    createInvoice,
-    updateInvoice,
-    deleteInvoice
+    refetch // Add alias method for compatibility
   };
 };

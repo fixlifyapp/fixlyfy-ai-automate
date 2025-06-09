@@ -1,26 +1,25 @@
 
 export interface UpsellItem {
   id: string;
-  name: string;
+  title: string;
   description: string;
   price: number;
-  category: string;
-  selected?: boolean;
-  reasoning?: string;
-  priority?: 'high' | 'medium' | 'low';
+  icon: any;
+  selected: boolean;
 }
 
-export interface SendingOptions {
-  method: 'email' | 'sms';
-  recipient: string;
-  subject?: string;
-  message?: string;
-}
-
-export interface DocumentData {
-  id?: string;
-  type: 'estimate' | 'invoice';
-  items: any[];
-  total: number;
-  notes: string;
+export interface UpsellStepProps {
+  onContinue: (upsells: UpsellItem[], notes: string) => void;
+  onBack: () => void;
+  documentTotal: number;
+  existingUpsellItems?: UpsellItem[];
+  estimateToConvert?: any;
+  jobContext?: {
+    job_type?: string;
+    service_category?: string;
+    job_value?: number;
+    client_history?: any;
+    estimateId?: string;
+    invoiceId?: string;
+  };
 }

@@ -2,89 +2,90 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define types locally to avoid import issues
+export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
+export type PaymentStatus = "paid" | "refunded" | "disputed";
+
 export interface Payment {
   id: string;
-  payment_number: string;
-  invoice_id?: string;
-  job_id?: string;
-  client_id?: string;
+  date: string;
+  clientId?: string;
+  clientName?: string;
+  jobId?: string;
   amount: number;
-  method: 'cash' | 'credit-card' | 'e-transfer' | 'cheque' | 'bank-transfer';
-  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'disputed';
+  method: PaymentMethod;
+  status: PaymentStatus;
   reference?: string;
   notes?: string;
-  payment_date: string;
-  processed_by?: string;
-  created_at: string;
-  updated_at: string;
+  technicianId?: string;
+  technicianName?: string;
+  invoice_id?: string;
+  created_at?: string;
 }
 
-export const usePayments = (jobId?: string) => {
+export const usePayments = (jobId: string) => {
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchPayments = async () => {
-    if (!jobId) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
+    if (!jobId) {
+      setPayments([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      let query = supabase
+      setIsLoading(true);
+      console.log('Fetching payments for job:', jobId);
+
+      // Fetch payments through invoices relationship
+      const { data, error } = await supabase
         .from('payments')
-        .select('*')
-        .order('payment_date', { ascending: false });
-      
-      if (jobId) {
-        query = query.eq('job_id', jobId);
+        .select(`
+          *,
+          invoices!inner(job_id)
+        `)
+        .eq('invoices.job_id', jobId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching payments:', error);
+        throw error;
       }
+
+      console.log('Fetched payments:', data);
       
-      const { data, error: fetchError } = await query;
-      
-      if (fetchError) throw fetchError;
-      
-      setPayments(data || []);
-    } catch (err) {
-      console.error('Error fetching payments:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch payments');
+      // Transform the data to match Payment interface
+      const transformedPayments = data?.map(payment => ({
+        id: payment.id,
+        date: payment.date,
+        amount: payment.amount,
+        method: payment.method as PaymentMethod,
+        status: 'paid' as const,
+        reference: payment.reference,
+        notes: payment.notes,
+        invoice_id: payment.invoice_id,
+        created_at: payment.created_at,
+        jobId: jobId
+      })) || [];
+
+      setPayments(transformedPayments);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      setPayments([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refreshPayments = async () => {
-    await fetchPayments();
+  const refreshPayments = () => {
+    fetchPayments();
   };
 
-  const createPayment = async (paymentData: Partial<Payment>) => {
-    try {
-      // Generate payment number
-      const { data: nextIdData } = await supabase.rpc('generate_next_id', { 
-        p_entity_type: 'payment' 
-      });
-      
-      const newPayment = {
-        ...paymentData,
-        payment_number: nextIdData || `PAY-${Date.now()}`,
-        job_id: jobId || paymentData.job_id,
-      };
-
-      const { data, error } = await supabase
-        .from('payments')
-        .insert([newPayment])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      await refreshPayments();
-      return data;
-    } catch (err) {
-      console.error('Error creating payment:', err);
-      throw err;
-    }
-  };
+  // Calculate totals
+  const totalPaid = payments.filter(p => p.amount > 0).reduce((sum, payment) => sum + payment.amount, 0);
+  const totalRefunded = payments.filter(p => p.amount < 0).reduce((sum, payment) => sum + Math.abs(payment.amount), 0);
+  const netAmount = totalPaid - totalRefunded;
 
   useEffect(() => {
     fetchPayments();
@@ -92,10 +93,11 @@ export const usePayments = (jobId?: string) => {
 
   return {
     payments,
+    setPayments,
     isLoading,
-    error,
-    refetch: refreshPayments,
     refreshPayments,
-    createPayment
+    totalPaid,
+    totalRefunded,
+    netAmount
   };
 };
