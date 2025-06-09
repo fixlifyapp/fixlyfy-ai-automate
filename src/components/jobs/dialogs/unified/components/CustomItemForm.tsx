@@ -1,125 +1,116 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
-import { LineItem } from '../../../builder/types';
-import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { LineItem } from '@/components/jobs/builder/types';
 
 interface CustomItemFormProps {
-  onAddItem: (item: LineItem) => void;
+  onAdd: (item: LineItem) => void;
+  onCancel: () => void;
 }
 
-export const CustomItemForm = ({ onAddItem }: CustomItemFormProps) => {
-  const [description, setDescription] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [price, setPrice] = useState(0);
-  const [taxable, setTaxable] = useState(true);
+export const CustomItemForm = ({ onAdd, onCancel }: CustomItemFormProps) => {
+  const [item, setItem] = useState<Partial<LineItem>>({
+    name: '',
+    description: '',
+    quantity: 1,
+    unitPrice: 0,
+    taxable: true
+  });
 
-  const handleAddItem = () => {
-    if (!description.trim()) {
-      toast.error('Please enter a description');
-      return;
-    }
-
-    if (price <= 0) {
-      toast.error('Please enter a valid price');
-      return;
-    }
-
-    if (quantity <= 0) {
-      toast.error('Please enter a valid quantity');
-      return;
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!item.name) return;
 
     const newItem: LineItem = {
-      id: `custom-${Date.now()}-${Math.random()}`,
-      description: description.trim(),
-      quantity,
-      unitPrice: price,
-      taxable,
-      discount: 0,
-      ourPrice: 0,
-      name: description.trim(),
-      price,
-      total: quantity * price
+      id: Date.now().toString(),
+      name: item.name,
+      description: item.description || '',
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || 0,
+      taxable: item.taxable !== false
     };
 
-    console.log('Adding custom item:', newItem);
-    onAddItem(newItem);
-    
-    // Reset form
-    setDescription('');
-    setQuantity(1);
-    setPrice(0);
-    setTaxable(true);
-    
-    toast.success('Custom item added successfully');
+    onAdd(newItem);
+  };
+
+  const handleChange = (field: keyof LineItem, value: any) => {
+    setItem(prev => ({ ...prev, [field]: value }));
   };
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <Label htmlFor="description">Description *</Label>
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg bg-muted/10">
+      <h3 className="font-medium">Add Custom Item</h3>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Item Name</Label>
           <Input
-            id="description"
-            placeholder="Service or product description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            id="name"
+            value={item.name || ''}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder="Enter item name"
+            required
           />
         </div>
         
-        <div>
-          <Label htmlFor="quantity">Quantity *</Label>
+        <div className="space-y-2">
+          <Label htmlFor="quantity">Quantity</Label>
           <Input
             id="quantity"
             type="number"
             min="1"
-            value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+            value={item.quantity || 1}
+            onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 1)}
           />
         </div>
-        
-        <div>
-          <Label htmlFor="price">Unit Price * ($)</Label>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={item.description || ''}
+          onChange={(e) => handleChange('description', e.target.value)}
+          placeholder="Item description (optional)"
+          rows={2}
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="unitPrice">Unit Price</Label>
           <Input
-            id="price"
+            id="unitPrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="0.00"
-            value={price}
-            onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+            value={item.unitPrice || 0}
+            onChange={(e) => handleChange('unitPrice', parseFloat(e.target.value) || 0)}
           />
         </div>
         
-        <div>
+        <div className="flex items-center space-x-2 pt-6">
+          <Switch
+            id="taxable"
+            checked={item.taxable !== false}
+            onCheckedChange={(checked) => handleChange('taxable', checked)}
+          />
           <Label htmlFor="taxable">Taxable</Label>
-          <Select value={taxable.toString()} onValueChange={(value) => setTaxable(value === 'true')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Yes</SelectItem>
-              <SelectItem value="false">No</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex items-end">
-          <Button 
-            onClick={handleAddItem} 
-            className="w-full"
-            disabled={!description.trim() || price <= 0 || quantity <= 0}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
         </div>
       </div>
-    </div>
+      
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Add Item
+        </Button>
+      </div>
+    </form>
   );
 };

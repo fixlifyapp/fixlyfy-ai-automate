@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Product } from "@/components/jobs/builder/types";
 
 interface ProductEditDialogProps {
@@ -13,13 +14,15 @@ interface ProductEditDialogProps {
   onOpenChange: (open: boolean) => void;
   product: Product | null;
   onSave: (product: Product) => void;
+  categories?: string[]; // Added categories prop
 }
 
 export const ProductEditDialog = ({
   open,
   onOpenChange,
   product,
-  onSave
+  onSave,
+  categories = ['General', 'HVAC', 'Plumbing', 'Electrical', 'Labor']
 }: ProductEditDialogProps) => {
   const [editProduct, setEditProduct] = useState<Product>(
     product || {
@@ -82,11 +85,21 @@ export const ProductEditDialog = ({
             
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={editProduct.category}
-                onChange={(e) => handleChange("category", e.target.value)}
-              />
+              <Select 
+                value={editProduct.category} 
+                onValueChange={(value) => handleChange("category", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           

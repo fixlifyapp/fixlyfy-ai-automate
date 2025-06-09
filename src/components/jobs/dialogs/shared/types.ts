@@ -6,6 +6,8 @@ export interface UpsellItem {
   price: number;
   category: string;
   isSelected?: boolean;
+  reasoning?: string; // Added for AI recommendations
+  priority?: 'high' | 'medium' | 'low'; // Added for UI styling
 }
 
 export interface UpsellStepProps {

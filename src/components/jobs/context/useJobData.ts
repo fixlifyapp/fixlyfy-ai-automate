@@ -12,11 +12,11 @@ export interface JobData {
   client_name?: string;
   client_phone?: string;
   client_email?: string;
-  address?: string;
-  service: string; // Make required to match components
+  address: string; // Made required
+  service: string;
   phone?: string;
   email?: string;
-  client: string; // Make required - always provide a fallback
+  client: string;
   tasks?: any[];
   tags?: string[];
   created_at?: string;
@@ -51,11 +51,11 @@ export const useJobData = (jobId: string) => {
         client_name: 'John Smith',
         client_phone: '(555) 123-4567',
         client_email: 'john.smith@email.com',
-        address: '123 Main St, Anytown, ST 12345',
-        service: 'HVAC Maintenance', // Required field
+        address: '123 Main St, Anytown, ST 12345', // Always provide address
+        service: 'HVAC Maintenance',
         phone: '(555) 123-4567',
         email: 'john.smith@email.com',
-        client: 'John Smith', // Always provide this required field
+        client: 'John Smith',
         total: 0,
         tasks: [
           { id: '1', name: 'Inspect air filters', completed: false },
