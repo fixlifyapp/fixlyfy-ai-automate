@@ -25,6 +25,7 @@ export interface JobData {
   date?: string;
   revenue?: number;
   notes?: string;
+  total?: number; // Added missing total property
 }
 
 export const useJobData = (jobId: string) => {
@@ -55,6 +56,7 @@ export const useJobData = (jobId: string) => {
         email: 'john.smith@email.com',
         client: 'John Smith',
         clientId: 'client-001',
+        total: 0, // Added total property
         tasks: [
           { id: '1', name: 'Inspect air filters', completed: false },
           { id: '2', name: 'Check refrigerant levels', completed: false },
