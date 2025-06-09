@@ -13,7 +13,7 @@ export interface JobData {
   client_phone?: string;
   client_email?: string;
   address?: string;
-  service?: string;
+  service: string; // Make required to match components
   phone?: string;
   email?: string;
   client: string; // Make required - always provide a fallback
@@ -52,7 +52,7 @@ export const useJobData = (jobId: string) => {
         client_phone: '(555) 123-4567',
         client_email: 'john.smith@email.com',
         address: '123 Main St, Anytown, ST 12345',
-        service: 'HVAC Maintenance',
+        service: 'HVAC Maintenance', // Required field
         phone: '(555) 123-4567',
         email: 'john.smith@email.com',
         client: 'John Smith', // Always provide this required field

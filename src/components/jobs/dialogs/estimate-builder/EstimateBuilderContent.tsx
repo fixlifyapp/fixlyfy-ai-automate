@@ -8,6 +8,8 @@ interface EstimateBuilderContentProps {
   activeTab: string;
   estimateNumber: string;
   lineItems: LineItem[];
+  taxRate: number;
+  setTaxRate: (rate: number) => void;
   onRemoveLineItem: (id: string) => void;
   onUpdateLineItem: (id: string, field: string, value: any) => void;
   onEditLineItem: (id: string) => boolean;
@@ -27,6 +29,8 @@ export const EstimateBuilderContent = ({
   activeTab,
   estimateNumber,
   lineItems,
+  taxRate,
+  setTaxRate,
   onRemoveLineItem,
   onUpdateLineItem,
   onEditLineItem,
@@ -52,6 +56,8 @@ export const EstimateBuilderContent = ({
       <EstimateForm
         estimateNumber={estimateNumber}
         lineItems={lineItems}
+        taxRate={taxRate}
+        setTaxRate={setTaxRate}
         onRemoveLineItem={onRemoveLineItem}
         onUpdateLineItem={onUpdateLineItem}
         onEditLineItem={onEditLineItem}
