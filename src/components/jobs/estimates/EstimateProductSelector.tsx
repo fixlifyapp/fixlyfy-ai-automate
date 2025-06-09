@@ -13,6 +13,8 @@ interface Product {
   price: number;
   category: string;
   taxable: boolean;
+  quantity?: number;
+  unitPrice?: number;
 }
 
 interface EstimateProductSelectorProps {
