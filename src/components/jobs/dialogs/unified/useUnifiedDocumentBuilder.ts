@@ -1,147 +1,133 @@
 
-import { useState, useCallback } from "react";
-import { toast } from "sonner";
-import { LineItem, Product } from "../../builder/types";
-import { DocumentType } from "../UnifiedDocumentBuilder";
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
-import { useDocumentInitialization } from "./hooks/useDocumentInitialization";
-import { useDocumentCalculations } from "./hooks/useDocumentCalculations";
-import { useDocumentOperations } from "./hooks/useDocumentOperations";
-import { useDocumentSmartFeatures } from "./hooks/useDocumentSmartFeatures";
-import { useJobs } from "@/hooks/useJobs";
+import { useState, useEffect } from 'react';
+
+export interface LineItem {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxable: boolean;
+  isWarranty?: boolean;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  taxable?: boolean;
+}
 
 interface UseUnifiedDocumentBuilderProps {
-  documentType: DocumentType;
-  existingDocument?: Estimate | Invoice;
+  documentType: 'estimate' | 'invoice';
+  existingDocument?: any;
   jobId: string;
   open: boolean;
-  onSyncToInvoice?: () => void;
 }
 
 export const useUnifiedDocumentBuilder = ({
   documentType,
   existingDocument,
   jobId,
-  open,
-  onSyncToInvoice
+  open
 }: UseUnifiedDocumentBuilderProps) => {
-  const { jobs } = useJobs();
-  const job = jobs.find(j => j.id === jobId);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [taxRate, setTaxRate] = useState(0.13); // 13% tax rate
+  const [notes, setNotes] = useState('');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize document state
-  const {
-    lineItems,
-    setLineItems,
-    taxRate,
-    setTaxRate,
-    notes,
-    setNotes,
-    documentNumber,
-    setDocumentNumber,
-    isInitialized
-  } = useDocumentInitialization({
-    documentType,
-    existingDocument,
-    jobId,
-    open
-  });
+  // Initialize document number
+  useEffect(() => {
+    if (open && !existingDocument && !documentNumber) {
+      const prefix = documentType === 'estimate' ? 'EST' : 'INV';
+      const timestamp = Date.now().toString().slice(-4);
+      setDocumentNumber(`${prefix}-${timestamp}`);
+    }
+  }, [open, documentType, existingDocument, documentNumber]);
 
-  // Calculate totals
-  const {
-    calculateSubtotal,
-    calculateTotalTax,
-    calculateGrandTotal,
-    calculateTotalMargin,
-    calculateMarginPercentage
-  } = useDocumentCalculations({ lineItems, taxRate });
+  // Load existing document data
+  useEffect(() => {
+    if (existingDocument) {
+      setLineItems(existingDocument.lineItems || []);
+      setTaxRate(existingDocument.taxRate || 0.13);
+      setNotes(existingDocument.notes || '');
+      setDocumentNumber(existingDocument.documentNumber || '');
+    }
+  }, [existingDocument]);
 
-  // Smart features
-  const smartFeatures = useDocumentSmartFeatures({
-    documentType,
-    lineItems,
-    jobId
-  });
-
-  // Create form data for operations
-  const formData = {
-    documentId: existingDocument?.id,
-    documentNumber,
-    items: lineItems.map(item => ({
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      taxable: item.taxable
-    })),
-    notes,
-    status: existingDocument?.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
-    total: calculateGrandTotal()
+  const calculateSubtotal = () => {
+    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   };
 
-  // Job data for display
-  const jobData = {
-    id: jobId,
-    title: job?.title || 'Service Request',
-    client: job?.client,
-    description: job?.description
+  const calculateTotalTax = () => {
+    return lineItems
+      .filter(item => item.taxable)
+      .reduce((sum, item) => sum + (item.quantity * item.unitPrice * taxRate), 0);
   };
 
-  // Document operations
-  const {
-    isSubmitting,
-    saveDocumentChanges,
-    convertToInvoice
-  } = useDocumentOperations({
-    documentType,
-    existingDocument,
-    jobId,
-    formData,
-    lineItems,
-    notes,
-    calculateGrandTotal,
-    onSyncToInvoice
-  });
+  const calculateGrandTotal = () => {
+    return calculateSubtotal() + calculateTotalTax();
+  };
 
-  // Line item management
-  const handleAddProduct = useCallback((product: Product) => {
+  const handleAddProduct = (product: Product) => {
     const newLineItem: LineItem = {
-      id: `temp-${Date.now()}`,
-      description: product.name,
+      id: Date.now().toString(),
+      name: product.name,
+      description: product.description || '',
       quantity: 1,
       unitPrice: product.price,
-      taxable: true,
-      discount: 0,
-      ourPrice: product.cost || 0,
-      name: product.name,
-      price: product.price,
-      total: product.price
+      taxable: product.taxable !== false,
     };
-
     setLineItems(prev => [...prev, newLineItem]);
-    toast.success(`${product.name} added to ${documentType}`);
-  }, [setLineItems, documentType]);
+  };
 
-  const handleRemoveLineItem = useCallback((id: string) => {
+  const handleRemoveLineItem = (id: string) => {
     setLineItems(prev => prev.filter(item => item.id !== id));
-    toast.success("Item removed");
-  }, [setLineItems]);
+  };
 
-  const handleUpdateLineItem = useCallback((id: string, field: string, value: any) => {
-    setLineItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [field]: value };
-        // Recalculate total when quantity or unitPrice changes
-        if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
-        }
-        return updatedItem;
-      }
-      return item;
-    }));
-  }, [setLineItems]);
+  const handleUpdateLineItem = (id: string, field: string, value: any) => {
+    setLineItems(prev => prev.map(item => 
+      item.id === id ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const saveDocumentChanges = async () => {
+    setIsSubmitting(true);
+    try {
+      // Mock save functionality - in real app this would save to Supabase
+      const documentData = {
+        id: existingDocument?.id || Date.now().toString(),
+        documentNumber,
+        type: documentType,
+        lineItems,
+        taxRate,
+        notes,
+        subtotal: calculateSubtotal(),
+        tax: calculateTotalTax(),
+        total: calculateGrandTotal(),
+        jobId,
+        status: 'draft',
+        createdAt: new Date().toISOString()
+      };
+      
+      console.log('Saving document:', documentData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return documentData;
+    } catch (error) {
+      console.error('Error saving document:', error);
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return {
-    // State
     lineItems,
     setLineItems,
     taxRate,
@@ -150,30 +136,13 @@ export const useUnifiedDocumentBuilder = ({
     setNotes,
     documentNumber,
     setDocumentNumber,
-    isInitialized,
     isSubmitting,
-
-    // Data objects
-    formData,
-    jobData,
-
-    // Calculations
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
-    calculateTotalMargin,
-    calculateMarginPercentage,
-
-    // Line item actions
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
-
-    // Document operations
-    saveDocumentChanges,
-    convertToInvoice,
-
-    // Smart features
-    ...smartFeatures
+    saveDocumentChanges
   };
 };

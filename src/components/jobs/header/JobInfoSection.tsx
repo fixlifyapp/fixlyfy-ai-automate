@@ -5,6 +5,7 @@ import { ClientContactButtons } from "./ClientContactButtons";
 import { FileText, CreditCard, CheckCircle, Hash, MapPin } from "lucide-react";
 import { useJobFinancials } from "@/hooks/useJobFinancials";
 import { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface JobInfoSectionProps {
   job: {
@@ -32,10 +33,9 @@ export const JobInfoSection = ({
   onMessageClick,
   onEditClient
 }: JobInfoSectionProps) => {
-  // Use local state for optimistic status updates
+  const isMobile = useIsMobile();
   const [currentStatus, setCurrentStatus] = useState(status);
   
-  // Sync with prop changes but prevent unnecessary updates
   useEffect(() => {
     if (status !== currentStatus) {
       setCurrentStatus(status);
@@ -63,39 +63,39 @@ export const JobInfoSection = ({
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    // Optimistic update - update UI immediately
     setCurrentStatus(newStatus);
     
     try {
-      // Call the parent's status change handler
       await onStatusChange(newStatus);
     } catch (error) {
-      // Revert on error
       setCurrentStatus(status);
       throw error;
     }
   };
 
   if (isLoadingFinancials) {
-    return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-4 shadow-lg">
+    return (
+      <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-3 sm:p-4 shadow-lg">
         <div className="space-y-3">
-          <div className="h-8 w-40 bg-gray-200 rounded animate-pulse" />
-          <div className="h-10 w-64 bg-gray-200 rounded animate-pulse" />
-          <div className="grid grid-cols-3 gap-3">
-            <div className="h-20 bg-gray-200 rounded animate-pulse" />
-            <div className="h-20 bg-gray-200 rounded animate-pulse" />
-            <div className="h-20 bg-gray-200 rounded animate-pulse" />
+          <div className="h-6 sm:h-8 w-32 sm:w-40 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 sm:h-10 w-48 sm:w-64 bg-gray-200 rounded animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="h-16 sm:h-20 bg-gray-200 rounded animate-pulse" />
+            <div className="h-16 sm:h-20 bg-gray-200 rounded animate-pulse" />
+            <div className="h-16 sm:h-20 bg-gray-200 rounded animate-pulse" />
           </div>
         </div>
-      </div>;
+      </div>
+    );
   }
 
-  return <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-      <div className="space-y-4">
+  return (
+    <div className="bg-gradient-to-br from-fixlyfy/5 to-fixlyfy-light/10 backdrop-blur-sm border border-fixlyfy/20 rounded-2xl p-3 sm:p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="space-y-3 sm:space-y-4">
         {/* Header Section */}
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            {/* Compact Status Badge Section */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="space-y-2 min-w-0 flex-1">
+            {/* Status Badge Section */}
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-fixlyfy to-fixlyfy-light rounded-lg blur-sm opacity-30 transform translate-y-0.5"></div>
               <div className="relative bg-gradient-to-r from-fixlyfy to-fixlyfy-light p-2 rounded-lg shadow-lg border border-white/20 backdrop-blur-sm">
@@ -113,33 +113,30 @@ export const JobInfoSection = ({
               </div>
             </div>
             
-            {/* Client Name, Job Number and Contact Actions */}
-            <div className="flex items-center gap-4">
-              <div className="space-y-1">
-                <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-                  {job.client}
-                </h1>
-                <div className="flex items-center gap-2 text-fixlyfy">
-                  <Hash size={14} />
-                  <span className="text-base font-semibold">
-                    {job.id}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Contact Actions - moved closer to name */}
-              <div className="bg-fixlyfy/5 border border-fixlyfy/20 rounded-lg p-2 shadow-sm">
-                <ClientContactButtons onCallClick={onCallClick} onMessageClick={onMessageClick} onEditClient={onEditClient} />
+            {/* Client Name and Job Number */}
+            <div className="space-y-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight break-words">
+                {job.client}
+              </h1>
+              <div className="flex items-center gap-2 text-fixlyfy">
+                <Hash size={12} className="sm:hidden" />
+                <Hash size={14} className="hidden sm:block" />
+                <span className="text-sm sm:text-base font-semibold break-all">
+                  {job.id}
+                </span>
               </div>
             </div>
-            
-            {/* Service info */}
-            
+          </div>
+          
+          {/* Contact Actions - Now properly positioned */}
+          <div className="bg-fixlyfy/5 border border-fixlyfy/20 rounded-lg p-2 shadow-sm w-full sm:w-auto">
+            <ClientContactButtons onCallClick={onCallClick} onMessageClick={onMessageClick} onEditClient={onEditClient} />
           </div>
         </div>
 
-        {/* Job Address - Made clickable */}
-        {job.address && <div 
+        {/* Job Address - Made more mobile-friendly */}
+        {job.address && (
+          <div 
             className="bg-fixlyfy/10 border border-fixlyfy/20 rounded-xl p-3 cursor-pointer hover:bg-fixlyfy/15 transition-colors duration-200 group"
             onClick={handleAddressClick}
             role="button"
@@ -153,9 +150,9 @@ export const JobInfoSection = ({
           >
             <div className="flex items-start gap-3">
               <MapPin className="h-4 w-4 text-fixlyfy mt-0.5 flex-shrink-0 group-hover:text-fixlyfy-dark transition-colors" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-fixlyfy mb-1 group-hover:text-fixlyfy-dark transition-colors">Service Address</p>
-                <p className="text-fixlyfy/80 font-medium leading-relaxed text-sm group-hover:text-fixlyfy-dark transition-colors">
+                <p className="text-fixlyfy/80 font-medium leading-relaxed text-sm group-hover:text-fixlyfy-dark transition-colors break-words">
                   {job.address}
                 </p>
                 <p className="text-xs text-fixlyfy/60 mt-1 group-hover:text-fixlyfy-dark transition-colors">
@@ -163,10 +160,11 @@ export const JobInfoSection = ({
                 </p>
               </div>
             </div>
-          </div>}
+          </div>
+        )}
 
-        {/* Smaller Financial Cards */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Financial Cards - Responsive grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Invoice Card */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-2">
@@ -178,12 +176,14 @@ export const JobInfoSection = ({
               </span>
             </div>
             <div className="space-y-1">
-              <div className="text-xl font-bold text-blue-900">
+              <div className="text-lg sm:text-xl font-bold text-blue-900 break-words">
                 {formatCurrency(invoiceAmount)}
               </div>
-              {(paidInvoices > 0 || unpaidInvoices > 0) && <div className="text-xs text-blue-700 font-medium">
+              {(paidInvoices > 0 || unpaidInvoices > 0) && (
+                <div className="text-xs text-blue-700 font-medium">
                   {paidInvoices} paid • {unpaidInvoices} pending
-                </div>}
+                </div>
+              )}
             </div>
           </div>
 
@@ -198,16 +198,18 @@ export const JobInfoSection = ({
               </span>
             </div>
             <div className="space-y-1">
-              <div className="text-xl font-bold text-green-900">
+              <div className="text-lg sm:text-xl font-bold text-green-900 break-words">
                 {formatCurrency(totalPaid)}
               </div>
-              {totalPaid > 0 && <div className="text-xs text-green-700 font-medium">
+              {totalPaid > 0 && (
+                <div className="text-xs text-green-700 font-medium">
                   Payment received
-                </div>}
+                </div>
+              )}
             </div>
           </div>
           
-          {/* Complete/Balance Card */}
+          {/* Outstanding/Complete Card */}
           <div className={`${balance > 0 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200"} border rounded-lg p-3 hover:shadow-md transition-shadow`}>
             <div className="flex items-center justify-between mb-2">
               <div className={`p-1.5 rounded-md ${balance > 0 ? "bg-amber-100" : "bg-emerald-100"}`}>
@@ -218,19 +220,26 @@ export const JobInfoSection = ({
               </span>
             </div>
             <div className="space-y-1">
-              <div className={`text-xl font-bold ${balance > 0 ? "text-amber-900" : "text-emerald-900"}`}>
+              <div className={`text-lg sm:text-xl font-bold ${balance > 0 ? "text-amber-900" : "text-emerald-900"} break-words`}>
                 {formatCurrency(balance)}
               </div>
-              {overdueAmount > 0 ? <div className="text-xs text-red-600 font-medium">
+              {overdueAmount > 0 ? (
+                <div className="text-xs text-red-600 font-medium">
                   ${overdueAmount.toFixed(2)} overdue
-                </div> : balance === 0 ? <div className="text-xs text-emerald-700 font-medium">
+                </div>
+              ) : balance === 0 ? (
+                <div className="text-xs text-emerald-700 font-medium">
                   Fully paid
-                </div> : <div className="text-xs text-amber-700 font-medium">
+                </div>
+              ) : (
+                <div className="text-xs text-amber-700 font-medium">
                   Payment pending
-                </div>}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };

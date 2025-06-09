@@ -8,13 +8,13 @@ interface EstimateBuilderContentProps {
   activeTab: string;
   estimateNumber: string;
   lineItems: LineItem[];
+  taxRate: number;
+  setTaxRate: (rate: number) => void;
   onRemoveLineItem: (id: string) => void;
   onUpdateLineItem: (id: string, field: string, value: any) => void;
   onEditLineItem: (id: string) => boolean;
   onAddEmptyLineItem: () => void;
   onAddCustomLine: () => void;
-  taxRate: number;
-  setTaxRate: (rate: number) => void;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
@@ -29,13 +29,13 @@ export const EstimateBuilderContent = ({
   activeTab,
   estimateNumber,
   lineItems,
+  taxRate,
+  setTaxRate,
   onRemoveLineItem,
   onUpdateLineItem,
   onEditLineItem,
   onAddEmptyLineItem,
   onAddCustomLine,
-  taxRate,
-  setTaxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
@@ -56,13 +56,13 @@ export const EstimateBuilderContent = ({
       <EstimateForm
         estimateNumber={estimateNumber}
         lineItems={lineItems}
+        taxRate={taxRate}
+        setTaxRate={setTaxRate}
         onRemoveLineItem={onRemoveLineItem}
         onUpdateLineItem={onUpdateLineItem}
         onEditLineItem={onEditLineItem}
         onAddEmptyLineItem={onAddEmptyLineItem}
         onAddCustomLine={onAddCustomLine}
-        taxRate={taxRate}
-        setTaxRate={setTaxRate}
         calculateSubtotal={calculateSubtotal}
         calculateTotalTax={calculateTotalTax}
         calculateGrandTotal={calculateGrandTotal}
@@ -78,7 +78,6 @@ export const EstimateBuilderContent = ({
         documentType="estimate"
         documentNumber={estimateNumber}
         lineItems={lineItems}
-        taxRate={taxRate}
         calculateSubtotal={calculateSubtotal}
         calculateTotalTax={calculateTotalTax}
         calculateGrandTotal={calculateGrandTotal}

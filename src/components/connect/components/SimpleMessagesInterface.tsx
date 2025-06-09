@@ -4,11 +4,13 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { useMessageContext } from "@/contexts/MessageContext";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, MessageSquare } from "lucide-react";
+import { Search, Plus, MessageSquare, ChevronLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ConversationsList } from "./ConversationsList";
 import { MessageThread } from "./MessageThread";
 import { MessageInput } from "./MessageInput";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 
 interface SearchResult {
   id: string;
@@ -29,6 +31,8 @@ export const SimpleMessagesInterface = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showClientResults, setShowClientResults] = useState(false);
+  const [showConversationView, setShowConversationView] = useState(false);
+  const isMobile = useIsMobile();
 
   console.log('SimpleMessagesInterface conversations:', conversations);
 
@@ -47,6 +51,7 @@ export const SimpleMessagesInterface = () => {
       
       if (existingConversation) {
         setSelectedConversation(existingConversation);
+        if (isMobile) setShowConversationView(true);
         console.log('✅ Found existing conversation for client:', clientName);
       } else {
         // Try to restore archived conversation or create new one
@@ -56,6 +61,7 @@ export const SimpleMessagesInterface = () => {
           const restoredConversation = conversations.find(conv => conv.client.id === clientId);
           if (restoredConversation) {
             setSelectedConversation(restoredConversation);
+            if (isMobile) setShowConversationView(true);
             toast.success(`Restored conversation with ${clientName}`);
           } else {
             // Create a new conversation placeholder if none exists
@@ -74,12 +80,13 @@ export const SimpleMessagesInterface = () => {
             };
             
             setSelectedConversation(newConversation);
+            if (isMobile) setShowConversationView(true);
             console.log('📝 Created new conversation placeholder for client:', clientName);
           }
         });
       }
     }
-  }, [conversations, restoreArchivedConversation]);
+  }, [conversations, restoreArchivedConversation, isMobile]);
 
   // Auto-refresh conversations every 5 seconds to catch new messages
   useEffect(() => {
@@ -150,6 +157,7 @@ export const SimpleMessagesInterface = () => {
     
     if (existingConversation) {
       setSelectedConversation(existingConversation);
+      if (isMobile) setShowConversationView(true);
       console.log('Using existing conversation:', existingConversation.id);
     } else {
       // Create a new conversation placeholder
@@ -168,12 +176,25 @@ export const SimpleMessagesInterface = () => {
       };
       
       setSelectedConversation(newConversation);
+      if (isMobile) setShowConversationView(true);
       console.log('Created new conversation placeholder for client:', client.name);
     }
 
     setSearchTerm("");
     setShowClientResults(false);
     toast.success(`Opening conversation with ${client.name}`);
+  };
+
+  const handleConversationSelect = (conversation: any) => {
+    setSelectedConversation(conversation);
+    if (isMobile) {
+      setShowConversationView(true);
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowConversationView(false);
+    setSelectedConversation(null);
   };
 
   const handleMessageSent = () => {
@@ -186,6 +207,104 @@ export const SimpleMessagesInterface = () => {
     (conv.client.phone && conv.client.phone.includes(searchTerm))
   );
 
+  // Mobile layout - show either conversations list or conversation view
+  if (isMobile) {
+    return (
+      <div className="h-[700px] border border-fixlyfy-border rounded-xl overflow-hidden bg-white shadow-card">
+        {!showConversationView ? (
+          // Mobile Conversations List
+          <div className="h-full flex flex-col">
+            {/* Header with search */}
+            <div className="p-3 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5 flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 bg-gradient-primary rounded-lg">
+                  <MessageSquare className="h-4 w-4 text-white" />
+                </div>
+                <h2 className="text-base font-semibold text-fixlyfy-text">Messages</h2>
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
+                <Input
+                  placeholder="Search or find clients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy text-sm h-10"
+                />
+              </div>
+
+              {/* Client search results dropdown */}
+              {showClientResults && searchResults.length > 0 && (
+                <div className="absolute left-3 right-3 mt-2 bg-white border border-fixlyfy-border rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                  <div className="p-2 text-xs font-medium text-fixlyfy-text-muted border-b border-fixlyfy-border">New clients:</div>
+                  {searchResults.map((client) => (
+                    <div
+                      key={client.id}
+                      onClick={() => handleClientSelect(client)}
+                      className="p-3 hover:bg-fixlyfy/5 cursor-pointer border-b border-fixlyfy-border/50 last:border-b-0 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm text-fixlyfy-text truncate">{client.name}</div>
+                          {client.phone && (
+                            <div className="text-xs text-fixlyfy-text-secondary truncate">{client.phone}</div>
+                          )}
+                        </div>
+                        <Plus className="h-4 w-4 text-fixlyfy flex-shrink-0 ml-2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Conversations List */}
+            <div className="flex-1 overflow-hidden">
+              <ConversationsList
+                conversations={searchTerm ? filteredConversations : conversations}
+                selectedConversation={selectedConversation}
+                onConversationSelect={handleConversationSelect}
+                isLoading={isLoading}
+                onRefresh={refreshConversations}
+                hideSearch={true}
+              />
+            </div>
+          </div>
+        ) : (
+          // Mobile Conversation View
+          <div className="h-full flex flex-col">
+            {/* Back button header */}
+            <div className="p-3 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5 flex-shrink-0">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleBackToList}
+                className="gap-2 p-2 h-8"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Messages
+              </Button>
+            </div>
+            
+            {/* Conversation Display Area */}
+            <div className="flex-1 overflow-hidden">
+              <MessageThread selectedConversation={selectedConversation} />
+            </div>
+            
+            {/* Message Input */}
+            <div className="border-t border-fixlyfy-border/50 flex-shrink-0">
+              <MessageInput 
+                selectedConversation={selectedConversation}
+                onMessageSent={handleMessageSent}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop layout - two panel resizable
   return (
     <div className="h-[700px] border border-fixlyfy-border rounded-xl overflow-hidden bg-white shadow-card">
       <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -193,7 +312,7 @@ export const SimpleMessagesInterface = () => {
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
           <div className="h-full flex flex-col">
             {/* Header with unified search */}
-            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
+            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5 flex-shrink-0">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-gradient-primary rounded-lg">
                   <MessageSquare className="h-5 w-5 text-white" />
@@ -222,13 +341,13 @@ export const SimpleMessagesInterface = () => {
                       className="p-3 hover:bg-fixlyfy/5 cursor-pointer border-b border-fixlyfy-border/50 last:border-b-0 transition-colors"
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-fixlyfy-text">{client.name}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-fixlyfy-text truncate">{client.name}</div>
                           {client.phone && (
-                            <div className="text-sm text-fixlyfy-text-secondary">{client.phone}</div>
+                            <div className="text-sm text-fixlyfy-text-secondary truncate">{client.phone}</div>
                           )}
                         </div>
-                        <Plus className="h-4 w-4 text-fixlyfy" />
+                        <Plus className="h-4 w-4 text-fixlyfy flex-shrink-0" />
                       </div>
                     </div>
                   ))}
@@ -237,11 +356,11 @@ export const SimpleMessagesInterface = () => {
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1">
+            <div className="flex-1 overflow-hidden">
               <ConversationsList
                 conversations={searchTerm ? filteredConversations : conversations}
                 selectedConversation={selectedConversation}
-                onConversationSelect={setSelectedConversation}
+                onConversationSelect={handleConversationSelect}
                 isLoading={isLoading}
                 onRefresh={refreshConversations}
                 hideSearch={true}
@@ -261,7 +380,7 @@ export const SimpleMessagesInterface = () => {
             </div>
             
             {/* Message Input and AI Assistant */}
-            <div className="border-t border-fixlyfy-border/50">
+            <div className="border-t border-fixlyfy-border/50 flex-shrink-0">
               <MessageInput 
                 selectedConversation={selectedConversation}
                 onMessageSent={handleMessageSent}

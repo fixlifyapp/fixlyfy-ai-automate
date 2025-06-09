@@ -1,384 +1,279 @@
-
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, Phone, Clock, Shield, Save } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { Bot, Phone, Settings, BarChart3, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatPhoneForDisplay } from '@/utils/phoneUtils';
 
 interface PhoneNumber {
   id: string;
   phone_number: string;
-  status: string;
   ai_dispatcher_enabled?: boolean;
-  configured_for_ai?: boolean;
+  ai_dispatcher_config?: any;
+  last_call_routed_to?: string;
+  call_routing_stats?: any;
 }
 
 interface PhoneConfigDialogProps {
   phoneNumber: PhoneNumber | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: () => void;
+  onSave?: () => void;
+}
+
+interface RoutingStats {
+  total_calls: number;
+  ai_calls: number;
+  basic_calls: number;
+  recent_logs: any[];
 }
 
 export const PhoneConfigDialog = ({ phoneNumber, open, onOpenChange, onSave }: PhoneConfigDialogProps) => {
-  const [config, setConfig] = useState({
-    // AI Settings
-    voice: 'alloy',
-    language: 'en-US',
-    greeting: 'Hello, this is an AI assistant. How can I help you today?',
-    ai_enabled: true,
-    
-    // Business Hours
-    business_hours: {
-      monday: { open: '08:00', close: '17:00', enabled: true },
-      tuesday: { open: '08:00', close: '17:00', enabled: true },
-      wednesday: { open: '08:00', close: '17:00', enabled: true },
-      thursday: { open: '08:00', close: '17:00', enabled: true },
-      friday: { open: '08:00', close: '17:00', enabled: true },
-      saturday: { open: '09:00', close: '15:00', enabled: false },
-      sunday: { open: '10:00', close: '14:00', enabled: false }
-    },
-    
-    // Emergency & Forwarding
-    emergency_detection: true,
-    emergency_sensitivity: 'medium',
-    forwarding_enabled: false,
-    forwarding_number: '',
-    
-    // Recording
-    call_recording: false,
-    recording_consent: true
-  });
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState<RoutingStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
-  // Save configuration mutation
-  const saveConfigMutation = useMutation({
-    mutationFn: async (newConfig: typeof config) => {
-      if (!phoneNumber) return;
-      
-      console.log('Saving phone config:', newConfig);
-      const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
+  useEffect(() => {
+    if (phoneNumber) {
+      setAiEnabled(phoneNumber.ai_dispatcher_enabled || false);
+      if (open) {
+        loadStats();
+      }
+    }
+  }, [phoneNumber, open]);
+
+  const loadStats = async () => {
+    if (!phoneNumber) return;
+    
+    setLoadingStats(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-ai-dispatcher', {
         body: {
-          action: 'update_config',
-          phone_number: phoneNumber.phone_number,
-          config: newConfig
+          action: 'get_stats',
+          phoneNumberId: phoneNumber.phone_number
         }
       });
 
       if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Phone configuration saved successfully');
-      onSave();
-      onOpenChange(false);
-    },
-    onError: (error) => {
-      console.error('Save config error:', error);
-      toast.error('Failed to save configuration');
+      setStats(data.stats);
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    } finally {
+      setLoadingStats(false);
     }
-  });
+  };
 
-  const handleSave = () => {
-    saveConfigMutation.mutate(config);
+  const handleToggleAI = async (enabled: boolean) => {
+    if (!phoneNumber) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-ai-dispatcher', {
+        body: {
+          action: 'toggle',
+          phoneNumberId: phoneNumber.id,
+          enabled
+        }
+      });
+
+      if (error) throw error;
+
+      setAiEnabled(enabled);
+      toast.success(`AI Assistant ${enabled ? 'enabled' : 'disabled'} for ${formatPhoneForDisplay(phoneNumber.phone_number)}`);
+      
+      if (onSave) onSave();
+    } catch (error: any) {
+      console.error('Error toggling AI:', error);
+      toast.error(`Failed to ${enabled ? 'enable' : 'disable'} AI Assistant: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatRoutingDecision = (decision: string) => {
+    return decision === 'ai_dispatcher' ? 'AI Assistant' : 'Basic Telephony';
+  };
+
+  const getRoutingBadgeColor = (decision: string) => {
+    return decision === 'ai_dispatcher' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
   };
 
   if (!phoneNumber) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Configure {phoneNumber.phone_number}
+            <Settings className="h-5 w-5" />
+            Configure {formatPhoneForDisplay(phoneNumber.phone_number)}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="ai-settings" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="ai-settings">
-              <Bot className="h-4 w-4 mr-2" />
-              AI Settings
-            </TabsTrigger>
-            <TabsTrigger value="business-hours">
-              <Clock className="h-4 w-4 mr-2" />
-              Hours
-            </TabsTrigger>
-            <TabsTrigger value="emergency">
-              <Shield className="h-4 w-4 mr-2" />
-              Emergency
-            </TabsTrigger>
-            <TabsTrigger value="recording">
-              <Phone className="h-4 w-4 mr-2" />
-              Recording
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="ai-settings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Voice & Language</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="voice">Voice Type</Label>
-                    <Select
-                      value={config.voice}
-                      onValueChange={(value) => 
-                        setConfig(prev => ({ ...prev, voice: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="alloy">Alloy (Neutral)</SelectItem>
-                        <SelectItem value="echo">Echo (Male)</SelectItem>
-                        <SelectItem value="fable">Fable (British)</SelectItem>
-                        <SelectItem value="onyx">Onyx (Deep)</SelectItem>
-                        <SelectItem value="nova">Nova (Female)</SelectItem>
-                        <SelectItem value="shimmer">Shimmer (Soft)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="language">Language</Label>
-                    <Select
-                      value={config.language}
-                      onValueChange={(value) => 
-                        setConfig(prev => ({ ...prev, language: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en-US">English (US)</SelectItem>
-                        <SelectItem value="en-GB">English (UK)</SelectItem>
-                        <SelectItem value="es-ES">Spanish</SelectItem>
-                        <SelectItem value="fr-FR">French</SelectItem>
-                        <SelectItem value="de-DE">German</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
+        <div className="space-y-6">
+          {/* AI Dispatcher Toggle */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="greeting">Custom Greeting</Label>
-                  <Textarea
-                    id="greeting"
-                    value={config.greeting}
-                    onChange={(e) => 
-                      setConfig(prev => ({ ...prev, greeting: e.target.value }))
-                    }
-                    placeholder="Enter custom greeting message"
-                    rows={3}
-                  />
+                  <h4 className="font-medium">Enable AI Assistant</h4>
+                  <p className="text-sm text-muted-foreground">
+                    When enabled, calls will be handled by your AI Assistant with dynamic prompts and business data integration.
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <Switch
+                  checked={aiEnabled}
+                  onCheckedChange={handleToggleAI}
+                  disabled={isLoading}
+                />
+              </div>
 
-          <TabsContent value="business-hours" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Hours</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <div className="text-sm">
+                <Badge variant="outline" className={aiEnabled ? 'text-green-600' : 'text-gray-600'}>
+                  {aiEnabled ? (
+                    <>
+                      <Bot className="h-3 w-3 mr-1" />
+                      AI Assistant Active
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="h-3 w-3 mr-1" />
+                      Basic Telephony Active
+                    </>
+                  )}
+                </Badge>
+              </div>
+
+              {phoneNumber.last_call_routed_to && (
+                <div className="text-sm text-muted-foreground">
+                  Last call routed to: <span className="font-medium">{formatRoutingDecision(phoneNumber.last_call_routed_to)}</span>
+                </div>
+              )}
+
+              {aiEnabled && (
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <h5 className="font-medium text-green-800 mb-1">✨ AI Assistant Features</h5>
+                  <ul className="text-sm text-green-700 space-y-1">
+                    <li>• Dynamic prompts with business data</li>
+                    <li>• Appointment scheduling capabilities</li>
+                    <li>• Service pricing information</li>
+                    <li>• Emergency detection and routing</li>
+                    <li>• Professional voice synthesis</li>
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Call Routing Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Call Routing Statistics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingStats ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  Loading statistics...
+                </div>
+              ) : stats ? (
                 <div className="space-y-4">
-                  {Object.entries(config.business_hours).map(([day, hours]) => (
-                    <div key={day} className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <Switch
-                          checked={hours.enabled}
-                          onCheckedChange={(checked) => 
-                            setConfig(prev => ({
-                              ...prev,
-                              business_hours: {
-                                ...prev.business_hours,
-                                [day]: { ...hours, enabled: checked }
-                              }
-                            }))
-                          }
-                        />
-                        <span className="w-20 capitalize">{day}</span>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{stats.total_calls}</div>
+                      <div className="text-sm text-muted-foreground">Total Calls</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{stats.ai_calls}</div>
+                      <div className="text-sm text-muted-foreground">AI Assistant</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{stats.basic_calls}</div>
+                      <div className="text-sm text-muted-foreground">Basic Telephony</div>
+                    </div>
+                  </div>
+
+                  {stats.recent_logs && stats.recent_logs.length > 0 && (
+                    <div>
+                      <h5 className="font-medium mb-2 flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Recent Call Routing
+                      </h5>
+                      <div className="space-y-2">
+                        {stats.recent_logs.slice(0, 5).map((log: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
+                            <div>
+                              <span className="font-medium">{log.caller_phone}</span>
+                              <span className="text-muted-foreground ml-2">
+                                {new Date(log.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                            <Badge className={getRoutingBadgeColor(log.routing_decision)}>
+                              {formatRoutingDecision(log.routing_decision)}
+                            </Badge>
+                          </div>
+                        ))}
                       </div>
-                      {hours.enabled && (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="time"
-                            value={hours.open}
-                            onChange={(e) => 
-                              setConfig(prev => ({
-                                ...prev,
-                                business_hours: {
-                                  ...prev.business_hours,
-                                  [day]: { ...hours, open: e.target.value }
-                                }
-                              }))
-                            }
-                            className="w-24"
-                          />
-                          <span>to</span>
-                          <Input
-                            type="time"
-                            value={hours.close}
-                            onChange={(e) => 
-                              setConfig(prev => ({
-                                ...prev,
-                                business_hours: {
-                                  ...prev.business_hours,
-                                  [day]: { ...hours, close: e.target.value }
-                                }
-                              }))
-                            }
-                            className="w-24"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="emergency" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Emergency Detection & Forwarding</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Emergency Detection</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically detect emergency situations
-                    </p>
-                  </div>
-                  <Switch
-                    checked={config.emergency_detection}
-                    onCheckedChange={(checked) => 
-                      setConfig(prev => ({ ...prev, emergency_detection: checked }))
-                    }
-                  />
-                </div>
-
-                {config.emergency_detection && (
-                  <div>
-                    <Label>Detection Sensitivity</Label>
-                    <Select
-                      value={config.emergency_sensitivity}
-                      onValueChange={(value) => 
-                        setConfig(prev => ({ ...prev, emergency_sensitivity: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Call Forwarding</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Forward calls when AI can't handle them
-                      </p>
-                    </div>
-                    <Switch
-                      checked={config.forwarding_enabled}
-                      onCheckedChange={(checked) => 
-                        setConfig(prev => ({ ...prev, forwarding_enabled: checked }))
-                      }
-                    />
-                  </div>
-
-                  {config.forwarding_enabled && (
-                    <div>
-                      <Label htmlFor="forwarding_number">Forwarding Number</Label>
-                      <Input
-                        id="forwarding_number"
-                        value={config.forwarding_number}
-                        onChange={(e) => 
-                          setConfig(prev => ({ ...prev, forwarding_number: e.target.value }))
-                        }
-                        placeholder="+1234567890"
-                      />
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="recording" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Call Recording</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Enable Call Recording</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Record all calls for quality and training
-                    </p>
-                  </div>
-                  <Switch
-                    checked={config.call_recording}
-                    onCheckedChange={(checked) => 
-                      setConfig(prev => ({ ...prev, call_recording: checked }))
-                    }
-                  />
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  No call statistics available yet
                 </div>
+              )}
+            </CardContent>
+          </Card>
 
-                {config.call_recording && (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Recording Consent</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Announce recording to callers
-                      </p>
-                    </div>
-                    <Switch
-                      checked={config.recording_consent}
-                      onCheckedChange={(checked) => 
-                        setConfig(prev => ({ ...prev, recording_consent: checked }))
-                      }
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          {/* Configuration Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>System Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Router Webhook:</span> 
+                <span className="ml-2 font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                  /functions/v1/telnyx-webhook-router
+                </span>
+              </div>
+              <div>
+                <span className="font-medium">Current Mode:</span> 
+                <span className="ml-2">
+                  {aiEnabled ? 'AI Assistant (Telnyx AI)' : 'Basic Telephony'}
+                </span>
+              </div>
+              <div className="text-muted-foreground">
+                The router automatically directs calls to the appropriate handler. AI Assistant mode uses Telnyx AI with dynamic business data integration.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Close
           </Button>
-          <Button onClick={handleSave} disabled={saveConfigMutation.isPending}>
-            <Save className="h-4 w-4 mr-2" />
-            {saveConfigMutation.isPending ? 'Saving...' : 'Save Configuration'}
+          <Button onClick={loadStats} variant="outline" disabled={loadingStats}>
+            Refresh Stats
           </Button>
         </div>
       </DialogContent>

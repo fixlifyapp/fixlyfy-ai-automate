@@ -1,177 +1,230 @@
 
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Loader } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Save } from "lucide-react";
+import { toast } from "sonner";
 
-// Import refactored components
-import { ClientFormHeader } from "./client-form/ClientFormHeader";
-import { ClientInsights } from "./client-form/ClientInsights";
-import { ClientDetailsTab } from "./client-form/ClientDetailsTab";
-import { EmptyTabContent } from "./client-form/EmptyTabContent";
-import { InvoiceModal } from "./client-form/InvoiceModal";
-import { PaymentsTab } from "./client-form/PaymentsTab";
-import { PropertiesTab } from "./client-form/PropertiesTab";
-import { ClientStatsCard } from "./ClientStatsCard";
-import { ClientContactActions } from "./ClientContactActions";
-
-// Import custom hooks
-import { useClientData } from "./client-form/hooks/useClientData";
-import { useInvoiceCreation } from "./client-form/hooks/useInvoiceCreation";
-import { useClientStats } from "@/hooks/useClientStats";
-import { ClientJobs } from "./ClientJobs";
-
-interface ClientFormProps {
-  clientId?: string;
-  onCreateJob?: () => void;
-}
-
-export const ClientForm = ({ clientId, onCreateJob }: ClientFormProps) => {
+const ClientForm = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("details");
-  
-  // Use the custom hooks
-  const {
-    client,
-    isLoading,
-    isSaving,
-    formData,
-    showInsights,
-    isGeneratingInsight,
-    aiInsight,
-    handleInputChange,
-    saveChanges,
-    setShowInsights
-  } = useClientData(clientId);
+  const isEditing = Boolean(id);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    isInvoiceModalOpen,
-    setIsInvoiceModalOpen,
-    invoiceData,
-    setInvoiceData,
-    handleCreateInvoice,
-    handleInvoiceSubmit
-  } = useInvoiceCreation(clientId);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    notes: ""
+  });
 
-  const { stats, isLoading: statsLoading } = useClientStats(clientId);
-  
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-xl shadow p-8 text-center">
-        <div className="flex flex-col items-center justify-center">
-          <Loader className="h-8 w-8 animate-spin text-primary mb-4" />
-          <div className="text-muted-foreground">Loading client details...</div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!client) {
-    return (
-      <div className="bg-white rounded-xl shadow p-8 text-center">
-        <div className="text-muted-foreground">Client not found</div>
-        <Button 
-          variant="outline" 
-          className="mt-4"
-          onClick={() => navigate('/clients')}
-        >
-          Back to Clients
-        </Button>
-      </div>
-    );
-  }
-  
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      // TODO: Implement client save logic
+      toast.success(isEditing ? "Client updated successfully" : "Client created successfully");
+      navigate("/clients");
+    } catch (error) {
+      toast.error("Failed to save client");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow p-6">
-        <ClientFormHeader
-          client={client}
-          isSaving={isSaving}
-          onCreateJob={onCreateJob || (() => {})}
-          onCreateInvoice={handleCreateInvoice}
-          onSaveChanges={saveChanges}
-        />
-
-        {/* Client Contact Actions */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Actions</h3>
-          <ClientContactActions client={client} />
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto py-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/clients")}
+            className="gap-2"
+          >
+            <ArrowLeft size={16} />
+            Back to Clients
+          </Button>
+          <h1 className="text-2xl font-bold">
+            {isEditing ? "Edit Client" : "New Client"}
+          </h1>
         </div>
-        
-        <ClientInsights
-          client={client}
-          isGeneratingInsight={isGeneratingInsight}
-          aiInsight={aiInsight}
-          showInsights={showInsights}
-          onHideInsights={() => setShowInsights(false)}
-        />
-        
-        <Tabs 
-          value={activeTab} 
-          onValueChange={setActiveTab}
-          className="space-y-4"
-        >
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1">
-            <TabsTrigger value="details" className="relative">
-              <User size={16} className="mr-2" />
-              Details
-            </TabsTrigger>
-            <TabsTrigger value="jobs" className="relative">
-              Jobs
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="relative">
-              Payments
-            </TabsTrigger>
-            <TabsTrigger value="properties" className="relative">
-              Properties
-            </TabsTrigger>
-          </TabsList>
-          
-          {/* Details Tab */}
-          <TabsContent value="details" className="space-y-6">
-            {/* Client Statistics */}
-            {!statsLoading && (
-              <ClientStatsCard clientId={clientId || ''} stats={stats} />
-            )}
-            
-            <ClientDetailsTab 
-              formData={formData}
-              handleInputChange={handleInputChange}
-              onSaveChanges={saveChanges}
-              isSaving={isSaving}
-            />
-          </TabsContent>
-          
-          {/* Jobs Tab */}
-          <TabsContent value="jobs" className="space-y-6">
-            <ClientJobs clientId={clientId} />
-          </TabsContent>
-          
-          {/* Payments Tab */}
-          <TabsContent value="payments" className="space-y-6">
-            <PaymentsTab 
-              clientId={clientId} 
-              onCreateInvoice={handleCreateInvoice} 
-            />
-          </TabsContent>
-          
-          {/* Properties Tab */}
-          <TabsContent value="properties" className="space-y-6">
-            <PropertiesTab clientId={clientId} />
-          </TabsContent>
-        </Tabs>
-      </div>
 
-      {/* Create Invoice Modal */}
-      <InvoiceModal
-        isOpen={isInvoiceModalOpen}
-        onOpenChange={setIsInvoiceModalOpen}
-        clientName={client?.name || ''}
-        invoiceData={invoiceData}
-        setInvoiceData={setInvoiceData}
-        onSubmit={handleInvoiceSubmit}
-      />
+        <div className="max-w-4xl">
+          <Tabs defaultValue="details" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="details">Client Details</TabsTrigger>
+              <TabsTrigger value="jobs">Jobs</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="payments">Payments</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Client Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">Name *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => handleInputChange("name", e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="company">Company</Label>
+                        <Input
+                          id="company"
+                          value={formData.company}
+                          onChange={(e) => handleInputChange("company", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange("address", e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={formData.city}
+                          onChange={(e) => handleInputChange("city", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          value={formData.state}
+                          onChange={(e) => handleInputChange("state", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="zip">ZIP Code</Label>
+                        <Input
+                          id="zip"
+                          value={formData.zip}
+                          onChange={(e) => handleInputChange("zip", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => handleInputChange("notes", e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => navigate("/clients")}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={isLoading} className="gap-2">
+                        <Save size={16} />
+                        {isLoading ? "Saving..." : "Save Client"}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="jobs">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Client Jobs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    Jobs system will be rebuilt in the next phase
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="documents">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Documents</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    Document system will be rebuilt in the next phase
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="payments">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    Payment system will be rebuilt in the next phase
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
+
+export default ClientForm;

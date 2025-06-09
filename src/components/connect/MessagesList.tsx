@@ -7,6 +7,7 @@ import { MessageSquare, Phone, User, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMessageContext } from "@/contexts/MessageContext";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Conversation {
   id: string;
@@ -39,6 +40,7 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
   const [loading, setLoading] = useState(true);
   const [callingNumber, setCallingNumber] = useState<string | null>(null);
   const { openMessageDialog } = useMessageContext();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadConversations();
@@ -139,8 +141,9 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
   const getLastMessage = (messages: any[]) => {
     if (messages.length === 0) return "No messages yet";
     const lastMessage = messages[messages.length - 1];
-    return lastMessage.body.length > 50 
-      ? lastMessage.body.substring(0, 50) + "..."
+    const maxLength = isMobile ? 35 : 50;
+    return lastMessage.body.length > maxLength 
+      ? lastMessage.body.substring(0, maxLength) + "..."
       : lastMessage.body;
   };
 
@@ -161,7 +164,7 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
+        <CardContent className={`${isMobile ? 'p-4' : 'p-8'} text-center`}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fixlyfy mx-auto"></div>
           <p className="text-sm text-gray-500 mt-2">Loading conversations...</p>
         </CardContent>
@@ -172,22 +175,24 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
   if (conversations.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className={isMobile ? 'p-4 pb-2' : ''}>
+          <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
             <MessageSquare className="h-5 w-5" />
             Recent Conversations
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isMobile ? 'p-4 pt-2' : ''}>
           <div className="text-center py-8">
             <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
-            <p className="text-gray-500 mb-4">
+            <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-medium text-gray-900 mb-2`}>
+              No conversations yet
+            </h3>
+            <p className={`${isMobile ? 'text-sm' : ''} text-gray-500 mb-4`}>
               Start messaging clients to see conversations here.
             </p>
             <Button 
               onClick={() => openMessageDialog({ id: "", name: "New Client", phone: "" })}
-              className="bg-fixlyfy hover:bg-fixlyfy/90"
+              className={`bg-fixlyfy hover:bg-fixlyfy/90 ${isMobile ? 'text-sm min-h-[44px]' : ''}`}
             >
               Start New Conversation
             </Button>
@@ -200,49 +205,51 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className={isMobile ? 'p-4 pb-2' : ''}>
+          <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
             <MessageSquare className="h-5 w-5" />
             Recent Conversations ({conversations.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isMobile ? 'p-4 pt-2' : ''}>
           <div className="space-y-3">
             {conversations.map((conversation) => (
               <div
                 key={conversation.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors`}
                 onClick={() => handleOpenConversation(conversation)}
               >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-full">
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className="p-2 bg-blue-100 rounded-full flex-shrink-0">
                     <User className="h-4 w-4 text-blue-600" />
                   </div>
                   
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{conversation.clients.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-medium ${isMobile ? 'text-sm' : ''} truncate`}>
+                        {conversation.clients.name}
+                      </span>
                       {conversation.unread_count > 0 && (
-                        <Badge className="bg-fixlyfy">
+                        <Badge className="bg-fixlyfy text-xs">
                           {conversation.unread_count}
                         </Badge>
                       )}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 truncate`}>
                       {formatPhoneNumber(conversation.clients.phone)}
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-600 mt-1 truncate`}>
                       {getLastMessage(conversation.messages)}
                     </div>
                   </div>
                 </div>
                 
-                <div className="text-right">
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                <div className={`text-right flex-shrink-0 ${isMobile ? 'ml-2' : ''}`}>
+                  <div className="text-xs text-gray-500 flex items-center gap-1 mb-2">
                     <Clock className="h-3 w-3" />
                     {getLastMessageTime(conversation.last_message_at)}
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className={`flex ${isMobile ? 'flex-col gap-1' : 'items-center gap-2'}`}>
                     <Button
                       variant="outline"
                       size="sm"
@@ -251,17 +258,17 @@ export const MessagesList = ({ searchResults }: MessagesListProps) => {
                         makeCall(conversation.clients.phone, conversation.clients.id);
                       }}
                       disabled={callingNumber === conversation.clients.phone}
-                      className="gap-1"
+                      className={`gap-1 ${isMobile ? 'min-h-[36px] text-xs px-2' : ''}`}
                     >
                       {callingNumber === conversation.clients.phone ? (
                         <>
                           <div className="animate-spin h-3 w-3 border border-gray-300 border-t-gray-600 rounded-full" />
-                          Calling...
+                          {!isMobile && "Calling..."}
                         </>
                       ) : (
                         <>
                           <Phone className="h-3 w-3" />
-                          Call
+                          {!isMobile && "Call"}
                         </>
                       )}
                     </Button>

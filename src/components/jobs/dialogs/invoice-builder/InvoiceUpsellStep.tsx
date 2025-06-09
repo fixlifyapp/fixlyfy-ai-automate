@@ -1,319 +1,155 @@
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { useProducts } from "@/hooks/useProducts";
-import { Shield, Info } from "lucide-react";
-import { EstimateSummaryCard } from "../estimate-builder/components/EstimateSummaryCard";
-import { NotesSection } from "../estimate-builder/components/NotesSection";
-import { WarrantiesList } from "../estimate-builder/components/WarrantiesList";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { UpsellStepProps } from "../shared/types";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { UpsellStepProps, UpsellItem } from '../shared/types';
 
-export const InvoiceUpsellStep = ({ 
-  onContinue, 
-  onBack, 
-  documentTotal, 
+export const InvoiceUpsellStep = ({
+  documentTotal,
+  onContinue,
+  onBack,
   existingUpsellItems = [],
-  estimateToConvert,
   jobContext
 }: UpsellStepProps) => {
-  const [notes, setNotes] = useState("");
-  const [upsellItems, setUpsellItems] = useState<any[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSavingWarranty, setIsSavingWarranty] = useState(false);
-  const [hasExistingWarranties, setHasExistingWarranties] = useState(false);
-  const [isLoadingExistingWarranties, setIsLoadingExistingWarranties] = useState(true);
-  const { products: warrantyProducts, isLoading } = useProducts("Warranties");
+  const [selectedItems, setSelectedItems] = useState<UpsellItem[]>(existingUpsellItems);
+  const [notes, setNotes] = useState('');
+  const [availableUpsells, setAvailableUpsells] = useState<UpsellItem[]>([]);
 
-  // Get invoice ID from jobContext or other source
-  const invoiceId = jobContext?.invoiceId;
-
-  // Check if warranties were already added in the estimate OR already exist in the invoice
   useEffect(() => {
-    const checkExistingWarranties = async () => {
-      if (!invoiceId) {
-        setIsLoadingExistingWarranties(false);
-        return;
+    // Mock upsell items for now
+    const mockUpsells: UpsellItem[] = [
+      {
+        id: '1',
+        name: 'Extended Warranty',
+        description: '2-year extended warranty coverage',
+        price: 150,
+        category: 'warranty'
+      },
+      {
+        id: '2',
+        name: 'Priority Support',
+        description: '24/7 priority support for 1 year',
+        price: 200,
+        category: 'service'
+      },
+      {
+        id: '3',
+        name: 'Maintenance Plan',
+        description: 'Annual maintenance package',
+        price: 300,
+        category: 'maintenance'
       }
+    ];
 
-      try {
-        setIsLoadingExistingWarranties(true);
-        
-        // Check if the invoice already contains warranty items
-        const { data: invoiceLineItems, error } = await supabase
-          .from('line_items')
-          .select('*')
-          .eq('parent_id', invoiceId)
-          .eq('parent_type', 'invoice');
+    setAvailableUpsells(mockUpsells);
+  }, [jobContext]);
 
-        if (error) {
-          console.error('Error fetching invoice line items:', error);
-          setIsLoadingExistingWarranties(false);
-          return;
-        }
-
-        // Check if any line items are warranties
-        const hasWarranties = invoiceLineItems?.some((item: any) => 
-          item.description?.toLowerCase().includes('warranty') ||
-          warrantyProducts.some(wp => item.description?.includes(wp.name))
-        ) || false;
-
-        console.log('Invoice line items:', invoiceLineItems);
-        console.log('Has existing warranties in invoice:', hasWarranties);
-        
-        setHasExistingWarranties(hasWarranties);
-      } catch (error) {
-        console.error('Error checking existing warranties:', error);
-      } finally {
-        setIsLoadingExistingWarranties(false);
-      }
-    };
-
-    // Only check after warranty products are loaded
-    if (!isLoading && warrantyProducts.length > 0) {
-      checkExistingWarranties();
-    } else if (!isLoading) {
-      setIsLoadingExistingWarranties(false);
-    }
-  }, [invoiceId, warrantyProducts, isLoading]);
-
-  // Convert warranty products to upsell items and restore previous selections
-  useEffect(() => {
-    if (hasExistingWarranties || isLoadingExistingWarranties) {
-      // If warranties already exist or we're still loading, don't show them as options
-      setUpsellItems([]);
-      return;
-    }
-
-    const warrantyUpsells = warrantyProducts.map(product => {
-      const existingSelection = existingUpsellItems.find(item => item.id === product.id);
-      
-      return {
-        id: product.id,
-        title: product.name,
-        description: product.description || "",
-        price: product.price,
-        icon: Shield,
-        selected: existingSelection ? existingSelection.selected : false
-      };
-    });
-    setUpsellItems(warrantyUpsells);
-  }, [warrantyProducts, existingUpsellItems, hasExistingWarranties, isLoadingExistingWarranties]);
-
-  const handleUpsellToggle = async (itemId: string) => {
-    if (isProcessing || isSavingWarranty) return;
-    
-    setIsSavingWarranty(true);
-    
-    try {
-      const item = upsellItems.find(item => item.id === itemId);
-      if (!item || !invoiceId) {
-        toast.error("Unable to save warranty - missing information");
-        return;
-      }
-
-      const newSelectedState = !item.selected;
-
-      if (newSelectedState) {
-        // Add warranty to database
-        const { error: lineItemError } = await supabase
-          .from('line_items')
-          .insert({
-            parent_id: invoiceId,
-            parent_type: 'invoice',
-            description: item.title + (item.description ? ` - ${item.description}` : ''),
-            quantity: 1,
-            unit_price: item.price,
-            taxable: false // Warranties are typically not taxed
-          });
-
-        if (lineItemError) {
-          console.error('Error adding warranty line item:', lineItemError);
-          toast.error(`Failed to add ${item.title}`);
-          return;
-        }
-
-        // Update invoice total and balance
-        const newTotal = documentTotal + item.price;
-        const { error: updateError } = await supabase
-          .from('invoices')
-          .update({ 
-            total: newTotal,
-            balance: newTotal // Assuming no payments yet
-          })
-          .eq('id', invoiceId);
-
-        if (updateError) {
-          console.error('Error updating invoice total:', updateError);
-          toast.error('Failed to update invoice total');
-          return;
-        }
-
-        toast.success(`${item.title} added to invoice`);
+  const toggleUpsellSelection = (upsell: UpsellItem) => {
+    setSelectedItems(prev => {
+      const isSelected = prev.find(item => item.id === upsell.id);
+      if (isSelected) {
+        return prev.filter(item => item.id !== upsell.id);
       } else {
-        // Remove warranty from database
-        const { error: deleteError } = await supabase
-          .from('line_items')
-          .delete()
-          .eq('parent_id', invoiceId)
-          .eq('parent_type', 'invoice')
-          .eq('description', item.title + (item.description ? ` - ${item.description}` : ''));
-
-        if (deleteError) {
-          console.error('Error removing warranty line item:', deleteError);
-          toast.error(`Failed to remove ${item.title}`);
-          return;
-        }
-
-        // Update invoice total and balance
-        const newTotal = Math.max(0, documentTotal - item.price);
-        const { error: updateError } = await supabase
-          .from('invoices')
-          .update({ 
-            total: newTotal,
-            balance: newTotal // Assuming no payments yet
-          })
-          .eq('id', invoiceId);
-
-        if (updateError) {
-          console.error('Error updating invoice total:', updateError);
-          toast.error('Failed to update invoice total');
-          return;
-        }
-
-        toast.success(`${item.title} removed from invoice`);
+        return [...prev, { ...upsell, isSelected: true }];
       }
-
-      // Update local state
-      setUpsellItems(prev => prev.map(upsellItem => 
-        upsellItem.id === itemId ? { ...upsellItem, selected: newSelectedState } : upsellItem
-      ));
-
-    } catch (error) {
-      console.error('Error toggling warranty:', error);
-      toast.error('Failed to update warranty');
-    } finally {
-      setIsSavingWarranty(false);
-    }
+    });
   };
 
-  const selectedUpsells = upsellItems.filter(item => item.selected);
-  const upsellTotal = selectedUpsells.reduce((sum, item) => sum + item.price, 0);
-  const grandTotal = documentTotal + upsellTotal;
-
-  const handleContinue = async () => {
-    if (isProcessing || isSavingWarranty) return;
-    
-    setIsProcessing(true);
-    
-    try {
-      // Save notes if any
-      if (notes.trim() && invoiceId) {
-        const { error: notesError } = await supabase
-          .from('invoices')
-          .update({ notes: notes.trim() })
-          .eq('id', invoiceId);
-
-        if (notesError) {
-          console.error('Error saving notes:', notesError);
-          toast.error('Failed to save notes');
-          return;
-        }
-      }
-
-      // Continue with selected upsells (they're already saved to database)
-      await onContinue(selectedUpsells, notes);
-    } catch (error) {
-      console.error('Error in handleContinue:', error);
-      toast.error('Failed to continue');
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleContinue = () => {
+    onContinue(selectedItems, notes);
   };
-
-  if (isLoading || isLoadingExistingWarranties) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold">Loading Additional Services...</h3>
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mt-4"></div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-lg font-semibold">Enhance Your Invoice</h3>
-        <p className="text-muted-foreground">Add valuable warranty services for complete protection</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recommended Add-ons</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {availableUpsells.map((upsell) => {
+              const isSelected = selectedItems.find(item => item.id === upsell.id);
+              return (
+                <div
+                  key={upsell.id}
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                    isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                  }`}
+                  onClick={() => toggleUpsellSelection(upsell)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{upsell.name}</h4>
+                        <Badge variant="secondary">{upsell.category}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{upsell.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">${upsell.price}</span>
+                      {isSelected && (
+                        <div className="text-green-600 text-sm mt-1">✓ Selected</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-      {hasExistingWarranties ? (
-        <Alert>
-          <Shield className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Warranties Already Included</strong>
-            <br />
-            This invoice already includes warranty services. 
-            No additional warranty options are needed at this time.
-            {estimateToConvert && (
-              <span className="block mt-1 text-sm text-muted-foreground">
-                (Warranties were included from the original estimate)
-              </span>
-            )}
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <>
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Warranty Recommendation</strong>
-              <br />
-              No warranty was added to this invoice. Consider offering warranty protection 
-              to provide additional value and peace of mind for your customer. Warranties help build 
-              trust and can increase customer satisfaction while protecting your work.
-            </AlertDescription>
-          </Alert>
-
-          <WarrantiesList
-            upsellItems={upsellItems}
-            existingUpsellItems={existingUpsellItems}
-            isProcessing={isProcessing || isSavingWarranty}
-            onUpsellToggle={handleUpsellToggle}
-          />
-        </>
+      {selectedItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Selected Add-ons</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {selectedItems.map((item) => (
+                <div key={item.id} className="flex justify-between">
+                  <span>{item.name}</span>
+                  <span>${item.price}</span>
+                </div>
+              ))}
+              <div className="border-t pt-2 font-bold">
+                <div className="flex justify-between">
+                  <span>Total Add-ons:</span>
+                  <span>${selectedItems.reduce((sum, item) => sum + item.price, 0)}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <NotesSection
-        notes={notes}
-        onNotesChange={setNotes}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Additional Notes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Any additional notes about the selected add-ons..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      <EstimateSummaryCard
-        estimateTotal={documentTotal}
-        selectedUpsells={selectedUpsells}
-        upsellTotal={upsellTotal}
-        grandTotal={grandTotal}
-      />
-
-      <div className="flex justify-between pt-4">
-        <Button 
-          variant="outline" 
-          onClick={onBack} 
-          disabled={isProcessing || isSavingWarranty}
-        >
-          Back to Items
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={onBack}>
+          Back
         </Button>
-        <Button 
-          onClick={handleContinue} 
-          className="gap-2"
-          disabled={isProcessing || isSavingWarranty}
-        >
-          {isProcessing ? "Processing..." : isSavingWarranty ? "Saving..." : "Continue to Send"}
+        <Button onClick={handleContinue}>
+          Continue
         </Button>
       </div>
     </div>

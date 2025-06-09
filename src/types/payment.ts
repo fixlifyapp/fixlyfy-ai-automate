@@ -1,4 +1,3 @@
-
 export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
 export type PaymentStatus = "paid" | "refunded" | "disputed";
 
@@ -17,12 +16,4 @@ export interface Payment {
   technicianName?: string;
   invoice_id?: string;
   created_at?: string;
-}
-
-export interface PaymentInput {
-  amount: number;
-  method: PaymentMethod;
-  date: string;
-  notes?: string;
-  status?: PaymentStatus;
 }

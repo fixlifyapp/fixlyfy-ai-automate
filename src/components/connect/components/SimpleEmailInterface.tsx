@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Mail } from "lucide-react";
+import { Search, Plus, Mail, ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { EmailConversationsList } from "./EmailConversationsList";
 import { EmailThreadView } from "./EmailThreadView";
 import { EmailInputPanel } from "./EmailInputPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SearchResult {
   id: string;
@@ -39,6 +41,8 @@ export const SimpleEmailInterface = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showClientResults, setShowClientResults] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showConversationView, setShowConversationView] = useState(false);
+  const isMobile = useIsMobile();
 
   console.log('SimpleEmailInterface conversations:', conversations);
 
@@ -94,78 +98,34 @@ export const SimpleEmailInterface = () => {
               .eq('id', conv.client_id)
               .single();
             
-            if (client) {
-              clientInfo = client;
-            }
-          }
-          
-          // If no client info from database, try to extract from email messages
-          if (!clientInfo && conv.email_messages?.length > 0) {
-            const firstMessage = conv.email_messages[0];
-            const clientEmailAddr = firstMessage.direction === 'inbound' 
-              ? firstMessage.sender_email 
-              : firstMessage.recipient_email;
-              
-            clientInfo = {
-              id: 'email_' + clientEmailAddr,
-              name: clientEmailAddr.split('@')[0],
-              email: clientEmailAddr,
-              phone: null
-            };
+            clientInfo = client;
           }
 
           return {
-            id: conv.id,
-            subject: conv.subject,
-            last_message_at: conv.last_message_at,
-            status: conv.status,
-            client_id: conv.client_id,
+            ...conv,
             client: clientInfo,
-            emails: (conv.email_messages || []).map(msg => ({
-              id: msg.id,
-              sender_email: msg.sender_email,
-              recipient_email: msg.recipient_email,
-              subject: msg.subject,
-              body_html: msg.body_html,
-              body_text: msg.body_text,
-              direction: msg.direction as 'inbound' | 'outbound',
-              delivery_status: msg.delivery_status,
-              created_at: msg.created_at
-            })).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            emails: conv.email_messages || []
           };
         })
       );
 
-      setConversations(conversationsWithClients as EmailConversation[]);
+      setConversations(conversationsWithClients);
     } catch (error) {
-      console.error('Error fetching email conversations:', error);
-      toast.error('Failed to load email conversations');
+      console.error('Error fetching conversations:', error);
+      toast.error("Failed to load email conversations");
     } finally {
       setLoading(false);
     }
   };
 
+  // Auto-refresh conversations every 10 seconds
   useEffect(() => {
     fetchConversations();
-
-    // Set up real-time subscription for new emails
-    const channel = supabase
-      .channel('email-updates')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'email_messages' 
-      }, () => {
-        fetchConversations();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const interval = setInterval(fetchConversations, 10000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Client search functionality
+  // Combined search for both clients and conversations
   useEffect(() => {
     const searchClients = async () => {
       if (!searchTerm.trim()) {
@@ -177,7 +137,8 @@ export const SimpleEmailInterface = () => {
       // First check if any existing conversations match
       const matchingConversations = conversations.filter(conv =>
         conv.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (conv.client?.email && conv.client.email.includes(searchTerm.toLowerCase()))
+        (conv.client?.email && conv.client.email.includes(searchTerm)) ||
+        conv.subject.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
       if (matchingConversations.length > 0) {
@@ -192,7 +153,6 @@ export const SimpleEmailInterface = () => {
           .from('clients')
           .select('id, name, phone, email')
           .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-          .not('email', 'is', null)
           .limit(5);
 
         if (error) throw error;
@@ -222,31 +182,30 @@ export const SimpleEmailInterface = () => {
     console.log('Selected client for email:', client);
     
     // Check if conversation already exists
-    let existingConversation = conversations.find(conv => 
-      conv.client?.email === client.email || conv.client_id === client.id
-    );
+    let existingConversation = conversations.find(conv => conv.client?.id === client.id);
     
     if (existingConversation) {
       setSelectedConversation(existingConversation);
+      if (isMobile) setShowConversationView(true);
       console.log('Using existing email conversation:', existingConversation.id);
     } else {
-      // Create a new conversation placeholder
-      const newConversation: EmailConversation = {
-        id: `new_email_${client.id}_${Date.now()}`,
-        subject: `New conversation with ${client.name}`,
-        last_message_at: new Date().toISOString(),
-        status: 'active',
-        client_id: client.id,
+      // Create a new email conversation placeholder
+      const newConversation = {
+        id: `temp-${client.id}`,
+        subject: 'New Email Conversation',
         client: {
           id: client.id,
           name: client.name,
-          email: client.email || '',
-          phone: client.phone || undefined
+          phone: client.phone || '',
+          email: client.email || ''
         },
-        emails: []
+        emails: [],
+        last_message_at: new Date().toISOString(),
+        status: 'active'
       };
       
       setSelectedConversation(newConversation);
+      if (isMobile) setShowConversationView(true);
       console.log('Created new email conversation placeholder for client:', client.name);
     }
 
@@ -255,33 +214,141 @@ export const SimpleEmailInterface = () => {
     toast.success(`Opening email conversation with ${client.name}`);
   };
 
-  const handleEmailSent = () => {
-    fetchConversations();
+  const handleConversationSelect = (conversation: EmailConversation) => {
+    setSelectedConversation(conversation);
+    if (isMobile) {
+      setShowConversationView(true);
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowConversationView(false);
+    setSelectedConversation(null);
   };
 
   const handleNewEmail = () => {
-    const newConversation: EmailConversation = {
-      id: 'new_email_conversation_' + Date.now(),
+    const newConversation = {
+      id: 'temp-new',
       subject: 'New Email',
+      client: undefined,
+      emails: [],
       last_message_at: new Date().toISOString(),
-      status: 'active',
-      client: {
-        id: 'new_client',
-        name: 'New Client',
-        email: '',
-      },
-      emails: []
+      status: 'draft'
     };
+    
     setSelectedConversation(newConversation);
+    if (isMobile) setShowConversationView(true);
+  };
+
+  const handleEmailSent = () => {
+    fetchConversations();
   };
 
   // Filter conversations based on search term
   const filteredConversations = conversations.filter(conv =>
     conv.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (conv.client?.email && conv.client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (conv.client?.email && conv.client.email.includes(searchTerm)) ||
     conv.subject.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Mobile layout - show either conversations list or conversation view
+  if (isMobile) {
+    return (
+      <div className="h-[700px] border border-fixlyfy-border rounded-xl overflow-hidden bg-white shadow-card">
+        {!showConversationView ? (
+          // Mobile Conversations List
+          <div className="h-full flex flex-col">
+            {/* Header with search */}
+            <div className="p-3 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5 flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 bg-gradient-primary rounded-lg">
+                  <Mail className="h-4 w-4 text-white" />
+                </div>
+                <h2 className="text-base font-semibold text-fixlyfy-text">Emails</h2>
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
+                <Input
+                  placeholder="Search conversations or find clients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy text-sm h-10"
+                />
+              </div>
+
+              {/* Client search results dropdown */}
+              {showClientResults && searchResults.length > 0 && (
+                <div className="absolute left-3 right-3 mt-2 bg-white border border-fixlyfy-border rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                  <div className="p-2 text-xs font-medium text-fixlyfy-text-muted border-b border-fixlyfy-border">New clients:</div>
+                  {searchResults.map((client) => (
+                    <div
+                      key={client.id}
+                      onClick={() => handleClientSelect(client)}
+                      className="p-3 hover:bg-fixlyfy/5 cursor-pointer border-b border-fixlyfy-border/50 last:border-b-0 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm text-fixlyfy-text truncate">{client.name}</div>
+                          {client.email && (
+                            <div className="text-xs text-fixlyfy-text-secondary truncate">{client.email}</div>
+                          )}
+                        </div>
+                        <Plus className="h-4 w-4 text-fixlyfy flex-shrink-0 ml-2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Conversations List */}
+            <div className="flex-1 overflow-hidden">
+              <EmailConversationsList
+                conversations={searchTerm ? filteredConversations : conversations}
+                selectedConversation={selectedConversation}
+                onConversationSelect={handleConversationSelect}
+                isLoading={loading}
+                onRefresh={fetchConversations}
+                onNewEmail={handleNewEmail}
+              />
+            </div>
+          </div>
+        ) : (
+          // Mobile Conversation View
+          <div className="h-full flex flex-col">
+            {/* Back button header */}
+            <div className="p-3 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5 flex-shrink-0">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleBackToList}
+                className="gap-2 p-2 h-8"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Emails
+              </Button>
+            </div>
+            
+            {/* Email Display Area */}
+            <div className="flex-1 overflow-hidden">
+              <EmailThreadView selectedConversation={selectedConversation} />
+            </div>
+            
+            {/* Email Input */}
+            <div className="border-t border-fixlyfy-border/50 flex-shrink-0">
+              <EmailInputPanel 
+                selectedConversation={selectedConversation}
+                onEmailSent={handleEmailSent}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop layout - two panel resizable
   return (
     <div className="h-[700px] border border-fixlyfy-border rounded-xl overflow-hidden bg-white shadow-card">
       <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -289,18 +356,18 @@ export const SimpleEmailInterface = () => {
         <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
           <div className="h-full flex flex-col">
             {/* Header with unified search */}
-            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5">
+            <div className="p-4 border-b border-fixlyfy-border bg-gradient-to-r from-fixlyfy/5 to-fixlyfy-light/5 flex-shrink-0">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-gradient-primary rounded-lg">
                   <Mail className="h-5 w-5 text-white" />
                 </div>
-                <h2 className="text-lg font-semibold text-fixlyfy-text">Email Conversations</h2>
+                <h2 className="text-lg font-semibold text-fixlyfy-text">Emails</h2>
               </div>
               
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-fixlyfy-text-muted h-4 w-4" />
                 <Input
-                  placeholder="Search email conversations or find clients..."
+                  placeholder="Search conversations or find new clients..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-fixlyfy-border focus:ring-2 focus:ring-fixlyfy/20 focus:border-fixlyfy"
@@ -318,13 +385,13 @@ export const SimpleEmailInterface = () => {
                       className="p-3 hover:bg-fixlyfy/5 cursor-pointer border-b border-fixlyfy-border/50 last:border-b-0 transition-colors"
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-fixlyfy-text">{client.name}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-fixlyfy-text truncate">{client.name}</div>
                           {client.email && (
-                            <div className="text-sm text-fixlyfy-text-secondary">{client.email}</div>
+                            <div className="text-sm text-fixlyfy-text-secondary truncate">{client.email}</div>
                           )}
                         </div>
-                        <Plus className="h-4 w-4 text-fixlyfy" />
+                        <Plus className="h-4 w-4 text-fixlyfy flex-shrink-0" />
                       </div>
                     </div>
                   ))}
@@ -333,11 +400,11 @@ export const SimpleEmailInterface = () => {
             </div>
 
             {/* Email Conversations List */}
-            <div className="flex-1">
+            <div className="flex-1 overflow-hidden">
               <EmailConversationsList
                 conversations={searchTerm ? filteredConversations : conversations}
                 selectedConversation={selectedConversation}
-                onConversationSelect={setSelectedConversation}
+                onConversationSelect={handleConversationSelect}
                 isLoading={loading}
                 onRefresh={fetchConversations}
                 onNewEmail={handleNewEmail}
@@ -348,16 +415,16 @@ export const SimpleEmailInterface = () => {
 
         <ResizableHandle withHandle className="bg-fixlyfy-border hover:bg-fixlyfy/20 transition-colors w-1" />
 
-        {/* Right Panel - Email Thread View with Input */}
+        {/* Right Panel - Email Conversation View */}
         <ResizablePanel defaultSize={65} minSize={50} maxSize={75}>
           <div className="h-full flex flex-col bg-fixlyfy-bg-interface">
-            {/* Email Thread Display Area */}
+            {/* Email Display Area */}
             <div className="flex-1 overflow-hidden">
               <EmailThreadView selectedConversation={selectedConversation} />
             </div>
             
-            {/* Email Input Panel */}
-            <div className="border-t border-fixlyfy-border/50">
+            {/* Email Input */}
+            <div className="border-t border-fixlyfy-border/50 flex-shrink-0">
               <EmailInputPanel 
                 selectedConversation={selectedConversation}
                 onEmailSent={handleEmailSent}

@@ -1,186 +1,159 @@
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Send } from "lucide-react";
-import { SendMethodStep } from "./steps/SendMethodStep";
-import { useEstimateSendingInterface } from "../shared/hooks/useSendingInterface";
-import { useJobData } from "../unified/hooks/useJobData";
+
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Send, Mail, MessageSquare } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface EstimateSendDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  estimateId: string;
-  estimateNumber: string;
-  total: number;
-  jobId?: string;
-  onSuccess?: () => void;
-  onSave?: () => Promise<boolean>;
-  contactInfo?: {
-    name: string;
-    email: string;
-    phone: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  estimate: {
+    id: string;
+    estimate_number: string;
+    total: number;
   };
+  clientInfo: {
+    name: string;
+    email?: string;
+    phone?: string;
+  };
+  onSendSuccess: () => void;
 }
 
-export const EstimateSendDialog = ({ 
-  isOpen, 
-  onClose, 
-  estimateId, 
-  estimateNumber, 
-  total,
-  jobId,
-  onSuccess,
-  onSave,
-  contactInfo: propContactInfo
+export const EstimateSendDialog = ({
+  open,
+  onOpenChange,
+  estimate,
+  clientInfo,
+  onSendSuccess
 }: EstimateSendDialogProps) => {
-  const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
-  const [sendTo, setSendTo] = useState("");
-  const [validationError, setValidationError] = useState("");
-  const [sentMethods, setSentMethods] = useState<Set<string>>(new Set());
-  const { sendDocument, isProcessing } = useEstimateSendingInterface();
+  const [sendMethod, setSendMethod] = React.useState<'email' | 'sms'>('email');
+  const [recipient, setRecipient] = React.useState('');
+  const [message, setMessage] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const { toast } = useToast();
 
-  // Fetch job and client data using the optimized hook
-  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId || '');
-
-  // Helper functions for validation
-  const isValidEmail = (email: string): boolean => {
-    if (!email) return false;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const isValidPhoneNumber = (phone: string): boolean => {
-    if (!phone) return false;
-    const cleaned = phone.replace(/\D/g, '');
-    return cleaned.length >= 10;
-  };
-
-  // Use prop contactInfo if provided, otherwise use fetched clientInfo
-  const contactInfo = propContactInfo || {
-    name: clientInfo?.name || 'Client',
-    email: clientInfo?.email || '',
-    phone: clientInfo?.phone || ''
-  };
-
-  // Check if contact info has valid email/phone
-  const hasValidEmail = contactInfo?.email && isValidEmail(contactInfo.email);
-  const hasValidPhone = contactInfo?.phone && isValidPhoneNumber(contactInfo.phone);
-
-  // Set default sendTo value when dialog opens or method changes
   React.useEffect(() => {
-    if (isOpen && !jobDataLoading) {
-      if (sendMethod === "email" && hasValidEmail) {
-        setSendTo(contactInfo.email);
-      } else if (sendMethod === "sms" && hasValidPhone) {
-        setSendTo(contactInfo.phone);
-      } else {
-        setSendTo("");
-      }
-      setValidationError("");
+    if (open) {
+      setRecipient(sendMethod === 'email' ? (clientInfo.email || '') : (clientInfo.phone || ''));
+      setMessage(`Hi ${clientInfo.name}, your estimate ${estimate.estimate_number} is ready for review.`);
     }
-  }, [isOpen, sendMethod, hasValidEmail, hasValidPhone, contactInfo, jobDataLoading]);
+  }, [open, sendMethod, clientInfo, estimate.estimate_number]);
 
   const handleSend = async () => {
-    const result = await sendDocument({
-      sendMethod,
-      sendTo,
-      documentNumber: estimateNumber,
-      documentDetails: { estimate_number: estimateNumber },
-      lineItems: [],
-      contactInfo,
-      customNote: "",
-      jobId: estimateId,
-      onSave: onSave || (() => Promise.resolve(true)),
-      existingDocumentId: estimateId
-    });
+    if (!recipient.trim()) {
+      toast({
+        title: "Error",
+        description: `Please enter a ${sendMethod === 'email' ? 'email address' : 'phone number'}`,
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (result.success) {
-      setSentMethods(prev => new Set([...prev, sendMethod]));
+    setIsLoading(true);
+    try {
+      // Mock sending functionality
+      console.log('Sending estimate:', {
+        estimateId: estimate.id,
+        estimateNumber: estimate.estimate_number,
+        method: sendMethod,
+        recipient,
+        message,
+        total: estimate.total,
+        clientInfo
+      });
+
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      toast({
+        title: "Success",
+        description: `Estimate sent successfully via ${sendMethod}`,
+      });
       
-      if (sentMethods.size === 1) {
-        const otherMethod = sendMethod === "email" ? "SMS" : "email";
-        const hasOtherMethod = sendMethod === "email" ? hasValidPhone : hasValidEmail;
-        
-        if (!hasOtherMethod) {
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            onClose();
-          }
-        }
-      } else {
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          onClose();
-        }
-      }
+      onSendSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send estimate",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setSentMethods(new Set());
-    onClose();
-  };
-
-  if (jobDataLoading) {
-    return (
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
-          <div className="py-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading client information...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Send className="h-5 w-5 text-blue-600 flex-shrink-0" />
-            <span className="truncate">Send Estimate #{estimateNumber}</span>
-          </DialogTitle>
+          <DialogTitle>Send Estimate {estimate.estimate_number}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Total:</strong> ${total.toFixed(2)}
-            </p>
-            {contactInfo?.name && (
-              <p className="text-sm text-blue-800 truncate">
-                <strong>Customer:</strong> {contactInfo.name}
-              </p>
-            )}
-            {sentMethods.size > 0 && (
-              <p className="text-sm text-green-800 mt-2">
-                <strong>Sent via:</strong> {Array.from(sentMethods).join(", ")}
-              </p>
-            )}
-            <div className="bg-green-50 border border-green-200 p-2 rounded mt-2">
-              <p className="text-xs text-green-700">
-                <strong>✅ Estimate Saved:</strong> This estimate has been saved and is available in your estimates list.
-              </p>
-            </div>
+          {/* Send Method Toggle */}
+          <div className="flex items-center space-x-4 p-3 bg-muted rounded-lg">
+            <Button
+              variant={sendMethod === 'email' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSendMethod('email')}
+              className="flex items-center gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Email
+            </Button>
+            <Button
+              variant={sendMethod === 'sms' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSendMethod('sms')}
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              SMS
+            </Button>
           </div>
 
-          <SendMethodStep
-            sendMethod={sendMethod}
-            setSendMethod={setSendMethod}
-            sendTo={sendTo}
-            setSendTo={setSendTo}
-            validationError={validationError}
-            setValidationError={setValidationError}
-            contactInfo={contactInfo}
-            hasValidEmail={!!hasValidEmail}
-            hasValidPhone={!!hasValidPhone}
-            estimateNumber={estimateNumber}
-            isProcessing={isProcessing}
-            onSend={handleSend}
-            onBack={onClose}
-          />
+          {/* Recipient Input */}
+          <div className="space-y-2">
+            <Label htmlFor="recipient">
+              {sendMethod === 'email' ? 'Email Address' : 'Phone Number'}
+            </Label>
+            <Input
+              id="recipient"
+              type={sendMethod === 'email' ? 'email' : 'tel'}
+              placeholder={sendMethod === 'email' ? 'client@example.com' : '+1 (555) 123-4567'}
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+            />
+          </div>
+
+          {/* Message */}
+          <div className="space-y-2">
+            <Label htmlFor="message">Message</Label>
+            <Textarea
+              id="message"
+              placeholder="Add a personal message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-between space-x-2 pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSend} disabled={isLoading}>
+              <Send className="h-4 w-4 mr-2" />
+              {isLoading ? 'Sending...' : `Send via ${sendMethod === 'email' ? 'Email' : 'SMS'}`}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

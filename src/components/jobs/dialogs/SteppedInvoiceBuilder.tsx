@@ -1,97 +1,101 @@
+
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
-import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
 import { SendDialog } from "./shared/SendDialog";
-import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
+import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { useInvoiceSendingInterface } from "./shared/hooks/useSendingInterface";
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
-import { UpsellItem } from "./shared/types";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { generateNextId } from "@/utils/idGeneration";
 import { useJobData } from "./unified/hooks/useJobData";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SteppedInvoiceBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   jobId: string;
-  existingInvoice?: Invoice;
-  estimateToConvert?: Estimate;
-  onInvoiceCreated?: (invoice: Invoice) => void;
+  existingInvoice?: any;
+  onInvoiceCreated?: () => void;
 }
 
-type BuilderStep = "items" | "upsell" | "send";
+type BuilderStep = "items" | "send";
 
 export const SteppedInvoiceBuilder = ({
   open,
   onOpenChange,
   jobId,
   existingInvoice,
-  estimateToConvert,
   onInvoiceCreated
 }: SteppedInvoiceBuilderProps) => {
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  
+  const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId);
+  
   const [currentStep, setCurrentStep] = useState<BuilderStep>("items");
-  const [isCompleting, setIsCompleting] = useState(false);
   const [savedInvoice, setSavedInvoice] = useState<any>(null);
-  const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
-  const [upsellNotes, setUpsellNotes] = useState("");
   const [invoiceCreated, setInvoiceCreated] = useState(false);
 
-  // Get job and client data
-  const { clientInfo, loading: jobLoading } = useJobData(jobId);
-
+  // Create contactInfo object for compatibility
+  const contactInfo = {
+    name: clientInfo?.name || 'Client',
+    email: clientInfo?.email || '',
+    phone: clientInfo?.phone || ''
+  };
+  
   const {
-    formData,
     lineItems,
-    taxRate,
-    notes,
-    invoiceNumber,
-    isSubmitting,
     setLineItems,
+    taxRate,
     setTaxRate,
+    notes,
     setNotes,
-    handleAddProduct,
-    handleRemoveLineItem,
-    handleUpdateLineItem: originalHandleUpdateLineItem,
+    documentNumber,
+    setDocumentNumber,
+    isSubmitting,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
-    saveInvoiceChanges,
-    resetForm,
-    initializeFromEstimate,
-    initializeFromInvoice
-  } = useInvoiceBuilder(jobId);
+    handleAddProduct,
+    handleRemoveLineItem,
+    handleUpdateLineItem,
+    saveDocumentChanges
+  } = useUnifiedDocumentBuilder({
+    documentType: "invoice",
+    existingDocument: existingInvoice,
+    jobId,
+    open
+  });
 
-  // Create a wrapper function to match the standardized interface
-  const handleUpdateLineItem = (id: string, field: string, value: any) => {
-    originalHandleUpdateLineItem(id, { [field]: value });
-  };
-
-  // Initialize form data when dialog opens
+  // Reset step when dialog opens/closes
   useEffect(() => {
     if (open) {
-      if (existingInvoice) {
-        initializeFromInvoice(existingInvoice);
-        setInvoiceCreated(true);
-        setSavedInvoice(existingInvoice);
-      } else if (estimateToConvert) {
-        initializeFromEstimate(estimateToConvert);
-      } else {
-        resetForm();
-      }
       setCurrentStep("items");
-      setSelectedUpsells([]);
-      setUpsellNotes("");
+      setSavedInvoice(existingInvoice || null);
+      setInvoiceCreated(!!existingInvoice);
     }
-  }, [open, existingInvoice, estimateToConvert, initializeFromEstimate, initializeFromInvoice, resetForm]);
+  }, [open, existingInvoice]);
+
+  // Generate invoice number if creating new
+  useEffect(() => {
+    const generateInvoiceNumber = async () => {
+      if (open && !existingInvoice && !documentNumber) {
+        try {
+          const newNumber = await generateNextId('invoice');
+          setDocumentNumber(newNumber);
+        } catch (error) {
+          console.error("Error generating invoice number:", error);
+          const fallbackNumber = `INV-${Date.now()}`;
+          setDocumentNumber(fallbackNumber);
+        }
+      }
+    };
+
+    generateInvoiceNumber();
+  }, [open, existingInvoice, documentNumber, setDocumentNumber]);
 
   const handleSaveAndContinue = async () => {
     if (lineItems.length === 0) {
@@ -99,11 +103,15 @@ export const SteppedInvoiceBuilder = ({
       return;
     }
 
+    if (!jobId) {
+      toast.error("Job ID is required to save invoice");
+      return;
+    }
+    
     try {
-      console.log("💾 Saving invoice before continuing to upsell step...");
+      console.log("💾 Saving invoice before continuing to send step...");
       
-      // Always save the invoice, whether it's new or existing
-      const invoice = await saveInvoiceChanges();
+      const invoice = await saveDocumentChanges();
       
       if (invoice) {
         setSavedInvoice(invoice);
@@ -111,8 +119,8 @@ export const SteppedInvoiceBuilder = ({
         console.log("✅ Invoice saved successfully:", invoice.id);
         toast.success("Invoice saved successfully!");
         
-        // Move to upsell step
-        setCurrentStep("upsell");
+        // Move to send step
+        setCurrentStep("send");
       } else {
         toast.error("Failed to save invoice. Please try again.");
         return;
@@ -123,64 +131,40 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
-  // Create job context including invoiceId
-  const jobContext = {
-    job_type: 'General Service',
-    service_category: 'Maintenance',
-    job_value: calculateGrandTotal(),
-    client_history: null,
-    invoiceId: savedInvoice?.id || existingInvoice?.id
-  };
-
-  const handleUpsellContinue = async (upsells: UpsellItem[], notes: string) => {
-    setSelectedUpsells(prev => [...prev, ...upsells]);
-    setUpsellNotes(notes);
-    
-    // Don't add line items here since they're already saved in the upsell step
-    // Just update notes if needed
-    if (notes.trim() && savedInvoice?.id) {
-      try {
-        console.log("💾 Updating invoice notes...");
-        const { error } = await supabase
-          .from('invoices')
-          .update({ notes: notes.trim() })
-          .eq('id', savedInvoice.id);
-          
-        if (error) {
-          console.error('Error updating notes:', error);
-          toast.error('Failed to save notes');
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to save notes:", error);
-        toast.error("Failed to save notes");
-        return;
-      }
-    }
-    
-    setCurrentStep("send");
-  };
-
   const handleSaveAndSend = async () => {
-    setIsCompleting(true);
     try {
-      const savedInvoice = await saveInvoiceChanges();
+      const savedInvoice = await saveDocumentChanges();
       if (savedInvoice && onInvoiceCreated) {
-        onInvoiceCreated(savedInvoice);
+        onInvoiceCreated();
       }
       return savedInvoice !== null;
     } catch (error) {
       console.error("Error saving invoice:", error);
       return false;
-    } finally {
-      setIsCompleting(false);
     }
+  };
+
+  const handleSendSuccess = () => {
+    onOpenChange(false);
+    
+    if (onInvoiceCreated) {
+      onInvoiceCreated();
+    }
+
+    setTimeout(() => {
+      navigate(`/jobs/${jobId}`, { 
+        state: { activeTab: "invoices" },
+        replace: true 
+      });
+    }, 100);
+  };
+
+  const handleSendCancel = () => {
+    setCurrentStep("items");
   };
 
   const handleDialogClose = () => {
     if (currentStep === "send") {
-      setCurrentStep("upsell");
-    } else if (currentStep === "upsell") {
       setCurrentStep("items");
     } else {
       onOpenChange(false);
@@ -196,14 +180,12 @@ export const SteppedInvoiceBuilder = ({
 
     try {
       console.log("💾 Saving invoice for later...");
-      const invoice = await saveInvoiceChanges();
-      if (invoice) {
-        toast.success("Invoice saved as draft");
-        onOpenChange(false);
-        
-        if (onInvoiceCreated) {
-          onInvoiceCreated(invoice);
-        }
+      await saveDocumentChanges();
+      toast.success("Invoice saved as draft");
+      onOpenChange(false);
+      
+      if (onInvoiceCreated) {
+        onInvoiceCreated();
       }
     } catch (error) {
       console.error("Error saving invoice:", error);
@@ -211,103 +193,45 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
-  // Get client info for sending
-  const getClientInfo = () => {
-    if (clientInfo) {
-      return {
-        name: clientInfo.name || '',
-        email: clientInfo.email || '',
-        phone: clientInfo.phone || ''
-      };
-    }
-    return { name: '', email: '', phone: '' };
-  };
-
-  const steps = [
-    { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
-    { number: 2, title: "Additional Services", description: "Add warranties and extras" },
-    { number: 3, title: "Send Invoice", description: "Review and send to client" }
-  ];
-
-  const isStepComplete = (stepNumber: number) => {
-    switch (stepNumber) {
-      case 1:
-        return lineItems.length > 0;
-      case 2:
-        return true; // Upsell step is always optional
-      case 3:
-        return false; // Send step is never "complete" until actually sent
-      default:
-        return false;
-    }
-  };
-
-  const canProceedToNext = () => {
-    return isStepComplete(currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3);
-  };
-
   const stepTitles = {
     items: existingInvoice ? "Edit Invoice" : "Create Invoice",
-    upsell: "Enhance Your Invoice",
     send: "Send Invoice"
   };
 
-  const currentStepNumber = currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3;
+  const currentStepNumber = currentStep === "items" ? 1 : 2;
 
   return (
     <>
       <Dialog open={open && currentStep !== "send"} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                Step {currentStepNumber} of 3
-              </span>
-              {stepTitles[currentStep]}
-              {invoiceNumber && <span className="text-sm text-muted-foreground">(#{invoiceNumber})</span>}
+        <DialogContent className={`
+          ${isMobile 
+            ? 'max-w-[100vw] max-h-[100vh] w-full h-full m-0 rounded-none border-0' 
+            : 'max-w-6xl max-h-[90vh]'
+          } 
+          overflow-hidden flex flex-col p-0
+        `}>
+          <DialogHeader className={`${isMobile ? 'px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95' : 'px-6 py-4'} flex-shrink-0`}>
+            <DialogTitle className={`flex flex-col gap-2 ${isMobile ? 'text-base' : 'text-lg'}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                  Step {currentStepNumber} of 2
+                </span>
+                <span className={`${isMobile ? 'text-sm' : 'text-base'} truncate`}>{stepTitles[currentStep]}</span>
+                {documentNumber && (
+                  <span className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'} truncate`}>
+                    (#{documentNumber})
+                  </span>
+                )}
+              </div>
             </DialogTitle>
-            
-            {/* Step Indicator */}
-            <div className="flex items-center justify-center space-x-4 py-4">
-              {steps.map((step, index) => (
-                <div key={step.number} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                    currentStepNumber === step.number
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : isStepComplete(step.number)
-                      ? "border-green-500 bg-green-500 text-white"
-                      : "border-gray-300 bg-white text-gray-500"
-                  }`}>
-                    {isStepComplete(step.number) ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <span className="text-sm font-medium">{step.number}</span>
-                    )}
-                  </div>
-                  
-                  <div className="ml-3 text-left">
-                    <div className={`text-sm font-medium ${
-                      currentStepNumber === step.number ? "text-primary" : "text-gray-500"
-                    }`}>
-                      {step.title}
-                    </div>
-                    <div className="text-xs text-gray-500">{step.description}</div>
-                  </div>
-                  
-                  {index < steps.length - 1 && (
-                    <ArrowRight className="h-4 w-4 text-gray-400 mx-4" />
-                  )}
-                </div>
-              ))}
-            </div>
           </DialogHeader>
-          
-          <div className="py-6">
+
+          <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-4 pb-20' : 'px-6 pb-6'}`}>
             {currentStep === "items" && (
-              <>
+              <div className="space-y-4 pt-4">
                 <UnifiedItemsStep
                   documentType="invoice"
-                  documentNumber={invoiceNumber}
+                  documentNumber={documentNumber}
                   lineItems={lineItems}
                   taxRate={taxRate}
                   notes={notes}
@@ -321,51 +245,52 @@ export const SteppedInvoiceBuilder = ({
                   calculateTotalTax={calculateTotalTax}
                   calculateGrandTotal={calculateGrandTotal}
                 />
-
-                <div className="flex justify-between pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
-                  >
-                    {lineItems.length > 0 ? "Save for Later" : "Cancel"}
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleSaveAndContinue}
-                    disabled={isSubmitting || lineItems.length === 0}
-                    className="gap-2"
-                  >
-                    {isSubmitting ? "Saving..." : "Save & Continue"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </>
-            )}
-            
-            {currentStep === "upsell" && (
-              <InvoiceUpsellStep
-                documentTotal={calculateGrandTotal()}
-                onContinue={handleUpsellContinue}
-                onBack={() => setCurrentStep("items")}
-                existingUpsellItems={selectedUpsells}
-                estimateToConvert={estimateToConvert}
-                jobContext={jobContext}
-              />
+              </div>
             )}
           </div>
+
+          {/* Fixed bottom action bar for mobile */}
+          {currentStep === "items" && (
+            <div className={`
+              ${isMobile 
+                ? 'fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 border-t px-4 py-3' 
+                : 'px-6 pb-6 border-t bg-background'
+              } 
+              flex-shrink-0
+            `}>
+              <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'}`}>
+                <Button 
+                  variant="outline" 
+                  onClick={lineItems.length > 0 ? handleSaveForLater : () => onOpenChange(false)}
+                  className={`${isMobile ? 'w-full h-12 text-base' : ''}`}
+                >
+                  {lineItems.length > 0 ? "Save for Later" : "Cancel"}
+                </Button>
+                
+                <Button 
+                  onClick={handleSaveAndContinue}
+                  disabled={isSubmitting || lineItems.length === 0}
+                  className={`gap-2 ${isMobile ? 'w-full h-12 text-base' : ''}`}
+                >
+                  {isSubmitting ? "Saving..." : "Save & Continue"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
-      
-      {/* Send Dialog using standardized interface */}
+
+      {/* Send Dialog */}
       <SendDialog
         isOpen={currentStep === "send"}
-        onClose={() => onOpenChange(false)}
+        onClose={() => handleSendCancel()}
         documentId={savedInvoice?.id || existingInvoice?.id || ''}
-        documentNumber={invoiceNumber}
+        documentNumber={savedInvoice?.invoice_number || savedInvoice?.number || documentNumber}
         documentType="invoice"
         total={calculateGrandTotal()}
-        contactInfo={getClientInfo()}
-        onSuccess={() => onOpenChange(false)}
+        contactInfo={contactInfo}
+        onSuccess={handleSendSuccess}
         onSave={handleSaveAndSend}
         useSendingHook={useInvoiceSendingInterface}
       />

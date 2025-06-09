@@ -24,26 +24,7 @@ export const LineItemsTable = ({
   
   // Helper function to calculate the total for a line item
   const calculateLineTotal = (item: LineItem): number => {
-    const price = item.unitPrice;
-    const subtotal = item.quantity * price;
-    const discountAmount = item.discount ? subtotal * (item.discount / 100) : 0;
-    const afterDiscount = subtotal - discountAmount;
-    return afterDiscount;
-  };
-
-  // Helper function to calculate the margin for a line item
-  const calculateMargin = (item: LineItem): number => {
-    const revenue = calculateLineTotal(item);
-    const cost = item.quantity * (item.ourPrice || 0);
-    return revenue - cost;
-  };
-
-  // Helper function to calculate margin percentage
-  const calculateMarginPercentage = (item: LineItem): number => {
-    const margin = calculateMargin(item);
-    const revenue = calculateLineTotal(item);
-    if (revenue === 0) return 0;
-    return (margin / revenue) * 100;
+    return item.quantity * item.unitPrice;
   };
 
   return (
@@ -53,11 +34,7 @@ export const LineItemsTable = ({
           <TableRow>
             <TableHead className="w-[40%]">Description</TableHead>
             <TableHead className="w-[70px]">Qty</TableHead>
-            <TableHead className="w-[100px]">Customer Price ($)</TableHead>
-            {showOurPrice && (
-              <TableHead className="w-[100px]">Our Price ($)</TableHead>
-            )}
-            <TableHead className="w-[70px]">Discount</TableHead>
+            <TableHead className="w-[100px]">Price ($)</TableHead>
             <TableHead className="w-[120px] text-right">Total</TableHead>
             <TableHead className="w-[80px]"></TableHead>
           </TableRow>
@@ -68,7 +45,10 @@ export const LineItemsTable = ({
               <TableRow key={item.id} className="hover:bg-muted/20 group">
                 <TableCell>
                   <div className="line-clamp-2">
-                    {item.description || (item.name || "")}
+                    <div className="font-medium">{item.name}</div>
+                    {item.description && (
+                      <div className="text-sm text-muted-foreground">{item.description}</div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -79,27 +59,8 @@ export const LineItemsTable = ({
                     ${item.unitPrice.toFixed(2)}
                   </div>
                 </TableCell>
-                {showOurPrice && (
-                  <TableCell>
-                    <div className="pl-2">
-                      ${(item.ourPrice || 0).toFixed(2)}
-                    </div>
-                  </TableCell>
-                )}
-                <TableCell>
-                  <div className="text-center">
-                    {item.discount || 0}%
-                  </div>
-                </TableCell>
                 <TableCell className="text-right">
-                  <div>
-                    <div className="font-medium">${calculateLineTotal(item).toFixed(2)}</div>
-                    {showMargin && showOurPrice && item.ourPrice > 0 && (
-                      <div className="text-xs text-green-600">
-                        M: ${calculateMargin(item).toFixed(2)} ({calculateMarginPercentage(item).toFixed(0)}%)
-                      </div>
-                    )}
-                  </div>
+                  <div className="font-medium">${calculateLineTotal(item).toFixed(2)}</div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -127,7 +88,7 @@ export const LineItemsTable = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={showOurPrice ? 7 : 6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                 No items added yet. Add items from the catalog or create a custom line item.
               </TableCell>
             </TableRow>

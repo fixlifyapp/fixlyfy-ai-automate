@@ -1,124 +1,134 @@
 
-import React from "react";
-import { LineItem } from "../../builder/types";
-import { DocumentType } from "../UnifiedDocumentBuilder";
-import { useDocumentPreviewData } from "./hooks/useDocumentPreviewData";
-import { DocumentPreviewHeader } from "./components/DocumentPreviewHeader";
-import { DocumentInfoGrid } from "./components/DocumentInfoGrid";
-import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
-import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
-import { DocumentPreviewFooter } from "./components/DocumentPreviewFooter";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
+import { LineItem } from '@/components/jobs/builder/types';
 
 interface UnifiedDocumentPreviewProps {
-  documentType: DocumentType;
+  documentType: 'estimate' | 'invoice';
   documentNumber: string;
   lineItems: LineItem[];
-  taxRate: number;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
   notes: string;
-  clientInfo?: any;
-  issueDate?: string;
-  dueDate?: string;
+  clientInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   jobId?: string;
+  issueDate: string;
+  dueDate?: string;
 }
 
 export const UnifiedDocumentPreview = ({
   documentType,
   documentNumber,
   lineItems,
-  taxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
   notes,
   clientInfo,
+  jobId,
   issueDate,
-  dueDate,
-  jobId
+  dueDate
 }: UnifiedDocumentPreviewProps) => {
-  console.log('=== UnifiedDocumentPreview Debug ===');
-  console.log('JobId prop received:', jobId);
-  console.log('ClientInfo prop received:', clientInfo);
-  console.log('Document type:', documentType);
-
-  const { companyInfo, enhancedClientInfo, jobAddress, loading } = useDocumentPreviewData({
-    clientInfo,
-    jobId,
-    documentNumber,
-    documentType
-  });
-
-  console.log('Enhanced client info from hook:', enhancedClientInfo);
-  console.log('Job address from hook:', jobAddress);
-
-  if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200">
-        <div className="animate-pulse space-y-8 p-8">
-          <div className="h-24 bg-gray-200 rounded"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const subtotal = calculateSubtotal();
-  const tax = calculateTotalTax();
-  const total = calculateGrandTotal();
-
-  const documentColor = documentType === 'estimate' ? 'text-blue-700' : 'text-purple-700';
+  const documentTitle = documentType === 'estimate' ? 'Estimate' : 'Invoice';
 
   return (
-    <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200 print:shadow-none print:border-gray-300">
-      <DocumentPreviewHeader
-        documentType={documentType}
-        documentNumber={documentNumber}
-        companyInfo={companyInfo}
-      />
+    <div className="max-w-4xl mx-auto bg-white">
+      {/* Header */}
+      <div className="border-b pb-6 mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold">{documentTitle}</h1>
+            <p className="text-lg text-muted-foreground">#{documentNumber}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Issue Date</p>
+            <p className="font-medium">{issueDate}</p>
+            {dueDate && (
+              <>
+                <p className="text-sm text-muted-foreground mt-2">Due Date</p>
+                <p className="font-medium">{dueDate}</p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <DocumentInfoGrid
-        documentType={documentType}
-        enhancedClientInfo={enhancedClientInfo}
-        jobAddress={jobAddress}
-        issueDate={issueDate}
-        dueDate={dueDate}
-        taxRate={taxRate}
-        companyInfo={companyInfo}
-      />
-
-      <DocumentLineItemsTable
-        documentType={documentType}
-        lineItems={lineItems}
-      />
-
-      <DocumentTotalsSection
-        documentType={documentType}
-        subtotal={subtotal}
-        tax={tax}
-        total={total}
-        taxRate={taxRate}
-      />
-
-      {/* Notes Section */}
-      {notes && (
-        <div className="px-8 py-8 border-t">
-          <h3 className={`font-bold text-xl ${documentColor} mb-4 flex items-center`}>
-            <div className={`w-1 h-6 ${documentType === 'estimate' ? 'bg-blue-700' : 'bg-purple-700'} mr-3`}></div>
-            Notes & Instructions
-          </h3>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-base">{notes}</p>
+      {/* Client Information */}
+      {clientInfo && (
+        <div className="mb-6">
+          <h3 className="font-semibold mb-2">Bill To:</h3>
+          <div className="text-sm">
+            <p className="font-medium">{clientInfo.name}</p>
+            {clientInfo.email && <p>{clientInfo.email}</p>}
+            {clientInfo.phone && <p>{clientInfo.phone}</p>}
           </div>
         </div>
       )}
 
-      <DocumentPreviewFooter
-        documentType={documentType}
-        companyInfo={companyInfo}
-      />
+      {/* Line Items */}
+      <div className="mb-6">
+        <table className="w-full border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="border border-gray-300 px-4 py-2 text-left">Description</th>
+              <th className="border border-gray-300 px-4 py-2 text-center">Qty</th>
+              <th className="border border-gray-300 px-4 py-2 text-right">Rate</th>
+              <th className="border border-gray-300 px-4 py-2 text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.map((item) => (
+              <tr key={item.id}>
+                <td className="border border-gray-300 px-4 py-2">
+                  <div className="font-medium">{item.name}</div>
+                  {item.description && (
+                    <div className="text-sm text-muted-foreground">{item.description}</div>
+                  )}
+                </td>
+                <td className="border border-gray-300 px-4 py-2 text-center">{item.quantity}</td>
+                <td className="border border-gray-300 px-4 py-2 text-right">
+                  {formatCurrency(item.unitPrice)}
+                </td>
+                <td className="border border-gray-300 px-4 py-2 text-right">
+                  {formatCurrency(item.quantity * item.unitPrice)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Totals */}
+      <div className="flex justify-end mb-6">
+        <div className="w-64">
+          <div className="flex justify-between py-2">
+            <span>Subtotal:</span>
+            <span>{formatCurrency(calculateSubtotal())}</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span>Tax:</span>
+            <span>{formatCurrency(calculateTotalTax())}</span>
+          </div>
+          <div className="flex justify-between py-2 border-t font-bold text-lg">
+            <span>Total:</span>
+            <span>{formatCurrency(calculateGrandTotal())}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Notes */}
+      {notes && (
+        <div className="mb-6">
+          <h3 className="font-semibold mb-2">Notes:</h3>
+          <p className="text-sm whitespace-pre-wrap">{notes}</p>
+        </div>
+      )}
     </div>
   );
 };

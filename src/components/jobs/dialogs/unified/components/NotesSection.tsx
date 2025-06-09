@@ -1,6 +1,7 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NotesSectionProps {
   notes: string;
@@ -8,17 +9,21 @@ interface NotesSectionProps {
 }
 
 export const NotesSection = ({ notes, onNotesChange }: NotesSectionProps) => {
+  const isMobile = useIsMobile();
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Additional Notes</CardTitle>
+      <CardHeader className={isMobile ? 'px-3 py-3' : 'px-6 py-4'}>
+        <CardTitle className={isMobile ? 'text-base' : 'text-lg'}>
+          Notes & Terms
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={isMobile ? 'px-3 pb-3' : 'px-6 pb-6'}>
         <Textarea
-          placeholder="Add any additional notes, terms, or special instructions..."
+          placeholder="Add any additional notes, terms, or conditions..."
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
-          rows={3}
+          className={`resize-none ${isMobile ? 'min-h-[80px] text-sm' : 'min-h-[100px]'}`}
         />
       </CardContent>
     </Card>

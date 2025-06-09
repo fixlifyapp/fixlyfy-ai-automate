@@ -1,67 +1,110 @@
 
-import React from "react";
+import React from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Trash } from "lucide-react";
 import { LineItem } from "@/components/jobs/builder/types";
-import { formatCurrency } from "@/lib/utils";
-import { DocumentType } from "../../UnifiedDocumentBuilder";
 
 interface DocumentLineItemsTableProps {
-  documentType: DocumentType;
   lineItems: LineItem[];
+  onUpdateLineItem: (id: string, field: string, value: any) => void;
+  onRemoveLineItem: (id: string) => void;
 }
 
 export const DocumentLineItemsTable = ({
-  documentType,
-  lineItems
+  lineItems,
+  onUpdateLineItem,
+  onRemoveLineItem
 }: DocumentLineItemsTableProps) => {
+  
+  const calculateLineTotal = (item: LineItem): number => {
+    return item.quantity * item.unitPrice;
+  };
+
   return (
-    <div className="px-8 py-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">
-        {documentType === 'estimate' ? 'Estimated Services & Materials' : 'Services & Materials'}
-      </h3>
-      
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Description</th>
-              <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 w-20">Qty</th>
-              <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 w-28">Rate</th>
-              <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 w-28">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lineItems.map((item, index) => (
-              <tr key={item.id} className="border-t border-gray-200">
-                <td className="px-6 py-4">
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {item.description || item.name}
-                    </p>
-                    {item.taxable && (
-                      <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full mt-2">
-                        Taxable
-                      </span>
-                    )}
+    <div className="border rounded-md overflow-hidden bg-white">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[40%]">Description</TableHead>
+            <TableHead className="w-[10%]">Qty</TableHead>
+            <TableHead className="w-[15%]">Price</TableHead>
+            <TableHead className="w-[10%]">Taxable</TableHead>
+            <TableHead className="w-[15%] text-right">Total</TableHead>
+            <TableHead className="w-[10%]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {lineItems.length > 0 ? (
+            lineItems.map((item) => (
+              <TableRow key={item.id} className="hover:bg-muted/20">
+                <TableCell>
+                  <div className="space-y-2">
+                    <Input
+                      value={item.name}
+                      onChange={(e) => onUpdateLineItem(item.id, 'name', e.target.value)}
+                      placeholder="Item name"
+                      className="font-medium"
+                    />
+                    <Input
+                      value={item.description}
+                      onChange={(e) => onUpdateLineItem(item.id, 'description', e.target.value)}
+                      placeholder="Description"
+                      className="text-sm"
+                    />
                   </div>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <span className="text-gray-900">{item.quantity}</span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="text-gray-900">
-                    {formatCurrency(item.unitPrice)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="font-semibold text-gray-900">
-                    {formatCurrency(item.quantity * item.unitPrice)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) => onUpdateLineItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                    className="w-20"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.unitPrice}
+                    onChange={(e) => onUpdateLineItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    className="w-24"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Switch
+                    checked={item.taxable}
+                    onCheckedChange={(checked) => onUpdateLineItem(item.id, 'taxable', checked)}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="font-medium">${calculateLineTotal(item).toFixed(2)}</div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemoveLineItem(item.id)}
+                    className="h-8 w-8 text-destructive"
+                  >
+                    <Trash size={16} />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                No items added yet. Add items from the catalog or create a custom line item.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 };

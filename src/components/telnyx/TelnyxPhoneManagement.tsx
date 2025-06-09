@@ -25,6 +25,7 @@ interface PhoneNumber {
   source?: string;
   purchased_at?: string;
   monthly_cost?: number;
+  last_call_routed_to?: string;
 }
 
 export const TelnyxPhoneManagement = () => {
@@ -55,33 +56,19 @@ export const TelnyxPhoneManagement = () => {
     mutationFn: async ({ phoneNumber, enabled }: { phoneNumber: PhoneNumber; enabled: boolean }) => {
       console.log(`Toggling AI for ${phoneNumber.phone_number} to ${enabled}`);
       
-      if (enabled) {
-        // Enable AI - configure the number
-        const { data, error } = await supabase.functions.invoke('telnyx-phone-numbers', {
-          body: {
-            action: 'configure',
-            phone_number: phoneNumber.phone_number
-          }
-        });
-        if (error) {
-          console.error('Configure error:', error);
-          throw new Error(error.message || 'Failed to configure AI');
+      const { data, error } = await supabase.functions.invoke('manage-ai-dispatcher', {
+        body: {
+          action: 'toggle',
+          phoneNumberId: phoneNumber.id,
+          enabled
         }
-        return data;
-      } else {
-        // Disable AI - call the manage-ai-dispatcher function
-        const { data, error } = await supabase.functions.invoke('manage-ai-dispatcher', {
-          body: {
-            action: 'disable',
-            phoneNumberId: phoneNumber.id
-          }
-        });
-        if (error) {
-          console.error('Disable AI error:', error);
-          throw new Error(error.message || 'Failed to disable AI');
-        }
-        return data;
+      });
+      
+      if (error) {
+        console.error('Toggle AI error:', error);
+        throw new Error(error.message || 'Failed to toggle AI');
       }
+      return data;
     },
     onSuccess: (data, variables) => {
       const { phoneNumber, enabled } = variables;
@@ -110,13 +97,20 @@ export const TelnyxPhoneManagement = () => {
   };
 
   const isAIEnabled = (number: PhoneNumber) => {
-    return number.ai_dispatcher_enabled || number.configured_for_ai || !!number.configured_at;
+    return number.ai_dispatcher_enabled;
   };
 
   const getCostDisplay = (number: PhoneNumber) => {
     const monthlyCost = number.monthly_price || number.monthly_cost || 0;
     const setupCost = number.setup_cost || 0;
     return { monthly: monthlyCost, setup: setupCost };
+  };
+
+  const getRoutingStatus = (number: PhoneNumber) => {
+    if (number.last_call_routed_to) {
+      return number.last_call_routed_to === 'ai_dispatcher' ? 'AI Dispatcher' : 'Basic Telephony';
+    }
+    return 'No calls yet';
   };
 
   return (
@@ -186,11 +180,11 @@ export const TelnyxPhoneManagement = () => {
                         {number.purchased_at && (
                           <div>Added: {new Date(number.purchased_at).toLocaleDateString()}</div>
                         )}
-                        {number.configured_at && (
-                          <div>AI Configured: {new Date(number.configured_at).toLocaleDateString()}</div>
-                        )}
                         <div>
                           Cost: ${costs.setup.toFixed(2)} setup + ${costs.monthly.toFixed(2)}/month
+                        </div>
+                        <div>
+                          Last routing: <span className="font-medium">{getRoutingStatus(number)}</span>
                         </div>
                       </div>
                     </div>
@@ -229,6 +223,46 @@ export const TelnyxPhoneManagement = () => {
 
       {/* Purchase Section */}
       <PhoneNumberPurchase />
+
+      {/* Routing Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Webhook Routing System</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <h5 className="font-medium text-green-600">🤖 AI Dispatcher Mode</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• AI answers calls automatically</li>
+                <li>• Appointment scheduling</li>
+                <li>• Customer information capture</li>
+                <li>• Emergency detection</li>
+                <li>• Company-specific responses</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <h5 className="font-medium text-blue-600">📞 Basic Telephony Mode</h5>
+              <ul className="space-y-1 text-sm">
+                <li>• Calls forwarded to humans</li>
+                <li>• Simple call logging</li>
+                <li>• Basic greeting message</li>
+                <li>• Manual call handling</li>
+                <li>• Traditional phone system</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-medium text-blue-800 mb-2">📋 How It Works</h5>
+            <p className="text-sm text-blue-700">
+              The webhook router automatically checks each phone number's AI Dispatcher setting and routes 
+              calls to either the AI system or basic telephony based on your configuration. You can toggle 
+              this setting per number at any time.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Configuration Dialog */}
       <PhoneConfigDialog
