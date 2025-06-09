@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 export interface LineItem {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   quantity: number;
   unitPrice: number;
   taxable: boolean;
@@ -76,7 +76,7 @@ export const useUnifiedDocumentBuilder = ({
     const newLineItem: LineItem = {
       id: Date.now().toString(),
       name: product.name,
-      description: product.description,
+      description: product.description || '',
       quantity: 1,
       unitPrice: product.price,
       taxable: product.taxable !== false,

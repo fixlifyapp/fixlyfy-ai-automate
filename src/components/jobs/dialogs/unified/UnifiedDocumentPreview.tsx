@@ -2,103 +2,97 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { FileText } from 'lucide-react';
+import { LineItem } from './useUnifiedDocumentBuilder';
 import { formatCurrency } from '@/lib/utils';
-
-interface LineItem {
-  id: string;
-  name: string;
-  description?: string;
-  quantity: number;
-  unitPrice: number;
-  taxable: boolean;
-  isWarranty?: boolean;
-}
 
 interface UnifiedDocumentPreviewProps {
   documentType: 'estimate' | 'invoice';
   documentNumber: string;
   lineItems: LineItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  notes?: string;
+  calculateSubtotal: () => number;
+  calculateTotalTax: () => number;
+  calculateGrandTotal: () => number;
 }
 
 export const UnifiedDocumentPreview = ({
   documentType,
   documentNumber,
   lineItems,
-  subtotal,
-  tax,
-  total,
-  notes
+  calculateSubtotal,
+  calculateTotalTax,
+  calculateGrandTotal
 }: UnifiedDocumentPreviewProps) => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">
-            {documentType === 'estimate' ? 'Estimate' : 'Invoice'} Preview
-          </CardTitle>
-          <Badge variant={documentType === 'estimate' ? 'secondary' : 'default'}>
-            {documentNumber}
-          </Badge>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Document Preview
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Line Items */}
-        <div>
-          <h3 className="font-semibold mb-3">Items</h3>
-          {lineItems.length === 0 ? (
-            <p className="text-muted-foreground">No items added</p>
-          ) : (
-            <div className="space-y-2">
-              {lineItems.map((item) => (
-                <div key={item.id} className="flex justify-between items-start py-2 border-b">
-                  <div className="flex-1">
-                    <div className="font-medium">{item.name}</div>
-                    {item.description && (
-                      <div className="text-sm text-muted-foreground">{item.description}</div>
-                    )}
-                    <div className="text-sm text-muted-foreground">
-                      {item.quantity} × {formatCurrency(item.unitPrice)}
-                      {item.taxable && ' (Taxable)'}
+      <CardContent>
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-bold text-xl">
+                {documentType === 'estimate' ? 'ESTIMATE' : 'INVOICE'}
+              </h3>
+              <p className="text-muted-foreground">#{documentNumber}</p>
+            </div>
+            <Badge variant={documentType === 'estimate' ? 'secondary' : 'default'}>
+              {documentType === 'estimate' ? 'Draft' : 'Pending'}
+            </Badge>
+          </div>
+
+          {/* Items */}
+          <div className="space-y-2">
+            <h4 className="font-medium">Items:</h4>
+            {lineItems.length === 0 ? (
+              <p className="text-muted-foreground">No items selected</p>
+            ) : (
+              <div className="space-y-2">
+                {lineItems.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <div className="flex-1">
+                      <span className="font-medium">{item.name}</span>
+                      {item.isWarranty && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Warranty
+                        </Badge>
+                      )}
+                      <div className="text-muted-foreground text-sm">
+                        {item.quantity} × {formatCurrency(item.unitPrice)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {formatCurrency(item.quantity * item.unitPrice)}
                     </div>
                   </div>
-                  <div className="font-medium">
-                    {formatCurrency(item.quantity * item.unitPrice)}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Totals */}
+          {lineItems.length > 0 && (
+            <div className="space-y-1 pt-4 border-t">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(calculateSubtotal())}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Tax (13%):</span>
+                <span>{formatCurrency(calculateTotalTax())}</span>
+              </div>
+              <div className="flex justify-between font-bold border-t pt-1">
+                <span>Total:</span>
+                <span>{formatCurrency(calculateGrandTotal())}</span>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Totals */}
-        {lineItems.length > 0 && (
-          <div className="space-y-2 pt-4 border-t">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Tax (13%):</span>
-              <span>{formatCurrency(tax)}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
-              <span>Total:</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Notes */}
-        {notes && (
-          <div className="pt-4 border-t">
-            <h3 className="font-semibold mb-2">Notes</h3>
-            <p className="text-sm text-muted-foreground">{notes}</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

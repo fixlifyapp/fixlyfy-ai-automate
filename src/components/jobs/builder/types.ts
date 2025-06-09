@@ -2,7 +2,7 @@
 export interface LineItem {
   id: string;
   name: string;
-  description: string; // Made required to match unified builder
+  description: string;
   quantity: number;
   unitPrice: number;
   taxable: boolean;

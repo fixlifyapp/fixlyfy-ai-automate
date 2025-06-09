@@ -1,24 +1,21 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SteppedInvoiceBuilder } from './SteppedInvoiceBuilder';
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
 
 interface InvoiceBuilderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   jobId: string;
-  estimate?: Estimate;
-  invoice?: Invoice;
-  onInvoiceCreated?: (invoice: Invoice) => void;
+  existingInvoice?: any;
+  onInvoiceCreated?: () => void;
 }
 
 export const InvoiceBuilderDialog = ({
   open,
   onOpenChange,
   jobId,
-  estimate,
-  invoice,
+  existingInvoice,
   onInvoiceCreated
 }: InvoiceBuilderDialogProps) => {
   return (
@@ -26,8 +23,7 @@ export const InvoiceBuilderDialog = ({
       open={open}
       onOpenChange={onOpenChange}
       jobId={jobId}
-      existingInvoice={invoice}
-      estimateToConvert={estimate}
+      existingInvoice={existingInvoice}
       onInvoiceCreated={onInvoiceCreated}
     />
   );
