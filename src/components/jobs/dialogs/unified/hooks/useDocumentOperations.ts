@@ -1,10 +1,37 @@
 
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
 import { LineItem } from "../../../builder/types";
 import { DocumentType } from "../../UnifiedDocumentBuilder";
+
+// Local interfaces to replace deleted hooks
+interface Estimate {
+  id: string;
+  estimate_number?: string;
+  number?: string;
+  job_id: string;
+  total: number;
+  status: string;
+  notes?: string;
+  items?: any[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface Invoice {
+  id: string;
+  invoice_number?: string;
+  number?: string;
+  job_id: string;
+  total: number;
+  amount_paid: number;
+  balance: number;
+  status: string;
+  notes?: string;
+  items?: any[];
+  created_at: string;
+  updated_at: string;
+}
 
 interface DocumentFormData {
   documentId?: string;

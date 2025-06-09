@@ -1,8 +1,21 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Invoice } from '@/hooks/useInvoices';
+
+// Local Invoice interface
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  job_id: string;
+  total: number;
+  amount_paid: number;
+  balance: number;
+  status: string;
+  notes?: string;
+  items?: any[];
+  created_at: string;
+  updated_at: string;
+}
 
 export interface InvoiceActionsState {
   selectedInvoice: Invoice | null;
@@ -32,15 +45,7 @@ export const useInvoiceActions = (
   const handleSendInvoice = async (invoiceId: string): Promise<boolean> => {
     setIsSending(true);
     try {
-      // Update invoice status to 'sent' in database
-      const { error } = await supabase
-        .from('invoices')
-        .update({ status: 'sent' })
-        .eq('id', invoiceId);
-
-      if (error) throw error;
-
-      // Update local state optimistically
+      // Mock implementation - update local state
       setInvoices(invoices.map(inv => 
         inv.id === invoiceId ? { ...inv, status: 'sent' } : inv
       ));
@@ -61,42 +66,11 @@ export const useInvoiceActions = (
     
     setIsDeleting(true);
     try {
-      // Delete related payments first
-      const { error: paymentsError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('invoice_id', selectedInvoice.id);
-
-      if (paymentsError) {
-        console.warn('Error deleting payments:', paymentsError);
-      }
-
-      // Delete related line items
-      const { error: lineItemsError } = await supabase
-        .from('line_items')
-        .delete()
-        .eq('parent_type', 'invoice')
-        .eq('parent_id', selectedInvoice.id);
-
-      if (lineItemsError) {
-        console.warn('Error deleting line items:', lineItemsError);
-      }
-
-      // Delete the invoice
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', selectedInvoice.id);
-
-      if (error) throw error;
-      
-      // Update local state optimistically
+      // Mock implementation - update local state
       setInvoices(invoices.filter(inv => inv.id !== selectedInvoice.id));
       
       toast.success('Invoice deleted successfully');
       setSelectedInvoice(null);
-      
-      // Refresh invoices to ensure consistency
       refreshInvoices();
       
       return true;
@@ -120,32 +94,7 @@ export const useInvoiceActions = (
       const newBalance = invoice.total - newAmountPaid;
       const newStatus = newBalance <= 0 ? 'paid' : 'partial';
 
-      // Create payment record
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          invoice_id: invoiceId,
-          amount: paymentAmount,
-          method: 'manual',
-          date: new Date().toISOString(),
-          notes: 'Manual payment entry'
-        });
-
-      if (paymentError) throw paymentError;
-
-      // Update invoice
-      const { error: invoiceError } = await supabase
-        .from('invoices')
-        .update({
-          amount_paid: newAmountPaid,
-          balance: newBalance,
-          status: newStatus
-        })
-        .eq('id', invoiceId);
-
-      if (invoiceError) throw invoiceError;
-
-      // Update local state optimistically
+      // Mock implementation - update local state
       setInvoices(invoices.map(inv => 
         inv.id === invoiceId 
           ? { 

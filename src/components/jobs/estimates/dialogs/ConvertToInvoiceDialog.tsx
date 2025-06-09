@@ -9,7 +9,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { Estimate } from "@/hooks/useEstimates";
+
+// Local interface to replace deleted hook
+interface Estimate {
+  id: string;
+  estimate_number?: string;
+  job_id: string;
+  total: number;
+  status: string;
+}
 
 interface ConvertToInvoiceDialogProps {
   open: boolean;
