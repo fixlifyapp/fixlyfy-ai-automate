@@ -8,8 +8,21 @@ import { LineItemsManager } from "./unified/LineItemsManager";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
-import { Estimate } from "@/hooks/useEstimates";
 import { Product } from "../builder/types";
+
+// Define a proper Estimate interface to match expected structure
+interface Estimate {
+  id: string;
+  job_id: string;
+  estimate_number: string;
+  number: string;
+  date: string;
+  total: number;
+  status: string;
+  lineItems?: any[];
+  notes?: string;
+  created_at: string;
+}
 
 interface SimpleEstimateBuilderProps {
   open: boolean;
@@ -37,12 +50,10 @@ export const SimpleEstimateBuilder = ({
 
   const {
     lineItems,
-    taxRate,
     notes,
     documentNumber,
     isSubmitting,
     setLineItems,
-    setTaxRate,
     setNotes,
     handleAddProduct,
     handleRemoveLineItem,
@@ -87,10 +98,7 @@ export const SimpleEstimateBuilder = ({
             description: "2-year comprehensive warranty package",
             category: "Warranties",
             price: 149,
-            ourPrice: 0,
-            cost: 0,
-            taxable: false,
-            tags: ["warranty", "protection"]
+            taxable: false
           };
         } else if (total > 200) {
           warranty = {
@@ -99,10 +107,7 @@ export const SimpleEstimateBuilder = ({
             description: "1-year extended warranty with priority service",
             category: "Warranties",
             price: 89,
-            ourPrice: 0,
-            cost: 0,
-            taxable: false,
-            tags: ["warranty", "protection"]
+            taxable: false
           };
         } else {
           warranty = {
@@ -111,10 +116,7 @@ export const SimpleEstimateBuilder = ({
             description: "Extended warranty covering parts and labor",
             category: "Warranties",
             price: 49,
-            ourPrice: 0,
-            cost: 0,
-            taxable: false,
-            tags: ["warranty", "protection"]
+            taxable: false
           };
         }
 
@@ -162,7 +164,20 @@ export const SimpleEstimateBuilder = ({
     try {
       const savedDocument = await saveDocumentChanges();
       if (savedDocument && onEstimateCreated) {
-        onEstimateCreated(savedDocument as Estimate);
+        // Convert the saved document to Estimate format
+        const estimate: Estimate = {
+          id: savedDocument.id,
+          job_id: jobId,
+          estimate_number: documentNumber,
+          number: documentNumber,
+          date: new Date().toISOString(),
+          total: calculateGrandTotal(),
+          status: 'draft',
+          lineItems: lineItems,
+          notes: notes,
+          created_at: new Date().toISOString()
+        };
+        onEstimateCreated(estimate);
       }
       onOpenChange(false);
       toast.success("Estimate saved successfully!");
@@ -239,11 +254,7 @@ export const SimpleEstimateBuilder = ({
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
           <LineItemsManager
             lineItems={lineItems}
-            taxRate={taxRate}
-            notes={notes}
             onLineItemsChange={setLineItems}
-            onTaxRateChange={setTaxRate}
-            onNotesChange={setNotes}
             onAddProduct={handleAddProduct}
             onRemoveLineItem={handleRemoveLineItem}
             onUpdateLineItem={handleUpdateLineItem}

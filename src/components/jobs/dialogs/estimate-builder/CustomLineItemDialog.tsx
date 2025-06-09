@@ -25,8 +25,7 @@ export const CustomLineItemDialog = ({
     description: "",
     quantity: 1,
     unitPrice: 0,
-    taxable: true,
-    discount: 0
+    taxable: true
   });
 
   const handleChange = (field: keyof LineItem, value: any) => {
@@ -34,10 +33,7 @@ export const CustomLineItemDialog = ({
   };
 
   const handleSave = () => {
-    onSave({
-      ...item,
-      total: (item.quantity || 1) * (item.unitPrice || 0)
-    });
+    onSave(item);
     onOpenChange(false);
   };
 
@@ -72,7 +68,7 @@ export const CustomLineItemDialog = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="price">Customer Price ($)</Label>
+              <Label htmlFor="price">Price ($)</Label>
               <Input
                 id="price"
                 type="number"
@@ -80,36 +76,6 @@ export const CustomLineItemDialog = ({
                 step="0.01"
                 value={item.unitPrice || 0}
                 onChange={(e) => handleChange("unitPrice", parseFloat(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="discount">Discount</Label>
-              <div className="flex items-center">
-                <Input
-                  id="discount"
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="mr-2"
-                  value={item.discount || 0}
-                  onChange={(e) => handleChange("discount", parseFloat(e.target.value) || 0)}
-                />
-                <span>%</span>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cost">Our Price ($)</Label>
-              <Input
-                id="cost"
-                type="number"
-                min={0}
-                step="0.01"
-                value={item.ourPrice || 0}
-                onChange={(e) => handleChange("ourPrice", parseFloat(e.target.value) || 0)}
               />
             </div>
           </div>

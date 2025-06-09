@@ -13,8 +13,6 @@ interface EstimateBuilderContentProps {
   onEditLineItem: (id: string) => boolean;
   onAddEmptyLineItem: () => void;
   onAddCustomLine: () => void;
-  taxRate: number;
-  setTaxRate: (rate: number) => void;
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
@@ -34,8 +32,6 @@ export const EstimateBuilderContent = ({
   onEditLineItem,
   onAddEmptyLineItem,
   onAddCustomLine,
-  taxRate,
-  setTaxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
@@ -61,8 +57,6 @@ export const EstimateBuilderContent = ({
         onEditLineItem={onEditLineItem}
         onAddEmptyLineItem={onAddEmptyLineItem}
         onAddCustomLine={onAddCustomLine}
-        taxRate={taxRate}
-        setTaxRate={setTaxRate}
         calculateSubtotal={calculateSubtotal}
         calculateTotalTax={calculateTotalTax}
         calculateGrandTotal={calculateGrandTotal}
@@ -78,7 +72,6 @@ export const EstimateBuilderContent = ({
         documentType="estimate"
         documentNumber={estimateNumber}
         lineItems={lineItems}
-        taxRate={taxRate}
         calculateSubtotal={calculateSubtotal}
         calculateTotalTax={calculateTotalTax}
         calculateGrandTotal={calculateGrandTotal}

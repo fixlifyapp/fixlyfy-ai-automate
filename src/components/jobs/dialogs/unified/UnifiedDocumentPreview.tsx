@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText } from 'lucide-react';
-import { LineItem } from './useUnifiedDocumentBuilder';
+import { LineItem } from '../builder/types';
 import { formatCurrency } from '@/lib/utils';
 
 interface UnifiedDocumentPreviewProps {
@@ -13,6 +13,11 @@ interface UnifiedDocumentPreviewProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
+  notes?: string;
+  clientInfo?: any;
+  jobId?: string;
+  issueDate?: string;
+  dueDate?: string;
 }
 
 export const UnifiedDocumentPreview = ({
@@ -21,7 +26,12 @@ export const UnifiedDocumentPreview = ({
   lineItems,
   calculateSubtotal,
   calculateTotalTax,
-  calculateGrandTotal
+  calculateGrandTotal,
+  notes,
+  clientInfo,
+  jobId,
+  issueDate,
+  dueDate
 }: UnifiedDocumentPreviewProps) => {
   return (
     <Card>
@@ -46,6 +56,18 @@ export const UnifiedDocumentPreview = ({
             </Badge>
           </div>
 
+          {/* Client Info */}
+          {clientInfo && (
+            <div className="border-b pb-4">
+              <h4 className="font-medium mb-2">Bill To:</h4>
+              <div className="text-sm">
+                <p className="font-medium">{clientInfo.name}</p>
+                {clientInfo.email && <p>{clientInfo.email}</p>}
+                {clientInfo.phone && <p>{clientInfo.phone}</p>}
+              </div>
+            </div>
+          )}
+
           {/* Items */}
           <div className="space-y-2">
             <h4 className="font-medium">Items:</h4>
@@ -64,6 +86,9 @@ export const UnifiedDocumentPreview = ({
                       )}
                       <div className="text-muted-foreground text-sm">
                         {item.quantity} × {formatCurrency(item.unitPrice)}
+                        {item.description && (
+                          <div className="text-xs mt-1">{item.description}</div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
@@ -74,6 +99,14 @@ export const UnifiedDocumentPreview = ({
               </div>
             )}
           </div>
+
+          {/* Notes */}
+          {notes && (
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-2">Notes:</h4>
+              <p className="text-sm text-muted-foreground">{notes}</p>
+            </div>
+          )}
 
           {/* Totals */}
           {lineItems.length > 0 && (
@@ -90,6 +123,14 @@ export const UnifiedDocumentPreview = ({
                 <span>Total:</span>
                 <span>{formatCurrency(calculateGrandTotal())}</span>
               </div>
+            </div>
+          )}
+
+          {/* Dates */}
+          {(issueDate || dueDate) && (
+            <div className="text-xs text-muted-foreground border-t pt-4 space-y-1">
+              {issueDate && <div>Issue Date: {issueDate}</div>}
+              {dueDate && <div>Due Date: {dueDate}</div>}
             </div>
           )}
         </div>

@@ -8,7 +8,7 @@ export interface JobData {
   description?: string;
   status: string;
   client_id: string;
-  clientId: string; // Add required property
+  clientId: string;
   client_name?: string;
   client_phone?: string;
   client_email?: string;
@@ -16,7 +16,7 @@ export interface JobData {
   service?: string;
   phone?: string;
   email?: string;
-  client?: string;
+  client: string; // Make required - always provide a fallback
   tasks?: any[];
   tags?: string[];
   created_at?: string;
@@ -25,7 +25,7 @@ export interface JobData {
   date?: string;
   revenue?: number;
   notes?: string;
-  total: number; // Make required
+  total: number;
 }
 
 export const useJobData = (jobId: string) => {
@@ -47,7 +47,7 @@ export const useJobData = (jobId: string) => {
         description: 'Annual HVAC system inspection and maintenance',
         status: 'scheduled',
         client_id: 'client-001',
-        clientId: 'client-001', // Add required property
+        clientId: 'client-001',
         client_name: 'John Smith',
         client_phone: '(555) 123-4567',
         client_email: 'john.smith@email.com',
@@ -55,7 +55,7 @@ export const useJobData = (jobId: string) => {
         service: 'HVAC Maintenance',
         phone: '(555) 123-4567',
         email: 'john.smith@email.com',
-        client: 'John Smith',
+        client: 'John Smith', // Always provide this required field
         total: 0,
         tasks: [
           { id: '1', name: 'Inspect air filters', completed: false },

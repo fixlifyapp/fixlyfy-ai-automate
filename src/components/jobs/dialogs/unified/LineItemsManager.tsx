@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus } from 'lucide-react';
-import { LineItem, Product } from './useUnifiedDocumentBuilder';
+import { LineItem, Product } from '../builder/types';
 import { formatCurrency } from '@/lib/utils';
 
 interface LineItemsManagerProps {
@@ -18,6 +18,7 @@ interface LineItemsManagerProps {
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
+  documentType?: string;
 }
 
 export const LineItemsManager = ({
@@ -28,7 +29,8 @@ export const LineItemsManager = ({
   onUpdateLineItem,
   calculateSubtotal,
   calculateTotalTax,
-  calculateGrandTotal
+  calculateGrandTotal,
+  documentType = 'document'
 }: LineItemsManagerProps) => {
   const handleAddCustomItem = () => {
     const newItem: LineItem = {
