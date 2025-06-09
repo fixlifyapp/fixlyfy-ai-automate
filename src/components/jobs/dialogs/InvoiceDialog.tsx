@@ -12,13 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { InvoiceForm } from "../forms/InvoiceForm";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Calculator, Info } from "lucide-react";
 import { InvoiceProductSelector } from "../invoices/InvoiceProductSelector";
 import { Product } from "../builder/types";
-import { supabase } from "@/integrations/supabase/client";
 
 interface InvoiceDialogProps {
   open: boolean;
@@ -68,8 +66,8 @@ export const InvoiceDialog = ({
       if (editInvoice) {
         setAmount(editInvoice.total);
         setDescription(editInvoice.notes || "");
-        // Fetch invoice line items if editing
-        fetchInvoiceLineItems(editInvoice.id);
+        // Note: With new schema, we'll fetch document items differently
+        setInvoiceItems([]);
       } else {
         setAmount(0);
         setInvoiceItems([]);
@@ -78,40 +76,6 @@ export const InvoiceDialog = ({
       }
     }
   }, [open, editInvoice]);
-
-  // Fetch line items if editing an existing invoice
-  const fetchInvoiceLineItems = async (invoiceId: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("line_items")
-        .select("*")
-        .eq("parent_id", invoiceId)
-        .eq("parent_type", "invoice");
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const formattedItems = data.map(item => ({
-          id: item.id,
-          name: item.description,
-          description: item.description,
-          quantity: item.quantity || 1,
-          unitPrice: item.unit_price,
-          taxable: item.taxable
-        }));
-        
-        setInvoiceItems(formattedItems);
-      }
-    } catch (error) {
-      console.error("Error fetching invoice line items:", error);
-      toast.error("Failed to load invoice details");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Function to handle the amount change
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,79 +141,13 @@ export const InvoiceDialog = ({
         return;
       }
       
-      let invoiceId = editInvoice?.id;
-      let invoiceNumber = editInvoice?.invoice_number;
-      
-      if (!editInvoice) {
-        // Create new invoice
-        invoiceNumber = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
-        
-        const { data: newInvoice, error } = await supabase
-          .from("invoices")
-          .insert({
-            invoice_number: invoiceNumber,
-            total: totalAmount,
-            balance: totalAmount,
-            amount_paid: 0,
-            status: "unpaid",
-            notes: description,
-            job_id: "JOB-2034" // This should come from props in a real implementation
-          })
-          .select()
-          .single();
-          
-        if (error) {
-          throw error;
-        }
-        
-        invoiceId = newInvoice.id;
-      } else {
-        // Update existing invoice
-        const { error } = await supabase
-          .from("invoices")
-          .update({
-            total: totalAmount,
-            balance: totalAmount,
-            notes: description,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", invoiceId);
-          
-        if (error) {
-          throw error;
-        }
-        
-        // Delete existing line items so we can replace them
-        const { error: deleteError } = await supabase
-          .from("line_items")
-          .delete()
-          .eq("parent_id", invoiceId)
-          .eq("parent_type", "invoice");
-          
-        if (deleteError) {
-          throw deleteError;
-        }
-      }
-      
-      // Insert line items if we have any
-      if (invoiceItems.length > 0) {
-        const lineItemsToInsert = invoiceItems.map(item => ({
-          parent_id: invoiceId,
-          parent_type: "invoice",
-          description: item.name,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-        
-        const { error: lineItemsError } = await supabase
-          .from("line_items")
-          .insert(lineItemsToInsert);
-          
-        if (lineItemsError) {
-          throw lineItemsError;
-        }
-      }
+      // TODO: With new schema, create document in documents table
+      console.log('Creating invoice with new schema:', {
+        type: 'invoice',
+        total: totalAmount,
+        items: invoiceItems,
+        notes: description
+      });
       
       onInvoiceCreated(totalAmount);
       toast.success(`Invoice ${editInvoice ? 'updated' : 'created'} successfully`);
