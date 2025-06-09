@@ -1,255 +1,182 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Estimate } from '@/hooks/useEstimates';
 
-export interface EstimateActionsState {
-  selectedEstimate: Estimate | null;
-  isDeleting: boolean;
-  isConverting: boolean;
-  isSending: boolean;
+interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  taxable: boolean;
 }
 
-export interface EstimateActionsActions {
-  setSelectedEstimate: (estimate: Estimate | null) => void;
-  handleSendEstimate: (estimateId: string) => Promise<boolean>;
-  confirmDeleteEstimate: () => Promise<boolean>;
-  confirmConvertToInvoice: () => Promise<boolean>;
+interface Estimate {
+  id: string;
+  estimate_number: string;
+  job_id: string;
+  total: number;
+  status: string;
+  notes?: string;
+  items?: LineItem[];
+  created_at: string;
+  updated_at: string;
 }
 
-export interface EstimateActionsHook {
-  state: EstimateActionsState;
-  actions: EstimateActionsActions;
+interface UseEstimateActionsReturn {
+  isLoading: boolean;
+  createEstimate: (estimateData: any) => Promise<Estimate | null>;
+  updateEstimate: (estimateId: string, updates: any) => Promise<Estimate | null>;
+  deleteEstimate: (estimateId: string) => Promise<boolean>;
+  convertToInvoice: (estimateId: string) => Promise<any>;
+  sendEstimate: (estimateId: string, method: 'email' | 'sms', recipient: string) => Promise<boolean>;
 }
 
-export const useEstimateActions = (
-  jobId: string,
-  estimates: Estimate[],
-  setEstimates: (estimates: Estimate[]) => void,
-  refreshEstimates: () => void,
-  onEstimateConverted?: () => void
-): EstimateActionsHook => {
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+export const useEstimateActions = (): UseEstimateActionsReturn => {
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendEstimate = async (estimateId: string): Promise<boolean> => {
-    setIsSending(true);
+  const createEstimate = useCallback(async (estimateData: any): Promise<Estimate | null> => {
+    setIsLoading(true);
     try {
-      console.log('Starting estimate send process for ID:', estimateId);
+      console.log('Creating estimate (MOCK):', estimateData);
       
-      // Get estimate details with job and client info
-      const { data: estimateData, error: estimateError } = await supabase
-        .from('estimates')
-        .select(`
-          *,
-          jobs:job_id (
-            id,
-            title,
-            client_id,
-            clients:client_id (
-              id,
-              name,
-              email,
-              phone,
-              company
-            )
-          )
-        `)
-        .eq('id', estimateId)
-        .single();
-
-      if (estimateError || !estimateData) {
-        throw new Error('Failed to fetch estimate details');
-      }
-
-      console.log('Estimate data:', estimateData);
-
-      // Get line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', estimateId);
-
-      if (lineItemsError) {
-        throw new Error('Failed to fetch line items');
-      }
-
-      console.log('Line items:', lineItems);
-
-      // Call send-estimate function with complete data
-      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
-        body: {
-          estimateId: estimateId,
-          sendMethod: 'email', // Default to email for quick send
-          recipientEmail: estimateData.jobs?.clients?.email,
-          subject: `Estimate ${estimateData.estimate_number}`,
-          message: `Please find your estimate ${estimateData.estimate_number}. Total: $${estimateData.total.toFixed(2)}.`
-        }
-      });
-
-      if (sendError || !sendData?.success) {
-        throw new Error(sendData?.error || 'Failed to send estimate');
-      }
-
-      console.log('Estimate sent successfully');
-
-      // Update local state to reflect sent status
-      const updatedEstimates = estimates.map(est => 
-        est.id === estimateId ? { ...est, status: 'sent' } : est
-      );
-      setEstimates(updatedEstimates);
+      // Mock creation delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      toast.success('Estimate sent successfully');
-      return true;
+      const mockEstimate: Estimate = {
+        id: `est-${Date.now()}`,
+        estimate_number: `EST-${Date.now().toString().slice(-6)}`,
+        job_id: estimateData.job_id || '',
+        total: estimateData.total || 0,
+        status: 'draft',
+        notes: estimateData.notes || '',
+        items: estimateData.items || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      toast.success('Estimate created successfully');
+      console.log('✅ Mock estimate created:', mockEstimate);
+      return mockEstimate;
     } catch (error: any) {
-      console.error('Error sending estimate:', error);
-      toast.error('Failed to send estimate: ' + error.message);
-      return false;
+      console.error('❌ Error creating estimate:', error);
+      toast.error('Failed to create estimate');
+      return null;
     } finally {
-      setIsSending(false);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const confirmDeleteEstimate = async (): Promise<boolean> => {
-    if (!selectedEstimate) return false;
-
-    setIsDeleting(true);
+  const updateEstimate = useCallback(async (estimateId: string, updates: any): Promise<Estimate | null> => {
+    setIsLoading(true);
     try {
-      // Delete line items first
-      await supabase
-        .from('line_items')
-        .delete()
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', selectedEstimate.id);
+      console.log('Updating estimate (MOCK):', estimateId, updates);
+      
+      // Mock update delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const mockUpdatedEstimate: Estimate = {
+        id: estimateId,
+        estimate_number: `EST-${estimateId.slice(-6)}`,
+        job_id: updates.job_id || '',
+        total: updates.total || 0,
+        status: updates.status || 'draft',
+        notes: updates.notes || '',
+        items: updates.items || [],
+        created_at: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        updated_at: new Date().toISOString()
+      };
 
-      // Delete estimate
-      const { error } = await supabase
-        .from('estimates')
-        .delete()
-        .eq('id', selectedEstimate.id);
+      toast.success('Estimate updated successfully');
+      console.log('✅ Mock estimate updated:', mockUpdatedEstimate);
+      return mockUpdatedEstimate;
+    } catch (error: any) {
+      console.error('❌ Error updating estimate:', error);
+      toast.error('Failed to update estimate');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-      if (error) throw error;
-
-      // Update local state
-      const updatedEstimates = estimates.filter(est => est.id !== selectedEstimate.id);
-      setEstimates(updatedEstimates);
+  const deleteEstimate = useCallback(async (estimateId: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      console.log('Deleting estimate (MOCK):', estimateId);
+      
+      // Mock delete delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       toast.success('Estimate deleted successfully');
+      console.log('✅ Mock estimate deleted:', estimateId);
       return true;
     } catch (error: any) {
-      console.error('Error deleting estimate:', error);
+      console.error('❌ Error deleting estimate:', error);
       toast.error('Failed to delete estimate');
       return false;
     } finally {
-      setIsDeleting(false);
-      setSelectedEstimate(null);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const confirmConvertToInvoice = async (): Promise<boolean> => {
-    if (!selectedEstimate) return false;
-
-    setIsConverting(true);
+  const convertToInvoice = useCallback(async (estimateId: string): Promise<any> => {
+    setIsLoading(true);
     try {
-      // Get line items for the estimate
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', selectedEstimate.id);
-
-      if (lineItemsError) throw lineItemsError;
-
-      // Generate invoice number
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .rpc('generate_next_id', { p_entity_type: 'invoice' });
-
-      if (invoiceError) throw invoiceError;
-
-      const invoiceNumber = invoiceData;
-
-      // Create invoice
-      const { data: newInvoice, error: createInvoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          invoice_number: invoiceNumber,
-          job_id: selectedEstimate.job_id,
-          estimate_id: selectedEstimate.id,
-          total: selectedEstimate.total,
-          status: 'unpaid',
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-          notes: selectedEstimate.notes
-        })
-        .select()
-        .single();
-
-      if (createInvoiceError) throw createInvoiceError;
-
-      // Copy line items to invoice
-      if (lineItems && lineItems.length > 0) {
-        const invoiceLineItems = lineItems.map(item => ({
-          parent_type: 'invoice' as const,
-          parent_id: newInvoice.id,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          taxable: item.taxable
-        }));
-
-        const { error: lineItemsCreateError } = await supabase
-          .from('line_items')
-          .insert(invoiceLineItems);
-
-        if (lineItemsCreateError) throw lineItemsCreateError;
-      }
-
-      // Update estimate status to 'converted'
-      const { error: updateEstimateError } = await supabase
-        .from('estimates')
-        .update({ status: 'converted' })
-        .eq('id', selectedEstimate.id);
-
-      if (updateEstimateError) throw updateEstimateError;
-
-      // Update local state
-      const updatedEstimates = estimates.map(est => 
-        est.id === selectedEstimate.id ? { ...est, status: 'converted' } : est
-      );
-      setEstimates(updatedEstimates);
-
-      toast.success(`Invoice ${invoiceNumber} created successfully from estimate ${selectedEstimate.estimate_number}`);
+      console.log('Converting estimate to invoice (MOCK):', estimateId);
       
-      if (onEstimateConverted) {
-        onEstimateConverted();
-      }
+      // Mock conversion delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const mockInvoice = {
+        id: `inv-${Date.now()}`,
+        invoice_number: `INV-${Date.now().toString().slice(-6)}`,
+        estimate_id: estimateId,
+        job_id: `job-${estimateId}`,
+        total: 750.00,
+        amount_paid: 0,
+        balance: 750.00,
+        status: 'unpaid',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      toast.success('Estimate converted to invoice successfully');
+      console.log('✅ Mock invoice created:', mockInvoice);
+      return mockInvoice;
+    } catch (error: any) {
+      console.error('❌ Error converting estimate:', error);
+      toast.error('Failed to convert estimate to invoice');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const sendEstimate = useCallback(async (estimateId: string, method: 'email' | 'sms', recipient: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      console.log('Sending estimate (MOCK):', estimateId, method, recipient);
+      
+      // Mock send delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast.success(`Estimate sent via ${method} to ${recipient}`);
+      console.log('✅ Mock estimate sent');
       return true;
     } catch (error: any) {
-      console.error('Error converting estimate to invoice:', error);
-      toast.error('Failed to convert estimate to invoice');
+      console.error('❌ Error sending estimate:', error);
+      toast.error(`Failed to send estimate via ${method}`);
       return false;
     } finally {
-      setIsConverting(false);
-      setSelectedEstimate(null);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   return {
-    state: {
-      selectedEstimate,
-      isDeleting,
-      isConverting,
-      isSending
-    },
-    actions: {
-      setSelectedEstimate,
-      handleSendEstimate,
-      confirmDeleteEstimate,
-      confirmConvertToInvoice
-    }
+    isLoading,
+    createEstimate,
+    updateEstimate,
+    deleteEstimate,
+    convertToInvoice,
+    sendEstimate
   };
 };

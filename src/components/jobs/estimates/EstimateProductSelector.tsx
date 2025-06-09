@@ -1,196 +1,172 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useProducts } from "@/hooks/useProducts";
-import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash, Plus, Package, Pencil } from "lucide-react";
+import { Plus, Edit, Trash2, Package } from "lucide-react";
 import { ProductEditInEstimateDialog } from "../dialogs/ProductEditInEstimateDialog";
-import { Dialog } from "@/components/ui/dialog";
-import { DeleteConfirmDialog } from "../dialogs/DeleteConfirmDialog";
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  taxable: boolean;
+}
 
 interface EstimateProductSelectorProps {
   selectedProducts: any[];
-  onAddProduct: (product: any) => void;
-  onRemoveProduct: (productId: string) => void;
-  onUpdateProduct?: (productId: string, updatedProduct: any) => void;
+  onProductAdd: (product: Product) => void;
+  onProductEdit: (product: any) => void;
+  onProductRemove: (productId: string) => void;
 }
 
-export function EstimateProductSelector({
+export const EstimateProductSelector = ({
   selectedProducts,
-  onAddProduct,
-  onRemoveProduct,
-  onUpdateProduct
-}: EstimateProductSelectorProps) {
-  const { products, isLoading } = useProducts();
-  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<any>(null);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  onProductAdd,
+  onProductEdit,
+  onProductRemove
+}: EstimateProductSelectorProps) => {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
 
-  // Calculate total estimate amount
-  const estimateTotal = selectedProducts.reduce((sum, product) => 
-    sum + product.price, 0
-  );
-  
-  const handleOpenProductSearch = () => {
-    setIsProductSearchOpen(true);
-  };
+  // Mock products catalog
+  const mockProducts: Product[] = [
+    {
+      id: 'prod-1',
+      name: 'HVAC Filter',
+      description: 'High-efficiency air filter',
+      price: 25.00,
+      category: 'Parts',
+      taxable: true
+    },
+    {
+      id: 'prod-2',
+      name: 'Thermostat',
+      description: 'Digital programmable thermostat',
+      price: 125.00,
+      category: 'Parts',
+      taxable: true
+    },
+    {
+      id: 'prod-3',
+      name: 'Labor - HVAC Service',
+      description: 'Professional HVAC service labor',
+      price: 85.00,
+      category: 'Labor',
+      taxable: true
+    }
+  ];
 
-  const handleProductSelect = (product: any) => {
-    onAddProduct(product);
-  };
-  
   const handleEditProduct = (product: any) => {
-    setProductToEdit(product);
-    setIsEditDialogOpen(true);
+    setEditingProduct(product);
+    setShowEditDialog(true);
   };
-  
-  const handleUpdateProduct = (updatedProduct: any) => {
-    if (onUpdateProduct && updatedProduct.id) {
-      onUpdateProduct(updatedProduct.id, updatedProduct);
-    }
-    setIsEditDialogOpen(false);
+
+  const handleSaveProduct = (updatedProduct: any) => {
+    onProductEdit(updatedProduct);
+    setShowEditDialog(false);
+    setEditingProduct(null);
   };
-  
-  const handleDeleteClick = (productId: string) => {
-    setProductToDelete(productId);
-    setIsDeleteConfirmOpen(true);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
-  
-  const confirmDeleteProduct = () => {
-    if (productToDelete) {
-      onRemoveProduct(productToDelete);
-      setIsDeleteConfirmOpen(false);
-      setProductToDelete(null);
-    }
-  };
-  
+
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-base">Products & Services</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="gap-1"
-              onClick={handleOpenProductSearch}
-            >
-              <Plus size={16} />
-              Add Product
-            </Button>
+    <div className="space-y-6">
+      {/* Selected Products */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Selected Products & Services</h3>
+        {selectedProducts.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center text-gray-500">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No products selected yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {selectedProducts.map((product, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium">{product.description || product.name}</h4>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        <span>Qty: {product.quantity || 1}</span>
+                        <span>Unit: {formatCurrency(product.unitPrice || product.price)}</span>
+                        <span>Total: {formatCurrency((product.quantity || 1) * (product.unitPrice || product.price))}</span>
+                        {product.taxable && <Badge variant="outline" className="text-xs">Taxable</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onProductRemove(product.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardHeader>
-        <CardContent>
-          {selectedProducts.length > 0 ? (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedProducts.map(product => (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-muted-foreground line-clamp-1">
-                          {product.description}
-                        </div>
-                        {product.tags && product.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {product.tags.map((tag: string, i: number) => (
-                              <Badge 
-                                key={i}
-                                variant="outline" 
-                                className="text-[10px] py-0 h-4"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleEditProduct(product)}
-                            className="h-8 w-8"
-                            title="Edit product"
-                          >
-                            <Pencil size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteClick(product.id)}
-                            className="h-8 w-8"
-                            title="Remove product"
-                          >
-                            <Trash size={16} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                <span className="text-sm font-medium">Total</span>
-                <span className="text-lg font-bold">
-                  ${estimateTotal.toFixed(2)}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
-              <p>No products added yet</p>
-              <p className="text-sm">Click "Add Product" to add products to this estimate</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Product search dialog */}
-      <ProductSearch
-        open={isProductSearchOpen}
-        onOpenChange={setIsProductSearchOpen}
-        onProductSelect={handleProductSelect}
-      />
-      
-      {/* Product edit dialog for estimate-specific edits */}
+        )}
+      </div>
+
+      {/* Product Catalog */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Add Products & Services</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {mockProducts.map((product) => (
+            <Card key={product.id} className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-medium">{product.name}</h4>
+                    <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">{product.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-green-600">{formatCurrency(product.price)}</span>
+                    <Button
+                      size="sm"
+                      onClick={() => onProductAdd({
+                        ...product,
+                        quantity: 1,
+                        unitPrice: product.price
+                      })}
+                      className="gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Edit Product Dialog */}
       <ProductEditInEstimateDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        product={productToEdit}
-        onSave={handleUpdateProduct}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        product={editingProduct}
+        onSave={handleSaveProduct}
       />
-      
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DeleteConfirmDialog 
-          title="Remove Product"
-          description="Are you sure you want to remove this product from the estimate?"
-          onOpenChange={setIsDeleteConfirmOpen}
-          onConfirm={confirmDeleteProduct}
-          isDeleting={false}
-          confirmText="Remove"
-        />
-      </Dialog>
     </div>
   );
 };
