@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { Estimate } from '@/hooks/useEstimates';
 
 export interface UseEstimateActionsReturn {
   state: {
@@ -8,7 +9,7 @@ export interface UseEstimateActionsReturn {
     isConverting: boolean;
   };
   actions: {
-    setSelectedEstimate: (estimate: any) => void;
+    setSelectedEstimate: (estimate: Estimate | null) => void;
     confirmDeleteEstimate: () => Promise<void>;
     confirmConvertToInvoice: () => Promise<void>;
   };
@@ -16,15 +17,15 @@ export interface UseEstimateActionsReturn {
 
 export const useEstimateActions = (
   jobId: string,
-  estimates: any[],
-  setEstimates: (estimates: any[]) => void,
+  estimates: Estimate[],
+  setEstimates: (estimates: Estimate[]) => void,
   refreshEstimates: () => void,
   onEstimateConverted?: () => void
 ): UseEstimateActionsReturn => {
   const [isSending, setIsSending] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
 
   const confirmDeleteEstimate = async () => {
     if (!selectedEstimate) return;

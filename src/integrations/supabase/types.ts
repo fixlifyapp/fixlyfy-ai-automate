@@ -1260,6 +1260,78 @@ export type Database = {
           },
         ]
       }
+      estimates: {
+        Row: {
+          approved_at: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount_amount: number | null
+          estimate_number: string
+          id: string
+          items: Json | null
+          job_id: string
+          notes: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          terms: string | null
+          title: string | null
+          total: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          estimate_number: string
+          id?: string
+          items?: Json | null
+          job_id: string
+          notes?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          terms?: string | null
+          title?: string | null
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          estimate_number?: string
+          id?: string
+          items?: Json | null
+          job_id?: string
+          notes?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          terms?: string | null
+          title?: string | null
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       id_counters: {
         Row: {
           created_at: string | null
@@ -1289,6 +1361,98 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount_paid: number | null
+          balance_due: number | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount_amount: number | null
+          due_date: string | null
+          estimate_id: string | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          items: Json | null
+          job_id: string
+          notes: string | null
+          paid_at: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          terms: string | null
+          title: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          balance_due?: number | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          estimate_id?: string | null
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          items?: Json | null
+          job_id: string
+          notes?: string | null
+          paid_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          terms?: string | null
+          title?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number | null
+          balance_due?: number | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          estimate_id?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          items?: Json | null
+          job_id?: string
+          notes?: string | null
+          paid_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          terms?: string | null
+          title?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_attachments: {
         Row: {
@@ -1739,6 +1903,65 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          client_id: string | null
+          created_at: string
+          id: string
+          invoice_id: string | null
+          job_id: string | null
+          method: string
+          notes: string | null
+          payment_date: string
+          payment_number: string
+          processed_by: string | null
+          reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          job_id?: string | null
+          method: string
+          notes?: string | null
+          payment_date?: string
+          payment_number: string
+          processed_by?: string | null
+          reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          job_id?: string | null
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          payment_number?: string
+          processed_by?: string | null
+          reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
