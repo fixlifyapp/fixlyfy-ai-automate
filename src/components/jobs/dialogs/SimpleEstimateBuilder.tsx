@@ -53,8 +53,10 @@ export const SimpleEstimateBuilder = ({
     notes,
     documentNumber,
     isSubmitting,
+    taxRate,
     setLineItems,
     setNotes,
+    setTaxRate,
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
@@ -258,6 +260,10 @@ export const SimpleEstimateBuilder = ({
             onAddProduct={handleAddProduct}
             onRemoveLineItem={handleRemoveLineItem}
             onUpdateLineItem={handleUpdateLineItem}
+            taxRate={taxRate}
+            onTaxRateChange={setTaxRate}
+            notes={notes}
+            onNotesChange={setNotes}
             calculateSubtotal={calculateSubtotal}
             calculateTotalTax={calculateTotalTax}
             calculateGrandTotal={calculateGrandTotal}

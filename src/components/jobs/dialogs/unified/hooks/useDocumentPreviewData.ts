@@ -45,7 +45,7 @@ export const useDocumentPreviewData = ({
       // Use job client info if available (this is the primary source when we have a jobId)
       finalClientInfo = {
         ...jobClientInfo,
-        fullAddress: jobAddress || jobClientInfo.fullAddress || 'Address not available'
+        fullAddress: jobAddress || 'Address not available'
       };
       console.log('Using job client info:', finalClientInfo);
     } else if (providedClientInfo) {

@@ -74,7 +74,14 @@ export const useDocumentOperations = ({
         notes: notes || '',
         date: new Date().toISOString(),
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        items: lineItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }))
       };
 
       if (documentType === 'estimate') {
@@ -139,7 +146,14 @@ export const useDocumentOperations = ({
         status: 'unpaid',
         notes: notes || existingDocument.notes,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        items: lineItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }))
       };
 
       console.log('✅ Mock invoice created:', mockInvoice);

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Shield, Phone, Mail, MapPin, Calendar, FileText } from "lucide-react";
 import { UpsellDialog } from "../dialogs/UpsellDialog";
-import { supabase } from "@/integrations/supabase/client";
 import { useEstimateUpsell } from "./hooks/useEstimateUpsell";
 import { Product } from "../builder/types";
 import { toast } from "sonner";
@@ -68,47 +67,70 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
 
   const fetchEstimateData = async () => {
     try {
-      // Fetch estimate data
-      const { data: estimateData, error: estimateError } = await supabase
-        .from('estimates')
-        .select('*')
-        .eq('id', estimateId)
-        .single();
+      setIsLoading(true);
+      
+      // Mock estimate data since we don't have estimates table
+      const mockEstimate: EstimateData = {
+        id: estimateId,
+        estimate_number: `EST-${estimateId.slice(-4)}`,
+        total: 750.00,
+        status: 'draft',
+        notes: 'Recommended: Extended warranty for your HVAC system',
+        job_id: 'mock-job-001',
+        created_at: new Date().toISOString(),
+        techniciansNote: 'Based on the age of your system, I recommend adding an extended warranty',
+        viewed: false
+      };
 
-      if (estimateError) throw estimateError;
+      // Mock job and client data
+      const mockJob: JobData = {
+        id: 'mock-job-001',
+        title: 'HVAC System Maintenance',
+        description: 'Annual maintenance and inspection of HVAC system',
+        service: 'HVAC Maintenance',
+        client: {
+          name: 'John Smith',
+          email: 'john.smith@email.com',
+          phone: '(555) 123-4567',
+          address: '123 Main Street',
+          city: 'San Francisco',
+          state: 'CA',
+          zip: '94103'
+        }
+      };
 
-      // Fetch job and client data
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .select(`
-          *,
-          client:clients(*)
-        `)
-        .eq('id', estimateData.job_id)
-        .single();
+      // Mock line items
+      const mockLineItems: LineItemData[] = [
+        {
+          id: '1',
+          description: 'HVAC System Inspection',
+          quantity: 1,
+          unit_price: 150.00,
+          taxable: true
+        },
+        {
+          id: '2',
+          description: 'Filter Replacement',
+          quantity: 2,
+          unit_price: 25.00,
+          taxable: true
+        },
+        {
+          id: '3',
+          description: 'Coil Cleaning',
+          quantity: 1,
+          unit_price: 200.00,
+          taxable: true
+        }
+      ];
 
-      if (jobError) throw jobError;
-
-      // Fetch line items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_id', estimateId)
-        .eq('parent_type', 'estimate');
-
-      if (itemsError) throw itemsError;
-
-      setEstimate({
-        ...estimateData,
-        viewed: estimateData.status !== 'draft',
-        techniciansNote: estimateData.notes?.includes('Recommended:') ? estimateData.notes : undefined
-      });
-      setJob(jobData);
-      setLineItems(itemsData || []);
+      setEstimate(mockEstimate);
+      setJob(mockJob);
+      setLineItems(mockLineItems);
 
       // Check if we should show upsell (first time viewing with warranty recommendation)
-      const hasWarrantyRecommendation = estimateData.notes?.includes('Recommended:') || false;
-      const isFirstView = estimateData.status === 'draft';
+      const hasWarrantyRecommendation = mockEstimate.notes?.includes('Recommended:') || false;
+      const isFirstView = mockEstimate.status === 'draft';
       
       if (hasWarrantyRecommendation && isFirstView) {
         // Create a recommended warranty from the technician's note
@@ -118,21 +140,14 @@ export const ClientEstimateView = ({ estimateId, clientId }: ClientEstimateViewP
           description: "Complete protection for your system with priority service response",
           price: 149.99,
           category: "Warranties",
-          taxable: false,
-          cost: 50,
-          ourPrice: 75,
-          sku: "WAR-EXT-001",
-          tags: ["warranty", "protection"]
+          taxable: false
         };
         
         setRecommendedWarranty(recommendedWarranty);
         setShowUpsell(true);
 
-        // Mark estimate as viewed
-        await supabase
-          .from('estimates')
-          .update({ status: 'viewed' })
-          .eq('id', estimateId);
+        // Mock marking estimate as viewed
+        console.log('Marking estimate as viewed (mock)');
       }
 
     } catch (error: any) {
