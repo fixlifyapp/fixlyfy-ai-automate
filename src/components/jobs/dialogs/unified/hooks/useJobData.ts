@@ -17,7 +17,7 @@ export const useJobData = (jobId: string) => {
     setIsLoading(false);
   }, [jobId]);
 
-  // Mock client info
+  // Mock client info with proper defaults
   const clientInfo = {
     name: 'John Smith',
     email: 'john.smith@email.com',

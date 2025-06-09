@@ -19,6 +19,10 @@ interface LineItemsManagerProps {
   onTaxRateChange: (rate: number) => void;
   notes: string;
   onNotesChange: (notes: string) => void;
+  calculateSubtotal?: () => number;
+  calculateTotalTax?: () => number;
+  calculateGrandTotal?: () => number;
+  documentType?: string;
 }
 
 export const LineItemsManager = ({
@@ -30,7 +34,11 @@ export const LineItemsManager = ({
   taxRate,
   onTaxRateChange,
   notes,
-  onNotesChange
+  onNotesChange,
+  calculateSubtotal,
+  calculateTotalTax,
+  calculateGrandTotal,
+  documentType
 }: LineItemsManagerProps) => {
   const [showAddItem, setShowAddItem] = useState(false);
 

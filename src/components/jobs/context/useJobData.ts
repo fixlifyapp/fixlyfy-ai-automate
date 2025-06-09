@@ -10,12 +10,12 @@ export interface JobData {
   client_id: string;
   clientId: string;
   client_name?: string;
-  client_phone?: string;
-  client_email?: string;
+  client_phone: string; // Made required
+  client_email: string; // Made required  
   address: string; // Made required
   service: string;
-  phone?: string;
-  email?: string;
+  phone: string; // Made required
+  email: string; // Made required
   client: string;
   tasks?: any[];
   tags?: string[];
@@ -49,12 +49,12 @@ export const useJobData = (jobId: string) => {
         client_id: 'client-001',
         clientId: 'client-001',
         client_name: 'John Smith',
-        client_phone: '(555) 123-4567',
-        client_email: 'john.smith@email.com',
+        client_phone: '(555) 123-4567', // Always provide phone
+        client_email: 'john.smith@email.com', // Always provide email
         address: '123 Main St, Anytown, ST 12345', // Always provide address
         service: 'HVAC Maintenance',
-        phone: '(555) 123-4567',
-        email: 'john.smith@email.com',
+        phone: '(555) 123-4567', // Always provide phone
+        email: 'john.smith@email.com', // Always provide email
         client: 'John Smith',
         total: 0,
         tasks: [
