@@ -10,6 +10,7 @@ export interface Invoice {
   number: string; // alias for invoice_number
   date: string;
   total: number;
+  amount: number; // alias for total
   amount_paid: number;
   balance: number;
   status: "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled";
@@ -17,6 +18,9 @@ export interface Invoice {
   items?: any[];
   balance_due?: number;
   client_id?: string;
+  client_name?: string;
+  client_email?: string;
+  client_phone?: string;
   created_at: string;
   created_by?: string;
   description?: string;
@@ -32,6 +36,12 @@ export interface Invoice {
   terms?: string;
   title?: string;
   updated_at: string;
+  client?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 export const useInvoices = (jobId?: string) => {
@@ -42,7 +52,18 @@ export const useInvoices = (jobId?: string) => {
     console.log('Refreshing invoices for job:', jobId);
     try {
       setIsLoading(true);
-      let query = supabase.from('invoices').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('invoices')
+        .select(`
+          *,
+          clients:client_id (
+            id,
+            name,
+            email,
+            phone
+          )
+        `)
+        .order('created_at', { ascending: false });
       
       if (jobId) {
         query = query.eq('job_id', jobId);
@@ -57,10 +78,11 @@ export const useInvoices = (jobId?: string) => {
       
       console.log('Fetched invoices:', data);
       
-      // Map the data to include the alias properties with proper status casting
+      // Map the data to include the alias properties with proper status casting and client information
       const mappedData: Invoice[] = (data || []).map(item => ({
         ...item,
         number: item.invoice_number || `INV-${item.id.slice(0, 8)}`,
+        amount: item.total || 0, // Add amount alias
         date: item.created_at,
         items: Array.isArray(item.items) ? item.items : [],
         status: (item.status as "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled") || "draft",
@@ -70,7 +92,16 @@ export const useInvoices = (jobId?: string) => {
         tax_amount: item.tax_amount || 0,
         subtotal: item.subtotal || 0,
         discount_amount: item.discount_amount || 0,
-        terms: item.terms || ''
+        terms: item.terms || '',
+        client_name: item.clients?.name || 'Unknown Client',
+        client_email: item.clients?.email,
+        client_phone: item.clients?.phone,
+        client: item.clients ? {
+          id: item.clients.id,
+          name: item.clients.name,
+          email: item.clients.email,
+          phone: item.clients.phone
+        } : undefined
       }));
       
       setInvoices(mappedData);

@@ -24,9 +24,18 @@ export interface Estimate {
   subtotal?: number;
   discount_amount?: number;
   client_id?: string;
+  client_name?: string;
+  client_email?: string;
+  client_phone?: string;
   created_by?: string;
   sent_at?: string;
   approved_at?: string;
+  client?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 export const useEstimates = (jobId?: string) => {
@@ -37,7 +46,18 @@ export const useEstimates = (jobId?: string) => {
     console.log('Refreshing estimates for job:', jobId);
     try {
       setIsLoading(true);
-      let query = supabase.from('estimates').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('estimates')
+        .select(`
+          *,
+          clients:client_id (
+            id,
+            name,
+            email,
+            phone
+          )
+        `)
+        .order('created_at', { ascending: false });
       
       if (jobId) {
         query = query.eq('job_id', jobId);
@@ -52,7 +72,7 @@ export const useEstimates = (jobId?: string) => {
       
       console.log('Fetched estimates:', data);
       
-      // Map the data to include the alias properties
+      // Map the data to include the alias properties and client information
       const mappedData: Estimate[] = (data || []).map(item => ({
         ...item,
         number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
@@ -65,7 +85,16 @@ export const useEstimates = (jobId?: string) => {
         tax_rate: item.tax_rate || 0,
         tax_amount: item.tax_amount || 0,
         subtotal: item.subtotal || 0,
-        discount_amount: item.discount_amount || 0
+        discount_amount: item.discount_amount || 0,
+        client_name: item.clients?.name || 'Unknown Client',
+        client_email: item.clients?.email,
+        client_phone: item.clients?.phone,
+        client: item.clients ? {
+          id: item.clients.id,
+          name: item.clients.name,
+          email: item.clients.email,
+          phone: item.clients.phone
+        } : undefined
       }));
       
       setEstimates(mappedData);
@@ -173,7 +202,7 @@ export const useEstimates = (jobId?: string) => {
     setEstimates,
     isLoading,
     refreshEstimates,
-    fetchEstimatesWithJobs,
+    fetchEstimatesWithJobs: refreshEstimates,
     updateEstimateStatus,
     convertEstimateToInvoice
   };
