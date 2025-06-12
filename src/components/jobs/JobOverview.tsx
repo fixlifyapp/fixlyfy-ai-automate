@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
 
   const transformJobForOverview = (job: Job): JobInfoForOverview => ({
     ...job,
-    clientId: job.client_id || job.clientId || '', // Ensure clientId is always present
+    clientId: job.client_id || '', // Fix: use client_id instead of clientId
     client: typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'
   });
 

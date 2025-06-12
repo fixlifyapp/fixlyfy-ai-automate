@@ -3,8 +3,9 @@ import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Save, FileText, DollarSign } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, FileText, DollarSign, Shield } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
+import { WarrantyUpsellStep } from "./unified/WarrantyUpsellStep";
 import { UnifiedReviewStep } from "./unified/UnifiedReviewStep";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
@@ -32,7 +33,8 @@ export const UnifiedDocumentBuilder = ({
   onDocumentCreated,
   onSyncToInvoice
 }: UnifiedDocumentBuilderProps) => {
-  const [currentStep, setCurrentStep] = useState<"items" | "review">("items");
+  const [currentStep, setCurrentStep] = useState<"items" | "warranties" | "review">("items");
+  const [selectedWarranties, setSelectedWarranties] = useState<string[]>([]);
   
   const {
     // State
@@ -69,6 +71,29 @@ export const UnifiedDocumentBuilder = ({
     open,
     onSyncToInvoice
   });
+
+  const handleAddWarranty = (warranty: any) => {
+    const warrantyLineItem = {
+      id: `warranty-${warranty.id}-${Date.now()}`,
+      description: warranty.name,
+      quantity: 1,
+      unitPrice: warranty.price,
+      total: warranty.price,
+      taxable: false, // Warranties typically not taxed
+      ourPrice: warranty.cost,
+      name: warranty.name,
+      price: warranty.price,
+      discount: 0
+    };
+
+    setLineItems(prev => [...prev, warrantyLineItem]);
+    setSelectedWarranties(prev => [...prev, warranty.id]);
+  };
+
+  const handleRemoveWarranty = (warrantyId: string) => {
+    setLineItems(prev => prev.filter(item => !item.id.includes(`warranty-${warrantyId}`)));
+    setSelectedWarranties(prev => prev.filter(id => id !== warrantyId));
+  };
 
   const handleSave = async () => {
     try {
@@ -121,9 +146,13 @@ export const UnifiedDocumentBuilder = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "review")}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "warranties" | "review")}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="items">Items & Details</TabsTrigger>
+            <TabsTrigger value="warranties" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Warranties
+            </TabsTrigger>
             <TabsTrigger value="review">Review & Save</TabsTrigger>
           </TabsList>
 
@@ -146,6 +175,17 @@ export const UnifiedDocumentBuilder = ({
             />
           </TabsContent>
 
+          <TabsContent value="warranties" className="space-y-4">
+            <WarrantyUpsellStep
+              lineItems={lineItems}
+              onAddWarranty={handleAddWarranty}
+              onRemoveWarranty={handleRemoveWarranty}
+              onContinue={() => setCurrentStep("review")}
+              onBack={() => setCurrentStep("items")}
+              selectedWarranties={selectedWarranties}
+            />
+          </TabsContent>
+
           <TabsContent value="review" className="space-y-4">
             <UnifiedReviewStep
               documentType={documentType}
@@ -163,7 +203,7 @@ export const UnifiedDocumentBuilder = ({
 
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="flex gap-2">
-            {currentStep === "review" && (
+            {currentStep === "warranties" && (
               <Button 
                 variant="outline" 
                 onClick={() => setCurrentStep("items")}
@@ -173,15 +213,25 @@ export const UnifiedDocumentBuilder = ({
                 Back to Items
               </Button>
             )}
+            {currentStep === "review" && (
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep("warranties")}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Warranties
+              </Button>
+            )}
           </div>
 
           <div className="flex gap-2">
             {currentStep === "items" && (
               <Button 
-                onClick={() => setCurrentStep("review")}
+                onClick={() => setCurrentStep("warranties")}
                 className="gap-2"
               >
-                Review
+                Add Warranties
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
