@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { ChevronLeft, ChevronRight, Save, FileText, DollarSign, Shield } from "l
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { WarrantyUpsellStep } from "./unified/WarrantyUpsellStep";
 import { UnifiedReviewStep } from "./unified/UnifiedReviewStep";
+import { SendDocumentStep } from "./unified/SendDocumentStep";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
@@ -33,7 +33,7 @@ export const UnifiedDocumentBuilder = ({
   onDocumentCreated,
   onSyncToInvoice
 }: UnifiedDocumentBuilderProps) => {
-  const [currentStep, setCurrentStep] = useState<"items" | "warranties" | "review">("items");
+  const [currentStep, setCurrentStep] = useState<"items" | "warranties" | "review" | "send">("items");
   const [selectedWarranties, setSelectedWarranties] = useState<string[]>([]);
   
   const {
@@ -100,7 +100,7 @@ export const UnifiedDocumentBuilder = ({
       await saveDocumentChanges();
       toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} saved successfully`);
       onDocumentCreated?.();
-      onOpenChange(false);
+      setCurrentStep("send"); // Move to send step after saving
     } catch (error) {
       console.error('Error saving document:', error);
       toast.error('Failed to save document');
@@ -114,11 +114,16 @@ export const UnifiedDocumentBuilder = ({
       await convertToInvoice();
       toast.success('Estimate converted to invoice successfully');
       onDocumentCreated?.();
-      onOpenChange(false);
+      setCurrentStep("send"); // Move to send step after converting
     } catch (error) {
       console.error('Error converting to invoice:', error);
       toast.error('Failed to convert estimate to invoice');
     }
+  };
+
+  const handleSendSuccess = () => {
+    onDocumentCreated?.();
+    onOpenChange(false);
   };
 
   if (!isInitialized) {
@@ -146,14 +151,15 @@ export const UnifiedDocumentBuilder = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "warranties" | "review")}>
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "warranties" | "review" | "send")}>
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="items">Items & Details</TabsTrigger>
             <TabsTrigger value="warranties" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Warranties
             </TabsTrigger>
             <TabsTrigger value="review">Review & Save</TabsTrigger>
+            <TabsTrigger value="send">Send Document</TabsTrigger>
           </TabsList>
 
           <TabsContent value="items" className="space-y-4">
@@ -199,6 +205,21 @@ export const UnifiedDocumentBuilder = ({
               calculateGrandTotal={calculateGrandTotal}
             />
           </TabsContent>
+
+          <TabsContent value="send" className="space-y-4">
+            <SendDocumentStep
+              documentType={documentType}
+              documentNumber={documentNumber}
+              jobData={jobData}
+              lineItems={lineItems}
+              taxRate={taxRate}
+              notes={notes}
+              total={calculateGrandTotal()}
+              onSave={saveDocumentChanges}
+              onBack={() => setCurrentStep("review")}
+              onSuccess={handleSendSuccess}
+            />
+          </TabsContent>
         </Tabs>
 
         <div className="flex items-center justify-between pt-4 border-t">
@@ -221,6 +242,16 @@ export const UnifiedDocumentBuilder = ({
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back to Warranties
+              </Button>
+            )}
+            {currentStep === "send" && (
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep("review")}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Review
               </Button>
             )}
           </div>
