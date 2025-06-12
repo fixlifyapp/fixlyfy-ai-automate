@@ -2,8 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const useJobStatusUpdate = (jobId: string, refreshJob: () => void) => {
-  const updateJobStatus = async (newStatus: string) => {
+export const useJobStatusUpdate = () => {
+  const updateJobStatus = async (jobId: string, newStatus: string) => {
     if (!jobId) return;
     
     try {
@@ -22,9 +22,6 @@ export const useJobStatusUpdate = (jobId: string, refreshJob: () => void) => {
       }
       
       toast.success(`Job status updated to ${newStatus}`);
-      
-      // Refresh job data
-      refreshJob();
       
     } catch (error) {
       console.error("Error in updateJobStatus:", error);

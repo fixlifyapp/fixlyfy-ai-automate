@@ -23,7 +23,6 @@ export interface Invoice {
   discount_amount?: number;
   due_date?: string;
   estimate_id?: string;
-  invoice_number: string;
   issue_date?: string;
   paid_at?: string;
   sent_at?: string;
@@ -58,13 +57,13 @@ export const useInvoices = (jobId?: string) => {
       
       console.log('Fetched invoices:', data);
       
-      // Map the data to include the alias properties
+      // Map the data to include the alias properties with proper status casting
       const mappedData: Invoice[] = (data || []).map(item => ({
         ...item,
         number: item.invoice_number || `INV-${item.id.slice(0, 8)}`,
         date: item.created_at,
         items: Array.isArray(item.items) ? item.items : [],
-        status: item.status as "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled",
+        status: (item.status as "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled") || "draft",
         balance: item.balance || (item.total - (item.amount_paid || 0)),
         balance_due: item.balance || (item.total - (item.amount_paid || 0)),
         tax_rate: item.tax_rate || 0,

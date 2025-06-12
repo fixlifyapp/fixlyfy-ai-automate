@@ -16,7 +16,7 @@ export const ProductsPage = () => {
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleDeleteProduct = (productId: string) => {
@@ -99,9 +99,9 @@ export const ProductsPage = () => {
                         {formatCurrency(product.price)}
                       </span>
                     </div>
-                    {product.unit && (
+                    {(product as any).unit && (
                       <span className="text-sm text-muted-foreground">
-                        per {product.unit}
+                        per {(product as any).unit}
                       </span>
                     )}
                   </div>
