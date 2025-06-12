@@ -8,7 +8,7 @@ import { useClients } from "./useClients";
 export interface Job {
   id: string;
   client_id: string | null;
-  title?: string | null; // Make optional to match useJobs interface
+  title: string; // Make required to match useJobs interface
   description?: string | null;
   service?: string | null;
   status: string; // Make status required
@@ -113,7 +113,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
           const client = clientsMap.get(job.client_id || '') || job.client_id || 'Unknown Client';
           return {
             ...job,
-            title: job.title || undefined, // Keep as optional, let components handle fallbacks
+            title: job.title || 'Untitled Job', // Ensure title is always present
             status: job.status || 'scheduled', // Ensure status is always present
             updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
             tasks: extractTasks(job.tasks), // Safely extract tasks
@@ -161,7 +161,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
       const jobWithId = {
         ...jobDataForDb,
         id: crypto.randomUUID(), // Generate ID for new job
-        title: newJob.title || undefined, // Keep optional
+        title: newJob.title || 'Untitled Job', // Ensure title is present
         status: newJob.status || 'scheduled' // Ensure status is set
       };
       
@@ -182,7 +182,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
         const clientInfo = clientData || newJob.client_id || 'Unknown Client';
         const transformedJob: Job = {
           ...dbJob,
-          title: dbJob.title || undefined, // Keep optional
+          title: dbJob.title || 'Untitled Job', // Ensure title is present
           status: dbJob.status || 'scheduled',
           updated_at: dbJob.updated_at || dbJob.created_at,
           tasks: extractTasks(dbJob.tasks),
@@ -239,7 +239,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
           
         const transformedJob: Job = {
           ...dbJob,
-          title: dbJob.title || undefined, // Keep optional
+          title: dbJob.title || 'Untitled Job', // Ensure title is present
           status: dbJob.status || 'scheduled',
           updated_at: dbJob.updated_at || dbJob.created_at,
           tasks: extractTasks(dbJob.tasks),
