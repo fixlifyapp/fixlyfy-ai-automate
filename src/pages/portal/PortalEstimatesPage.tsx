@@ -197,3 +197,6 @@ export const PortalEstimatesPage = () => {
     </div>
   );
 };
+
+// Add default export
+export default PortalEstimatesPage;

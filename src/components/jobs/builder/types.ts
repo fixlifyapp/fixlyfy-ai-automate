@@ -4,12 +4,12 @@ export interface LineItem {
   description: string;
   quantity: number;
   unitPrice: number;
-  taxable: boolean;
   total: number;
-  discount?: number;
+  taxable: boolean;
   ourPrice?: number;
-  name?: string;
-  price?: number;
+  unit?: string;
+  category?: string;
+  [key: string]: any; // Add index signature for JSON compatibility
 }
 
 export interface Product {
@@ -18,20 +18,51 @@ export interface Product {
   price: number;
   category?: string;
   description?: string;
-  ourprice?: number; // Database field name
-  cost?: number; // Alternative field name
-  our_price?: number; // Alternative field name
+  ourprice?: number;
+  cost?: number;
+  our_price?: number;
   unit?: string;
   taxable?: boolean;
-  quantity?: number; // Add quantity for line item creation
-  tags?: string[]; // Add tags support
+  quantity?: number;
+  tags?: string[];
+  [key: string]: any; // Add index signature for JSON compatibility
 }
 
-export interface EstimateLineItem extends LineItem {
-  discount: number;
-  ourPrice: number;
+export interface EstimateData {
+  id?: string;
+  estimateNumber: string;
+  clientId?: string;
+  jobId: string;
+  lineItems: LineItem[];
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+  taxRate: number;
+  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'converted';
+  notes?: string;
+  terms?: string;
+  validUntil?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface InvoiceLineItem extends LineItem {
-  invoiceId?: string;
+export interface InvoiceData {
+  id?: string;
+  invoiceNumber: string;
+  clientId?: string;
+  jobId: string;
+  lineItems: LineItem[];
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+  taxRate: number;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'partial';
+  notes?: string;
+  terms?: string;
+  issueDate?: string;
+  dueDate?: string;
+  amountPaid?: number;
+  balance?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }

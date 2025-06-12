@@ -11,10 +11,9 @@ interface PortalInvoice {
   id: string;
   invoice_number: string;
   total: number;
-  amount_paid: number;
   balance: number;
   status: string;
-  issue_date: string;
+  created_at: string;
   due_date?: string;
   job: {
     id: string;
@@ -46,8 +45,6 @@ export const PortalInvoicesPage = () => {
       // Transform the data to handle the job relationship correctly
       const transformedData = (data || []).map(invoice => ({
         ...invoice,
-        amount_paid: invoice.amount_paid || 0,
-        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         job: {
           id: invoice.job_id,
           title: Array.isArray(invoice.jobs) 
@@ -64,35 +61,20 @@ export const PortalInvoicesPage = () => {
     }
   };
 
-  const renderStatusBadge = (status: string, balance: number) => {
-    let config = {
+  const renderStatusBadge = (status: string) => {
+    const config = {
       draft: 'bg-gray-100 text-gray-800',
       sent: 'bg-blue-100 text-blue-800',
-      unpaid: 'bg-red-100 text-red-800',
-      partial: 'bg-yellow-100 text-yellow-800',
       paid: 'bg-green-100 text-green-800',
       overdue: 'bg-red-100 text-red-800',
-      cancelled: 'bg-gray-100 text-gray-800'
+      partial: 'bg-yellow-100 text-yellow-800'
     };
 
-    // Override status based on balance for better accuracy
-    let displayStatus = status;
-    if (balance <= 0 && status !== 'cancelled') {
-      displayStatus = 'paid';
-    } else if (balance > 0 && balance < (invoices.find(i => i.status === status)?.total || 0)) {
-      displayStatus = 'partial';
-    }
-
     return (
-      <Badge className={config[displayStatus as keyof typeof config] || config.draft}>
-        {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
+      <Badge className={config[status as keyof typeof config] || config.draft}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
-  };
-
-  const isOverdue = (dueDate: string | undefined, status: string) => {
-    if (!dueDate || status === 'paid' || status === 'cancelled') return false;
-    return new Date(dueDate) < new Date();
   };
 
   return (
@@ -100,7 +82,7 @@ export const PortalInvoicesPage = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Your Invoices</h1>
         <p className="text-muted-foreground mt-2">
-          View and pay your service invoices
+          View and manage your service invoices
         </p>
       </div>
 
@@ -123,7 +105,7 @@ export const PortalInvoicesPage = () => {
           <CardContent className="p-12 text-center">
             <h3 className="text-lg font-medium mb-2">No invoices found</h3>
             <p className="text-muted-foreground">
-              You don't have any invoices yet. Check back later or contact us if you expect to see invoices here.
+              You don't have any invoices yet. Completed work will appear here.
             </p>
           </CardContent>
         </Card>
@@ -138,26 +120,16 @@ export const PortalInvoicesPage = () => {
                     <p className="text-sm text-muted-foreground mt-1">
                       {invoice.job.title}
                     </p>
-                    {isOverdue(invoice.due_date, invoice.status) && (
-                      <Badge variant="destructive" className="mt-2">
-                        Overdue
-                      </Badge>
-                    )}
                   </div>
                   <div className="text-right">
-                    {renderStatusBadge(invoice.status, invoice.balance)}
+                    {renderStatusBadge(invoice.status)}
                     <div className="text-2xl font-bold mt-2">
                       {formatCurrency(invoice.total)}
                     </div>
-                    {invoice.amount_paid > 0 && (
-                      <p className="text-sm text-green-600">
-                        Paid: {formatCurrency(invoice.amount_paid)}
-                      </p>
-                    )}
                     {invoice.balance > 0 && (
-                      <p className="text-sm text-red-600">
+                      <div className="text-sm text-muted-foreground">
                         Balance: {formatCurrency(invoice.balance)}
-                      </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -167,7 +139,7 @@ export const PortalInvoicesPage = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      Issued {new Date(invoice.issue_date).toLocaleDateString()}
+                      Created {new Date(invoice.created_at).toLocaleDateString()}
                     </div>
                     {invoice.due_date && (
                       <div className="flex items-center gap-1">
@@ -177,6 +149,12 @@ export const PortalInvoicesPage = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    {invoice.balance > 0 && (
+                      <Button size="sm">
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay Now
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm">
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
@@ -185,12 +163,6 @@ export const PortalInvoicesPage = () => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                    {invoice.balance > 0 && (
-                      <Button size="sm">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Pay Now
-                      </Button>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -201,3 +173,6 @@ export const PortalInvoicesPage = () => {
     </div>
   );
 };
+
+// Add default export
+export default PortalInvoicesPage;

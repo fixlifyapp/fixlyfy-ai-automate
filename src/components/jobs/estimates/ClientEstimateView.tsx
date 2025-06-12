@@ -3,25 +3,28 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Download, Calendar, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
-import { Product } from '../builder/types';
-
-interface ClientEstimateViewProps {
-  estimateId: string;
-  onStatusChange?: (status: string) => void;
-}
 
 interface EstimateData {
   id: string;
   estimate_number: string;
   total: number;
+  subtotal: number;
+  tax_amount: number;
+  tax_rate: number;
   status: string;
-  notes?: string;
-  items: any[];
+  notes: string;
   created_at: string;
   valid_until?: string;
+  items: any[]; // JSON array from database
+}
+
+interface ClientEstimateViewProps {
+  estimateId: string;
+  onStatusChange?: (newStatus: string) => void;
 }
 
 export const ClientEstimateView = ({ estimateId, onStatusChange }: ClientEstimateViewProps) => {
@@ -42,15 +45,23 @@ export const ClientEstimateView = ({ estimateId, onStatusChange }: ClientEstimat
         .single();
 
       if (error) throw error;
-      setEstimate(data);
+
+      // Handle the items field properly
+      const estimateData = {
+        ...data,
+        items: Array.isArray(data.items) ? data.items : []
+      };
+
+      setEstimate(estimateData);
     } catch (error) {
       console.error('Error fetching estimate:', error);
+      toast.error('Failed to load estimate');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateStatus = async (newStatus: string) => {
+  const updateEstimateStatus = async (newStatus: string) => {
     if (!estimate) return;
 
     setIsUpdating(true);
@@ -59,16 +70,19 @@ export const ClientEstimateView = ({ estimateId, onStatusChange }: ClientEstimat
         .from('estimates')
         .update({ 
           status: newStatus,
+          updated_at: new Date().toISOString(),
           ...(newStatus === 'approved' && { approved_at: new Date().toISOString() })
         })
         .eq('id', estimate.id);
 
       if (error) throw error;
 
-      setEstimate({ ...estimate, status: newStatus });
+      setEstimate(prev => prev ? { ...prev, status: newStatus } : null);
       onStatusChange?.(newStatus);
+      toast.success(`Estimate ${newStatus} successfully`);
     } catch (error) {
       console.error('Error updating estimate status:', error);
+      toast.error('Failed to update estimate status');
     } finally {
       setIsUpdating(false);
     }
@@ -76,75 +90,59 @@ export const ClientEstimateView = ({ estimateId, onStatusChange }: ClientEstimat
 
   const renderStatusBadge = (status: string) => {
     const config = {
-      draft: { color: 'bg-gray-100 text-gray-800', icon: Clock },
-      sent: { color: 'bg-blue-100 text-blue-800', icon: Clock },
-      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      rejected: { color: 'bg-red-100 text-red-800', icon: XCircle },
-      converted: { color: 'bg-purple-100 text-purple-800', icon: CheckCircle }
+      draft: 'bg-gray-100 text-gray-800',
+      sent: 'bg-blue-100 text-blue-800',
+      approved: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800',
+      converted: 'bg-purple-100 text-purple-800'
     };
 
-    const { color, icon: Icon } = config[status as keyof typeof config] || config.draft;
-
     return (
-      <Badge className={`${color} flex items-center gap-1`}>
-        <Icon size={12} />
+      <Badge className={config[status as keyof typeof config] || config.draft}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
 
-  // Parse line items from JSON
-  const parseLineItems = (items: any[]): Product[] => {
-    if (!Array.isArray(items)) return [];
-    
-    return items.map((item, index) => ({
-      id: item.id || `item-${index}`,
-      name: item.name || item.description || 'Service Item',
-      price: Number(item.price || item.unitPrice || 0),
-      description: item.description || '',
-      ourprice: Number(item.ourprice || item.ourPrice || item.cost || 0),
-      quantity: Number(item.quantity || 1),
-      unit: item.unit || 'each',
-      taxable: Boolean(item.taxable),
-      category: item.category || ''
-    }));
-  };
-
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!estimate) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <p className="text-center text-muted-foreground">Estimate not found</p>
+        <CardContent className="p-12 text-center">
+          <h3 className="text-lg font-medium mb-2">Estimate not found</h3>
+          <p className="text-muted-foreground">
+            The estimate you're looking for doesn't exist or you don't have permission to view it.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const lineItems = parseLineItems(estimate.items || []);
-
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>{estimate.estimate_number}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Created {new Date(estimate.created_at).toLocaleDateString()}
+              <CardTitle className="text-2xl">{estimate.estimate_number}</CardTitle>
+              <p className="text-muted-foreground mt-2">
+                Created on {new Date(estimate.created_at).toLocaleDateString()}
               </p>
               {estimate.valid_until && (
                 <p className="text-sm text-muted-foreground">
@@ -154,64 +152,103 @@ export const ClientEstimateView = ({ estimateId, onStatusChange }: ClientEstimat
             </div>
             <div className="text-right">
               {renderStatusBadge(estimate.status)}
-              <div className="text-2xl font-bold mt-2">
+              <div className="text-3xl font-bold mt-2">
                 {formatCurrency(estimate.total)}
               </div>
             </div>
           </div>
         </CardHeader>
+      </Card>
+
+      {/* Line Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Services & Products</CardTitle>
+        </CardHeader>
         <CardContent>
-          {estimate.notes && (
-            <div className="mb-6">
-              <h3 className="font-medium mb-2">Notes</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {estimate.notes}
-              </p>
-            </div>
-          )}
-
-          {lineItems.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-medium mb-4">Items & Services</h3>
-              <div className="space-y-3">
-                {lineItems.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                    <div>
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Qty: {item.quantity} × {formatCurrency(item.price)}
-                      </div>
-                    </div>
-                    <div className="font-medium">
-                      {formatCurrency((item.quantity || 1) * item.price)}
-                    </div>
+          <div className="space-y-3">
+            {estimate.items.map((item: any, index: number) => (
+              <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium">{item.description}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Quantity: {item.quantity} × {formatCurrency(item.unitPrice || item.unit_price || 0)}
                   </div>
-                ))}
+                </div>
+                <div className="text-right font-medium">
+                  {formatCurrency(item.total || (item.quantity * (item.unitPrice || item.unit_price || 0)))}
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {estimate.status === 'sent' && (
-            <div className="flex gap-3 pt-4 border-t">
+          {/* Totals */}
+          <div className="mt-6 space-y-2 border-t pt-4">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(estimate.subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax ({(estimate.tax_rate * 100).toFixed(1)}%):</span>
+              <span>{formatCurrency(estimate.tax_amount)}</span>
+            </div>
+            <div className="flex justify-between text-lg font-bold">
+              <span>Total:</span>
+              <span>{formatCurrency(estimate.total)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notes */}
+      {estimate.notes && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap">{estimate.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Actions */}
+      {estimate.status === 'sent' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Take Action</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
               <Button
-                onClick={() => updateStatus('approved')}
+                onClick={() => updateEstimateStatus('approved')}
                 disabled={isUpdating}
                 className="flex-1"
               >
-                <CheckCircle className="mr-2 h-4 w-4" />
+                <CheckCircle className="h-4 w-4 mr-2" />
                 Approve Estimate
               </Button>
               <Button
                 variant="outline"
-                onClick={() => updateStatus('rejected')}
+                onClick={() => updateEstimateStatus('rejected')}
                 disabled={isUpdating}
                 className="flex-1"
               >
-                <XCircle className="mr-2 h-4 w-4" />
+                <XCircle className="h-4 w-4 mr-2" />
                 Decline Estimate
               </Button>
             </div>
-          )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Download */}
+      <Card>
+        <CardContent className="p-4">
+          <Button variant="outline" className="w-full">
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
         </CardContent>
       </Card>
     </div>

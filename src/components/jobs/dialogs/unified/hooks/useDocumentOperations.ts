@@ -24,7 +24,7 @@ export const useDocumentOperations = () => {
       
       const documentData = {
         job_id: jobId,
-        items: lineItems,
+        items: lineItems as any, // Cast to any for JSON compatibility
         total,
         tax_rate: taxRate,
         notes,
@@ -38,7 +38,7 @@ export const useDocumentOperations = () => {
           .insert({
             ...documentData,
             estimate_number: documentNumber,
-            status: 'draft' as const, // Use const assertion for literal type
+            status: 'draft' as const,
             subtotal: total - (total * taxRate),
             tax_amount: total * taxRate
           })
@@ -53,7 +53,7 @@ export const useDocumentOperations = () => {
           .insert({
             ...documentData,
             invoice_number: documentNumber,
-            status: 'draft' as const, // Use const assertion for literal type
+            status: 'draft' as const,
             subtotal: total - (total * taxRate),
             tax_amount: total * taxRate,
             amount_paid: 0,
@@ -79,7 +79,7 @@ export const useDocumentOperations = () => {
     setIsSubmitting(true);
     try {
       const updateData = {
-        items: data.lineItems,
+        items: data.lineItems as any, // Cast to any for JSON compatibility
         total: data.total,
         tax_rate: data.taxRate,
         notes: data.notes,
