@@ -8,17 +8,17 @@ export interface Invoice {
   invoice_number: string;
   number: string; // Alias for compatibility
   date: string;
-  status: string;
+  status: 'draft' | 'sent' | 'unpaid' | 'partial' | 'paid' | 'overdue' | 'cancelled';
   total: number;
   amount_paid: number;
   balance: number;
   notes?: string;
-  items?: any[];
+  items?: any[]; // JSON array from database
   created_at: string;
   updated_at: string;
   due_date?: string;
-  issue_date?: string; // Add this missing property
-  estimate_id?: string; // Add this missing property
+  issue_date?: string;
+  estimate_id?: string;
 }
 
 export const useInvoices = (jobId: string) => {
@@ -38,14 +38,17 @@ export const useInvoices = (jobId: string) => {
       if (error) throw error;
       
       // Calculate balance for each invoice and add alias properties
-      const invoicesWithBalance = data?.map(invoice => ({
+      const invoicesWithBalance: Invoice[] = data?.map(invoice => ({
         ...invoice,
-        number: invoice.invoice_number, // Alias for compatibility
-        amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
+        number: invoice.invoice_number,
+        amount_paid: invoice.amount_paid || 0,
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         notes: invoice.notes || '',
-        issue_date: invoice.date, // Add issue_date as alias for date
-        estimate_id: invoice.estimate_id || undefined // Add estimate_id
+        issue_date: invoice.issue_date || invoice.created_at,
+        estimate_id: invoice.estimate_id || undefined,
+        items: Array.isArray(invoice.items) ? invoice.items : [],
+        status: invoice.status as 'draft' | 'sent' | 'unpaid' | 'partial' | 'paid' | 'overdue' | 'cancelled',
+        date: invoice.issue_date || invoice.created_at
       })) || [];
       
       setInvoices(invoicesWithBalance);
@@ -60,7 +63,6 @@ export const useInvoices = (jobId: string) => {
     fetchInvoices();
   };
 
-  // Add alias method for compatibility
   const refetch = refreshInvoices;
 
   useEffect(() => {
@@ -71,8 +73,8 @@ export const useInvoices = (jobId: string) => {
     invoices,
     setInvoices,
     isLoading,
-    loading: isLoading, // Add alias for compatibility
+    loading: isLoading,
     refreshInvoices,
-    refetch // Add alias method for compatibility
+    refetch
   };
 };

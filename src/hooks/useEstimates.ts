@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -10,21 +11,12 @@ export interface Estimate {
   date: string;
   total: number;
   amount: number; // alias for total
-  status: string;
+  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'converted';
   notes?: string;
   created_at: string;
   updated_at: string;
-  valid_until?: string; // Added this field
-  items?: Array<{
-    id: string;
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    taxable: boolean;
-    total: number;
-    name?: string;
-    price?: number;
-  }>;
+  valid_until?: string;
+  items?: any[]; // JSON array from database
   viewed?: boolean;
   techniciansNote?: string;
 }
@@ -53,13 +45,15 @@ export const useEstimates = (jobId?: string) => {
       console.log('Fetched estimates:', data);
       
       // Map the data to include the alias properties
-      const mappedData = (data || []).map(item => ({
+      const mappedData: Estimate[] = (data || []).map(item => ({
         ...item,
-        number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Add alias with fallback
-        amount: item.total || 0, // Add alias
-        date: item.created_at, // Use created_at as date
-        estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
-        valid_until: item.valid_until || undefined, // Handle valid_until properly
+        number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
+        amount: item.total || 0,
+        date: item.created_at,
+        estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
+        valid_until: item.valid_until || undefined,
+        items: Array.isArray(item.items) ? item.items : [],
+        status: item.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'converted'
       }));
       
       setEstimates(mappedData);
@@ -88,20 +82,6 @@ export const useEstimates = (jobId?: string) => {
 
       console.log('Found estimate for conversion:', estimate);
 
-      // Get line items for the estimate
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_id', estimateId)
-        .eq('parent_type', 'estimate');
-
-      if (lineItemsError) {
-        console.error('Error fetching line items:', lineItemsError);
-        throw lineItemsError;
-      }
-
-      console.log('Found line items:', lineItems);
-
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
       const { data: invoice, error: invoiceError } = await supabase
@@ -114,7 +94,8 @@ export const useEstimates = (jobId?: string) => {
           amount_paid: 0,
           status: 'unpaid',
           notes: estimate.notes,
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          items: estimate.items || []
         })
         .select()
         .single();
@@ -125,29 +106,6 @@ export const useEstimates = (jobId?: string) => {
       }
 
       console.log('Created invoice:', invoice);
-
-      // Copy line items to invoice
-      if (lineItems && lineItems.length > 0) {
-        const invoiceLineItems = lineItems.map(item => ({
-          parent_id: invoice.id,
-          parent_type: 'invoice',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          taxable: item.taxable
-        }));
-
-        const { error: lineItemError } = await supabase
-          .from('line_items')
-          .insert(invoiceLineItems);
-
-        if (lineItemError) {
-          console.error('Error copying line items:', lineItemError);
-          throw lineItemError;
-        }
-
-        console.log('Copied line items to invoice');
-      }
 
       // Update estimate status
       const { error: updateError } = await supabase

@@ -28,14 +28,18 @@ export const ProductEditDialog = ({
     description: "",
     ourprice: 0,
     unit: "each",
-    taxable: true
+    taxable: true,
+    quantity: 1,
+    tags: []
   });
 
   useEffect(() => {
     if (product) {
       setFormData({
         ...product,
-        ourprice: product.ourprice || product.cost || product.our_price || 0
+        ourprice: product.ourprice || product.cost || product.our_price || 0,
+        quantity: product.quantity || 1,
+        tags: product.tags || []
       });
     } else {
       setFormData({
@@ -46,7 +50,9 @@ export const ProductEditDialog = ({
         description: "",
         ourprice: 0,
         unit: "each",
-        taxable: true
+        taxable: true,
+        quantity: 1,
+        tags: []
       });
     }
   }, [product, open]);

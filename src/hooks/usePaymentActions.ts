@@ -2,7 +2,27 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Payment } from './usePayments';
+
+export type PaymentMethod = "cash" | "credit-card" | "e-transfer" | "cheque";
+export type PaymentStatus = "completed" | "refunded" | "disputed";
+
+export interface Payment {
+  id: string;
+  payment_date: string; // Use payment_date consistently
+  clientId?: string;
+  clientName?: string;
+  jobId?: string;
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  reference?: string;
+  notes?: string;
+  technicianId?: string;
+  technicianName?: string;
+  invoice_id?: string;
+  created_at?: string;
+  payment_number: string;
+}
 
 export const usePaymentActions = (jobId: string, refreshPayments: () => void) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,7 +48,7 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
           method: paymentData.method,
           reference: paymentData.reference,
           notes: paymentData.notes,
-          payment_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+          payment_date: new Date().toISOString().split('T')[0],
           payment_number: generatePaymentNumber(),
           status: 'completed'
         });
@@ -45,7 +65,7 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
       if (invoice) {
         const newAmountPaid = (invoice.amount_paid || 0) + paymentData.amount;
         const newBalance = invoice.total - newAmountPaid;
-        const newStatus = newBalance <= 0 ? 'paid' : 'partial';
+        const newStatus: 'paid' | 'partial' | 'unpaid' = newBalance <= 0 ? 'paid' : 'partial';
 
         await supabase
           .from('invoices')
@@ -72,7 +92,6 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
   const refundPayment = async (paymentId: string): Promise<boolean> => {
     setIsProcessing(true);
     try {
-      // Get payment details
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .select('amount, invoice_id')
@@ -81,7 +100,6 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
 
       if (paymentError || !payment) throw paymentError;
 
-      // Create refund record
       const { error: refundError } = await supabase
         .from('payments')
         .insert({
@@ -96,7 +114,6 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
 
       if (refundError) throw refundError;
 
-      // Update invoice amounts
       const { data: invoice } = await supabase
         .from('invoices')
         .select('total, amount_paid')
@@ -106,7 +123,7 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
       if (invoice) {
         const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
         const newBalance = invoice.total - newAmountPaid;
-        const newStatus = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
+        const newStatus: 'paid' | 'partial' | 'unpaid' = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
 
         await supabase
           .from('invoices')
@@ -133,7 +150,6 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
   const deletePayment = async (paymentId: string): Promise<boolean> => {
     setIsProcessing(true);
     try {
-      // Get payment details first
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .select('amount, invoice_id')
@@ -142,7 +158,6 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
 
       if (paymentError || !payment) throw paymentError;
 
-      // Delete the payment
       const { error } = await supabase
         .from('payments')
         .delete()
@@ -150,7 +165,6 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
 
       if (error) throw error;
 
-      // Update invoice amounts if payment was positive (not a refund)
       if (payment.amount > 0) {
         const { data: invoice } = await supabase
           .from('invoices')
@@ -161,7 +175,7 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
         if (invoice) {
           const newAmountPaid = Math.max(0, (invoice.amount_paid || 0) - payment.amount);
           const newBalance = invoice.total - newAmountPaid;
-          const newStatus = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
+          const newStatus: 'paid' | 'partial' | 'unpaid' = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
 
           await supabase
             .from('invoices')

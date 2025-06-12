@@ -23,6 +23,8 @@ export interface Product {
   our_price?: number; // Alternative field name
   unit?: string;
   taxable?: boolean;
+  quantity?: number; // Add quantity for line item creation
+  tags?: string[]; // Add tags support
 }
 
 export interface EstimateLineItem extends LineItem {
