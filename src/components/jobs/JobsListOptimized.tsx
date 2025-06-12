@@ -77,11 +77,11 @@ export const JobsListOptimized = ({
             }`}
             onClick={() => handleJobClick(job.id)}
           >
-            {isSelected && (
+            {onSelectJob && (
               <div className="absolute top-2 left-2">
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={(checked) => handleCheckboxChange(job.id, checked)}
+                  onCheckedChange={(checked) => handleCheckboxChange(job.id, Boolean(checked))}
                 />
               </div>
             )}
@@ -115,12 +115,14 @@ export const JobsListOptimized = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]">
-              <Checkbox
-                checked={selectedJobs.length === jobs.length}
-                onCheckedChange={handleSelectAllChange}
-              />
-            </TableHead>
+            {onSelectJob && (
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={selectedJobs.length === jobs.length}
+                  onCheckedChange={handleSelectAllChange}
+                />
+              </TableHead>
+            )}
             <TableHead>Title</TableHead>
             {showClientColumn && <TableHead>Client</TableHead>}
             <TableHead>Status</TableHead>
@@ -141,12 +143,14 @@ export const JobsListOptimized = ({
                 }`}
                 onClick={() => handleJobClick(job.id)}
               >
-                <TableCell className="font-medium w-[50px]">
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={(checked) => handleCheckboxChange(job.id, checked)}
-                  />
-                </TableCell>
+                {onSelectJob && (
+                  <TableCell className="font-medium w-[50px]">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => handleCheckboxChange(job.id, Boolean(checked))}
+                    />
+                  </TableCell>
+                )}
                 <TableCell>{job.title}</TableCell>
                 {showClientColumn && <TableCell>{clientName}</TableCell>}
                 <TableCell>{job.status}</TableCell>

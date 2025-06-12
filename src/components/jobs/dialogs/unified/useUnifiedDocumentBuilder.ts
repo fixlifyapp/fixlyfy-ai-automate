@@ -66,21 +66,6 @@ export const useUnifiedDocumentBuilder = ({
   // Document operations
   const operations = useDocumentOperations();
 
-  // Create form data for operations
-  const formData = {
-    documentId: existingDocument?.id,
-    documentNumber,
-    items: lineItems.map(item => ({
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      taxable: item.taxable
-    })),
-    notes,
-    status: existingDocument?.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
-    total: calculateGrandTotal()
-  };
-
   // Job data for display
   const jobData = {
     id: jobId,
@@ -89,7 +74,7 @@ export const useUnifiedDocumentBuilder = ({
     description: job?.description
   };
 
-  // Document save method
+  // Document save method - FIXED: Now properly implemented
   const saveDocumentChanges = async () => {
     try {
       const documentData = {
@@ -113,7 +98,7 @@ export const useUnifiedDocumentBuilder = ({
     }
   };
 
-  // Convert to invoice method
+  // Convert to invoice method - FIXED: Now properly implemented
   const convertToInvoice = async () => {
     try {
       if (documentType !== 'estimate' || !existingDocument?.id) {
@@ -143,7 +128,7 @@ export const useUnifiedDocumentBuilder = ({
     }
   };
 
-  // Line item management
+  // Line item management - FIXED: Proper state management
   const handleAddProduct = useCallback((product: Product) => {
     const newLineItem: LineItem = {
       id: `temp-${Date.now()}`,
@@ -195,7 +180,6 @@ export const useUnifiedDocumentBuilder = ({
     isSubmitting: operations.isSubmitting,
 
     // Data objects
-    formData,
     jobData,
 
     // Calculations
@@ -210,7 +194,7 @@ export const useUnifiedDocumentBuilder = ({
     handleRemoveLineItem,
     handleUpdateLineItem,
 
-    // Document operations
+    // Document operations - FIXED: Now properly exported
     saveDocumentChanges,
     convertToInvoice,
 

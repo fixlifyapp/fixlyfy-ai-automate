@@ -1,7 +1,6 @@
+
 import React from "react";
-import { JobStatusBadge } from "../JobStatusBadge";
-import { ClientInfoDisplay } from "./ClientInfoDisplay";
-import { ClientContactButtons } from "./ClientContactButtons";
+import { Badge } from "@/components/ui/badge";
 import { useJobDetails } from "../context/JobDetailsContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -50,7 +49,9 @@ export const JobInfoSection = ({ jobId }: JobInfoSectionProps) => {
           <h1 className="text-2xl font-bold text-foreground">
             {job.title || 'Untitled Job'}
           </h1>
-          <JobStatusBadge status={job.status} />
+          <Badge variant="secondary" className="capitalize">
+            {job.status}
+          </Badge>
         </div>
         
         {job.description && (
@@ -61,19 +62,12 @@ export const JobInfoSection = ({ jobId }: JobInfoSectionProps) => {
       </div>
 
       {/* Client Information */}
-      <ClientInfoDisplay 
-        clientId={job.client_id} 
-        clientName={typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'}
-        clientPhone={job.phone}
-        clientEmail={job.email}
-        jobAddress={job.address}
-      />
-
-      {/* Contact Actions */}
-      <div className="flex items-center gap-3">
-        <ClientContactButtons 
-          onEditClient={handleEditClient}
-        />
+      <div className="space-y-2">
+        <h3 className="font-medium">Client Information</h3>
+        <p>{typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'}</p>
+        {job.phone && <p>Phone: {job.phone}</p>}
+        {job.email && <p>Email: {job.email}</p>}
+        {job.address && <p>Address: {job.address}</p>}
       </div>
 
       {/* Job Details Grid */}

@@ -122,9 +122,21 @@ export const useJobs = () => {
 
   const addJob = async (jobData: Partial<Job>) => {
     try {
+      // Ensure required fields are present
+      const jobToInsert = {
+        id: jobData.id,
+        title: jobData.title || '',
+        client_id: jobData.client_id,
+        status: jobData.status || 'scheduled',
+        // Add other required fields with defaults
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...jobData
+      };
+
       const { data, error } = await supabase
         .from('jobs')
-        .insert([jobData])
+        .insert([jobToInsert])
         .select()
         .single();
 

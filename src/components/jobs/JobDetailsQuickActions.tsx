@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,33 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
   const navigate = useNavigate();
   
   const job = jobs.find(j => j.id === jobId);
-  const clientInfo = extractClientInfo(job?.client || null);
+  
+  // Fix client info extraction
+  const getClientInfo = () => {
+    if (!job?.client) return null;
+    
+    if (typeof job.client === 'string') {
+      return {
+        id: job.client_id || '',
+        name: job.client,
+        email: job.email,
+        phone: job.phone
+      };
+    }
+    
+    if (typeof job.client === 'object' && job.client.name) {
+      return {
+        id: job.client.id || job.client_id || '',
+        name: job.client.name,
+        email: job.client.email || job.email,
+        phone: job.client.phone || job.phone
+      };
+    }
+    
+    return null;
+  };
+
+  const clientInfo = getClientInfo();
 
   const handleCreateEstimate = async () => {
     await addHistoryItem({
