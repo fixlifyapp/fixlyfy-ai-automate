@@ -59,7 +59,7 @@ export const InvoiceDialog = ({
           notes: editInvoice.notes || "",
           total: editInvoice.total
         });
-        loadLineItems(editInvoice.id);
+        parseLineItemsFromInvoice(editInvoice);
       } else {
         // Reset form for new invoice
         setFormData({
@@ -73,45 +73,51 @@ export const InvoiceDialog = ({
           quantity: 1,
           unitPrice: 0,
           taxable: true,
-          total: 0
+          total: 0,
+          ourPrice: 0,
+          name: "Service",
+          price: 0
         }]);
       }
     }
   }, [open, editInvoice]);
 
-  const loadLineItems = async (invoiceId: string) => {
+  const parseLineItemsFromInvoice = (invoice: Invoice) => {
     try {
-      const { data, error } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_id', invoiceId)
-        .eq('parent_type', 'invoice');
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const mappedItems: LineItem[] = data.map(item => ({
-          id: item.id,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unit_price),
-          taxable: item.taxable,
-          total: Number(item.quantity) * Number(item.unit_price)
+      let parsedItems: LineItem[] = [];
+      
+      if (invoice.items && Array.isArray(invoice.items)) {
+        parsedItems = invoice.items.map((item: any, index: number) => ({
+          id: item.id || `temp-${Date.now()}-${index}`,
+          description: item.description || item.name || 'Service Item',
+          quantity: Number(item.quantity) || 1,
+          unitPrice: Number(item.unitPrice || item.price || item.unit_price) || 0,
+          taxable: item.taxable !== undefined ? item.taxable : true,
+          total: (Number(item.quantity) || 1) * (Number(item.unitPrice || item.price || item.unit_price) || 0),
+          ourPrice: Number(item.ourPrice || item.cost || item.our_price) || 0,
+          name: item.name || item.description,
+          price: Number(item.price || item.unitPrice || item.unit_price) || 0
         }));
-        setLineItems(mappedItems);
-      } else {
+      }
+      
+      if (parsedItems.length === 0) {
         // Fallback to single item if no line items found
-        setLineItems([{
+        parsedItems = [{
           id: "1",
           description: "Service",
           quantity: 1,
-          unitPrice: editInvoice?.total || 0,
+          unitPrice: invoice.total || 0,
           taxable: true,
-          total: editInvoice?.total || 0
-        }]);
+          total: invoice.total || 0,
+          ourPrice: 0,
+          name: "Service",
+          price: invoice.total || 0
+        }];
       }
+      
+      setLineItems(parsedItems);
     } catch (error) {
-      console.error('Error loading line items:', error);
+      console.error('Error parsing line items from invoice:', error);
       // Fallback on error
       setLineItems([{
         id: "1",
@@ -119,7 +125,10 @@ export const InvoiceDialog = ({
         quantity: 1,
         unitPrice: editInvoice?.total || 0,
         taxable: true,
-        total: editInvoice?.total || 0
+        total: editInvoice?.total || 0,
+        ourPrice: 0,
+        name: "Service",
+        price: editInvoice?.total || 0
       }]);
     }
   };
@@ -131,7 +140,10 @@ export const InvoiceDialog = ({
       quantity: 1,
       unitPrice: 0,
       taxable: true,
-      total: 0
+      total: 0,
+      ourPrice: 0,
+      name: "",
+      price: 0
     };
     setLineItems([...lineItems, newItem]);
   };
@@ -148,6 +160,7 @@ export const InvoiceDialog = ({
         const updatedItem = { ...item, [field]: value };
         if (field === 'quantity' || field === 'unitPrice') {
           updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+          updatedItem.price = updatedItem.unitPrice;
         }
         return updatedItem;
       }
@@ -185,6 +198,19 @@ export const InvoiceDialog = ({
     try {
       const total = calculateTotal();
       
+      // Convert line items to JSON format for storage
+      const itemsJson = lineItems.map(item => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        price: item.unitPrice,
+        taxable: item.taxable,
+        total: item.total,
+        ourPrice: item.ourPrice || 0,
+        name: item.description
+      }));
+      
       let invoice;
       if (editInvoice) {
         // Update existing invoice
@@ -193,7 +219,8 @@ export const InvoiceDialog = ({
           .update({
             invoice_number: formData.invoiceNumber,
             total,
-            notes: formData.notes
+            notes: formData.notes,
+            items: itemsJson
           })
           .eq('id', editInvoice.id)
           .select()
@@ -201,13 +228,6 @@ export const InvoiceDialog = ({
 
         if (error) throw error;
         invoice = data;
-
-        // Delete existing line items
-        await supabase
-          .from('line_items')
-          .delete()
-          .eq('parent_id', editInvoice.id)
-          .eq('parent_type', 'invoice');
       } else {
         // Create new invoice
         const { data, error } = await supabase
@@ -218,7 +238,8 @@ export const InvoiceDialog = ({
             amount_paid: 0,
             status: 'unpaid',
             notes: formData.notes,
-            job_id: 'default-job-id' // This should come from props or context
+            job_id: 'default-job-id', // This should come from props or context
+            items: itemsJson
           })
           .select()
           .single();
@@ -226,22 +247,6 @@ export const InvoiceDialog = ({
         if (error) throw error;
         invoice = data;
       }
-
-      // Insert line items
-      const lineItemsData = lineItems.map(item => ({
-        parent_id: invoice.id,
-        parent_type: 'invoice',
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        taxable: item.taxable
-      }));
-
-      const { error: lineItemsError } = await supabase
-        .from('line_items')
-        .insert(lineItemsData);
-
-      if (lineItemsError) throw lineItemsError;
 
       toast.success(editInvoice ? "Invoice updated successfully" : "Invoice created successfully");
       onInvoiceCreated(total);

@@ -7,6 +7,10 @@ import { Payment } from './usePayments';
 export const usePaymentActions = (jobId: string, refreshPayments: () => void) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const generatePaymentNumber = () => {
+    return `PAY-${Date.now()}`;
+  };
+
   const addPayment = async (paymentData: {
     invoiceId: string;
     amount: number;
@@ -24,7 +28,9 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
           method: paymentData.method,
           reference: paymentData.reference,
           notes: paymentData.notes,
-          date: new Date().toISOString()
+          payment_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+          payment_number: generatePaymentNumber(),
+          status: 'completed'
         });
 
       if (error) throw error;
@@ -83,7 +89,9 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
           amount: -payment.amount,
           method: 'refund',
           reference: `Refund for payment ${paymentId}`,
-          date: new Date().toISOString()
+          payment_date: new Date().toISOString().split('T')[0],
+          payment_number: generatePaymentNumber(),
+          status: 'completed'
         });
 
       if (refundError) throw refundError;

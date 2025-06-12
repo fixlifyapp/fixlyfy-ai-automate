@@ -30,52 +30,33 @@ export const EstimatePreviewWindow = ({
 
   useEffect(() => {
     if (open && estimate?.id) {
-      fetchLineItems();
+      parseLineItemsFromEstimate();
     }
   }, [open, estimate?.id]);
 
-  const fetchLineItems = async () => {
-    if (!estimate?.id) return;
-    
+  const parseLineItemsFromEstimate = () => {
     setIsLoadingItems(true);
     try {
-      // Try to fetch from line_items table first
-      const { data: lineItemsData, error: lineItemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_id', estimate.id)
-        .eq('parent_type', 'estimate');
-
-      if (lineItemsError) {
-        console.error('Error fetching line items:', lineItemsError);
-        // Fallback to items field if line_items table query fails
-        if (estimate.items && Array.isArray(estimate.items)) {
-          const mappedItems: LineItem[] = estimate.items.map((item: any) => ({
-            id: item.id || `temp-${Date.now()}-${Math.random()}`,
-            description: item.description || item.name || 'Service Item',
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || item.price || 0,
-            taxable: item.taxable !== undefined ? item.taxable : true,
-            total: (item.quantity || 1) * (item.unitPrice || item.price || 0)
-          }));
-          setLineItems(mappedItems);
-        } else {
-          setLineItems([]);
-        }
-      } else {
-        // Map line items data to LineItem interface
-        const mappedItems: LineItem[] = (lineItemsData || []).map(item => ({
-          id: item.id,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unit_price),
-          taxable: item.taxable,
-          total: Number(item.quantity) * Number(item.unit_price)
+      // Parse items from the estimate.items JSON field
+      let parsedItems: LineItem[] = [];
+      
+      if (estimate.items && Array.isArray(estimate.items)) {
+        parsedItems = estimate.items.map((item: any, index: number) => ({
+          id: item.id || `temp-${Date.now()}-${index}`,
+          description: item.description || item.name || 'Service Item',
+          quantity: Number(item.quantity) || 1,
+          unitPrice: Number(item.unitPrice || item.price || item.unit_price) || 0,
+          taxable: item.taxable !== undefined ? item.taxable : true,
+          total: (Number(item.quantity) || 1) * (Number(item.unitPrice || item.price || item.unit_price) || 0),
+          ourPrice: Number(item.ourPrice || item.cost || item.our_price) || 0,
+          name: item.name || item.description,
+          price: Number(item.price || item.unitPrice || item.unit_price) || 0
         }));
-        setLineItems(mappedItems);
       }
+      
+      setLineItems(parsedItems);
     } catch (error) {
-      console.error('Error in fetchLineItems:', error);
+      console.error('Error parsing line items from estimate:', error);
       setLineItems([]);
     } finally {
       setIsLoadingItems(false);
@@ -99,33 +80,13 @@ export const EstimatePreviewWindow = ({
           amount_paid: 0,
           status: 'unpaid',
           notes: estimate.notes,
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          items: estimate.items || []
         })
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
-
-      // Copy line items to invoice if they exist
-      if (lineItems.length > 0) {
-        const invoiceLineItems = lineItems.map(item => ({
-          parent_id: invoice.id,
-          parent_type: 'invoice',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-
-        const { error: lineItemError } = await supabase
-          .from('line_items')
-          .insert(invoiceLineItems);
-
-        if (lineItemError) {
-          console.error('Error copying line items:', lineItemError);
-          // Don't throw here, invoice was created successfully
-        }
-      }
 
       // Update estimate status
       const { error: updateError } = await supabase

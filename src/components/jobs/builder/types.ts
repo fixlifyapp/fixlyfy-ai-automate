@@ -5,48 +5,31 @@ export interface LineItem {
   quantity: number;
   unitPrice: number;
   taxable: boolean;
+  total: number;
   discount?: number;
   ourPrice?: number;
   name?: string;
   price?: number;
-  total: number;
 }
 
 export interface Product {
   id: string;
   name: string;
-  description?: string;
   price: number;
-  cost?: number;
   category?: string;
-  sku?: string;
-  tags?: string[];
-  taxable: boolean;
-  ourprice?: number;
+  description?: string;
+  ourprice?: number; // Database field name
+  cost?: number; // Alternative field name
+  our_price?: number; // Alternative field name
+  unit?: string;
+  taxable?: boolean;
 }
 
-export interface EstimateFormData {
-  estimateNumber: string;
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    taxable: boolean;
-  }>;
-  notes: string;
-  status: string;
-  total: number;
+export interface EstimateLineItem extends LineItem {
+  discount: number;
+  ourPrice: number;
 }
 
-export interface InvoiceFormData {
-  invoiceNumber: string;
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    taxable: boolean;
-  }>;
-  notes: string;
-  status: string;
-  total: number;
+export interface InvoiceLineItem extends LineItem {
+  invoiceId?: string;
 }
