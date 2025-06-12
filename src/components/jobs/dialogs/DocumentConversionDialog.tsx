@@ -4,19 +4,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   FileText, 
   DollarSign, 
   ArrowRight, 
   Calendar,
   CreditCard,
-  Check
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { PaymentRecordingModal } from "./PaymentRecordingModal";
 
 interface DocumentConversionDialogProps {
   open: boolean;
@@ -30,20 +29,20 @@ interface DocumentConversionDialogProps {
     client: string;
     jobId: string;
   };
-  onConvert: (data: any) => Promise<void>;
+  onConvert: (data: any) => Promise<any>;
+  onPaymentRecorded?: () => void;
 }
 
 export const DocumentConversionDialog = ({
   open,
   onOpenChange,
   sourceDocument,
-  onConvert
+  onConvert,
+  onPaymentRecorded
 }: DocumentConversionDialogProps) => {
   const [isConverting, setIsConverting] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [paymentNotes, setPaymentNotes] = useState("");
-  const [recordPayment, setRecordPayment] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [convertedInvoice, setConvertedInvoice] = useState<any>(null);
 
   const targetType = sourceDocument.type === "estimate" ? "invoice" : "estimate";
 
@@ -54,18 +53,23 @@ export const DocumentConversionDialog = ({
       const conversionData = {
         sourceId: sourceDocument.id,
         targetType,
-        lineItems: sourceDocument.lineItems,
-        payment: recordPayment ? {
-          amount: parseFloat(paymentAmount),
-          method: paymentMethod,
-          notes: paymentNotes
-        } : null
+        lineItems: sourceDocument.lineItems
       };
 
-      await onConvert(conversionData);
+      const result = await onConvert(conversionData);
       
-      toast.success(`${sourceDocument.type} converted to ${targetType} successfully!`);
-      onOpenChange(false);
+      if (result && targetType === "invoice") {
+        setConvertedInvoice(result);
+        toast.success(`${sourceDocument.type} converted to ${targetType} successfully!`);
+        
+        // Ask if they want to record a payment
+        setTimeout(() => {
+          setShowPaymentModal(true);
+        }, 500);
+      } else {
+        toast.success(`${sourceDocument.type} converted to ${targetType} successfully!`);
+        onOpenChange(false);
+      }
       
     } catch (error) {
       console.error("Conversion error:", error);
@@ -75,148 +79,132 @@ export const DocumentConversionDialog = ({
     }
   };
 
+  const handlePaymentRecorded = () => {
+    setShowPaymentModal(false);
+    onOpenChange(false);
+    if (onPaymentRecorded) {
+      onPaymentRecorded();
+    }
+  };
+
+  const handleSkipPayment = () => {
+    setShowPaymentModal(false);
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Convert {sourceDocument.type === "estimate" ? "Estimate" : "Invoice"}
-            <ArrowRight className="h-4 w-4" />
-            {targetType === "estimate" ? "Estimate" : "Invoice"}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open && !showPaymentModal} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Convert {sourceDocument.type === "estimate" ? "Estimate" : "Invoice"}
+              <ArrowRight className="h-4 w-4" />
+              {targetType === "estimate" ? "Estimate" : "Invoice"}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Source Document Info */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  <span className="font-semibold">Source Document</span>
-                </div>
-                <Badge variant="outline">{sourceDocument.type}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Number</p>
-                  <p className="font-semibold">{sourceDocument.number}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Client</p>
-                  <p className="font-semibold">{sourceDocument.client}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Total</p>
-                  <p className="font-semibold">{formatCurrency(sourceDocument.total)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Line Items</p>
-                  <p className="font-semibold">{sourceDocument.lineItems.length} items</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Conversion Details */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                <span className="font-semibold">Conversion Details</span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                <Check className="h-5 w-5 text-green-600" />
-                <span className="text-sm">All line items and warranty selections will be copied</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                <span className="text-sm">New {targetType} number will be auto-generated</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-                <FileText className="h-5 w-5 text-orange-600" />
-                <span className="text-sm">Original {sourceDocument.type} will be marked as converted</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Recording (for invoice conversions) */}
-          {targetType === "invoice" && (
+          <div className="space-y-6">
+            {/* Source Document Info */}
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    <span className="font-semibold">Record Payment (Optional)</span>
+                    <FileText className="h-5 w-5" />
+                    <span className="font-semibold">Source Document</span>
                   </div>
-                  <Button
-                    variant={recordPayment ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setRecordPayment(!recordPayment)}
-                  >
-                    {recordPayment ? "Enabled" : "Disabled"}
-                  </Button>
+                  <Badge variant="outline">{sourceDocument.type}</Badge>
                 </div>
               </CardHeader>
-              {recordPayment && (
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="amount">Payment Amount</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        placeholder="0.00"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                        max={sourceDocument.total}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="method">Payment Method</Label>
-                      <select
-                        id="method"
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full px-3 py-2 border border-input rounded-md"
-                      >
-                        <option value="cash">Cash</option>
-                        <option value="credit">Credit Card</option>
-                        <option value="check">Check</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                      </select>
-                    </div>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Number</p>
+                    <p className="font-semibold">{sourceDocument.number}</p>
                   </div>
                   <div>
-                    <Label htmlFor="notes">Payment Notes</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Optional payment notes..."
-                      value={paymentNotes}
-                      onChange={(e) => setPaymentNotes(e.target.value)}
-                      rows={2}
-                    />
+                    <p className="text-muted-foreground">Client</p>
+                    <p className="font-semibold">{sourceDocument.client}</p>
                   </div>
-                </CardContent>
-              )}
+                  <div>
+                    <p className="text-muted-foreground">Total</p>
+                    <p className="font-semibold">{formatCurrency(sourceDocument.total)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Line Items</p>
+                    <p className="font-semibold">{sourceDocument.lineItems.length} items</p>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
-          )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConvert} disabled={isConverting}>
-              {isConverting ? "Converting..." : `Convert to ${targetType}`}
-            </Button>
+            {/* Conversion Details */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  <span className="font-semibold">Conversion Details</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="text-sm">All line items and warranty selections will be copied</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm">New {targetType} number will be auto-generated</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
+                  <FileText className="h-5 w-5 text-orange-600" />
+                  <span className="text-sm">Original {sourceDocument.type} will be marked as converted</span>
+                </div>
+                {targetType === "invoice" && (
+                  <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-purple-600" />
+                    <span className="text-sm">Option to record payment after conversion</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Warning for estimate conversion */}
+            {targetType === "estimate" && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">Converting Invoice to Estimate</p>
+                  <p className="text-amber-700 mt-1">
+                    This will create a new estimate and mark the original invoice as converted. 
+                    Any payment records will remain associated with the original invoice.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConvert} disabled={isConverting}>
+                {isConverting ? "Converting..." : `Convert to ${targetType}`}
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Recording Modal */}
+      {convertedInvoice && (
+        <PaymentRecordingModal
+          isOpen={showPaymentModal}
+          onClose={handleSkipPayment}
+          invoice={convertedInvoice}
+          jobId={sourceDocument.jobId}
+          onPaymentRecorded={handlePaymentRecorded}
+        />
+      )}
+    </>
   );
 };
