@@ -63,6 +63,9 @@ export const useUnifiedDocumentBuilder = ({
     jobId
   });
 
+  // Document operations
+  const operations = useDocumentOperations();
+
   // Create form data for operations
   const formData = {
     documentId: existingDocument?.id,
@@ -86,21 +89,59 @@ export const useUnifiedDocumentBuilder = ({
     description: job?.description
   };
 
-  // Document operations
-  const {
-    isSubmitting,
-    saveDocumentChanges,
-    convertToInvoice
-  } = useDocumentOperations({
-    documentType,
-    existingDocument,
-    jobId,
-    formData,
-    lineItems,
-    notes,
-    calculateGrandTotal,
-    onSyncToInvoice
-  });
+  // Document save method
+  const saveDocumentChanges = async () => {
+    try {
+      const documentData = {
+        documentType,
+        documentNumber,
+        jobId,
+        lineItems,
+        taxRate,
+        notes,
+        total: calculateGrandTotal()
+      };
+
+      if (existingDocument?.id) {
+        return await operations.updateDocument(existingDocument.id, documentData);
+      } else {
+        return await operations.saveDocument(documentData);
+      }
+    } catch (error) {
+      console.error('Error saving document changes:', error);
+      throw error;
+    }
+  };
+
+  // Convert to invoice method
+  const convertToInvoice = async () => {
+    try {
+      if (documentType !== 'estimate' || !existingDocument?.id) {
+        throw new Error('Can only convert estimates to invoices');
+      }
+
+      const documentData = {
+        documentType: 'invoice' as const,
+        documentNumber: `INV-${Date.now()}`,
+        jobId,
+        lineItems,
+        taxRate,
+        notes,
+        total: calculateGrandTotal()
+      };
+
+      const invoice = await operations.convertToInvoice(existingDocument.id, documentData);
+      
+      if (onSyncToInvoice) {
+        onSyncToInvoice();
+      }
+      
+      return invoice;
+    } catch (error) {
+      console.error('Error converting to invoice:', error);
+      throw error;
+    }
+  };
 
   // Line item management
   const handleAddProduct = useCallback((product: Product) => {
@@ -151,7 +192,7 @@ export const useUnifiedDocumentBuilder = ({
     documentNumber,
     setDocumentNumber,
     isInitialized,
-    isSubmitting,
+    isSubmitting: operations.isSubmitting,
 
     // Data objects
     formData,

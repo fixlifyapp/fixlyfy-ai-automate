@@ -15,7 +15,8 @@ interface PortalInvoice {
   status: string;
   created_at: string;
   due_date?: string;
-  job: {
+  job_id: string;
+  job?: {
     id: string;
     title: string;
   };
@@ -31,31 +32,44 @@ export const PortalInvoicesPage = () => {
 
   const fetchInvoices = async () => {
     try {
-      // For now, fetch all invoices. In production, this would be filtered by client
-      const { data, error } = await supabase
+      // Fetch invoices with job data separately to avoid relation issues
+      const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
-        .select(`
-          *,
-          jobs:job_id(id, title)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (invoicesError) throw invoicesError;
 
-      // Transform the data to handle the job relationship correctly
-      const transformedData = (data || []).map(invoice => ({
-        ...invoice,
-        job: {
-          id: invoice.job_id,
-          title: Array.isArray(invoice.jobs) 
-            ? invoice.jobs[0]?.title || `Job ${invoice.job_id}`
-            : invoice.jobs?.title || `Job ${invoice.job_id}`
+      if (invoicesData && invoicesData.length > 0) {
+        // Get unique job IDs
+        const jobIds = [...new Set(invoicesData.map(inv => inv.job_id))];
+        
+        // Fetch job data separately
+        const { data: jobsData, error: jobsError } = await supabase
+          .from('jobs')
+          .select('id, title')
+          .in('id', jobIds);
+
+        if (jobsError) {
+          console.warn('Could not fetch job data:', jobsError);
         }
-      }));
 
-      setInvoices(transformedData);
+        // Combine invoices with job data
+        const invoicesWithJobs = invoicesData.map(invoice => ({
+          ...invoice,
+          job: jobsData?.find(job => job.id === invoice.job_id) || {
+            id: invoice.job_id,
+            title: `Job ${invoice.job_id}`
+          }
+        }));
+
+        setInvoices(invoicesWithJobs);
+      } else {
+        setInvoices([]);
+      }
     } catch (error) {
       console.error('Error fetching invoices:', error);
+      setInvoices([]);
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +132,7 @@ export const PortalInvoicesPage = () => {
                   <div>
                     <CardTitle className="text-xl">{invoice.invoice_number}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {invoice.job.title}
+                      {invoice.job?.title || `Job ${invoice.job_id}`}
                     </p>
                   </div>
                   <div className="text-right">
@@ -174,5 +188,4 @@ export const PortalInvoicesPage = () => {
   );
 };
 
-// Add default export
 export default PortalInvoicesPage;

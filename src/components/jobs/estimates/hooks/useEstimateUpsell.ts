@@ -110,8 +110,14 @@ export const useEstimateUpsell = (estimateId: string) => {
 
       const updatedItems = [...currentItems, newItem];
 
-      // Recalculate totals
-      const subtotal = updatedItems.reduce((sum, item) => sum + (item.total || item.quantity * item.unitPrice), 0);
+      // Recalculate totals safely
+      const subtotal = updatedItems.reduce((sum, item: any) => {
+        const itemTotal = typeof item === 'object' && item !== null 
+          ? (item.total || (item.quantity * item.unitPrice) || 0)
+          : 0;
+        return sum + itemTotal;
+      }, 0);
+      
       const taxAmount = subtotal * (estimate.tax_rate || 0.1);
       const total = subtotal + taxAmount;
 

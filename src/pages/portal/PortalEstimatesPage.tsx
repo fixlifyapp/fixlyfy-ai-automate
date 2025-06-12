@@ -15,7 +15,8 @@ interface PortalEstimate {
   status: string;
   created_at: string;
   valid_until?: string;
-  job: {
+  job_id: string;
+  job?: {
     id: string;
     title: string;
   };
@@ -32,31 +33,44 @@ export const PortalEstimatesPage = () => {
 
   const fetchEstimates = async () => {
     try {
-      // For now, fetch all estimates. In production, this would be filtered by client
-      const { data, error } = await supabase
+      // Fetch estimates with job data separately to avoid relation issues
+      const { data: estimatesData, error: estimatesError } = await supabase
         .from('estimates')
-        .select(`
-          *,
-          jobs:job_id(id, title)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (estimatesError) throw estimatesError;
 
-      // Transform the data to handle the job relationship correctly
-      const transformedData = (data || []).map(estimate => ({
-        ...estimate,
-        job: {
-          id: estimate.job_id,
-          title: Array.isArray(estimate.jobs) 
-            ? estimate.jobs[0]?.title || `Job ${estimate.job_id}`
-            : estimate.jobs?.title || `Job ${estimate.job_id}`
+      if (estimatesData && estimatesData.length > 0) {
+        // Get unique job IDs
+        const jobIds = [...new Set(estimatesData.map(est => est.job_id))];
+        
+        // Fetch job data separately
+        const { data: jobsData, error: jobsError } = await supabase
+          .from('jobs')
+          .select('id, title')
+          .in('id', jobIds);
+
+        if (jobsError) {
+          console.warn('Could not fetch job data:', jobsError);
         }
-      }));
 
-      setEstimates(transformedData);
+        // Combine estimates with job data
+        const estimatesWithJobs = estimatesData.map(estimate => ({
+          ...estimate,
+          job: jobsData?.find(job => job.id === estimate.job_id) || {
+            id: estimate.job_id,
+            title: `Job ${estimate.job_id}`
+          }
+        }));
+
+        setEstimates(estimatesWithJobs);
+      } else {
+        setEstimates([]);
+      }
     } catch (error) {
       console.error('Error fetching estimates:', error);
+      setEstimates([]);
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +163,7 @@ export const PortalEstimatesPage = () => {
                   <div>
                     <CardTitle className="text-xl">{estimate.estimate_number}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {estimate.job.title}
+                      {estimate.job?.title || `Job ${estimate.job_id}`}
                     </p>
                   </div>
                   <div className="text-right">
@@ -198,5 +212,4 @@ export const PortalEstimatesPage = () => {
   );
 };
 
-// Add default export
 export default PortalEstimatesPage;
