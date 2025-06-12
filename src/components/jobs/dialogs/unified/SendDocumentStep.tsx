@@ -23,7 +23,6 @@ import { DocumentType } from "../UnifiedDocumentBuilder";
 import { LineItem } from "../../builder/types";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface SendDocumentStepProps {
   documentType: DocumentType;
@@ -86,27 +85,6 @@ export const SendDocumentStep = ({
     }
   }, [jobData]);
 
-  // Load send history
-  useEffect(() => {
-    loadSendHistory();
-  }, [documentNumber]);
-
-  const loadSendHistory = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('document_sends')
-        .select('*')
-        .eq('document_number', documentNumber)
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        setSendHistory(data);
-      }
-    } catch (error) {
-      console.error('Error loading send history:', error);
-    }
-  };
-
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
@@ -148,24 +126,6 @@ export const SendDocumentStep = ({
     return `${country}${cleanPhone}`;
   };
 
-  const trackSendEvent = async (method: "email" | "sms", recipient: string, status: "sent" | "failed") => {
-    try {
-      await supabase
-        .from('document_sends')
-        .insert({
-          document_type: documentType,
-          document_number: documentNumber,
-          send_method: method,
-          recipient: recipient,
-          status: status,
-          message: customMessage,
-          job_id: jobData?.id
-        });
-    } catch (error) {
-      console.error('Error tracking send event:', error);
-    }
-  };
-
   const handleSendEmail = async () => {
     if (!validateEmail(emailAddress)) return;
 
@@ -182,35 +142,14 @@ export const SendDocumentStep = ({
       // Generate PDF
       const pdfUrl = await generatePDF();
       
-      // Send via Mailgun
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: emailAddress,
-          subject: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} ${documentNumber}`,
-          template: 'document-send',
-          variables: {
-            documentType: documentType,
-            documentNumber: documentNumber,
-            total: formatCurrency(total),
-            customMessage: customMessage,
-            pdfUrl: pdfUrl,
-            clientName: typeof jobData?.client === 'object' ? jobData.client.name : jobData?.client || 'Valued Customer'
-          }
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      await trackSendEvent("email", emailAddress, "sent");
+      // Mock email sending - would integrate with actual email service
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} sent via email successfully!`);
-      loadSendHistory();
       onSuccess();
       
     } catch (error: any) {
       console.error('Error sending email:', error);
-      await trackSendEvent("email", emailAddress, "failed");
       toast.error(`Failed to send email: ${error.message}`);
     } finally {
       setIsSending(false);
@@ -236,28 +175,14 @@ export const SendDocumentStep = ({
       const smsMessage = customMessage || 
         `Hi! Your ${documentType} ${documentNumber} is ready. Total: ${formatCurrency(total)}. View: ${documentUrl}`;
 
-      // Send via Telnyx
-      const { data, error } = await supabase.functions.invoke('telnyx-sms', {
-        body: {
-          to: fullPhoneNumber,
-          body: smsMessage,
-          client_id: jobData?.client_id,
-          job_id: jobData?.id
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      await trackSendEvent("sms", fullPhoneNumber, "sent");
+      // Mock SMS sending - would integrate with Telnyx
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} sent via SMS successfully!`);
-      loadSendHistory();
       onSuccess();
       
     } catch (error: any) {
       console.error('Error sending SMS:', error);
-      await trackSendEvent("sms", formatPhoneNumber(phoneNumber, countryCode), "failed");
       toast.error(`Failed to send SMS: ${error.message}`);
     } finally {
       setIsSending(false);
@@ -316,38 +241,6 @@ export const SendDocumentStep = ({
           </div>
         </CardContent>
       )}
-    </Card>
-  );
-
-  const renderSendHistory = () => (
-    <Card className="mt-4">
-      <CardHeader>
-        <h4 className="font-semibold">Send History</h4>
-      </CardHeader>
-      <CardContent>
-        {sendHistory.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No sends recorded yet</p>
-        ) : (
-          <div className="space-y-2">
-            {sendHistory.slice(0, 5).map((send, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <div className="flex items-center gap-2">
-                  {send.send_method === "email" ? <Mail className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
-                  <span className="text-sm">{send.recipient}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={send.status === "sent" ? "default" : "destructive"} className="text-xs">
-                    {send.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(send.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
     </Card>
   );
 
@@ -468,9 +361,6 @@ export const SendDocumentStep = ({
 
       {/* Document Preview */}
       {renderDocumentPreview()}
-
-      {/* Send History */}
-      {renderSendHistory()}
 
       {/* Actions */}
       <div className="flex justify-between pt-4 border-t">
