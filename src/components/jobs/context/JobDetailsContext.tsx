@@ -38,7 +38,19 @@ export const JobDetailsProvider = ({ children, jobId }: JobDetailsProviderProps)
       setIsLoading(true);
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select(`
+          *,
+          clients:client_id (
+            id,
+            name,
+            email,
+            phone,
+            address,
+            city,
+            state,
+            zip
+          )
+        `)
         .eq('id', jobId)
         .single();
 
@@ -47,7 +59,20 @@ export const JobDetailsProvider = ({ children, jobId }: JobDetailsProviderProps)
         return;
       }
 
-      setJob(data);
+      // Transform the data to match Job interface
+      const clientData = Array.isArray(data.clients) ? data.clients[0] : data.clients;
+      
+      const transformedJob: Job = {
+        ...data,
+        clientId: data.client_id,
+        client: clientData?.name || data.client_id,
+        phone: clientData?.phone || '',
+        email: clientData?.email || '',
+        tasks: Array.isArray(data.tasks) ? data.tasks : [],
+        total: data.revenue || 0
+      };
+
+      setJob(transformedJob);
     } catch (error) {
       console.error('Error in refreshJob:', error);
     } finally {

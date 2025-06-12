@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { useJobs } from "@/hooks/useJobs";
@@ -12,6 +13,7 @@ import { AttachmentsCard } from "./overview/AttachmentsCard";
 import { ConditionalCustomFieldsCard } from "./overview/ConditionalCustomFieldsCard";
 import { TaskManagementDialog } from "./dialogs/TaskManagementDialog";
 import { toast } from "sonner";
+import type { JobInfo } from "./overview/types";
 
 interface JobOverviewProps {
   jobId: string;
@@ -28,6 +30,23 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const { updateJob } = useJobs();
+
+  // Transform job to JobInfo format
+  const transformJobToJobInfo = (job: any): JobInfo => {
+    const clientName = typeof job.client === 'string' ? job.client : (job.client?.name || '');
+    const clientPhone = job.phone || (typeof job.client === 'object' ? job.client?.phone : '') || '';
+    const clientEmail = job.email || (typeof job.client === 'object' ? job.client?.email : '') || '';
+
+    return {
+      ...job,
+      clientId: job.client_id,
+      client: clientName,
+      phone: clientPhone,
+      email: clientEmail,
+      total: job.revenue || job.total || 0,
+      tasks: Array.isArray(job.tasks) ? job.tasks : []
+    };
+  };
 
   // Convert job tasks to dialog format
   const convertToDialogTasks = (jobTasks: string[] | undefined): Task[] => {
@@ -86,28 +105,30 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
     );
   }
 
+  const jobInfo = transformJobToJobInfo(job);
+
   return (
     <div className="space-y-6">
       {/* Primary Information Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <JobDescriptionCard 
-            description={job.description || ""} 
+            description={jobInfo.description || ""} 
             jobId={jobId} 
             editable 
           />
           <JobSummaryCard 
-            job={job} 
+            job={jobInfo} 
             jobId={jobId} 
             editable 
           />
           <TechnicianCard 
-            job={job} 
+            job={jobInfo} 
             jobId={jobId} 
             editable 
           />
           <TasksCard 
-            tasks={job.tasks || []} 
+            tasks={jobInfo.tasks || []} 
             jobId={jobId} 
             editable 
             onManageTasks={() => setIsTaskDialogOpen(true)}
@@ -115,9 +136,9 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
         </div>
         
         <div className="space-y-6">
-          <AdditionalInfoCard job={job} />
+          <AdditionalInfoCard job={jobInfo} />
           <ScheduleInfoCard 
-            job={job} 
+            job={jobInfo} 
             jobId={jobId} 
             editable 
           />
@@ -133,7 +154,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <JobTagsCard 
-            tags={job.tags || []} 
+            tags={jobInfo.tags || []} 
             jobId={jobId} 
             editable 
           />
@@ -144,7 +165,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
       <TaskManagementDialog
         open={isTaskDialogOpen}
         onOpenChange={setIsTaskDialogOpen}
-        initialTasks={convertToDialogTasks(job.tasks)}
+        initialTasks={convertToDialogTasks(jobInfo.tasks)}
         onSave={handleUpdateTasks}
         disabled={isUpdating}
       />

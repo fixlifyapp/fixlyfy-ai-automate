@@ -118,8 +118,11 @@ export const useEstimateUpsell = (estimateId: string) => {
       // Recalculate totals safely with type guards and Number conversion
       const subtotal = updatedItems.reduce((sum, item: any) => {
         if (typeof item === 'object' && item !== null) {
-          const itemTotal = Number(item.total) || (Number(item.quantity || 0) * Number(item.unitPrice || 0)) || 0;
-          return sum + itemTotal;
+          // Safe number conversion for total calculation
+          const itemTotal = typeof item.total === 'number' 
+            ? item.total 
+            : (Number(item.quantity || 0) * Number(item.unitPrice || 0));
+          return sum + (isNaN(itemTotal) ? 0 : itemTotal);
         }
         return sum;
       }, 0);

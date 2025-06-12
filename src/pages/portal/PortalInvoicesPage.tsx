@@ -32,41 +32,41 @@ export const PortalInvoicesPage = () => {
 
   const fetchInvoices = async () => {
     try {
-      // Fetch invoices with job data separately to avoid relation issues
+      setIsLoading(true);
+      
+      // Fetch invoices with proper job joins
       const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
-        .select('*')
+        .select(`
+          id,
+          invoice_number,
+          total,
+          balance,
+          status,
+          created_at,
+          due_date,
+          job_id,
+          jobs!inner (
+            id,
+            title
+          )
+        `)
         .order('created_at', { ascending: false });
 
-      if (invoicesError) throw invoicesError;
-
-      if (invoicesData && invoicesData.length > 0) {
-        // Get unique job IDs
-        const jobIds = [...new Set(invoicesData.map(inv => inv.job_id))];
-        
-        // Fetch job data separately
-        const { data: jobsData, error: jobsError } = await supabase
-          .from('jobs')
-          .select('id, title')
-          .in('id', jobIds);
-
-        if (jobsError) {
-          console.warn('Could not fetch job data:', jobsError);
-        }
-
-        // Combine invoices with job data
-        const invoicesWithJobs = invoicesData.map(invoice => ({
-          ...invoice,
-          job: jobsData?.find(job => job.id === invoice.job_id) || {
-            id: invoice.job_id,
-            title: `Job ${invoice.job_id}`
-          }
-        }));
-
-        setInvoices(invoicesWithJobs);
-      } else {
-        setInvoices([]);
+      if (invoicesError) {
+        console.error('Error fetching invoices:', invoicesError);
+        throw invoicesError;
       }
+
+      // Transform and validate data
+      const transformedInvoices = (invoicesData || []).map(invoice => ({
+        ...invoice,
+        job: Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs,
+        total: Number(invoice.total) || 0,
+        balance: Number(invoice.balance) || 0
+      })).filter(invoice => invoice.job); // Only include invoices with valid job data
+
+      setInvoices(transformedInvoices);
     } catch (error) {
       console.error('Error fetching invoices:', error);
       setInvoices([]);

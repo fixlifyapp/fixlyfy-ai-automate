@@ -33,41 +33,39 @@ export const PortalEstimatesPage = () => {
 
   const fetchEstimates = async () => {
     try {
-      // Fetch estimates with job data separately to avoid relation issues
+      setIsLoading(true);
+      
+      // Fetch estimates with proper job joins
       const { data: estimatesData, error: estimatesError } = await supabase
         .from('estimates')
-        .select('*')
+        .select(`
+          id,
+          estimate_number,
+          total,
+          status,
+          created_at,
+          valid_until,
+          job_id,
+          jobs!inner (
+            id,
+            title
+          )
+        `)
         .order('created_at', { ascending: false });
 
-      if (estimatesError) throw estimatesError;
-
-      if (estimatesData && estimatesData.length > 0) {
-        // Get unique job IDs
-        const jobIds = [...new Set(estimatesData.map(est => est.job_id))];
-        
-        // Fetch job data separately
-        const { data: jobsData, error: jobsError } = await supabase
-          .from('jobs')
-          .select('id, title')
-          .in('id', jobIds);
-
-        if (jobsError) {
-          console.warn('Could not fetch job data:', jobsError);
-        }
-
-        // Combine estimates with job data
-        const estimatesWithJobs = estimatesData.map(estimate => ({
-          ...estimate,
-          job: jobsData?.find(job => job.id === estimate.job_id) || {
-            id: estimate.job_id,
-            title: `Job ${estimate.job_id}`
-          }
-        }));
-
-        setEstimates(estimatesWithJobs);
-      } else {
-        setEstimates([]);
+      if (estimatesError) {
+        console.error('Error fetching estimates:', estimatesError);
+        throw estimatesError;
       }
+
+      // Transform and validate data
+      const transformedEstimates = (estimatesData || []).map(estimate => ({
+        ...estimate,
+        job: Array.isArray(estimate.jobs) ? estimate.jobs[0] : estimate.jobs,
+        total: Number(estimate.total) || 0
+      })).filter(estimate => estimate.job); // Only include estimates with valid job data
+
+      setEstimates(transformedEstimates);
     } catch (error) {
       console.error('Error fetching estimates:', error);
       setEstimates([]);
