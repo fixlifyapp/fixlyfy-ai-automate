@@ -25,12 +25,13 @@ export const useInvoiceCreation = (clientId?: string) => {
       const { data, error } = await supabase
         .from('invoices')
         .insert({
+          job_id: 'default-job-id', // This should be provided from context or props
           invoice_number: `INV-${Date.now().toString().slice(-6)}`,
           total: parseFloat(invoiceData.amount) || 0,
           notes: invoiceData.description,
           issue_date: currentDate,
           amount_paid: 0,
-          client_id: clientId // Link invoice to the client
+          client_id: clientId
         })
         .select();
         

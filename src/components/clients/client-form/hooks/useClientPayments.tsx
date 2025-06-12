@@ -7,7 +7,7 @@ import { useClientPaymentsRealtime } from "./useClientPaymentsRealtime";
 
 export interface ClientPayment {
   id: string;
-  date: string;
+  payment_date: string;
   amount: number;
   method: string;
   status: string;
@@ -75,12 +75,12 @@ export const useClientPayments = (clientId?: string) => {
         if (invoices && invoices.length > 0) {
           const invoiceIds = invoices.map(inv => inv.id);
           
-          // Then get payments for those invoices - now using the correct column name
+          // Then get payments for those invoices - using payment_date
           const { data: payments, error: paymentError } = await supabase
             .from('payments')
-            .select('id, invoice_id, amount, method, date, payment_date')
+            .select('id, invoice_id, amount, method, payment_date')
             .in('invoice_id', invoiceIds)
-            .order('date', { ascending: false });
+            .order('payment_date', { ascending: false });
             
           if (paymentError) throw paymentError;
           
@@ -99,7 +99,7 @@ export const useClientPayments = (clientId?: string) => {
               
               return {
                 id: payment.id,
-                date: payment.date || payment.payment_date,
+                payment_date: payment.payment_date,
                 amount: payment.amount,
                 method: payment.method,
                 status: 'paid', // Default status since column doesn't exist yet

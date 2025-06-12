@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -104,57 +103,39 @@ export const InvoiceSendDialog = ({
     try {
       console.log("Fetching invoice details for invoice number:", invoiceNumber);
       
-      const { data: details, error: detailsError } = await supabase
-        .from('invoice_details_view')
+      // Since the view doesn't exist, query directly from invoices table
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
         .select('*')
         .eq('invoice_number', invoiceNumber)
         .maybeSingle();
 
-      if (detailsError && detailsError.code !== 'PGRST116') {
-        console.error('Error fetching invoice details:', detailsError);
+      if (invoiceError) {
+        console.error('Error fetching invoice directly:', invoiceError);
       }
 
-      console.log("Invoice details from view:", details);
+      if (invoice) {
+        const fallbackDetails: InvoiceDetails = {
+          invoice_id: invoice.id,
+          invoice_number: invoice.invoice_number,
+          total: invoice.total || 0,
+          status: invoice.status || 'draft',
+          notes: invoice.notes,
+          job_id: invoice.job_id || '',
+          job_title: '',
+          job_description: '',
+          client_id: clientInfo?.id || '',
+          client_name: clientInfo?.name || 'Unknown Client',
+          client_email: clientInfo?.email,
+          client_phone: clientInfo?.phone,
+          client_company: ''
+        };
 
-      if (details) {
-        setInvoiceDetails(details);
-        console.log("Invoice details updated:", details);
-      } else {
-        console.log("No data from view, trying direct fetch");
-        
-        const { data: invoice, error: invoiceError } = await supabase
-          .from('invoices')
-          .select('*')
-          .eq('invoice_number', invoiceNumber)
-          .maybeSingle();
-
-        if (invoiceError) {
-          console.error('Error fetching invoice directly:', invoiceError);
-        }
-
-        if (invoice) {
-          const fallbackDetails: InvoiceDetails = {
-            invoice_id: invoice.id,
-            invoice_number: invoice.invoice_number,
-            total: invoice.total || 0,
-            status: invoice.status || 'draft',
-            notes: invoice.notes,
-            job_id: invoice.job_id || '',
-            job_title: '',
-            job_description: '',
-            client_id: clientInfo?.id || '',
-            client_name: clientInfo?.name || 'Unknown Client',
-            client_email: clientInfo?.email,
-            client_phone: clientInfo?.phone,
-            client_company: ''
-          };
-
-          setInvoiceDetails(fallbackDetails);
-          console.log("Using fallback invoice details:", fallbackDetails);
-        }
+        setInvoiceDetails(fallbackDetails);
+        console.log("Using invoice details:", fallbackDetails);
       }
 
-      const invoiceId = details?.invoice_id || invoiceDetails?.invoice_id;
+      const invoiceId = invoice?.id;
       if (invoiceId) {
         const { data: items, error: itemsError } = await supabase
           .from('line_items')

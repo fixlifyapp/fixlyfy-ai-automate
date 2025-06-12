@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +14,7 @@ export interface Estimate {
   notes?: string;
   created_at: string;
   updated_at: string;
+  valid_until?: string; // Added this field
   items?: Array<{
     id: string;
     description: string;
@@ -57,8 +57,9 @@ export const useEstimates = (jobId?: string) => {
         ...item,
         number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Add alias with fallback
         amount: item.total || 0, // Add alias
-        date: item.date || item.created_at, // Ensure date is present
+        date: item.created_at, // Use created_at as date
         estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
+        valid_until: item.valid_until || undefined, // Handle valid_until properly
       }));
       
       setEstimates(mappedData);
@@ -111,7 +112,6 @@ export const useEstimates = (jobId?: string) => {
           invoice_number: invoiceNumber,
           total: estimate.total || 0,
           amount_paid: 0,
-          balance: estimate.total || 0,
           status: 'unpaid',
           notes: estimate.notes,
           due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
