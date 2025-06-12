@@ -128,7 +128,7 @@ const JobsPageOptimized = () => {
     const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
     const csvData = selectedJobData.map(job => ({
       'Job ID': job.id,
-      'Client': job.client?.name || '',
+      'Client': job.client?.name || 'Unknown Client',
       'Status': job.status,
       'Type': job.job_type || '',
       'Date': job.date ? new Date(job.date).toLocaleDateString() : '',

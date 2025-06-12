@@ -1,311 +1,303 @@
-
-import { useState, useEffect } from "react";
-import { PageLayout } from "@/components/layout/PageLayout";
-import { PageHeader } from "@/components/ui/page-header";
-import { ModernCard } from "@/components/ui/modern-card";
-import { AnimatedContainer } from "@/components/ui/animated-container";
-import { Button } from "@/components/ui/button";
-import { 
-  Grid, 
-  List, 
-  Plus, 
-  Wrench, 
-  Target, 
-  TrendingUp,
-  RefreshCw
-} from "lucide-react";
-import { JobsList } from "@/components/jobs/JobsList";
-import { JobsFilters } from "@/components/jobs/JobsFilters";
-import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
-import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
-import { useJobsOptimized } from "@/hooks/useJobsOptimized";
-import { useJobs } from "@/hooks/useJobs";
-import { toast } from "sonner";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useJobs } from '@/hooks/useJobsConsolidated';
+import { Job } from '@/hooks/useJobsConsolidated';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { deleteJob } from '@/lib/jobs';
+import { toast } from 'sonner';
+import { SteppedEstimateBuilder } from '@/components/jobs/dialogs/SteppedEstimateBuilder';
+import { InvoiceBuilderDialog } from '@/components/jobs/dialogs/InvoiceBuilderDialog';
+import { format } from 'date-fns';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useSearchParams } from 'react-router-dom';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useClients } from '@/hooks/useClients';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { generateNextId } from '@/utils/idGeneration';
 
 const JobsPage = () => {
-  const [isGridView, setIsGridView] = useState(false);
-  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
-  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "all",
-    type: "all",
-    technician: "all",
-    dateRange: { start: null as Date | null, end: null as Date | null },
-    tags: [] as string[]
-  });
-  
-  // Use optimized hook for display
-  const { 
-    jobs: optimizedJobs, 
-    isLoading: isOptimizedLoading,
-    totalCount,
-    totalPages,
-    hasNextPage,
-    hasPreviousPage,
-    refreshJobs: refreshOptimized,
-    canCreate,
-    canEdit,
-    canDelete
-  } = useJobsOptimized({
-    page: currentPage,
-    pageSize: 50,
-    enableRealtime: true
-  });
+  const navigate = useNavigate();
+  const { jobs, isLoading, mutateJobs } = useJobs();
+  const { clients, isLoading: isClientsLoading } = useClients();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [selectedClient, setSelectedClient] = useState(searchParams.get('client') || '');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
+  const [selectedJobIdForEstimate, setSelectedJobIdForEstimate] = useState<string | null>(null);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [selectedJobIdForInvoice, setSelectedJobIdForInvoice] = useState<string | null>(null);
+  const [jobToDelete, setJobToDelete] = useState<string | null>(null);
 
-  // Keep original hook for mutations only
-  const { addJob, updateJob, deleteJob } = useJobs();
-  
-  // Clear selected jobs when jobs change
+  // Update search params when search query or client changes
   useEffect(() => {
-    setSelectedJobs(prev => prev.filter(id => optimizedJobs.some(job => job.id === id)));
-  }, [optimizedJobs]);
+    const params = new URLSearchParams();
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+    if (selectedClient) params.set('client', selectedClient);
+    setSearchParams(params);
+  }, [debouncedSearchQuery, selectedClient, setSearchParams]);
 
-  // Filter jobs based on current filters
-  const filteredJobs = optimizedJobs.filter(job => {
-    // Search filter - search in client name, job ID, title, and description
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const searchableFields = [
-        job.client?.name || '',
-        job.id || '',
-        job.title || '',
-        job.description || ''
-      ];
-      
-      if (!searchableFields.some(field => field.toLowerCase().includes(searchTerm))) {
-        return false;
+  // Filter jobs based on search query and selected client
+  const filteredJobs = useCallback(() => {
+    let filtered = [...jobs];
+
+    if (debouncedSearchQuery) {
+      const lowerCaseQuery = debouncedSearchQuery.toLowerCase();
+      filtered = filtered.filter(job => {
+        const clientName = typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client';
+        return (
+          job.title?.toLowerCase().includes(lowerCaseQuery) ||
+          job.description?.toLowerCase().includes(lowerCaseQuery) ||
+          clientName.toLowerCase().includes(lowerCaseQuery)
+        );
+      });
+    }
+
+    if (selectedClient) {
+      filtered = filtered.filter(job => job.client_id === selectedClient);
+    }
+
+    return filtered;
+  }, [jobs, debouncedSearchQuery, selectedClient]);
+
+  const handleDeleteJob = async (jobId: string) => {
+    setJobToDelete(jobId);
+  };
+
+  const confirmDeleteJob = async () => {
+    if (jobToDelete) {
+      try {
+        await deleteJob(jobToDelete);
+        mutateJobs();
+        toast.success('Job deleted successfully');
+      } catch (error) {
+        console.error('Error deleting job:', error);
+        toast.error('Failed to delete job');
+      } finally {
+        setJobToDelete(null);
       }
     }
-    
-    // Status filter
-    if (filters.status !== "all" && job.status.toLowerCase() !== filters.status.toLowerCase()) {
-      return false;
-    }
-    
-    // Type filter
-    if (filters.type !== "all" && job.job_type?.toLowerCase() !== filters.type.toLowerCase()) {
-      return false;
-    }
-    
-    // Date range filter
-    if (filters.dateRange.start && job.date && new Date(job.date) < filters.dateRange.start) {
-      return false;
-    }
-    if (filters.dateRange.end && job.date && new Date(job.date) > filters.dateRange.end) {
-      return false;
-    }
-    
-    // Tags filter - check if job has any of the selected tags
-    if (filters.tags.length > 0) {
-      if (!job.tags || !filters.tags.some(tag => job.tags?.includes(tag))) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
-  
-  const handleJobCreated = async (jobData: any) => {
+  };
+
+  const cancelDeleteJob = () => {
+    setJobToDelete(null);
+  };
+
+  const handleCreateEstimate = (jobId: string) => {
+    setSelectedJobIdForEstimate(jobId);
+    setIsEstimateDialogOpen(true);
+  };
+
+  const handleCreateInvoice = (jobId: string) => {
+    setSelectedJobIdForInvoice(jobId);
+    setIsInvoiceDialogOpen(true);
+  };
+
+  const handleEstimateCreated = () => {
+    setIsEstimateDialogOpen(false);
+    setSelectedJobIdForEstimate(null);
+  };
+
+  const handleInvoiceCreated = () => {
+    setIsInvoiceDialogOpen(false);
+    setSelectedJobIdForInvoice(null);
+  };
+
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
     try {
-      const createdJob = await addJob(jobData);
-      if (createdJob) {
-        toast.success(`Job ${createdJob.id} created successfully!`);
-        // Refresh optimized jobs immediately
-        refreshOptimized();
-        return createdJob;
-      }
+      return format(new Date(dateString), 'MMM dd, yyyy');
     } catch (error) {
-      console.error('Error creating job:', error);
-      toast.error('Failed to create job');
-      throw error;
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
     }
-  };
-
-  const handleSelectJob = (jobId: string, isSelected: boolean) => {
-    setSelectedJobs(prev => 
-      isSelected 
-        ? [...prev, jobId]
-        : prev.filter(id => id !== jobId)
-    );
-  };
-
-  const handleSelectAllJobs = (select: boolean) => {
-    setSelectedJobs(select ? filteredJobs.map(job => job.id) : []);
-  };
-
-  // Bulk action handlers with optimized refresh
-  const handleBulkUpdateStatus = async (jobIds: string[], newStatus: string) => {
-    try {
-      await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
-      toast.success(`Updated ${jobIds.length} jobs to ${newStatus}`);
-      setSelectedJobs([]);
-      refreshOptimized();
-    } catch (error) {
-      toast.error('Failed to update job statuses');
-    }
-  };
-
-  const handleBulkAssignTechnician = async (jobIds: string[], technicianId: string, technicianName: string) => {
-    try {
-      await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
-      toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
-      setSelectedJobs([]);
-      refreshOptimized();
-    } catch (error) {
-      toast.error('Failed to assign technician');
-    }
-  };
-
-  const handleBulkDelete = async (jobIds: string[]) => {
-    try {
-      await Promise.all(jobIds.map(id => deleteJob(id)));
-      toast.success(`Deleted ${jobIds.length} jobs`);
-      setSelectedJobs([]);
-      refreshOptimized();
-    } catch (error) {
-      toast.error('Failed to delete jobs');
-    }
-  };
-
-  const handleBulkExport = (jobIds: string[]) => {
-    const selectedJobData = filteredJobs.filter(job => jobIds.includes(job.id));
-    const csvData = selectedJobData.map(job => ({
-      'Job ID': job.id,
-      'Client': job.client?.name || '',
-      'Status': job.status,
-      'Type': job.job_type || '',
-      'Date': job.date ? new Date(job.date).toLocaleDateString() : '',
-      'Revenue': job.revenue || 0,
-      'Address': job.address || ''
-    }));
-    
-    const csv = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `jobs-export-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    toast.success(`Exported ${jobIds.length} jobs`);
-    setSelectedJobs([]);
-  };
-
-  const handleBulkTagJobs = async (jobIds: string[], tags: string[]) => {
-    try {
-      await Promise.all(jobIds.map(id => {
-        const job = filteredJobs.find(j => j.id === id);
-        const existingTags = job?.tags || [];
-        const newTags = [...new Set([...existingTags, ...tags])];
-        return updateJob(id, { tags: newTags });
-      }));
-      toast.success(`Tagged ${jobIds.length} jobs`);
-      setSelectedJobs([]);
-      refreshOptimized();
-    } catch (error) {
-      toast.error('Failed to tag jobs');
-    }
-  };
-
-  const handleRefreshJobs = () => {
-    refreshOptimized();
-    setSelectedJobs([]);
-    toast.success('Jobs refreshed');
   };
 
   return (
-    <PageLayout>
-      <AnimatedContainer animation="fade-in">
-        <PageHeader
-          title="Job Management"
-          subtitle="Manage your jobs efficiently"
-          icon={Wrench}
-          badges={[
-            { text: "Active Jobs", icon: Target, variant: "fixlyfy" },
-            { text: "Performance", icon: TrendingUp, variant: "info" }
-          ]}
-          actionButton={{
-            text: "Create Job",
-            icon: Plus,
-            onClick: () => setIsCreateJobModalOpen(true)
-          }}
-        />
-      </AnimatedContainer>
-      
-      <AnimatedContainer animation="fade-in" delay={200}>
-        <div className="space-y-6">
-          <ModernCard variant="glass" className="p-4">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-              <JobsFilters 
-                onFiltersChange={setFilters} 
-                filters={filters}
-              />
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefreshJobs}
-                  className="flex gap-2 rounded-xl"
-                  disabled={isOptimizedLoading}
-                >
-                  <RefreshCw size={18} className={isOptimizedLoading ? "animate-spin" : ""} /> 
-                  Refresh
-                </Button>
-                <Button
-                  variant={isGridView ? "ghost" : "secondary"}
-                  size="sm"
-                  onClick={() => setIsGridView(false)}
-                  className="flex gap-2 rounded-xl"
-                >
-                  <List size={18} /> List
-                </Button>
-                <Button 
-                  variant={isGridView ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setIsGridView(true)}
-                  className="flex gap-2 rounded-xl"
-                >
-                  <Grid size={18} /> Grid
-                </Button>
-              </div>
-            </div>
-          </ModernCard>
-          
-          <JobsList 
-            isGridView={isGridView}
-            jobs={filteredJobs}
-            selectedJobs={selectedJobs}
-            onSelectJob={handleSelectJob}
-            onSelectAllJobs={handleSelectAllJobs}
-            onRefresh={handleRefreshJobs}
+    <div className="container mx-auto py-10">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-semibold">Jobs</h1>
+        <Button onClick={() => navigate('/jobs/new')}><Plus className="mr-2 h-4 w-4" /> Add Job</Button>
+      </div>
+
+      <div className="flex items-center space-x-4 mb-4">
+        <div className="relative flex-1">
+          <Input
+            type="text"
+            placeholder="Search jobs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-10"
           />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+              }}
+              className="absolute right-2.5 top-0 h-full rounded-none px-2"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-500" />
         </div>
-      </AnimatedContainer>
-      
-      <BulkActionsBar
-        selectedJobs={selectedJobs}
-        onClearSelection={() => setSelectedJobs([])}
-        onUpdateStatus={handleBulkUpdateStatus}
-        onAssignTechnician={handleBulkAssignTechnician}
-        onDeleteJobs={handleBulkDelete}
-        onTagJobs={handleBulkTagJobs}
-        onExport={handleBulkExport}
+
+        <div>
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Clients</SelectItem>
+              {clients.map(client => (
+                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {isLoading || isClientsLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-4">
+              <Skeleton className="h-4 w-[200px]" />
+              <Skeleton className="h-4 w-[100px]" />
+              <Skeleton className="h-4 w-[120px]" />
+              <Skeleton className="h-4 w-[80px]" />
+              <Skeleton className="h-4 w-[150px]" />
+              <Skeleton className="h-4 w-[100px]" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="px-6 py-3">Title</TableHead>
+                <TableHead className="px-6 py-3">Client</TableHead>
+                <TableHead className="px-6 py-3">Status</TableHead>
+                <TableHead className="px-6 py-3">Date</TableHead>
+                <TableHead className="px-6 py-3">Created At</TableHead>
+                <TableHead className="px-6 py-3">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredJobs().map((job: Job) => (
+                <TableRow key={job.id} className="hover:bg-gray-100">
+                  <TableCell className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                    {job.title || 'No Title'}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap">
+                    {typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap">{job.status}</TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap">{formatDate(job.date)}</TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap">{formatDate(job.created_at)}</TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/jobs/edit/${job.id}`)}>
+                          Edit Job
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateEstimate(job.id)}>
+                          Create Estimate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateInvoice(job.id)}>
+                          Create Invoice
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDeleteJob(job.id)} className="text-red-500">
+                          Delete Job
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <AlertDialog open={!!jobToDelete} onOpenChange={(open) => { if (!open) cancelDeleteJob(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Are you sure you want to delete this job?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDeleteJob}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteJob}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <SteppedEstimateBuilder
+        open={isEstimateDialogOpen}
+        onOpenChange={setIsEstimateDialogOpen}
+        jobId={selectedJobIdForEstimate || ''}
+        onEstimateCreated={handleEstimateCreated}
       />
-      
-      <ScheduleJobModal 
-        open={isCreateJobModalOpen} 
-        onOpenChange={setIsCreateJobModalOpen}
-        onJobCreated={handleJobCreated}
-        onSuccess={(job) => toast.success(`Job ${job.id} created successfully!`)}
+
+      <InvoiceBuilderDialog
+        open={isInvoiceDialogOpen}
+        onOpenChange={setIsInvoiceDialogOpen}
+        jobId={selectedJobIdForInvoice || ''}
+        onInvoiceCreated={handleInvoiceCreated}
       />
-    </PageLayout>
+    </div>
   );
 };
 

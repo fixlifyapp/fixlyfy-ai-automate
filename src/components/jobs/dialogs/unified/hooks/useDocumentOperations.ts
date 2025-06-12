@@ -31,7 +31,7 @@ export const useDocumentOperations = () => {
         subtotal: documentData.total / (1 + documentData.taxRate),
         tax_rate: documentData.taxRate,
         tax_amount: documentData.total - (documentData.total / (1 + documentData.taxRate)),
-        items: documentData.lineItems,
+        items: documentData.lineItems as any, // Cast to Json type for Supabase
         notes: documentData.notes,
         status: 'draft'
       };
@@ -67,7 +67,7 @@ export const useDocumentOperations = () => {
         subtotal: documentData.total / (1 + documentData.taxRate),
         tax_rate: documentData.taxRate,
         tax_amount: documentData.total - (documentData.total / (1 + documentData.taxRate)),
-        items: documentData.lineItems,
+        items: documentData.lineItems as any, // Cast to Json type for Supabase
         notes: documentData.notes,
         updated_at: new Date().toISOString()
       };
@@ -104,7 +104,7 @@ export const useDocumentOperations = () => {
         subtotal: documentData.total / (1 + documentData.taxRate),
         tax_rate: documentData.taxRate,
         tax_amount: documentData.total - (documentData.total / (1 + documentData.taxRate)),
-        items: documentData.lineItems,
+        items: documentData.lineItems as any, // Cast to Json type for Supabase
         notes: documentData.notes,
         status: 'draft',
         issue_date: new Date().toISOString().split('T')[0]

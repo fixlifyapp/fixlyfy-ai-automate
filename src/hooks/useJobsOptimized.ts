@@ -113,14 +113,15 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
         if (error) throw error;
         
         // Process jobs efficiently
-        const processedJobs = (data || []).map(job => ({
+        const dbJobs = (data || []);
+        const transformedJobs = dbJobs.map(job => ({
           ...job,
-          tags: Array.isArray(job.tags) ? job.tags : [],
-          title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
+          updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
+          client: job.clients || job.client_id || 'Unknown Client'
         }));
         
         const result = {
-          jobs: processedJobs,
+          jobs: transformedJobs,
           totalCount: count || 0
         };
         

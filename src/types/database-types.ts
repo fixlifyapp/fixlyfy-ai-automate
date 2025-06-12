@@ -115,12 +115,12 @@ export interface DbInvoice {
   date?: string | null;
 }
 
-// Type guards for Json field casting
+// Type guards for Json field casting - Fixed to handle proper Json types
 export function isStringArray(value: Json): value is string[] {
   return Array.isArray(value) && value.every(item => typeof item === 'string');
 }
 
-export function isLineItemArray(value: Json): value is LineItem[] {
+export function isLineItemArray(value: Json): value is any[] {
   return Array.isArray(value) && value.every(item => 
     typeof item === 'object' && 
     item !== null && 
@@ -133,7 +133,22 @@ export function isLineItemArray(value: Json): value is LineItem[] {
 // Safe extractors for Json fields
 export function extractLineItems(items: Json | null): LineItem[] {
   if (!items) return [];
-  if (isLineItemArray(items)) return items;
+  if (isLineItemArray(items)) {
+    return items.map(item => ({
+      id: item.id || `temp-${Date.now()}`,
+      description: item.description || '',
+      quantity: Number(item.quantity) || 1,
+      unitPrice: Number(item.unitPrice) || 0,
+      total: Number(item.total) || 0,
+      taxable: Boolean(item.taxable),
+      ourPrice: item.ourPrice ? Number(item.ourPrice) : undefined,
+      unit: item.unit,
+      category: item.category,
+      name: item.name,
+      price: item.price ? Number(item.price) : undefined,
+      discount: item.discount ? Number(item.discount) : 0
+    }));
+  }
   return [];
 }
 
