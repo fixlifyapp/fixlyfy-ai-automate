@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       const processedInvoices: Invoice[] = (data || []).map(invoice => ({
         ...invoice,
         number: invoice.invoice_number, // Add alias
+        amount: invoice.total || 0, // Add amount alias for compatibility
         updated_at: invoice.updated_at || invoice.created_at, // Ensure updated_at exists
         date: invoice.issue_date || invoice.created_at, // Use issue_date as primary date
         amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number

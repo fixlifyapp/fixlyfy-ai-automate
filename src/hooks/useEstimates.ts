@@ -46,56 +46,72 @@ export const useEstimates = (jobId?: string) => {
     console.log('Refreshing estimates for job:', jobId);
     try {
       setIsLoading(true);
-      let query = supabase
+      
+      // First fetch estimates
+      let estimateQuery = supabase
         .from('estimates')
-        .select(`
-          *,
-          clients:client_id (
-            id,
-            name,
-            email,
-            phone
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (jobId) {
-        query = query.eq('job_id', jobId);
+        estimateQuery = estimateQuery.eq('job_id', jobId);
       }
       
-      const { data, error } = await query;
+      const { data: estimatesData, error: estimatesError } = await estimateQuery;
       
-      if (error) {
-        console.error('Error fetching estimates:', error);
-        throw error;
+      if (estimatesError) {
+        console.error('Error fetching estimates:', estimatesError);
+        throw estimatesError;
       }
       
-      console.log('Fetched estimates:', data);
+      console.log('Fetched estimates:', estimatesData);
+      
+      // Get unique client IDs
+      const clientIds = [...new Set(estimatesData?.map(est => est.client_id).filter(Boolean))];
+      
+      // Fetch client data separately if we have client IDs
+      let clientsMap = new Map();
+      if (clientIds.length > 0) {
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('clients')
+          .select('id, name, email, phone')
+          .in('id', clientIds);
+        
+        if (!clientsError && clientsData) {
+          clientsData.forEach(client => {
+            clientsMap.set(client.id, client);
+          });
+        }
+      }
       
       // Map the data to include the alias properties and client information
-      const mappedData: Estimate[] = (data || []).map(item => ({
-        ...item,
-        number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
-        amount: item.total || 0,
-        date: item.created_at,
-        estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
-        valid_until: item.valid_until || undefined,
-        items: Array.isArray(item.items) ? item.items : [],
-        status: item.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'converted',
-        tax_rate: item.tax_rate || 0,
-        tax_amount: item.tax_amount || 0,
-        subtotal: item.subtotal || 0,
-        discount_amount: item.discount_amount || 0,
-        client_name: item.clients?.name || 'Unknown Client',
-        client_email: item.clients?.email,
-        client_phone: item.clients?.phone,
-        client: item.clients ? {
-          id: item.clients.id,
-          name: item.clients.name,
-          email: item.clients.email,
-          phone: item.clients.phone
-        } : undefined
-      }));
+      const mappedData: Estimate[] = (estimatesData || []).map(item => {
+        const client = item.client_id ? clientsMap.get(item.client_id) : null;
+        
+        return {
+          ...item,
+          number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
+          amount: item.total || 0,
+          date: item.created_at,
+          estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
+          valid_until: item.valid_until || undefined,
+          items: Array.isArray(item.items) ? item.items : [],
+          status: item.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'converted',
+          tax_rate: item.tax_rate || 0,
+          tax_amount: item.tax_amount || 0,
+          subtotal: item.subtotal || 0,
+          discount_amount: item.discount_amount || 0,
+          client_name: client?.name || 'Unknown Client',
+          client_email: client?.email,
+          client_phone: client?.phone,
+          client: client ? {
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone
+          } : undefined
+        };
+      });
       
       setEstimates(mappedData);
     } catch (error: any) {

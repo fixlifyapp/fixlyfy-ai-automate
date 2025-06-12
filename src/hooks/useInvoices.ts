@@ -52,57 +52,73 @@ export const useInvoices = (jobId?: string) => {
     console.log('Refreshing invoices for job:', jobId);
     try {
       setIsLoading(true);
-      let query = supabase
+      
+      // First fetch invoices
+      let invoiceQuery = supabase
         .from('invoices')
-        .select(`
-          *,
-          clients:client_id (
-            id,
-            name,
-            email,
-            phone
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (jobId) {
-        query = query.eq('job_id', jobId);
+        invoiceQuery = invoiceQuery.eq('job_id', jobId);
       }
       
-      const { data, error } = await query;
+      const { data: invoicesData, error: invoicesError } = await invoiceQuery;
       
-      if (error) {
-        console.error('Error fetching invoices:', error);
-        throw error;
+      if (invoicesError) {
+        console.error('Error fetching invoices:', invoicesError);
+        throw invoicesError;
       }
       
-      console.log('Fetched invoices:', data);
+      console.log('Fetched invoices:', invoicesData);
+      
+      // Get unique client IDs
+      const clientIds = [...new Set(invoicesData?.map(inv => inv.client_id).filter(Boolean))];
+      
+      // Fetch client data separately if we have client IDs
+      let clientsMap = new Map();
+      if (clientIds.length > 0) {
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('clients')
+          .select('id, name, email, phone')
+          .in('id', clientIds);
+        
+        if (!clientsError && clientsData) {
+          clientsData.forEach(client => {
+            clientsMap.set(client.id, client);
+          });
+        }
+      }
       
       // Map the data to include the alias properties with proper status casting and client information
-      const mappedData: Invoice[] = (data || []).map(item => ({
-        ...item,
-        number: item.invoice_number || `INV-${item.id.slice(0, 8)}`,
-        amount: item.total || 0, // Add amount alias
-        date: item.created_at,
-        items: Array.isArray(item.items) ? item.items : [],
-        status: (item.status as "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled") || "draft",
-        balance: item.balance || (item.total - (item.amount_paid || 0)),
-        balance_due: item.balance || (item.total - (item.amount_paid || 0)),
-        tax_rate: item.tax_rate || 0,
-        tax_amount: item.tax_amount || 0,
-        subtotal: item.subtotal || 0,
-        discount_amount: item.discount_amount || 0,
-        terms: item.terms || '',
-        client_name: item.clients?.name || 'Unknown Client',
-        client_email: item.clients?.email,
-        client_phone: item.clients?.phone,
-        client: item.clients ? {
-          id: item.clients.id,
-          name: item.clients.name,
-          email: item.clients.email,
-          phone: item.clients.phone
-        } : undefined
-      }));
+      const mappedData: Invoice[] = (invoicesData || []).map(item => {
+        const client = item.client_id ? clientsMap.get(item.client_id) : null;
+        
+        return {
+          ...item,
+          number: item.invoice_number || `INV-${item.id.slice(0, 8)}`,
+          amount: item.total || 0, // Add amount alias
+          date: item.created_at,
+          items: Array.isArray(item.items) ? item.items : [],
+          status: (item.status as "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled") || "draft",
+          balance: item.balance || (item.total - (item.amount_paid || 0)),
+          balance_due: item.balance || (item.total - (item.amount_paid || 0)),
+          tax_rate: item.tax_rate || 0,
+          tax_amount: item.tax_amount || 0,
+          subtotal: item.subtotal || 0,
+          discount_amount: item.discount_amount || 0,
+          terms: item.terms || '',
+          client_name: client?.name || 'Unknown Client',
+          client_email: client?.email,
+          client_phone: client?.phone,
+          client: client ? {
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone
+          } : undefined
+        };
+      });
       
       setInvoices(mappedData);
     } catch (error: any) {
