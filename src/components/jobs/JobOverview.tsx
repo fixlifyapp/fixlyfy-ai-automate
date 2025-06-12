@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { useJobDetails } from "./context/JobDetailsContext";
 import { Property } from "@/hooks/useProperties";
 import { useProperty } from "@/hooks/useProperty";
-import { useJobsConsolidated, Job } from "@/hooks/useJobsConsolidated";
+import { useJobsConsolidated, Job as ConsolidatedJob } from "@/hooks/useJobsConsolidated";
 import { toast } from "sonner";
 
 interface JobOverviewProps {
@@ -59,15 +60,30 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
     }
   }, [property]);
 
-  const transformJobForOverview = (job: Job): JobInfoForOverview => ({
-    ...job,
-    clientId: job.client_id || '', // Fix: use client_id instead of clientId
-    client: typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'
-  });
+  // Transform job to ensure client property is always present
+  const transformJobForOverview = (job: any): JobInfoForOverview => {
+    const clientValue = typeof job.client === 'object' && job.client?.name 
+      ? job.client.name 
+      : typeof job.client === 'string' 
+        ? job.client 
+        : 'Unknown Client';
+
+    return {
+      ...job,
+      clientId: job.client_id || '', // Fix: use client_id instead of clientId
+      client: clientValue
+    };
+  };
 
   const handleJobCreated = async (jobData: any) => {
     try {
-      const createdJob = await addJob(jobData);
+      // Ensure client property is present for the consolidated hook
+      const jobWithClient: ConsolidatedJob = {
+        ...jobData,
+        client: jobData.client || 'Unknown Client'
+      };
+      
+      const createdJob = await addJob(jobWithClient);
       if (createdJob) {
         toast.success(`Job ${createdJob.id} created successfully!`);
         refreshJobs();
