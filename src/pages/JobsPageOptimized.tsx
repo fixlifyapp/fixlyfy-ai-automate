@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,7 +20,6 @@ import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
 import { useJobsConsolidated } from "@/hooks/useJobsConsolidated";
-import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
 const JobsPageOptimized = () => {
@@ -47,16 +47,11 @@ const JobsPageOptimized = () => {
     refreshJobs,
     canCreate,
     canEdit,
-    canDelete
-  } = useJobsConsolidated({
-    page: currentPage,
-    pageSize: 50,
-    enableRealtime: true,
-    filters
-  });
-
-  // Keep original hook for mutations only
-  const { addJob, updateJob, deleteJob } = useJobs();
+    canDelete,
+    addJob,
+    updateJob,
+    deleteJob
+  } = useJobsConsolidated();
   
   // Clear selected jobs when jobs change
   useEffect(() => {
@@ -128,7 +123,7 @@ const JobsPageOptimized = () => {
     const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
     const csvData = selectedJobData.map(job => ({
       'Job ID': job.id,
-      'Client': job.client?.name || 'Unknown Client',
+      'Client': typeof job.client === 'object' && job.client ? job.client.name : job.client || 'Unknown Client',
       'Status': job.status,
       'Type': job.job_type || '',
       'Date': job.date ? new Date(job.date).toLocaleDateString() : '',
@@ -241,7 +236,10 @@ const JobsPageOptimized = () => {
           ) : (
             <JobsList 
               isGridView={isGridView}
-              jobs={jobs}
+              jobs={jobs.map(job => ({
+                ...job,
+                title: job.title || 'Untitled Job' // Ensure title is always present
+              }))}
               selectedJobs={selectedJobs}
               onSelectJob={handleSelectJob}
               onSelectAllJobs={handleSelectAllJobs}

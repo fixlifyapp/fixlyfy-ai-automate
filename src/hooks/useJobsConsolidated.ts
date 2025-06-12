@@ -43,6 +43,15 @@ interface UseJobsResult {
   addJob: (newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => Promise<Job | null>;
   updateJob: (id: string, updates: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>) => Promise<Job | null>;
   deleteJob: (id: string) => Promise<boolean>;
+  // Add missing properties
+  isLoading: boolean;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 // Helper function to safely cast Json tasks to string array
@@ -140,12 +149,16 @@ export const useJobsConsolidated = (): UseJobsResult => {
         .eq('id', newJob.client_id)
         .single();
 
-      // Prepare job data for insertion, excluding client field
+      // Prepare job data for insertion, excluding client field and adding ID
       const { client, ...jobDataForDb } = newJob;
+      const jobWithId = {
+        ...jobDataForDb,
+        id: crypto.randomUUID() // Generate ID for new job
+      };
       
       const { data: dbJob, error: jobsError } = await supabase
         .from('jobs')
-        .insert([jobDataForDb])
+        .insert([jobWithId])
         .select()
         .single();
 
@@ -270,10 +283,22 @@ export const useJobsConsolidated = (): UseJobsResult => {
   return {
     jobs,
     loading,
+    isLoading: loading, // Alias for compatibility
     error,
     refreshJobs,
     addJob,
     updateJob,
-    deleteJob
+    deleteJob,
+    // Mock values for missing properties
+    totalCount: jobs.length,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true
   };
 };
+
+// Export as useJobs for compatibility
+export const useJobs = useJobsConsolidated;

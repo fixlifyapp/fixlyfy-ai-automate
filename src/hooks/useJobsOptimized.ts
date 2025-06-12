@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -137,7 +138,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
           ...job,
           updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
           tasks: extractTasks(job.tasks), // Safely extract tasks
-          client: job.clients || job.client_id || 'Unknown Client'
+          client: job.client || job.client_id || 'Unknown Client' // Fixed: use 'client' instead of 'clients'
         }));
         
         const result = {

@@ -1,4 +1,3 @@
-
 // Unified database types that match Supabase schema exactly
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -130,24 +129,39 @@ export function isLineItemArray(value: Json): value is any[] {
   );
 }
 
-// Safe extractors for Json fields
+// Safe extractors for Json fields - Fixed type casting
 export function extractLineItems(items: Json | null): LineItem[] {
   if (!items) return [];
   if (isLineItemArray(items)) {
-    return items.map(item => ({
-      id: item.id || `temp-${Date.now()}`,
-      description: item.description || '',
-      quantity: Number(item.quantity) || 1,
-      unitPrice: Number(item.unitPrice) || 0,
-      total: Number(item.total) || 0,
-      taxable: Boolean(item.taxable),
-      ourPrice: item.ourPrice ? Number(item.ourPrice) : undefined,
-      unit: item.unit,
-      category: item.category,
-      name: item.name,
-      price: item.price ? Number(item.price) : undefined,
-      discount: item.discount ? Number(item.discount) : 0
-    }));
+    return items.map(item => {
+      // Proper type guard and casting
+      if (typeof item === 'object' && item !== null) {
+        const lineItem = item as any; // Cast to any first for property access
+        return {
+          id: lineItem.id || `temp-${Date.now()}`,
+          description: lineItem.description || '',
+          quantity: Number(lineItem.quantity) || 1,
+          unitPrice: Number(lineItem.unitPrice) || 0,
+          total: Number(lineItem.total) || 0,
+          taxable: Boolean(lineItem.taxable),
+          ourPrice: lineItem.ourPrice ? Number(lineItem.ourPrice) : undefined,
+          unit: lineItem.unit,
+          category: lineItem.category,
+          name: lineItem.name,
+          price: lineItem.price ? Number(lineItem.price) : undefined,
+          discount: lineItem.discount ? Number(lineItem.discount) : 0
+        };
+      }
+      return {
+        id: `temp-${Date.now()}`,
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        total: 0,
+        taxable: true,
+        discount: 0
+      };
+    });
   }
   return [];
 }

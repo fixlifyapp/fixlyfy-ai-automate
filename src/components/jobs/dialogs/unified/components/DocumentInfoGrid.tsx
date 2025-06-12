@@ -11,18 +11,29 @@ interface DocumentInfoGridProps {
     description?: string;
   };
   taxRate: number;
+  enhancedClientInfo?: any;
+  jobAddress?: string;
+  issueDate?: string;
+  dueDate?: string;
+  companyInfo?: any;
 }
 
 export const DocumentInfoGrid = ({
   documentType,
   jobData,
-  taxRate
+  taxRate,
+  enhancedClientInfo,
+  jobAddress,
+  issueDate,
+  dueDate,
+  companyInfo
 }: DocumentInfoGridProps) => {
   console.log('=== DocumentInfoGrid Debug ===');
   console.log('Job data:', jobData);
+  console.log('Enhanced client info:', enhancedClientInfo);
 
-  // Extract client info from jobData
-  const clientInfo = jobData.client || {};
+  // Extract client info from jobData or enhancedClientInfo
+  const clientInfo = enhancedClientInfo || jobData.client || {};
   const clientName = typeof clientInfo === 'string' ? clientInfo : clientInfo.name || 'Client Name';
   const clientEmail = typeof clientInfo === 'object' ? clientInfo.email : undefined;
   const clientPhone = typeof clientInfo === 'object' ? clientInfo.phone : undefined;
@@ -69,7 +80,7 @@ export const DocumentInfoGrid = ({
                 {documentType === 'estimate' ? 'Estimate Date' : 'Issue Date'}
               </span>
               <span className="font-medium text-gray-900">
-                {new Date().toLocaleDateString()}
+                {issueDate || new Date().toLocaleDateString()}
               </span>
             </div>
             
@@ -78,7 +89,7 @@ export const DocumentInfoGrid = ({
                 {documentType === 'estimate' ? 'Valid Until' : 'Due Date'}
               </span>
               <span className="font-medium text-gray-900">
-                {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                {dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
               </span>
             </div>
 
