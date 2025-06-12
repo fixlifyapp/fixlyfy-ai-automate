@@ -1365,10 +1365,12 @@ export type Database = {
       invoices: {
         Row: {
           amount_paid: number | null
+          balance: number | null
           balance_due: number | null
           client_id: string | null
           created_at: string
           created_by: string | null
+          date: string | null
           description: string | null
           discount_amount: number | null
           due_date: string | null
@@ -1392,10 +1394,12 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number | null
+          balance?: number | null
           balance_due?: number | null
           client_id?: string | null
           created_at?: string
           created_by?: string | null
+          date?: string | null
           description?: string | null
           discount_amount?: number | null
           due_date?: string | null
@@ -1419,10 +1423,12 @@ export type Database = {
         }
         Update: {
           amount_paid?: number | null
+          balance?: number | null
           balance_due?: number | null
           client_id?: string | null
           created_at?: string
           created_by?: string | null
+          date?: string | null
           description?: string | null
           discount_amount?: number | null
           due_date?: string | null
@@ -1857,6 +1863,45 @@ export type Database = {
         }
         Relationships: []
       }
+      line_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount: number | null
+          id: string
+          parent_id: string
+          parent_type: string
+          quantity: number
+          taxable: boolean
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount?: number | null
+          id?: string
+          parent_id: string
+          parent_type: string
+          quantity?: number
+          taxable?: boolean
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount?: number | null
+          id?: string
+          parent_id?: string
+          parent_type?: string
+          quantity?: number
+          taxable?: boolean
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string
@@ -1910,8 +1955,10 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          balance: number | null
           client_id: string | null
           created_at: string
+          date: string | null
           id: string
           invoice_id: string | null
           job_id: string | null
@@ -1926,8 +1973,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          balance?: number | null
           client_id?: string | null
           created_at?: string
+          date?: string | null
           id?: string
           invoice_id?: string | null
           job_id?: string | null
@@ -1942,8 +1991,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          balance?: number | null
           client_id?: string | null
           created_at?: string
+          date?: string | null
           id?: string
           invoice_id?: string | null
           job_id?: string | null

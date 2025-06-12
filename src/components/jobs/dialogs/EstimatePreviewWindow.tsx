@@ -2,345 +2,328 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Eye, 
-  Printer, 
-  Send, 
-  DollarSign, 
-  FileText, 
-  Calendar,
-  User,
-  MapPin
-} from "lucide-react";
-import { Estimate } from "@/hooks/useEstimates";
-import { useJobs } from "@/hooks/useJobs";
-import { EstimateSendDialog } from "./estimate-builder/EstimateSendDialog";
-import { formatCurrency } from "@/lib/utils";
-import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText, DollarSign, Clock, CheckCircle, XCircle, Send, Download, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  taxable: boolean;
-}
+import { toast } from "sonner";
+import { Estimate } from "@/hooks/useEstimates";
+import { formatCurrency } from "@/lib/utils";
+import { LineItem } from "../builder/types";
 
 interface EstimatePreviewWindowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   estimate: Estimate;
-  onConvertToInvoice?: (estimate: Estimate) => void;
+  onEstimateConverted?: () => void;
 }
 
-export const EstimatePreviewWindow = ({
-  open,
-  onOpenChange,
+export const EstimatePreviewWindow = ({ 
+  open, 
+  onOpenChange, 
   estimate,
-  onConvertToInvoice
+  onEstimateConverted 
 }: EstimatePreviewWindowProps) => {
-  const [showSendDialog, setShowSendDialog] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [isConverting, setIsConverting] = useState(false);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const { jobs } = useJobs();
-  
-  const job = jobs.find(j => j.id === estimate.job_id);
-  
-  // Ensure clientInfo has required properties with fallbacks
-  const clientInfo = {
-    name: job?.client?.name || 'Client Name',
-    email: job?.client?.email || 'client@example.com',
-    phone: job?.client?.phone || '(555) 123-4567'
+
+  useEffect(() => {
+    if (open && estimate?.id) {
+      fetchLineItems();
+    }
+  }, [open, estimate?.id]);
+
+  const fetchLineItems = async () => {
+    if (!estimate?.id) return;
+    
+    setIsLoadingItems(true);
+    try {
+      // Try to fetch from line_items table first
+      const { data: lineItemsData, error: lineItemsError } = await supabase
+        .from('line_items')
+        .select('*')
+        .eq('parent_id', estimate.id)
+        .eq('parent_type', 'estimate');
+
+      if (lineItemsError) {
+        console.error('Error fetching line items:', lineItemsError);
+        // Fallback to items field if line_items table query fails
+        if (estimate.items && Array.isArray(estimate.items)) {
+          const mappedItems: LineItem[] = estimate.items.map((item: any) => ({
+            id: item.id || `temp-${Date.now()}-${Math.random()}`,
+            description: item.description || item.name || 'Service Item',
+            quantity: item.quantity || 1,
+            unitPrice: item.unitPrice || item.price || 0,
+            taxable: item.taxable !== undefined ? item.taxable : true,
+            total: (item.quantity || 1) * (item.unitPrice || item.price || 0)
+          }));
+          setLineItems(mappedItems);
+        } else {
+          setLineItems([]);
+        }
+      } else {
+        // Map line items data to LineItem interface
+        const mappedItems: LineItem[] = (lineItemsData || []).map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unit_price),
+          taxable: item.taxable,
+          total: Number(item.quantity) * Number(item.unit_price)
+        }));
+        setLineItems(mappedItems);
+      }
+    } catch (error) {
+      console.error('Error in fetchLineItems:', error);
+      setLineItems([]);
+    } finally {
+      setIsLoadingItems(false);
+    }
   };
 
-  // Fetch line items for the estimate
-  useEffect(() => {
-    const fetchLineItems = async () => {
-      if (!estimate.id || !open) return;
-      
-      setIsLoadingItems(true);
-      try {
-        const { data, error } = await supabase
+  const handleConvertToInvoice = async () => {
+    if (!estimate?.id) return;
+    
+    setIsConverting(true);
+    try {
+      // Convert estimate to invoice
+      const invoiceNumber = `INV-${Date.now()}`;
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          job_id: estimate.job_id,
+          estimate_id: estimate.id,
+          invoice_number: invoiceNumber,
+          total: estimate.total || 0,
+          amount_paid: 0,
+          status: 'unpaid',
+          notes: estimate.notes,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Copy line items to invoice if they exist
+      if (lineItems.length > 0) {
+        const invoiceLineItems = lineItems.map(item => ({
+          parent_id: invoice.id,
+          parent_type: 'invoice',
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          taxable: item.taxable
+        }));
+
+        const { error: lineItemError } = await supabase
           .from('line_items')
-          .select('*')
-          .eq('parent_id', estimate.id)
-          .eq('parent_type', 'estimate');
+          .insert(invoiceLineItems);
 
-        if (error) throw error;
-        
-        setLineItems(data || []);
-      } catch (error) {
-        console.error('Error fetching line items:', error);
-        toast.error('Failed to load estimate items');
-      } finally {
-        setIsLoadingItems(false);
+        if (lineItemError) {
+          console.error('Error copying line items:', lineItemError);
+          // Don't throw here, invoice was created successfully
+        }
       }
-    };
 
-    fetchLineItems();
-  }, [estimate.id, open]);
+      // Update estimate status
+      const { error: updateError } = await supabase
+        .from('estimates')
+        .update({ status: 'converted' })
+        .eq('id', estimate.id);
+
+      if (updateError) {
+        console.error('Error updating estimate status:', updateError);
+        // Don't throw here, conversion was successful
+      }
+
+      toast.success('Estimate converted to invoice successfully');
+      onEstimateConverted?.();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error converting estimate to invoice:', error);
+      toast.error('Failed to convert estimate to invoice');
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    return lineItems.reduce((sum, item) => sum + item.total, 0);
   };
 
   const calculateTax = () => {
-    const taxableTotal = lineItems
-      .filter(item => item.taxable)
-      .reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    return taxableTotal * 0.13; // 13% tax rate
+    const taxableAmount = lineItems.reduce((sum, item) => {
+      return sum + (item.taxable ? item.total : 0);
+    }, 0);
+    return taxableAmount * 0.1; // 10% tax rate
   };
 
-  const handlePrint = () => {
-    window.print();
-    toast.success("Print dialog opened");
+  const calculateTotal = () => {
+    return calculateSubtotal() + calculateTax();
   };
 
-  const handleConvert = () => {
-    if (onConvertToInvoice) {
-      onConvertToInvoice(estimate);
-      onOpenChange(false);
-    }
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { color: "bg-gray-100 text-gray-800", icon: FileText },
+      sent: { color: "bg-blue-100 text-blue-800", icon: Send },
+      approved: { color: "bg-green-100 text-green-800", icon: CheckCircle },
+      rejected: { color: "bg-red-100 text-red-800", icon: XCircle },
+      converted: { color: "bg-purple-100 text-purple-800", icon: Receipt }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const IconComponent = config.icon;
+
+    return (
+      <Badge className={`${config.color} gap-1`}>
+        <IconComponent className="h-3 w-3" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'sent': return 'bg-blue-100 text-blue-800';
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'converted': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0 pb-4 border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Eye className="h-6 w-6 text-blue-600" />
-                <div>
-                  <DialogTitle className="text-xl">Estimate Preview</DialogTitle>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="secondary" className="text-sm">
-                      {estimate.estimate_number || estimate.number}
-                    </Badge>
-                    <Badge className={getStatusColor(estimate.status)}>
-                      {estimate.status || 'draft'}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Total Amount</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(estimate.total || estimate.amount || 0)}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Estimate Preview - {estimate.estimate_number || estimate.number}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Header Info */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-2xl font-bold">{estimate.estimate_number || estimate.number}</h2>
+              <p className="text-sm text-muted-foreground">
+                Created on {formatDate(estimate.created_at)}
+              </p>
+              {estimate.valid_until && (
+                <p className="text-sm text-muted-foreground">
+                  Valid until {formatDate(estimate.valid_until)}
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              {getStatusBadge(estimate.status)}
+              <div className="mt-2">
+                <div className="text-2xl font-bold">
+                  {formatCurrency(estimate.total || calculateTotal())}
                 </div>
               </div>
             </div>
-          </DialogHeader>
+          </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="max-w-3xl mx-auto p-8 bg-white">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">ESTIMATE</h1>
-                <div className="text-lg text-gray-600">
-                  #{estimate.estimate_number || estimate.number}
-                </div>
-              </div>
+          <Separator />
 
-              {/* Company & Client Info */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">From:</h3>
-                  <div className="text-gray-700">
-                    <div className="font-medium">Fixlyfy Services Inc.</div>
-                    <div>123 Business Park, Suite 456</div>
-                    <div>San Francisco, CA 94103</div>
-                    <div>(555) 123-4567</div>
-                    <div>contact@fixlyfy.com</div>
-                  </div>
+          {/* Line Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Items & Services</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingItems ? (
+                <div className="text-center py-4">Loading items...</div>
+              ) : lineItems.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  No items found for this estimate
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">To:</h3>
-                  <div className="text-gray-700">
-                    <div className="font-medium flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      {clientInfo.name}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="w-4" />
-                      {clientInfo.email}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="w-4" />
-                      {clientInfo.phone}
-                    </div>
-                    {job?.address && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <MapPin className="h-4 w-4" />
-                        {job.address}
+              ) : (
+                <div className="space-y-2">
+                  {lineItems.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                      <div className="flex-1">
+                        <div className="font-medium">{item.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Qty: {item.quantity} × {formatCurrency(item.unitPrice)}
+                          {item.taxable && " (Taxable)"}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Date & Job Info */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
-                <div>
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Calendar className="h-4 w-4" />
-                    <span className="font-medium">Date:</span>
-                    {new Date(estimate.date || estimate.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">Job:</span>
-                    {job?.title || 'Service Request'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Service Description */}
-              {job?.description && (
-                <div className="mb-8">
-                  <h3 className="font-semibold text-gray-900 mb-3">Service Description:</h3>
-                  <div className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    {job.description}
-                  </div>
+                      <div className="font-medium">
+                        {formatCurrency(item.total)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
 
-              {/* Line Items */}
-              <div className="mb-8">
-                <h3 className="font-semibold text-gray-900 mb-4">Services & Products:</h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium text-gray-900">Description</th>
-                        <th className="px-4 py-3 text-center font-medium text-gray-900">Qty</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-900">Unit Price</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-900">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isLoadingItems ? (
-                        <tr className="border-t">
-                          <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                            Loading items...
-                          </td>
-                        </tr>
-                      ) : lineItems.length > 0 ? (
-                        lineItems.map((item) => (
-                          <tr key={item.id} className="border-t">
-                            <td className="px-4 py-3 text-gray-700">{item.description}</td>
-                            <td className="px-4 py-3 text-center text-gray-700">{item.quantity}</td>
-                            <td className="px-4 py-3 text-right text-gray-700">
-                              {formatCurrency(item.unit_price)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-gray-700">
-                              {formatCurrency(item.quantity * item.unit_price)}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr className="border-t">
-                          <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                            No items added to this estimate
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Totals */}
-              <div className="flex justify-end mb-8">
-                <div className="w-64">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-gray-700">
-                      <span>Subtotal:</span>
-                      <span>{formatCurrency(calculateSubtotal())}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-700">
-                      <span>Tax (13%):</span>
-                      <span>{formatCurrency(calculateTax())}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                      <span>Total:</span>
-                      <span>{formatCurrency(calculateSubtotal() + calculateTax())}</span>
-                    </div>
+          {/* Totals */}
+          {lineItems.length > 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(calculateSubtotal())}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax (10%):</span>
+                    <span>{formatCurrency(calculateTax())}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span>{formatCurrency(calculateTotal())}</span>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Notes */}
-              {estimate.notes && (
-                <div className="mb-8">
-                  <h3 className="font-semibold text-gray-900 mb-3">Notes:</h3>
-                  <div className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    {estimate.notes}
-                  </div>
-                </div>
-              )}
+          {/* Notes */}
+          {estimate.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap">{estimate.notes}</p>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Terms */}
-              <div className="border-t pt-6 text-sm text-gray-600">
-                <h4 className="font-medium mb-2">Terms & Conditions:</h4>
-                <ul className="space-y-1">
-                  <li>• This estimate is valid for 30 days from the date of issue</li>
-                  <li>• All work will be performed in accordance with industry standards</li>
-                  <li>• Payment terms: Net 30 days from completion</li>
-                  <li>• Warranty information will be provided upon acceptance</li>
-                </ul>
-              </div>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+            
+            {estimate.status !== 'converted' && (
+              <Button 
+                onClick={handleConvertToInvoice}
+                disabled={isConverting}
+                className="gap-2"
+              >
+                {isConverting ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Converting...
+                  </>
+                ) : (
+                  <>
+                    <Receipt className="h-4 w-4" />
+                    Convert to Invoice
+                  </>
+                )}
+              </Button>
+            )}
           </div>
-
-          <div className="flex-shrink-0 flex justify-between items-center pt-4 px-6 border-t">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handlePrint} className="gap-2">
-                <Printer className="h-4 w-4" />
-                Print
-              </Button>
-              <Button variant="outline" onClick={() => setShowSendDialog(true)} className="gap-2">
-                <Send className="h-4 w-4" />
-                Send
-              </Button>
-            </div>
-
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              {estimate.status !== 'converted' && (
-                <Button onClick={handleConvert} className="gap-2 bg-green-600 hover:bg-green-700">
-                  <DollarSign className="h-4 w-4" />
-                  Convert to Invoice
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <EstimateSendDialog
-        isOpen={showSendDialog}
-        onClose={() => setShowSendDialog(false)}
-        estimateId={estimate.id}
-        estimateNumber={estimate.estimate_number || estimate.number || ''}
-        total={estimate.total || estimate.amount || 0}
-        contactInfo={clientInfo}
-      />
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

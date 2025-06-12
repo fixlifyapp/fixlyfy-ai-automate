@@ -28,8 +28,8 @@ export const useInvoiceCreation = (clientId?: string) => {
           invoice_number: `INV-${Date.now().toString().slice(-6)}`,
           total: parseFloat(invoiceData.amount) || 0,
           notes: invoiceData.description,
-          date: currentDate,
-          balance: parseFloat(invoiceData.amount) || 0,
+          issue_date: currentDate,
+          amount_paid: 0,
           client_id: clientId // Link invoice to the client
         })
         .select();

@@ -1,24 +1,17 @@
 
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { InvoiceForm } from "../forms/InvoiceForm";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Calculator, Info } from "lucide-react";
-import { InvoiceProductSelector } from "../invoices/InvoiceProductSelector";
-import { Product } from "../builder/types";
+import { Separator } from "@/components/ui/separator";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
+import { Invoice } from "@/hooks/useInvoices";
+import { LineItem } from "../builder/types";
 
 interface InvoiceDialogProps {
   open: boolean;
@@ -38,388 +31,372 @@ interface InvoiceDialogProps {
     email: string;
     legalText: string;
   };
-  editInvoice?: {
-    id: string;
-    invoice_number: string;
-    total: number;
-    status: string;
-    notes?: string;
-  } | null;
+  editInvoice?: Invoice;
 }
 
-export const InvoiceDialog = ({ 
-  open, 
-  onOpenChange, 
+export const InvoiceDialog = ({
+  open,
+  onOpenChange,
   onInvoiceCreated,
   clientInfo,
   companyInfo,
   editInvoice
 }: InvoiceDialogProps) => {
-  const [amount, setAmount] = useState(0);
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
-  const [description, setDescription] = useState("");
-  const [invoiceName, setInvoiceName] = useState("Service Invoice");
-  const [taxRate] = useState(13); // Fixed 13% tax rate
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    invoiceNumber: "",
+    notes: "",
+    total: 0
+  });
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset state when the dialog opens/closes
   useEffect(() => {
     if (open) {
       if (editInvoice) {
-        setAmount(editInvoice.total);
-        setDescription(editInvoice.notes || "");
-        // Fetch invoice line items if editing
-        fetchInvoiceLineItems(editInvoice.id);
+        // Populate form with existing invoice data
+        setFormData({
+          invoiceNumber: editInvoice.invoice_number,
+          notes: editInvoice.notes || "",
+          total: editInvoice.total
+        });
+        loadLineItems(editInvoice.id);
       } else {
-        setAmount(0);
-        setInvoiceItems([]);
-        setDescription("");
-        setInvoiceName("Service Invoice");
+        // Reset form for new invoice
+        setFormData({
+          invoiceNumber: `INV-${Date.now()}`,
+          notes: "",
+          total: 0
+        });
+        setLineItems([{
+          id: "1",
+          description: "Service",
+          quantity: 1,
+          unitPrice: 0,
+          taxable: true,
+          total: 0
+        }]);
       }
     }
   }, [open, editInvoice]);
 
-  // Fetch line items if editing an existing invoice
-  const fetchInvoiceLineItems = async (invoiceId: string) => {
-    setIsLoading(true);
+  const loadLineItems = async (invoiceId: string) => {
     try {
       const { data, error } = await supabase
-        .from("line_items")
-        .select("*")
-        .eq("parent_id", invoiceId)
-        .eq("parent_type", "invoice");
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const formattedItems = data.map(item => ({
+        .from('line_items')
+        .select('*')
+        .eq('parent_id', invoiceId)
+        .eq('parent_type', 'invoice');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const mappedItems: LineItem[] = data.map(item => ({
           id: item.id,
-          name: item.description,
           description: item.description,
-          quantity: item.quantity || 1,
-          unitPrice: item.unit_price,
-          taxable: item.taxable
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unit_price),
+          taxable: item.taxable,
+          total: Number(item.quantity) * Number(item.unit_price)
         }));
-        
-        setInvoiceItems(formattedItems);
+        setLineItems(mappedItems);
+      } else {
+        // Fallback to single item if no line items found
+        setLineItems([{
+          id: "1",
+          description: "Service",
+          quantity: 1,
+          unitPrice: editInvoice?.total || 0,
+          taxable: true,
+          total: editInvoice?.total || 0
+        }]);
       }
     } catch (error) {
-      console.error("Error fetching invoice line items:", error);
-      toast.error("Failed to load invoice details");
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading line items:', error);
+      // Fallback on error
+      setLineItems([{
+        id: "1",
+        description: "Service",
+        quantity: 1,
+        unitPrice: editInvoice?.total || 0,
+        taxable: true,
+        total: editInvoice?.total || 0
+      }]);
     }
   };
 
-  // Function to handle the amount change
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setAmount(isNaN(value) ? 0 : value);
+  const addLineItem = () => {
+    const newItem: LineItem = {
+      id: Date.now().toString(),
+      description: "",
+      quantity: 1,
+      unitPrice: 0,
+      taxable: true,
+      total: 0
+    };
+    setLineItems([...lineItems, newItem]);
   };
 
-  // Calculate tax amount
-  const calculateTax = () => {
-    const subtotal = invoiceItems.length > 0 
-      ? invoiceItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) 
-      : amount;
-    return subtotal * (taxRate / 100);
+  const removeLineItem = (id: string) => {
+    if (lineItems.length > 1) {
+      setLineItems(lineItems.filter(item => item.id !== id));
+    }
   };
 
-  // Calculate total with tax
-  const calculateTotal = () => {
-    const subtotal = invoiceItems.length > 0 
-      ? invoiceItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) 
-      : amount;
-    return subtotal + calculateTax();
-  };
-
-  // Function to add product to invoice
-  const handleAddProduct = (product: Product) => {
-    setInvoiceItems(prev => [...prev, {
-      id: `item-${Date.now()}`,
-      name: product.name,
-      description: product.description || product.name,
-      quantity: product.quantity || 1,
-      unitPrice: product.price,
-      ourPrice: product.ourPrice || product.cost || 0,
-      taxable: product.taxable || true
-    }]);
-  };
-  
-  // Function to remove product from invoice
-  const handleRemoveProduct = (id: string) => {
-    setInvoiceItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  // Handle updating a product in the invoice
-  const handleUpdateProduct = (productId: string, updatedProduct: any) => {
-    setInvoiceItems(prev => 
-      prev.map(item => item.id === productId ? {
-        ...item,
-        ...updatedProduct,
-        ourPrice: 0 // Ensure ourPrice is 0 for any product added to invoices
-      } : item)
-    );
-  };
-
-  // Function to handle the form submission  
-  const handleSubmitInvoice = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Calculate the total amount including tax
-      const totalAmount = calculateTotal();
-      
-      if (totalAmount <= 0) {
-        toast.error("Please enter a valid invoice amount or add products");
-        return;
+  const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
+    setLineItems(lineItems.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, [field]: value };
+        if (field === 'quantity' || field === 'unitPrice') {
+          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+        }
+        return updatedItem;
       }
+      return item;
+    }));
+  };
+
+  const calculateSubtotal = () => {
+    return lineItems.reduce((sum, item) => sum + item.total, 0);
+  };
+
+  const calculateTax = () => {
+    const taxableAmount = lineItems.reduce((sum, item) => {
+      return sum + (item.taxable ? item.total : 0);
+    }, 0);
+    return taxableAmount * 0.1; // 10% tax rate
+  };
+
+  const calculateTotal = () => {
+    return calculateSubtotal() + calculateTax();
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.invoiceNumber.trim()) {
+      toast.error("Please enter an invoice number");
+      return;
+    }
+
+    if (lineItems.some(item => !item.description.trim())) {
+      toast.error("Please fill in all item descriptions");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const total = calculateTotal();
       
-      let invoiceId = editInvoice?.id;
-      let invoiceNumber = editInvoice?.invoice_number;
-      
-      if (!editInvoice) {
+      let invoice;
+      if (editInvoice) {
+        // Update existing invoice
+        const { data, error } = await supabase
+          .from('invoices')
+          .update({
+            invoice_number: formData.invoiceNumber,
+            total,
+            notes: formData.notes
+          })
+          .eq('id', editInvoice.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        invoice = data;
+
+        // Delete existing line items
+        await supabase
+          .from('line_items')
+          .delete()
+          .eq('parent_id', editInvoice.id)
+          .eq('parent_type', 'invoice');
+      } else {
         // Create new invoice
-        invoiceNumber = `INV-${Math.floor(10000 + Math.random() * 90000)}`;
-        
-        const { data: newInvoice, error } = await supabase
-          .from("invoices")
+        const { data, error } = await supabase
+          .from('invoices')
           .insert({
-            invoice_number: invoiceNumber,
-            total: totalAmount,
-            balance: totalAmount,
+            invoice_number: formData.invoiceNumber,
+            total,
             amount_paid: 0,
-            status: "unpaid",
-            notes: description,
-            job_id: "JOB-2034" // This should come from props in a real implementation
+            status: 'unpaid',
+            notes: formData.notes,
+            job_id: 'default-job-id' // This should come from props or context
           })
           .select()
           .single();
-          
-        if (error) {
-          throw error;
-        }
-        
-        invoiceId = newInvoice.id;
-      } else {
-        // Update existing invoice
-        const { error } = await supabase
-          .from("invoices")
-          .update({
-            total: totalAmount,
-            balance: totalAmount,
-            notes: description,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", invoiceId);
-          
-        if (error) {
-          throw error;
-        }
-        
-        // Delete existing line items so we can replace them
-        const { error: deleteError } = await supabase
-          .from("line_items")
-          .delete()
-          .eq("parent_id", invoiceId)
-          .eq("parent_type", "invoice");
-          
-        if (deleteError) {
-          throw deleteError;
-        }
+
+        if (error) throw error;
+        invoice = data;
       }
-      
-      // Insert line items if we have any
-      if (invoiceItems.length > 0) {
-        const lineItemsToInsert = invoiceItems.map(item => ({
-          parent_id: invoiceId,
-          parent_type: "invoice",
-          description: item.name,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-        
-        const { error: lineItemsError } = await supabase
-          .from("line_items")
-          .insert(lineItemsToInsert);
-          
-        if (lineItemsError) {
-          throw lineItemsError;
-        }
-      }
-      
-      onInvoiceCreated(totalAmount);
-      toast.success(`Invoice ${editInvoice ? 'updated' : 'created'} successfully`);
+
+      // Insert line items
+      const lineItemsData = lineItems.map(item => ({
+        parent_id: invoice.id,
+        parent_type: 'invoice',
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        taxable: item.taxable
+      }));
+
+      const { error: lineItemsError } = await supabase
+        .from('line_items')
+        .insert(lineItemsData);
+
+      if (lineItemsError) throw lineItemsError;
+
+      toast.success(editInvoice ? "Invoice updated successfully" : "Invoice created successfully");
+      onInvoiceCreated(total);
       onOpenChange(false);
     } catch (error) {
-      console.error("Error saving invoice:", error);
-      toast.error(`Failed to ${editInvoice ? 'update' : 'create'} invoice`);
+      console.error('Error saving invoice:', error);
+      toast.error("Failed to save invoice");
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="p-6 border-b">
-          <DialogTitle className="text-xl">
-            {editInvoice ? 'Edit Invoice' : 'Create New Invoice'}
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editInvoice ? "Edit Invoice" : "Create New Invoice"}
           </DialogTitle>
-          <DialogDescription>
-            {editInvoice 
-              ? 'Update the invoice details below.'
-              : 'Create an invoice by adding products or entering details below.'
-            }
-          </DialogDescription>
         </DialogHeader>
-        
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
+
+        <div className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="invoiceNumber">Invoice Number</Label>
+              <Input
+                id="invoiceNumber"
+                value={formData.invoiceNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                placeholder="INV-001"
+              />
+            </div>
           </div>
-        ) : (
-          <div className="p-6 space-y-6">
-            {/* Main Form Layout - Responsive Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left column - Core details */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="invoice-name" className="text-sm font-medium">Invoice Name</Label>
-                  <Input
-                    id="invoice-name"
-                    placeholder="Service Invoice"
-                    className="mt-1"
-                    value={invoiceName}
-                    onChange={(e) => setInvoiceName(e.target.value)}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="invoice-description" className="text-sm font-medium">Description</Label>
-                  <Textarea
-                    id="invoice-description"
-                    placeholder="Describe the invoice details..."
-                    className="mt-1 min-h-[80px]"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="invoice-category" className="text-sm font-medium">Category</Label>
-                    <select 
-                      id="invoice-category"
-                      className="w-full mt-1 border border-input bg-background px-3 py-2 rounded-md text-sm"
-                    >
-                      <option value="repair">Repair</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="installation">Installation</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="invoice-status" className="text-sm font-medium">Status</Label>
-                    <div className="mt-2">
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                        {editInvoice ? editInvoice.status : 'Draft'}
-                      </Badge>
+
+          <Separator />
+
+          {/* Line Items */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Items & Services</h3>
+              <Button onClick={addLineItem} variant="outline" size="sm">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {lineItems.map((item, index) => (
+                <div key={item.id} className="border rounded-lg p-4">
+                  <div className="grid grid-cols-12 gap-3 items-center">
+                    <div className="col-span-4">
+                      <Label className="text-xs">Description</Label>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                        placeholder="Service description"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Quantity</Label>
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value) || 0)}
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Unit Price</Label>
+                      <Input
+                        type="number"
+                        value={item.unitPrice}
+                        onChange={(e) => updateLineItem(item.id, 'unitPrice', Number(e.target.value) || 0)}
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Total</Label>
+                      <div className="font-medium pt-2">
+                        {formatCurrency(item.total)}
+                      </div>
+                    </div>
+                    <div className="col-span-1">
+                      <Label className="text-xs">Taxable</Label>
+                      <input
+                        type="checkbox"
+                        checked={item.taxable}
+                        onChange={(e) => updateLineItem(item.id, 'taxable', e.target.checked)}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      {lineItems.length > 1 && (
+                        <Button
+                          onClick={() => removeLineItem(item.id)}
+                          variant="outline"
+                          size="sm"
+                          className="mt-4"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Right column - Pricing */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="invoice-amount" className="flex items-center gap-2 text-sm font-medium">
-                    Customer Price ($)
-                    <span className="text-xs text-muted-foreground">(before tax)</span>
-                  </Label>
-                  <Input
-                    id="invoice-amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="mt-1"
-                    value={invoiceItems.length > 0 ? '' : (amount === 0 ? '' : amount)}
-                    onChange={handleAmountChange}
-                    disabled={invoiceItems.length > 0}
-                  />
-                  {invoiceItems.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Using line items for pricing
-                    </p>
-                  )}
-                </div>
-                
-                <div className="bg-muted/30 border rounded-md p-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal:</span>
-                    <span>
-                      ${invoiceItems.length > 0 
-                        ? invoiceItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toFixed(2) 
-                        : amount.toFixed(2)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      Tax ({taxRate}%):
-                    </span>
-                    <span>${calculateTax().toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between font-medium pt-2 border-t border-border">
-                    <span>Total:</span>
-                    <span>${calculateTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Taxable checkbox */}
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="taxable"
-                className="rounded border-gray-300"
-                checked={true}
-                readOnly
-              />
-              <Label htmlFor="taxable" className="text-sm cursor-pointer">Taxable Item (13% tax will be applied)</Label>
-            </div>
-            
-            {/* Product Selector Section */}
-            <div className="pt-4 border-t">
-              <h3 className="text-base font-medium mb-3 flex items-center gap-2">
-                <Calculator size={18} />
-                Product Selection
-              </h3>
-              
-              <InvoiceProductSelector
-                selectedProducts={invoiceItems}
-                onAddProduct={handleAddProduct}
-                onRemoveProduct={handleRemoveProduct}
-                onUpdateProduct={handleUpdateProduct}
-              />
+              ))}
             </div>
           </div>
-        )}
-        
-        <DialogFooter className="p-6 border-t bg-muted/30">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmitInvoice} disabled={isLoading}>
-            {isLoading ? 'Saving...' : (editInvoice ? 'Update Invoice' : 'Create Invoice')}
-          </Button>
-        </DialogFooter>
+
+          <Separator />
+
+          {/* Totals */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(calculateSubtotal())}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tax (10%):</span>
+                <span>{formatCurrency(calculateTax())}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total:</span>
+                <span>{formatCurrency(calculateTotal())}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Additional notes..."
+              rows={3}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : editInvoice ? "Update Invoice" : "Create Invoice"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

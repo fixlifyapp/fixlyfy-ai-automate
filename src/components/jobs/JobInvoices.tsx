@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,10 +59,11 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
         ...invoice,
         number: invoice.invoice_number, // Add alias
         updated_at: invoice.updated_at || invoice.created_at, // Ensure updated_at exists
-        date: invoice.date || invoice.created_at, // Ensure date exists
+        date: invoice.date || invoice.issue_date || invoice.created_at, // Use the new date column
         amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
-        notes: invoice.notes || ''
+        notes: invoice.notes || '',
+        items: Array.isArray(invoice.items) ? invoice.items : [] // Ensure items is always an array
       }));
       
       setInvoices(processedInvoices);
