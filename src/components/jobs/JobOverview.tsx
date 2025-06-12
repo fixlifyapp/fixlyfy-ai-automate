@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { User, Calendar, MapPin, Home } from "lucide-react";
@@ -17,7 +18,7 @@ interface JobOverviewProps {
 interface JobInfoForOverview {
   id: string;
   client_id: string;
-  clientId: string;
+  clientId: string; // Make required to match usage
   title?: string;
   description?: string;
   service?: string;
@@ -44,7 +45,7 @@ interface JobInfoForOverview {
 }
 
 export const JobOverview = ({ jobId }: JobOverviewProps) => {
-  const { job, isLoading, error } = useJobDetails();
+  const { job, isLoading } = useJobDetails();
   const { property, isLoading: isPropertyLoading } = useProperty(job?.property_id);
   const [propertyData, setPropertyData] = useState<Property | null>(null);
 
@@ -56,6 +57,7 @@ export const JobOverview = ({ jobId }: JobOverviewProps) => {
 
   const transformJobForOverview = (job: Job): JobInfoForOverview => ({
     ...job,
+    clientId: job.client_id || job.clientId || '', // Ensure clientId is always present
     client: typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'
   });
 

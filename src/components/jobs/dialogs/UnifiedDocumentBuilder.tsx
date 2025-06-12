@@ -1,19 +1,15 @@
 
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, FileText, DollarSign, Calculator } from "lucide-react";
-import { toast } from "sonner";
-import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChevronLeft, ChevronRight, Save, FileText, DollarSign } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
-import { EstimatePreviewStep } from "./unified/EstimatePreviewStep";
-import { InvoicePreviewStep } from "./unified/InvoicePreviewStep";
-import { formatCurrency } from "@/lib/utils";
+import { UnifiedReviewStep } from "./unified/UnifiedReviewStep";
+import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
+import { Estimate } from "@/hooks/useEstimates";
+import { Invoice } from "@/hooks/useInvoices";
+import { toast } from "sonner";
 
 export type DocumentType = "estimate" | "invoice";
 
@@ -22,8 +18,8 @@ interface UnifiedDocumentBuilderProps {
   onOpenChange: (open: boolean) => void;
   documentType: DocumentType;
   jobId: string;
-  existingDocument?: any; // Use generic type to handle both estimates and invoices
-  onDocumentCreated?: (document?: any) => void;
+  existingDocument?: Estimate | Invoice;
+  onDocumentCreated?: () => void;
   onSyncToInvoice?: () => void;
 }
 
@@ -36,39 +32,21 @@ export const UnifiedDocumentBuilder = ({
   onDocumentCreated,
   onSyncToInvoice
 }: UnifiedDocumentBuilderProps) => {
-  const [currentStep, setCurrentStep] = useState<"items" | "preview">("items");
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Transform existing document to match expected types
-  const transformedDocument = existingDocument ? {
-    ...existingDocument,
-    // Add missing properties for Invoice type
-    ...(documentType === "invoice" && {
-      invoice_number: existingDocument.invoice_number || existingDocument.estimate_number || `INV-${Date.now()}`,
-      number: existingDocument.number || existingDocument.invoice_number || existingDocument.estimate_number,
-      date: existingDocument.date || existingDocument.created_at,
-      amount_paid: existingDocument.amount_paid || 0,
-      balance: existingDocument.balance || existingDocument.total || 0
-    }),
-    // Add missing properties for Estimate type
-    ...(documentType === "estimate" && {
-      amount: existingDocument.amount || existingDocument.total || 0,
-      number: existingDocument.number || existingDocument.estimate_number,
-      date: existingDocument.date || existingDocument.created_at
-    })
-  } : undefined;
-
+  const [currentStep, setCurrentStep] = useState<"items" | "review">("items");
+  
   const {
     // State
     lineItems,
+    setLineItems,
     taxRate,
+    setTaxRate,
     notes,
+    setNotes,
     documentNumber,
     isInitialized,
     isSubmitting,
 
     // Data objects
-    formData,
     jobData,
 
     // Calculations
@@ -83,212 +61,157 @@ export const UnifiedDocumentBuilder = ({
 
     // Document operations
     saveDocumentChanges,
-    convertToInvoice,
-
-    // Setters
-    setTaxRate,
-    setNotes
+    convertToInvoice
   } = useUnifiedDocumentBuilder({
     documentType,
-    existingDocument: transformedDocument,
+    existingDocument,
     jobId,
     open,
     onSyncToInvoice
   });
 
-  // Reset to items step when dialog opens
-  useEffect(() => {
-    if (open) {
-      setCurrentStep("items");
-    }
-  }, [open]);
-
   const handleSave = async () => {
-    setIsSaving(true);
     try {
-      const savedDocument = await saveDocumentChanges();
-      
-      if (savedDocument && onDocumentCreated) {
-        onDocumentCreated(savedDocument);
-      }
-      
-      toast.success(`${documentType} saved successfully`);
+      await saveDocumentChanges();
+      toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} saved successfully`);
+      onDocumentCreated?.();
       onOpenChange(false);
-    } catch (error: any) {
-      console.error(`Error saving ${documentType}:`, error);
-      toast.error(`Failed to save ${documentType}: ${error.message}`);
-    } finally {
-      setIsSaving(false);
+    } catch (error) {
+      console.error('Error saving document:', error);
+      toast.error('Failed to save document');
     }
   };
 
-  const handleConvertToInvoice = async () => {
-    if (documentType !== "estimate") return;
+  const handleConvert = async () => {
+    if (documentType !== 'estimate') return;
     
     try {
-      const invoice = await convertToInvoice();
-      if (invoice && onDocumentCreated) {
-        onDocumentCreated(invoice);
-      }
-      toast.success("Estimate converted to invoice successfully");
+      await convertToInvoice();
+      toast.success('Estimate converted to invoice successfully');
+      onDocumentCreated?.();
       onOpenChange(false);
-    } catch (error: any) {
-      console.error("Error converting to invoice:", error);
-      toast.error(`Failed to convert to invoice: ${error.message}`);
+    } catch (error) {
+      console.error('Error converting to invoice:', error);
+      toast.error('Failed to convert estimate to invoice');
     }
   };
 
-  const canProceedToPreview = lineItems.length > 0;
-
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case "items":
-        return (
-          <UnifiedItemsStep
-            documentType={documentType}
-            documentNumber={documentNumber}
-            lineItems={lineItems}
-            taxRate={taxRate}
-            notes={notes}
-            onLineItemsChange={() => {}} // Handled internally by the hook
-            onTaxRateChange={setTaxRate}
-            onNotesChange={setNotes}
-            onAddProduct={handleAddProduct}
-            onRemoveLineItem={handleRemoveLineItem}
-            onUpdateLineItem={handleUpdateLineItem}
-            calculateSubtotal={calculateSubtotal}
-            calculateTotalTax={calculateTotalTax}
-            calculateGrandTotal={calculateGrandTotal}
-          />
-        );
-      case "preview":
-        if (documentType === "estimate") {
-          return (
-            <EstimatePreviewStep
-              estimateNumber={documentNumber}
-              lineItems={lineItems}
-              subtotal={calculateSubtotal()}
-              taxAmount={calculateTotalTax()}
-              total={calculateGrandTotal()}
-              notes={notes}
-              jobData={jobData}
-              onSave={handleSave}
-              onConvertToInvoice={handleConvertToInvoice}
-              onBack={() => setCurrentStep("items")}
-              isSaving={isSaving}
-            />
-          );
-        } else {
-          return (
-            <InvoicePreviewStep
-              invoiceNumber={documentNumber}
-              lineItems={lineItems}
-              subtotal={calculateSubtotal()}
-              taxAmount={calculateTotalTax()}
-              total={calculateGrandTotal()}
-              notes={notes}
-              jobData={jobData}
-              onSave={handleSave}
-              onBack={() => setCurrentStep("items")}
-              isSaving={isSaving}
-            />
-          );
-        }
-      default:
-        return null;
-    }
-  };
-
-  const getTitle = () => {
-    if (existingDocument) {
-      return `Edit ${documentType === "estimate" ? "Estimate" : "Invoice"}`;
-    }
-    return `Create ${documentType === "estimate" ? "Estimate" : "Invoice"}`;
-  };
+  if (!isInitialized) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {documentType === "estimate" ? (
-              <FileText className="h-5 w-5" />
-            ) : (
-              <DollarSign className="h-5 w-5" />
-            )}
-            {getTitle()}
-            {documentNumber && (
-              <span className="text-sm text-muted-foreground">
-                #{documentNumber}
-              </span>
-            )}
+            {documentType === "estimate" ? <FileText className="h-5 w-5" /> : <DollarSign className="h-5 w-5" />}
+            {existingDocument ? "Edit" : "Create"} {documentType === "estimate" ? "Estimate" : "Invoice"}
+            <span className="text-sm font-mono text-muted-foreground">
+              {documentNumber}
+            </span>
           </DialogTitle>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
 
-        {/* Step Navigation */}
-        <div className="flex items-center justify-center space-x-8 py-4 border-b">
-          <button
-            onClick={() => setCurrentStep("items")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              currentStep === "items"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Calculator className="h-4 w-4" />
-            Items & Pricing
-          </button>
-          <button
-            onClick={() => canProceedToPreview && setCurrentStep("preview")}
-            disabled={!canProceedToPreview}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              currentStep === "preview"
-                ? "bg-primary text-primary-foreground"
-                : canProceedToPreview
-                ? "text-muted-foreground hover:text-foreground"
-                : "text-muted-foreground/50 cursor-not-allowed"
-            }`}
-          >
-            <FileText className="h-4 w-4" />
-            Preview & Send
-          </button>
-        </div>
+        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "review")}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="items">Items & Details</TabsTrigger>
+            <TabsTrigger value="review">Review & Save</TabsTrigger>
+          </TabsList>
 
-        {/* Step Content */}
-        <div className="py-6">
-          {isInitialized ? renderStepContent() : (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          )}
-        </div>
+          <TabsContent value="items" className="space-y-4">
+            <UnifiedItemsStep
+              documentType={documentType}
+              documentNumber={documentNumber}
+              lineItems={lineItems}
+              taxRate={taxRate}
+              notes={notes}
+              onLineItemsChange={setLineItems}
+              onTaxRateChange={setTaxRate}
+              onNotesChange={setNotes}
+              onAddProduct={handleAddProduct}
+              onRemoveLineItem={handleRemoveLineItem}
+              onUpdateLineItem={handleUpdateLineItem}
+              calculateSubtotal={calculateSubtotal}
+              calculateTotalTax={calculateTotalTax}
+              calculateGrandTotal={calculateGrandTotal}
+            />
+          </TabsContent>
 
-        {/* Summary Footer */}
-        {currentStep === "items" && lineItems.length > 0 && (
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-muted-foreground">
-                {lineItems.length} item{lineItems.length !== 1 ? "s" : ""} • 
-                Subtotal: {formatCurrency(calculateSubtotal())} • 
-                Tax: {formatCurrency(calculateTotalTax())}
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-lg font-semibold">
-                  Total: {formatCurrency(calculateGrandTotal())}
-                </span>
-                <Button 
-                  onClick={() => setCurrentStep("preview")}
-                  disabled={!canProceedToPreview || isSubmitting}
-                >
-                  Continue to Preview
-                </Button>
-              </div>
-            </div>
+          <TabsContent value="review" className="space-y-4">
+            <UnifiedReviewStep
+              documentType={documentType}
+              documentNumber={documentNumber}
+              jobData={jobData}
+              lineItems={lineItems}
+              taxRate={taxRate}
+              notes={notes}
+              calculateSubtotal={calculateSubtotal}
+              calculateTotalTax={calculateTotalTax}
+              calculateGrandTotal={calculateGrandTotal}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex gap-2">
+            {currentStep === "review" && (
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep("items")}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Items
+              </Button>
+            )}
           </div>
-        )}
+
+          <div className="flex gap-2">
+            {currentStep === "items" && (
+              <Button 
+                onClick={() => setCurrentStep("review")}
+                className="gap-2"
+              >
+                Review
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+
+            {currentStep === "review" && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={handleSave}
+                  disabled={isSubmitting}
+                  className="gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  Save {documentType === "estimate" ? "Estimate" : "Invoice"}
+                </Button>
+
+                {documentType === "estimate" && (
+                  <Button 
+                    onClick={handleConvert}
+                    disabled={isSubmitting}
+                    className="gap-2"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    Convert to Invoice
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

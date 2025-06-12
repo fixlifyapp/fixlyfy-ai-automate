@@ -1,9 +1,12 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { 
   ExternalLink, 
   Edit, 
@@ -144,6 +147,10 @@ export const JobsList = ({
       {jobs.map((job) => {
         const isSelected = selectedJobs.includes(job.id);
         const clientName = getClientName(job.client);
+        const statusStyle = getStatusBadgeStyle(job.status);
+        const statusIcon = getStatusIcon(job.status);
+        const jobTypeDisplay = getJobTypeDisplay(job);
+        const resolvedTags = resolveJobTags(job.tags || []);
         
         return (
           <Card 
@@ -246,21 +253,21 @@ export const JobsList = ({
   const renderTableView = () => (
     <div className="rounded-md border">
       <Table>
-        <TableHead>
-          <tr className="border-b">
-            <th className="text-left p-4 w-12">
+        <TableHeader>
+          <TableRow className="border-b">
+            <TableHead className="text-left p-4 w-12">
               <Checkbox 
                 checked={areAllJobsSelected}
                 onCheckedChange={onSelectAllJobs}
               />
-            </th>
-            <th className="text-left p-4 font-semibold">Job Number</th>
-            <th className="text-left p-4 font-semibold">Client Name</th>
-            <th className="text-left p-4 font-semibold">Time</th>
-            <th className="text-left p-4 font-semibold">Address</th>
-            <th className="text-left p-4 font-semibold">Tags</th>
-            <th className="text-left p-4 font-semibold">Revenue</th>
-            <th className="text-right p-4 w-20">
+            </TableHead>
+            <TableHead className="text-left p-4 font-semibold">Job Number</TableHead>
+            <TableHead className="text-left p-4 font-semibold">Client Name</TableHead>
+            <TableHead className="text-left p-4 font-semibold">Time</TableHead>
+            <TableHead className="text-left p-4 font-semibold">Address</TableHead>
+            <TableHead className="text-left p-4 font-semibold">Tags</TableHead>
+            <TableHead className="text-left p-4 font-semibold">Revenue</TableHead>
+            <TableHead className="text-right p-4 w-20">
               Actions
               {onRefresh && (
                 <Button 
@@ -272,13 +279,14 @@ export const JobsList = ({
                   Refresh
                 </Button>
               )}
-            </th>
-          </tr>
-        </TableHead>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
         <TableBody>
           {jobs.map((job) => {
             const statusStyle = getStatusBadgeStyle(job.status);
             const resolvedTags = resolveJobTags(job.tags || []);
+            const clientName = getClientName(job.client);
             
             return (
               <TableRow 
@@ -286,14 +294,14 @@ export const JobsList = ({
                 className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
                 onClick={() => handleJobClick(job.id)}
               >
-                <td className="p-4">
+                <TableCell className="p-4">
                   <Checkbox 
                     checked={selectedJobs.includes(job.id)}
                     onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
                     onClick={(e) => e.stopPropagation()}
                   />
-                </td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell className="p-4">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
                     <Badge 
@@ -304,17 +312,17 @@ export const JobsList = ({
                       {job.status}
                     </Badge>
                   </div>
-                </td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell className="p-4">
                   <div className="font-medium">{clientName}</div>
-                </td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell className="p-4">
                   <div className="flex items-center text-sm">
                     <Clock className="h-4 w-4 mr-2" />
                     {formatTime(job)}
                   </div>
-                </td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell className="p-4">
                   {job.address ? (
                     <div className="flex items-center text-sm">
                       <MapPin className="h-4 w-4 mr-2" />
@@ -323,8 +331,8 @@ export const JobsList = ({
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
-                </td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell className="p-4">
                   {resolvedTags && resolvedTags.length > 0 ? (
                     <div className="flex items-center gap-1 flex-wrap">
                       {resolvedTags.slice(0, 2).map((tag, index) => (
@@ -346,8 +354,8 @@ export const JobsList = ({
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
-                </td>
-                <td className="p-4">
+                </TableCell>
+                <TableCell className="p-4">
                   {job.revenue && job.revenue > 0 ? (
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
@@ -356,8 +364,8 @@ export const JobsList = ({
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
-                </td>
-                <td className="p-4 text-right">
+                </TableCell>
+                <TableCell className="p-4 text-right">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -365,7 +373,7 @@ export const JobsList = ({
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                </td>
+                </TableCell>
               </TableRow>
             );
           })}
