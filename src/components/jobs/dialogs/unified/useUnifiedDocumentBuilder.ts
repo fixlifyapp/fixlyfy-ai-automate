@@ -74,8 +74,8 @@ export const useUnifiedDocumentBuilder = ({
     description: job?.description
   };
 
-  // Document save method - FIXED: Now properly implemented
-  const saveDocumentChanges = async () => {
+  // Document save method - Returns boolean for success/failure
+  const saveDocumentChanges = async (): Promise<boolean> => {
     try {
       const documentData = {
         documentType,
@@ -88,18 +88,20 @@ export const useUnifiedDocumentBuilder = ({
       };
 
       if (existingDocument?.id) {
-        return await operations.updateDocument(existingDocument.id, documentData);
+        const result = await operations.updateDocument(existingDocument.id, documentData);
+        return !!result; // Convert to boolean
       } else {
-        return await operations.saveDocument(documentData);
+        const result = await operations.saveDocument(documentData);
+        return !!result; // Convert to boolean
       }
     } catch (error) {
       console.error('Error saving document changes:', error);
-      throw error;
+      return false;
     }
   };
 
-  // Convert to invoice method - FIXED: Now properly implemented
-  const convertToInvoice = async () => {
+  // Convert to invoice method - Returns boolean for success/failure
+  const convertToInvoice = async (): Promise<boolean> => {
     try {
       if (documentType !== 'estimate' || !existingDocument?.id) {
         throw new Error('Can only convert estimates to invoices');
@@ -121,10 +123,10 @@ export const useUnifiedDocumentBuilder = ({
         onSyncToInvoice();
       }
       
-      return invoice;
+      return !!invoice; // Convert to boolean
     } catch (error) {
       console.error('Error converting to invoice:', error);
-      throw error;
+      return false;
     }
   };
 
@@ -194,7 +196,7 @@ export const useUnifiedDocumentBuilder = ({
     handleRemoveLineItem,
     handleUpdateLineItem,
 
-    // Document operations - FIXED: Now properly exported
+    // Document operations - Now return boolean values
     saveDocumentChanges,
     convertToInvoice,
 

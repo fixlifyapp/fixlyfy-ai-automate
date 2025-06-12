@@ -114,7 +114,7 @@ export const UnifiedDocumentBuilder = ({
   };
 
   const handleConvert = async () => {
-    if (documentType !== 'estimate') return;
+    if (documentType !== 'estimate') return false;
     
     try {
       const result = await convertToInvoice();
