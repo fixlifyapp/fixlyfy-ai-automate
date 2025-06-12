@@ -56,7 +56,12 @@ export const useEstimateUpsell = (estimateId: string) => {
       });
 
       // Add service-specific upsells based on current items
-      if (currentItems.some(item => item.description?.toLowerCase().includes('hvac'))) {
+      if (currentItems.some(item => {
+        const description = typeof item === 'object' && item !== null 
+          ? (item as any).description || ''
+          : String(item);
+        return description.toLowerCase().includes('hvac');
+      })) {
         mockRecommendations.push({
           id: 'rec-maintenance',
           product: {
@@ -96,7 +101,7 @@ export const useEstimateUpsell = (estimateId: string) => {
 
       if (fetchError) throw fetchError;
 
-      // Add new item to existing items
+      // Add new item to existing items with proper type handling
       const currentItems = Array.isArray(estimate.items) ? estimate.items : [];
       const newItem = {
         id: `item-${Date.now()}`,
@@ -110,12 +115,13 @@ export const useEstimateUpsell = (estimateId: string) => {
 
       const updatedItems = [...currentItems, newItem];
 
-      // Recalculate totals safely
+      // Recalculate totals safely with type guards
       const subtotal = updatedItems.reduce((sum, item: any) => {
-        const itemTotal = typeof item === 'object' && item !== null 
-          ? (item.total || (item.quantity * item.unitPrice) || 0)
-          : 0;
-        return sum + itemTotal;
+        if (typeof item === 'object' && item !== null) {
+          const itemTotal = item.total || (item.quantity * item.unitPrice) || 0;
+          return sum + Number(itemTotal);
+        }
+        return sum;
       }, 0);
       
       const taxAmount = subtotal * (estimate.tax_rate || 0.1);

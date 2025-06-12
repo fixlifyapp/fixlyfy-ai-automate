@@ -1,190 +1,107 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, Eye, Send, Download, Edit2 } from 'lucide-react';
-import { SteppedEstimateBuilder } from '../dialogs/SteppedEstimateBuilder';
-import { useEstimates } from '@/hooks/useEstimates';
-import { formatCurrency } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { EstimatesList } from "../estimates/EstimatesList";
+import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
+import { EstimatePreviewWindow } from "../dialogs/EstimatePreviewWindow";
+import { useJobs } from "@/hooks/useJobs";
+import { useEstimates, Estimate } from "@/hooks/useEstimates";
+import { toast } from "sonner";
 
-interface ModernJobEstimatesTabProps {
+export interface ModernJobEstimatesTabProps {
   jobId: string;
 }
 
 export const ModernJobEstimatesTab = ({ jobId }: ModernJobEstimatesTabProps) => {
-  const [showEstimateBuilder, setShowEstimateBuilder] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
-  const [estimates, setEstimates] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   
-  const estimatesHook = useEstimates();
+  const { jobs } = useJobs();
+  const { 
+    estimates, 
+    convertEstimateToInvoice, 
+    refreshEstimates, 
+    updateEstimateStatus,
+    fetchEstimatesWithJobs 
+  } = useEstimates(jobId);
+  
+  const job = jobs.find(j => j.id === jobId);
 
-  useEffect(() => {
-    fetchJobEstimates();
-  }, [jobId]);
-
-  const fetchJobEstimates = async () => {
-    setIsLoading(true);
-    try {
-      const allEstimates = await estimatesHook.fetchEstimatesWithJobs();
-      const jobEstimates = allEstimates.filter(est => est.job_id === jobId);
-      setEstimates(jobEstimates);
-    } catch (error) {
-      console.error('Error fetching estimates:', error);
-      toast.error('Failed to load estimates');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleCreateEstimate = () => {
+    console.log('Creating new estimate for job:', jobId);
+    setShowCreateForm(true);
   };
 
-  const handleEstimateCreated = () => {
-    setShowEstimateBuilder(false);
-    setSelectedEstimate(null);
-    fetchJobEstimates(); // Refresh the list
+  const handleEstimateCreated = (estimate?: Estimate) => {
+    console.log('Estimate created, refreshing list');
+    setShowCreateForm(false);
+    refreshEstimates();
+    toast.success('Estimate created successfully!');
   };
 
-  const handleEditEstimate = (estimate: any) => {
+  const handleViewEstimate = (estimate: Estimate) => {
+    console.log('Viewing estimate:', estimate.id);
     setSelectedEstimate(estimate);
-    setShowEstimateBuilder(true);
+    setShowPreview(true);
   };
 
-  const handleSendEstimate = async (estimateId: string) => {
-    try {
-      await estimatesHook.updateEstimateStatus(estimateId, 'sent');
-      toast.success('Estimate sent successfully');
-      fetchJobEstimates();
-    } catch (error) {
-      console.error('Error sending estimate:', error);
-      toast.error('Failed to send estimate');
+  const handleConvertToInvoice = async (estimate: Estimate) => {
+    console.log('Converting estimate to invoice:', estimate.id);
+    const success = await convertEstimateToInvoice(estimate.id);
+    if (success) {
+      toast.success("Estimate converted to invoice!");
     }
   };
 
-  const renderStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Draft', className: 'bg-gray-100 text-gray-800' },
-      sent: { label: 'Sent', className: 'bg-blue-100 text-blue-800' },
-      approved: { label: 'Approved', className: 'bg-green-100 text-green-800' },
-      rejected: { label: 'Rejected', className: 'bg-red-100 text-red-800' },
-      converted: { label: 'Converted', className: 'bg-purple-100 text-purple-800' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
+  const handleEstimateConverted = () => {
+    refreshEstimates();
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  if (!job) {
+    return <div>Job not found</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Estimates
-        </h3>
-        <Button onClick={() => setShowEstimateBuilder(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Estimate
-        </Button>
-      </div>
-
-      {estimates.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No estimates yet</h3>
-            <p className="text-gray-500 mb-4">
-              Create your first estimate for this job to get started.
-            </p>
-            <Button onClick={() => setShowEstimateBuilder(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create First Estimate
+    <>
+      <Card className="border-fixlyfy-border shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Estimates</h3>
+            <Button className="gap-2" onClick={handleCreateEstimate}>
+              <Plus size={16} />
+              Create Estimate
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {estimates.map((estimate) => (
-            <Card key={estimate.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{estimate.estimate_number}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Created {new Date(estimate.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    {renderStatusBadge(estimate.status)}
-                    <div className="text-2xl font-bold mt-2">
-                      {formatCurrency(estimate.total)}
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditEstimate(estimate)}
-                      className="gap-2"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSendEstimate(estimate.id)}
-                      disabled={estimate.status === 'sent'}
-                      className="gap-2"
-                    >
-                      <Send className="h-4 w-4" />
-                      Send
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Download className="h-4 w-4" />
-                      PDF
-                    </Button>
-                  </div>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <Eye className="h-4 w-4" />
-                    View Details
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+          </div>
 
-      <SteppedEstimateBuilder
-        open={showEstimateBuilder}
-        onOpenChange={setShowEstimateBuilder}
+          <EstimatesList
+            jobId={jobId}
+            onEstimateConverted={handleEstimateConverted}
+            onViewEstimate={handleViewEstimate}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Unified Document Builder for creating/editing estimates */}
+      <UnifiedDocumentBuilder
+        open={showCreateForm}
+        onOpenChange={setShowCreateForm}
+        documentType="estimate"
         jobId={jobId}
-        existingEstimate={selectedEstimate}
-        onEstimateCreated={handleEstimateCreated}
+        onDocumentCreated={handleEstimateCreated}
       />
-    </div>
+
+      {/* Estimate Preview Window */}
+      {selectedEstimate && (
+        <EstimatePreviewWindow
+          open={showPreview}
+          onOpenChange={setShowPreview}
+          estimate={selectedEstimate}
+          onEstimateConverted={handleEstimateConverted}
+        />
+      )}
+    </>
   );
 };

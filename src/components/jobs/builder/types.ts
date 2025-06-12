@@ -9,6 +9,9 @@ export interface LineItem {
   ourPrice?: number;
   unit?: string;
   category?: string;
+  name?: string;
+  price?: number;
+  discount?: number;
   [key: string]: any; // Add index signature for JSON compatibility
 }
 

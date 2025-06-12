@@ -19,6 +19,14 @@ export interface Estimate {
   items?: any[]; // JSON array from database
   viewed?: boolean;
   techniciansNote?: string;
+  tax_rate?: number;
+  tax_amount?: number;
+  subtotal?: number;
+  discount_amount?: number;
+  client_id?: string;
+  created_by?: string;
+  sent_at?: string;
+  approved_at?: string;
 }
 
 export const useEstimates = (jobId?: string) => {
@@ -53,7 +61,11 @@ export const useEstimates = (jobId?: string) => {
         estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
         valid_until: item.valid_until || undefined,
         items: Array.isArray(item.items) ? item.items : [],
-        status: item.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'converted'
+        status: item.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'converted',
+        tax_rate: item.tax_rate || 0,
+        tax_amount: item.tax_amount || 0,
+        subtotal: item.subtotal || 0,
+        discount_amount: item.discount_amount || 0
       }));
       
       setEstimates(mappedData);
@@ -62,6 +74,26 @@ export const useEstimates = (jobId?: string) => {
       toast.error('Failed to fetch estimates');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchEstimatesWithJobs = async () => {
+    return refreshEstimates();
+  };
+
+  const updateEstimateStatus = async (estimateId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('estimates')
+        .update({ status: newStatus })
+        .eq('id', estimateId);
+
+      if (error) throw error;
+      await refreshEstimates();
+      return true;
+    } catch (error) {
+      console.error('Error updating estimate status:', error);
+      return false;
     }
   };
 
@@ -141,6 +173,8 @@ export const useEstimates = (jobId?: string) => {
     setEstimates,
     isLoading,
     refreshEstimates,
+    fetchEstimatesWithJobs,
+    updateEstimateStatus,
     convertEstimateToInvoice
   };
 };
