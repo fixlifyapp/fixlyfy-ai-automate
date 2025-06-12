@@ -1,5 +1,7 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { DbJob } from "@/types/database-types";
 import { useClients } from "./useClients";
 
@@ -43,6 +45,23 @@ interface UseJobsResult {
   deleteJob: (id: string) => Promise<boolean>;
 }
 
+// Helper function to safely cast Json tasks to string array
+const extractTasks = (tasks: any): string[] => {
+  if (!tasks) return [];
+  if (Array.isArray(tasks)) {
+    return tasks.filter(task => typeof task === 'string');
+  }
+  if (typeof tasks === 'string') {
+    try {
+      const parsed = JSON.parse(tasks);
+      return Array.isArray(parsed) ? parsed.filter(task => typeof task === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export const useJobsConsolidated = (): UseJobsResult => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,11 +99,12 @@ export const useJobsConsolidated = (): UseJobsResult => {
         const clientsMap = new Map(clientsData?.map(client => [client.id, client]));
 
         // Map database jobs to the Job interface
-        const transformedJobs = dbJobs.map(job => {
-          const client = clientsMap.get(job.client_id || job.client_id) || job.client_id || 'Unknown Client';
+        const transformedJobs: Job[] = dbJobs.map(job => {
+          const client = clientsMap.get(job.client_id || '') || job.client_id || 'Unknown Client';
           return {
             ...job,
             updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
+            tasks: extractTasks(job.tasks), // Safely extract tasks
             client: typeof client === 'object' && client !== null ? {
               id: client.id,
               name: client.name,
@@ -120,9 +140,12 @@ export const useJobsConsolidated = (): UseJobsResult => {
         .eq('id', newJob.client_id)
         .single();
 
-      const { data: dbJobs, error: jobsError } = await supabase
+      // Prepare job data for insertion, excluding client field
+      const { client, ...jobDataForDb } = newJob;
+      
+      const { data: dbJob, error: jobsError } = await supabase
         .from('jobs')
-        .insert([{ ...newJob }])
+        .insert([jobDataForDb])
         .select()
         .single();
 
@@ -133,17 +156,18 @@ export const useJobsConsolidated = (): UseJobsResult => {
         return null;
       }
 
-      if (dbJobs) {
-        const client = clientData || newJob.client_id || 'Unknown Client';
+      if (dbJob) {
+        const clientInfo = clientData || newJob.client_id || 'Unknown Client';
         const transformedJob: Job = {
-          ...dbJobs,
-          updated_at: dbJobs.updated_at || dbJobs.created_at, // Ensure updated_at is always present
-          client: typeof client === 'object' && client !== null ? {
-            id: client.id,
-            name: client.name,
-            email: client.email,
-            phone: client.phone
-          } : client
+          ...dbJob,
+          updated_at: dbJob.updated_at || dbJob.created_at,
+          tasks: extractTasks(dbJob.tasks),
+          client: typeof clientInfo === 'object' && clientInfo !== null ? {
+            id: clientInfo.id,
+            name: clientInfo.name,
+            email: clientInfo.email,
+            phone: clientInfo.phone
+          } : clientInfo
         };
 
         setJobs(prevJobs => [...prevJobs, transformedJob]);
@@ -169,9 +193,12 @@ export const useJobsConsolidated = (): UseJobsResult => {
         .eq('id', updates.client_id)
         .single();
 
-      const { data: dbJobs, error: jobsError } = await supabase
+      // Prepare updates for database, excluding client field
+      const { client, ...updatesForDb } = updates;
+
+      const { data: dbJob, error: jobsError } = await supabase
         .from('jobs')
-        .update(updates)
+        .update(updatesForDb)
         .eq('id', id)
         .select()
         .single();
@@ -183,18 +210,19 @@ export const useJobsConsolidated = (): UseJobsResult => {
         return null;
       }
 
-      if (dbJobs) {
-        const client = clientData || updates.client_id || 'Unknown Client';
+      if (dbJob) {
+        const clientInfo = clientData || updates.client_id || 'Unknown Client';
           
         const transformedJob: Job = {
-          ...dbJobs,
-           updated_at: dbJobs.updated_at || dbJobs.created_at, // Ensure updated_at is always present
-          client: typeof client === 'object' && client !== null ? {
-            id: client.id,
-            name: client.name,
-            email: client.email,
-            phone: client.phone
-          } : client
+          ...dbJob,
+          updated_at: dbJob.updated_at || dbJob.created_at,
+          tasks: extractTasks(dbJob.tasks),
+          client: typeof clientInfo === 'object' && clientInfo !== null ? {
+            id: clientInfo.id,
+            name: clientInfo.name,
+            email: clientInfo.email,
+            phone: clientInfo.phone
+          } : clientInfo
         };
 
         setJobs(prevJobs =>

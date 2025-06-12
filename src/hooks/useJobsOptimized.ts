@@ -13,6 +13,23 @@ interface UseJobsOptimizedOptions {
   clientId?: string;
 }
 
+// Helper function to safely cast Json tasks to string array
+const extractTasks = (tasks: any): string[] => {
+  if (!tasks) return [];
+  if (Array.isArray(tasks)) {
+    return tasks.filter(task => typeof task === 'string');
+  }
+  if (typeof tasks === 'string') {
+    try {
+      const parsed = JSON.parse(tasks);
+      return Array.isArray(parsed) ? parsed.filter(task => typeof task === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 // Request deduplication cache with longer TTL
 const requestCache = new Map<string, Promise<any>>();
 
@@ -86,7 +103,9 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
             revenue,
             address,
             tags,
+            tasks,
             created_at,
+            updated_at,
             client:clients!inner(id, name, email, phone)
           `, { count: 'exact' });
         
@@ -117,6 +136,7 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
         const transformedJobs = dbJobs.map(job => ({
           ...job,
           updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
+          tasks: extractTasks(job.tasks), // Safely extract tasks
           client: job.clients || job.client_id || 'Unknown Client'
         }));
         

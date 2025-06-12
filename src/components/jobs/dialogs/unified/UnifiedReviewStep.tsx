@@ -47,6 +47,7 @@ export const UnifiedReviewStep = ({
       <DocumentInfoGrid
         jobData={jobData}
         documentType={documentType}
+        taxRate={taxRate}
       />
 
       <DocumentLineItemsTable
@@ -57,12 +58,12 @@ export const UnifiedReviewStep = ({
       <DocumentTotalsSection
         subtotal={calculateSubtotal()}
         taxRate={taxRate}
-        taxAmount={calculateTotalTax()}
+        tax_amount={calculateTotalTax()}
         total={calculateGrandTotal()}
       />
 
       {notes && (
-        <NotesSection notes={notes} />
+        <NotesSection notes={notes} readOnly={true} />
       )}
     </div>
   );

@@ -5,17 +5,33 @@ import { DocumentType } from "../../UnifiedDocumentBuilder";
 interface DocumentPreviewHeaderProps {
   documentType: DocumentType;
   documentNumber: string;
-  companyInfo: any;
+  jobData: {
+    id: string;
+    title: string;
+    client?: any;
+    description?: string;
+  };
 }
 
 export const DocumentPreviewHeader = ({
   documentType,
   documentNumber,
-  companyInfo
+  jobData
 }: DocumentPreviewHeaderProps) => {
   const documentTitle = documentType === 'estimate' ? 'ESTIMATE' : 'INVOICE';
   const documentColor = documentType === 'estimate' ? 'text-blue-600' : 'text-green-600';
   const documentBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-green-50';
+
+  // Extract company info from job data or use defaults
+  const companyInfo = {
+    name: 'FixLyfy Services',
+    address: '123 Business Park, Suite 456',
+    city: 'San Francisco',
+    state: 'California',
+    zip: '94103',
+    phone: '(555) 123-4567',
+    email: 'contact@fixlyfy.com'
+  };
 
   return (
     <div className="bg-white border-b border-gray-200">
@@ -23,19 +39,11 @@ export const DocumentPreviewHeader = ({
         <div className="flex justify-between items-start">
           {/* Company Info */}
           <div className="flex items-start space-x-4">
-            {companyInfo?.logoUrl ? (
-              <img 
-                src={companyInfo.logoUrl} 
-                alt={companyInfo.name} 
-                className="h-16 w-auto object-contain"
-              />
-            ) : (
-              <div className="h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">
-                  {companyInfo?.name?.charAt(0) || 'F'}
-                </span>
-              </div>
-            )}
+            <div className="h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">
+                {companyInfo?.name?.charAt(0) || 'F'}
+              </span>
+            </div>
             
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-1">
