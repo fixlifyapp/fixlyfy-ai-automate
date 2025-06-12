@@ -8,7 +8,7 @@ import { useClients } from "./useClients";
 export interface Job {
   id: string;
   client_id: string | null;
-  title?: string | null;
+  title?: string | null; // Make optional to match useJobs interface
   description?: string | null;
   service?: string | null;
   status: string; // Make status required
@@ -43,7 +43,7 @@ interface UseJobsResult {
   addJob: (newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => Promise<Job | null>;
   updateJob: (id: string, updates: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>) => Promise<Job | null>;
   deleteJob: (id: string) => Promise<boolean>;
-  mutateJobs: () => void; // Add missing mutateJobs property
+  mutateJobs: () => void;
   // Add missing properties
   isLoading: boolean;
   totalCount: number;
@@ -113,6 +113,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
           const client = clientsMap.get(job.client_id || '') || job.client_id || 'Unknown Client';
           return {
             ...job,
+            title: job.title || undefined, // Keep as optional, let components handle fallbacks
             status: job.status || 'scheduled', // Ensure status is always present
             updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
             tasks: extractTasks(job.tasks), // Safely extract tasks
@@ -160,6 +161,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
       const jobWithId = {
         ...jobDataForDb,
         id: crypto.randomUUID(), // Generate ID for new job
+        title: newJob.title || undefined, // Keep optional
         status: newJob.status || 'scheduled' // Ensure status is set
       };
       
@@ -180,6 +182,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
         const clientInfo = clientData || newJob.client_id || 'Unknown Client';
         const transformedJob: Job = {
           ...dbJob,
+          title: dbJob.title || undefined, // Keep optional
           status: dbJob.status || 'scheduled',
           updated_at: dbJob.updated_at || dbJob.created_at,
           tasks: extractTasks(dbJob.tasks),
@@ -236,6 +239,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
           
         const transformedJob: Job = {
           ...dbJob,
+          title: dbJob.title || undefined, // Keep optional
           status: dbJob.status || 'scheduled',
           updated_at: dbJob.updated_at || dbJob.created_at,
           tasks: extractTasks(dbJob.tasks),

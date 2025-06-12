@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -170,11 +169,11 @@ const JobsPageOptimized = () => {
     toast.success('Jobs refreshed');
   };
 
-  // Transform jobs to ensure required properties are present
+  // Transform jobs to ensure required properties are present with proper fallbacks
   const transformedJobs: Job[] = jobs.map(job => ({
     ...job,
-    title: job.title || 'Untitled Job', // Ensure title is always present
-    status: job.status || 'scheduled' // Ensure status is always present
+    title: job.title || 'Untitled Job', // Always provide title fallback
+    status: job.status || 'scheduled' // Always provide status fallback
   }));
 
   return (
