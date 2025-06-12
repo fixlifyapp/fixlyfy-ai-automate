@@ -7,15 +7,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, X, FileText, DollarSign, Calculator } from "lucide-react";
+import { X, FileText, DollarSign, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimatePreviewStep } from "./unified/EstimatePreviewStep";
 import { InvoicePreviewStep } from "./unified/InvoicePreviewStep";
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
 import { formatCurrency } from "@/lib/utils";
 
 export type DocumentType = "estimate" | "invoice";

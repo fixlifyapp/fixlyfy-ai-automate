@@ -115,16 +115,16 @@ export const useEstimateUpsell = (estimateId: string) => {
 
       const updatedItems = [...currentItems, newItem];
 
-      // Recalculate totals safely with type guards
+      // Recalculate totals safely with type guards and Number conversion
       const subtotal = updatedItems.reduce((sum, item: any) => {
         if (typeof item === 'object' && item !== null) {
-          const itemTotal = Number(item.total) || Number(item.quantity * item.unitPrice) || 0;
+          const itemTotal = Number(item.total) || (Number(item.quantity || 0) * Number(item.unitPrice || 0)) || 0;
           return sum + itemTotal;
         }
         return sum;
       }, 0);
       
-      const taxAmount = subtotal * (estimate.tax_rate || 0.1);
+      const taxAmount = subtotal * (Number(estimate.tax_rate) || 0.1);
       const total = subtotal + taxAmount;
 
       // Update estimate
