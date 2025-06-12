@@ -1,255 +1,194 @@
 
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Estimate } from '@/hooks/useEstimates';
 
-export interface EstimateActionsState {
-  selectedEstimate: Estimate | null;
-  isDeleting: boolean;
-  isConverting: boolean;
-  isSending: boolean;
-}
+export const useEstimateActions = () => {
+  const [isLoading, setIsLoading] = useState(false);
 
-export interface EstimateActionsActions {
-  setSelectedEstimate: (estimate: Estimate | null) => void;
-  handleSendEstimate: (estimateId: string) => Promise<boolean>;
-  confirmDeleteEstimate: () => Promise<boolean>;
-  confirmConvertToInvoice: () => Promise<boolean>;
-}
-
-export interface EstimateActionsHook {
-  state: EstimateActionsState;
-  actions: EstimateActionsActions;
-}
-
-export const useEstimateActions = (
-  jobId: string,
-  estimates: Estimate[],
-  setEstimates: (estimates: Estimate[]) => void,
-  refreshEstimates: () => void,
-  onEstimateConverted?: () => void
-): EstimateActionsHook => {
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-
-  const handleSendEstimate = async (estimateId: string): Promise<boolean> => {
-    setIsSending(true);
+  const fetchEstimatesWithJobs = async () => {
+    setIsLoading(true);
     try {
-      console.log('Starting estimate send process for ID:', estimateId);
-      
-      // Get estimate details with job and client info
-      const { data: estimateData, error: estimateError } = await supabase
+      const { data, error } = await supabase
         .from('estimates')
         .select(`
           *,
-          jobs:job_id (
-            id,
-            title,
-            client_id,
-            clients:client_id (
-              id,
-              name,
-              email,
-              phone,
-              company
-            )
-          )
-        `)
-        .eq('id', estimateId)
-        .single();
-
-      if (estimateError || !estimateData) {
-        throw new Error('Failed to fetch estimate details');
-      }
-
-      console.log('Estimate data:', estimateData);
-
-      // Get line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('line_items')
-        .select('*')
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', estimateId);
-
-      if (lineItemsError) {
-        throw new Error('Failed to fetch line items');
-      }
-
-      console.log('Line items:', lineItems);
-
-      // Call send-estimate function with complete data
-      const { data: sendData, error: sendError } = await supabase.functions.invoke('send-estimate', {
-        body: {
-          estimateId: estimateId,
-          sendMethod: 'email', // Default to email for quick send
-          recipientEmail: estimateData.jobs?.clients?.email,
-          subject: `Estimate ${estimateData.estimate_number}`,
-          message: `Please find your estimate ${estimateData.estimate_number}. Total: $${estimateData.total.toFixed(2)}.`
-        }
-      });
-
-      if (sendError || !sendData?.success) {
-        throw new Error(sendData?.error || 'Failed to send estimate');
-      }
-
-      console.log('Estimate sent successfully');
-
-      // Update local state to reflect sent status
-      const updatedEstimates = estimates.map(est => 
-        est.id === estimateId ? { ...est, status: 'sent' } : est
-      );
-      setEstimates(updatedEstimates);
-      
-      toast.success('Estimate sent successfully');
-      return true;
-    } catch (error: any) {
-      console.error('Error sending estimate:', error);
-      toast.error('Failed to send estimate: ' + error.message);
-      return false;
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const confirmDeleteEstimate = async (): Promise<boolean> => {
-    if (!selectedEstimate) return false;
-
-    setIsDeleting(true);
-    try {
-      // Delete line items first
-      await supabase
-        .from('line_items')
-        .delete()
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', selectedEstimate.id);
-
-      // Delete estimate
-      const { error } = await supabase
-        .from('estimates')
-        .delete()
-        .eq('id', selectedEstimate.id);
+          jobs:job_id(*)
+        `);
 
       if (error) throw error;
 
-      // Update local state
-      const updatedEstimates = estimates.filter(est => est.id !== selectedEstimate.id);
-      setEstimates(updatedEstimates);
-      
-      toast.success('Estimate deleted successfully');
-      return true;
-    } catch (error: any) {
-      console.error('Error deleting estimate:', error);
-      toast.error('Failed to delete estimate');
-      return false;
+      // Transform the data to match our Estimate interface
+      const estimates: Estimate[] = (data || []).map(item => ({
+        id: item.id,
+        job_id: item.job_id,
+        estimate_number: item.estimate_number,
+        number: item.estimate_number,
+        date: item.created_at,
+        total: item.total || 0,
+        amount: item.total || 0,
+        status: item.status as Estimate['status'], // Cast to correct type
+        notes: item.notes,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        valid_until: item.valid_until,
+        items: Array.isArray(item.items) ? item.items : [],
+        viewed: false,
+        techniciansNote: item.notes
+      }));
+
+      return estimates;
+    } catch (error) {
+      console.error('Error fetching estimates with jobs:', error);
+      toast.error('Failed to fetch estimates');
+      return [];
     } finally {
-      setIsDeleting(false);
-      setSelectedEstimate(null);
+      setIsLoading(false);
     }
   };
 
-  const confirmConvertToInvoice = async (): Promise<boolean> => {
-    if (!selectedEstimate) return false;
-
-    setIsConverting(true);
+  const updateEstimateStatus = async (estimateId: string, status: Estimate['status']) => {
     try {
-      // Get line items for the estimate
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('line_items')
+      const { error } = await supabase
+        .from('estimates')
+        .update({ 
+          status,
+          updated_at: new Date().toISOString(),
+          ...(status === 'approved' && { approved_at: new Date().toISOString() })
+        })
+        .eq('id', estimateId);
+
+      if (error) throw error;
+
+      toast.success(`Estimate ${status} successfully`);
+      return true;
+    } catch (error) {
+      console.error('Error updating estimate status:', error);
+      toast.error('Failed to update estimate status');
+      return false;
+    }
+  };
+
+  const convertEstimateToInvoice = async (estimateId: string) => {
+    try {
+      // Get the estimate data
+      const { data: estimate, error: estimateError } = await supabase
+        .from('estimates')
         .select('*')
-        .eq('parent_type', 'estimate')
-        .eq('parent_id', selectedEstimate.id);
+        .eq('id', estimateId)
+        .single();
 
-      if (lineItemsError) throw lineItemsError;
+      if (estimateError) throw estimateError;
 
-      // Generate invoice number
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .rpc('generate_next_id', { p_entity_type: 'invoice' });
-
-      if (invoiceError) throw invoiceError;
-
-      const invoiceNumber = invoiceData;
-
-      // Create invoice
-      const { data: newInvoice, error: createInvoiceError } = await supabase
+      // Create invoice from estimate
+      const invoiceNumber = `INV-${Date.now()}`;
+      const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
+          job_id: estimate.job_id,
+          estimate_id: estimateId,
           invoice_number: invoiceNumber,
-          job_id: selectedEstimate.job_id,
-          estimate_id: selectedEstimate.id,
-          total: selectedEstimate.total,
+          total: estimate.total || 0,
+          subtotal: estimate.subtotal || 0,
+          tax_amount: estimate.tax_amount || 0,
+          tax_rate: estimate.tax_rate || 0,
+          amount_paid: 0,
+          balance: estimate.total || 0,
           status: 'unpaid',
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-          notes: selectedEstimate.notes
+          notes: estimate.notes,
+          items: estimate.items || [],
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         })
         .select()
         .single();
 
-      if (createInvoiceError) throw createInvoiceError;
+      if (invoiceError) throw invoiceError;
 
-      // Copy line items to invoice
-      if (lineItems && lineItems.length > 0) {
-        const invoiceLineItems = lineItems.map(item => ({
-          parent_type: 'invoice' as const,
-          parent_id: newInvoice.id,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          taxable: item.taxable
-        }));
+      // Update estimate status
+      await updateEstimateStatus(estimateId, 'converted');
 
-        const { error: lineItemsCreateError } = await supabase
-          .from('line_items')
-          .insert(invoiceLineItems);
-
-        if (lineItemsCreateError) throw lineItemsCreateError;
-      }
-
-      // Update estimate status to 'converted'
-      const { error: updateEstimateError } = await supabase
-        .from('estimates')
-        .update({ status: 'converted' })
-        .eq('id', selectedEstimate.id);
-
-      if (updateEstimateError) throw updateEstimateError;
-
-      // Update local state
-      const updatedEstimates = estimates.map(est => 
-        est.id === selectedEstimate.id ? { ...est, status: 'converted' } : est
-      );
-      setEstimates(updatedEstimates);
-
-      toast.success(`Invoice ${invoiceNumber} created successfully from estimate ${selectedEstimate.estimate_number}`);
-      
-      if (onEstimateConverted) {
-        onEstimateConverted();
-      }
-      
-      return true;
-    } catch (error: any) {
+      toast.success('Estimate converted to invoice successfully');
+      return invoice;
+    } catch (error) {
       console.error('Error converting estimate to invoice:', error);
       toast.error('Failed to convert estimate to invoice');
-      return false;
-    } finally {
-      setIsConverting(false);
-      setSelectedEstimate(null);
+      return null;
     }
   };
 
-  return {
-    state: {
-      selectedEstimate,
-      isDeleting,
-      isConverting,
-      isSending
-    },
-    actions: {
-      setSelectedEstimate,
-      handleSendEstimate,
-      confirmDeleteEstimate,
-      confirmConvertToInvoice
+  const deleteEstimate = async (estimateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('estimates')
+        .delete()
+        .eq('id', estimateId);
+
+      if (error) throw error;
+
+      toast.success('Estimate deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting estimate:', error);
+      toast.error('Failed to delete estimate');
+      return false;
     }
+  };
+
+  const duplicateEstimate = async (estimateId: string) => {
+    try {
+      const { data: estimate, error: fetchError } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('id', estimateId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Create new estimate with copied data
+      const newEstimateNumber = `EST-${Date.now()}`;
+      const { data: newEstimate, error: createError } = await supabase
+        .from('estimates')
+        .insert({
+          job_id: estimate.job_id,
+          estimate_number: newEstimateNumber,
+          total: estimate.total,
+          subtotal: estimate.subtotal,
+          tax_amount: estimate.tax_amount,
+          tax_rate: estimate.tax_rate,
+          status: 'draft',
+          notes: estimate.notes,
+          items: estimate.items,
+          description: estimate.description,
+          title: estimate.title,
+          terms: estimate.terms
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      toast.success('Estimate duplicated successfully');
+      return newEstimate;
+    } catch (error) {
+      console.error('Error duplicating estimate:', error);
+      toast.error('Failed to duplicate estimate');
+      return null;
+    }
+  };
+
+  const refreshEstimatesData = async () => {
+    return await fetchEstimatesWithJobs();
+  };
+
+  return {
+    fetchEstimatesWithJobs,
+    updateEstimateStatus,
+    convertEstimateToInvoice,
+    deleteEstimate,
+    duplicateEstimate,
+    refreshEstimatesData,
+    isLoading
   };
 };
