@@ -3,7 +3,7 @@
 export interface JobInfo {
   id: string;
   client_id: string;
-  clientId?: string;
+  clientId: string; // Make required to match context type
   title?: string;
   description?: string;
   service?: string;

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { InvoiceBuilderDialog } from "./dialogs/InvoiceBuilderDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { useJobHistory } from "@/hooks/useJobHistory";
 import { useNavigate } from "react-router-dom";
+import { extractClientInfo } from "@/types/database-types";
 
 interface JobDetailsQuickActionsProps {
   jobId: string;
@@ -34,6 +36,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
   const navigate = useNavigate();
   
   const job = jobs.find(j => j.id === jobId);
+  const clientInfo = extractClientInfo(job?.client || null);
 
   const handleCreateEstimate = async () => {
     await addHistoryItem({
@@ -58,7 +61,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
   };
 
   const handleCallClient = async () => {
-    if (!job?.client?.phone) {
+    if (!clientInfo?.phone) {
       return;
     }
 
@@ -67,14 +70,14 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       type: 'communication',
       title: 'Call Initiated',
       description: 'User navigated to Connect Center to call client',
-      meta: { action: 'call_navigation', client_phone: job.client.phone }
+      meta: { action: 'call_navigation', client_phone: clientInfo.phone }
     });
 
-    navigate(`/connect?tab=calls&clientId=${job.client.id}&clientName=${encodeURIComponent(job.client.name)}&clientPhone=${encodeURIComponent(job.client.phone)}`);
+    navigate(`/connect?tab=calls&clientId=${clientInfo.id}&clientName=${encodeURIComponent(clientInfo.name)}&clientPhone=${encodeURIComponent(clientInfo.phone)}`);
   };
 
   const handleMessageClient = async () => {
-    if (!job?.client) {
+    if (!clientInfo) {
       return;
     }
 
@@ -83,10 +86,10 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
       type: 'communication',
       title: 'Message Started',
       description: 'User navigated to Connect Center to message client',
-      meta: { action: 'message_navigation', client_phone: job.client.phone }
+      meta: { action: 'message_navigation', client_phone: clientInfo.phone }
     });
 
-    navigate(`/connect?tab=messages&clientId=${job.client.id}&clientName=${encodeURIComponent(job.client.name)}&clientPhone=${encodeURIComponent(job.client.phone || "")}&autoOpen=true`);
+    navigate(`/connect?tab=messages&clientId=${clientInfo.id}&clientName=${encodeURIComponent(clientInfo.name)}&clientPhone=${encodeURIComponent(clientInfo.phone || "")}&autoOpen=true`);
   };
 
   const handleScheduleJob = async () => {
@@ -166,13 +169,13 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
               onClick={handleCallClient}
               variant="outline" 
               className="w-full justify-start h-10"
-              disabled={!job?.client?.phone}
+              disabled={!clientInfo?.phone}
             >
               <Phone className="h-4 w-4 mr-3" />
               <span>Call Client</span>
-              {job?.client?.phone && (
+              {clientInfo?.phone && (
                 <Badge variant="secondary" className="ml-auto text-xs">
-                  {job.client.phone}
+                  {clientInfo.phone}
                 </Badge>
               )}
             </Button>
@@ -181,7 +184,7 @@ export const JobDetailsQuickActions = ({ jobId }: JobDetailsQuickActionsProps) =
               onClick={handleMessageClient}
               variant="outline" 
               className="w-full justify-start h-10"
-              disabled={!job?.client?.phone}
+              disabled={!clientInfo?.phone}
             >
               <MessageSquare className="h-4 w-4 mr-3" />
               <span>Send Message</span>

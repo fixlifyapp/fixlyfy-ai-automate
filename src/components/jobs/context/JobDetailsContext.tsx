@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useJobStatusUpdate } from './useJobStatusUpdate';
 import { supabase } from '@/integrations/supabase/client';
 import { Job } from '@/hooks/useJobs';
+import { DbJob, DbClient, extractStringArray } from '@/types/database-types';
 
 interface JobDetailsContextType {
   job: Job | null;
@@ -60,16 +61,36 @@ export const JobDetailsProvider = ({ children, jobId }: JobDetailsProviderProps)
       }
 
       // Transform the data to match Job interface
-      const clientData = Array.isArray(data.clients) ? data.clients[0] : data.clients;
+      const dbJob = data as DbJob & { clients?: DbClient | DbClient[] };
+      const clientData = Array.isArray(dbJob.clients) ? dbJob.clients[0] : dbJob.clients;
       
       const transformedJob: Job = {
-        ...data,
-        clientId: data.client_id,
-        client: clientData?.name || data.client_id,
+        id: dbJob.id,
+        client_id: dbJob.client_id || '',
+        clientId: dbJob.client_id || '',
+        title: dbJob.title || '',
+        description: dbJob.description || undefined,
+        service: dbJob.service || undefined,
+        status: dbJob.status || 'scheduled',
+        tags: extractStringArray(dbJob.tags),
+        notes: dbJob.notes || undefined,
+        job_type: dbJob.job_type || undefined,
+        lead_source: dbJob.lead_source || undefined,
+        address: dbJob.address || undefined,
+        date: dbJob.date || undefined,
+        schedule_start: dbJob.schedule_start || undefined,
+        schedule_end: dbJob.schedule_end || undefined,
+        revenue: dbJob.revenue || undefined,
+        technician_id: dbJob.technician_id || undefined,
+        created_by: dbJob.created_by || undefined,
+        created_at: dbJob.created_at,
+        updated_at: dbJob.updated_at || dbJob.created_at,
+        tasks: extractStringArray(dbJob.tasks),
+        property_id: dbJob.property_id || undefined,
+        client: clientData?.name || dbJob.client_id || '',
         phone: clientData?.phone || '',
         email: clientData?.email || '',
-        tasks: Array.isArray(data.tasks) ? data.tasks : [],
-        total: data.revenue || 0
+        total: dbJob.revenue || 0
       };
 
       setJob(transformedJob);

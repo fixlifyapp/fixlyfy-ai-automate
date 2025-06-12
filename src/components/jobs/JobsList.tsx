@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernCard } from "@/components/ui/modern-card";
@@ -28,15 +27,17 @@ interface JobsListProps {
   onSelectJob: (jobId: string, isSelected: boolean) => void;
   onSelectAllJobs: (isSelected: boolean) => void;
   onRefresh?: () => void;
+  showClientColumn?: boolean;
 }
 
 export const JobsList = ({ 
   jobs, 
-  isGridView = false, 
-  selectedJobs, 
+  isGridView = true, 
+  selectedJobs = [], 
   onSelectJob, 
   onSelectAllJobs,
-  onRefresh
+  showClientColumn = true,
+  onRefresh 
 }: JobsListProps) => {
   const navigate = useNavigate();
   
@@ -132,6 +133,247 @@ export const JobsList = ({
     return "TBD";
   };
 
+  const getClientName = (client: any): string => {
+    if (typeof client === 'string') return client;
+    if (typeof client === 'object' && client?.name) return client.name;
+    return 'Unknown Client';
+  };
+
+  const renderGridView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {jobs.map((job) => {
+        const isSelected = selectedJobs.includes(job.id);
+        const clientName = getClientName(job.client);
+        
+        return (
+          <Card 
+            key={job.id} 
+            className={`relative transition-all duration-200 hover:shadow-md cursor-pointer group ${
+              isSelected ? 'ring-2 ring-primary shadow-lg' : ''
+            }`}
+            onClick={() => handleJobClick(job.id)}
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    checked={selectedJobs.includes(job.id)}
+                    onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => handleEditJob(e, job.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-lg mb-1">{clientName}</h3>
+                <p className="text-sm text-muted-foreground">{formatTime(job)}</p>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Badge 
+                  variant="outline" 
+                  className="flex items-center gap-1"
+                  style={statusStyle}
+                >
+                  {statusIcon}
+                  {job.status}
+                </Badge>
+                
+                {jobTypeDisplay.color ? (
+                  <Badge 
+                    variant="outline"
+                    style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
+                  >
+                    {jobTypeDisplay.name}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">
+                    {jobTypeDisplay.name}
+                  </Badge>
+                )}
+              </div>
+              
+              {job.address && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span className="truncate">{job.address}</span>
+                </div>
+              )}
+              
+              {job.revenue && job.revenue > 0 && (
+                <div className="flex items-center text-sm font-medium text-green-600">
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  ${job.revenue.toFixed(2)}
+                </div>
+              )}
+              
+              {resolvedTags && resolvedTags.length > 0 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Tag className="h-3 w-3 text-muted-foreground" />
+                  {resolvedTags.slice(0, 2).map((tag, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="outline" 
+                      className="text-xs"
+                      style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                  {resolvedTags.length > 2 && (
+                    <span className="text-xs text-muted-foreground">
+                      +{resolvedTags.length - 2} more
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  const renderTableView = () => (
+    <div className="rounded-md border">
+      <Table>
+        <TableHead>
+          <tr className="border-b">
+            <th className="text-left p-4 w-12">
+              <Checkbox 
+                checked={areAllJobsSelected}
+                onCheckedChange={onSelectAllJobs}
+              />
+            </th>
+            <th className="text-left p-4 font-semibold">Job Number</th>
+            <th className="text-left p-4 font-semibold">Client Name</th>
+            <th className="text-left p-4 font-semibold">Time</th>
+            <th className="text-left p-4 font-semibold">Address</th>
+            <th className="text-left p-4 font-semibold">Tags</th>
+            <th className="text-left p-4 font-semibold">Revenue</th>
+            <th className="text-right p-4 w-20">
+              Actions
+              {onRefresh && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={onRefresh}
+                  className="ml-2"
+                >
+                  Refresh
+                </Button>
+              )}
+            </th>
+          </tr>
+        </TableHead>
+        <TableBody>
+          {jobs.map((job) => {
+            const statusStyle = getStatusBadgeStyle(job.status);
+            const resolvedTags = resolveJobTags(job.tags || []);
+            
+            return (
+              <TableRow 
+                key={job.id} 
+                className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => handleJobClick(job.id)}
+              >
+                <td className="p-4">
+                  <Checkbox 
+                    checked={selectedJobs.includes(job.id)}
+                    onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
+                    <Badge 
+                      variant="outline" 
+                      className="text-xs"
+                      style={statusStyle}
+                    >
+                      {job.status}
+                    </Badge>
+                  </div>
+                </td>
+                <td className="p-4">
+                  <div className="font-medium">{clientName}</div>
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center text-sm">
+                    <Clock className="h-4 w-4 mr-2" />
+                    {formatTime(job)}
+                  </div>
+                </td>
+                <td className="p-4">
+                  {job.address ? (
+                    <div className="flex items-center text-sm">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      <span className="truncate max-w-[200px]">{job.address}</span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="p-4">
+                  {resolvedTags && resolvedTags.length > 0 ? (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {resolvedTags.slice(0, 2).map((tag, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="outline" 
+                          className="text-xs"
+                          style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                        >
+                          {tag.name}
+                        </Badge>
+                      ))}
+                      {resolvedTags.length > 2 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{resolvedTags.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="p-4">
+                  {job.revenue && job.revenue > 0 ? (
+                    <div className="flex items-center text-sm font-medium text-green-600">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      ${job.revenue.toFixed(2)}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="p-4 text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleEditJob(e, job.id)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </td>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
   if (jobs.length === 0) {
     return (
       <ModernCard variant="elevated" className="p-12 text-center">
@@ -154,266 +396,9 @@ export const JobsList = ({
   }
 
   if (isGridView) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              checked={areAllJobsSelected}
-              onCheckedChange={onSelectAllJobs}
-            />
-            <span className="text-sm text-muted-foreground">
-              Select all ({jobs.length})
-            </span>
-          </div>
-          {onRefresh && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={onRefresh}
-            >
-              Refresh
-            </Button>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {jobs.map((job) => {
-            const statusStyle = getStatusBadgeStyle(job.status);
-            const jobTypeDisplay = getJobTypeDisplay(job);
-            const statusIcon = getStatusIcon(job.status);
-            const resolvedTags = resolveJobTags(job.tags || []);
-            
-            return (
-              <div key={job.id} className="cursor-pointer" onClick={() => handleJobClick(job.id)}>
-                <ModernCard 
-                  variant="elevated" 
-                  className="hover:shadow-lg transition-all duration-300 group"
-                >
-                  <div className="p-6 space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          checked={selectedJobs.includes(job.id)}
-                          onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleEditJob(e, job.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-lg mb-1">{job.client?.name || 'Unknown Client'}</h3>
-                      <p className="text-sm text-muted-foreground">{formatTime(job)}</p>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Badge 
-                        variant="outline" 
-                        className="flex items-center gap-1"
-                        style={statusStyle}
-                      >
-                        {statusIcon}
-                        {job.status}
-                      </Badge>
-                      
-                      {jobTypeDisplay.color ? (
-                        <Badge 
-                          variant="outline"
-                          style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
-                        >
-                          {jobTypeDisplay.name}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">
-                          {jobTypeDisplay.name}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {job.address && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        <span className="truncate">{job.address}</span>
-                      </div>
-                    )}
-                    
-                    {job.revenue && job.revenue > 0 && (
-                      <div className="flex items-center text-sm font-medium text-green-600">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        ${job.revenue.toFixed(2)}
-                      </div>
-                    )}
-                    
-                    {resolvedTags && resolvedTags.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <Tag className="h-3 w-3 text-muted-foreground" />
-                        {resolvedTags.slice(0, 2).map((tag, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="outline" 
-                            className="text-xs"
-                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                        {resolvedTags.length > 2 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{resolvedTags.length - 2} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </ModernCard>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
+    return renderGridView();
   }
 
   // List view (table format)
-  return (
-    <ModernCard variant="elevated">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left p-4 w-12">
-                <Checkbox 
-                  checked={areAllJobsSelected}
-                  onCheckedChange={onSelectAllJobs}
-                />
-              </th>
-              <th className="text-left p-4 font-semibold">Job Number</th>
-              <th className="text-left p-4 font-semibold">Client Name</th>
-              <th className="text-left p-4 font-semibold">Time</th>
-              <th className="text-left p-4 font-semibold">Address</th>
-              <th className="text-left p-4 font-semibold">Tags</th>
-              <th className="text-left p-4 font-semibold">Revenue</th>
-              <th className="text-right p-4 w-20">
-                Actions
-                {onRefresh && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={onRefresh}
-                    className="ml-2"
-                  >
-                    Refresh
-                  </Button>
-                )}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((job) => {
-              const statusStyle = getStatusBadgeStyle(job.status);
-              const resolvedTags = resolveJobTags(job.tags || []);
-              
-              return (
-                <tr 
-                  key={job.id} 
-                  className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => handleJobClick(job.id)}
-                >
-                  <td className="p-4">
-                    <Checkbox 
-                      checked={selectedJobs.includes(job.id)}
-                      onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs"
-                        style={statusStyle}
-                      >
-                        {job.status}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-medium">{job.client?.name || 'Unknown Client'}</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {formatTime(job)}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    {job.address ? (
-                      <div className="flex items-center text-sm">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        <span className="truncate max-w-[200px]">{job.address}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    {resolvedTags && resolvedTags.length > 0 ? (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {resolvedTags.slice(0, 2).map((tag, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="outline" 
-                            className="text-xs"
-                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                        {resolvedTags.length > 2 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{resolvedTags.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    {job.revenue && job.revenue > 0 ? (
-                      <div className="flex items-center text-sm font-medium text-green-600">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        ${job.revenue.toFixed(2)}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleEditJob(e, job.id)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </ModernCard>
-  );
+  return renderTableView();
 };

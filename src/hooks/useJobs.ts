@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DbJob, DbClient, extractStringArray, extractClientInfo } from "@/types/database-types";
 
 export interface Job {
   id: string;
@@ -76,16 +78,36 @@ export const useJobs = () => {
 
       // Transform the data to include flattened client info and aliases
       const transformedJobs: Job[] = (data || []).map(job => {
-        const clientData = Array.isArray(job.clients) ? job.clients[0] : job.clients;
+        const dbJob = job as DbJob & { clients?: DbClient | DbClient[] };
+        const clientData = Array.isArray(dbJob.clients) ? dbJob.clients[0] : dbJob.clients;
         
         return {
-          ...job,
-          clientId: job.client_id, // Add alias
-          client: clientData?.name || job.client_id,
+          id: dbJob.id,
+          client_id: dbJob.client_id || '',
+          clientId: dbJob.client_id || '', // Add alias
+          title: dbJob.title || '',
+          description: dbJob.description || undefined,
+          service: dbJob.service || undefined,
+          status: dbJob.status || 'scheduled',
+          tags: extractStringArray(dbJob.tags),
+          notes: dbJob.notes || undefined,
+          job_type: dbJob.job_type || undefined,
+          lead_source: dbJob.lead_source || undefined,
+          address: dbJob.address || undefined,
+          date: dbJob.date || undefined,
+          schedule_start: dbJob.schedule_start || undefined,
+          schedule_end: dbJob.schedule_end || undefined,
+          revenue: dbJob.revenue || undefined,
+          technician_id: dbJob.technician_id || undefined,
+          created_by: dbJob.created_by || undefined,
+          created_at: dbJob.created_at,
+          updated_at: dbJob.updated_at || dbJob.created_at,
+          tasks: extractStringArray(dbJob.tasks),
+          property_id: dbJob.property_id || undefined,
+          client: clientData?.name || dbJob.client_id || '',
           phone: clientData?.phone || '',
           email: clientData?.email || '',
-          tasks: Array.isArray(job.tasks) ? job.tasks : [],
-          total: job.revenue || 0
+          total: dbJob.revenue || 0
         };
       });
 
@@ -98,9 +120,31 @@ export const useJobs = () => {
     }
   };
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const addJob = async (jobData: Partial<Job>) => {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .insert([jobData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newJob = {
+        ...data,
+        clientId: data.client_id,
+        tasks: extractStringArray(data.tasks),
+        total: data.revenue || 0
+      } as Job;
+
+      setJobs(prev => [newJob, ...prev]);
+      return newJob;
+    } catch (error: any) {
+      console.error('Error adding job:', error);
+      toast.error('Failed to add job');
+      throw error;
+    }
+  };
 
   const updateJob = async (jobId: string, updates: Partial<Job>) => {
     try {
@@ -126,11 +170,35 @@ export const useJobs = () => {
     }
   };
 
+  const deleteJob = async (jobId: string) => {
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      setJobs(prev => prev.filter(job => job.id !== jobId));
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting job:', error);
+      toast.error('Failed to delete job');
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
   return {
     jobs,
     setJobs,
     isLoading,
     refreshJobs: fetchJobs,
-    updateJob
+    addJob,
+    updateJob,
+    deleteJob
   };
 };
