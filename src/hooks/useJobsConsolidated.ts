@@ -11,7 +11,7 @@ export interface Job {
   title?: string | null;
   description?: string | null;
   service?: string | null;
-  status?: string | null;
+  status: string; // Make status required
   tags?: string[] | null;
   notes?: string | null;
   job_type?: string | null;
@@ -43,6 +43,7 @@ interface UseJobsResult {
   addJob: (newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => Promise<Job | null>;
   updateJob: (id: string, updates: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>) => Promise<Job | null>;
   deleteJob: (id: string) => Promise<boolean>;
+  mutateJobs: () => void; // Add missing mutateJobs property
   // Add missing properties
   isLoading: boolean;
   totalCount: number;
@@ -112,6 +113,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
           const client = clientsMap.get(job.client_id || '') || job.client_id || 'Unknown Client';
           return {
             ...job,
+            status: job.status || 'scheduled', // Ensure status is always present
             updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
             tasks: extractTasks(job.tasks), // Safely extract tasks
             client: typeof client === 'object' && client !== null ? {
@@ -141,6 +143,10 @@ export const useJobsConsolidated = (): UseJobsResult => {
     await fetchJobs();
   }, [fetchJobs]);
 
+  const mutateJobs = useCallback(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
   const addJob = useCallback(async (newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job | null> => {
     try {
       const { data: clientData } = await supabase
@@ -153,7 +159,8 @@ export const useJobsConsolidated = (): UseJobsResult => {
       const { client, ...jobDataForDb } = newJob;
       const jobWithId = {
         ...jobDataForDb,
-        id: crypto.randomUUID() // Generate ID for new job
+        id: crypto.randomUUID(), // Generate ID for new job
+        status: newJob.status || 'scheduled' // Ensure status is set
       };
       
       const { data: dbJob, error: jobsError } = await supabase
@@ -173,6 +180,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
         const clientInfo = clientData || newJob.client_id || 'Unknown Client';
         const transformedJob: Job = {
           ...dbJob,
+          status: dbJob.status || 'scheduled',
           updated_at: dbJob.updated_at || dbJob.created_at,
           tasks: extractTasks(dbJob.tasks),
           client: typeof clientInfo === 'object' && clientInfo !== null ? {
@@ -228,6 +236,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
           
         const transformedJob: Job = {
           ...dbJob,
+          status: dbJob.status || 'scheduled',
           updated_at: dbJob.updated_at || dbJob.created_at,
           tasks: extractTasks(dbJob.tasks),
           client: typeof clientInfo === 'object' && clientInfo !== null ? {
@@ -286,6 +295,7 @@ export const useJobsConsolidated = (): UseJobsResult => {
     isLoading: loading, // Alias for compatibility
     error,
     refreshJobs,
+    mutateJobs,
     addJob,
     updateJob,
     deleteJob,

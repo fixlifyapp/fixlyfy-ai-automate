@@ -19,7 +19,7 @@ import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
-import { useJobsConsolidated } from "@/hooks/useJobsConsolidated";
+import { useJobsConsolidated, Job } from "@/hooks/useJobsConsolidated";
 import { toast } from "sonner";
 
 const JobsPageOptimized = () => {
@@ -170,6 +170,13 @@ const JobsPageOptimized = () => {
     toast.success('Jobs refreshed');
   };
 
+  // Transform jobs to ensure required properties are present
+  const transformedJobs: Job[] = jobs.map(job => ({
+    ...job,
+    title: job.title || 'Untitled Job', // Ensure title is always present
+    status: job.status || 'scheduled' // Ensure status is always present
+  }));
+
   return (
     <PageLayout>
       <AnimatedContainer animation="fade-in">
@@ -236,10 +243,7 @@ const JobsPageOptimized = () => {
           ) : (
             <JobsList 
               isGridView={isGridView}
-              jobs={jobs.map(job => ({
-                ...job,
-                title: job.title || 'Untitled Job' // Ensure title is always present
-              }))}
+              jobs={transformedJobs}
               selectedJobs={selectedJobs}
               onSelectJob={handleSelectJob}
               onSelectAllJobs={handleSelectAllJobs}
