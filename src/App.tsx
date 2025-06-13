@@ -15,7 +15,7 @@ import ClientsPage from "./pages/ClientsPage";
 import SchedulePage from "./pages/SchedulePage";
 import FinancePage from "./pages/FinancePage";
 import ConnectPage from "./pages/ConnectPage";
-import AICenterPage from "./pages/AICenterPage";
+import AiCenterPage from "./pages/AiCenterPage";
 import AutomationsPage from "./pages/AutomationsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import TeamPage from "./pages/TeamPage";
@@ -57,7 +57,7 @@ function App() {
                     <Route path="/schedule" element={<SchedulePage />} />
                     <Route path="/finance" element={<FinancePage />} />
                     <Route path="/connect" element={<ConnectPage />} />
-                    <Route path="/ai-center" element={<AICenterPage />} />
+                    <Route path="/ai-center" element={<AiCenterPage />} />
                     <Route path="/automations" element={<AutomationsPage />} />
                     <Route path="/analytics" element={<AnalyticsPage />} />
                     <Route path="/team" element={<TeamPage />} />
