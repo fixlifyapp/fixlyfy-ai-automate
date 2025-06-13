@@ -5,7 +5,6 @@ export const cacheConfig = {
     cacheTime: 10 * 60 * 1000, // 10 minutes  
     refetchOnWindowFocus: false,
     retry: 2,
-    // Remove refetchInterval from here since it should be set per query
   },
   
   // Specific configurations for different data types
@@ -22,5 +21,39 @@ export const cacheConfig = {
   documents: {
     staleTime: 5 * 60 * 1000, // 5 minutes for documents
     cacheTime: 15 * 60 * 1000,
+  }
+};
+
+// Add missing exports that other files are looking for
+export const localStorageCache = {
+  get: (key: string) => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
+    } catch {
+      return null;
+    }
+  },
+  set: (key: string, value: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Handle storage errors silently
+    }
+  },
+  remove: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Handle storage errors silently
+    }
+  }
+};
+
+export const registerServiceWorker = () => {
+  // Service worker registration placeholder
+  if ('serviceWorker' in navigator) {
+    // Can be implemented later if needed
+    console.log('Service worker registration placeholder');
   }
 };
