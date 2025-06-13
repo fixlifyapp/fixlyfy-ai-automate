@@ -24,17 +24,20 @@ import JobDetailPage from "./pages/JobDetailPage";
 import EstimateViewPage from "./pages/EstimateViewPage";
 
 // Portal pages
-import { PortalLoginPage } from "./pages/portal/PortalLoginPage";
-import { PortalDashboard } from "./pages/portal/PortalDashboard";
-import { PortalJobs } from "./pages/portal/PortalJobs";
-import { PortalEstimates } from "./pages/portal/PortalEstimates";
-import { PortalInvoices } from "./pages/portal/PortalInvoices";
-import { PortalProfile } from "./pages/portal/PortalProfile";
+import PortalLoginPage from "./pages/portal/PortalLoginPage";
+import PortalDashboard from "./pages/portal/PortalDashboard";
+import PortalJobs from "./pages/portal/PortalJobs";
+import PortalEstimates from "./pages/portal/PortalEstimates";
+import PortalInvoices from "./pages/portal/PortalInvoices";
+import PortalProfile from "./pages/portal/PortalProfile";
 
 // Create query client with enhanced configuration
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: cacheConfig.queries,
+    queries: {
+      ...cacheConfig.queries,
+      refetchInterval: false, // Fix: changed from boolean to false
+    },
   },
 });
 

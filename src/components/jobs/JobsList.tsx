@@ -23,6 +23,17 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-800',
 } as const;
 
+// Helper function to get client name
+const getClientName = (client: any): string => {
+  if (typeof client === 'string') {
+    return client;
+  }
+  if (client && typeof client === 'object' && client.name) {
+    return client.name;
+  }
+  return 'Unassigned';
+};
+
 export const JobsList = ({ jobs, isLoading, onRefresh }: JobsListProps) => {
   const navigate = useNavigate();
 
@@ -81,7 +92,7 @@ export const JobsList = ({ jobs, isLoading, onRefresh }: JobsListProps) => {
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground">Client</p>
-                  <p className="font-medium">{job.client || 'Unassigned'}</p>
+                  <p className="font-medium">{getClientName(job.client)}</p>
                 </div>
               </div>
 

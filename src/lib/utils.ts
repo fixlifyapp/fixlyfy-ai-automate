@@ -22,3 +22,18 @@ export function formatCurrency(amount: number): string {
 export function roundToCurrency(amount: number): number {
   return Math.round((amount || 0) * 100) / 100;
 }
+
+// Add missing formatDate function
+export function formatDate(dateString: string | Date): string {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  
+  if (!date || isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+  
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }).format(date);
+}
