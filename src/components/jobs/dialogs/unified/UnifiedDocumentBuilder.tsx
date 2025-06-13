@@ -2,11 +2,11 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Save, FileText, DollarSign, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { ChevronLeft, ChevronRight, FileText, DollarSign, Shield, Send } from "lucide-react";
 import { UnifiedItemsStep } from "./UnifiedItemsStep";
 import { WarrantyUpsellStep } from "./WarrantyUpsellStep";
-import { UnifiedReviewStep } from "./UnifiedReviewStep";
 import { SendDocumentStep } from "./SendDocumentStep";
 import { useUnifiedDocumentBuilder } from "./useUnifiedDocumentBuilder";
 import { Estimate } from "@/hooks/useEstimates";
@@ -25,6 +25,14 @@ interface UnifiedDocumentBuilderProps {
   onSyncToInvoice?: () => void;
 }
 
+const STEPS = [
+  { id: 'items', title: 'Items & Details', icon: FileText },
+  { id: 'warranties', title: 'Warranties', icon: Shield },
+  { id: 'send', title: 'Send Document', icon: Send }
+] as const;
+
+type StepId = typeof STEPS[number]['id'];
+
 export const UnifiedDocumentBuilder = ({
   open,
   onOpenChange,
@@ -34,7 +42,7 @@ export const UnifiedDocumentBuilder = ({
   onDocumentCreated,
   onSyncToInvoice
 }: UnifiedDocumentBuilderProps) => {
-  const [currentStep, setCurrentStep] = useState<"items" | "warranties" | "review" | "send">("items");
+  const [currentStep, setCurrentStep] = useState<StepId>("items");
   const [selectedWarranties, setSelectedWarranties] = useState<string[]>([]);
   
   const {
@@ -73,6 +81,9 @@ export const UnifiedDocumentBuilder = ({
     onSyncToInvoice
   });
 
+  const currentStepIndex = STEPS.findIndex(step => step.id === currentStep);
+  const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
+
   const handleAddWarranty = (warranty: any) => {
     const warrantyLineItem = {
       id: `warranty-${warranty.id}-${Date.now()}`,
@@ -80,7 +91,7 @@ export const UnifiedDocumentBuilder = ({
       quantity: 1,
       unitPrice: warranty.price,
       total: warranty.price,
-      taxable: false, // Warranties typically not taxed
+      taxable: false,
       ourPrice: warranty.cost,
       name: warranty.name,
       price: warranty.price,
@@ -96,39 +107,23 @@ export const UnifiedDocumentBuilder = ({
     setSelectedWarranties(prev => prev.filter(id => id !== warrantyId));
   };
 
-  const handleSave = async () => {
-    try {
-      const result = await saveDocumentChanges();
-      if (result) {
-        toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} saved successfully`);
-        onDocumentCreated?.();
-        setCurrentStep("send"); // Move to send step after saving
-        return true;
+  const handleNext = async () => {
+    if (currentStep === 'items') {
+      setCurrentStep('warranties');
+    } else if (currentStep === 'warranties') {
+      // Save document before proceeding to send step
+      const saved = await saveDocumentChanges();
+      if (saved) {
+        setCurrentStep('send');
       }
-      return false;
-    } catch (error) {
-      console.error('Error saving document:', error);
-      toast.error('Failed to save document');
-      return false;
     }
   };
 
-  const handleConvert = async () => {
-    if (documentType !== 'estimate') return false;
-    
-    try {
-      const result = await convertToInvoice();
-      if (result) {
-        toast.success('Estimate converted to invoice successfully');
-        onDocumentCreated?.();
-        setCurrentStep("send"); // Move to send step after converting
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error converting to invoice:', error);
-      toast.error('Failed to convert estimate to invoice');
-      return false;
+  const handleBack = () => {
+    if (currentStep === 'warranties') {
+      setCurrentStep('items');
+    } else if (currentStep === 'send') {
+      setCurrentStep('warranties');
     }
   };
 
@@ -156,24 +151,37 @@ export const UnifiedDocumentBuilder = ({
           <DialogTitle className="flex items-center gap-2">
             {documentType === "estimate" ? <FileText className="h-5 w-5" /> : <DollarSign className="h-5 w-5" />}
             {existingDocument ? "Edit" : "Create"} {documentType === "estimate" ? "Estimate" : "Invoice"}
-            <span className="text-sm font-mono text-muted-foreground">
+            <Badge variant="outline" className="font-mono">
               {documentNumber}
-            </span>
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "warranties" | "review" | "send")}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="items">Items & Details</TabsTrigger>
-            <TabsTrigger value="warranties" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Warranties
-            </TabsTrigger>
-            <TabsTrigger value="review">Review & Save</TabsTrigger>
-            <TabsTrigger value="send">Send Document</TabsTrigger>
-          </TabsList>
+        {/* Progress Bar */}
+        <div className="px-6 pb-4">
+          <div className="flex items-center justify-between mb-2">
+            {STEPS.map((step, index) => (
+              <div 
+                key={step.id}
+                className={`flex items-center gap-2 ${
+                  index <= currentStepIndex ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  index <= currentStepIndex ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}>
+                  {index < currentStepIndex ? '✓' : index + 1}
+                </div>
+                <span className="text-sm font-medium hidden sm:block">{step.title}</span>
+              </div>
+            ))}
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
 
-          <TabsContent value="items" className="space-y-4">
+        {/* Step Content */}
+        <div className="flex-1 overflow-y-auto">
+          {currentStep === "items" && (
             <UnifiedItemsStep
               documentType={documentType}
               documentNumber={documentNumber}
@@ -190,34 +198,20 @@ export const UnifiedDocumentBuilder = ({
               calculateTotalTax={calculateTotalTax}
               calculateGrandTotal={calculateGrandTotal}
             />
-          </TabsContent>
+          )}
 
-          <TabsContent value="warranties" className="space-y-4">
+          {currentStep === "warranties" && (
             <WarrantyUpsellStep
               lineItems={lineItems}
               onAddWarranty={handleAddWarranty}
               onRemoveWarranty={handleRemoveWarranty}
-              onContinue={() => setCurrentStep("review")}
-              onBack={() => setCurrentStep("items")}
+              onContinue={handleNext}
+              onBack={handleBack}
               selectedWarranties={selectedWarranties}
             />
-          </TabsContent>
+          )}
 
-          <TabsContent value="review" className="space-y-4">
-            <UnifiedReviewStep
-              documentType={documentType}
-              documentNumber={documentNumber}
-              jobData={jobData}
-              lineItems={lineItems}
-              taxRate={taxRate}
-              notes={notes}
-              calculateSubtotal={calculateSubtotal}
-              calculateTotalTax={calculateTotalTax}
-              calculateGrandTotal={calculateGrandTotal}
-            />
-          </TabsContent>
-
-          <TabsContent value="send" className="space-y-4">
+          {currentStep === "send" && (
             <SendDocumentStep
               documentType={documentType}
               documentNumber={documentNumber}
@@ -226,81 +220,50 @@ export const UnifiedDocumentBuilder = ({
               taxRate={taxRate}
               notes={notes}
               total={calculateGrandTotal()}
-              onSave={handleSave}
-              onBack={() => setCurrentStep("review")}
+              onSave={saveDocumentChanges}
+              onBack={handleBack}
               onSuccess={handleSendSuccess}
             />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
 
-        <div className="flex items-center justify-between pt-4 border-t">
+        {/* Navigation Footer */}
+        <div className="flex items-center justify-between p-6 border-t">
           <div className="flex gap-2">
-            {currentStep === "warranties" && (
+            {currentStep !== 'items' && (
               <Button 
                 variant="outline" 
-                onClick={() => setCurrentStep("items")}
+                onClick={handleBack}
                 className="gap-2"
+                disabled={isSubmitting}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Back to Items
-              </Button>
-            )}
-            {currentStep === "review" && (
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentStep("warranties")}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back to Warranties
-              </Button>
-            )}
-            {currentStep === "send" && (
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentStep("review")}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back to Review
+                Back
               </Button>
             )}
           </div>
 
           <div className="flex gap-2">
-            {currentStep === "items" && (
+            {currentStep === 'items' && (
               <Button 
-                onClick={() => setCurrentStep("warranties")}
+                onClick={handleNext}
                 className="gap-2"
+                disabled={lineItems.length === 0}
               >
                 Add Warranties
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
-
-            {currentStep === "review" && (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={handleSave}
-                  disabled={isSubmitting}
-                  className="gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  Save {documentType === "estimate" ? "Estimate" : "Invoice"}
-                </Button>
-
-                {documentType === "estimate" && (
-                  <Button 
-                    onClick={handleConvert}
-                    disabled={isSubmitting}
-                    className="gap-2"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    Convert to Invoice
-                  </Button>
-                )}
-              </>
+            
+            {currentStep === 'warranties' && (
+              <Button 
+                onClick={handleNext}
+                className="gap-2"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Saving...' : 'Continue to Send'}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             )}
           </div>
         </div>

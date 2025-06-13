@@ -1,303 +1,138 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
-import { useJobs } from '@/hooks/useJobsConsolidated';
-import { Job } from '@/hooks/useJobsConsolidated';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { deleteJob } from '@/lib/jobs';
-import { toast } from 'sonner';
-import { SteppedEstimateBuilder } from '@/components/jobs/dialogs/SteppedEstimateBuilder';
-import { InvoiceBuilderDialog } from '@/components/jobs/dialogs/InvoiceBuilderDialog';
-import { format } from 'date-fns';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useSearchParams } from 'react-router-dom';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useClients } from '@/hooks/useClients';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { generateNextId } from '@/utils/idGeneration';
+
+import React, { useState } from 'react';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { PageHeader } from '@/components/ui/page-header';
+import { ModernCard } from '@/components/ui/modern-card';
+import { AnimatedContainer } from '@/components/ui/animated-container';
+import { JobsList } from '@/components/jobs/JobsList';
+import { JobsKanban } from '@/components/jobs/JobsKanban';
+import { CreateJobDialog } from '@/components/jobs/dialogs/CreateJobDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useJobsOptimized } from '@/hooks/useJobsOptimized';
+import { Plus, Search, Grid, List, Filter } from 'lucide-react';
 
 const JobsPage = () => {
-  const navigate = useNavigate();
-  const { jobs, isLoading, mutateJobs } = useJobs();
-  const { clients, isLoading: isClientsLoading } = useClients();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [selectedClient, setSelectedClient] = useState(searchParams.get('client') || '');
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [isEstimateDialogOpen, setIsEstimateDialogOpen] = useState(false);
-  const [selectedJobIdForEstimate, setSelectedJobIdForEstimate] = useState<string | null>(null);
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [selectedJobIdForInvoice, setSelectedJobIdForInvoice] = useState<string | null>(null);
-  const [jobToDelete, setJobToDelete] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  
+  const { jobs, isLoading, refreshJobs, canCreate } = useJobsOptimized({
+    page: 1,
+    pageSize: 50,
+    enableRealtime: true
+  });
 
-  // Update search params when search query or client changes
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
-    if (selectedClient) params.set('client', selectedClient);
-    setSearchParams(params);
-  }, [debouncedSearchQuery, selectedClient, setSearchParams]);
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = !searchTerm || 
+      job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.id.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
-  // Filter jobs based on search query and selected client
-  const filteredJobs = useCallback(() => {
-    let filtered = [...jobs];
-
-    if (debouncedSearchQuery) {
-      const lowerCaseQuery = debouncedSearchQuery.toLowerCase();
-      filtered = filtered.filter(job => {
-        const clientName = typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client';
-        return (
-          job.title?.toLowerCase().includes(lowerCaseQuery) ||
-          job.description?.toLowerCase().includes(lowerCaseQuery) ||
-          clientName.toLowerCase().includes(lowerCaseQuery)
-        );
-      });
-    }
-
-    if (selectedClient) {
-      filtered = filtered.filter(job => job.client_id === selectedClient);
-    }
-
-    return filtered;
-  }, [jobs, debouncedSearchQuery, selectedClient]);
-
-  const handleDeleteJob = async (jobId: string) => {
-    setJobToDelete(jobId);
-  };
-
-  const confirmDeleteJob = async () => {
-    if (jobToDelete) {
-      try {
-        await deleteJob(jobToDelete);
-        mutateJobs();
-        toast.success('Job deleted successfully');
-      } catch (error) {
-        console.error('Error deleting job:', error);
-        toast.error('Failed to delete job');
-      } finally {
-        setJobToDelete(null);
-      }
-    }
-  };
-
-  const cancelDeleteJob = () => {
-    setJobToDelete(null);
-  };
-
-  const handleCreateEstimate = (jobId: string) => {
-    setSelectedJobIdForEstimate(jobId);
-    setIsEstimateDialogOpen(true);
-  };
-
-  const handleCreateInvoice = (jobId: string) => {
-    setSelectedJobIdForInvoice(jobId);
-    setIsInvoiceDialogOpen(true);
-  };
-
-  const handleEstimateCreated = () => {
-    setIsEstimateDialogOpen(false);
-    setSelectedJobIdForEstimate(null);
-  };
-
-  const handleInvoiceCreated = () => {
-    setIsInvoiceDialogOpen(false);
-    setSelectedJobIdForInvoice(null);
-  };
-
-  const formatDate = (dateString: string | undefined): string => {
-    if (!dateString) return 'N/A';
-    try {
-      return format(new Date(dateString), 'MMM dd, yyyy');
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid Date';
-    }
+  const handleCreateSuccess = () => {
+    setShowCreateDialog(false);
+    refreshJobs();
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-semibold">Jobs</h1>
-        <Button onClick={() => navigate('/jobs/new')}><Plus className="mr-2 h-4 w-4" /> Add Job</Button>
-      </div>
+    <PageLayout>
+      <div className="space-y-6">
+        <PageHeader
+          title="Jobs"
+          subtitle="Manage and track all your service jobs"
+          action={
+            canCreate ? (
+              <Button 
+                onClick={() => setShowCreateDialog(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Job
+              </Button>
+            ) : null
+          }
+        />
 
-      <div className="flex items-center space-x-4 mb-4">
-        <div className="relative flex-1">
-          <Input
-            type="text"
-            placeholder="Search jobs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearchQuery('');
-              }}
-              className="absolute right-2.5 top-0 h-full rounded-none px-2"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-500" />
-        </div>
+        <AnimatedContainer>
+          <ModernCard className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search jobs by title, client, or ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
-        <div>
-          <Select value={selectedClient} onValueChange={setSelectedClient}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Clients</SelectItem>
-              {clients.map(client => (
-                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
 
-      {isLoading || isClientsLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center space-x-4">
-              <Skeleton className="h-4 w-[200px]" />
-              <Skeleton className="h-4 w-[100px]" />
-              <Skeleton className="h-4 w-[120px]" />
-              <Skeleton className="h-4 w-[80px]" />
-              <Skeleton className="h-4 w-[150px]" />
-              <Skeleton className="h-4 w-[100px]" />
+              {/* View Toggle */}
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'kanban' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('kanban')}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-6 py-3">Title</TableHead>
-                <TableHead className="px-6 py-3">Client</TableHead>
-                <TableHead className="px-6 py-3">Status</TableHead>
-                <TableHead className="px-6 py-3">Date</TableHead>
-                <TableHead className="px-6 py-3">Created At</TableHead>
-                <TableHead className="px-6 py-3">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredJobs().map((job: Job) => (
-                <TableRow key={job.id} className="hover:bg-gray-100">
-                  <TableCell className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                    {job.title || 'No Title'}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">
-                    {typeof job.client === 'string' ? job.client : job.client?.name || 'Unknown Client'}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">{job.status}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">{formatDate(job.date)}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">{formatDate(job.created_at)}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/jobs/edit/${job.id}`)}>
-                          Edit Job
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCreateEstimate(job.id)}>
-                          Create Estimate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCreateInvoice(job.id)}>
-                          Create Invoice
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDeleteJob(job.id)} className="text-red-500">
-                          Delete Job
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
 
-      <AlertDialog open={!!jobToDelete} onOpenChange={(open) => { if (!open) cancelDeleteJob(); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. Are you sure you want to delete this job?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDeleteJob}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteJob}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            {/* Jobs Display */}
+            {viewMode === 'list' ? (
+              <JobsList 
+                jobs={filteredJobs} 
+                isLoading={isLoading}
+                onRefresh={refreshJobs}
+              />
+            ) : (
+              <JobsKanban 
+                jobs={filteredJobs} 
+                isLoading={isLoading}
+                onRefresh={refreshJobs}
+              />
+            )}
+          </ModernCard>
+        </AnimatedContainer>
 
-      <SteppedEstimateBuilder
-        open={isEstimateDialogOpen}
-        onOpenChange={setIsEstimateDialogOpen}
-        jobId={selectedJobIdForEstimate || ''}
-        onEstimateCreated={handleEstimateCreated}
-      />
-
-      <InvoiceBuilderDialog
-        open={isInvoiceDialogOpen}
-        onOpenChange={setIsInvoiceDialogOpen}
-        jobId={selectedJobIdForInvoice || ''}
-        onInvoiceCreated={handleInvoiceCreated}
-      />
-    </div>
+        {/* Create Job Dialog */}
+        <CreateJobDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onSuccess={handleCreateSuccess}
+        />
+      </div>
+    </PageLayout>
   );
 };
 
