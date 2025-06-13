@@ -3,13 +3,14 @@ import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, TrendingUp, DollarSign, Users, Calendar, Target } from "lucide-react";
+import { BarChart3, TrendingUp, DollarSign, Users, Calendar, Target, Shield } from "lucide-react";
 import { BusinessDashboard } from "@/components/analytics/BusinessDashboard";
 import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics";
 import { RevenueAnalytics } from "@/components/analytics/RevenueAnalytics";
 import { TeamPerformance } from "@/components/analytics/TeamPerformance";
 import { PredictiveAnalytics } from "@/components/analytics/PredictiveAnalytics";
 import { CustomReports } from "@/components/analytics/CustomReports";
+import { WarrantyAnalyticsDashboard } from "@/components/analytics/WarrantyAnalyticsDashboard";
 
 const AnalyticsPage = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("last30days");
@@ -29,11 +30,12 @@ const AnalyticsPage = () => {
 
       <div className="space-y-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="team">Team Analytics</TabsTrigger>
+            <TabsTrigger value="warranty">Warranty</TabsTrigger>
             <TabsTrigger value="predictive">Forecasting</TabsTrigger>
             <TabsTrigger value="reports">Custom Reports</TabsTrigger>
           </TabsList>
@@ -52,6 +54,10 @@ const AnalyticsPage = () => {
           
           <TabsContent value="team" className="space-y-6">
             <TeamPerformance timeframe={selectedTimeframe} />
+          </TabsContent>
+          
+          <TabsContent value="warranty" className="space-y-6">
+            <WarrantyAnalyticsDashboard />
           </TabsContent>
           
           <TabsContent value="predictive" className="space-y-6">
