@@ -22,6 +22,11 @@ export interface Product {
   category?: string;
   description?: string;
   unit?: string;
+  ourprice?: number;
+  taxable?: boolean;
+  quantity?: number;
+  tags?: string[];
+  our_price?: number;
 }
 
 export interface DocumentData {

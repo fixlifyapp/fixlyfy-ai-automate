@@ -1,65 +1,97 @@
 
-import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import * as React from "react"
+import { cn } from "@/lib/utils"
+import { cva, type VariantProps } from "class-variance-authority"
 
-interface ModernCardProps {
-  children: ReactNode;
-  className?: string;
-  hover?: boolean;
-  glow?: boolean;
-  variant?: 'default' | 'elevated' | 'glass';
-}
+const modernCardVariants = cva(
+  "rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200",
+  {
+    variants: {
+      variant: {
+        default: "border-border",
+        elevated: "shadow-md hover:shadow-lg",
+        interactive: "hover:shadow-md cursor-pointer",
+        ghost: "border-transparent shadow-none",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
 
-export const ModernCard = ({ 
-  children, 
-  className, 
-  hover = true, 
-  glow = false,
-  variant = 'default'
-}: ModernCardProps) => {
-  return (
+export interface ModernCardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof modernCardVariants> {}
+
+const ModernCard = React.forwardRef<HTMLDivElement, ModernCardProps>(
+  ({ className, variant, ...props }, ref) => (
     <div
-      className={cn(
-        "bg-white rounded-xl border border-gray-200/60 shadow-sm",
-        "backdrop-blur-sm bg-white/95",
-        variant === 'elevated' && "shadow-lg border-primary/10",
-        variant === 'glass' && "bg-white/80 backdrop-blur-md",
-        hover && "hover:shadow-lg hover:border-primary/20 hover:-translate-y-0.5",
-        glow && "shadow-primary/10",
-        "transition-all duration-300 ease-out",
-        className
-      )}
-      style={{
-        boxShadow: glow 
-          ? "0 4px 20px rgba(138, 77, 213, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05)"
-          : undefined
-      }}
-    >
-      {children}
-    </div>
-  );
-};
+      ref={ref}
+      className={cn(modernCardVariants({ variant, className }))}
+      {...props}
+    />
+  )
+)
+ModernCard.displayName = "ModernCard"
 
-// Additional exports for compatibility
-export const ModernCardHeader = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <div className={cn("p-6 pb-3", className)}>
-    {children}
-  </div>
-);
+const ModernCardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+ModernCardHeader.displayName = "ModernCardHeader"
 
-export const ModernCardContent = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <div className={cn("p-6 pt-0", className)}>
-    {children}
-  </div>
-);
+const ModernCardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+ModernCardTitle.displayName = "ModernCardTitle"
 
-export const ModernCardTitle = ({ children, className, icon: Icon }: { 
-  children: ReactNode; 
-  className?: string;
-  icon?: React.ComponentType<any>;
-}) => (
-  <h3 className={cn("text-lg font-semibold flex items-center gap-2", className)}>
-    {Icon && <Icon className="h-5 w-5" />}
-    {children}
-  </h3>
-);
+const ModernCardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+ModernCardDescription.displayName = "ModernCardDescription"
+
+const ModernCardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+ModernCardContent.displayName = "ModernCardContent"
+
+const ModernCardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center p-6 pt-0", className)}
+    {...props}
+  />
+))
+ModernCardFooter.displayName = "ModernCardFooter"
+
+export { ModernCard, ModernCardHeader, ModernCardFooter, ModernCardTitle, ModernCardDescription, ModernCardContent }
