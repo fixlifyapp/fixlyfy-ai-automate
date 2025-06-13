@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   TrendingUp, 
   DollarSign, 
@@ -15,11 +15,13 @@ import {
   Trophy,
   Target,
   Zap,
-  Bell
+  Bell,
+  Gamepad2
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Legend } from "recharts";
+import { GamificationDashboard } from "@/components/gamification/GamificationDashboard";
 
 interface WarrantyMetrics {
   totalRevenue: number;
@@ -208,373 +210,393 @@ export const WarrantyAnalyticsDashboard = () => {
         </div>
       </div>
 
-      {/* Real-time Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Live Warranty Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {notifications.map((notification) => (
-              <div key={notification.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  {notification.type === 'success' && <Zap className="h-4 w-4 text-green-600" />}
-                  {notification.type === 'milestone' && <Trophy className="h-4 w-4 text-yellow-600" />}
-                  {notification.type === 'alert' && <Target className="h-4 w-4 text-blue-600" />}
-                  <span className="text-sm">{notification.message}</span>
-                </div>
-                <span className="text-xs text-muted-foreground">{notification.timestamp}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-            <p className="text-xs text-green-600 mt-2">+28% from last period</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Conversion Rate</p>
-                <p className="text-2xl font-bold">{metrics.conversionRate}%</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-blue-600" />
-            </div>
-            <p className="text-xs text-blue-600 mt-2">+5.2% from last period</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Average Value</p>
-                <p className="text-2xl font-bold">{formatCurrency(metrics.averageValue)}</p>
-              </div>
-              <Target className="h-8 w-8 text-purple-600" />
-            </div>
-            <p className="text-xs text-purple-600 mt-2">+12% from last period</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Top Technician</p>
-                <p className="text-lg font-bold">{metrics.topTechnician.name}</p>
-                <p className="text-sm text-muted-foreground">{metrics.topTechnician.sales} sales</p>
-              </div>
-              <Award className="h-8 w-8 text-orange-600" />
-            </div>
-            <p className="text-xs text-green-600 mt-2">{formatCurrency(metrics.topTechnician.revenue)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Best Product</p>
-                <p className="text-sm font-bold truncate">{metrics.topProduct.name}</p>
-                <p className="text-sm text-muted-foreground">{metrics.topProduct.sales} sales</p>
-              </div>
-              <Users className="h-8 w-8 text-indigo-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Technician Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Warranty Sales by Technician</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                sales: { label: "Sales", color: "#8b5cf6" },
-                revenue: { label: "Revenue", color: "#06b6d4" }
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={metrics.technicianLeaderboard}>
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="sales" fill="#8b5cf6" name="Sales" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Daily Conversion Rates */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Conversion Rates</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                rate: { label: "Conversion Rate", color: "#10b981" }
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={metrics.dailyConversions}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Warranty Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Warranty Types Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                value: { label: "Sales", color: "#f59e0b" }
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={metrics.warrantyDistribution}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                  >
-                    {metrics.warrantyDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Monthly Revenue Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Warranty Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                revenue: { label: "Revenue", color: "#06b6d4" }
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={metrics.monthlyTrend}>
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area type="monotone" dataKey="revenue" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Technician Leaderboard */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Technician Leaderboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {metrics.technicianLeaderboard.map((tech, index) => (
-              <div key={tech.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold">
-                    {index + 1}
+      {/* Tabs for Analytics and Gamification */}
+      <Tabs defaultValue="analytics" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="analytics" className="gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="gamification" className="gap-2">
+            <Gamepad2 className="h-4 w-4" />
+            Gamification
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Real-time Notifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Live Warranty Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {notifications.map((notification) => (
+                  <div key={notification.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {notification.type === 'success' && <Zap className="h-4 w-4 text-green-600" />}
+                      {notification.type === 'milestone' && <Trophy className="h-4 w-4 text-yellow-600" />}
+                      {notification.type === 'alert' && <Target className="h-4 w-4 text-blue-600" />}
+                      <span className="text-sm">{notification.message}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{notification.timestamp}</span>
                   </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-semibold">{tech.name}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary">{tech.badge}</Badge>
-                      <span className="text-sm text-muted-foreground">{tech.conversionRate}% conversion</span>
+                    <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+                    <p className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-green-600" />
+                </div>
+                <p className="text-xs text-green-600 mt-2">+28% from last period</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Conversion Rate</p>
+                    <p className="text-2xl font-bold">{metrics.conversionRate}%</p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                </div>
+                <p className="text-xs text-blue-600 mt-2">+5.2% from last period</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Average Value</p>
+                    <p className="text-2xl font-bold">{formatCurrency(metrics.averageValue)}</p>
+                  </div>
+                  <Target className="h-8 w-8 text-purple-600" />
+                </div>
+                <p className="text-xs text-purple-600 mt-2">+12% from last period</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Top Technician</p>
+                    <p className="text-lg font-bold">{metrics.topTechnician.name}</p>
+                    <p className="text-sm text-muted-foreground">{metrics.topTechnician.sales} sales</p>
+                  </div>
+                  <Award className="h-8 w-8 text-orange-600" />
+                </div>
+                <p className="text-xs text-green-600 mt-2">{formatCurrency(metrics.topTechnician.revenue)}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Best Product</p>
+                    <p className="text-sm font-bold truncate">{metrics.topProduct.name}</p>
+                    <p className="text-sm text-muted-foreground">{metrics.topProduct.sales} sales</p>
+                  </div>
+                  <Users className="h-8 w-8 text-indigo-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Row 1 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Technician Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Warranty Sales by Technician</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    sales: { label: "Sales", color: "#8b5cf6" },
+                    revenue: { label: "Revenue", color: "#06b6d4" }
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={metrics.technicianLeaderboard}>
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="sales" fill="#8b5cf6" name="Sales" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Daily Conversion Rates */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Conversion Rates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    rate: { label: "Conversion Rate", color: "#10b981" }
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={metrics.dailyConversions}>
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Row 2 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Warranty Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Warranty Types Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    value: { label: "Sales", color: "#f59e0b" }
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={metrics.warrantyDistribution}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                      >
+                        {metrics.warrantyDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Monthly Revenue Trend */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Warranty Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    revenue: { label: "Revenue", color: "#06b6d4" }
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={metrics.monthlyTrend}>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Area type="monotone" dataKey="revenue" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Technician Leaderboard */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Technician Leaderboard
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {metrics.technicianLeaderboard.map((tech, index) => (
+                  <div key={tech.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">{tech.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary">{tech.badge}</Badge>
+                          <span className="text-sm text-muted-foreground">{tech.conversionRate}% conversion</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{tech.sales} sales</p>
+                      <p className="text-sm text-green-600">{formatCurrency(tech.revenue)}</p>
+                      <p className="text-xs text-muted-foreground">Commission: {formatCurrency(tech.commission)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Channel Performance */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Channel Performance Comparison</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold">Email</span>
+                    <Badge variant="secondary">{metrics.channelPerformance.email.conversion}% conversion</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Sales</span>
+                      <span className="font-semibold">{metrics.channelPerformance.email.sales}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Revenue</span>
+                      <span className="font-semibold">{formatCurrency(metrics.channelPerformance.email.revenue)}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ width: `${(metrics.channelPerformance.email.sales / 51) * 100}%` }}
+                      ></div>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">{tech.sales} sales</p>
-                  <p className="text-sm text-green-600">{formatCurrency(tech.revenue)}</p>
-                  <p className="text-xs text-muted-foreground">Commission: {formatCurrency(tech.commission)}</p>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="h-5 w-5 text-green-600" />
+                    <span className="font-semibold">SMS</span>
+                    <Badge variant="secondary">{metrics.channelPerformance.sms.conversion}% conversion</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Sales</span>
+                      <span className="font-semibold">{metrics.channelPerformance.sms.sales}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Revenue</span>
+                      <span className="font-semibold">{formatCurrency(metrics.channelPerformance.sms.revenue)}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-600 h-2 rounded-full" 
+                        style={{ width: `${(metrics.channelPerformance.sms.sales / 51) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            </CardContent>
+          </Card>
+
+          {/* Business Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">💡 Key Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm font-medium">Best Time to Sell</p>
+                  <p className="text-xs text-muted-foreground">Thursdays 2-4 PM show highest conversion</p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm font-medium">Top Client Segment</p>
+                  <p className="text-xs text-muted-foreground">Commercial clients 85% more likely to buy</p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <p className="text-sm font-medium">ROI Impact</p>
+                  <p className="text-xs text-muted-foreground">Warranty program adds 34% to job value</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🏆 Goals & Achievements</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Monthly Target</span>
+                    <span className="font-semibold">85%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-primary h-2 rounded-full" style={{ width: "85%" }}></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Team Conversion Goal</span>
+                    <span className="font-semibold">92%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-green-600 h-2 rounded-full" style={{ width: "92%" }}></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">📊 Export Options</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button onClick={exportToPDF} className="w-full" variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF Report
+                </Button>
+                <Button onClick={exportToExcel} className="w-full" variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel Export
+                </Button>
+                <Button onClick={exportToCSV} className="w-full" variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  CSV Data
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Channel Performance */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Channel Performance Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-blue-600" />
-                <span className="font-semibold">Email</span>
-                <Badge variant="secondary">{metrics.channelPerformance.email.conversion}% conversion</Badge>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Sales</span>
-                  <span className="font-semibold">{metrics.channelPerformance.email.sales}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Revenue</span>
-                  <span className="font-semibold">{formatCurrency(metrics.channelPerformance.email.revenue)}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full" 
-                    style={{ width: `${(metrics.channelPerformance.email.sales / 51) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5 text-green-600" />
-                <span className="font-semibold">SMS</span>
-                <Badge variant="secondary">{metrics.channelPerformance.sms.conversion}% conversion</Badge>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Sales</span>
-                  <span className="font-semibold">{metrics.channelPerformance.sms.sales}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Revenue</span>
-                  <span className="font-semibold">{formatCurrency(metrics.channelPerformance.sms.revenue)}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${(metrics.channelPerformance.sms.sales / 51) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Business Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">💡 Key Insights</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm font-medium">Best Time to Sell</p>
-              <p className="text-xs text-muted-foreground">Thursdays 2-4 PM show highest conversion</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <p className="text-sm font-medium">Top Client Segment</p>
-              <p className="text-xs text-muted-foreground">Commercial clients 85% more likely to buy</p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <p className="text-sm font-medium">ROI Impact</p>
-              <p className="text-xs text-muted-foreground">Warranty program adds 34% to job value</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">🏆 Goals & Achievements</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Monthly Target</span>
-                <span className="font-semibold">85%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full" style={{ width: "85%" }}></div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Team Conversion Goal</span>
-                <span className="font-semibold">92%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: "92%" }}></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📊 Export Options</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button onClick={exportToPDF} className="w-full" variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              PDF Report
-            </Button>
-            <Button onClick={exportToExcel} className="w-full" variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Excel Export
-            </Button>
-            <Button onClick={exportToCSV} className="w-full" variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              CSV Data
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+        </TabsContent>
+        
+        <TabsContent value="gamification" className="space-y-6">
+          <GamificationDashboard />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
