@@ -15,6 +15,38 @@ interface UseJobsOptimizedOptions {
   };
 }
 
+// Helper function to safely convert Json to string array
+const convertJsonToStringArray = (jsonValue: any): string[] => {
+  if (!jsonValue) return [];
+  if (Array.isArray(jsonValue)) {
+    return jsonValue.map(item => String(item));
+  }
+  if (typeof jsonValue === 'string') {
+    try {
+      const parsed = JSON.parse(jsonValue);
+      return Array.isArray(parsed) ? parsed.map(item => String(item)) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+// Helper function to transform database job to Job type
+const transformDbJobToJob = (dbJob: any): Job => {
+  return {
+    ...dbJob,
+    tasks: convertJsonToStringArray(dbJob.tasks),
+    tags: dbJob.tags || [],
+    // Ensure all required Job properties exist
+    title: dbJob.title || '',
+    client: dbJob.client || dbJob.client_id || '',
+    status: dbJob.status || 'scheduled',
+    date: dbJob.date || dbJob.created_at,
+    revenue: dbJob.revenue || 0
+  };
+};
+
 export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
   const {
     page = 1,
@@ -61,7 +93,10 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
         throw fetchError;
       }
 
-      setJobs(data || []);
+      // Transform data to match Job interface
+      const transformedJobs = (data || []).map(transformDbJobToJob);
+
+      setJobs(transformedJobs);
       setTotalCount(count || 0);
       setHasMore((data?.length || 0) === pageSize);
     } catch (err: any) {
@@ -79,17 +114,27 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
 
   const addJob = useCallback(async (jobData: Partial<Job>) => {
     try {
+      // Ensure required fields are present
+      const jobToInsert = {
+        ...jobData,
+        id: jobData.id || `job-${Date.now()}`,
+        title: jobData.title || '',
+        status: jobData.status || 'scheduled',
+        tasks: jobData.tasks || []
+      };
+
       const { data, error } = await supabase
         .from('jobs')
-        .insert([jobData])
+        .insert([jobToInsert])
         .select()
         .single();
 
       if (error) throw error;
 
-      setJobs(prev => [data, ...prev]);
+      const transformedJob = transformDbJobToJob(data);
+      setJobs(prev => [transformedJob, ...prev]);
       toast.success('Job created successfully');
-      return data;
+      return transformedJob;
     } catch (err: any) {
       console.error('Error creating job:', err);
       toast.error('Failed to create job');
@@ -108,13 +153,32 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
 
       if (error) throw error;
 
+      const transformedJob = transformDbJobToJob(data);
       setJobs(prev => prev.map(job => 
-        job.id === jobId ? { ...job, ...data } : job
+        job.id === jobId ? { ...job, ...transformedJob } : job
       ));
       
-      return data;
+      return transformedJob;
     } catch (err: any) {
       console.error('Error updating job:', err);
+      throw err;
+    }
+  }, []);
+
+  const deleteJob = useCallback(async (jobId: string) => {
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      setJobs(prev => prev.filter(job => job.id !== jobId));
+      toast.success('Job deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting job:', err);
+      toast.error('Failed to delete job');
       throw err;
     }
   }, []);
@@ -158,6 +222,9 @@ export const useJobsOptimized = (options: UseJobsOptimizedOptions = {}) => {
     refreshJobs,
     addJob,
     updateJob,
-    canCreate: true, // For now, always allow creation
+    deleteJob,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
   };
 };

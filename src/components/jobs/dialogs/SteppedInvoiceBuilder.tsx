@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -29,6 +30,21 @@ interface SteppedInvoiceBuilderProps {
 }
 
 type BuilderStep = "items" | "upsell" | "send";
+
+// Helper function to safely convert Json to array
+const convertJsonToArray = (jsonValue: any): any[] => {
+  if (!jsonValue) return [];
+  if (Array.isArray(jsonValue)) return jsonValue;
+  if (typeof jsonValue === 'string') {
+    try {
+      const parsed = JSON.parse(jsonValue);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 export const SteppedInvoiceBuilder = ({
   open,
@@ -79,11 +95,21 @@ export const SteppedInvoiceBuilder = ({
   useEffect(() => {
     if (open) {
       if (existingInvoice) {
-        initializeFromInvoice(existingInvoice);
+        // Convert Json to array for items
+        const invoiceWithItems = {
+          ...existingInvoice,
+          items: convertJsonToArray(existingInvoice.items)
+        };
+        initializeFromInvoice(invoiceWithItems);
         setInvoiceCreated(true);
-        setSavedInvoice(existingInvoice);
+        setSavedInvoice(invoiceWithItems);
       } else if (estimateToConvert) {
-        initializeFromEstimate(estimateToConvert);
+        // Convert Json to array for items
+        const estimateWithItems = {
+          ...estimateToConvert,
+          items: convertJsonToArray(estimateToConvert.items)
+        };
+        initializeFromEstimate(estimateWithItems);
       } else {
         resetForm();
       }

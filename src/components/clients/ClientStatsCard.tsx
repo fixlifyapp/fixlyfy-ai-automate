@@ -12,9 +12,10 @@ interface ClientStatsCardProps {
     type: 'positive' | 'negative';
   };
   icon?: React.ComponentType<any>;
+  clientId?: string;
 }
 
-export const ClientStatsCard = ({ title, value, change, icon: Icon }: ClientStatsCardProps) => {
+export const ClientStatsCard = ({ title, value, change, icon: Icon, clientId }: ClientStatsCardProps) => {
   return (
     <ModernCard variant="elevated">
       <ModernCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -15,7 +15,7 @@ interface PageHeaderProps {
     icon?: React.ComponentType<any>;
   }>;
   actionButton?: {
-    label: string;
+    label?: string;
     text?: string;
     onClick: () => void;
     icon?: React.ComponentType<any>;
