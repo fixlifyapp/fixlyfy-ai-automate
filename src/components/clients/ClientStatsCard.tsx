@@ -16,13 +16,13 @@ interface ClientStatsCardProps {
 
 export const ClientStatsCard = ({ title, value, change, icon: Icon }: ClientStatsCardProps) => {
   return (
-    <ModernCard>
+    <ModernCard variant="elevated">
       <ModernCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <h3 className="text-sm font-medium">{title}</h3>
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
       </ModernCardHeader>
       <ModernCardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{value}</div>
         {change && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             {change.type === 'positive' ? (

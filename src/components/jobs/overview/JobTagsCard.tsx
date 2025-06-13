@@ -1,149 +1,120 @@
 
-import React, { useState, useEffect } from "react";
-import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Tag, Plus } from "lucide-react";
-import { useJobs } from "@/hooks/useJobs";
-import { useTags } from "@/hooks/useConfigItems";
-import { toast } from "sonner";
-import { TagSelectionDialog } from "../dialogs/TagSelectionDialog";
-import { getTagColor } from "@/data/tags";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tag, Plus, X, Edit3 } from "lucide-react";
 
 interface JobTagsCardProps {
   tags: string[];
   jobId?: string;
   editable?: boolean;
-  onUpdate?: () => void;
+  onTagsUpdate?: (tags: string[]) => void;
 }
 
-export const JobTagsCard = ({ tags, jobId, editable = false, onUpdate }: JobTagsCardProps) => {
-  const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
-  const [resolvedTags, setResolvedTags] = useState<Array<{name: string, color?: string}>>([]);
-  const { updateJob } = useJobs();
-  const { items: tagItems } = useTags();
+export const JobTagsCard = ({ tags = [], jobId, editable = false, onTagsUpdate }: JobTagsCardProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const [localTags, setLocalTags] = useState(tags);
 
-  // Resolve tag UUIDs to tag names and colors
-  useEffect(() => {
-    if (!tags || tags.length === 0) {
-      setResolvedTags([]);
-      return;
+  const handleAddTag = () => {
+    if (newTag.trim() && !localTags.includes(newTag.trim())) {
+      const updatedTags = [...localTags, newTag.trim()];
+      setLocalTags(updatedTags);
+      setNewTag("");
+      onTagsUpdate?.(updatedTags);
     }
+  };
 
-    const resolved = tags.map(tag => {
-      // If it's a UUID, find the tag by ID
-      if (typeof tag === 'string' && tag.length === 36 && tag.includes('-')) {
-        const tagItem = tagItems.find(t => t.id === tag);
-        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: getTagColor(tag) };
-      }
-      // If it's a name, find the tag by name
-      const tagItem = tagItems.find(t => t.name === tag);
-      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: String(tag), color: getTagColor(String(tag)) };
-    });
+  const handleRemoveTag = (tagToRemove: string) => {
+    const updatedTags = localTags.filter(tag => tag !== tagToRemove);
+    setLocalTags(updatedTags);
+    onTagsUpdate?.(updatedTags);
+  };
 
-    setResolvedTags(resolved);
-  }, [tags, tagItems]);
-
-  if (!resolvedTags || resolvedTags.length === 0) {
-    if (!editable) return null;
-    
-    return (
-      <>
-        <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-          <ModernCardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <ModernCardTitle icon={Tag}>
-                Tags
-              </ModernCardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsTagDialogOpen(true)}
-                className="text-fixlyfy hover:text-fixlyfy-dark"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </ModernCardHeader>
-          <ModernCardContent>
-            <p className="text-muted-foreground">No tags assigned yet</p>
-          </ModernCardContent>
-        </ModernCard>
-
-        <TagSelectionDialog
-          open={isTagDialogOpen}
-          onOpenChange={setIsTagDialogOpen}
-          initialTags={[]}
-          onSave={async (selectedTags) => {
-            if (jobId) {
-              const result = await updateJob(jobId, { tags: selectedTags });
-              if (result) {
-                toast.success("Tags updated successfully");
-                if (onUpdate) {
-                  onUpdate();
-                }
-              }
-            }
-          }}
-        />
-      </>
-    );
-  }
-
-  const handleTagsUpdate = async (selectedTags: string[]) => {
-    if (!jobId) return;
-    
-    const result = await updateJob(jobId, { tags: selectedTags });
-    if (result) {
-      toast.success("Tags updated successfully");
-      if (onUpdate) {
-        onUpdate();
-      }
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
     }
   };
 
   return (
-    <>
-      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
-        <ModernCardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <ModernCardTitle icon={Tag}>
-              Tags
-            </ModernCardTitle>
-            {editable && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsTagDialogOpen(true)}
-                className="text-fixlyfy hover:text-fixlyfy-dark"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </ModernCardHeader>
-        <ModernCardContent>
+    <ModernCard variant="elevated">
+      <ModernCardHeader className="flex flex-row items-center justify-between space-y-0">
+        <ModernCardTitle className="flex items-center gap-2">
+          <Tag className="h-5 w-5" />
+          Tags
+        </ModernCardTitle>
+        {editable && !isEditing && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsEditing(true)}
+            className="gap-2"
+          >
+            <Edit3 className="h-4 w-4" />
+            Edit
+          </Button>
+        )}
+      </ModernCardHeader>
+      <ModernCardContent>
+        <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {resolvedTags.map((tag, index) => (
-              <Badge 
-                key={index} 
-                variant="outline" 
-                className="text-xs"
-                style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
-              >
-                {tag.name}
+            {localTags.map((tag, index) => (
+              <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                {tag}
+                {isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleRemoveTag(tag)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </Badge>
             ))}
+            {localTags.length === 0 && (
+              <span className="text-sm text-muted-foreground">No tags added</span>
+            )}
           </div>
-        </ModernCardContent>
-      </ModernCard>
-
-      <TagSelectionDialog
-        open={isTagDialogOpen}
-        onOpenChange={setIsTagDialogOpen}
-        initialTags={resolvedTags.map(t => t.name)}
-        onSave={handleTagsUpdate}
-      />
-    </>
+          
+          {isEditing && (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add new tag..."
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={handleAddTag}
+                disabled={!newTag.trim()}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </Button>
+            </div>
+          )}
+          
+          {isEditing && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              className="gap-2"
+            >
+              Done
+            </Button>
+          )}
+        </div>
+      </ModernCardContent>
+    </ModernCard>
   );
 };

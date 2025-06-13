@@ -1,47 +1,28 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface Invoice {
   id: string;
-  job_id: string;
+  number?: string;
   invoice_number: string;
-  number: string; // alias for invoice_number
-  date: string;
+  amount?: number;
   total: number;
-  amount: number; // alias for total
-  amount_paid: number;
-  balance: number;
-  status: "draft" | "sent" | "paid" | "overdue" | "partial" | "unpaid" | "cancelled";
-  notes?: string;
-  items?: any[];
-  balance_due?: number;
-  client_id?: string;
-  client_name?: string;
-  client_email?: string;
-  client_phone?: string;
-  created_at: string;
-  created_by?: string;
-  description?: string;
-  discount_amount?: number;
+  job_id: string;
+  status: string;
+  date: string;
   due_date?: string;
-  estimate_id?: string;
-  issue_date?: string;
-  paid_at?: string;
-  sent_at?: string;
-  subtotal?: number;
-  tax_amount?: number;
-  tax_rate?: number;
+  notes?: string;
   terms?: string;
-  title?: string;
+  items?: any[];
+  tax_rate?: number;
+  tax_amount?: number;
+  subtotal?: number;
+  amount_paid?: number;
+  balance_due?: number;
+  balance?: number;
+  created_at: string;
   updated_at: string;
-  client?: {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-  };
 }
 
 export const useInvoices = (jobId?: string) => {

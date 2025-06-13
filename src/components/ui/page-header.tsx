@@ -12,6 +12,7 @@ interface PageHeaderProps {
   badges?: Array<{
     text: string;
     variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "fixlyfy";
+    icon?: React.ComponentType<any>;
   }>;
   actionButton?: {
     label: string;
@@ -39,7 +40,7 @@ export const PageHeader = ({
           {badges && badges.length > 0 && (
             <div className="flex gap-2 ml-3">
               {badges.map((badge, index) => (
-                <Badge key={index} variant={badge.variant || "default"}>
+                <Badge key={index} variant={badge.variant || "default"} icon={badge.icon}>
                   {badge.text}
                 </Badge>
               ))}
