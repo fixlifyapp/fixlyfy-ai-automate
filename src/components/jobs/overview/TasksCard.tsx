@@ -1,65 +1,62 @@
 
 import React from "react";
-import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card";
+import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Circle, Edit3, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CheckSquare, Square, Plus, Clock } from "lucide-react";
 
 interface TasksCardProps {
-  tasks?: any[];
-  jobId?: string;
+  tasks: string[];
+  jobId: string;
   editable?: boolean;
+  onManageTasks?: () => void;
+  onUpdate?: () => void;
 }
 
-export const TasksCard = ({ tasks = [], jobId, editable = false }: TasksCardProps) => {
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const totalTasks = tasks.length;
-
+export const TasksCard = ({ tasks, jobId, editable = false, onManageTasks, onUpdate }: TasksCardProps) => {
+  const taskList = Array.isArray(tasks) ? tasks : [];
+  
   return (
-    <ModernCard variant="elevated">
-      <ModernCardHeader className="flex flex-row items-center justify-between space-y-0">
-        <ModernCardTitle className="flex items-center gap-2">
-          <CheckSquare className="h-5 w-5" />
-          Tasks ({completedTasks}/{totalTasks})
-        </ModernCardTitle>
-        {editable && (
-          <Badge variant="outline" className="gap-1">
-            <Plus className="h-3 w-3" />
-            Add Task
-          </Badge>
-        )}
-      </ModernCardHeader>
-      <ModernCardContent>
-        <div className="space-y-3">
-          {tasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tasks created yet</p>
-          ) : (
-            tasks.map((task, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
-                <div className="flex items-center mt-1">
-                  {task.completed ? (
-                    <CheckSquare className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Square className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className={`text-sm font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                    {task.title}
-                  </p>
-                  {task.description && (
-                    <p className="text-xs text-muted-foreground">{task.description}</p>
-                  )}
-                  {task.due_date && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      Due: {new Date(task.due_date).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))
+    <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+      <ModernCardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <ModernCardTitle icon={ClipboardList}>
+            Tasks
+          </ModernCardTitle>
+          {editable && onManageTasks && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onManageTasks}
+              className="text-fixlyfy hover:text-fixlyfy-dark"
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
           )}
         </div>
+      </ModernCardHeader>
+      <ModernCardContent>
+        {taskList.length > 0 ? (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {taskList.map((task, index) => (
+                <div key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                  <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm flex-1">{task}</span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-3 border-t">
+              <Badge variant="outline" className="text-xs">
+                {taskList.length} task{taskList.length !== 1 ? 's' : ''} total
+              </Badge>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground text-center py-4">
+            {editable ? "No tasks assigned. Click the edit button to add tasks." : "No tasks assigned"}
+          </div>
+        )}
       </ModernCardContent>
     </ModernCard>
   );

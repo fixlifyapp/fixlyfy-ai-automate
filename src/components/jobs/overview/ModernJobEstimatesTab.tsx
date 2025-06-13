@@ -1,105 +1,313 @@
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { EstimatesList } from "../estimates/EstimatesList";
-import { UnifiedDocumentBuilder } from "../dialogs/UnifiedDocumentBuilder";
-import { EstimatePreviewWindow } from "../dialogs/EstimatePreviewWindow";
-import { useJobs } from "@/hooks/useJobs";
-import { useEstimates, Estimate } from "@/hooks/useEstimates";
+import { Badge } from "@/components/ui/badge";
+import { Plus, FileText, Send, Trash2, Edit, DollarSign, Eye } from "lucide-react";
+import { useEstimates } from "@/hooks/useEstimates";
+import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
+import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
+import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
+import { EstimateSendDialog } from "@/components/jobs/dialogs/estimate-builder/EstimateSendDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { format } from "date-fns";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export interface ModernJobEstimatesTabProps {
+interface ModernJobEstimatesTabProps {
   jobId: string;
+  onEstimateConverted?: () => void;
 }
 
-export const ModernJobEstimatesTab = ({ jobId }: ModernJobEstimatesTabProps) => {
+export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
+  const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
+  const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingEstimate, setEditingEstimate] = useState<any>(null);
+  const [previewEstimate, setPreviewEstimate] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
-  
-  const { jobs } = useJobs();
-  const { 
-    estimates, 
-    convertEstimateToInvoice, 
-    refreshEstimates, 
-    updateEstimateStatus,
-    fetchEstimatesWithJobs 
-  } = useEstimates(jobId);
-  
-  const job = jobs.find(j => j.id === jobId);
+  const [sendingEstimate, setSendingEstimate] = useState<any>(null);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const isMobile = useIsMobile();
 
-  const handleCreateEstimate = () => {
-    console.log('Creating new estimate for job:', jobId);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusStyles = {
+      'draft': 'bg-gray-100 text-gray-800',
+      'sent': 'bg-blue-100 text-blue-800',
+      'approved': 'bg-green-100 text-green-800',
+      'rejected': 'bg-red-100 text-red-800',
+      'converted': 'bg-purple-100 text-purple-800'
+    };
+
+    return (
+      <Badge className={statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800'}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const totalEstimateValue = estimates.reduce((sum, estimate) => sum + (estimate.total || 0), 0);
+  const pendingApproval = estimates.filter(est => est.status === 'sent').length;
+
+  const handleEstimateCreated = () => {
+    refreshEstimates();
+    setShowCreateForm(false);
+    setEditingEstimate(null);
+  };
+
+  const handleEditEstimate = (estimate: any) => {
+    console.log('Setting estimate for editing:', estimate);
+    setEditingEstimate(estimate);
     setShowCreateForm(true);
   };
 
-  const handleEstimateCreated = (estimate?: Estimate) => {
-    console.log('Estimate created, refreshing list');
-    setShowCreateForm(false);
-    refreshEstimates();
-    toast.success('Estimate created successfully!');
-  };
-
-  const handleViewEstimate = (estimate: Estimate) => {
-    console.log('Viewing estimate:', estimate.id);
-    setSelectedEstimate(estimate);
+  const handleViewEstimate = (estimate: any) => {
+    console.log('Setting estimate for preview:', estimate);
+    setPreviewEstimate(estimate);
     setShowPreview(true);
   };
 
-  const handleConvertToInvoice = async (estimate: Estimate) => {
-    console.log('Converting estimate to invoice:', estimate.id);
-    const success = await convertEstimateToInvoice(estimate.id);
-    if (success) {
-      toast.success("Estimate converted to invoice!");
-    }
+  const handleCreateNew = () => {
+    setEditingEstimate(null);
+    setShowCreateForm(true);
   };
 
-  const handleEstimateConverted = () => {
+  const handleDialogClose = () => {
+    setShowCreateForm(false);
+    setEditingEstimate(null);
+  };
+
+  const handlePreviewClose = () => {
+    setShowPreview(false);
+    setPreviewEstimate(null);
+  };
+
+  const handleDeleteEstimate = async (estimate: any) => {
+    console.log('Deleting estimate:', estimate);
+    actions.setSelectedEstimate(estimate);
+    await actions.confirmDeleteEstimate();
+  };
+
+  const handleSendEstimate = (estimate: any) => {
+    console.log('Sending estimate:', estimate);
+    setSendingEstimate(estimate);
+    setShowSendDialog(true);
+  };
+
+  const handleSendSuccess = () => {
+    setShowSendDialog(false);
+    setSendingEstimate(null);
     refreshEstimates();
+    toast.success("Estimate sent successfully!");
   };
 
-  if (!job) {
-    return <div>Job not found</div>;
-  }
+  const handleSendCancel = () => {
+    setShowSendDialog(false);
+    setSendingEstimate(null);
+  };
 
   return (
     <>
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Estimates</h3>
-            <Button className="gap-2" onClick={handleCreateEstimate}>
-              <Plus size={16} />
-              Create Estimate
-            </Button>
-          </div>
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Estimates</CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-lg sm:text-2xl font-bold">{estimates.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Value</CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600 break-all">{formatCurrency(totalEstimateValue)}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-fixlyfy-border shadow-sm">
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-lg sm:text-2xl font-bold text-orange-600">{pendingApproval}</div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <EstimatesList
-            jobId={jobId}
-            onEstimateConverted={handleEstimateConverted}
-            onViewEstimate={handleViewEstimate}
-          />
-        </CardContent>
-      </Card>
+        {/* Estimates List */}
+        <Card className="border-fixlyfy-border shadow-sm">
+          <CardHeader className="px-3 pt-3 pb-3 sm:px-6 sm:pt-6 sm:pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                Estimates ({estimates.length})
+              </CardTitle>
+              <Button 
+                onClick={handleCreateNew}
+                className={`w-full sm:w-auto ${isMobile ? 'h-11 text-sm' : ''}`}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Estimate
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading estimates...</p>
+              </div>
+            ) : estimates.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-lg font-medium">No estimates yet</p>
+                <p className="text-sm">Create your first estimate to get started</p>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {estimates.map((estimate) => (
+                  <div key={estimate.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                          <span className="font-medium text-sm sm:text-base break-all">{estimate.estimate_number}</span>
+                          <span className="text-lg sm:text-xl font-semibold text-blue-600 break-all">
+                            {formatCurrency(estimate.total || 0)}
+                          </span>
+                          {getStatusBadge(estimate.status)}
+                        </div>
+                        <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
+                          <p>Created: {format(new Date(estimate.created_at), 'MMM dd, yyyy')}</p>
+                          {estimate.notes && <p className="break-words">Notes: {estimate.notes}</p>}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-wrap gap-2'}`}>
+                      <Button
+                        variant="outline"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
+                        onClick={() => handleViewEstimate(estimate)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
 
-      {/* Unified Document Builder for creating/editing estimates */}
-      <UnifiedDocumentBuilder
+                      <Button
+                        variant="outline"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
+                        onClick={() => handleEditEstimate(estimate)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
+                        onClick={() => handleSendEstimate(estimate)}
+                        disabled={state.isSending}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Send
+                      </Button>
+                      
+                      {estimate.status !== 'converted' && (
+                        <Button
+                          variant="outline"
+                          size={isMobile ? "default" : "sm"}
+                          className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-green-600 hover:text-green-700 border-green-200 hover:border-green-300`}
+                          onClick={() => {
+                            actions.setSelectedEstimate(estimate);
+                            actions.confirmConvertToInvoice();
+                          }}
+                          disabled={state.isConverting}
+                        >
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Convert
+                        </Button>
+                      )}
+                      
+                      <Button
+                        variant="outline"
+                        size={isMobile ? "default" : "sm"}
+                        className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-red-600 hover:text-red-700 border-red-200 hover:border-red-300`}
+                        onClick={() => handleDeleteEstimate(estimate)}
+                        disabled={state.isDeleting}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dialogs */}
+      <SteppedEstimateBuilder
         open={showCreateForm}
-        onOpenChange={setShowCreateForm}
-        documentType="estimate"
+        onOpenChange={handleDialogClose}
         jobId={jobId}
-        onDocumentCreated={handleEstimateCreated}
+        existingEstimate={editingEstimate}
+        onEstimateCreated={handleEstimateCreated}
       />
 
-      {/* Estimate Preview Window */}
-      {selectedEstimate && (
-        <EstimatePreviewWindow
-          open={showPreview}
-          onOpenChange={setShowPreview}
-          estimate={selectedEstimate}
-          onEstimateConverted={handleEstimateConverted}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-sm sm:text-base break-all">
+              Estimate Preview - {previewEstimate?.estimate_number}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[80vh]">
+            {previewEstimate && (
+              <UnifiedDocumentPreview
+                documentType="estimate"
+                documentNumber={previewEstimate.estimate_number}
+                lineItems={[]}
+                taxRate={8.5}
+                calculateSubtotal={() => previewEstimate.total * 0.92}
+                calculateTotalTax={() => previewEstimate.total * 0.08}
+                calculateGrandTotal={() => previewEstimate.total}
+                notes={previewEstimate.notes || ''}
+                issueDate={new Date(previewEstimate.created_at).toLocaleDateString()}
+                dueDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {sendingEstimate && (
+        <EstimateSendDialog
+          isOpen={showSendDialog}
+          onClose={handleSendCancel}
+          estimateId={sendingEstimate.id}
+          estimateNumber={sendingEstimate.estimate_number}
+          total={sendingEstimate.total || 0}
+          contactInfo={{
+            name: 'Client',
+            email: '',
+            phone: ''
+          }}
+          onSuccess={handleSendSuccess}
         />
       )}
     </>

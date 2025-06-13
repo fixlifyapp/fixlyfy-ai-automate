@@ -1,32 +1,30 @@
 
-import { ReactNode } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 
 interface AnimatedContainerProps {
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
+  animation?: "fade-in" | "slide-up" | "scale-in";
   delay?: number;
-  animation?: 'fade-in' | 'slide-up' | 'scale-in';
 }
 
 export const AnimatedContainer = ({ 
   children, 
-  className,
-  delay = 0,
-  animation = 'fade-in'
+  className, 
+  animation = "fade-in",
+  delay = 0
 }: AnimatedContainerProps) => {
   return (
-    <div
+    <div 
       className={cn(
-        "animate-fade-in",
-        animation === 'slide-up' && "animate-slide-up",
-        animation === 'scale-in' && "animate-scale-in",
+        "transition-all duration-500 ease-out",
+        animation === "fade-in" && "animate-fade-in opacity-0",
+        animation === "slide-up" && "animate-slide-up transform translate-y-4 opacity-0",
+        animation === "scale-in" && "animate-scale-in transform scale-95 opacity-0",
         className
       )}
-      style={{
-        animationDelay: `${delay}ms`,
-        animationFillMode: 'both'
-      }}
+      style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
     >
       {children}
     </div>

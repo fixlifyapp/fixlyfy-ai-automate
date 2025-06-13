@@ -58,14 +58,12 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
       const processedInvoices: Invoice[] = (data || []).map(invoice => ({
         ...invoice,
         number: invoice.invoice_number, // Add alias
-        amount: invoice.total || 0, // Add amount alias for compatibility
         updated_at: invoice.updated_at || invoice.created_at, // Ensure updated_at exists
         date: invoice.issue_date || invoice.created_at, // Use issue_date as primary date
         amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         notes: invoice.notes || '',
-        items: Array.isArray(invoice.items) ? invoice.items : [], // Ensure items is always an array
-        status: (invoice.status as Invoice['status']) || 'draft' // Cast to correct type
+        items: Array.isArray(invoice.items) ? invoice.items : [] // Ensure items is always an array
       }));
       
       setInvoices(processedInvoices);

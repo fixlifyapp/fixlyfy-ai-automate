@@ -55,11 +55,6 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
     }
   };
 
-  const handleEstimateConverted = () => {
-    refreshEstimates();
-    if (onEstimateConverted) onEstimateConverted();
-  };
-
   if (!job) {
     return <div>Job not found</div>;
   }
@@ -78,7 +73,10 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
 
           <EstimatesList
             jobId={jobId}
-            onEstimateConverted={handleEstimateConverted}
+            onEstimateConverted={() => {
+              refreshEstimates();
+              if (onEstimateConverted) onEstimateConverted();
+            }}
             onViewEstimate={handleViewEstimate}
           />
         </CardContent>
@@ -99,7 +97,7 @@ export const JobEstimatesTab = ({ jobId, onEstimateConverted }: JobEstimatesTabP
           open={showPreview}
           onOpenChange={setShowPreview}
           estimate={selectedEstimate}
-          onEstimateConverted={handleEstimateConverted}
+          onConvertToInvoice={handleConvertToInvoice}
         />
       )}
     </>

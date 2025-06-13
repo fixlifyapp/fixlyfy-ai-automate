@@ -1,11 +1,15 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { LineItem } from '../../builder/types';
-import { Estimate } from '@/hooks/useEstimates';
-import { Invoice } from '@/hooks/useInvoices';
-import { toast } from 'sonner';
-
-export type DocumentType = "estimate" | "invoice";
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
+import { LineItem, Product } from "../../builder/types";
+import { DocumentType } from "../UnifiedDocumentBuilder";
+import { Estimate } from "@/hooks/useEstimates";
+import { Invoice } from "@/hooks/useInvoices";
+import { useDocumentInitialization } from "./hooks/useDocumentInitialization";
+import { useDocumentCalculations } from "./hooks/useDocumentCalculations";
+import { useDocumentOperations } from "./hooks/useDocumentOperations";
+import { useDocumentSmartFeatures } from "./hooks/useDocumentSmartFeatures";
+import { useJobs } from "@/hooks/useJobs";
 
 interface UseUnifiedDocumentBuilderProps {
   documentType: DocumentType;
@@ -22,159 +26,119 @@ export const useUnifiedDocumentBuilder = ({
   open,
   onSyncToInvoice
 }: UseUnifiedDocumentBuilderProps) => {
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [taxRate, setTaxRate] = useState(0.08);
-  const [notes, setNotes] = useState('');
-  const [documentNumber, setDocumentNumber] = useState('');
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { jobs } = useJobs();
+  const job = jobs.find(j => j.id === jobId);
 
-  // Mock job data
-  const jobData = {
-    id: jobId,
-    title: 'HVAC Maintenance Service',
-    client: {
-      name: 'John Smith',
-      email: 'john.smith@example.com',
-      phone: '+1 (555) 123-4567'
-    },
-    address: '123 Main St, Anytown, USA'
+  // Initialize document state
+  const {
+    lineItems,
+    setLineItems,
+    taxRate,
+    setTaxRate,
+    notes,
+    setNotes,
+    documentNumber,
+    setDocumentNumber,
+    isInitialized
+  } = useDocumentInitialization({
+    documentType,
+    existingDocument,
+    jobId,
+    open
+  });
+
+  // Calculate totals
+  const {
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage
+  } = useDocumentCalculations({ lineItems, taxRate });
+
+  // Smart features
+  const smartFeatures = useDocumentSmartFeatures({
+    documentType,
+    lineItems,
+    jobId
+  });
+
+  // Create form data for operations
+  const formData = {
+    documentId: existingDocument?.id,
+    documentNumber,
+    items: lineItems.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxable: item.taxable
+    })),
+    notes,
+    status: existingDocument?.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
+    total: calculateGrandTotal()
   };
 
-  // Initialize document
-  useEffect(() => {
-    if (open) {
-      const initializeDocument = async () => {
-        try {
-          if (existingDocument) {
-            // Load existing document
-            setLineItems(existingDocument.items || []);
-            setTaxRate(existingDocument.tax_rate || 0.08);
-            setNotes(existingDocument.notes || '');
-            
-            // Handle different document types with type safety
-            if (documentType === 'estimate' && 'estimate_number' in existingDocument) {
-              setDocumentNumber(existingDocument.estimate_number || '');
-            } else if (documentType === 'invoice' && 'invoice_number' in existingDocument) {
-              setDocumentNumber(existingDocument.invoice_number || '');
-            }
-          } else {
-            // Create new document
-            const prefix = documentType === 'estimate' ? 'EST' : 'INV';
-            const number = `${prefix}-${Date.now().toString().slice(-6)}`;
-            setDocumentNumber(number);
-            setLineItems([]);
-            setTaxRate(0.08);
-            setNotes('');
-          }
-          setIsInitialized(true);
-        } catch (error) {
-          console.error('Error initializing document:', error);
-          toast.error('Failed to initialize document');
-        }
-      };
+  // Job data for display
+  const jobData = {
+    id: jobId,
+    title: job?.title || 'Service Request',
+    client: job?.client,
+    description: job?.description
+  };
 
-      initializeDocument();
-    }
-  }, [open, existingDocument, documentType]);
+  // Document operations
+  const {
+    isSubmitting,
+    saveDocumentChanges,
+    convertToInvoice
+  } = useDocumentOperations({
+    documentType,
+    existingDocument,
+    jobId,
+    formData,
+    lineItems,
+    notes,
+    calculateGrandTotal,
+    onSyncToInvoice
+  });
 
-  // Calculations
-  const calculateSubtotal = useCallback(() => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  }, [lineItems]);
-
-  const calculateTotalTax = useCallback(() => {
-    const taxableAmount = lineItems
-      .filter(item => item.taxable)
-      .reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    return taxableAmount * taxRate;
-  }, [lineItems, taxRate]);
-
-  const calculateGrandTotal = useCallback(() => {
-    return calculateSubtotal() + calculateTotalTax();
-  }, [calculateSubtotal, calculateTotalTax]);
-
-  // Line item actions
-  const handleAddProduct = useCallback((product: any) => {
-    const newItem: LineItem = {
-      id: `item-${Date.now()}`,
+  // Line item management
+  const handleAddProduct = useCallback((product: Product) => {
+    const newLineItem: LineItem = {
+      id: `temp-${Date.now()}`,
       description: product.name,
       quantity: 1,
       unitPrice: product.price,
-      total: product.price,
       taxable: true,
-      ourPrice: product.cost || product.ourprice || 0,
+      discount: 0,
+      ourPrice: product.cost || 0,
       name: product.name,
       price: product.price,
-      discount: 0
+      total: product.price
     };
-    setLineItems(prev => [...prev, newItem]);
-  }, []);
+
+    setLineItems(prev => [...prev, newLineItem]);
+    toast.success(`${product.name} added to ${documentType}`);
+  }, [setLineItems, documentType]);
 
   const handleRemoveLineItem = useCallback((id: string) => {
     setLineItems(prev => prev.filter(item => item.id !== id));
-  }, []);
+    toast.success("Item removed");
+  }, [setLineItems]);
 
   const handleUpdateLineItem = useCallback((id: string, field: string, value: any) => {
     setLineItems(prev => prev.map(item => {
       if (item.id === id) {
-        const updated = { ...item, [field]: value };
+        const updatedItem = { ...item, [field]: value };
+        // Recalculate total when quantity or unitPrice changes
         if (field === 'quantity' || field === 'unitPrice') {
-          updated.total = updated.quantity * updated.unitPrice;
+          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
         }
-        return updated;
+        return updatedItem;
       }
       return item;
     }));
-  }, []);
-
-  // Document operations
-  const saveDocumentChanges = useCallback(async () => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Saving document:', {
-        documentType,
-        documentNumber,
-        jobId,
-        lineItems,
-        taxRate,
-        notes,
-        total: calculateGrandTotal()
-      });
-      
-      toast.success(`${documentType} saved successfully`);
-      return true;
-    } catch (error) {
-      console.error('Error saving document:', error);
-      toast.error(`Failed to save ${documentType}`);
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [documentType, documentNumber, jobId, lineItems, taxRate, notes, calculateGrandTotal]);
-
-  const convertToInvoice = useCallback(async () => {
-    if (documentType !== 'estimate') return false;
-    
-    setIsSubmitting(true);
-    try {
-      // Simulate conversion
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Estimate converted to invoice successfully');
-      onSyncToInvoice?.();
-      return true;
-    } catch (error) {
-      console.error('Error converting to invoice:', error);
-      toast.error('Failed to convert to invoice');
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [documentType, onSyncToInvoice]);
+  }, [setLineItems]);
 
   return {
     // State
@@ -190,12 +154,15 @@ export const useUnifiedDocumentBuilder = ({
     isSubmitting,
 
     // Data objects
+    formData,
     jobData,
 
     // Calculations
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
+    calculateTotalMargin,
+    calculateMarginPercentage,
 
     // Line item actions
     handleAddProduct,
@@ -204,6 +171,9 @@ export const useUnifiedDocumentBuilder = ({
 
     // Document operations
     saveDocumentChanges,
-    convertToInvoice
+    convertToInvoice,
+
+    // Smart features
+    ...smartFeatures
   };
 };

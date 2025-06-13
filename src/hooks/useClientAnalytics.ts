@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,13 +23,7 @@ export interface QuoteConversionData {
   conversionRate: number;
 }
 
-export interface ClientAnalytics {
-  clientValueData: ClientValueData[];
-  quoteConversionData: QuoteConversionData | null;
-  isLoading: boolean;
-}
-
-export const useClientAnalytics = (): ClientAnalytics => {
+export const useClientAnalytics = () => {
   const [clientValueData, setClientValueData] = useState<ClientValueData[]>([]);
   const [quoteConversionData, setQuoteConversionData] = useState<QuoteConversionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

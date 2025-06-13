@@ -2,50 +2,20 @@
 import React from "react";
 import { DocumentType } from "../../UnifiedDocumentBuilder";
 
-interface CompanyInfo {
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  phone: string;
-  email: string;
-}
-
 interface DocumentPreviewHeaderProps {
   documentType: DocumentType;
   documentNumber: string;
-  jobData: {
-    id: string;
-    title: string;
-    client?: any;
-    description?: string;
-  };
-  companyInfo?: CompanyInfo;
+  companyInfo: any;
 }
 
 export const DocumentPreviewHeader = ({
   documentType,
   documentNumber,
-  jobData,
   companyInfo
 }: DocumentPreviewHeaderProps) => {
   const documentTitle = documentType === 'estimate' ? 'ESTIMATE' : 'INVOICE';
   const documentColor = documentType === 'estimate' ? 'text-blue-600' : 'text-green-600';
   const documentBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-green-50';
-
-  // Use provided company info or defaults
-  const defaultCompanyInfo = {
-    name: 'FixLyfy Services',
-    address: '123 Business Park, Suite 456',
-    city: 'San Francisco',
-    state: 'California',
-    zip: '94103',
-    phone: '(555) 123-4567',
-    email: 'contact@fixlyfy.com'
-  };
-
-  const finalCompanyInfo = companyInfo || defaultCompanyInfo;
 
   return (
     <div className="bg-white border-b border-gray-200">
@@ -53,23 +23,31 @@ export const DocumentPreviewHeader = ({
         <div className="flex justify-between items-start">
           {/* Company Info */}
           <div className="flex items-start space-x-4">
-            <div className="h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">
-                {finalCompanyInfo?.name?.charAt(0) || 'F'}
-              </span>
-            </div>
+            {companyInfo?.logoUrl ? (
+              <img 
+                src={companyInfo.logoUrl} 
+                alt={companyInfo.name} 
+                className="h-16 w-auto object-contain"
+              />
+            ) : (
+              <div className="h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xl">
+                  {companyInfo?.name?.charAt(0) || 'F'}
+                </span>
+              </div>
+            )}
             
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-1">
-                {finalCompanyInfo?.name || 'FixLyfy Services'}
+                {companyInfo?.name || 'FixLyfy Services'}
               </h2>
               <div className="text-sm text-gray-600 space-y-1">
-                <p>{finalCompanyInfo?.address}</p>
+                <p>{companyInfo?.address}</p>
                 <p>
-                  {[finalCompanyInfo?.city, finalCompanyInfo?.state, finalCompanyInfo?.zip].filter(Boolean).join(', ')}
+                  {[companyInfo?.city, companyInfo?.state, companyInfo?.zip].filter(Boolean).join(', ')}
                 </p>
-                <p>{finalCompanyInfo?.phone}</p>
-                <p>{finalCompanyInfo?.email}</p>
+                <p>{companyInfo?.phone}</p>
+                <p>{companyInfo?.email}</p>
               </div>
             </div>
           </div>

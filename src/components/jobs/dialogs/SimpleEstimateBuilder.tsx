@@ -2,317 +2,278 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Save, Lightbulb, X } from "lucide-react";
+import { LineItemsManager } from "./unified/LineItemsManager";
+import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
+import { useJobs } from "@/hooks/useJobs";
+import { toast } from "sonner";
+import { Estimate } from "@/hooks/useEstimates";
 import { Product } from "../builder/types";
-import { formatCurrency } from "@/lib/utils";
 
 interface SimpleEstimateBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEstimateCreated: () => void;
+  jobId: string;
+  clientInfo?: any;
+  onEstimateCreated?: (estimate: Estimate) => void;
+  existingEstimate?: Estimate;
 }
-
-interface EstimateLineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  taxable: boolean;
-}
-
-const defaultProducts: Product[] = [
-  {
-    id: "hvac-service",
-    name: "HVAC Service Call",
-    price: 150,
-    description: "Standard HVAC diagnostic and service",
-    ourprice: 75,
-    category: "HVAC",
-    unit: "each",
-    taxable: true
-  },
-  {
-    id: "plumbing-service",
-    name: "Plumbing Service Call",
-    price: 125,
-    description: "Standard plumbing diagnostic and service",
-    ourprice: 65,
-    category: "Plumbing", 
-    unit: "each",
-    taxable: true
-  },
-  {
-    id: "electrical-service",
-    name: "Electrical Service Call",
-    price: 175,
-    description: "Standard electrical diagnostic and service",
-    ourprice: 85,
-    category: "Electrical",
-    unit: "each",
-    taxable: true
-  }
-];
 
 export const SimpleEstimateBuilder = ({
   open,
   onOpenChange,
-  onEstimateCreated
+  jobId,
+  clientInfo,
+  onEstimateCreated,
+  existingEstimate
 }: SimpleEstimateBuilderProps) => {
-  const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
-  const [notes, setNotes] = useState("");
-  const [estimateNumber, setEstimateNumber] = useState("");
+  const [showWarrantyNotification, setShowWarrantyNotification] = useState(false);
+  const [suggestedWarranty, setSuggestedWarranty] = useState<Product | null>(null);
+  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
+  const { jobs } = useJobs();
+  const job = jobs.find(j => j.id === jobId);
+
+  const {
+    lineItems,
+    taxRate,
+    notes,
+    documentNumber,
+    isSubmitting,
+    setLineItems,
+    setTaxRate,
+    setNotes,
+    handleAddProduct,
+    handleRemoveLineItem,
+    handleUpdateLineItem,
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    saveDocumentChanges
+  } = useUnifiedDocumentBuilder({
+    documentType: "estimate",
+    existingDocument: existingEstimate,
+    jobId,
+    open,
+  });
+
+  const finalClientInfo = clientInfo || job?.client || { name: '', email: '', phone: '' };
+
+  // Smart warranty detection
   useEffect(() => {
-    if (open) {
-      // Initialize with one empty line item
-      setLineItems([{
-        id: Date.now().toString(),
-        description: "",
-        quantity: 1,
-        unitPrice: 0,
-        total: 0,
-        taxable: true
-      }]);
-      setNotes("");
-      setEstimateNumber(`EST-${Date.now()}`);
-    }
-  }, [open]);
+    if (lineItems.length > 0 && !showWarrantyNotification) {
+      // Check if any line items suggest warranty need
+      const hasRepairItems = lineItems.some(item => 
+        item.description.toLowerCase().includes('repair') ||
+        item.description.toLowerCase().includes('fix') ||
+        item.description.toLowerCase().includes('install') ||
+        item.description.toLowerCase().includes('replace')
+      );
 
-  const addLineItem = () => {
-    const newItem: EstimateLineItem = {
-      id: Date.now().toString(),
-      description: "",
-      quantity: 1,
-      unitPrice: 0,
-      total: 0,
-      taxable: true
-    };
-    setLineItems([...lineItems, newItem]);
-  };
+      const hasWarranty = lineItems.some(item =>
+        item.description.toLowerCase().includes('warranty')
+      );
 
-  const removeLineItem = (id: string) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter(item => item.id !== id));
-    }
-  };
+      if (hasRepairItems && !hasWarranty) {
+        // Suggest appropriate warranty based on total amount
+        const total = calculateGrandTotal();
+        let warranty: Product;
 
-  const updateLineItem = (id: string, field: keyof EstimateLineItem, value: any) => {
-    setLineItems(lineItems.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [field]: value };
-        if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+        if (total > 500) {
+          warranty = {
+            id: "prod-5",
+            name: "2-Year Warranty",
+            description: "2-year comprehensive warranty package",
+            category: "Warranties",
+            price: 149,
+            ourPrice: 0,
+            cost: 0,
+            taxable: false,
+            tags: ["warranty", "protection"]
+          };
+        } else if (total > 200) {
+          warranty = {
+            id: "prod-4",
+            name: "1-Year Warranty",
+            description: "1-year extended warranty with priority service",
+            category: "Warranties",
+            price: 89,
+            ourPrice: 0,
+            cost: 0,
+            taxable: false,
+            tags: ["warranty", "protection"]
+          };
+        } else {
+          warranty = {
+            id: "prod-3",
+            name: "6-Month Warranty",
+            description: "Extended warranty covering parts and labor",
+            category: "Warranties",
+            price: 49,
+            ourPrice: 0,
+            cost: 0,
+            taxable: false,
+            tags: ["warranty", "protection"]
+          };
         }
-        return updatedItem;
+
+        setSuggestedWarranty(warranty);
+        setShowWarrantyNotification(true);
       }
-      return item;
-    }));
-  };
+    }
+  }, [lineItems, calculateGrandTotal, showWarrantyNotification]);
 
-  const addProduct = (product: Product) => {
-    const newItem: EstimateLineItem = {
-      id: Date.now().toString(),
-      description: product.name,
-      quantity: 1,
-      unitPrice: product.price,
-      total: product.price,
-      taxable: product.taxable || true
+  // Auto-save functionality
+  useEffect(() => {
+    if (lineItems.length > 0 || notes) {
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+
+      const timeout = setTimeout(async () => {
+        try {
+          await saveDocumentChanges();
+          console.log("Auto-saved estimate");
+        } catch (error) {
+          console.error("Auto-save failed:", error);
+        }
+      }, 3000);
+
+      setAutoSaveTimeout(timeout);
+    }
+
+    return () => {
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
     };
-    setLineItems([...lineItems, newItem]);
+  }, [lineItems, notes, saveDocumentChanges]);
+
+  const handleAddWarranty = () => {
+    if (suggestedWarranty) {
+      handleAddProduct(suggestedWarranty);
+      setShowWarrantyNotification(false);
+      toast.success(`${suggestedWarranty.name} added to estimate`);
+    }
   };
 
-  const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => sum + item.total, 0);
+  const handleSaveAndClose = async () => {
+    try {
+      const savedDocument = await saveDocumentChanges();
+      if (savedDocument && onEstimateCreated) {
+        onEstimateCreated(savedDocument as Estimate);
+      }
+      onOpenChange(false);
+      toast.success("Estimate saved successfully!");
+    } catch (error) {
+      console.error('Error saving estimate:', error);
+      toast.error('Failed to save estimate');
+    }
   };
 
-  const calculateTax = () => {
-    const taxableAmount = lineItems.reduce((sum, item) => {
-      return sum + (item.taxable ? item.total : 0);
-    }, 0);
-    return taxableAmount * 0.1; // 10% tax rate
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax();
-  };
-
-  const handleSave = () => {
-    // In a real implementation, this would save to the database
-    console.log("Saving estimate:", {
-      estimateNumber,
-      lineItems,
-      notes,
-      subtotal: calculateSubtotal(),
-      tax: calculateTax(),
-      total: calculateTotal()
-    });
-    
-    onEstimateCreated();
-    onOpenChange(false);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Quick Estimate</DialogTitle>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-blue-600" />
+              <div>
+                <DialogTitle className="text-xl">
+                  {existingEstimate ? 'Edit Estimate' : 'Create Estimate'}
+                </DialogTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-sm">{documentNumber}</Badge>
+                  <span className="text-sm text-gray-500">•</span>
+                  <span className="text-sm text-gray-600">{finalClientInfo.name || 'Client'}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Total Amount</div>
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(calculateGrandTotal())}
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Estimate Number */}
-          <div>
-            <Label htmlFor="estimateNumber">Estimate Number</Label>
-            <Input
-              id="estimateNumber"
-              value={estimateNumber}
-              onChange={(e) => setEstimateNumber(e.target.value)}
-              placeholder="EST-001"
-            />
-          </div>
-
-          {/* Quick Add Products */}
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="font-medium mb-3">Quick Add Services</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                {defaultProducts.map((product) => (
-                  <Button
-                    key={product.id}
-                    variant="outline"
-                    onClick={() => addProduct(product)}
-                    className="text-left h-auto p-3"
-                  >
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatCurrency(product.price)}
-                      </div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Line Items */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Line Items</h3>
-              <Button onClick={addLineItem} variant="outline" size="sm">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {lineItems.map((item) => (
-                <div key={item.id} className="border rounded-lg p-4">
-                  <div className="grid grid-cols-12 gap-3 items-center">
-                    <div className="col-span-4">
-                      <Label className="text-xs">Description</Label>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        placeholder="Service description"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs">Quantity</Label>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateLineItem(item.id, 'quantity', Number(e.target.value) || 0)}
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs">Unit Price</Label>
-                      <Input
-                        type="number"
-                        value={item.unitPrice}
-                        onChange={(e) => updateLineItem(item.id, 'unitPrice', Number(e.target.value) || 0)}
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs">Total</Label>
-                      <div className="font-medium pt-2">
-                        {formatCurrency(item.total)}
-                      </div>
-                    </div>
-                    <div className="col-span-1">
-                      <Label className="text-xs">Taxable</Label>
-                      <input
-                        type="checkbox"
-                        checked={item.taxable}
-                        onChange={(e) => updateLineItem(item.id, 'taxable', e.target.checked)}
-                        className="mt-2"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      {lineItems.length > 1 && (
-                        <Button
-                          onClick={() => removeLineItem(item.id)}
-                          variant="outline"
-                          size="sm"
-                          className="mt-4"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+        {/* Smart Warranty Notification */}
+        {showWarrantyNotification && suggestedWarranty && (
+          <div className="flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg p-4 mx-6 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-start gap-3">
+                <Lightbulb className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-medium text-amber-800">
+                    Recommend warranty for this service
+                  </div>
+                  <div className="text-sm text-amber-700 mt-1">
+                    Based on your service items, we suggest adding <strong>{suggestedWarranty.name}</strong> 
+                    ({formatCurrency(suggestedWarranty.price)}) for customer peace of mind
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(calculateSubtotal())}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Tax (10%):</span>
-                <span>{formatCurrency(calculateTax())}</span>
-              </div>
-              <div className="border-t pt-2">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span>{formatCurrency(calculateTotal())}</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleAddWarranty} className="bg-amber-600 hover:bg-amber-700">
+                  Add Warranty
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => setShowWarrantyNotification(false)}
+                  className="text-amber-600 hover:text-amber-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Notes */}
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes..."
-              rows={3}
-            />
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+          <LineItemsManager
+            lineItems={lineItems}
+            taxRate={taxRate}
+            notes={notes}
+            onLineItemsChange={setLineItems}
+            onTaxRateChange={setTaxRate}
+            onNotesChange={setNotes}
+            onAddProduct={handleAddProduct}
+            onRemoveLineItem={handleRemoveLineItem}
+            onUpdateLineItem={handleUpdateLineItem}
+            calculateSubtotal={calculateSubtotal}
+            calculateTotalTax={calculateTotalTax}
+            calculateGrandTotal={calculateGrandTotal}
+            documentType="estimate"
+          />
+        </div>
+
+        <div className="flex-shrink-0 flex justify-between items-center pt-4 px-6 border-t">
+          <div className="text-sm text-gray-500">
+            Auto-saves every 3 seconds
           </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              Create Estimate
+            <Button 
+              onClick={handleSaveAndClose}
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting ? 'Saving...' : 'Save & Close'}
             </Button>
           </div>
         </div>

@@ -1,315 +1,232 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { PlusCircle, Pencil, Search, X, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Search, Edit, Trash2, Package } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { formatCurrency } from "@/lib/utils";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ProductEditDialog } from "./dialogs/ProductEditDialog";
-import { Product } from "./builder/types";
-import { toast } from "sonner";
+import { useProducts, Product } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobProductsProps {
   jobId: string;
+  onDeleteProduct?: (productId: string) => void;
 }
 
-export const JobProducts = ({ jobId }: JobProductsProps) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [isLoading, setIsLoading] = useState(true);
+export const JobProducts = ({ jobId, onDeleteProduct }: JobProductsProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-  // Mock products data - in a real app, this would come from your products database
-  const mockProducts: Product[] = [
-    {
-      id: "hvac-service",
-      name: "HVAC Service Call",
-      price: 150,
-      description: "Standard HVAC diagnostic and service",
-      ourprice: 75,
-      category: "HVAC",
-      unit: "each",
-      taxable: true
-    },
-    {
-      id: "air-filter",
-      name: "High-Efficiency Air Filter",
-      price: 25,
-      description: "HEPA air filter replacement",
-      ourprice: 12,
-      category: "HVAC",
-      unit: "each",
-      taxable: true
-    },
-    {
-      id: "plumbing-service",
-      name: "Plumbing Service Call",
-      price: 125,
-      description: "Standard plumbing diagnostic and service",
-      ourprice: 65,
-      category: "Plumbing",
-      unit: "each",
-      taxable: true
-    },
-    {
-      id: "drain-cleaning",
-      name: "Drain Cleaning Service",
-      price: 95,
-      description: "Professional drain cleaning and unclogging",
-      ourprice: 45,
-      category: "Plumbing",
-      unit: "each",
-      taxable: true
-    },
-    {
-      id: "electrical-service",
-      name: "Electrical Service Call",
-      price: 175,
-      description: "Standard electrical diagnostic and service",
-      ourprice: 85,
-      category: "Electrical",
-      unit: "each",
-      taxable: true
-    },
-    {
-      id: "outlet-installation",
-      name: "Outlet Installation",
-      price: 120,
-      description: "Standard electrical outlet installation",
-      ourprice: 60,
-      category: "Electrical",
-      unit: "each",
-      taxable: true
-    }
-  ];
-
-  useEffect(() => {
-    // In a real app, you would fetch products from your database
-    // For now, we'll use mock data
-    const loadProducts = async () => {
-      setIsLoading(true);
-      try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setProducts(mockProducts);
-        setFilteredProducts(mockProducts);
-      } catch (error) {
-        console.error("Error loading products:", error);
-        toast.error("Failed to load products");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, []);
-
-  useEffect(() => {
-    let filtered = products;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(product => product.category === selectedCategory);
-    }
-
-    setFilteredProducts(filtered);
-  }, [products, searchTerm, selectedCategory]);
-
-  const categories = ["all", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
-
-  const handleAddProduct = () => {
-    setSelectedProduct(null);
-    setIsEditDialogOpen(true);
-  };
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  const { 
+    products, 
+    categories, 
+    isLoading, 
+    createProduct, 
+    updateProduct, 
+    deleteProduct 
+  } = useProducts();
+  
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = !searchQuery || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+      (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+    
+    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveProduct = async (productData: Product) => {
-    try {
-      if (selectedProduct) {
-        // Update existing product
-        setProducts(prev => prev.map(p => p.id === selectedProduct.id ? productData : p));
-        toast.success("Product updated successfully");
-      } else {
-        // Add new product
-        const newProduct = {
-          ...productData,
-          id: `custom-${Date.now()}`
-        };
-        setProducts(prev => [...prev, newProduct]);
-        toast.success("Product added successfully");
-      }
-    } catch (error) {
-      console.error("Error saving product:", error);
-      toast.error("Failed to save product");
+  const handleCreateProduct = () => {
+    setSelectedProduct(null);
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleSaveProduct = async (product: any) => {
+    if (selectedProduct) {
+      // Editing existing product
+      await updateProduct(product.id, product);
+    } else {
+      // Creating new product
+      // Make sure cost has a default value for new products
+      const newProduct = {
+        ...product,
+        cost: product.cost ?? 0
+      };
+      await createProduct(newProduct);
+    }
+    setIsEditDialogOpen(false);
+    setIsCreateDialogOpen(false);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    if (onDeleteProduct) {
+      onDeleteProduct(productId);
+    } else {
+      deleteProduct(productId);
     }
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    try {
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      toast.success("Product deleted successfully");
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      toast.error("Failed to delete product");
-    }
+  const getMarginPercentage = (product: Product) => {
+    const margin = product.price - (product.ourPrice || 0);
+    return margin > 0 ? ((margin / product.price) * 100).toFixed(0) : "0";
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin h-8 w-8 border-4 border-fixlyfy border-t-transparent rounded-full"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const getMarginColor = (percentage: number) => {
+    if (percentage < 20) return "text-red-500";
+    if (percentage < 40) return "text-orange-500";
+    return "text-green-500";
+  };
 
   return (
-    <>
-      <Card className="border-fixlyfy-border shadow-sm">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Products & Services
-            </CardTitle>
-            <Button onClick={handleAddProduct} className="gap-2">
-              <PlusCircle size={16} />
-              Add Product
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          {/* Search and Filter */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+    <Card className="border-fixlyfy-border shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-medium">Product Catalog</h3>
+          <Button onClick={handleCreateProduct} className="gap-2">
+            <PlusCircle size={16} />
+            New Product
+          </Button>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <Label htmlFor="search-products" className="sr-only">Search Products</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
+                id="search-products"
                 placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category === "all" ? "All" : category}
-                </Button>
-              ))}
-            </div>
           </div>
 
-          {/* Products Grid */}
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No products found</h3>
-              <p>
-                {searchTerm || selectedCategory !== "all"
-                  ? "Try adjusting your search or filter criteria."
-                  : "Add your first product to get started."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={selectedCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(null)}
+              className="text-xs h-7 px-2"
+            >
+              All
+            </Button>
+            {categories.map(category => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="text-xs h-7 px-2"
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="w-full h-16" />
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Price</TableHead>
+                <TableHead className="text-right">Our Price</TableHead>
+                <TableHead className="text-right">Margin</TableHead>
+                <TableHead>Taxable</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredProducts.map((product) => (
-                <Card key={product.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{product.name}</h4>
-                        {product.category && (
-                          <Badge variant="secondary" className="mt-1">
-                            {product.category}
+                <TableRow key={product.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-sm text-muted-foreground">{product.description}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {product.tags && product.tags.map((tag, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-[10px] py-0 h-5 bg-muted/50"
+                          >
+                            {tag}
                           </Badge>
-                        )}
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditProduct(product)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        ))}
                       </div>
                     </div>
-
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {product.description}
-                    </p>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Sell Price:</span>
-                        <span className="font-semibold">{formatCurrency(product.price)}</span>
-                      </div>
-                      {product.ourprice && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Our Cost:</span>
-                          <span className="text-sm">{formatCurrency(product.ourprice)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Unit:</span>
-                        <span className="text-sm">{product.unit || "each"}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Taxable:</span>
-                        <Badge variant={product.taxable ? "default" : "secondary"}>
-                          {product.taxable ? "Yes" : "No"}
-                        </Badge>
-                      </div>
+                  </TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${(product.ourPrice || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                    <span className={getMarginColor(parseInt(getMarginPercentage(product)))}>
+                      {getMarginPercentage(product)}%
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {product.taxable ? "Yes" : "No"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteProduct(product.id)}
+                      >
+                        <Trash size={16} />
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Product Edit Dialog */}
-      <ProductEditDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        product={selectedProduct}
-        onSave={handleSaveProduct}
-      />
-    </>
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No products found. Try adjusting your search or filters.</p>
+          </div>
+        )}
+        
+        <ProductEditDialog
+          open={isEditDialogOpen || isCreateDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            setIsCreateDialogOpen(open);
+          }}
+          product={selectedProduct}
+          onSave={handleSaveProduct}
+          categories={categories}
+        />
+      </CardContent>
+    </Card>
   );
 };

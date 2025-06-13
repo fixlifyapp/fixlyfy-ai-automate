@@ -1,235 +1,168 @@
 
-import React, { useState } from 'react';
-import { ModernCard, ModernCardContent, ModernCardHeader } from '@/components/ui/modern-card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, 
-  Download, 
-  Trash2, 
-  FileText, 
-  Image, 
-  File,
-  Plus,
-  Eye,
-  ExternalLink
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-
-interface Attachment {
-  id: string;
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  uploaded_at: string;
-  uploaded_by?: string;
-  file_path: string;
-}
+import React, { useState } from "react";
+import { ModernCard, ModernCardHeader, ModernCardContent, ModernCardTitle } from "@/components/ui/modern-card";
+import { Button } from "@/components/ui/button";
+import { Upload, File, Download, Trash2, Eye, Paperclip } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { AttachmentUploadDialog } from "../dialogs/AttachmentUploadDialog";
+import { useJobAttachments } from "@/hooks/useJobAttachments";
 
 interface AttachmentsCardProps {
   jobId: string;
-  attachments: Attachment[];
-  onUpload?: (files: FileList) => void;
-  onDelete?: (attachmentId: string) => void;
-  onDownload?: (attachment: Attachment) => void;
-  onView?: (attachment: Attachment) => void;
-  isUploading?: boolean;
-  canUpload?: boolean;
-  canDelete?: boolean;
+  editable?: boolean;
+  onUpdate?: () => void;
 }
 
-export const AttachmentsCard = ({
-  jobId,
-  attachments = [],
-  onUpload,
-  onDelete,
-  onDownload,
-  onView,
-  isUploading = false,
-  canUpload = true,
-  canDelete = true
-}: AttachmentsCardProps) => {
-  const [dragOver, setDragOver] = useState(false);
+export const AttachmentsCard = ({ jobId, editable = false, onUpdate }: AttachmentsCardProps) => {
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  
+  const {
+    attachments,
+    isLoading,
+    deleteAttachment,
+    downloadAttachment,
+    viewAttachment,
+    formatFileSize,
+    getFileType,
+    refreshAttachments
+  } = useJobAttachments(jobId);
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) {
-      return Image;
-    } else if (mimeType.includes('pdf') || mimeType.includes('document')) {
-      return FileText;
+  const handleView = async (attachment: any) => {
+    await viewAttachment(attachment.file_path, attachment.file_name);
+  };
+
+  const handleDownload = async (attachment: any) => {
+    await downloadAttachment(attachment.file_path, attachment.file_name);
+  };
+
+  const handleDelete = async (attachment: any) => {
+    const success = await deleteAttachment(attachment.id, attachment.file_path);
+    if (success && onUpdate) {
+      onUpdate();
     }
-    return File;
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
+  const handleUploadSuccess = () => {
+    console.log("Upload success callback triggered, refreshing attachments");
+    setIsUploadDialogOpen(false);
     
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && onUpload) {
-      onUpload(files);
+    // Force refresh the attachments list
+    refreshAttachments();
+    
+    // Also trigger any parent update callback
+    if (onUpdate) {
+      console.log("Calling parent onUpdate callback");
+      onUpdate();
     }
+    
+    // Add a small delay and refresh again to ensure we get the latest data
+    setTimeout(() => {
+      console.log("Secondary refresh triggered");
+      refreshAttachments();
+    }, 1000);
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0 && onUpload) {
-      onUpload(files);
-    }
-  };
+  if (isLoading) {
+    return (
+      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+        <ModernCardHeader className="pb-4">
+          <ModernCardTitle icon={Paperclip}>
+            Attachments
+          </ModernCardTitle>
+        </ModernCardHeader>
+        <ModernCardContent>
+          <div className="text-sm text-muted-foreground text-center py-4">
+            Loading attachments...
+          </div>
+        </ModernCardContent>
+      </ModernCard>
+    );
+  }
 
   return (
-    <ModernCard>
-      <ModernCardHeader className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Attachments ({attachments.length})
-        </h3>
-        {canUpload && (
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isUploading}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {isUploading ? 'Uploading...' : 'Add Files'}
-            </Button>
-            <Input
-              type="file"
-              multiple
-              onChange={handleFileInput}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              disabled={isUploading}
-            />
+    <>
+      <ModernCard variant="elevated" className="hover:shadow-lg transition-all duration-300">
+        <ModernCardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <ModernCardTitle icon={Paperclip}>
+              Attachments ({attachments.length})
+            </ModernCardTitle>
+            {editable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsUploadDialogOpen(true)}
+                className="text-fixlyfy hover:text-fixlyfy-dark"
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-        )}
-      </ModernCardHeader>
-      <ModernCardContent className="space-y-4">
-        {/* Upload Drop Zone */}
-        {canUpload && (
-          <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              dragOver 
-                ? 'border-primary bg-primary/10' 
-                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop files here, or click to select
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Supports: Images, PDFs, Documents (Max 10MB each)
-            </p>
-          </div>
-        )}
-
-        {/* Attachments List */}
-        {attachments.length > 0 ? (
-          <div className="space-y-2">
-            {attachments.map((attachment) => {
-              const FileIcon = getFileIcon(attachment.mime_type);
-              
-              return (
-                <div
-                  key={attachment.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {attachment.file_name}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatFileSize(attachment.file_size)}</span>
-                        <span>•</span>
-                        <span>
-                          {formatDistanceToNow(new Date(attachment.uploaded_at), { addSuffix: true })}
+        </ModernCardHeader>
+        <ModernCardContent>
+          {attachments.length > 0 ? (
+            <div className="space-y-3">
+              {attachments.map((attachment) => (
+                <div key={attachment.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {getFileType(attachment.mime_type)}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize(attachment.file_size)}
                         </span>
-                        {attachment.uploaded_by && (
-                          <>
-                            <span>•</span>
-                            <span>by {attachment.uploaded_by}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-1">
-                    {attachment.mime_type.startsWith('image/') && onView && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onView(attachment)}
-                        className="h-8 w-8 p-0"
+                  <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                      onClick={() => handleView(attachment)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                      onClick={() => handleDownload(attachment)}
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                    {editable && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => handleDelete(attachment)}
                       >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
-                    
-                    {onDownload && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDownload(attachment)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    )}
-                    
-                    {canDelete && onDelete && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(attachment.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-6">
-            <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No attachments yet
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Upload files to share documents, photos, or other materials
-            </p>
-          </div>
-        )}
-      </ModernCardContent>
-    </ModernCard>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground text-center py-4">
+              {editable ? "No attachments. Click the upload button to add files." : "No attachments"}
+            </div>
+          )}
+        </ModernCardContent>
+      </ModernCard>
+
+      <AttachmentUploadDialog
+        open={isUploadDialogOpen}
+        onOpenChange={setIsUploadDialogOpen}
+        jobId={jobId}
+        onUploadSuccess={handleUploadSuccess}
+      />
+    </>
   );
 };

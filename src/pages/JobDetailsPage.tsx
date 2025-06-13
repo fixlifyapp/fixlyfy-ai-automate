@@ -1,96 +1,91 @@
 
-import { useParams } from 'react-router-dom';
-import { JobDetailsHeader } from '@/components/jobs/JobDetailsHeader';
-import { JobDetailsTabs } from '@/components/jobs/JobDetailsTabs';
-import { ModernJobEstimatesTab } from '@/components/jobs/overview/ModernJobEstimatesTab';
-import { ModernJobInvoicesTab } from '@/components/jobs/overview/ModernJobInvoicesTab';
-import { ModernJobPaymentsTab } from '@/components/jobs/overview/ModernJobPaymentsTab';
-import { ModernJobHistoryTab } from '@/components/jobs/overview/ModernJobHistoryTab';
-import { useJobs } from '@/hooks/useJobs';
-import { JobDetailsProvider } from '@/components/jobs/context/JobDetailsContext';
-import { JobOverview } from '@/components/jobs/JobOverview';
-import { JobMessages } from '@/components/jobs/JobMessages';
-import { useState } from 'react';
+import { useState, useEffect } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { JobDetailsTabs } from "@/components/jobs/JobDetailsTabs";
+import { Card } from "@/components/ui/card";
+import { JobDetailsHeader } from "@/components/jobs/JobDetailsHeader";
+import { TabsContent } from "@/components/ui/tabs";
+import { useRBAC } from "@/components/auth/RBACProvider";
+import { toast } from "sonner";
+import { JobDetailsProvider } from "@/components/jobs/context/JobDetailsContext";
+import { JobOverview } from "@/components/jobs/JobOverview";
+import { ModernJobEstimatesTab } from "@/components/jobs/overview/ModernJobEstimatesTab";
+import { ModernJobInvoicesTab } from "@/components/jobs/overview/ModernJobInvoicesTab";
+import { ModernJobPaymentsTab } from "@/components/jobs/overview/ModernJobPaymentsTab";
+import { ModernJobHistoryTab } from "@/components/jobs/overview/ModernJobHistoryTab";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export const JobDetailsPage = () => {
+const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { jobs, isLoading } = useJobs();
-  const [activeTab, setActiveTab] = useState('overview');
-
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("overview");
+  const { hasPermission } = useRBAC();
+  const isMobile = useIsMobile();
+  
+  useEffect(() => {
+    if (location.state && location.state.activeTab) {
+      setActiveTab(location.state.activeTab);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+  
+  const handleEstimateConverted = () => {
+    setActiveTab("invoices");
+    toast.success('Estimate converted to invoice successfully');
+  };
+  
   if (!id) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600">Job Not Found</h1>
-          <p className="text-muted-foreground mt-2">
-            The job you're looking for could not be found.
-          </p>
+      <PageLayout>
+        <div className="container mx-auto px-2 sm:px-4">
+          <div className="text-center py-8">
+            <h1 className="text-xl sm:text-2xl font-bold text-red-600">Job not found</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">Invalid job ID provided.</p>
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
-
-  const job = jobs.find(j => j.id === id);
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!job) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600">Job Not Found</h1>
-          <p className="text-muted-foreground mt-2">
-            Job with ID "{id}" could not be found.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <JobOverview jobId={id} />;
-      case 'estimates':
-        return <ModernJobEstimatesTab jobId={id} />;
-      case 'invoices':
-        return <ModernJobInvoicesTab jobId={id} />;
-      case 'payments':
-        return <ModernJobPaymentsTab jobId={id} />;
-      case 'history':
-        return <ModernJobHistoryTab jobId={id} />;
-      case 'messages':
-        return <JobMessages jobId={id} />;
-      default:
-        return <JobOverview jobId={id} />;
-    }
-  };
-
+  
   return (
-    <JobDetailsProvider jobId={id}>
-      <div className="container mx-auto p-6 space-y-6">
-        <JobDetailsHeader job={job} />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-4 space-y-6">
+    <PageLayout>
+      <JobDetailsProvider jobId={id}>
+        <div className="container mx-auto px-2 sm:px-4 max-w-none overflow-x-hidden">
+          <div className="mb-4 sm:mb-6">
+            <Card className="border-fixlyfy-border shadow-sm">
+              <JobDetailsHeader />
+            </Card>
+          </div>
+          
+          <div className="w-full">
             <JobDetailsTabs 
               activeTab={activeTab} 
               onTabChange={setActiveTab}
-            />
-            {renderTabContent()}
+            >
+              <TabsContent value="overview" className="mt-0">
+                <JobOverview jobId={id} />
+              </TabsContent>
+              <TabsContent value="estimates" className="mt-0">
+                <ModernJobEstimatesTab 
+                  jobId={id} 
+                  onEstimateConverted={handleEstimateConverted}
+                />
+              </TabsContent>
+              <TabsContent value="invoices" className="mt-0">
+                <ModernJobInvoicesTab jobId={id} />
+              </TabsContent>
+              <TabsContent value="payments" className="mt-0">
+                <ModernJobPaymentsTab jobId={id} />
+              </TabsContent>
+              <TabsContent value="history" className="mt-0">
+                <ModernJobHistoryTab jobId={id} />
+              </TabsContent>
+            </JobDetailsTabs>
           </div>
         </div>
-      </div>
-    </JobDetailsProvider>
+      </JobDetailsProvider>
+    </PageLayout>
   );
 };
 

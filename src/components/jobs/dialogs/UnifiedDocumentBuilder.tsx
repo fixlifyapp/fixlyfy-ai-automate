@@ -1,106 +1,120 @@
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Save, FileText, DollarSign, Shield } from "lucide-react";
-import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
-import { WarrantyUpsellStep } from "./unified/WarrantyUpsellStep";
-import { UnifiedReviewStep } from "./unified/UnifiedReviewStep";
-import { SendDocumentStep } from "./unified/SendDocumentStep";
-import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
-import { Estimate } from "@/hooks/useEstimates";
-import { Invoice } from "@/hooks/useInvoices";
-import { toast } from "sonner";
 
-export type DocumentType = "estimate" | "invoice";
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Plus, 
+  Trash2, 
+  DollarSign, 
+  FileText, 
+  Calculator,
+  Save,
+  ArrowRight
+} from 'lucide-react';
+import { useUnifiedDocumentBuilder } from './unified/useUnifiedDocumentBuilder';
+import { Estimate } from '@/hooks/useEstimates';
+import { Invoice } from '@/hooks/useInvoices';
+import { formatCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
+
+export type DocumentType = 'estimate' | 'invoice';
 
 interface UnifiedDocumentBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   documentType: DocumentType;
-  jobId: string;
   existingDocument?: Estimate | Invoice;
-  onDocumentCreated?: () => void;
-  onSyncToInvoice?: () => void;
+  jobId: string;
+  onDocumentCreated?: (document?: Estimate | Invoice) => void;
 }
 
 export const UnifiedDocumentBuilder = ({
   open,
   onOpenChange,
   documentType,
-  jobId,
   existingDocument,
-  onDocumentCreated,
-  onSyncToInvoice
+  jobId,
+  onDocumentCreated
 }: UnifiedDocumentBuilderProps) => {
-  const [currentStep, setCurrentStep] = useState<"items" | "warranties" | "review" | "send">("items");
-  const [selectedWarranties, setSelectedWarranties] = useState<string[]>([]);
-  
   const {
-    // State
-    lineItems,
-    setLineItems,
-    taxRate,
-    setTaxRate,
-    notes,
-    setNotes,
-    documentNumber,
-    isInitialized,
-    isSubmitting,
-
-    // Data objects
+    formData,
     jobData,
-
-    // Calculations
-    calculateSubtotal,
-    calculateTotalTax,
-    calculateGrandTotal,
-
-    // Line item actions
+    lineItems,
+    taxRate,
+    notes,
+    isSubmitting,
+    setLineItems,
+    setTaxRate,
+    setNotes,
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,
-
-    // Document operations
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
     saveDocumentChanges,
     convertToInvoice
   } = useUnifiedDocumentBuilder({
     documentType,
     existingDocument,
     jobId,
-    open,
-    onSyncToInvoice
+    open
   });
 
-  const handleAddWarranty = (warranty: any) => {
-    const warrantyLineItem = {
-      id: `warranty-${warranty.id}-${Date.now()}`,
-      description: warranty.name,
-      quantity: 1,
-      unitPrice: warranty.price,
-      total: warranty.price,
-      taxable: false, // Warranties typically not taxed
-      ourPrice: warranty.cost,
-      name: warranty.name,
-      price: warranty.price,
-      discount: 0
+  const [newItemDescription, setNewItemDescription] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState(1);
+  const [newItemPrice, setNewItemPrice] = useState(0);
+  const [newItemTaxable, setNewItemTaxable] = useState(true);
+
+  const handleAddLineItem = () => {
+    if (!newItemDescription.trim() || newItemPrice <= 0) {
+      toast.error('Please enter valid item details');
+      return;
+    }
+
+    const newItem = {
+      id: `temp-${Date.now()}`,
+      description: newItemDescription,
+      quantity: newItemQuantity,
+      unitPrice: newItemPrice,
+      taxable: newItemTaxable,
+      discount: 0,
+      ourPrice: 0,
+      name: newItemDescription,
+      price: newItemPrice,
+      total: newItemQuantity * newItemPrice
     };
 
-    setLineItems(prev => [...prev, warrantyLineItem]);
-    setSelectedWarranties(prev => [...prev, warranty.id]);
-  };
-
-  const handleRemoveWarranty = (warrantyId: string) => {
-    setLineItems(prev => prev.filter(item => !item.id.includes(`warranty-${warrantyId}`)));
-    setSelectedWarranties(prev => prev.filter(id => id !== warrantyId));
+    setLineItems(prev => [...prev, newItem]);
+    
+    // Reset form
+    setNewItemDescription('');
+    setNewItemQuantity(1);
+    setNewItemPrice(0);
+    setNewItemTaxable(true);
+    
+    console.log('Added new line item:', newItem);
   };
 
   const handleSave = async () => {
+    console.log('Saving document:', { documentType, lineItems, notes });
+    
+    if (lineItems.length === 0) {
+      toast.error('Please add at least one item');
+      return;
+    }
+
     try {
-      await saveDocumentChanges();
-      toast.success(`${documentType === 'estimate' ? 'Estimate' : 'Invoice'} saved successfully`);
-      onDocumentCreated?.();
-      setCurrentStep("send"); // Move to send step after saving
+      const savedDocument = await saveDocumentChanges();
+      if (savedDocument && onDocumentCreated) {
+        onDocumentCreated(savedDocument);
+      }
+      onOpenChange(false);
     } catch (error) {
       console.error('Error saving document:', error);
       toast.error('Failed to save document');
@@ -108,188 +122,253 @@ export const UnifiedDocumentBuilder = ({
   };
 
   const handleConvert = async () => {
-    if (documentType !== 'estimate') return;
-    
+    console.log('Converting estimate to invoice');
     try {
-      await convertToInvoice();
-      toast.success('Estimate converted to invoice successfully');
-      onDocumentCreated?.();
-      setCurrentStep("send"); // Move to send step after converting
+      const invoice = await convertToInvoice();
+      if (invoice && onDocumentCreated) {
+        onDocumentCreated(invoice);
+      }
+      onOpenChange(false);
     } catch (error) {
       console.error('Error converting to invoice:', error);
-      toast.error('Failed to convert estimate to invoice');
+      toast.error('Failed to convert to invoice');
     }
   };
 
-  const handleSendSuccess = () => {
-    onDocumentCreated?.();
-    onOpenChange(false);
-  };
-
-  if (!isInitialized) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  const isEstimate = documentType === 'estimate';
+  const title = isEstimate 
+    ? (existingDocument ? 'Edit Estimate' : 'Create Estimate')
+    : (existingDocument ? 'Edit Invoice' : 'Create Invoice');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {documentType === "estimate" ? <FileText className="h-5 w-5" /> : <DollarSign className="h-5 w-5" />}
-            {existingDocument ? "Edit" : "Create"} {documentType === "estimate" ? "Estimate" : "Invoice"}
-            <span className="text-sm font-mono text-muted-foreground">
-              {documentNumber}
-            </span>
-          </DialogTitle>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {isEstimate ? (
+                <FileText className="h-6 w-6 text-blue-600" />
+              ) : (
+                <DollarSign className="h-6 w-6 text-green-600" />
+              )}
+              <div>
+                <DialogTitle className="text-xl">{title}</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {jobData?.title || 'Service Request'}
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="text-sm">
+              {formData.documentNumber || `${isEstimate ? 'EST' : 'INV'}-NEW`}
+            </Badge>
+          </div>
         </DialogHeader>
 
-        <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as "items" | "warranties" | "review" | "send")}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="items">Items & Details</TabsTrigger>
-            <TabsTrigger value="warranties" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Warranties
-            </TabsTrigger>
-            <TabsTrigger value="review">Review & Save</TabsTrigger>
-            <TabsTrigger value="send">Send Document</TabsTrigger>
-          </TabsList>
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-6 p-1">
+          {/* Line Items Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              Items & Services
+            </h3>
 
-          <TabsContent value="items" className="space-y-4">
-            <UnifiedItemsStep
-              documentType={documentType}
-              documentNumber={documentNumber}
-              lineItems={lineItems}
-              taxRate={taxRate}
-              notes={notes}
-              onLineItemsChange={setLineItems}
-              onTaxRateChange={setTaxRate}
-              onNotesChange={setNotes}
-              onAddProduct={handleAddProduct}
-              onRemoveLineItem={handleRemoveLineItem}
-              onUpdateLineItem={handleUpdateLineItem}
-              calculateSubtotal={calculateSubtotal}
-              calculateTotalTax={calculateTotalTax}
-              calculateGrandTotal={calculateGrandTotal}
-            />
-          </TabsContent>
+            {/* Add New Item Form */}
+            <div className="grid grid-cols-12 gap-3 p-4 bg-gray-50 rounded-lg">
+              <div className="col-span-5">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  placeholder="Service or product description"
+                  value={newItemDescription}
+                  onChange={(e) => setNewItemDescription(e.target.value)}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="quantity">Qty</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={newItemQuantity}
+                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="price">Price</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newItemPrice}
+                  onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="taxable">Taxable</Label>
+                <Select value={newItemTaxable.toString()} onValueChange={(value) => setNewItemTaxable(value === 'true')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Yes</SelectItem>
+                    <SelectItem value="false">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-1 flex items-end">
+                <Button onClick={handleAddLineItem} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
 
-          <TabsContent value="warranties" className="space-y-4">
-            <WarrantyUpsellStep
-              lineItems={lineItems}
-              onAddWarranty={handleAddWarranty}
-              onRemoveWarranty={handleRemoveWarranty}
-              onContinue={() => setCurrentStep("review")}
-              onBack={() => setCurrentStep("items")}
-              selectedWarranties={selectedWarranties}
-            />
-          </TabsContent>
-
-          <TabsContent value="review" className="space-y-4">
-            <UnifiedReviewStep
-              documentType={documentType}
-              documentNumber={documentNumber}
-              jobData={jobData}
-              lineItems={lineItems}
-              taxRate={taxRate}
-              notes={notes}
-              calculateSubtotal={calculateSubtotal}
-              calculateTotalTax={calculateTotalTax}
-              calculateGrandTotal={calculateGrandTotal}
-            />
-          </TabsContent>
-
-          <TabsContent value="send" className="space-y-4">
-            <SendDocumentStep
-              documentType={documentType}
-              documentNumber={documentNumber}
-              jobData={jobData}
-              lineItems={lineItems}
-              taxRate={taxRate}
-              notes={notes}
-              total={calculateGrandTotal()}
-              onSave={saveDocumentChanges}
-              onBack={() => setCurrentStep("review")}
-              onSuccess={handleSendSuccess}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex gap-2">
-            {currentStep === "warranties" && (
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentStep("items")}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back to Items
-              </Button>
-            )}
-            {currentStep === "review" && (
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentStep("warranties")}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back to Warranties
-              </Button>
-            )}
-            {currentStep === "send" && (
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentStep("review")}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back to Review
-              </Button>
+            {/* Line Items List */}
+            {lineItems.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Description</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Qty</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Unit Price</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Taxable</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-900">Total</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-gray-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineItems.map((item) => (
+                      <tr key={item.id} className="border-t">
+                        <td className="px-4 py-3">
+                          <Input
+                            value={item.description}
+                            onChange={(e) => handleUpdateLineItem(item.id, 'description', e.target.value)}
+                            className="border-0 p-0 h-auto bg-transparent"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => handleUpdateLineItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                            className="w-16 text-center"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unitPrice}
+                            onChange={(e) => handleUpdateLineItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            className="w-24 text-right"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Select 
+                            value={item.taxable.toString()} 
+                            onValueChange={(value) => handleUpdateLineItem(item.id, 'taxable', value === 'true')}
+                          >
+                            <SelectTrigger className="w-16">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {formatCurrency(item.quantity * item.unitPrice)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveLineItem(item.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
-          <div className="flex gap-2">
-            {currentStep === "items" && (
+          {/* Totals Section */}
+          <div className="flex justify-end">
+            <div className="w-80 space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(calculateSubtotal())}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span>Tax:</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                    className="w-16 h-6 text-xs"
+                  />
+                  <span className="text-xs">%</span>
+                </div>
+                <span>{formatCurrency(calculateTotalTax())}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                <span>Total:</span>
+                <span>{formatCurrency(calculateGrandTotal())}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes Section */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              placeholder="Additional notes or terms..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+
+          <div className="flex gap-3">
+            <Button 
+              onClick={handleSave} 
+              disabled={isSubmitting || lineItems.length === 0}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting ? 'Saving...' : `Save ${isEstimate ? 'Estimate' : 'Invoice'}`}
+            </Button>
+
+            {isEstimate && existingDocument && (
               <Button 
-                onClick={() => setCurrentStep("warranties")}
-                className="gap-2"
+                onClick={handleConvert} 
+                disabled={isSubmitting}
+                className="gap-2 bg-green-600 hover:bg-green-700"
               >
-                Add Warranties
-                <ChevronRight className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
+                Convert to Invoice
               </Button>
-            )}
-
-            {currentStep === "review" && (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={handleSave}
-                  disabled={isSubmitting}
-                  className="gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  Save {documentType === "estimate" ? "Estimate" : "Invoice"}
-                </Button>
-
-                {documentType === "estimate" && (
-                  <Button 
-                    onClick={handleConvert}
-                    disabled={isSubmitting}
-                    className="gap-2"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    Convert to Invoice
-                  </Button>
-                )}
-              </>
             )}
           </div>
         </div>

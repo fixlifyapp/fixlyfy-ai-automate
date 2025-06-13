@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -11,31 +10,23 @@ export interface Estimate {
   date: string;
   total: number;
   amount: number; // alias for total
-  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'converted';
+  status: string;
   notes?: string;
   created_at: string;
   updated_at: string;
-  valid_until?: string;
-  items?: any[]; // JSON array from database
+  valid_until?: string; // Added this field
+  items?: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxable: boolean;
+    total: number;
+    name?: string;
+    price?: number;
+  }>;
   viewed?: boolean;
   techniciansNote?: string;
-  tax_rate?: number;
-  tax_amount?: number;
-  subtotal?: number;
-  discount_amount?: number;
-  client_id?: string;
-  client_name?: string;
-  client_email?: string;
-  client_phone?: string;
-  created_by?: string;
-  sent_at?: string;
-  approved_at?: string;
-  client?: {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-  };
 }
 
 export const useEstimates = (jobId?: string) => {
@@ -46,72 +37,30 @@ export const useEstimates = (jobId?: string) => {
     console.log('Refreshing estimates for job:', jobId);
     try {
       setIsLoading(true);
-      
-      // First fetch estimates
-      let estimateQuery = supabase
-        .from('estimates')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('estimates').select('*').order('created_at', { ascending: false });
       
       if (jobId) {
-        estimateQuery = estimateQuery.eq('job_id', jobId);
+        query = query.eq('job_id', jobId);
       }
       
-      const { data: estimatesData, error: estimatesError } = await estimateQuery;
+      const { data, error } = await query;
       
-      if (estimatesError) {
-        console.error('Error fetching estimates:', estimatesError);
-        throw estimatesError;
+      if (error) {
+        console.error('Error fetching estimates:', error);
+        throw error;
       }
       
-      console.log('Fetched estimates:', estimatesData);
+      console.log('Fetched estimates:', data);
       
-      // Get unique client IDs
-      const clientIds = [...new Set(estimatesData?.map(est => est.client_id).filter(Boolean))];
-      
-      // Fetch client data separately if we have client IDs
-      let clientsMap = new Map();
-      if (clientIds.length > 0) {
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('clients')
-          .select('id, name, email, phone')
-          .in('id', clientIds);
-        
-        if (!clientsError && clientsData) {
-          clientsData.forEach(client => {
-            clientsMap.set(client.id, client);
-          });
-        }
-      }
-      
-      // Map the data to include the alias properties and client information
-      const mappedData: Estimate[] = (estimatesData || []).map(item => {
-        const client = item.client_id ? clientsMap.get(item.client_id) : null;
-        
-        return {
-          ...item,
-          number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
-          amount: item.total || 0,
-          date: item.created_at,
-          estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`,
-          valid_until: item.valid_until || undefined,
-          items: Array.isArray(item.items) ? item.items : [],
-          status: item.status as 'draft' | 'sent' | 'approved' | 'rejected' | 'converted',
-          tax_rate: item.tax_rate || 0,
-          tax_amount: item.tax_amount || 0,
-          subtotal: item.subtotal || 0,
-          discount_amount: item.discount_amount || 0,
-          client_name: client?.name || 'Unknown Client',
-          client_email: client?.email,
-          client_phone: client?.phone,
-          client: client ? {
-            id: client.id,
-            name: client.name,
-            email: client.email,
-            phone: client.phone
-          } : undefined
-        };
-      });
+      // Map the data to include the alias properties
+      const mappedData = (data || []).map(item => ({
+        ...item,
+        number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Add alias with fallback
+        amount: item.total || 0, // Add alias
+        date: item.created_at, // Use created_at as date
+        estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
+        valid_until: item.valid_until || undefined, // Handle valid_until properly
+      }));
       
       setEstimates(mappedData);
     } catch (error: any) {
@@ -119,26 +68,6 @@ export const useEstimates = (jobId?: string) => {
       toast.error('Failed to fetch estimates');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchEstimatesWithJobs = async () => {
-    return refreshEstimates();
-  };
-
-  const updateEstimateStatus = async (estimateId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('estimates')
-        .update({ status: newStatus })
-        .eq('id', estimateId);
-
-      if (error) throw error;
-      await refreshEstimates();
-      return true;
-    } catch (error) {
-      console.error('Error updating estimate status:', error);
-      return false;
     }
   };
 
@@ -159,6 +88,20 @@ export const useEstimates = (jobId?: string) => {
 
       console.log('Found estimate for conversion:', estimate);
 
+      // Get line items for the estimate
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('line_items')
+        .select('*')
+        .eq('parent_id', estimateId)
+        .eq('parent_type', 'estimate');
+
+      if (lineItemsError) {
+        console.error('Error fetching line items:', lineItemsError);
+        throw lineItemsError;
+      }
+
+      console.log('Found line items:', lineItems);
+
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
       const { data: invoice, error: invoiceError } = await supabase
@@ -171,8 +114,7 @@ export const useEstimates = (jobId?: string) => {
           amount_paid: 0,
           status: 'unpaid',
           notes: estimate.notes,
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          items: estimate.items || []
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         })
         .select()
         .single();
@@ -183,6 +125,29 @@ export const useEstimates = (jobId?: string) => {
       }
 
       console.log('Created invoice:', invoice);
+
+      // Copy line items to invoice
+      if (lineItems && lineItems.length > 0) {
+        const invoiceLineItems = lineItems.map(item => ({
+          parent_id: invoice.id,
+          parent_type: 'invoice',
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          taxable: item.taxable
+        }));
+
+        const { error: lineItemError } = await supabase
+          .from('line_items')
+          .insert(invoiceLineItems);
+
+        if (lineItemError) {
+          console.error('Error copying line items:', lineItemError);
+          throw lineItemError;
+        }
+
+        console.log('Copied line items to invoice');
+      }
 
       // Update estimate status
       const { error: updateError } = await supabase
@@ -218,8 +183,6 @@ export const useEstimates = (jobId?: string) => {
     setEstimates,
     isLoading,
     refreshEstimates,
-    fetchEstimatesWithJobs: refreshEstimates,
-    updateEstimateStatus,
     convertEstimateToInvoice
   };
 };

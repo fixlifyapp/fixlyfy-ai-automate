@@ -71,26 +71,16 @@ export const UnifiedDocumentPreview = ({
 
   const documentColor = documentType === 'estimate' ? 'text-blue-700' : 'text-purple-700';
 
-  // Create mock jobData for compatibility
-  const jobData = {
-    id: jobId || '',
-    title: 'Job Title',
-    client: enhancedClientInfo || clientInfo,
-    description: ''
-  };
-
   return (
     <div className="max-w-5xl mx-auto bg-white shadow-2xl border border-gray-200 print:shadow-none print:border-gray-300">
       <DocumentPreviewHeader
         documentType={documentType}
         documentNumber={documentNumber}
-        jobData={jobData}
         companyInfo={companyInfo}
       />
 
       <DocumentInfoGrid
         documentType={documentType}
-        jobData={jobData}
         enhancedClientInfo={enhancedClientInfo}
         jobAddress={jobAddress}
         issueDate={issueDate}
@@ -107,7 +97,7 @@ export const UnifiedDocumentPreview = ({
       <DocumentTotalsSection
         documentType={documentType}
         subtotal={subtotal}
-        tax_amount={tax}
+        tax={tax}
         total={total}
         taxRate={taxRate}
       />

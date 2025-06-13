@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,7 +18,8 @@ import { JobsList } from "@/components/jobs/JobsList";
 import { JobsFilters } from "@/components/jobs/JobsFilters";
 import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
 import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
-import { useJobsConsolidated, Job } from "@/hooks/useJobsConsolidated";
+import { useJobsConsolidated } from "@/hooks/useJobsConsolidated";
+import { useJobs } from "@/hooks/useJobs";
 import { toast } from "sonner";
 
 const JobsPageOptimized = () => {
@@ -47,11 +47,16 @@ const JobsPageOptimized = () => {
     refreshJobs,
     canCreate,
     canEdit,
-    canDelete,
-    addJob,
-    updateJob,
-    deleteJob
-  } = useJobsConsolidated();
+    canDelete
+  } = useJobsConsolidated({
+    page: currentPage,
+    pageSize: 50,
+    enableRealtime: true,
+    filters
+  });
+
+  // Keep original hook for mutations only
+  const { addJob, updateJob, deleteJob } = useJobs();
   
   // Clear selected jobs when jobs change
   useEffect(() => {
@@ -123,7 +128,7 @@ const JobsPageOptimized = () => {
     const selectedJobData = jobs.filter(job => jobIds.includes(job.id));
     const csvData = selectedJobData.map(job => ({
       'Job ID': job.id,
-      'Client': typeof job.client === 'object' && job.client ? job.client.name : job.client || 'Unknown Client',
+      'Client': job.client?.name || '',
       'Status': job.status,
       'Type': job.job_type || '',
       'Date': job.date ? new Date(job.date).toLocaleDateString() : '',
@@ -169,9 +174,6 @@ const JobsPageOptimized = () => {
     setSelectedJobs([]);
     toast.success('Jobs refreshed');
   };
-
-  // Jobs are already transformed in the hook to ensure required properties
-  const transformedJobs: Job[] = jobs;
 
   return (
     <PageLayout>
@@ -239,7 +241,7 @@ const JobsPageOptimized = () => {
           ) : (
             <JobsList 
               isGridView={isGridView}
-              jobs={transformedJobs}
+              jobs={jobs}
               selectedJobs={selectedJobs}
               onSelectJob={handleSelectJob}
               onSelectAllJobs={handleSelectAllJobs}

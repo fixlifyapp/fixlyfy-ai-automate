@@ -1,318 +1,241 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { DbJob } from "@/types/database-types";
-import { useClients } from "./useClients";
+import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Job } from "@/hooks/useJobs";
 
-export interface Job {
-  id: string;
-  client_id: string | null;
-  title: string; // Make required to match useJobs interface
-  description?: string | null;
-  service?: string | null;
-  status: string; // Make status required
-  tags?: string[] | null;
-  notes?: string | null;
-  job_type?: string | null;
-  lead_source?: string | null;
-  address?: string | null;
-  date?: string | null;
-  schedule_start?: string | null;
-  schedule_end?: string | null;
-  revenue?: number | null;
-  technician_id?: string | null;
-  created_by?: string | null;
-  created_at: string;
-  updated_at: string;
-  tasks?: string[] | null;
-  property_id?: string | null;
-  client: string | {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-  } | null;
+interface UseJobsOptions {
+  page?: number;
+  pageSize?: number;
+  enableRealtime?: boolean;
+  clientId?: string;
+  filters?: {
+    search?: string;
+    status?: string;
+    type?: string;
+    technician?: string;
+    dateRange?: { start: Date | null; end: Date | null };
+    tags?: string[];
+  };
 }
 
-interface UseJobsResult {
-  jobs: Job[];
-  loading: boolean;
-  error: Error | null;
-  refreshJobs: () => Promise<void>;
-  addJob: (newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'>) => Promise<Job | null>;
-  updateJob: (id: string, updates: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>) => Promise<Job | null>;
-  deleteJob: (id: string) => Promise<boolean>;
-  mutateJobs: () => void;
-  // Add missing properties
-  isLoading: boolean;
-  totalCount: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-  canCreate: boolean;
-  canEdit: boolean;
-  canDelete: boolean;
-}
+// Enhanced cache with longer TTL and better cleanup
+const jobsCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
-// Helper function to safely cast Json tasks to string array
-const extractTasks = (tasks: any): string[] => {
-  if (!tasks) return [];
-  if (Array.isArray(tasks)) {
-    return tasks.filter(task => typeof task === 'string');
-  }
-  if (typeof tasks === 'string') {
-    try {
-      const parsed = JSON.parse(tasks);
-      return Array.isArray(parsed) ? parsed.filter(task => typeof task === 'string') : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-};
-
-export const useJobsConsolidated = (): UseJobsResult => {
+export const useJobsConsolidated = (options: UseJobsOptions = {}) => {
+  const { 
+    page = 1, 
+    pageSize = 50, 
+    enableRealtime = true, 
+    clientId,
+    filters = {}
+  } = options;
+  
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const { clients } = useClients();
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const { user } = useAuth();
+  const { getJobViewScope, canCreateJobs, canEditJobs, canDeleteJobs } = usePermissions();
+  
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  const fetchJobs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const cacheKey = useMemo(() => {
+    const filterKey = JSON.stringify(filters);
+    return `jobs_${clientId || 'all'}_${page}_${pageSize}_${user?.id}_${filterKey}`;
+  }, [clientId, page, pageSize, user?.id, filters]);
 
-    try {
-      const { data: dbJobs, error: jobsError } = await supabase
-        .from('jobs')
-        .select('*');
-
-      if (jobsError) {
-        setError(jobsError);
-        console.error("Supabase jobs error:", jobsError);
+  const fetchJobs = useCallback(async (useCache = true) => {
+    // Check cache first
+    if (useCache) {
+      const cached = jobsCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < cached.ttl) {
+        if (isMountedRef.current) {
+          setJobs(cached.data.jobs);
+          setTotalCount(cached.data.totalCount);
+          setIsLoading(false);
+        }
         return;
       }
-
-      if (dbJobs) {
-        // Fetch clients along with jobs
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('clients')
-          .select('*');
-
-        if (clientsError) {
-          setError(clientsError);
-          console.error("Supabase clients error:", clientsError);
-          return;
-        }
-
-        // Create a map of clients for easy lookup
-        const clientsMap = new Map(clientsData?.map(client => [client.id, client]));
-
-        // Map database jobs to the Job interface
-        const transformedJobs: Job[] = dbJobs.map(job => {
-          const client = clientsMap.get(job.client_id || '') || job.client_id || 'Unknown Client';
-          return {
-            ...job,
-            title: job.title || 'Untitled Job', // Ensure title is always present
-            status: job.status || 'scheduled', // Ensure status is always present
-            updated_at: job.updated_at || job.created_at, // Ensure updated_at is always present
-            tasks: extractTasks(job.tasks), // Safely extract tasks
-            client: typeof client === 'object' && client !== null ? {
-              id: client.id,
-              name: client.name,
-              email: client.email,
-              phone: client.phone
-            } : client
-          };
-        });
-
-        setJobs(transformedJobs);
-      }
-    } catch (err: any) {
-      setError(err);
-      console.error("General error fetching jobs:", err);
-    } finally {
-      setLoading(false);
     }
-  }, [setJobs, setError]);
 
+    setIsLoading(true);
+    try {
+      // Build optimized query with server-side filtering
+      let query = supabase
+        .from('jobs')
+        .select(`
+          id,
+          title,
+          client_id,
+          status,
+          job_type,
+          service,
+          date,
+          schedule_start,
+          revenue,
+          address,
+          tags,
+          created_at,
+          client:clients!inner(id, name, email, phone)
+        `, { count: 'exact' });
+      
+      // Apply filters at database level for better performance
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
+      
+      if (filters.status && filters.status !== "all") {
+        query = query.eq('status', filters.status);
+      }
+      
+      if (filters.type && filters.type !== "all") {
+        query = query.eq('job_type', filters.type);
+      }
+      
+      if (filters.search) {
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,clients.name.ilike.%${filters.search}%`);
+      }
+      
+      // Apply role-based filtering
+      const jobViewScope = getJobViewScope();
+      if (jobViewScope === "assigned" && user?.id) {
+        query = query.eq('technician_id', user.id);
+      } else if (jobViewScope === "none") {
+        if (isMountedRef.current) {
+          setJobs([]);
+          setTotalCount(0);
+          setIsLoading(false);
+        }
+        return;
+      }
+      
+      // Apply pagination
+      query = query
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+      
+      const { data, error, count } = await query;
+      
+      if (error) throw error;
+      
+      const processedJobs = (data || []).map(job => ({
+        ...job,
+        tags: Array.isArray(job.tags) ? job.tags : [],
+        title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
+      }));
+      
+      const result = {
+        jobs: processedJobs,
+        totalCount: count || 0
+      };
+      
+      // Cache with 20-minute TTL
+      jobsCache.set(cacheKey, { 
+        data: result, 
+        timestamp: Date.now(), 
+        ttl: 20 * 60 * 1000 
+      });
+      
+      if (isMountedRef.current) {
+        setJobs(result.jobs);
+        setTotalCount(result.totalCount);
+      }
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to load jobs');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [cacheKey, clientId, getJobViewScope, user?.id, page, pageSize, filters]);
+
+  // Initial fetch
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
-  const refreshJobs = useCallback(async () => {
-    await fetchJobs();
-  }, [fetchJobs]);
+  // Optimized real-time updates with longer debouncing
+  useEffect(() => {
+    if (!enableRealtime) return;
 
-  const mutateJobs = useCallback(() => {
-    fetchJobs();
-  }, [fetchJobs]);
-
-  const addJob = useCallback(async (newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job | null> => {
-    try {
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', newJob.client_id)
-        .single();
-
-      // Prepare job data for insertion, excluding client field and adding ID
-      const { client, ...jobDataForDb } = newJob;
-      const jobWithId = {
-        ...jobDataForDb,
-        id: crypto.randomUUID(), // Generate ID for new job
-        title: newJob.title || 'Untitled Job', // Ensure title is present
-        status: newJob.status || 'scheduled' // Ensure status is set
-      };
-      
-      const { data: dbJob, error: jobsError } = await supabase
-        .from('jobs')
-        .insert([jobWithId])
-        .select()
-        .single();
-
-      if (jobsError) {
-        setError(jobsError);
-        console.error("Supabase add job error:", jobsError);
-        toast.error('Failed to add job.');
-        return null;
-      }
-
-      if (dbJob) {
-        const clientInfo = clientData || newJob.client_id || 'Unknown Client';
-        const transformedJob: Job = {
-          ...dbJob,
-          title: dbJob.title || 'Untitled Job', // Ensure title is present
-          status: dbJob.status || 'scheduled',
-          updated_at: dbJob.updated_at || dbJob.created_at,
-          tasks: extractTasks(dbJob.tasks),
-          client: typeof clientInfo === 'object' && clientInfo !== null ? {
-            id: clientInfo.id,
-            name: clientInfo.name,
-            email: clientInfo.email,
-            phone: clientInfo.phone
-          } : clientInfo
-        };
-
-        setJobs(prevJobs => [...prevJobs, transformedJob]);
-        toast.success('Job added successfully!');
-        return transformedJob;
-      } else {
-        toast.error('Failed to add job: No data returned.');
-        return null;
-      }
-    } catch (err: any) {
-      setError(err);
-      console.error("Error adding job:", err);
-      toast.error('Failed to add job: ' + err.message);
-      return null;
-    }
-  }, []);
-
-  const updateJob = useCallback(async (id: string, updates: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>): Promise<Job | null> => {
-    try {
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', updates.client_id)
-        .single();
-
-      // Prepare updates for database, excluding client field
-      const { client, ...updatesForDb } = updates;
-
-      const { data: dbJob, error: jobsError } = await supabase
-        .from('jobs')
-        .update(updatesForDb)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (jobsError) {
-        setError(jobsError);
-        console.error("Supabase update job error:", jobsError);
-        toast.error('Failed to update job.');
-        return null;
-      }
-
-      if (dbJob) {
-        const clientInfo = clientData || updates.client_id || 'Unknown Client';
+    let debounceTimer: NodeJS.Timeout;
+    let isSubscribed = true;
+    
+    const channel = supabase
+      .channel(`jobs-realtime-${cacheKey}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs'
+        },
+        () => {
+          if (!isSubscribed) return;
           
-        const transformedJob: Job = {
-          ...dbJob,
-          title: dbJob.title || 'Untitled Job', // Ensure title is present
-          status: dbJob.status || 'scheduled',
-          updated_at: dbJob.updated_at || dbJob.created_at,
-          tasks: extractTasks(dbJob.tasks),
-          client: typeof clientInfo === 'object' && clientInfo !== null ? {
-            id: clientInfo.id,
-            name: clientInfo.name,
-            email: clientInfo.email,
-            phone: clientInfo.phone
-          } : clientInfo
-        };
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            if (isSubscribed && isMountedRef.current) {
+              jobsCache.delete(cacheKey);
+              fetchJobs(false);
+            }
+          }, 3000); // 3 second debounce
+        }
+      )
+      .subscribe();
 
-        setJobs(prevJobs =>
-          prevJobs.map(job => (job.id === id ? transformedJob : job))
-        );
-        toast.success('Job updated successfully!');
-        return transformedJob;
-      } else {
-        toast.error('Failed to update job: No data returned.');
-        return null;
-      }
-    } catch (err: any) {
-      setError(err);
-      console.error("Error updating job:", err);
-      toast.error('Failed to update job: ' + err.message);
-      return null;
-    }
-  }, []);
+    return () => {
+      isSubscribed = false;
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchJobs, enableRealtime, cacheKey]);
 
-  const deleteJob = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      const { error: jobsError } = await supabase
-        .from('jobs')
-        .delete()
-        .eq('id', id);
+  const totalPages = useMemo(() => Math.ceil(totalCount / pageSize), [totalCount, pageSize]);
+  const hasNextPage = useMemo(() => page < totalPages, [page, totalPages]);
+  const hasPreviousPage = useMemo(() => page > 1, [page]);
 
-      if (jobsError) {
-        setError(jobsError);
-        console.error("Supabase delete job error:", jobsError);
-        toast.error('Failed to delete job.');
-        return false;
-      }
-
-      setJobs(prevJobs => prevJobs.filter(job => job.id !== id));
-      toast.success('Job deleted successfully!');
-      return true;
-    } catch (err: any) {
-      setError(err);
-      console.error("Error deleting job:", err);
-      toast.error('Failed to delete job: ' + err.message);
-      return false;
-    }
-  }, []);
+  const refreshJobs = useCallback(() => {
+    jobsCache.delete(cacheKey);
+    fetchJobs(false);
+  }, [fetchJobs, cacheKey]);
 
   return {
     jobs,
-    loading,
-    isLoading: loading, // Alias for compatibility
-    error,
+    isLoading,
+    totalCount,
+    totalPages,
+    currentPage: page,
+    hasNextPage,
+    hasPreviousPage,
     refreshJobs,
-    mutateJobs,
-    addJob,
-    updateJob,
-    deleteJob,
-    // Mock values for missing properties
-    totalCount: jobs.length,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-    canCreate: true,
-    canEdit: true,
-    canDelete: true
+    canCreate: canCreateJobs(),
+    canEdit: canEditJobs(),
+    canDelete: canDeleteJobs(),
+    viewScope: getJobViewScope()
   };
 };
 
-// Export as useJobs for compatibility
-export const useJobs = useJobsConsolidated;
+// Cleanup cache periodically
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of jobsCache.entries()) {
+      if (now - value.timestamp > value.ttl) {
+        jobsCache.delete(key);
+      }
+    }
+  }, 5 * 60 * 1000); // Clean every 5 minutes
+}

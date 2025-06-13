@@ -46,40 +46,22 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   const navigate = useNavigate();
   const { job, isLoading } = useJobDetails();
 
-  // Get client name and contact info from job data
-  const getClientName = () => {
-    if (!job?.client) return "Loading...";
-    return typeof job.client === 'string' ? job.client : job.client.name;
-  };
-
-  const getClientPhone = () => {
-    if (job?.phone) return job.phone;
-    if (typeof job?.client === 'object' && job.client?.phone) return job.client.phone;
-    return "";
-  };
-
-  const getClientEmail = () => {
-    if (job?.email) return job.email;
-    if (typeof job?.client === 'object' && job.client?.email) return job.client.email;
-    return "";
-  };
-
   // Initialize client info from job data
   const [clientInfo, setClientInfo] = useState({
-    fullName: getClientName(),
+    fullName: job?.client || "Loading...",
     address: job?.address || "Loading...",
-    phone: getClientPhone(),
-    email: getClientEmail()
+    phone: job?.phone || "",
+    email: job?.email || ""
   });
 
   // Update client info when job data loads
   React.useEffect(() => {
     if (job) {
       setClientInfo({
-        fullName: getClientName(),
-        address: job.address || "",
-        phone: getClientPhone(),
-        email: getClientEmail()
+        fullName: job.client,
+        address: job.address,
+        phone: job.phone,
+        email: job.email
       });
     }
   }, [job]);
@@ -144,6 +126,32 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
   // Edit states
   const [editingClientInfo, setEditingClientInfo] = useState(false);
   const [tempClientInfo, setTempClientInfo] = useState(clientInfo);
+
+  // Tag colors based on tag name
+  const getTagColor = (tag: string) => {
+    const tagColors: Record<string, string> = {
+      "HVAC": "bg-purple-50 border-purple-200 text-purple-600",
+      "Residential": "bg-blue-50 border-blue-200 text-blue-600",
+      "Commercial": "bg-indigo-50 border-indigo-200 text-indigo-600",
+      "Emergency": "bg-red-50 border-red-200 text-red-600",
+      "Maintenance": "bg-green-50 border-green-200 text-green-600",
+      "Installation": "bg-amber-50 border-amber-200 text-amber-600",
+      "Repair": "bg-orange-50 border-orange-200 text-orange-600"
+    };
+    
+    return tagColors[tag] || "bg-purple-50 border-purple-200 text-purple-600";
+  };
+  
+  // Priority colors based on priority level
+  const getPriorityColor = (priority: string) => {
+    const priorityColors: Record<string, string> = {
+      "High": "text-red-600",
+      "Medium": "text-orange-600",
+      "Low": "text-green-600"
+    };
+    
+    return priorityColors[priority] || "text-purple-600";
+  };
 
   // Handle saving client info
   const handleSaveClientInfo = () => {
@@ -245,32 +253,6 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
     const newSources = [...additionalSources];
     newSources.splice(index, 1);
     setAdditionalSources(newSources);
-  };
-
-  // Tag colors based on tag name
-  const getTagColor = (tag: string) => {
-    const tagColors: Record<string, string> = {
-      "HVAC": "bg-purple-50 border-purple-200 text-purple-600",
-      "Residential": "bg-blue-50 border-blue-200 text-blue-600",
-      "Commercial": "bg-indigo-50 border-indigo-200 text-indigo-600",
-      "Emergency": "bg-red-50 border-red-200 text-red-600",
-      "Maintenance": "bg-green-50 border-green-200 text-green-600",
-      "Installation": "bg-amber-50 border-amber-200 text-amber-600",
-      "Repair": "bg-orange-50 border-orange-200 text-orange-600"
-    };
-    
-    return tagColors[tag] || "bg-purple-50 border-purple-200 text-purple-600";
-  };
-  
-  // Priority colors based on priority level
-  const getPriorityColor = (priority: string) => {
-    const priorityColors: Record<string, string> = {
-      "High": "text-red-600",
-      "Medium": "text-orange-600",
-      "Low": "text-green-600"
-    };
-    
-    return priorityColors[priority] || "text-purple-600";
   };
 
   if (isLoading) {
@@ -385,8 +367,8 @@ export const JobDetails = ({ jobId }: JobDetailsProps) => {
                   size="sm" 
                   className="mt-2 w-full md:w-auto"
                   onClick={() => {
-                    if (job.client_id) {
-                      navigate(`/clients/${job.client_id}`);
+                    if (job.clientId) {
+                      navigate(`/clients/${job.clientId}`);
                     }
                   }}
                 >

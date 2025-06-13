@@ -4,40 +4,26 @@ import { DocumentType } from "../../UnifiedDocumentBuilder";
 
 interface DocumentInfoGridProps {
   documentType: DocumentType;
-  jobData: {
-    id: string;
-    title: string;
-    client?: any;
-    description?: string;
-  };
-  taxRate: number;
-  enhancedClientInfo?: any;
-  jobAddress?: string;
+  enhancedClientInfo: any;
+  jobAddress: string;
   issueDate?: string;
   dueDate?: string;
-  companyInfo?: any;
+  taxRate: number;
+  companyInfo: any;
 }
 
 export const DocumentInfoGrid = ({
   documentType,
-  jobData,
-  taxRate,
   enhancedClientInfo,
   jobAddress,
   issueDate,
   dueDate,
+  taxRate,
   companyInfo
 }: DocumentInfoGridProps) => {
   console.log('=== DocumentInfoGrid Debug ===');
-  console.log('Job data:', jobData);
   console.log('Enhanced client info:', enhancedClientInfo);
-
-  // Extract client info from jobData or enhancedClientInfo
-  const clientInfo = enhancedClientInfo || jobData.client || {};
-  const clientName = typeof clientInfo === 'string' ? clientInfo : clientInfo.name || 'Client Name';
-  const clientEmail = typeof clientInfo === 'object' ? clientInfo.email : undefined;
-  const clientPhone = typeof clientInfo === 'object' ? clientInfo.phone : undefined;
-  const clientCompany = typeof clientInfo === 'object' ? clientInfo.company : undefined;
+  console.log('Job address:', jobAddress);
 
   return (
     <div className="px-8 py-6 bg-gray-50">
@@ -50,19 +36,42 @@ export const DocumentInfoGrid = ({
           
           <div className="space-y-3">
             <h4 className="text-lg font-semibold text-gray-900">
-              {clientName}
+              {enhancedClientInfo?.name || 'Client Name'}
             </h4>
             
-            {clientCompany && (
-              <p className="text-gray-600 font-medium">{clientCompany}</p>
+            {enhancedClientInfo?.company && (
+              <p className="text-gray-600 font-medium">{enhancedClientInfo.company}</p>
+            )}
+            
+            <div className="text-gray-600 space-y-1">
+              {enhancedClientInfo?.fullAddress && (
+                <div>
+                  {enhancedClientInfo.fullAddress.split('\n').map((line: string, index: number) => (
+                    <p key={index}>{line || 'Address not available'}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {jobAddress && jobAddress !== enhancedClientInfo?.fullAddress && (
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Service Address
+                </p>
+                <div className="text-gray-600">
+                  {jobAddress.split('\n').map((line: string, index: number) => (
+                    <p key={index}>{line || 'Service address not available'}</p>
+                  ))}
+                </div>
+              </div>
             )}
 
             <div className="mt-4 pt-3 border-t border-gray-200 space-y-1">
-              {clientPhone && (
-                <p className="text-gray-600">{clientPhone}</p>
+              {enhancedClientInfo?.phone && (
+                <p className="text-gray-600">{enhancedClientInfo.phone}</p>
               )}
-              {clientEmail && (
-                <p className="text-gray-600">{clientEmail}</p>
+              {enhancedClientInfo?.email && (
+                <p className="text-gray-600">{enhancedClientInfo.email}</p>
               )}
             </div>
           </div>
@@ -89,13 +98,16 @@ export const DocumentInfoGrid = ({
                 {documentType === 'estimate' ? 'Valid Until' : 'Due Date'}
               </span>
               <span className="font-medium text-gray-900">
-                {dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                {documentType === 'estimate' 
+                  ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                  : dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                }
               </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-600">Tax Rate</span>
-              <span className="font-medium text-gray-900">{(taxRate * 100).toFixed(1)}%</span>
+              <span className="font-medium text-gray-900">{taxRate}%</span>
             </div>
           </div>
         </div>

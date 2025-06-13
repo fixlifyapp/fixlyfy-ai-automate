@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,25 +64,6 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
       case 'converted': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  // Helper function to get client name safely
-  const getClientName = (client: any): string => {
-    if (typeof client === 'string') return client;
-    if (typeof client === 'object' && client?.name) return client.name;
-    return 'Unknown Client';
-  };
-
-  // Helper function to get client email safely
-  const getClientEmail = (client: any): string => {
-    if (typeof client === 'object' && client?.email) return client.email;
-    return '';
-  };
-
-  // Helper function to get client phone safely
-  const getClientPhone = (client: any): string => {
-    if (typeof client === 'object' && client?.phone) return client.phone;
-    return '';
   };
 
   if (isLoading) {
@@ -191,9 +171,9 @@ export const EstimatesList = ({ jobId, onEstimateConverted, onViewEstimate }: Es
         estimateNumber={sendingEstimate?.estimate_number || sendingEstimate?.number || ''}
         total={sendingEstimate?.total || sendingEstimate?.amount || 0}
         contactInfo={{
-          name: getClientName(job?.client),
-          email: getClientEmail(job?.client),
-          phone: getClientPhone(job?.client)
+          name: job?.client?.name || 'Client',
+          email: job?.client?.email || '',
+          phone: job?.client?.phone || ''
         }}
       />
     </>

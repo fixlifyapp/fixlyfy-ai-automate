@@ -1,144 +1,419 @@
 
-import React from 'react';
-import { Job } from '@/hooks/useJobs';
-import { ModernCard } from '@/components/ui/modern-card';
-import { AnimatedContainer } from '@/components/ui/animated-container';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import { Eye, Edit, Calendar, MapPin, DollarSign, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ModernCard } from "@/components/ui/modern-card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  ExternalLink, 
+  Edit, 
+  Calendar, 
+  User, 
+  MapPin, 
+  DollarSign,
+  Tag,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import { format } from "date-fns";
+import { Job } from "@/hooks/useJobs";
+import { useJobStatuses, useJobTypes, useTags } from "@/hooks/useConfigItems";
 
 interface JobsListProps {
   jobs: Job[];
-  isLoading: boolean;
-  onRefresh: () => void;
+  isGridView?: boolean;
+  selectedJobs: string[];
+  onSelectJob: (jobId: string, isSelected: boolean) => void;
+  onSelectAllJobs: (isSelected: boolean) => void;
+  onRefresh?: () => void;
 }
 
-const statusColors = {
-  scheduled: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-} as const;
-
-// Helper function to get client name
-const getClientName = (client: any): string => {
-  if (typeof client === 'string') {
-    return client;
-  }
-  if (client && typeof client === 'object' && client.name) {
-    return client.name;
-  }
-  return 'Unassigned';
-};
-
-export const JobsList = ({ jobs, isLoading, onRefresh }: JobsListProps) => {
+export const JobsList = ({ 
+  jobs, 
+  isGridView = false, 
+  selectedJobs, 
+  onSelectJob, 
+  onSelectAllJobs,
+  onRefresh
+}: JobsListProps) => {
   const navigate = useNavigate();
+  
+  // Get configuration data for styling and display
+  const { items: jobStatuses } = useJobStatuses();
+  const { items: jobTypes } = useJobTypes();
+  const { items: tagItems } = useTags();
 
-  if (isLoading) {
-    return <LoadingSkeleton type="job-list" count={5} />;
-  }
+  const handleJobClick = (jobId: string) => {
+    navigate(`/jobs/${jobId}`);
+  };
+
+  const handleEditJob = (e: React.MouseEvent, jobId: string) => {
+    e.stopPropagation();
+    navigate(`/jobs/${jobId}`);
+  };
+
+  const areAllJobsSelected = jobs.length > 0 && jobs.every(job => selectedJobs.includes(job.id));
+
+  // Get status styling from configuration
+  const getStatusBadgeStyle = (status: string) => {
+    const statusConfig = jobStatuses?.find(s => s.name.toLowerCase() === status.toLowerCase());
+    if (statusConfig?.color) {
+      return { backgroundColor: `${statusConfig.color}20`, color: statusConfig.color, borderColor: statusConfig.color };
+    }
+    
+    // Fallback styles
+    const statusStyles: Record<string, any> = {
+      "completed": { backgroundColor: "#10b98120", color: "#10b981", borderColor: "#10b981" },
+      "in-progress": { backgroundColor: "#3b82f620", color: "#3b82f6", borderColor: "#3b82f6" }, 
+      "scheduled": { backgroundColor: "#f59e0b20", color: "#f59e0b", borderColor: "#f59e0b" },
+      "cancelled": { backgroundColor: "#ef444420", color: "#ef4444", borderColor: "#ef4444" },
+      "canceled": { backgroundColor: "#ef444420", color: "#ef4444", borderColor: "#ef4444" }
+    };
+    
+    return statusStyles[status.toLowerCase()] || { backgroundColor: "#6b728020", color: "#6b7280", borderColor: "#6b7280" };
+  };
+
+  // Get job type styling from configuration
+  const getJobTypeDisplay = (job: Job) => {
+    if (job.job_type) {
+      const jobTypeConfig = jobTypes?.find(jt => jt.name === job.job_type);
+      return {
+        name: jobTypeConfig?.name || job.job_type,
+        color: jobTypeConfig?.color
+      };
+    }
+    if (job.service) {
+      return { name: job.service, color: null };
+    }
+    return { name: "Service Job", color: null };
+  };
+
+  // Resolve tag UUIDs to tag names and colors
+  const resolveJobTags = (tags: string[]) => {
+    if (!tags || tags.length === 0) return [];
+    
+    return tags.map(tag => {
+      // If it's a UUID, find the tag by ID
+      if (tag.length === 36 && tag.includes('-')) {
+        const tagItem = tagItems.find(t => t.id === tag);
+        return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: null };
+      }
+      // If it's a name, find the tag by name
+      const tagItem = tagItems.find(t => t.name === tag);
+      return tagItem ? { name: tagItem.name, color: tagItem.color } : { name: tag, color: null };
+    });
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'in-progress':
+        return <Clock className="h-4 w-4" />;
+      case 'scheduled':
+        return <Calendar className="h-4 w-4" />;
+      case 'cancelled':
+      case 'canceled':
+        return <AlertCircle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const formatTime = (job: Job) => {
+    if (job.schedule_start) {
+      return format(new Date(job.schedule_start), "HH:mm");
+    }
+    if (job.date) {
+      return format(new Date(job.date), "HH:mm");
+    }
+    return "TBD";
+  };
 
   if (jobs.length === 0) {
     return (
-      <AnimatedContainer>
-        <ModernCard className="p-12 text-center">
-          <div className="text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
-            <p>Start by creating your first job or adjust your filters.</p>
-          </div>
-        </ModernCard>
-      </AnimatedContainer>
+      <ModernCard variant="elevated" className="p-12 text-center">
+        <div className="text-muted-foreground">
+          <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
+          <p>No jobs match your current filters.</p>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={onRefresh}
+            >
+              Refresh Jobs
+            </Button>
+          )}
+        </div>
+      </ModernCard>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {jobs.map((job, index) => (
-        <AnimatedContainer key={job.id} delay={index * 50}>
-          <ModernCard className="p-6 hover:shadow-md transition-all duration-200">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                  <Badge 
-                    className={statusColors[job.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}
-                  >
-                    {job.status?.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {job.description || 'No description provided'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="gap-2"
+  if (isGridView) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              checked={areAllJobsSelected}
+              onCheckedChange={onSelectAllJobs}
+            />
+            <span className="text-sm text-muted-foreground">
+              Select all ({jobs.length})
+            </span>
+          </div>
+          {onRefresh && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onRefresh}
+            >
+              Refresh
+            </Button>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {jobs.map((job) => {
+            const statusStyle = getStatusBadgeStyle(job.status);
+            const jobTypeDisplay = getJobTypeDisplay(job);
+            const statusIcon = getStatusIcon(job.status);
+            const resolvedTags = resolveJobTags(job.tags || []);
+            
+            return (
+              <div key={job.id} className="cursor-pointer" onClick={() => handleJobClick(job.id)}>
+                <ModernCard 
+                  variant="elevated" 
+                  className="hover:shadow-lg transition-all duration-300 group"
                 >
-                  <Eye className="h-4 w-4" />
-                  View
-                </Button>
+                  <div className="p-6 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          checked={selectedJobs.includes(job.id)}
+                          onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleEditJob(e, job.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">{job.client?.name || 'Unknown Client'}</h3>
+                      <p className="text-sm text-muted-foreground">{formatTime(job)}</p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Badge 
+                        variant="outline" 
+                        className="flex items-center gap-1"
+                        style={statusStyle}
+                      >
+                        {statusIcon}
+                        {job.status}
+                      </Badge>
+                      
+                      {jobTypeDisplay.color ? (
+                        <Badge 
+                          variant="outline"
+                          style={{ borderColor: jobTypeDisplay.color, color: jobTypeDisplay.color }}
+                        >
+                          {jobTypeDisplay.name}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          {jobTypeDisplay.name}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {job.address && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span className="truncate">{job.address}</span>
+                      </div>
+                    )}
+                    
+                    {job.revenue && job.revenue > 0 && (
+                      <div className="flex items-center text-sm font-medium text-green-600">
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        ${job.revenue.toFixed(2)}
+                      </div>
+                    )}
+                    
+                    {resolvedTags && resolvedTags.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Tag className="h-3 w-3 text-muted-foreground" />
+                        {resolvedTags.slice(0, 2).map((tag, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {resolvedTags.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{resolvedTags.length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </ModernCard>
               </div>
-            </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Client</p>
-                  <p className="font-medium">{getClientName(job.client)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Scheduled</p>
-                  <p className="font-medium">
-                    {job.schedule_start ? formatDate(job.schedule_start) : 'Not scheduled'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Location</p>
-                  <p className="font-medium truncate" title={job.address}>
-                    {job.address || 'No address'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Value</p>
-                  <p className="font-medium">
-                    {job.revenue ? formatCurrency(job.revenue) : 'TBD'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {job.tags && job.tags.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {job.tags.map((tag, tagIndex) => (
-                  <Badge key={tagIndex} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </ModernCard>
-        </AnimatedContainer>
-      ))}
-    </div>
+  // List view (table format)
+  return (
+    <ModernCard variant="elevated">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left p-4 w-12">
+                <Checkbox 
+                  checked={areAllJobsSelected}
+                  onCheckedChange={onSelectAllJobs}
+                />
+              </th>
+              <th className="text-left p-4 font-semibold">Job Number</th>
+              <th className="text-left p-4 font-semibold">Client Name</th>
+              <th className="text-left p-4 font-semibold">Time</th>
+              <th className="text-left p-4 font-semibold">Address</th>
+              <th className="text-left p-4 font-semibold">Tags</th>
+              <th className="text-left p-4 font-semibold">Revenue</th>
+              <th className="text-right p-4 w-20">
+                Actions
+                {onRefresh && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={onRefresh}
+                    className="ml-2"
+                  >
+                    Refresh
+                  </Button>
+                )}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.map((job) => {
+              const statusStyle = getStatusBadgeStyle(job.status);
+              const resolvedTags = resolveJobTags(job.tags || []);
+              
+              return (
+                <tr 
+                  key={job.id} 
+                  className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => handleJobClick(job.id)}
+                >
+                  <td className="p-4">
+                    <Checkbox 
+                      checked={selectedJobs.includes(job.id)}
+                      onCheckedChange={(checked) => onSelectJob(job.id, !!checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-medium text-fixlyfy">{job.id}</span>
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs"
+                        style={statusStyle}
+                      >
+                        {job.status}
+                      </Badge>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-medium">{job.client?.name || 'Unknown Client'}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center text-sm">
+                      <Clock className="h-4 w-4 mr-2" />
+                      {formatTime(job)}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    {job.address ? (
+                      <div className="flex items-center text-sm">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span className="truncate max-w-[200px]">{job.address}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {resolvedTags && resolvedTags.length > 0 ? (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {resolvedTags.slice(0, 2).map((tag, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {resolvedTags.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{resolvedTags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {job.revenue && job.revenue > 0 ? (
+                      <div className="flex items-center text-sm font-medium text-green-600">
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        ${job.revenue.toFixed(2)}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleEditJob(e, job.id)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </ModernCard>
   );
 };

@@ -1,30 +1,31 @@
 
 import { z } from "zod";
 
+// Define the schema for an invoice line item
 export const invoiceLineItemSchema = z.object({
-  id: z.string().optional(),
-  description: z.string().min(1, "Description is required"),
-  quantity: z.number().min(0.01, "Quantity must be greater than 0").default(1),
-  unitPrice: z.number().min(0, "Unit price must be at least 0").default(0),
+  description: z.string().optional(),
+  quantity: z.number().min(1, "Quantity must be at least 1").default(1),
+  unitPrice: z.number().min(0, "Price must be at least 0").default(0),
   ourPrice: z.number().min(0, "Our price must be at least 0").default(0),
-  taxable: z.boolean().default(true),
-  total: z.number().default(0),
-  name: z.string().optional(),
-  price: z.number().optional(),
-  discount: z.number().default(0)
+  taxable: z.boolean().default(true)
 });
 
+// Define the schema for the entire invoice form
 export const invoiceFormSchema = z.object({
-  invoiceNumber: z.string().min(1, "Invoice number is required"),
-  issueDate: z.string().min(1, "Issue date is required"),
+  invoiceNumber: z.string().optional(),
+  issueDate: z.string().optional(),
   dueDate: z.string().optional(),
   items: z.array(invoiceLineItemSchema).min(1, "At least one item is required"),
   notes: z.string().optional()
 });
 
+// TypeScript type derived from the Zod schema
 export type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
-export type InvoiceLineItemValues = z.infer<typeof invoiceLineItemSchema>;
 
+// For components that need partial form values (like during initialization)
+export type PartialInvoiceFormValues = Partial<InvoiceFormValues>;
+
+// Interface for the InvoiceForm component props
 export interface InvoiceFormProps {
   type: "invoice" | "estimate";
   onSubmit: (data: InvoiceFormValues) => void;

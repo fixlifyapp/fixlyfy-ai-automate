@@ -1,175 +1,138 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Search } from "lucide-react";
+import { Search, Plus, ArrowRight, Trash, Edit } from "lucide-react";
+import { ProductSearch } from "../builder/ProductSearch";
 import { Product } from "../builder/types";
-import { formatCurrency } from "@/lib/utils";
+import { ProductEditInEstimateDialog } from "../dialogs/ProductEditInEstimateDialog";
 
 interface InvoiceProductSelectorProps {
+  selectedProducts: any[];
   onAddProduct: (product: Product) => void;
-  onCreateProduct: (product: Product) => void;
+  onRemoveProduct: (id: string) => void;
+  onUpdateProduct: (id: string, updatedProduct: any) => void;
 }
 
-// Mock products for demonstration
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "HVAC Service Call",
-    price: 150,
-    description: "Standard HVAC diagnostic and service",
-    ourprice: 75,
-    category: "HVAC"
-  },
-  {
-    id: "2", 
-    name: "Plumbing Repair",
-    price: 125,
-    description: "Standard plumbing repair service",
-    ourprice: 65,
-    category: "Plumbing"
-  },
-  {
-    id: "3",
-    name: "Electrical Inspection",
-    price: 100,
-    description: "Electrical system inspection",
-    ourprice: 50,
-    category: "Electrical"
-  }
-];
+export const InvoiceProductSelector = ({
+  selectedProducts,
+  onAddProduct,
+  onRemoveProduct,
+  onUpdateProduct,
+}: InvoiceProductSelectorProps) => {
+  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
 
-export const InvoiceProductSelector = ({ onAddProduct, onCreateProduct }: InvoiceProductSelectorProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newProduct, setNewProduct] = useState<Product>({
-    id: "",
-    name: "",
-    price: 0,
-    description: "",
-    ourprice: 0,
-    category: ""
-  });
-
-  const filteredProducts = mockProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleCreateProduct = () => {
-    const productWithId = {
-      ...newProduct,
-      id: `custom-${Date.now()}`,
-      ourprice: newProduct.ourprice || 0 // Use ourprice consistently
-    };
-    onCreateProduct(productWithId);
-    setNewProduct({
-      id: "",
-      name: "",
-      price: 0,
-      description: "",
-      ourprice: 0,
-      category: ""
+  const handleProductSelect = (product: Product) => {
+    onAddProduct(product);
+    setIsProductSearchOpen(false);
+  };
+  
+  const handleEditProduct = (product: any) => {
+    setSelectedProduct({
+      id: product.id,
+      name: product.name,
+      description: product.description || product.name,
+      category: "",
+      price: product.unitPrice,
+      cost: product.ourPrice || 0,
+      ourPrice: product.ourPrice || 0,
+      taxable: product.taxable,
+      quantity: product.quantity,
+      tags: []
     });
-    setShowCreateForm(false);
+    setIsProductEditDialogOpen(true);
+  };
+
+  const handleProductUpdate = (updatedProduct: Product) => {
+    if (selectedProduct) {
+      onUpdateProduct(selectedProduct.id, {
+        name: updatedProduct.name,
+        description: updatedProduct.description,
+        quantity: updatedProduct.quantity || 1,
+        unitPrice: updatedProduct.price,
+        ourPrice: updatedProduct.ourPrice || 0,
+        taxable: updatedProduct.taxable
+      });
+    }
+    setIsProductEditDialogOpen(false);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          Product Catalog
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowCreateForm(!showCreateForm)}
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Custom
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+    <div>
+      <div className="mb-4">
+        <Button 
+          onClick={() => setIsProductSearchOpen(true)}
+          variant="outline"
+          className="w-full justify-start"
+        >
+          <Search className="mr-2" size={16} />
+          Search and add products
+        </Button>
+      </div>
+
+      {selectedProducts.length > 0 && (
+        <div className="mt-6 border rounded-md overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/50 text-xs">
+                <th className="px-4 py-2 text-left">Product</th>
+                <th className="px-4 py-2 text-center w-16">Qty</th>
+                <th className="px-4 py-2 text-right w-24">Price</th>
+                <th className="px-4 py-2 w-16 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {selectedProducts.map((product) => (
+                <tr key={product.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3">
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      {product.description && product.description !== product.name && (
+                        <p className="text-xs text-muted-foreground">{product.description}</p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">{product.quantity}</td>
+                  <td className="px-4 py-3 text-right">${product.unitPrice.toFixed(2)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Edit size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => onRemoveProduct(product.id)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+      
+      <ProductSearch
+        open={isProductSearchOpen}
+        onOpenChange={setIsProductSearchOpen}
+        onProductSelect={handleProductSelect}
+      />
 
-        {/* Create Product Form */}
-        {showCreateForm && (
-          <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
-            <h4 className="font-medium">Create Custom Product</h4>
-            <Input
-              placeholder="Product name"
-              value={newProduct.name}
-              onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="number"
-                placeholder="Price"
-                value={newProduct.price || ''}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, price: Number(e.target.value) || 0 }))}
-              />
-              <Input
-                type="number"
-                placeholder="Our cost"
-                value={newProduct.ourprice || ''}
-                onChange={(e) => setNewProduct(prev => ({ ...prev, ourprice: Number(e.target.value) || 0 }))}
-              />
-            </div>
-            <Input
-              placeholder="Description"
-              value={newProduct.description || ''}
-              onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleCreateProduct}>
-                Create & Add
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Product List */}
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {filteredProducts.map((product) => (
-            <div 
-              key={product.id}
-              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-              onClick={() => onAddProduct(product)}
-            >
-              <div className="flex-1">
-                <div className="font-medium">{product.name}</div>
-                <div className="text-sm text-gray-500">{product.description}</div>
-                <div className="text-xs text-gray-400">
-                  Our cost: {formatCurrency(product.ourprice || 0)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-medium">{formatCurrency(product.price)}</div>
-                <div className="text-sm text-gray-500">{product.category}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-6 text-gray-500">
-            No products found matching "{searchTerm}"
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      <ProductEditInEstimateDialog
+        open={isProductEditDialogOpen}
+        onOpenChange={setIsProductEditDialogOpen}
+        product={selectedProduct}
+        onSave={handleProductUpdate}
+      />
+    </div>
   );
 };

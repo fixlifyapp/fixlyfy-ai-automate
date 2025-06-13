@@ -14,7 +14,6 @@ import { generateNextId } from "@/utils/idGeneration";
 import { useJobData } from "./unified/hooks/useJobData";
 import { UpsellItem } from "./shared/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useEstimateCreation } from "../estimates/hooks/useEstimateCreation";
 
 interface SteppedEstimateBuilderProps {
   open: boolean;
@@ -34,7 +33,6 @@ export const SteppedEstimateBuilder = ({
   onEstimateCreated
 }: SteppedEstimateBuilderProps) => {
   const navigate = useNavigate();
-  const { createEstimate, updateEstimate } = useEstimateCreation();
   
   // Use the optimized useJobData hook instead of fetching all jobs
   const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId);
@@ -68,7 +66,8 @@ export const SteppedEstimateBuilder = ({
     calculateGrandTotal,
     handleAddProduct,
     handleRemoveLineItem,
-    handleUpdateLineItem
+    handleUpdateLineItem,
+    saveDocumentChanges
   } = useUnifiedDocumentBuilder({
     documentType: "estimate",
     existingDocument: existingEstimate,
@@ -134,26 +133,8 @@ export const SteppedEstimateBuilder = ({
     try {
       console.log("💾 Saving estimate before continuing to upsell step...");
       
-      // Use the estimate creation hook instead of the unified builder
-      let estimate;
-      
-      if (existingEstimate?.id) {
-        estimate = await updateEstimate(existingEstimate.id, {
-          jobId,
-          estimateNumber: documentNumber,
-          lineItems,
-          notes,
-          taxRate
-        });
-      } else {
-        estimate = await createEstimate({
-          jobId,
-          estimateNumber: documentNumber,
-          lineItems,
-          notes,
-          taxRate
-        });
-      }
+      // Always save the estimate, whether it's new or existing
+      const estimate = await saveDocumentChanges();
       
       if (estimate) {
         setSavedEstimate(estimate);
@@ -204,13 +185,13 @@ export const SteppedEstimateBuilder = ({
 
   const handleSaveAndSend = async () => {
     try {
-      // The estimate is already saved, just return success
-      if (savedEstimate?.id && onEstimateCreated) {
+      const savedEstimate = await saveDocumentChanges();
+      if (savedEstimate && onEstimateCreated) {
         onEstimateCreated();
       }
-      return true;
+      return savedEstimate !== null;
     } catch (error) {
-      console.error("Error in save and send:", error);
+      console.error("Error saving estimate:", error);
       return false;
     }
   };
@@ -257,26 +238,7 @@ export const SteppedEstimateBuilder = ({
 
     try {
       console.log("💾 Saving estimate for later...");
-      
-      let estimate;
-      if (existingEstimate?.id) {
-        estimate = await updateEstimate(existingEstimate.id, {
-          jobId,
-          estimateNumber: documentNumber,
-          lineItems,
-          notes,
-          taxRate
-        });
-      } else {
-        estimate = await createEstimate({
-          jobId,
-          estimateNumber: documentNumber,
-          lineItems,
-          notes,
-          taxRate
-        });
-      }
-      
+      await saveDocumentChanges();
       toast.success("Estimate saved as draft");
       onOpenChange(false);
       

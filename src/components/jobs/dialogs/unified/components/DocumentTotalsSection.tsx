@@ -1,26 +1,25 @@
 
 import React from "react";
 import { formatCurrency } from "@/lib/utils";
+import { DocumentType } from "../../UnifiedDocumentBuilder";
 
 interface DocumentTotalsSectionProps {
-  documentType?: string;
+  documentType: DocumentType;
   subtotal: number;
-  taxRate: number;
-  tax_amount: number;
+  tax: number;
   total: number;
-  tax?: number;
+  taxRate: number;
 }
 
 export const DocumentTotalsSection = ({
   documentType,
   subtotal,
-  taxRate,
-  tax_amount,
+  tax,
   total,
-  tax
+  taxRate
 }: DocumentTotalsSectionProps) => {
-  // Use tax_amount or tax, whichever is provided
-  const finalTaxAmount = tax_amount || tax || 0;
+  const totalColor = documentType === 'estimate' ? 'text-blue-600' : 'text-green-600';
+  const totalBg = documentType === 'estimate' ? 'bg-blue-50' : 'bg-green-50';
 
   return (
     <div className="px-8 py-6 bg-gray-50">
@@ -33,14 +32,14 @@ export const DocumentTotalsSection = ({
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Tax ({(taxRate * 100).toFixed(1)}%)</span>
-              <span className="font-medium text-gray-900">{formatCurrency(finalTaxAmount)}</span>
+              <span className="text-gray-700">Tax ({taxRate}%)</span>
+              <span className="font-medium text-gray-900">{formatCurrency(tax)}</span>
             </div>
             
             <div className="border-t border-gray-200 pt-3">
-              <div className="flex justify-between items-center p-3 rounded-lg bg-blue-50">
+              <div className={`flex justify-between items-center p-3 rounded-lg ${totalBg}`}>
                 <span className="text-lg font-bold text-gray-900">Total</span>
-                <span className="text-xl font-bold text-blue-600">
+                <span className={`text-xl font-bold ${totalColor}`}>
                   {formatCurrency(total)}
                 </span>
               </div>

@@ -1,137 +1,310 @@
 
-import React, { useState } from 'react';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { PageHeader } from '@/components/ui/page-header';
-import { ModernCard } from '@/components/ui/modern-card';
-import { AnimatedContainer } from '@/components/ui/animated-container';
-import { JobsList } from '@/components/jobs/JobsList';
-import { JobsKanban } from '@/components/jobs/JobsKanban';
-import { CreateJobDialog } from '@/components/jobs/dialogs/CreateJobDialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useJobsOptimized } from '@/hooks/useJobsOptimized';
-import { Plus, Search, Grid, List, Filter } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { PageHeader } from "@/components/ui/page-header";
+import { ModernCard } from "@/components/ui/modern-card";
+import { AnimatedContainer } from "@/components/ui/animated-container";
+import { Button } from "@/components/ui/button";
+import { 
+  Grid, 
+  List, 
+  Plus, 
+  Wrench, 
+  Target, 
+  TrendingUp,
+  RefreshCw
+} from "lucide-react";
+import { JobsList } from "@/components/jobs/JobsList";
+import { JobsFilters } from "@/components/jobs/JobsFilters";
+import { BulkActionsBar } from "@/components/jobs/BulkActionsBar";
+import { ScheduleJobModal } from "@/components/schedule/ScheduleJobModal";
+import { useJobsOptimized } from "@/hooks/useJobsOptimized";
+import { useJobs } from "@/hooks/useJobs";
+import { toast } from "sonner";
 
 const JobsPage = () => {
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [isGridView, setIsGridView] = useState(false);
+  const [isCreateJobModalOpen, setIsCreateJobModalOpen] = useState(false);
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "all",
+    type: "all",
+    technician: "all",
+    dateRange: { start: null as Date | null, end: null as Date | null },
+    tags: [] as string[]
+  });
   
-  const { jobs, isLoading, refreshJobs, canCreate } = useJobsOptimized({
-    page: 1,
+  // Use optimized hook for display
+  const { 
+    jobs: optimizedJobs, 
+    isLoading: isOptimizedLoading,
+    totalCount,
+    totalPages,
+    hasNextPage,
+    hasPreviousPage,
+    refreshJobs: refreshOptimized,
+    canCreate,
+    canEdit,
+    canDelete
+  } = useJobsOptimized({
+    page: currentPage,
     pageSize: 50,
     enableRealtime: true
   });
 
-  const filteredJobs = jobs.filter(job => {
-    const matchesSearch = !searchTerm || 
-      job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.id.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Keep original hook for mutations only
+  const { addJob, updateJob, deleteJob } = useJobs();
+  
+  // Clear selected jobs when jobs change
+  useEffect(() => {
+    setSelectedJobs(prev => prev.filter(id => optimizedJobs.some(job => job.id === id)));
+  }, [optimizedJobs]);
 
-  const handleCreateSuccess = () => {
-    setShowCreateDialog(false);
-    refreshJobs();
+  // Filter jobs based on current filters
+  const filteredJobs = optimizedJobs.filter(job => {
+    // Search filter - search in client name, job ID, title, and description
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      const searchableFields = [
+        job.client?.name || '',
+        job.id || '',
+        job.title || '',
+        job.description || ''
+      ];
+      
+      if (!searchableFields.some(field => field.toLowerCase().includes(searchTerm))) {
+        return false;
+      }
+    }
+    
+    // Status filter
+    if (filters.status !== "all" && job.status.toLowerCase() !== filters.status.toLowerCase()) {
+      return false;
+    }
+    
+    // Type filter
+    if (filters.type !== "all" && job.job_type?.toLowerCase() !== filters.type.toLowerCase()) {
+      return false;
+    }
+    
+    // Date range filter
+    if (filters.dateRange.start && job.date && new Date(job.date) < filters.dateRange.start) {
+      return false;
+    }
+    if (filters.dateRange.end && job.date && new Date(job.date) > filters.dateRange.end) {
+      return false;
+    }
+    
+    // Tags filter - check if job has any of the selected tags
+    if (filters.tags.length > 0) {
+      if (!job.tags || !filters.tags.some(tag => job.tags?.includes(tag))) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  const handleJobCreated = async (jobData: any) => {
+    try {
+      const createdJob = await addJob(jobData);
+      if (createdJob) {
+        toast.success(`Job ${createdJob.id} created successfully!`);
+        // Refresh optimized jobs immediately
+        refreshOptimized();
+        return createdJob;
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      toast.error('Failed to create job');
+      throw error;
+    }
+  };
+
+  const handleSelectJob = (jobId: string, isSelected: boolean) => {
+    setSelectedJobs(prev => 
+      isSelected 
+        ? [...prev, jobId]
+        : prev.filter(id => id !== jobId)
+    );
+  };
+
+  const handleSelectAllJobs = (select: boolean) => {
+    setSelectedJobs(select ? filteredJobs.map(job => job.id) : []);
+  };
+
+  // Bulk action handlers with optimized refresh
+  const handleBulkUpdateStatus = async (jobIds: string[], newStatus: string) => {
+    try {
+      await Promise.all(jobIds.map(id => updateJob(id, { status: newStatus })));
+      toast.success(`Updated ${jobIds.length} jobs to ${newStatus}`);
+      setSelectedJobs([]);
+      refreshOptimized();
+    } catch (error) {
+      toast.error('Failed to update job statuses');
+    }
+  };
+
+  const handleBulkAssignTechnician = async (jobIds: string[], technicianId: string, technicianName: string) => {
+    try {
+      await Promise.all(jobIds.map(id => updateJob(id, { technician_id: technicianId })));
+      toast.success(`Assigned ${jobIds.length} jobs to ${technicianName}`);
+      setSelectedJobs([]);
+      refreshOptimized();
+    } catch (error) {
+      toast.error('Failed to assign technician');
+    }
+  };
+
+  const handleBulkDelete = async (jobIds: string[]) => {
+    try {
+      await Promise.all(jobIds.map(id => deleteJob(id)));
+      toast.success(`Deleted ${jobIds.length} jobs`);
+      setSelectedJobs([]);
+      refreshOptimized();
+    } catch (error) {
+      toast.error('Failed to delete jobs');
+    }
+  };
+
+  const handleBulkExport = (jobIds: string[]) => {
+    const selectedJobData = filteredJobs.filter(job => jobIds.includes(job.id));
+    const csvData = selectedJobData.map(job => ({
+      'Job ID': job.id,
+      'Client': job.client?.name || '',
+      'Status': job.status,
+      'Type': job.job_type || '',
+      'Date': job.date ? new Date(job.date).toLocaleDateString() : '',
+      'Revenue': job.revenue || 0,
+      'Address': job.address || ''
+    }));
+    
+    const csv = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `jobs-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast.success(`Exported ${jobIds.length} jobs`);
+    setSelectedJobs([]);
+  };
+
+  const handleBulkTagJobs = async (jobIds: string[], tags: string[]) => {
+    try {
+      await Promise.all(jobIds.map(id => {
+        const job = filteredJobs.find(j => j.id === id);
+        const existingTags = job?.tags || [];
+        const newTags = [...new Set([...existingTags, ...tags])];
+        return updateJob(id, { tags: newTags });
+      }));
+      toast.success(`Tagged ${jobIds.length} jobs`);
+      setSelectedJobs([]);
+      refreshOptimized();
+    } catch (error) {
+      toast.error('Failed to tag jobs');
+    }
+  };
+
+  const handleRefreshJobs = () => {
+    refreshOptimized();
+    setSelectedJobs([]);
+    toast.success('Jobs refreshed');
   };
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <AnimatedContainer animation="fade-in">
         <PageHeader
-          title="Jobs"
-          subtitle="Manage and track all your service jobs"
-          action={
-            canCreate ? (
-              <Button 
-                onClick={() => setShowCreateDialog(true)}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Job
-              </Button>
-            ) : null
-          }
+          title="Job Management"
+          subtitle="Manage your jobs efficiently"
+          icon={Wrench}
+          badges={[
+            { text: "Active Jobs", icon: Target, variant: "fixlyfy" },
+            { text: "Performance", icon: TrendingUp, variant: "info" }
+          ]}
+          actionButton={{
+            text: "Create Job",
+            icon: Plus,
+            onClick: () => setIsCreateJobModalOpen(true)
+          }}
         />
-
-        <AnimatedContainer>
-          <ModernCard className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search jobs by title, client, or ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* View Toggle */}
-              <div className="flex gap-2">
+      </AnimatedContainer>
+      
+      <AnimatedContainer animation="fade-in" delay={200}>
+        <div className="space-y-6">
+          <ModernCard variant="glass" className="p-4">
+            <div className="flex flex-col md:flex-row justify-between gap-4">
+              <JobsFilters 
+                onFiltersChange={setFilters} 
+                filters={filters}
+              />
+              <div className="flex items-center gap-2">
                 <Button
-                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setViewMode('list')}
+                  onClick={handleRefreshJobs}
+                  className="flex gap-2 rounded-xl"
+                  disabled={isOptimizedLoading}
                 >
-                  <List className="h-4 w-4" />
+                  <RefreshCw size={18} className={isOptimizedLoading ? "animate-spin" : ""} /> 
+                  Refresh
                 </Button>
                 <Button
-                  variant={viewMode === 'kanban' ? 'default' : 'outline'}
+                  variant={isGridView ? "ghost" : "secondary"}
                   size="sm"
-                  onClick={() => setViewMode('kanban')}
+                  onClick={() => setIsGridView(false)}
+                  className="flex gap-2 rounded-xl"
                 >
-                  <Grid className="h-4 w-4" />
+                  <List size={18} /> List
+                </Button>
+                <Button 
+                  variant={isGridView ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setIsGridView(true)}
+                  className="flex gap-2 rounded-xl"
+                >
+                  <Grid size={18} /> Grid
                 </Button>
               </div>
             </div>
-
-            {/* Jobs Display */}
-            {viewMode === 'list' ? (
-              <JobsList 
-                jobs={filteredJobs} 
-                isLoading={isLoading}
-                onRefresh={refreshJobs}
-              />
-            ) : (
-              <JobsKanban 
-                jobs={filteredJobs} 
-                isLoading={isLoading}
-                onRefresh={refreshJobs}
-              />
-            )}
           </ModernCard>
-        </AnimatedContainer>
-
-        {/* Create Job Dialog */}
-        <CreateJobDialog
-          open={showCreateDialog}
-          onOpenChange={setShowCreateDialog}
-          onSuccess={handleCreateSuccess}
-        />
-      </div>
+          
+          <JobsList 
+            isGridView={isGridView}
+            jobs={filteredJobs}
+            selectedJobs={selectedJobs}
+            onSelectJob={handleSelectJob}
+            onSelectAllJobs={handleSelectAllJobs}
+            onRefresh={handleRefreshJobs}
+          />
+        </div>
+      </AnimatedContainer>
+      
+      <BulkActionsBar
+        selectedJobs={selectedJobs}
+        onClearSelection={() => setSelectedJobs([])}
+        onUpdateStatus={handleBulkUpdateStatus}
+        onAssignTechnician={handleBulkAssignTechnician}
+        onDeleteJobs={handleBulkDelete}
+        onTagJobs={handleBulkTagJobs}
+        onExport={handleBulkExport}
+      />
+      
+      <ScheduleJobModal 
+        open={isCreateJobModalOpen} 
+        onOpenChange={setIsCreateJobModalOpen}
+        onJobCreated={handleJobCreated}
+        onSuccess={(job) => toast.success(`Job ${job.id} created successfully!`)}
+      />
     </PageLayout>
   );
 };

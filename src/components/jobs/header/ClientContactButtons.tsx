@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClientContactButtonsProps {
+  onCallClick: () => void;
+  onMessageClick: () => void;
   onEditClient: () => void;
 }
 
@@ -15,26 +17,26 @@ export const ClientContactButtons = ({ onEditClient }: ClientContactButtonsProps
   const isMobile = useIsMobile();
 
   const handleCallClick = () => {
-    if (job?.client_id && job?.client && job?.phone) {
-      navigate(`/connect?tab=calls&clientId=${job.client_id}&clientName=${encodeURIComponent(typeof job.client === 'string' ? job.client : job.client.name)}&clientPhone=${encodeURIComponent(job.phone)}`);
+    if (job?.clientId && job?.client && job?.phone) {
+      navigate(`/connect?tab=calls&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientPhone=${encodeURIComponent(job.phone)}`);
     }
   };
 
   const handleMessageClick = () => {
-    if (job?.client_id && job?.client && job?.phone) {
-      navigate(`/connect?tab=messages&clientId=${job.client_id}&clientName=${encodeURIComponent(typeof job.client === 'string' ? job.client : job.client.name)}&clientPhone=${encodeURIComponent(job.phone)}&autoOpen=true`);
+    if (job?.clientId && job?.client && job?.phone) {
+      navigate(`/connect?tab=messages&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientPhone=${encodeURIComponent(job.phone)}&autoOpen=true`);
     }
   };
 
   const handleEmailClick = () => {
-    if (job?.client_id && job?.client && job?.email) {
-      navigate(`/connect?tab=emails&clientId=${job.client_id}&clientName=${encodeURIComponent(typeof job.client === 'string' ? job.client : job.client.name)}&clientEmail=${encodeURIComponent(job.email)}&autoOpen=true`);
+    if (job?.clientId && job?.client && job?.email) {
+      navigate(`/connect?tab=emails&clientId=${job.clientId}&clientName=${encodeURIComponent(job.client)}&clientEmail=${encodeURIComponent(job.email)}&autoOpen=true`);
     }
   };
 
   const handleEditClient = () => {
-    if (job?.client_id) {
-      navigate(`/clients/${job.client_id}`);
+    if (job?.clientId) {
+      navigate(`/clients/${job.clientId}`);
     } else {
       console.error('No client ID available for editing');
     }
