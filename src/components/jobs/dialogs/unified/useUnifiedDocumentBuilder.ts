@@ -23,7 +23,7 @@ export const useUnifiedDocumentBuilder = ({
   onSyncToInvoice
 }: UseUnifiedDocumentBuilderProps) => {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [taxRate, setTaxRate] = useState(0.08); // 8% default tax rate
+  const [taxRate, setTaxRate] = useState(0.08);
   const [notes, setNotes] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -51,7 +51,13 @@ export const useUnifiedDocumentBuilder = ({
             setLineItems(existingDocument.items || []);
             setTaxRate(existingDocument.tax_rate || 0.08);
             setNotes(existingDocument.notes || '');
-            setDocumentNumber(existingDocument.estimate_number || existingDocument.invoice_number || '');
+            
+            // Handle different document types with type safety
+            if (documentType === 'estimate' && 'estimate_number' in existingDocument) {
+              setDocumentNumber(existingDocument.estimate_number || '');
+            } else if (documentType === 'invoice' && 'invoice_number' in existingDocument) {
+              setDocumentNumber(existingDocument.invoice_number || '');
+            }
           } else {
             // Create new document
             const prefix = documentType === 'estimate' ? 'EST' : 'INV';
@@ -179,6 +185,7 @@ export const useUnifiedDocumentBuilder = ({
     notes,
     setNotes,
     documentNumber,
+    setDocumentNumber,
     isInitialized,
     isSubmitting,
 

@@ -11,10 +11,11 @@ interface PageHeaderProps {
   icon?: React.ComponentType<any>;
   badges?: Array<{
     text: string;
-    variant?: "default" | "secondary" | "destructive" | "outline";
+    variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "fixlyfy";
   }>;
   actionButton?: {
     label: string;
+    text?: string;
     onClick: () => void;
     icon?: React.ComponentType<any>;
   };
@@ -58,7 +59,7 @@ export const PageHeader = ({
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               {actionButton.icon && <actionButton.icon className="h-4 w-4" />}
-              {actionButton.label}
+              {actionButton.text || actionButton.label}
             </button>
           )}
         </div>

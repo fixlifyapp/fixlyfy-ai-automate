@@ -1,71 +1,42 @@
 
-import { ModernCard, ModernCardContent, ModernCardHeader, ModernCardTitle } from "@/components/ui/modern-card";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Calendar, DollarSign, Wrench } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import React from 'react';
+import { ModernCard, ModernCardContent, ModernCardHeader } from '@/components/ui/modern-card';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface ClientStatsCardProps {
-  clientId: string;
-  stats: {
-    totalJobs: number;
-    totalRevenue: number;
-    lastServiceDate?: string;
-    averageJobValue: number;
-    jobsThisYear: number;
-    revenueThisYear: number;
+  title: string;
+  value: string | number;
+  change?: {
+    value: string;
+    type: 'positive' | 'negative';
   };
+  icon?: React.ComponentType<any>;
 }
 
-export const ClientStatsCard = ({ clientId, stats }: ClientStatsCardProps) => {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString();
-  };
-
+export const ClientStatsCard = ({ title, value, change, icon: Icon }: ClientStatsCardProps) => {
   return (
-    <ModernCard variant="elevated">
-      <ModernCardHeader>
-        <ModernCardTitle icon={TrendingUp}>
-          Client Statistics
-        </ModernCardTitle>
+    <ModernCard>
+      <ModernCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <h3 className="text-sm font-medium">{title}</h3>
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
       </ModernCardHeader>
       <ModernCardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <Wrench className="h-4 w-4 text-blue-600 mr-1" />
-              <span className="text-sm font-medium text-blue-600">Total Jobs</span>
-            </div>
-            <div className="text-2xl font-bold text-blue-900">{stats.totalJobs}</div>
-            <div className="text-xs text-blue-600">{stats.jobsThisYear} this year</div>
+        <div className="text-2xl font-bold">{value}</div>
+        {change && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            {change.type === 'positive' ? (
+              <TrendingUp className="h-3 w-3 text-green-500" />
+            ) : (
+              <TrendingDown className="h-3 w-3 text-red-500" />
+            )}
+            <span className={change.type === 'positive' ? 'text-green-500' : 'text-red-500'}>
+              {change.value}
+            </span>
+            <span>from last month</span>
           </div>
-
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-              <span className="text-sm font-medium text-green-600">Total Revenue</span>
-            </div>
-            <div className="text-2xl font-bold text-green-900">{formatCurrency(stats.totalRevenue)}</div>
-            <div className="text-xs text-green-600">{formatCurrency(stats.revenueThisYear)} this year</div>
-          </div>
-
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <TrendingUp className="h-4 w-4 text-orange-600 mr-1" />
-              <span className="text-sm font-medium text-orange-600">Avg Job Value</span>
-            </div>
-            <div className="text-2xl font-bold text-orange-900">{formatCurrency(stats.averageJobValue)}</div>
-          </div>
-
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <Calendar className="h-4 w-4 text-purple-600 mr-1" />
-              <span className="text-sm font-medium text-purple-600">Last Service</span>
-            </div>
-            <div className="text-sm font-bold text-purple-900">{formatDate(stats.lastServiceDate)}</div>
-          </div>
-        </div>
+        )}
       </ModernCardContent>
     </ModernCard>
   );
-}
+};

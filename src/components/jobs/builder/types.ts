@@ -38,3 +38,21 @@ export interface DocumentData {
   notes: string;
   total: number;
 }
+
+// Helper function to convert LineItems to JSON for database storage
+export const lineItemsToJson = (lineItems: LineItem[]): any => {
+  return lineItems.map(item => ({
+    id: item.id,
+    description: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    total: item.total,
+    taxable: item.taxable,
+    discount: item.discount || 0,
+    ourPrice: item.ourPrice || 0,
+    unit: item.unit,
+    category: item.category,
+    name: item.name || item.description,
+    price: item.price || item.unitPrice
+  }));
+};

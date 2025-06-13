@@ -22,13 +22,16 @@ const modernCardVariants = cva(
 
 export interface ModernCardProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof modernCardVariants> {}
+    VariantProps<typeof modernCardVariants> {
+  onClick?: () => void;
+}
 
 const ModernCard = React.forwardRef<HTMLDivElement, ModernCardProps>(
-  ({ className, variant, ...props }, ref) => (
+  ({ className, variant, onClick, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(modernCardVariants({ variant, className }))}
+      onClick={onClick}
       {...props}
     />
   )

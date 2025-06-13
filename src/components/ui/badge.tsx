@@ -19,7 +19,7 @@ const badgeVariants = cva(
         success: "border-transparent bg-green-100 text-green-800 hover:bg-green-200",
         warning: "border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
         info: "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-200",
-        fixlyfy: "border-transparent bg-fixlyfy text-white hover:bg-fixlyfy/80",
+        fixlyfy: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
       },
     },
     defaultVariants: {
