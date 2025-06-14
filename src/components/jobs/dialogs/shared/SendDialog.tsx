@@ -119,10 +119,11 @@ export const SendDialog = ({
         onClose();
       } else {
         let errorMessage = result.error || 'Unknown error occurred';
-        if (typeof result.error === "object" && result.error !== null) {
-          if (result.error.message) {
+        // Only try to read properties if error is an object and not null
+        if (result.error != null && typeof result.error === "object") {
+          if ("message" in result.error && result.error.message) {
             errorMessage = result.error.message;
-          } else if (result.error.error) {
+          } else if ("error" in result.error && result.error.error) {
             errorMessage = result.error.error;
           } else {
             errorMessage = JSON.stringify(result.error);
@@ -137,7 +138,7 @@ export const SendDialog = ({
       console.error(`Error sending ${documentType}:`, error);
       const errorMessage =
         error?.message ||
-        error?.error?.message ||
+        (error?.error && error.error?.message) ||
         error?.error ||
         "Unknown error occurred";
       toast.error(`Failed to send ${documentType}: ${errorMessage}`);
