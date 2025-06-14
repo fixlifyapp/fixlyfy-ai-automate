@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Send, Edit, CreditCard, Eye, FileText, Download } from "lucide-react";
+import { Plus, Send, Edit, CreditCard, Eye, FileText, Download, Trash2 } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
@@ -31,6 +30,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const [showPreviewWindow, setShowPreviewWindow] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isMobile = useIsMobile();
 
   const handleCreateInvoice = () => {
@@ -97,6 +97,34 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     } catch (error) {
       console.error('Error downloading invoice:', error);
       toast.error('Failed to download invoice PDF');
+    }
+  };
+
+  const handleRemoveInvoice = async (invoice: any) => {
+    if (!confirm(`Are you sure you want to delete invoice ${invoice.invoice_number}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoice.id);
+
+      if (error) {
+        console.error('Error deleting invoice:', error);
+        toast.error('Failed to delete invoice');
+        return;
+      }
+
+      refreshInvoices();
+      toast.success('Invoice deleted successfully');
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast.error('Failed to delete invoice');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,6 +350,17 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                     >
                       <Download className="h-4 w-4 mr-2" />
                       PDF
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size={isMobile ? "default" : "sm"}
+                      className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-red-600 hover:text-red-700 border-red-200 hover:border-red-300`}
+                      onClick={() => handleRemoveInvoice(invoice)}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isDeleting ? "Deleting..." : "Remove"}
                     </Button>
                   </div>
                 </div>
