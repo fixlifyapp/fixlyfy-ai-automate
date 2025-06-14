@@ -26,11 +26,7 @@ export const useProducts = (category?: string) => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      // Only show loading if we don't have products yet
-      if (products.length === 0) {
-        setIsLoading(true);
-      }
-      
+      setIsLoading(true);
       try {
         let query = supabase
           .from('products')
@@ -52,19 +48,16 @@ export const useProducts = (category?: string) => {
         setProducts(formattedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);
-        // Only show toast error if this is the initial load
-        if (products.length === 0) {
-          toast.error('Failed to load products');
-        }
+        toast.error('Failed to load products');
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchProducts();
-  }, [category, refreshTrigger]); // Removed products.length from dependency
+  }, [category, refreshTrigger]);
 
-  // Get unique categories from products - memoized for performance
+  // Get unique categories from products
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
     products.forEach(product => {
@@ -72,7 +65,7 @@ export const useProducts = (category?: string) => {
         uniqueCategories.add(product.category);
       }
     });
-    return Array.from(uniqueCategories).sort();
+    return Array.from(uniqueCategories);
   }, [products]);
 
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
