@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,8 +64,38 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     setShowPreviewWindow(true);
   };
 
-  const handleDownloadInvoice = (invoice: any) => {
-    toast.info("Download functionality coming soon");
+  const handleDownloadInvoice = async (invoice: any) => {
+    try {
+      // Call the download-invoice edge function
+      const { data, error } = await supabase.functions.invoke('download-invoice', {
+        body: {
+          invoiceId: invoice.id,
+          jobId: jobId
+        }
+      });
+
+      if (error) {
+        console.error('Error downloading invoice:', error);
+        toast.error('Failed to download invoice PDF');
+        return;
+      }
+
+      if (data && data.success && data.pdfUrl) {
+        // Create a temporary link to download the PDF
+        const link = document.createElement('a');
+        link.href = data.pdfUrl;
+        link.download = `Invoice-${invoice.invoice_number}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Invoice PDF downloaded successfully');
+      } else {
+        toast.error('Failed to generate invoice PDF');
+      }
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Failed to download invoice PDF');
+    }
   };
 
   const handleSendSuccess = () => {
@@ -104,7 +133,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
   const canAcceptPayment = (invoice: any) => {
     const status = invoice.status?.toLowerCase();
-    return status === 'sent' || status === 'partial' || status === 'overdue' || status === 'draft';
+    return status === 'sent' || status === 'partial' || status === 'overdue' || status === 'draft' || status === 'unpaid';
   };
 
   if (isLoading) {
