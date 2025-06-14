@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('SMS Invoice request received');
+    console.log('📱 SMS Invoice request received');
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -170,9 +170,10 @@ serve(async (req) => {
           recipient: formattedToPhone,
           content: smsMessage,
           status: 'sent',
-          external_id: telnyxResult.data?.id,
+          provider_message_id: telnyxResult.data?.id,
           invoice_number: invoice.invoice_number,
           client_name: client?.name,
+          client_email: client?.email,
           client_phone: client?.phone,
           portal_link_included: !!portalLink
         });

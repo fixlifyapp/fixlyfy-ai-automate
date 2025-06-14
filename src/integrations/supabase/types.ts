@@ -1309,6 +1309,7 @@ export type Database = {
           external_id: string | null
           id: string
           portal_link_included: boolean | null
+          provider_message_id: string | null
           recipient: string
           sent_at: string | null
           status: string
@@ -1327,6 +1328,7 @@ export type Database = {
           external_id?: string | null
           id?: string
           portal_link_included?: boolean | null
+          provider_message_id?: string | null
           recipient: string
           sent_at?: string | null
           status?: string
@@ -1345,6 +1347,7 @@ export type Database = {
           external_id?: string | null
           id?: string
           portal_link_included?: boolean | null
+          provider_message_id?: string | null
           recipient?: string
           sent_at?: string | null
           status?: string
@@ -1423,7 +1426,22 @@ export type Database = {
           updated_at?: string
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_estimates_job_id"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_estimates_job_id"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       id_counters: {
         Row: {
@@ -1468,6 +1486,7 @@ export type Database = {
           invoice_id: string
           invoice_number: string | null
           portal_link_included: boolean | null
+          provider_message_id: string | null
           recipient: string
           sent_at: string | null
           status: string
@@ -1486,6 +1505,7 @@ export type Database = {
           invoice_id: string
           invoice_number?: string | null
           portal_link_included?: boolean | null
+          provider_message_id?: string | null
           recipient: string
           sent_at?: string | null
           status?: string
@@ -1504,6 +1524,7 @@ export type Database = {
           invoice_id?: string
           invoice_number?: string | null
           portal_link_included?: boolean | null
+          provider_message_id?: string | null
           recipient?: string
           sent_at?: string | null
           status?: string
@@ -1601,6 +1622,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_invoices_job_id"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "fact_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_invoices_job_id"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_estimate_id_fkey"
             columns: ["estimate_id"]
@@ -3469,6 +3504,10 @@ export type Database = {
           p_user_id?: string
         }
         Returns: undefined
+      }
+      send_invoice_sms: {
+        Args: { invoice_id: string; recipient_phone: string; message: string }
+        Returns: Json
       }
       update_team_member_commission: {
         Args: { user_id: string; base_rate: number; rules: Json; fees: Json }

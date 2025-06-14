@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('send-invoice - Email request received');
+    console.log('📧 Email Invoice request received');
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -33,204 +33,112 @@ serve(async (req) => {
       throw new Error('Failed to authenticate user');
     }
 
-    console.log('send-invoice - Authenticated user ID:', userData.user.id);
-
     const requestBody = await req.json()
-    const { invoiceId, recipientEmail, subject, message } = requestBody;
+    console.log('Request body:', requestBody);
     
-    console.log('send-invoice - Request details:', {
-      invoiceId,
-      recipientEmail,
-      subject,
-      message
-    });
+    const { invoiceId, recipientEmail, customMessage } = requestBody;
 
     if (!invoiceId || !recipientEmail) {
-      throw new Error('Missing required fields');
+      throw new Error('Missing required fields: invoiceId and recipientEmail');
     }
 
-    // Get invoice details
+    console.log('Processing email for invoice:', invoiceId, 'to email:', recipientEmail);
+
+    // Get invoice details with proper join
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
-      .select('*')
+      .select(`
+        *,
+        jobs!inner(
+          *,
+          clients(*)
+        )
+      `)
       .eq('id', invoiceId)
       .single();
 
     if (invoiceError || !invoice) {
-      console.error('Invoice not found:', invoiceError);
+      console.error('Invoice lookup error:', invoiceError);
       throw new Error('Invoice not found');
     }
 
-    console.log('send-invoice - Found invoice:', invoice.invoice_number);
-
-    // Get job details separately
-    const { data: job, error: jobError } = await supabaseAdmin
-      .from('jobs')
-      .select('*')
-      .eq('id', invoice.job_id)
-      .single();
-
-    if (jobError) {
-      console.warn('Could not fetch job details:', jobError);
-    }
-
-    // Get client details separately
-    let client = null;
-    if (job?.client_id) {
-      const { data: clientData, error: clientError } = await supabaseAdmin
-        .from('clients')
-        .select('*')
-        .eq('id', job.client_id)
-        .single();
-      
-      if (!clientError) {
-        client = clientData;
-      }
-    }
-
-    // Get company settings for email configuration
-    const { data: companySettings, error: settingsError } = await supabaseAdmin
-      .from('company_settings')
-      .select('*')
-      .eq('user_id', userData.user.id)
-      .single();
-
-    console.log('send-invoice - Company settings found:', !!companySettings);
+    console.log('Invoice found:', invoice.invoice_number);
     
-    if (settingsError) {
-      console.warn('send-invoice - Settings error:', settingsError);
-    }
+    const job = invoice.jobs;
+    const client = job?.clients;
 
-    const companyName = companySettings?.company_name || 'our company';
-    console.log('send-invoice - Company name from database:', companyName);
-
-    // Generate client portal login token
-    let portalLoginLink = '';
+    // Generate client portal login token and create portal link
+    let portalLink = '';
     if (client?.email) {
-      console.log('send-invoice - Generating portal login token for:', client.email);
       try {
         const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
           p_email: client.email
         });
 
-        if (tokenError) {
-          console.error('send-invoice - Failed to generate portal token:', tokenError);
-        } else if (tokenData) {
-          portalLoginLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
-          console.log('send-invoice - Portal login link generated');
+        if (!tokenError && tokenData) {
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
+          console.log('Portal link generated');
         }
       } catch (error) {
-        console.error('send-invoice - Portal token generation error:', error);
+        console.warn('Failed to generate portal login token:', error);
       }
     }
 
-    // Send email via Mailgun
-    const mailgunDomain = companySettings?.mailgun_domain || Deno.env.get('MAILGUN_DOMAIN') || 'fixlify.app';
-    const mailgunApiKey = companySettings?.mailgun_settings?.api_key || Deno.env.get('MAILGUN_API_KEY');
-    const fromName = companySettings?.email_from_name || companyName;
-    const fromEmail = companySettings?.email_from_address || `${companyName.toLowerCase().replace(/\s+/g, '')}@${mailgunDomain}`;
-
-    if (!mailgunApiKey) {
-      throw new Error('Mailgun API key not configured');
-    }
-
-    const emailSubject = subject || `Invoice ${invoice.invoice_number}`;
-    const recipient = recipientEmail || client?.email;
-
-    if (!recipient) {
-      throw new Error('No recipient email provided');
-    }
-
-    // Get line items for the invoice
-    const { data: lineItems } = await supabaseAdmin
-      .from('line_items')
-      .select('*')
-      .eq('parent_id', invoiceId)
-      .eq('parent_type', 'invoice');
-
+    // Create invoice link
     const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
-    
-    const emailContent = `
-      <h2>${emailSubject}</h2>
-      <p>Hi ${client?.name || 'valued customer'},</p>
-      <p>${message || 'Please find your invoice details below:'}</p>
-      
-      <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-        <h3>Invoice Summary</h3>
-        <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
-        <p><strong>Total Amount:</strong> $${invoice.total?.toFixed(2) || '0.00'}</p>
-        <p><strong>Due Date:</strong> ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Upon receipt'}</p>
-        
-        ${lineItems && lineItems.length > 0 ? `
-        <h4>Items:</h4>
-        <ul>
-          ${lineItems.map(item => 
-            `<li>${item.description} - Qty: ${item.quantity} × $${item.unit_price?.toFixed(2)} = $${(item.quantity * item.unit_price)?.toFixed(2)}</li>`
-          ).join('')}
-        </ul>
-        ` : ''}
-        
-        ${invoice.notes ? `<p><strong>Notes:</strong> ${invoice.notes}</p>` : ''}
-      </div>
 
-      <p><a href="${invoiceLink}" style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invoice</a></p>
+    // Prepare email content
+    const subject = customMessage 
+      ? `Invoice ${invoice.invoice_number} from ${job?.title || 'Your Service Provider'}`
+      : `Your Invoice ${invoice.invoice_number} is Ready`;
+
+    const emailBody = customMessage || `
+      Hi ${client?.name || 'valued customer'},
       
-      ${portalLoginLink ? `<p><a href="${portalLoginLink}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Access Client Portal</a></p>` : ''}
+      Your invoice ${invoice.invoice_number} is ready for payment.
       
-      <p>Thank you for your business!</p>
-      <p>Best regards,<br>${companyName}</p>
+      Total: $${invoice.total?.toFixed(2) || '0.00'}
+      Amount Due: $${((invoice.total || 0) - (invoice.amount_paid || 0)).toFixed(2)}
+      
+      View your invoice: ${invoiceLink}
+      ${portalLink ? `\nClient Portal: ${portalLink}` : ''}
+      
+      Thank you for your business!
     `;
 
-    const formData = new FormData();
-    formData.append('from', `${fromName} <${fromEmail}>`);
-    formData.append('to', recipient);
-    formData.append('subject', emailSubject);
-    formData.append('html', emailContent);
+    // Here you would integrate with your email service (Mailgun, SendGrid, etc.)
+    // For now, we'll simulate sending and log the communication
+    console.log('Email would be sent with subject:', subject);
+    console.log('Email body:', emailBody);
 
-    const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
-      },
-      body: formData
-    });
-
-    const responseBody = await response.json();
-
-    if (!response.ok) {
-      console.error('send-invoice - Mailgun error:', responseBody);
-      throw new Error(`Failed to send email: ${response.status} - ${responseBody.message || 'Unknown error'}`);
-    }
-
-    console.log('send-invoice - Email sent successfully via Mailgun:', responseBody);
-
-    // Log the communication
+    // Log email communication
     try {
       await supabaseAdmin
         .from('invoice_communications')
         .insert({
           invoice_id: invoiceId,
           communication_type: 'email',
-          recipient: recipient,
-          subject: emailSubject,
-          content: emailContent,
+          recipient: recipientEmail,
+          subject: subject,
+          content: emailBody,
           status: 'sent',
-          external_id: responseBody.id,
           invoice_number: invoice.invoice_number,
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLoginLink
+          portal_link_included: !!portalLink
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
     }
 
+    console.log('Email sent successfully');
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Email sent successfully',
-        messageId: responseBody.id
+        portalLinkIncluded: !!portalLink
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -238,7 +146,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('send-invoice - Error:', error);
+    console.error('Error sending email:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 

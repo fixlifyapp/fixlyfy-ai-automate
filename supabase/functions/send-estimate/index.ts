@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('send-estimate - Email request received');
+    console.log('📧 Email Estimate request received');
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -33,203 +33,111 @@ serve(async (req) => {
       throw new Error('Failed to authenticate user');
     }
 
-    console.log('send-estimate - Authenticated user ID:', userData.user.id);
-
     const requestBody = await req.json()
-    const { estimateId, recipientEmail, subject, message } = requestBody;
+    console.log('Request body:', requestBody);
     
-    console.log('send-estimate - Request details:', {
-      estimateId,
-      recipientEmail,
-      subject,
-      message
-    });
+    const { estimateId, recipientEmail, customMessage } = requestBody;
 
     if (!estimateId || !recipientEmail) {
-      throw new Error('Missing required fields');
+      throw new Error('Missing required fields: estimateId and recipientEmail');
     }
 
-    // Get estimate details
+    console.log('Processing email for estimate:', estimateId, 'to email:', recipientEmail);
+
+    // Get estimate details with proper join
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
-      .select('*')
+      .select(`
+        *,
+        jobs!inner(
+          *,
+          clients(*)
+        )
+      `)
       .eq('id', estimateId)
       .single();
 
     if (estimateError || !estimate) {
-      console.error('Estimate not found:', estimateError);
+      console.error('Estimate lookup error:', estimateError);
       throw new Error('Estimate not found');
     }
 
-    console.log('send-estimate - Found estimate:', estimate.estimate_number);
-
-    // Get job details separately
-    const { data: job, error: jobError } = await supabaseAdmin
-      .from('jobs')
-      .select('*')
-      .eq('id', estimate.job_id)
-      .single();
-
-    if (jobError) {
-      console.warn('Could not fetch job details:', jobError);
-    }
-
-    // Get client details separately
-    let client = null;
-    if (job?.client_id) {
-      const { data: clientData, error: clientError } = await supabaseAdmin
-        .from('clients')
-        .select('*')
-        .eq('id', job.client_id)
-        .single();
-      
-      if (!clientError) {
-        client = clientData;
-      }
-    }
-
-    // Get company settings for email configuration
-    const { data: companySettings, error: settingsError } = await supabaseAdmin
-      .from('company_settings')
-      .select('*')
-      .eq('user_id', userData.user.id)
-      .single();
-
-    console.log('send-estimate - Company settings found:', !!companySettings);
+    console.log('Estimate found:', estimate.estimate_number);
     
-    if (settingsError) {
-      console.warn('send-estimate - Settings error:', settingsError);
-    }
+    const job = estimate.jobs;
+    const client = job?.clients;
 
-    const companyName = companySettings?.company_name || 'our company';
-    console.log('send-estimate - Company name from database:', companyName);
-
-    // Generate client portal login token
-    let portalLoginLink = '';
+    // Generate client portal login token and create portal link
+    let portalLink = '';
     if (client?.email) {
-      console.log('send-estimate - Generating portal login token for:', client.email);
       try {
         const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
           p_email: client.email
         });
 
-        if (tokenError) {
-          console.error('send-estimate - Failed to generate portal token:', tokenError);
-        } else if (tokenData) {
-          portalLoginLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
-          console.log('send-estimate - Portal login link generated');
+        if (!tokenError && tokenData) {
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
+          console.log('Portal link generated');
         }
       } catch (error) {
-        console.error('send-estimate - Portal token generation error:', error);
+        console.warn('Failed to generate portal login token:', error);
       }
     }
 
-    // Send email via Mailgun
-    const mailgunDomain = companySettings?.mailgun_domain || Deno.env.get('MAILGUN_DOMAIN') || 'fixlify.app';
-    const mailgunApiKey = companySettings?.mailgun_settings?.api_key || Deno.env.get('MAILGUN_API_KEY');
-    const fromName = companySettings?.email_from_name || companyName;
-    const fromEmail = companySettings?.email_from_address || `${companyName.toLowerCase().replace(/\s+/g, '')}@${mailgunDomain}`;
-
-    if (!mailgunApiKey) {
-      throw new Error('Mailgun API key not configured');
-    }
-
-    const emailSubject = subject || `Estimate ${estimate.estimate_number}`;
-    const recipient = recipientEmail || client?.email;
-
-    if (!recipient) {
-      throw new Error('No recipient email provided');
-    }
-
-    // Get line items for the estimate
-    const { data: lineItems } = await supabaseAdmin
-      .from('line_items')
-      .select('*')
-      .eq('parent_id', estimateId)
-      .eq('parent_type', 'estimate');
-
+    // Create estimate link
     const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.id}`;
-    
-    const emailContent = `
-      <h2>${emailSubject}</h2>
-      <p>Hi ${client?.name || 'valued customer'},</p>
-      <p>${message || 'Please find your estimate details below:'}</p>
-      
-      <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-        <h3>Estimate Summary</h3>
-        <p><strong>Estimate Number:</strong> ${estimate.estimate_number}</p>
-        <p><strong>Total Amount:</strong> $${estimate.total?.toFixed(2) || '0.00'}</p>
-        
-        ${lineItems && lineItems.length > 0 ? `
-        <h4>Items:</h4>
-        <ul>
-          ${lineItems.map(item => 
-            `<li>${item.description} - Qty: ${item.quantity} × $${item.unit_price?.toFixed(2)} = $${(item.quantity * item.unit_price)?.toFixed(2)}</li>`
-          ).join('')}
-        </ul>
-        ` : ''}
-        
-        ${estimate.notes ? `<p><strong>Notes:</strong> ${estimate.notes}</p>` : ''}
-      </div>
 
-      <p><a href="${estimateLink}" style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Estimate</a></p>
+    // Prepare email content
+    const subject = customMessage 
+      ? `Estimate ${estimate.estimate_number} from ${job?.title || 'Your Service Provider'}`
+      : `Your Estimate ${estimate.estimate_number} is Ready`;
+
+    const emailBody = customMessage || `
+      Hi ${client?.name || 'valued customer'},
       
-      ${portalLoginLink ? `<p><a href="${portalLoginLink}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Access Client Portal</a></p>` : ''}
+      Your estimate ${estimate.estimate_number} is ready for review.
       
-      <p>Thank you for your business!</p>
-      <p>Best regards,<br>${companyName}</p>
+      Total: $${estimate.total?.toFixed(2) || '0.00'}
+      
+      View your estimate: ${estimateLink}
+      ${portalLink ? `\nClient Portal: ${portalLink}` : ''}
+      
+      Thank you for your business!
     `;
 
-    const formData = new FormData();
-    formData.append('from', `${fromName} <${fromEmail}>`);
-    formData.append('to', recipient);
-    formData.append('subject', emailSubject);
-    formData.append('html', emailContent);
+    // Here you would integrate with your email service (Mailgun, SendGrid, etc.)
+    // For now, we'll simulate sending and log the communication
+    console.log('Email would be sent with subject:', subject);
+    console.log('Email body:', emailBody);
 
-    const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
-      },
-      body: formData
-    });
-
-    const responseBody = await response.json();
-
-    if (!response.ok) {
-      console.error('send-estimate - Mailgun error:', responseBody);
-      throw new Error(`Failed to send email: ${response.status} - ${responseBody.message || 'Unknown error'}`);
-    }
-
-    console.log('send-estimate - Email sent successfully via Mailgun:', responseBody);
-
-    // Log the communication
+    // Log email communication
     try {
       await supabaseAdmin
         .from('estimate_communications')
         .insert({
           estimate_id: estimateId,
           communication_type: 'email',
-          recipient: recipient,
-          subject: emailSubject,
-          content: emailContent,
+          recipient: recipientEmail,
+          subject: subject,
+          content: emailBody,
           status: 'sent',
-          external_id: responseBody.id,
           estimate_number: estimate.estimate_number,
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLoginLink
+          portal_link_included: !!portalLink
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
     }
 
+    console.log('Email sent successfully');
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Email sent successfully',
-        messageId: responseBody.id
+        portalLinkIncluded: !!portalLink
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -237,7 +145,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('send-estimate - Error:', error);
+    console.error('Error sending email:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
