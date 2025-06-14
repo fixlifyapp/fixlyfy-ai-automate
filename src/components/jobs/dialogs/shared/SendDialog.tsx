@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,12 +122,13 @@ export const SendDialog = ({
         let errorMessage = result.error || 'Unknown error occurred';
         // Only try to read properties if error is an object and not null
         if (result.error != null && typeof result.error === "object") {
-          if ("message" in result.error && result.error.message) {
-            errorMessage = result.error.message;
-          } else if ("error" in result.error && result.error.error) {
-            errorMessage = result.error.error;
+          const errorObj = result.error as any;
+          if ("message" in errorObj && errorObj.message) {
+            errorMessage = errorObj.message;
+          } else if ("error" in errorObj && errorObj.error) {
+            errorMessage = errorObj.error;
           } else {
-            errorMessage = JSON.stringify(result.error);
+            errorMessage = JSON.stringify(errorObj);
           }
         }
         console.error(`Failed to send ${documentType}: ${errorMessage}`);
