@@ -20,7 +20,7 @@ export interface SendDocumentParams {
 }
 
 export interface SendingHookReturn {
-  sendDocument: (params: SendDocumentParams) => Promise<{ success: boolean }>;
+  sendDocument: (params: SendDocumentParams) => Promise<{ success: boolean; error?: string }>;
   isProcessing: boolean;
 }
 
