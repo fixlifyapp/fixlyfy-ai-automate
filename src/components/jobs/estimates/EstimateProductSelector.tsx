@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
-import { ProductSearch } from "@/components/jobs/builder/ProductSearch";
+import { ProductCatalog } from "@/components/jobs/builder/ProductCatalog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Trash, Plus, Package, Pencil } from "lucide-react";
 import { ProductEditInEstimateDialog } from "../dialogs/ProductEditInEstimateDialog";
-import { Dialog } from "@/components/ui/dialog";
 import { DeleteConfirmDialog } from "../dialogs/DeleteConfirmDialog";
 
 interface EstimateProductSelectorProps {
@@ -25,7 +25,7 @@ export function EstimateProductSelector({
   onUpdateProduct
 }: EstimateProductSelectorProps) {
   const { products, isLoading } = useProducts();
-  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<any>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -36,12 +36,13 @@ export function EstimateProductSelector({
     sum + product.price, 0
   );
   
-  const handleOpenProductSearch = () => {
-    setIsProductSearchOpen(true);
+  const handleOpenProductDialog = () => {
+    setIsProductDialogOpen(true);
   };
 
   const handleProductSelect = (product: any) => {
     onAddProduct(product);
+    setIsProductDialogOpen(false);
   };
   
   const handleEditProduct = (product: any) => {
@@ -79,7 +80,7 @@ export function EstimateProductSelector({
               variant="outline" 
               size="sm" 
               className="gap-1"
-              onClick={handleOpenProductSearch}
+              onClick={handleOpenProductDialog}
             >
               <Plus size={16} />
               Add Product
@@ -165,12 +166,19 @@ export function EstimateProductSelector({
         </CardContent>
       </Card>
       
-      {/* Product search dialog */}
-      <ProductSearch
-        open={isProductSearchOpen}
-        onOpenChange={setIsProductSearchOpen}
-        onProductSelect={handleProductSelect}
-      />
+      {/* Product selection dialog */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Products</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh] p-4">
+            <ProductCatalog
+              onAddProduct={handleProductSelect}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Product edit dialog for estimate-specific edits */}
       <ProductEditInEstimateDialog

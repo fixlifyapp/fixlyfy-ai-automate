@@ -1,8 +1,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Plus, ArrowRight, Trash, Edit } from "lucide-react";
-import { ProductSearch } from "../builder/ProductSearch";
+import { ProductCatalog } from "../builder/ProductCatalog";
 import { Product } from "../builder/types";
 import { ProductEditInEstimateDialog } from "../dialogs/ProductEditInEstimateDialog";
 
@@ -19,13 +20,13 @@ export const InvoiceProductSelector = ({
   onRemoveProduct,
   onUpdateProduct,
 }: InvoiceProductSelectorProps) => {
-  const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductEditDialogOpen, setIsProductEditDialogOpen] = useState(false);
 
   const handleProductSelect = (product: Product) => {
     onAddProduct(product);
-    setIsProductSearchOpen(false);
+    setIsProductDialogOpen(false);
   };
   
   const handleEditProduct = (product: any) => {
@@ -62,12 +63,12 @@ export const InvoiceProductSelector = ({
     <div>
       <div className="mb-4">
         <Button 
-          onClick={() => setIsProductSearchOpen(true)}
+          onClick={() => setIsProductDialogOpen(true)}
           variant="outline"
           className="w-full justify-start"
         >
-          <Search className="mr-2" size={16} />
-          Search and add products
+          <Plus className="mr-2" size={16} />
+          Add products
         </Button>
       </div>
 
@@ -121,11 +122,19 @@ export const InvoiceProductSelector = ({
         </div>
       )}
       
-      <ProductSearch
-        open={isProductSearchOpen}
-        onOpenChange={setIsProductSearchOpen}
-        onProductSelect={handleProductSelect}
-      />
+      {/* Product selection dialog */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Products</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh] p-4">
+            <ProductCatalog
+              onAddProduct={handleProductSelect}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ProductEditInEstimateDialog
         open={isProductEditDialogOpen}

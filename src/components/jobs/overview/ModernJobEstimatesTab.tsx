@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -307,9 +308,9 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                 documentType="estimate"
                 documentNumber={previewEstimate.estimate_number}
                 lineItems={[]}
-                taxRate={8.5}
-                calculateSubtotal={() => previewEstimate.total * 0.92}
-                calculateTotalTax={() => previewEstimate.total * 0.08}
+                taxRate={13}
+                calculateSubtotal={() => previewEstimate.total * 0.885}
+                calculateTotalTax={() => previewEstimate.total * 0.115}
                 calculateGrandTotal={() => previewEstimate.total}
                 notes={previewEstimate.notes || ''}
                 issueDate={new Date(previewEstimate.created_at).toLocaleDateString()}

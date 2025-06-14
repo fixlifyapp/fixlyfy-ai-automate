@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { LineItem, Product } from "../../builder/types";
 import { ProductCatalog } from "../../builder/ProductCatalog";
@@ -42,7 +43,12 @@ export const UnifiedItemsStep = ({
   calculateTotalTax,
   calculateGrandTotal
 }: UnifiedItemsStepProps) => {
-  const [showProductCatalog, setShowProductCatalog] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
+
+  const handleProductSelect = (product: Product) => {
+    onAddProduct(product);
+    setShowProductDialog(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -57,7 +63,7 @@ export const UnifiedItemsStep = ({
           </p>
         </div>
         <Button 
-          onClick={() => setShowProductCatalog(true)}
+          onClick={() => setShowProductDialog(true)}
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -101,27 +107,19 @@ export const UnifiedItemsStep = ({
         onNotesChange={onNotesChange}
       />
 
-      {/* Product Catalog - Conditional Render */}
-      {showProductCatalog && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Product Catalog</h3>
-              <Button variant="ghost" onClick={() => setShowProductCatalog(false)}>
-                ×
-              </Button>
-            </div>
-            <div className="p-4">
-              <ProductCatalog
-                onAddProduct={(product) => {
-                  onAddProduct(product);
-                  setShowProductCatalog(false);
-                }}
-              />
-            </div>
+      {/* Product Selection Dialog */}
+      <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Products</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh] p-4">
+            <ProductCatalog
+              onAddProduct={handleProductSelect}
+            />
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
