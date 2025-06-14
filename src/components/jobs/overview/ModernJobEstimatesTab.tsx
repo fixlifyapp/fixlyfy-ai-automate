@@ -8,7 +8,6 @@ import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimat
 import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
 import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
 import { UniversalSendDialog } from "@/components/jobs/dialogs/shared/UniversalSendDialog";
-import { DocumentConversionDialog } from "@/components/jobs/dialogs/unified/DocumentConversionDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -30,8 +29,6 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const [showPreview, setShowPreview] = useState(false);
   const [sendingEstimate, setSendingEstimate] = useState<any>(null);
   const [showSendDialog, setShowSendDialog] = useState(false);
-  const [convertingEstimate, setConvertingEstimate] = useState<any>(null);
-  const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const isMobile = useIsMobile();
 
@@ -115,21 +112,14 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
     setSendingEstimate(null);
   };
 
-  const handleConvertEstimate = (estimate: any) => {
-    setConvertingEstimate(estimate);
-    setShowConvertDialog(true);
-  };
-
-  const handleConvertConfirm = async () => {
-    if (!convertingEstimate) return;
+  const handleConvertEstimate = async (estimate: any) => {
+    if (!estimate) return;
     
     setIsConverting(true);
     try {
-      const success = await convertEstimateToInvoice(convertingEstimate.id);
+      const success = await convertEstimateToInvoice(estimate.id);
       if (success) {
         toast.success("Estimate converted to invoice successfully!");
-        setShowConvertDialog(false);
-        setConvertingEstimate(null);
         if (onEstimateConverted) {
           onEstimateConverted();
         }
@@ -266,7 +256,7 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                           disabled={isConverting}
                         >
                           <DollarSign className="h-4 w-4 mr-2" />
-                          Convert
+                          {isConverting ? "Converting..." : "Convert"}
                         </Button>
                       )}
                       
@@ -338,16 +328,6 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
             phone: clientInfo?.phone || ''
           }}
           onSuccess={handleSendSuccess}
-        />
-      )}
-
-      {convertingEstimate && (
-        <DocumentConversionDialog
-          open={showConvertDialog}
-          onOpenChange={setShowConvertDialog}
-          estimate={convertingEstimate}
-          onConvert={handleConvertConfirm}
-          isConverting={isConverting}
         />
       )}
     </>
