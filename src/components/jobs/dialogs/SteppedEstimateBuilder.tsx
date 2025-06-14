@@ -1,13 +1,12 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
-import { SendDialog } from "./shared/SendDialog";
+import { UniversalSendDialog } from "./shared/UniversalSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
-import { useEstimateSendingInterface } from "./shared/hooks/useSendingInterface";
+import { useEstimateSending } from "./estimate-builder/hooks/useEstimateSending";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
@@ -378,18 +377,16 @@ export const SteppedEstimateBuilder = ({
         </DialogContent>
       </Dialog>
 
-      {/* Send Dialog - using the generic SendDialog component */}
-      <SendDialog
+      {/* Universal Send Dialog for estimates */}
+      <UniversalSendDialog
         isOpen={currentStep === "send"}
-        onClose={() => handleSendCancel()}
+        onClose={handleSendCancel}
+        documentType="estimate"
         documentId={savedEstimate?.id || existingEstimate?.id || ''}
         documentNumber={savedEstimate?.estimate_number || savedEstimate?.number || documentNumber}
-        documentType="estimate"
         total={calculateGrandTotal()}
         contactInfo={contactInfo}
         onSuccess={handleSendSuccess}
-        onSave={handleSaveAndSend}
-        useSendingHook={useEstimateSendingInterface}
       />
     </>
   );

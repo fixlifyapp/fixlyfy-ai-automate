@@ -1,8 +1,9 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Send } from "lucide-react";
 import { SendMethodStep } from "./steps/SendMethodStep";
-import { useEstimateSendingInterface } from "../shared/hooks/useSendingInterface";
+import { useEstimateSending } from "./hooks/useEstimateSending";
 import { useJobData } from "../unified/hooks/useJobData";
 
 interface EstimateSendDialogProps {
@@ -36,7 +37,7 @@ export const EstimateSendDialog = ({
   const [sendTo, setSendTo] = useState("");
   const [validationError, setValidationError] = useState("");
   const [sentMethods, setSentMethods] = useState<Set<string>>(new Set());
-  const { sendDocument, isProcessing } = useEstimateSendingInterface();
+  const { sendDocument, isProcessing } = useEstimateSending();
 
   // Fetch job and client data using the optimized hook
   const { clientInfo, jobAddress, loading: jobDataLoading } = useJobData(jobId || '');

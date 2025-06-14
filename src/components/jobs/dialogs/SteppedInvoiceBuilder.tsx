@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -9,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
-import { SendDialog } from "./shared/SendDialog";
+import { UniversalSendDialog } from "./shared/UniversalSendDialog";
 import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
-import { useInvoiceSendingInterface } from "./shared/hooks/useSendingInterface";
+import { useInvoiceSending } from "./shared/hooks/useInvoiceSending";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
 import { UpsellItem } from "./shared/types";
@@ -356,18 +357,16 @@ export const SteppedInvoiceBuilder = ({
         </DialogContent>
       </Dialog>
       
-      {/* Send Dialog using standardized interface */}
-      <SendDialog
+      {/* Universal Send Dialog for invoices */}
+      <UniversalSendDialog
         isOpen={currentStep === "send"}
         onClose={() => onOpenChange(false)}
+        documentType="invoice"
         documentId={savedInvoice?.id || existingInvoice?.id || ''}
         documentNumber={invoiceNumber}
-        documentType="invoice"
         total={calculateGrandTotal()}
         contactInfo={getClientInfo()}
         onSuccess={() => onOpenChange(false)}
-        onSave={handleSaveAndSend}
-        useSendingHook={useInvoiceSendingInterface}
       />
     </>
   );
