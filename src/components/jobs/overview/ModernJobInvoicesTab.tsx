@@ -81,6 +81,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
     setSelectedInvoice(null);
   };
 
+  const handlePaymentSuccess = () => {
+    setShowPaymentDialog(false);
+    setSelectedInvoice(null);
+    refreshInvoices();
+    toast.success("Payment recorded successfully!");
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: { label: "Draft", variant: "secondary" as const },
@@ -97,7 +104,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
   const canAcceptPayment = (invoice: any) => {
     const status = invoice.status?.toLowerCase();
-    return status === 'sent' || status === 'partial' || status === 'overdue';
+    return status === 'sent' || status === 'partial' || status === 'overdue' || status === 'draft';
   };
 
   if (isLoading) {
@@ -325,10 +332,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
             onClose={() => setShowPaymentDialog(false)}
             invoice={selectedInvoice}
             jobId={jobId}
-            onPaymentAdded={() => {
-              refreshInvoices();
-              setShowPaymentDialog(false);
-            }}
+            onPaymentAdded={handlePaymentSuccess}
           />
 
           <InvoicePreviewWindow

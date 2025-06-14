@@ -8,6 +8,7 @@ import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimat
 import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
 import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
 import { UniversalSendDialog } from "@/components/jobs/dialogs/shared/UniversalSendDialog";
+import { DocumentConversionDialog } from "@/components/jobs/dialogs/unified/DocumentConversionDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -20,7 +21,7 @@ interface ModernJobEstimatesTabProps {
 }
 
 export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
-  const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
+  const { estimates, setEstimates, isLoading, refreshEstimates, convertEstimateToInvoice } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -29,6 +30,9 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const [showPreview, setShowPreview] = useState(false);
   const [sendingEstimate, setSendingEstimate] = useState<any>(null);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [convertingEstimate, setConvertingEstimate] = useState<any>(null);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const isMobile = useIsMobile();
 
   const formatCurrency = (amount: number) => {
@@ -109,6 +113,33 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const handleSendCancel = () => {
     setShowSendDialog(false);
     setSendingEstimate(null);
+  };
+
+  const handleConvertEstimate = (estimate: any) => {
+    setConvertingEstimate(estimate);
+    setShowConvertDialog(true);
+  };
+
+  const handleConvertConfirm = async () => {
+    if (!convertingEstimate) return;
+    
+    setIsConverting(true);
+    try {
+      const success = await convertEstimateToInvoice(convertingEstimate.id);
+      if (success) {
+        toast.success("Estimate converted to invoice successfully!");
+        setShowConvertDialog(false);
+        setConvertingEstimate(null);
+        if (onEstimateConverted) {
+          onEstimateConverted();
+        }
+      }
+    } catch (error) {
+      console.error('Error converting estimate:', error);
+      toast.error("Failed to convert estimate to invoice");
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   return (
@@ -231,11 +262,8 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
                           variant="outline"
                           size={isMobile ? "default" : "sm"}
                           className={`${isMobile ? 'w-full h-11 justify-start' : ''} text-green-600 hover:text-green-700 border-green-200 hover:border-green-300`}
-                          onClick={() => {
-                            actions.setSelectedEstimate(estimate);
-                            actions.confirmConvertToInvoice();
-                          }}
-                          disabled={state.isConverting}
+                          onClick={() => handleConvertEstimate(estimate)}
+                          disabled={isConverting}
                         >
                           <DollarSign className="h-4 w-4 mr-2" />
                           Convert
@@ -310,6 +338,16 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
             phone: clientInfo?.phone || ''
           }}
           onSuccess={handleSendSuccess}
+        />
+      )}
+
+      {convertingEstimate && (
+        <DocumentConversionDialog
+          open={showConvertDialog}
+          onOpenChange={setShowConvertDialog}
+          estimate={convertingEstimate}
+          onConvert={handleConvertConfirm}
+          isConverting={isConverting}
         />
       )}
     </>
