@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -165,7 +164,7 @@ export const useInvoiceBuilder = (jobId: string) => {
         setFormData(prev => ({
           ...prev,
           invoiceId: invoice.id,
-          invoiceNumber: invoice.number,
+          invoiceNumber: invoice.invoice_number,
           status: invoice.status,
           total: invoice.total
         }));
@@ -333,7 +332,7 @@ export const useInvoiceBuilder = (jobId: string) => {
       const successMessage = formData.invoiceId ? "Invoice updated successfully" : "Invoice created successfully";
       toast.success(successMessage);
       
-      // Return standardized invoice object
+      // Return standardized invoice object - only include properties that exist in Invoice interface
       const standardizedInvoice: Invoice = {
         id: invoice.id,
         job_id: invoice.job_id,
@@ -343,7 +342,6 @@ export const useInvoiceBuilder = (jobId: string) => {
         issue_date: invoice.issue_date,
         due_date: invoice.due_date,
         total: invoice.total,
-        subtotal: invoice.subtotal,
         tax_rate: invoice.tax_rate,
         tax_amount: invoice.tax_amount,
         amount_paid: invoice.amount_paid || 0,
