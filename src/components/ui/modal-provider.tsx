@@ -13,7 +13,6 @@ export type ModalType =
   | "jobType" 
   | "refund" 
   | "sendReminder"
-  | "markAsPaid"
   | "invoiceCreate"
   | "convertToInvoice"
   | "jobDetailsEdit"

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useModal, ModalType } from "./modal-provider";
 import { SelectionModal } from "@/components/shared/modals/SelectionModal";
@@ -11,7 +12,6 @@ import { SourceSelectionDialog } from "@/components/jobs/dialogs/SourceSelection
 import { JobTypeDialog } from "@/components/jobs/dialogs/JobTypeDialog";
 import { RefundDialog } from "@/components/finance/dialogs/RefundDialog";
 import { SendReminderDialog } from "@/components/jobs/dialogs/SendReminderDialog";
-import { MarkAsPaidDialog } from "@/components/jobs/dialogs/MarkAsPaidDialog";
 import { InvoiceModal } from "@/components/clients/client-form/InvoiceModal";
 import { ConvertToInvoiceDialog } from "@/components/jobs/estimates/dialogs/ConvertToInvoiceDialog";
 import { JobDetailsEditDialog } from "@/components/jobs/dialogs/JobDetailsEditDialog";
@@ -117,14 +117,6 @@ export const ModalRenderer = () => {
       
     case "sendReminder":
       return <SendReminderDialog 
-        {...commonProps} 
-        {...modalProps}
-        selectedJobs={modalProps.selectedJobs || []}
-        onSuccess={modalProps.onSuccess || (() => {})}
-      />;
-      
-    case "markAsPaid":
-      return <MarkAsPaidDialog 
         {...commonProps} 
         {...modalProps}
         selectedJobs={modalProps.selectedJobs || []}
