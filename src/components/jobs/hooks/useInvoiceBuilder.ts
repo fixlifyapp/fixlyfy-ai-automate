@@ -179,35 +179,79 @@ export const useInvoiceBuilder = (jobId: string) => {
   }, []);
 
   const resetForm = useCallback(async () => {
-    const invoiceNumber = await generateNextId('invoice');
-    setFormData({
-      invoiceNumber,
-      items: [],
-      notes: "",
-      status: "draft",
-      total: 0
-    });
-    setLineItems([]);
-    setNotes("");
+    try {
+      const invoiceNumber = await generateNextId('invoice');
+      setFormData({
+        invoiceNumber,
+        items: [],
+        notes: "",
+        status: "draft",
+        total: 0
+      });
+      setLineItems([]);
+      setNotes("");
+    } catch (error) {
+      console.error('Error resetting form:', error);
+      const timestamp = Date.now();
+      const shortNumber = timestamp.toString().slice(-4);
+      setFormData({
+        invoiceNumber: `I-${shortNumber}`,
+        items: [],
+        notes: "",
+        status: "draft",
+        total: 0
+      });
+      setLineItems([]);
+      setNotes("");
+    }
   }, []);
 
   const saveInvoiceChanges = useCallback(async (): Promise<Invoice | null> => {
-    if (isSubmitting) return null;
+    if (isSubmitting) {
+      console.log('Already submitting, skipping duplicate call');
+      return null;
+    }
     
     setIsSubmitting(true);
     
     try {
+      console.log('💾 Starting invoice save process...');
+      console.log('Job ID:', jobId);
+      console.log('Form data:', formData);
+      console.log('Line items:', lineItems);
+      console.log('Notes:', notes);
+      
+      const subtotal = calculateSubtotal();
+      const taxAmount = calculateTotalTax();
+      const total = calculateGrandTotal();
+      
+      // Create invoice data object with correct column names matching the invoices table
       const invoiceData = {
         job_id: jobId,
         invoice_number: formData.invoiceNumber,
-        total: calculateGrandTotal(),
+        total: total,
+        subtotal: subtotal,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        amount_paid: 0, // Set initial amount_paid to 0
         status: formData.status,
-        notes: notes,
-        balance: calculateGrandTotal() // Set initial balance to total
+        notes: notes || null,
+        issue_date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+        due_date: null, // Can be set later
+        items: lineItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          taxable: item.taxable,
+          total: item.quantity * item.unitPrice
+        }))
       };
+
+      console.log('Invoice data to save:', invoiceData);
 
       let invoice;
       if (formData.invoiceId) {
+        console.log('Updating existing invoice:', formData.invoiceId);
         // Update existing invoice
         const { data, error } = await supabase
           .from('invoices')
@@ -216,9 +260,14 @@ export const useInvoiceBuilder = (jobId: string) => {
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating invoice:', error);
+          throw error;
+        }
         invoice = data;
+        console.log('Invoice updated successfully:', invoice);
       } else {
+        console.log('Creating new invoice...');
         // Create new invoice
         const { data, error } = await supabase
           .from('invoices')
@@ -226,18 +275,34 @@ export const useInvoiceBuilder = (jobId: string) => {
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating invoice:', error);
+          throw error;
+        }
         invoice = data;
+        console.log('Invoice created successfully:', invoice);
+        
+        // Update form data with the new invoice ID
+        setFormData(prev => ({
+          ...prev,
+          invoiceId: invoice.id
+        }));
       }
       
-      // Handle line items
+      // Handle line items - delete existing and create new ones
       if (invoice) {
+        console.log('Managing line items for invoice:', invoice.id);
+        
         // Delete existing line items
-        await supabase
+        const { error: deleteError } = await supabase
           .from('line_items')
           .delete()
           .eq('parent_id', invoice.id)
           .eq('parent_type', 'invoice');
+          
+        if (deleteError) {
+          console.error('Error deleting existing line items:', deleteError);
+        }
         
         // Create new line items
         if (lineItems.length > 0) {
@@ -250,36 +315,56 @@ export const useInvoiceBuilder = (jobId: string) => {
             taxable: item.taxable
           }));
           
-          await supabase
+          console.log('Creating line items:', lineItemsData);
+          
+          const { error: insertError } = await supabase
             .from('line_items')
             .insert(lineItemsData);
+            
+          if (insertError) {
+            console.error('Error creating line items:', insertError);
+            throw insertError;
+          }
+          
+          console.log('Line items created successfully');
         }
       }
       
-      toast.success(formData.invoiceId ? "Invoice updated successfully" : "Invoice created successfully");
+      const successMessage = formData.invoiceId ? "Invoice updated successfully" : "Invoice created successfully";
+      toast.success(successMessage);
       
-      return {
+      // Return standardized invoice object
+      const standardizedInvoice: Invoice = {
         id: invoice.id,
         job_id: invoice.job_id,
         invoice_number: invoice.invoice_number,
-        number: invoice.invoice_number,
-        date: invoice.date || invoice.created_at,
+        number: invoice.invoice_number, // Add alias for compatibility
+        date: invoice.issue_date || invoice.created_at,
+        issue_date: invoice.issue_date,
+        due_date: invoice.due_date,
         total: invoice.total,
+        subtotal: invoice.subtotal,
+        tax_rate: invoice.tax_rate,
+        tax_amount: invoice.tax_amount,
         amount_paid: invoice.amount_paid || 0,
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         status: invoice.status,
         notes: invoice.notes,
+        items: invoice.items || [],
         created_at: invoice.created_at,
         updated_at: invoice.updated_at
       };
-    } catch (error) {
-      console.error("Error saving invoice:", error);
-      toast.error("Failed to save invoice");
+      
+      console.log('✅ Invoice save process completed successfully');
+      return standardizedInvoice;
+    } catch (error: any) {
+      console.error("❌ Error saving invoice:", error);
+      toast.error("Failed to save invoice: " + (error.message || "Unknown error"));
       return null;
     } finally {
       setIsSubmitting(false);
     }
-  }, [jobId, formData, lineItems, notes, calculateGrandTotal, isSubmitting]);
+  }, [jobId, formData, lineItems, notes, taxRate, calculateSubtotal, calculateTotalTax, calculateGrandTotal, isSubmitting]);
 
   return {
     formData,
