@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
 import { SendDialog } from "./shared/SendDialog";
@@ -42,7 +42,6 @@ export const SteppedEstimateBuilder = ({
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellItem[]>([]);
   const [upsellNotes, setUpsellNotes] = useState("");
   const [estimateCreated, setEstimateCreated] = useState(false);
-  const [addedUpsellIds, setAddedUpsellIds] = useState<Set<string>>(new Set());
 
   // Create contactInfo object for compatibility - now loads much faster
   const contactInfo = {
@@ -92,7 +91,6 @@ export const SteppedEstimateBuilder = ({
       setSelectedUpsells([]);
       setUpsellNotes("");
       setEstimateCreated(!!existingEstimate);
-      setAddedUpsellIds(new Set());
     }
   }, [open, existingEstimate]);
 
@@ -251,6 +249,26 @@ export const SteppedEstimateBuilder = ({
     }
   };
 
+  // Step indicator logic matching invoice builder
+  const steps = [
+    { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
+    { number: 2, title: "Additional Services", description: "Add warranties and extras" },
+    { number: 3, title: "Send Estimate", description: "Review and send to client" }
+  ];
+
+  const isStepComplete = (stepNumber: number) => {
+    switch (stepNumber) {
+      case 1:
+        return lineItems.length > 0;
+      case 2:
+        return true; // Upsell step is always optional
+      case 3:
+        return false; // Send step is never "complete" until actually sent
+      default:
+        return false;
+    }
+  };
+
   const stepTitles = {
     items: existingEstimate ? "Edit Estimate" : "Create Estimate",
     upsell: "Enhance Your Service",
@@ -271,9 +289,43 @@ export const SteppedEstimateBuilder = ({
               {stepTitles[currentStep]}
               {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
             </DialogTitle>
+            
+            {/* Step Indicator matching invoice builder */}
+            <div className="flex items-center justify-center space-x-4 py-4">
+              {steps.map((step, index) => (
+                <div key={step.number} className="flex items-center">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                    currentStepNumber === step.number
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : isStepComplete(step.number)
+                      ? "border-green-500 bg-green-500 text-white"
+                      : "border-gray-300 bg-white text-gray-500"
+                  }`}>
+                    {isStepComplete(step.number) ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <span className="text-sm font-medium">{step.number}</span>
+                    )}
+                  </div>
+                  
+                  <div className="ml-3 text-left">
+                    <div className={`text-sm font-medium ${
+                      currentStepNumber === step.number ? "text-primary" : "text-gray-500"
+                    }`}>
+                      {step.title}
+                    </div>
+                    <div className="text-xs text-gray-500">{step.description}</div>
+                  </div>
+                  
+                  {index < steps.length - 1 && (
+                    <ArrowRight className="h-4 w-4 text-gray-400 mx-4" />
+                  )}
+                </div>
+              ))}
+            </div>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="py-6">
             {currentStep === "items" && (
               <>
                 <UnifiedItemsStep
