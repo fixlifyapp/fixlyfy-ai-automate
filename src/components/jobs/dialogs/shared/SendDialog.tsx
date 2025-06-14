@@ -37,6 +37,15 @@ export const SendDialog = ({
   onSave,
   useSendingHook
 }: SendDialogProps) => {
+  console.log("SendDialog props:", {
+    isOpen,
+    documentId,
+    documentType,
+    documentNumber,
+    total,
+    contactInfo
+  });
+
   const {
     sendMethod,
     setSendMethod,
@@ -59,9 +68,13 @@ export const SendDialog = ({
   });
 
   const handleSendClick = async () => {
+    console.log("Send button clicked!");
     const success = await handleSend();
     if (success) {
+      console.log("Send successful, closing dialog");
       onClose();
+    } else {
+      console.log("Send failed, keeping dialog open");
     }
   };
 
@@ -101,12 +114,12 @@ export const SendDialog = ({
         <div className="p-6 border-t flex gap-2">
           <Button
             onClick={handleSendClick}
-            disabled={isProcessing || !sendTo.trim()}
+            disabled={isProcessing || !sendTo.trim() || !documentId}
             className="flex-1"
           >
             {isProcessing ? "Sending..." : `Send ${documentType.charAt(0).toUpperCase() + documentType.slice(1)}`}
           </Button>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancel
           </Button>
         </div>

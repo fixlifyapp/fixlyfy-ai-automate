@@ -51,6 +51,14 @@ export const useSendDialog = ({
   }, [isOpen, sendMethod, contactInfo]);
 
   const handleSend = async () => {
+    console.log("=== HANDLE SEND CLICKED ===");
+    console.log("Document type:", documentType);
+    console.log("Document ID:", documentId);
+    console.log("Document number:", documentNumber);
+    console.log("Send method:", sendMethod);
+    console.log("Send to:", sendTo);
+    console.log("Total:", total);
+
     if (!sendTo.trim()) {
       toast.error(`Please enter ${sendMethod === "email" ? "email address" : "phone number"}`);
       return false;
@@ -67,14 +75,13 @@ export const useSendDialog = ({
       return false;
     }
 
-    try {
-      console.log("=== SENDING DOCUMENT ===");
-      console.log("Document type:", documentType);
-      console.log("Document ID:", documentId);
-      console.log("Document number:", documentNumber);
-      console.log("Send method:", sendMethod);
-      console.log("Send to:", sendTo);
+    // Validate document ID
+    if (!documentId) {
+      toast.error(`${documentType} ID is required`);
+      return false;
+    }
 
+    try {
       // Save document first if onSave is provided
       if (onSave) {
         console.log("Saving document before sending...");
@@ -85,14 +92,14 @@ export const useSendDialog = ({
         }
       }
 
-      // Call the sendDocument function with proper parameters
-      const result = await sendDocument({
+      console.log("Calling sendDocument with parameters:");
+      const sendParams = {
         sendMethod,
         sendTo: sendTo.trim(),
         documentNumber,
         documentDetails: { 
-          [documentType + '_number']: documentNumber,
-          total: total
+          total: total,
+          [documentType + '_number']: documentNumber
         },
         lineItems: [],
         contactInfo,
@@ -100,12 +107,16 @@ export const useSendDialog = ({
         jobId: documentId,
         existingDocumentId: documentId,
         onSave: onSave || (() => Promise.resolve(true))
-      });
+      };
+      console.log("Send parameters:", sendParams);
+
+      // Call the sendDocument function with proper parameters
+      const result = await sendDocument(sendParams);
 
       console.log("Send result:", result);
 
       if (result.success) {
-        toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} sent successfully!`);
+        console.log(`${documentType} sent successfully!`);
         if (onSuccess) {
           onSuccess();
         }
