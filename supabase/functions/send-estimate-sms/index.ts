@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -125,7 +124,7 @@ serve(async (req) => {
     }
 
     // Create SMS message with portal link
-    const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.estimate_number}`;
+    const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.id}`;
     const smsMessage = message || `Hi ${client?.name || 'valued customer'}! Your estimate ${estimate.estimate_number} is ready. Total: $${estimate.total?.toFixed(2) || '0.00'}. View: ${estimateLink}${portalLink ? ` | Portal: ${portalLink}` : ''}`;
 
     console.log('SMS message length:', smsMessage.length);

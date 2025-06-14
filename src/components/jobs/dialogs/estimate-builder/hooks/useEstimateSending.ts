@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,7 +185,7 @@ export const useEstimateSending = () => {
           body: {
             estimateId: savedEstimate.id,
             recipientPhone: finalRecipient,
-            message: customNote || `Hi ${contactInfo.name}! Your estimate ${documentNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${documentNumber}`
+            message: customNote || `Hi ${contactInfo.name}! Your estimate ${documentNumber} is ready. Total: $${savedEstimate.total.toFixed(2)}. View details: ${window.location.origin}/estimate/view/${savedEstimate.id}`
           }
         });
 
