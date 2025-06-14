@@ -53,18 +53,18 @@ export const useSendDialog = ({
   const handleSend = async () => {
     if (!sendTo.trim()) {
       toast.error(`Please enter ${sendMethod === "email" ? "email address" : "phone number"}`);
-      return;
+      return false;
     }
 
     // Validate format
     if (sendMethod === "email" && !isValidEmail(sendTo.trim())) {
       toast.error("Please enter a valid email address");
-      return;
+      return false;
     }
 
     if (sendMethod === "sms" && !isValidPhoneNumber(sendTo.trim())) {
       toast.error("Please enter a valid phone number");
-      return;
+      return false;
     }
 
     try {
@@ -74,6 +74,16 @@ export const useSendDialog = ({
       console.log("Document number:", documentNumber);
       console.log("Send method:", sendMethod);
       console.log("Send to:", sendTo);
+
+      // Save document first if onSave is provided
+      if (onSave) {
+        console.log("Saving document before sending...");
+        const saveSuccess = await onSave();
+        if (!saveSuccess) {
+          toast.error("Failed to save document. Please try again.");
+          return false;
+        }
+      }
 
       // Call the sendDocument function with proper parameters
       const result = await sendDocument({
