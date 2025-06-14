@@ -9,7 +9,6 @@ import { Estimate } from "@/hooks/useEstimates";
 const EstimateViewPage = () => {
   const { id } = useParams<{ id: string }>();
   const [estimate, setEstimate] = useState<Estimate | null>(null);
-  const [clientId, setClientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +74,6 @@ const EstimateViewPage = () => {
         };
 
         setEstimate(estimateWithItems);
-        setClientId(jobData?.client_id || estimateData.client_id || "");
       } catch (err: any) {
         console.error('Error fetching estimate:', err);
         setError(err.message || 'Failed to fetch estimate');
@@ -110,10 +108,7 @@ const EstimateViewPage = () => {
 
   return (
     <PageLayout>
-      <ClientEstimateView
-        estimate={estimate}
-        clientId={clientId}
-      />
+      <ClientEstimateView estimate={estimate} />
     </PageLayout>
   );
 };

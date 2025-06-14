@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,9 +30,10 @@ import ConfigurationPage from "@/pages/ConfigurationPage";
 import PortalLoginPage from "@/pages/portal/PortalLoginPage";
 import PortalDashboardPage from "@/pages/portal/PortalDashboardPage";
 import PortalJobsPage from "@/pages/portal/PortalJobsPage";
-import PortalEstimatesPage from "@/pages/portal/PortalEstimatesPage";
-import PortalInvoicesPage from "@/pages/portal/PortalInvoicesPage";
+import { PortalEstimatesPage } from "@/pages/portal/PortalEstimatesPage";
+import { PortalInvoicesPage } from "@/pages/portal/PortalInvoicesPage";
 import PortalProfilePage from "@/pages/portal/PortalProfilePage";
+import EstimateViewPage from "@/pages/EstimateViewPage";
 import { useState } from "react";
 import { AppErrorBoundary } from "@/components/ui/AppErrorBoundary";
 import { AppInitializer } from "@/components/ui/AppInitializer";
@@ -84,6 +84,9 @@ const App = () => {
                       <PortalProfilePage />
                     </ProtectedPortalRoute>
                   } />
+                  
+                  {/* Estimate View Route */}
+                  <Route path="/estimates/:id" element={<EstimateViewPage />} />
                   
                   {/* Main App Routes */}
                   <Route path="/dashboard" element={
