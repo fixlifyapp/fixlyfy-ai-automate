@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,10 +101,10 @@ export const SendDialog = ({
           [documentType + '_number']: documentNumber,
           total: total
         },
-        lineItems: [], // Line items are handled by the document save process
+        lineItems: [],
         contactInfo,
         customNote: customNote.trim(),
-        jobId: documentId, // This might be estimate/invoice ID, the hook will handle it
+        jobId: documentId,
         existingDocumentId: documentId,
         onSave: onSave || (() => Promise.resolve(true))
       });
@@ -114,20 +113,33 @@ export const SendDialog = ({
 
       if (result.success) {
         toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} sent successfully!`);
-        
-        // Close dialog and call success callback
         if (onSuccess) {
           onSuccess();
         }
         onClose();
       } else {
-        const errorMessage = result.error || 'Unknown error occurred';
-        console.error(`Failed to send ${documentType}:`, errorMessage);
-        toast.error(`Failed to send ${documentType}: ${errorMessage}`);
+        let errorMessage = result.error || 'Unknown error occurred';
+        if (typeof result.error === "object" && result.error !== null) {
+          if (result.error.message) {
+            errorMessage = result.error.message;
+          } else if (result.error.error) {
+            errorMessage = result.error.error;
+          } else {
+            errorMessage = JSON.stringify(result.error);
+          }
+        }
+        console.error(`Failed to send ${documentType}: ${errorMessage}`);
+        toast.error(
+          `Failed to send ${documentType}: ${errorMessage}`
+        );
       }
     } catch (error: any) {
       console.error(`Error sending ${documentType}:`, error);
-      const errorMessage = error.message || 'Unknown error occurred';
+      const errorMessage =
+        error?.message ||
+        error?.error?.message ||
+        error?.error ||
+        "Unknown error occurred";
       toast.error(`Failed to send ${documentType}: ${errorMessage}`);
     }
   };
