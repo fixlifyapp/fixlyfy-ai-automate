@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useJobData } from "../dialogs/unified/hooks/useJobData";
 
 interface ModernJobEstimatesTabProps {
   jobId: string;
@@ -21,6 +22,7 @@ interface ModernJobEstimatesTabProps {
 export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
   const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
+  const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEstimate, setEditingEstimate] = useState<any>(null);
   const [previewEstimate, setPreviewEstimate] = useState<any>(null);
@@ -303,9 +305,9 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
           documentNumber={sendingEstimate.estimate_number}
           total={sendingEstimate.total || 0}
           contactInfo={{
-            name: 'Client',
-            email: '',
-            phone: ''
+            name: clientInfo?.name || 'Client',
+            email: clientInfo?.email || '',
+            phone: clientInfo?.phone || ''
           }}
           onSuccess={handleSendSuccess}
         />

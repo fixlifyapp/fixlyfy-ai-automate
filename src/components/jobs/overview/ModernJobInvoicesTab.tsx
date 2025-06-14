@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { InvoicePreviewWindow } from "../dialogs/InvoicePreviewWindow";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useJobData } from "../dialogs/unified/hooks/useJobData";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
@@ -21,6 +21,7 @@ interface ModernJobInvoicesTabProps {
 export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const { invoices, isLoading, refreshInvoices } = useInvoices(jobId);
   const { estimates } = useEstimates(jobId);
+  const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
   const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -297,9 +298,9 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
             documentNumber={selectedInvoice.invoice_number}
             total={selectedInvoice.total || 0}
             contactInfo={{
-              name: 'Client',
-              email: '',
-              phone: ''
+              name: clientInfo?.name || 'Client',
+              email: clientInfo?.email || '',
+              phone: clientInfo?.phone || ''
             }}
             onSuccess={handleSendSuccess}
           />
