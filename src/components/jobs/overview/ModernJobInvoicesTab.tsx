@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Plus, Send, Edit, CreditCard, Eye, FileText, Download } from "lucide-re
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
-import { InvoiceSendDialog } from "../dialogs/InvoiceSendDialog";
+import { UniversalSendDialog } from "../dialogs/shared/UniversalSendDialog";
 import { InvoicePaymentDialog } from "../dialogs/invoice-builder/InvoicePaymentDialog";
 import { InvoicePreviewWindow } from "../dialogs/InvoicePreviewWindow";
 import { formatCurrency } from "@/lib/utils";
@@ -63,6 +64,18 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
   const handleDownloadInvoice = (invoice: any) => {
     toast.info("Download functionality coming soon");
+  };
+
+  const handleSendSuccess = () => {
+    setShowSendDialog(false);
+    setSelectedInvoice(null);
+    refreshInvoices();
+    toast.success("Invoice sent successfully!");
+  };
+
+  const handleSendCancel = () => {
+    setShowSendDialog(false);
+    setSelectedInvoice(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -276,13 +289,19 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
       {selectedInvoice && (
         <>
-          <InvoiceSendDialog
-            open={showSendDialog}
-            onOpenChange={setShowSendDialog}
-            onSave={async () => true}
-            onAddWarranty={() => {}}
-            invoiceNumber={selectedInvoice.invoice_number}
-            jobId={jobId}
+          <UniversalSendDialog
+            isOpen={showSendDialog}
+            onClose={handleSendCancel}
+            documentType="invoice"
+            documentId={selectedInvoice.id}
+            documentNumber={selectedInvoice.invoice_number}
+            total={selectedInvoice.total || 0}
+            contactInfo={{
+              name: 'Client',
+              email: '',
+              phone: ''
+            }}
+            onSuccess={handleSendSuccess}
           />
 
           <InvoicePaymentDialog

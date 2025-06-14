@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { useEstimates } from "@/hooks/useEstimates";
 import { useEstimateActions } from "@/components/jobs/estimates/hooks/useEstimateActions";
 import { SteppedEstimateBuilder } from "@/components/jobs/dialogs/SteppedEstimateBuilder";
 import { UnifiedDocumentPreview } from "@/components/jobs/dialogs/unified/UnifiedDocumentPreview";
-import { EstimateSendDialog } from "@/components/jobs/dialogs/estimate-builder/EstimateSendDialog";
+import { UniversalSendDialog } from "@/components/jobs/dialogs/shared/UniversalSendDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -296,11 +295,12 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
       </Dialog>
 
       {sendingEstimate && (
-        <EstimateSendDialog
+        <UniversalSendDialog
           isOpen={showSendDialog}
           onClose={handleSendCancel}
-          estimateId={sendingEstimate.id}
-          estimateNumber={sendingEstimate.estimate_number}
+          documentType="estimate"
+          documentId={sendingEstimate.id}
+          documentNumber={sendingEstimate.estimate_number}
           total={sendingEstimate.total || 0}
           contactInfo={{
             name: 'Client',
