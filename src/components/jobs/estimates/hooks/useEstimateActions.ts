@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,29 +39,26 @@ export const useEstimateActions = (
     try {
       console.log('Starting estimate send process for ID:', estimateId);
       
-      // Get estimate details with job and client info
+      // Get estimate details
       const { data: estimateData, error: estimateError } = await supabase
         .from('estimates')
-        .select(`
-          *,
-          jobs:job_id (
-            id,
-            title,
-            client_id,
-            clients:client_id (
-              id,
-              name,
-              email,
-              phone,
-              company
-            )
-          )
-        `)
+        .select('*')
         .eq('id', estimateId)
         .single();
 
       if (estimateError || !estimateData) {
         throw new Error('Failed to fetch estimate details');
+      }
+
+      // Get job and client info separately
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .select('*, clients(*)')
+        .eq('id', estimateData.job_id)
+        .single();
+
+      if (jobError) {
+        console.warn('Could not fetch job/client data:', jobError);
       }
 
       console.log('Estimate data:', estimateData);
@@ -85,7 +81,7 @@ export const useEstimateActions = (
         body: {
           estimateId: estimateId,
           sendMethod: 'email', // Default to email for quick send
-          recipientEmail: estimateData.jobs?.clients?.email,
+          recipientEmail: jobData?.clients?.email,
           subject: `Estimate ${estimateData.estimate_number}`,
           message: `Please find your estimate ${estimateData.estimate_number}. Total: $${estimateData.total.toFixed(2)}.`
         }

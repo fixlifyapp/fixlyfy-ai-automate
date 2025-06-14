@@ -38,15 +38,33 @@ export const useInvoices = (jobId: string) => {
       if (error) throw error;
       
       // Calculate balance for each invoice and add alias properties
-      const invoicesWithBalance = data?.map(invoice => ({
-        ...invoice,
-        number: invoice.invoice_number, // Alias for compatibility
-        amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
-        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
-        notes: invoice.notes || '',
-        issue_date: invoice.date, // Add issue_date as alias for date
-        estimate_id: invoice.estimate_id || undefined // Add estimate_id
-      })) || [];
+      const invoicesWithBalance: Invoice[] = (data || []).map(invoice => {
+        // Handle JSON items field properly
+        let items: any[] = [];
+        if (invoice.items) {
+          if (typeof invoice.items === 'string') {
+            try {
+              items = JSON.parse(invoice.items);
+            } catch (e) {
+              console.warn('Failed to parse invoice items JSON:', e);
+              items = [];
+            }
+          } else if (Array.isArray(invoice.items)) {
+            items = invoice.items;
+          }
+        }
+
+        return {
+          ...invoice,
+          number: invoice.invoice_number, // Alias for compatibility
+          amount_paid: invoice.amount_paid || 0, // Ensure amount_paid is always a number
+          balance: (invoice.total || 0) - (invoice.amount_paid || 0),
+          notes: invoice.notes || '',
+          issue_date: invoice.issue_date || invoice.created_at, // Add issue_date as alias
+          estimate_id: invoice.estimate_id || undefined, // Add estimate_id
+          items: items // Properly handle items
+        };
+      });
       
       setInvoices(invoicesWithBalance);
     } catch (error) {

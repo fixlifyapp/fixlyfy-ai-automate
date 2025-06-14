@@ -1,111 +1,120 @@
 
-import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ClientEstimateView } from "@/components/jobs/estimates/ClientEstimateView";
-import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
-interface EstimateData {
-  id: string;
-  estimate_number: string;
-  total: number;
-  status: string;
-  notes?: string;
-  job_id: string;
-  created_at: string;
-  client_id?: string;
-}
+import { PageLayout } from "@/components/layout/PageLayout";
+import { ClientEstimateView } from "@/components/jobs/estimates/ClientEstimateView";
+import { Estimate } from "@/hooks/useEstimates";
 
 const EstimateViewPage = () => {
-  const { estimateNumber } = useParams<{ estimateNumber: string }>();
-  const [estimate, setEstimate] = useState<EstimateData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { id } = useParams<{ id: string }>();
+  const [estimate, setEstimate] = useState<Estimate | null>(null);
+  const [clientId, setClientId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEstimate = async () => {
-      if (!estimateNumber) {
-        setError("No estimate number provided");
-        setIsLoading(false);
+      if (!id) {
+        setError("No estimate ID provided");
+        setLoading(false);
         return;
       }
 
       try {
-        console.log("Fetching public estimate:", estimateNumber);
-        
-        // Fetch estimate by estimate number
+        // Fetch estimate data
         const { data: estimateData, error: estimateError } = await supabase
           .from('estimates')
           .select('*')
-          .eq('estimate_number', estimateNumber)
+          .eq('id', id)
           .single();
 
         if (estimateError) {
-          console.error("Error fetching estimate:", estimateError);
-          setError("Estimate not found");
-          return;
+          throw estimateError;
         }
 
-        console.log("Estimate data loaded:", estimateData);
-        setEstimate(estimateData);
+        // Fetch related job data to get client info
+        const { data: jobData, error: jobError } = await supabase
+          .from('jobs')
+          .select('*, clients(*)')
+          .eq('id', estimateData.job_id)
+          .single();
 
-        // Update estimate status to viewed if it's still draft
-        if (estimateData.status === 'draft') {
-          await supabase
-            .from('estimates')
-            .update({ status: 'viewed' })
-            .eq('id', estimateData.id);
+        if (jobError) {
+          console.warn('Could not fetch job data:', jobError);
         }
 
-      } catch (error: any) {
-        console.error("Error in fetchEstimate:", error);
-        setError("Failed to load estimate");
+        // Fetch line items
+        const { data: lineItems, error: lineItemsError } = await supabase
+          .from('line_items')
+          .select('*')
+          .eq('parent_id', id)
+          .eq('parent_type', 'estimate');
+
+        if (lineItemsError) {
+          throw lineItemsError;
+        }
+
+        // Map line items to estimate format
+        const items = lineItems?.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          taxable: item.taxable,
+          total: item.quantity * item.unit_price
+        })) || [];
+
+        // Create estimate object
+        const estimateWithItems: Estimate = {
+          ...estimateData,
+          number: estimateData.estimate_number,
+          amount: estimateData.total,
+          date: estimateData.created_at,
+          items: items
+        };
+
+        setEstimate(estimateWithItems);
+        setClientId(jobData?.client_id || estimateData.client_id || "");
+      } catch (err: any) {
+        console.error('Error fetching estimate:', err);
+        setError(err.message || 'Failed to fetch estimate');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchEstimate();
-  }, [estimateNumber]);
+  }, [id]);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="p-8">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p>Loading your estimate...</p>
-          </div>
-        </Card>
-      </div>
+      <PageLayout>
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </PageLayout>
     );
   }
 
   if (error || !estimate) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="p-8 text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Estimate Not Found</h1>
-          <p className="text-gray-600 mb-4">
-            {error || "The estimate you're looking for could not be found."}
-          </p>
-          <p className="text-sm text-gray-500">
-            Please check the link or contact us for assistance.
-          </p>
-        </Card>
-      </div>
+      <PageLayout>
+        <div className="text-center py-8">
+          <h1 className="text-2xl font-bold text-red-600">Error</h1>
+          <p className="text-muted-foreground mt-2">{error || 'Estimate not found'}</p>
+        </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="py-8">
-        <ClientEstimateView
-          estimateId={estimate.id}
-          clientId={estimate.client_id}
-        />
-      </div>
-    </div>
+    <PageLayout>
+      <ClientEstimateView
+        estimate={estimate}
+        clientId={clientId}
+      />
+    </PageLayout>
   );
 };
 

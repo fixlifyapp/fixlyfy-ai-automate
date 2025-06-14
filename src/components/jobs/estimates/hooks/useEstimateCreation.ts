@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -202,7 +201,7 @@ export const useEstimateCreation = (
         id: data.id,
         job_id: data.job_id,
         estimate_number: data.estimate_number,
-        date: data.date,
+        date: data.created_at, // Use created_at as date
         total: data.total,
         status: data.status,
         viewed: false,

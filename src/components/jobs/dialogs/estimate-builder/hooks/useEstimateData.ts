@@ -36,25 +36,26 @@ export const useEstimateData = (estimateId?: string): EstimateDataHook => {
     setError(null);
     
     try {
-      // Fetch estimate with job and client data using joins
+      // First fetch estimate data
       const { data: estimateData, error: estimateError } = await supabase
         .from('estimates')
-        .select(`
-          *,
-          jobs!inner(
-            id,
-            title,
-            clients!inner(
-              id,
-              name
-            )
-          )
-        `)
+        .select('*')
         .eq('id', estimateId)
         .single();
 
       if (estimateError) {
         throw estimateError;
+      }
+
+      // Then fetch related job data
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .select('*, clients(*)')
+        .eq('id', estimateData.job_id)
+        .single();
+
+      if (jobError) {
+        console.warn('Could not fetch job data:', jobError);
       }
 
       // Fetch line items separately
@@ -72,8 +73,8 @@ export const useEstimateData = (estimateId?: string): EstimateDataHook => {
       const transformedEstimate: EstimateDetails = {
         id: estimateData.id,
         estimate_number: estimateData.estimate_number,
-        job_title: estimateData.jobs?.title || 'Unknown Job',
-        client_name: estimateData.jobs?.clients?.name || 'Unknown Client',
+        job_title: jobData?.title || 'Unknown Job',
+        client_name: jobData?.clients?.name || 'Unknown Client',
         total: estimateData.total,
         status: estimateData.status,
         created_at: estimateData.created_at,
