@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -139,9 +140,13 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   };
 
   const handlePaymentSuccess = () => {
+    console.log('Payment success callback triggered in ModernJobInvoicesTab');
     setShowPaymentDialog(false);
     setSelectedInvoice(null);
+    
+    // Force refresh invoices immediately
     refreshInvoices();
+    
     toast.success("Payment recorded successfully!");
   };
 
@@ -397,7 +402,11 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
           <UnifiedPaymentDialog
             isOpen={showPaymentDialog}
-            onClose={() => setShowPaymentDialog(false)}
+            onClose={() => {
+              console.log('Closing payment dialog manually');
+              setShowPaymentDialog(false);
+              setSelectedInvoice(null);
+            }}
             invoice={selectedInvoice}
             jobId={jobId}
             onPaymentAdded={handlePaymentSuccess}

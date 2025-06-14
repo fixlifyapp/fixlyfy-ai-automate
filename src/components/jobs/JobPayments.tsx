@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ interface JobPaymentsProps {
 
 export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const { payments, isLoading, totalPaid, totalRefunded, netAmount, refreshPayments } = usePayments(jobId);
-  const { invoices } = useInvoices(jobId);
+  const { invoices, refreshInvoices } = useInvoices(jobId);
   const { refundPayment, deletePayment, isProcessing } = usePaymentActions(jobId, refreshPayments);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -77,9 +78,13 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   };
 
   const handlePaymentSuccess = () => {
+    console.log('Payment success callback triggered in JobPayments');
     setShowPaymentDialog(false);
     setSelectedInvoice(null);
+    
+    // Refresh both payments and invoices immediately
     refreshPayments();
+    refreshInvoices();
   };
 
   // Calculate outstanding balance with proper rounding
@@ -202,7 +207,11 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
       {selectedInvoice && (
         <UnifiedPaymentDialog
           isOpen={showPaymentDialog}
-          onClose={() => setShowPaymentDialog(false)}
+          onClose={() => {
+            console.log('Closing payment dialog manually in JobPayments');
+            setShowPaymentDialog(false);
+            setSelectedInvoice(null);
+          }}
           invoice={selectedInvoice}
           jobId={jobId}
           onPaymentAdded={handlePaymentSuccess}

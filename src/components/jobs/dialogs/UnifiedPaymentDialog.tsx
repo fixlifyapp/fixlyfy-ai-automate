@@ -39,7 +39,11 @@ export const UnifiedPaymentDialog = ({
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { addPayment, isProcessing } = usePaymentActions(jobId, () => {
-    if (onPaymentAdded) onPaymentAdded();
+    // Enhanced callback to ensure real-time refresh
+    console.log('Payment action completed, triggering refresh');
+    if (onPaymentAdded) {
+      onPaymentAdded();
+    }
   });
 
   const remainingBalance = (invoice.balance ?? (invoice.total - (invoice.amount_paid ?? 0)));
@@ -79,6 +83,8 @@ export const UnifiedPaymentDialog = ({
     }, 10000); // 10 second timeout
 
     try {
+      console.log('Submitting payment for invoice:', invoice.id, 'amount:', paymentAmount);
+      
       const success = await addPayment({
         invoiceId: invoice.id,
         amount: paymentAmount,
@@ -88,12 +94,27 @@ export const UnifiedPaymentDialog = ({
       });
 
       if (success) {
-        onClose();
-        // Reset form
+        console.log('Payment recorded successfully, closing dialog and refreshing');
+        
+        // Reset form first
         setAmount("");
         setMethod("cash");
         setReference("");
         setNotes("");
+        
+        // Close dialog immediately
+        onClose();
+        
+        // Show success message
+        toast.success("Payment recorded successfully!");
+        
+        // Small delay to ensure dialog closes before refresh
+        setTimeout(() => {
+          if (onPaymentAdded) {
+            console.log('Triggering payment refresh callback');
+            onPaymentAdded();
+          }
+        }, 100);
       }
     } catch (error) {
       console.error('Error submitting payment:', error);
