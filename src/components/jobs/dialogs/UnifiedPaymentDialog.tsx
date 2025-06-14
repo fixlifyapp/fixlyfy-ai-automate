@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,8 @@ export const UnifiedPaymentDialog = ({
   const [method, setMethod] = useState("cash");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { addPayment, isProcessing } = usePaymentActions(jobId, () => {
     if (onPaymentAdded) onPaymentAdded();
@@ -45,6 +47,12 @@ export const UnifiedPaymentDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent duplicate submissions
+    if (isSubmitting || isProcessing) {
+      console.log('Payment submission already in progress, ignoring duplicate click');
+      return;
+    }
     
     const paymentAmount = parseFloat(amount);
     
@@ -58,25 +66,54 @@ export const UnifiedPaymentDialog = ({
       return;
     }
 
-    const success = await addPayment({
-      invoiceId: invoice.id,
-      amount: paymentAmount,
-      method,
-      reference: reference.trim() || undefined,
-      notes: notes.trim() || undefined
-    });
+    setIsSubmitting(true);
+    
+    // Clear any existing timeout
+    if (submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+    }
+    
+    // Set a timeout to reset submitting state in case of unexpected errors
+    submitTimeoutRef.current = setTimeout(() => {
+      setIsSubmitting(false);
+    }, 10000); // 10 second timeout
 
-    if (success) {
-      onClose();
-      // Reset form
-      setAmount("");
-      setMethod("cash");
-      setReference("");
-      setNotes("");
+    try {
+      const success = await addPayment({
+        invoiceId: invoice.id,
+        amount: paymentAmount,
+        method,
+        reference: reference.trim() || undefined,
+        notes: notes.trim() || undefined
+      });
+
+      if (success) {
+        onClose();
+        // Reset form
+        setAmount("");
+        setMethod("cash");
+        setReference("");
+        setNotes("");
+      }
+    } catch (error) {
+      console.error('Error submitting payment:', error);
+      toast.error('Failed to submit payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
+      }
     }
   };
 
   const handleClose = () => {
+    // Don't allow closing while submitting
+    if (isSubmitting || isProcessing) {
+      toast.error('Please wait for the payment to be processed');
+      return;
+    }
+    
     setAmount("");
     setMethod("cash");
     setReference("");
@@ -85,9 +122,13 @@ export const UnifiedPaymentDialog = ({
   };
 
   const handleQuickAmount = (percentage: number) => {
+    if (isSubmitting || isProcessing) return;
+    
     const quickAmount = (remainingBalance * percentage / 100).toFixed(2);
     setAmount(quickAmount);
   };
+
+  const isFormDisabled = isSubmitting || isProcessing;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -130,6 +171,7 @@ export const UnifiedPaymentDialog = ({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
                   className="pl-9"
+                  disabled={isFormDisabled}
                   required
                 />
               </div>
@@ -139,6 +181,7 @@ export const UnifiedPaymentDialog = ({
                   variant="outline" 
                   size="sm"
                   onClick={() => handleQuickAmount(25)}
+                  disabled={isFormDisabled}
                 >
                   25%
                 </Button>
@@ -147,6 +190,7 @@ export const UnifiedPaymentDialog = ({
                   variant="outline" 
                   size="sm"
                   onClick={() => handleQuickAmount(50)}
+                  disabled={isFormDisabled}
                 >
                   50%
                 </Button>
@@ -155,6 +199,7 @@ export const UnifiedPaymentDialog = ({
                   variant="outline" 
                   size="sm"
                   onClick={() => handleQuickAmount(100)}
+                  disabled={isFormDisabled}
                 >
                   Full
                 </Button>
@@ -166,7 +211,7 @@ export const UnifiedPaymentDialog = ({
 
             <div>
               <Label htmlFor="method">Payment Method</Label>
-              <Select value={method} onValueChange={setMethod}>
+              <Select value={method} onValueChange={setMethod} disabled={isFormDisabled}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -189,6 +234,7 @@ export const UnifiedPaymentDialog = ({
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="Check number, transaction ID, etc."
+                disabled={isFormDisabled}
               />
             </div>
 
@@ -200,18 +246,24 @@ export const UnifiedPaymentDialog = ({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Additional payment details..."
                 rows={3}
+                disabled={isFormDisabled}
               />
             </div>
 
             <div className="flex gap-2 pt-4">
               <Button
                 type="submit"
-                disabled={isProcessing || !amount}
+                disabled={isFormDisabled || !amount}
                 className="flex-1"
               >
-                {isProcessing ? "Recording..." : "Record Payment"}
+                {isSubmitting || isProcessing ? "Recording..." : "Record Payment"}
               </Button>
-              <Button type="button" variant="outline" onClick={handleClose}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClose}
+                disabled={isSubmitting || isProcessing}
+              >
                 Cancel
               </Button>
             </div>
