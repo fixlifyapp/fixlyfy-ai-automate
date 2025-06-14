@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.24.0'
 
@@ -43,24 +44,10 @@ serve(async (req) => {
 
     console.log('Processing SMS for estimate:', estimateId, 'to phone:', recipientPhone);
 
-    // Get estimate details with job and client information
+    // Get estimate details
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
-      .select(`
-        *,
-        jobs:job_id (
-          id,
-          title,
-          client_id,
-          clients:client_id (
-            id,
-            name,
-            email,
-            phone,
-            company
-          )
-        )
-      `)
+      .select('*')
       .eq('id', estimateId)
       .single();
 
@@ -70,8 +57,30 @@ serve(async (req) => {
 
     console.log('Estimate found:', estimate.estimate_number);
     
-    const client = estimate.jobs?.clients;
-    const job = estimate.jobs;
+    // Get job details separately
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('jobs')
+      .select('*')
+      .eq('id', estimate.job_id)
+      .single();
+
+    if (jobError) {
+      console.warn('Could not fetch job details:', jobError);
+    }
+
+    // Get client details separately
+    let client = null;
+    if (job?.client_id) {
+      const { data: clientData, error: clientError } = await supabaseAdmin
+        .from('clients')
+        .select('*')
+        .eq('id', job.client_id)
+        .single();
+      
+      if (!clientError) {
+        client = clientData;
+      }
+    }
 
     // Get user's Telnyx phone numbers
     const { data: userPhoneNumbers, error: phoneError } = await supabaseAdmin

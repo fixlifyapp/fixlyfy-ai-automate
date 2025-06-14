@@ -36,37 +36,23 @@ serve(async (req) => {
     console.log('send-invoice - Authenticated user ID:', userData.user.id);
 
     const requestBody = await req.json()
-    const { invoiceId, sendMethod, recipientEmail, recipientPhone } = requestBody;
+    const { invoiceId, recipientEmail, subject, message } = requestBody;
     
     console.log('send-invoice - Request details:', {
       invoiceId,
-      sendMethod,
       recipientEmail,
-      recipientPhone
+      subject,
+      message
     });
 
-    if (!invoiceId || !sendMethod) {
+    if (!invoiceId || !recipientEmail) {
       throw new Error('Missing required fields');
     }
 
     // Get invoice details
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
-      .select(`
-        *,
-        jobs:job_id (
-          id,
-          title,
-          client_id,
-          clients:client_id (
-            id,
-            name,
-            email,
-            phone,
-            company
-          )
-        )
-      `)
+      .select('*')
       .eq('id', invoiceId)
       .single();
 
@@ -77,7 +63,30 @@ serve(async (req) => {
 
     console.log('send-invoice - Found invoice:', invoice.invoice_number);
 
-    const client = invoice.jobs?.clients;
+    // Get job details separately
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('jobs')
+      .select('*')
+      .eq('id', invoice.job_id)
+      .single();
+
+    if (jobError) {
+      console.warn('Could not fetch job details:', jobError);
+    }
+
+    // Get client details separately
+    let client = null;
+    if (job?.client_id) {
+      const { data: clientData, error: clientError } = await supabaseAdmin
+        .from('clients')
+        .select('*')
+        .eq('id', job.client_id)
+        .single();
+      
+      if (!clientError) {
+        client = clientData;
+      }
+    }
 
     // Get company settings for email configuration
     const { data: companySettings, error: settingsError } = await supabaseAdmin
@@ -121,26 +130,16 @@ serve(async (req) => {
     const fromName = companySettings?.email_from_name || companyName;
     const fromEmail = companySettings?.email_from_address || `${companyName.toLowerCase().replace(/\s+/g, '')}@${mailgunDomain}`;
 
-    console.log('send-invoice - Final email configuration:');
-    console.log('send-invoice - User ID:', userData.user.id);
-    console.log('send-invoice - Company name used:', companyName);
-    console.log('send-invoice - Mailgun domain:', mailgunDomain);
-    console.log('send-invoice - From email:', fromEmail);
-
     if (!mailgunApiKey) {
       throw new Error('Mailgun API key not configured');
     }
 
-    const emailSubject = `Invoice ${invoice.invoice_number}`;
+    const emailSubject = subject || `Invoice ${invoice.invoice_number}`;
     const recipient = recipientEmail || client?.email;
 
     if (!recipient) {
       throw new Error('No recipient email provided');
     }
-
-    console.log('send-invoice - Subject:', emailSubject);
-    console.log('send-invoice - From:', `${fromName} <${fromEmail}>`);
-    console.log('send-invoice - To:', recipient);
 
     // Get line items for the invoice
     const { data: lineItems } = await supabaseAdmin
@@ -149,15 +148,18 @@ serve(async (req) => {
       .eq('parent_id', invoiceId)
       .eq('parent_type', 'invoice');
 
+    const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
+    
     const emailContent = `
-      <h2>Invoice ${invoice.invoice_number}</h2>
+      <h2>${emailSubject}</h2>
       <p>Hi ${client?.name || 'valued customer'},</p>
-      <p>Please find your invoice details below:</p>
+      <p>${message || 'Please find your invoice details below:'}</p>
       
       <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
         <h3>Invoice Summary</h3>
         <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
         <p><strong>Total Amount:</strong> $${invoice.total?.toFixed(2) || '0.00'}</p>
+        <p><strong>Due Date:</strong> ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Upon receipt'}</p>
         
         ${lineItems && lineItems.length > 0 ? `
         <h4>Items:</h4>
@@ -171,15 +173,13 @@ serve(async (req) => {
         ${invoice.notes ? `<p><strong>Notes:</strong> ${invoice.notes}</p>` : ''}
       </div>
 
-      <p><a href="https://hub.fixlify.app/invoice/view/${invoice.invoice_number}" style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invoice</a></p>
+      <p><a href="${invoiceLink}" style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invoice</a></p>
       
       ${portalLoginLink ? `<p><a href="${portalLoginLink}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Access Client Portal</a></p>` : ''}
       
       <p>Thank you for your business!</p>
       <p>Best regards,<br>${companyName}</p>
     `;
-
-    console.log('send-invoice - Sending email via Mailgun URL:', `https://api.mailgun.net/v3/${mailgunDomain}/messages`);
 
     const formData = new FormData();
     formData.append('from', `${fromName} <${fromEmail}>`);
@@ -195,10 +195,7 @@ serve(async (req) => {
       body: formData
     });
 
-    console.log('send-invoice - Email send response status:', response.status);
-
     const responseBody = await response.json();
-    console.log('send-invoice - Email send response body:', responseBody);
 
     if (!response.ok) {
       console.error('send-invoice - Mailgun error:', responseBody);
@@ -218,11 +215,12 @@ serve(async (req) => {
           subject: emailSubject,
           content: emailContent,
           status: 'sent',
-          provider_message_id: responseBody.id,
+          external_id: responseBody.id,
           invoice_number: invoice.invoice_number,
           client_name: client?.name,
           client_email: client?.email,
-          client_phone: client?.phone
+          client_phone: client?.phone,
+          portal_link_included: !!portalLoginLink
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
@@ -232,8 +230,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Email sent successfully',
-        messageId: responseBody.id,
-        portalLinkIncluded: !!portalLoginLink
+        messageId: responseBody.id
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

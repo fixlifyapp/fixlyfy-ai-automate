@@ -600,6 +600,42 @@ export type Database = {
         }
         Relationships: []
       }
+      client_notifications: {
+        Row: {
+          client_id: string
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_portal_sessions: {
         Row: {
           created_at: string | null
@@ -1260,6 +1296,63 @@ export type Database = {
           },
         ]
       }
+      estimate_communications: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          communication_type: string
+          content: string | null
+          created_at: string
+          estimate_id: string
+          estimate_number: string | null
+          external_id: string | null
+          id: string
+          portal_link_included: boolean | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type: string
+          content?: string | null
+          created_at?: string
+          estimate_id: string
+          estimate_number?: string | null
+          external_id?: string | null
+          id?: string
+          portal_link_included?: boolean | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type?: string
+          content?: string | null
+          created_at?: string
+          estimate_id?: string
+          estimate_number?: string | null
+          external_id?: string | null
+          id?: string
+          portal_link_included?: boolean | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       estimates: {
         Row: {
           approved_at: string | null
@@ -1359,6 +1452,63 @@ export type Database = {
           prefix?: string
           start_value?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      invoice_communications: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          communication_type: string
+          content: string | null
+          created_at: string
+          external_id: string | null
+          id: string
+          invoice_id: string
+          invoice_number: string | null
+          portal_link_included: boolean | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type: string
+          content?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          invoice_id: string
+          invoice_number?: string | null
+          portal_link_included?: boolean | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          communication_type?: string
+          content?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          invoice_id?: string
+          invoice_number?: string | null
+          portal_link_included?: boolean | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

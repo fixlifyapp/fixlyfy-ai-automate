@@ -52,21 +52,7 @@ serve(async (req) => {
     // Get estimate details
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
-      .select(`
-        *,
-        jobs:job_id (
-          id,
-          title,
-          client_id,
-          clients:client_id (
-            id,
-            name,
-            email,
-            phone,
-            company
-          )
-        )
-      `)
+      .select('*')
       .eq('id', estimateId)
       .single();
 
@@ -77,7 +63,30 @@ serve(async (req) => {
 
     console.log('send-estimate - Found estimate:', estimate.estimate_number);
 
-    const client = estimate.jobs?.clients;
+    // Get job details separately
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('jobs')
+      .select('*')
+      .eq('id', estimate.job_id)
+      .single();
+
+    if (jobError) {
+      console.warn('Could not fetch job details:', jobError);
+    }
+
+    // Get client details separately
+    let client = null;
+    if (job?.client_id) {
+      const { data: clientData, error: clientError } = await supabaseAdmin
+        .from('clients')
+        .select('*')
+        .eq('id', job.client_id)
+        .single();
+      
+      if (!clientError) {
+        client = clientData;
+      }
+    }
 
     // Get company settings for email configuration
     const { data: companySettings, error: settingsError } = await supabaseAdmin

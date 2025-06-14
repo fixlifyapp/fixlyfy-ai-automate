@@ -44,24 +44,10 @@ serve(async (req) => {
 
     console.log('Processing SMS for invoice:', invoiceId, 'to phone:', recipientPhone);
 
-    // Get invoice details with job and client information
+    // Get invoice details
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
-      .select(`
-        *,
-        jobs:job_id (
-          id,
-          title,
-          client_id,
-          clients:client_id (
-            id,
-            name,
-            email,
-            phone,
-            company
-          )
-        )
-      `)
+      .select('*')
       .eq('id', invoiceId)
       .single();
 
@@ -71,8 +57,30 @@ serve(async (req) => {
 
     console.log('Invoice found:', invoice.invoice_number);
     
-    const client = invoice.jobs?.clients;
-    const job = invoice.jobs;
+    // Get job details separately
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from('jobs')
+      .select('*')
+      .eq('id', invoice.job_id)
+      .single();
+
+    if (jobError) {
+      console.warn('Could not fetch job details:', jobError);
+    }
+
+    // Get client details separately
+    let client = null;
+    if (job?.client_id) {
+      const { data: clientData, error: clientError } = await supabaseAdmin
+        .from('clients')
+        .select('*')
+        .eq('id', job.client_id)
+        .single();
+      
+      if (!clientError) {
+        client = clientData;
+      }
+    }
 
     // Get user's Telnyx phone numbers
     const { data: userPhoneNumbers, error: phoneError } = await supabaseAdmin
@@ -125,7 +133,7 @@ serve(async (req) => {
     }
 
     // Create SMS message with portal link
-    const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.invoice_number}`;
+    const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
     const smsMessage = message || `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} is ready. Total: $${invoice.total?.toFixed(2) || '0.00'}. View: ${invoiceLink}${portalLink ? ` | Portal: ${portalLink}` : ''}`;
 
     console.log('SMS message length:', smsMessage.length);
@@ -162,11 +170,11 @@ serve(async (req) => {
           recipient: formattedToPhone,
           content: smsMessage,
           status: 'sent',
-          provider_message_id: telnyxResult.data?.id,
+          external_id: telnyxResult.data?.id,
           invoice_number: invoice.invoice_number,
           client_name: client?.name,
-          client_email: client?.email,
-          client_phone: client?.phone
+          client_phone: client?.phone,
+          portal_link_included: !!portalLink
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
