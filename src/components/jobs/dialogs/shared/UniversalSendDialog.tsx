@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -138,11 +137,12 @@ export const UniversalSendDialog = ({
         toast.success(`${documentType === "estimate" ? "Estimate" : "Invoice"} sent via SMS successfully!`);
       }
 
-      // Success - close dialog and call success callback
+      // Always close the dialog after successful send
+      onClose();
+      
+      // Call success callback if provided
       if (onSuccess) {
         onSuccess();
-      } else {
-        onClose();
       }
 
     } catch (error: any) {
