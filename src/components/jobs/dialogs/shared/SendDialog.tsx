@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,15 +92,9 @@ export const SendDialog = ({
       console.log("Send method:", sendMethod);
       console.log("Send to:", sendTo);
 
-      // Save document first if needed
-      if (onSave) {
-        console.log("Saving document before sending...");
-        const saveSuccess = await onSave();
-        if (!saveSuccess) {
-          toast.error("Failed to save document");
-          return;
-        }
-      }
+      // The onSave logic is handled by the useEstimateSending and useInvoiceSending hooks
+      // to avoid creating duplicate documents. They will decide whether to save or not
+      // based on the presence of an existingDocumentId.
 
       // Call the sendDocument function with proper parameters
       const result = await sendDocument({
@@ -132,7 +125,7 @@ export const SendDialog = ({
       } else {
         toast.error(`Failed to send ${documentType}: ${result.error || 'Unknown error'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error sending ${documentType}:`, error);
       toast.error(`Failed to send ${documentType}: ${error.message || 'Unknown error'}`);
     }
