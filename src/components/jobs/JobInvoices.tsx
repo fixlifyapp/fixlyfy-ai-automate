@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -250,7 +249,7 @@ export const JobInvoices = ({ jobId }: JobInvoicesProps) => {
             editInvoice={isEditMode ? selectedInvoice : undefined}
           />
 
-          {/* Invoice Preview Window */}
+          {/* Invoice Preview Window - Now uses UnifiedPaymentDialog */}
           {selectedInvoice && (
             <InvoicePreviewWindow
               open={showPreview}

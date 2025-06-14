@@ -68,7 +68,6 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
 
   const handleDownloadInvoice = async (invoice: any) => {
     try {
-      // Call the download-invoice edge function
       const { data, error } = await supabase.functions.invoke('download-invoice', {
         body: {
           invoiceId: invoice.id,
@@ -83,7 +82,6 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
       }
 
       if (data && data.success && data.pdfUrl) {
-        // Create a temporary link to download the PDF
         const link = document.createElement('a');
         link.href = data.pdfUrl;
         link.download = `Invoice-${invoice.invoice_number}.pdf`;
@@ -370,7 +368,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
+      {/* Dialogs - Only UnifiedPaymentDialog for payments */}
       <SteppedInvoiceBuilder
         open={showInvoiceBuilder}
         onOpenChange={setShowInvoiceBuilder}

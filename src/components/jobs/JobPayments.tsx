@@ -6,9 +6,8 @@ import { Plus, CreditCard, Trash2, RotateCcw } from "lucide-react";
 import { usePayments } from "@/hooks/usePayments";
 import { useInvoices } from "@/hooks/useInvoices";
 import { usePaymentActions } from "@/hooks/usePaymentActions";
-import { PaymentDialog } from "@/components/jobs/dialogs/PaymentDialog";
+import { UnifiedPaymentDialog } from "@/components/jobs/dialogs/UnifiedPaymentDialog";
 import { formatDistanceToNow } from "date-fns";
-import { PaymentMethod } from "@/types/payment";
 import { formatCurrency, roundToCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -19,8 +18,9 @@ interface JobPaymentsProps {
 export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   const { payments, isLoading, totalPaid, totalRefunded, netAmount, refreshPayments } = usePayments(jobId);
   const { invoices } = useInvoices(jobId);
-  const { addPayment, refundPayment, deletePayment, isProcessing } = usePaymentActions(jobId, refreshPayments);
+  const { refundPayment, deletePayment, isProcessing } = usePaymentActions(jobId, refreshPayments);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const isMobile = useIsMobile();
 
   const getPaymentMethodBadge = (method: string) => {
@@ -65,30 +65,21 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
   };
 
   const handleAddPayment = () => {
-    setShowPaymentDialog(true);
-  };
-
-  const handlePaymentProcessed = async (amount: number, method: PaymentMethod, reference?: string, notes?: string) => {
     // Find the first unpaid or partially paid invoice
     const unpaidInvoice = invoices.find(inv => inv.balance > 0);
     
     if (!unpaidInvoice) {
-      // If no unpaid invoices, still create a payment record but without invoice association
-      // This would need to be handled in the payment system
       return;
     }
 
-    const success = await addPayment({
-      invoiceId: unpaidInvoice.id,
-      amount,
-      method,
-      reference,
-      notes
-    });
+    setSelectedInvoice(unpaidInvoice);
+    setShowPaymentDialog(true);
+  };
 
-    if (success) {
-      setShowPaymentDialog(false);
-    }
+  const handlePaymentSuccess = () => {
+    setShowPaymentDialog(false);
+    setSelectedInvoice(null);
+    refreshPayments();
   };
 
   // Calculate outstanding balance with proper rounding
@@ -207,13 +198,16 @@ export const JobPayments = ({ jobId }: JobPaymentsProps) => {
         </CardContent>
       </Card>
 
-      {/* Payment Dialog */}
-      <PaymentDialog
-        open={showPaymentDialog}
-        onOpenChange={setShowPaymentDialog}
-        balance={outstandingBalance}
-        onPaymentProcessed={handlePaymentProcessed}
-      />
+      {/* Unified Payment Dialog */}
+      {selectedInvoice && (
+        <UnifiedPaymentDialog
+          isOpen={showPaymentDialog}
+          onClose={() => setShowPaymentDialog(false)}
+          invoice={selectedInvoice}
+          jobId={jobId}
+          onPaymentAdded={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 };
