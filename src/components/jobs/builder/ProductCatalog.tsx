@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,15 +18,18 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
   const [showProducts, setShowProducts] = useState(false);
   const { products, categories, isLoading } = useProducts();
   
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = searchQuery === "" || 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
-    
-    const matchesCategory = selectedCategory === null || product.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+  // Memoize filtered products to prevent unnecessary re-calculations
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = searchQuery === "" || 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
+      
+      const matchesCategory = selectedCategory === null || product.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, selectedCategory]);
 
   const handleSearchClick = () => {
     setShowProducts(true);
@@ -38,6 +41,30 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
     setSearchQuery("");
     setSelectedCategory(null);
   };
+
+  // Show loading state immediately when products are being loaded
+  if (isLoading && products.length === 0) {
+    return (
+      <div className="border rounded-md overflow-hidden">
+        <div className="p-4 border-b bg-muted/30">
+          <h4 className="font-medium mb-4">Product Catalog</h4>
+          <div className="space-y-3">
+            <Skeleton className="w-full h-9" />
+            <div className="flex gap-2">
+              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-7 w-20" />
+              <Skeleton className="h-7 w-24" />
+            </div>
+          </div>
+        </div>
+        <div className="p-4 space-y-3">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="w-full h-12" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border rounded-md overflow-hidden">
@@ -88,27 +115,21 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
       
       {showProducts && (
         <div className="max-h-[300px] overflow-y-auto">
-          {isLoading ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="w-full h-12" />
-              ))}
-            </div>
-          ) : filteredProducts.length > 0 ? (
+          {filteredProducts.length > 0 ? (
             <ul className="divide-y">
               {filteredProducts.map(product => (
                 <li 
                   key={product.id} 
-                  className="p-3 hover:bg-muted/40 cursor-pointer"
+                  className="p-3 hover:bg-muted/40 cursor-pointer transition-colors"
                   onClick={() => handleProductAdd(product)}
                 >
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <h5 className="font-medium text-sm">{product.name}</h5>
-                      <p className="text-xs text-muted-foreground">{product.description}</p>
-                      <p className="text-xs mt-1">${product.price.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+                      <p className="text-xs mt-1 font-medium">${product.price.toFixed(2)}</p>
                     </div>
-                    <div className="flex space-x-1">
+                    <div className="flex space-x-1 ml-2">
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -123,7 +144,7 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-7 w-7"
+                        className="h-7 w-7 text-blue-600 hover:text-blue-700"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleProductAdd(product);
@@ -133,23 +154,32 @@ export const ProductCatalog = ({ onAddProduct }: ProductCatalogProps) => {
                       </Button>
                     </div>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {product.tags && product.tags.map((tag, index) => (
-                      <Badge 
-                        key={index} 
-                        variant="outline" 
-                        className="text-[10px] py-0 h-5 bg-muted/50"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  {product.tags && product.tags.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {product.tags.map((tag, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="outline" 
+                          className="text-[10px] py-0 h-5 bg-muted/50"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              No products found
+              {isLoading ? (
+                <div className="space-y-2">
+                  <div>Loading products...</div>
+                  <Skeleton className="w-full h-4" />
+                </div>
+              ) : (
+                "No products found"
+              )}
             </div>
           )}
         </div>

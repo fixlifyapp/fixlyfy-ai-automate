@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,55 +22,71 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { products, categories, isLoading } = useProducts();
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = searchQuery === "" || 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-      (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+  // Memoize filtered products for better performance
+  const filteredProducts = useMemo(() => {
+    if (!products.length) return [];
     
-    const matchesCategory = selectedCategory === null || 
-      (selectedCategory === "frequently-used" ? 
-        ["prod-1", "prod-4", "prod-5"].includes(product.id) : 
-        product.category === selectedCategory);
-    
-    return matchesSearch && matchesCategory;
-  });
+    return products.filter(product => {
+      const matchesSearch = searchQuery === "" || 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+        (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+      
+      const matchesCategory = selectedCategory === null || 
+        (selectedCategory === "frequently-used" ? 
+          ["prod-1", "prod-4", "prod-5"].includes(product.id) : 
+          product.category === selectedCategory);
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, selectedCategory]);
 
   // Function to handle row click which now immediately adds the product and closes dialog
-  const handleRowClick = (product: Product) => {
+  const handleRowClick = useCallback((product: Product) => {
     onProductSelect(product);
     onOpenChange(false);
     setSearchQuery("");
-  };
+    setSelectedProduct(null);
+  }, [onProductSelect, onOpenChange]);
 
   // Keep the original functions for backward compatibility
-  const handleSelectProduct = (product: Product) => {
+  const handleSelectProduct = useCallback((product: Product) => {
     setSelectedProduct(product);
-  };
+  }, []);
 
-  const handleAddProduct = () => {
+  const handleAddProduct = useCallback(() => {
     if (selectedProduct) {
       onProductSelect(selectedProduct);
       onOpenChange(false);
       setSelectedProduct(null);
       setSearchQuery("");
     }
-  };
+  }, [selectedProduct, onProductSelect, onOpenChange]);
   
   // Keep the quick add function for the plus button
-  const handleQuickAddProduct = (product: Product, e: React.MouseEvent) => {
+  const handleQuickAddProduct = useCallback((product: Product, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click from selecting the product
     onProductSelect(product);
     onOpenChange(false);
     setSelectedProduct(null);
     setSearchQuery("");
-  };
+  }, [onProductSelect, onOpenChange]);
 
   // Get frequently used products - in a real app this would come from analytics
-  const frequentlyUsed = products.slice(0, 3); // Just take first 3 for now
+  const frequentlyUsed = useMemo(() => products.slice(0, 3), [products]);
+
+  // Reset search when dialog closes
+  const handleDialogClose = useCallback((isOpen: boolean) => {
+    onOpenChange(isOpen);
+    if (!isOpen) {
+      setSearchQuery("");
+      setSelectedCategory(null);
+      setSelectedProduct(null);
+    }
+  }, [onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto p-0">
         <DialogHeader className="p-6 border-b">
           <DialogTitle className="text-xl font-semibold">Select a Product</DialogTitle>
@@ -125,7 +141,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
           </div>
           
           <div className="border rounded-md overflow-hidden bg-white">
-            {isLoading ? (
+            {isLoading && products.length === 0 ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map(i => (
                   <Skeleton key={i} className="w-full h-16" />
@@ -184,7 +200,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        No products found matching your search.
+                        {isLoading ? "Loading products..." : "No products found matching your search."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -195,7 +211,7 @@ export const ProductSearch = ({ open, onOpenChange, onProductSelect }: ProductSe
         </div>
         
         <DialogFooter className="border-t p-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleDialogClose(false)}>
             Cancel
           </Button>
           <Button 
