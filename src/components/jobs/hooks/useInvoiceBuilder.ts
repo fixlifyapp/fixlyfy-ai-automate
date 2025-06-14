@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,9 +65,9 @@ export const useInvoiceBuilder = (jobId: string) => {
       description: product.description || product.name,
       quantity: product.quantity || 1,
       unitPrice: product.price,
-      taxable: product.taxable,
+      taxable: product.taxable || true,
       discount: 0,
-      ourPrice: product.ourPrice || 0,
+      ourPrice: product.ourPrice || product.ourprice || product.cost || 0,
       name: product.name,
       price: product.price,
       total: (product.quantity || 1) * product.price

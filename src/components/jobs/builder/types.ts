@@ -19,10 +19,13 @@ export interface Product {
   category?: string;
   description?: string;
   ourprice?: number; // Database field name
+  ourPrice?: number; // Component field name - for compatibility
   cost?: number; // Alternative field name
   our_price?: number; // Alternative field name
   unit?: string;
   taxable?: boolean;
+  quantity?: number; // Add quantity support
+  tags?: string[]; // Add tags support
 }
 
 export interface EstimateLineItem extends LineItem {

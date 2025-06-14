@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,7 +15,7 @@ export interface Estimate {
   notes?: string;
   created_at: string;
   updated_at: string;
-  valid_until?: string; // Added this field
+  valid_until?: string;
   items?: Array<{
     id: string;
     description: string;
@@ -52,7 +53,7 @@ export const useEstimates = (jobId?: string) => {
       
       console.log('Fetched estimates:', data);
       
-      // Map the data to include the alias properties
+      // Map the data to include the alias properties and handle Json fields
       const mappedData = (data || []).map(item => ({
         ...item,
         number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Add alias with fallback
@@ -60,7 +61,8 @@ export const useEstimates = (jobId?: string) => {
         date: item.created_at, // Use created_at as date
         estimate_number: item.estimate_number || `EST-${item.id.slice(0, 8)}`, // Ensure estimate_number exists
         valid_until: item.valid_until || undefined, // Handle valid_until properly
-      }));
+        items: Array.isArray(item.items) ? item.items : (item.items ? JSON.parse(JSON.stringify(item.items)) : []), // Handle Json type
+      })) as Estimate[];
       
       setEstimates(mappedData);
     } catch (error: any) {

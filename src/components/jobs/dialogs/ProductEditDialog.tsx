@@ -1,154 +1,181 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Product } from "../builder/types";
-
-interface ProductEditDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  product: Product | null;
-  onSave: (product: Product) => void;
-}
+import { ProductEditDialogProps } from "./ProductEditDialogProps";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const ProductEditDialog = ({
   open,
   onOpenChange,
   product,
-  onSave
+  onSave,
+  categories = []
 }: ProductEditDialogProps) => {
-  const [formData, setFormData] = useState<Product>({
-    id: "",
-    name: "",
-    price: 0,
-    category: "",
-    description: "",
-    ourprice: 0,
-    unit: "each",
-    taxable: true
-  });
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [price, setPrice] = useState(0);
+  const [ourPrice, setOurPrice] = useState(0);
+  const [taxable, setTaxable] = useState(true);
+
+  // Default categories if none provided
+  const defaultCategories = [
+    "Maintenance Plans",
+    "Repairs", 
+    "Parts",
+    "Services",
+    "Warranty",
+    "Accessories"
+  ];
+
+  const availableCategories = categories.length > 0 ? categories : defaultCategories;
 
   useEffect(() => {
     if (product) {
-      setFormData({
-        ...product,
-        ourprice: product.ourprice || product.cost || product.our_price || 0
-      });
+      setName(product.name);
+      setDescription(product.description || "");
+      setCategory(product.category || "");
+      setPrice(product.price);
+      setOurPrice(product.ourPrice || product.ourprice || product.cost || 0);
+      setTaxable(product.taxable !== undefined ? product.taxable : true);
     } else {
-      setFormData({
-        id: "",
-        name: "",
-        price: 0,
-        category: "",
-        description: "",
-        ourprice: 0,
-        unit: "each",
-        taxable: true
-      });
+      // Reset form
+      setName("");
+      setDescription("");
+      setCategory("");
+      setPrice(0);
+      setOurPrice(0);
+      setTaxable(true);
     }
   }, [product, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      ...formData,
-      id: formData.id || `product-${Date.now()}`
-    });
-    onOpenChange(false);
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      toast.error("Product name is required");
+      return;
+    }
+    
+    if (!category.trim()) {
+      toast.error("Category is required");
+      return;
+    }
+    
+    const updatedProduct: Product = {
+      id: product?.id || '',
+      name,
+      description,
+      category,
+      price,
+      ourPrice,
+      ourprice: ourPrice, // For database compatibility
+      cost: ourPrice,
+      taxable,
+      quantity: 1,
+      tags: []
+    };
+    
+    await onSave(updatedProduct);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {product ? "Edit Product" : "Add New Product"}
-          </DialogTitle>
+          <DialogTitle>{product ? 'Edit Product' : 'Add Product'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Product Name</Label>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="product-name">Product Name</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              id="product-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Enter product name"
-              required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="price">Sell Price</Label>
-              <Input
-                id="price"
-                type="number"
-                value={formData.price}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) || 0 }))}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="ourprice">Our Cost</Label>
-              <Input
-                id="ourprice"
-                type="number"
-                value={formData.ourprice || 0}
-                onChange={(e) => setFormData(prev => ({ ...prev, ourprice: Number(e.target.value) || 0 }))}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="category">Category</Label>
+          <div className="space-y-2">
+            <Label htmlFor="product-description">Description</Label>
             <Input
-              id="category"
-              value={formData.category || ""}
-              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              placeholder="Enter category"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description || ""}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              id="product-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter product description"
-              rows={3}
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
+          <div className="space-y-2">
+            <Label htmlFor="product-category">Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="product-price">Customer Price ($)</Label>
+              <Input
+                id="product-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-our-price">Our Price ($)</Label>
+              <Input
+                id="product-our-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={ourPrice}
+                onChange={(e) => setOurPrice(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="taxable">Taxable Item</Label>
+            <Switch
               id="taxable"
-              checked={formData.taxable}
-              onChange={(e) => setFormData(prev => ({ ...prev, taxable: e.target.checked }))}
+              checked={taxable}
+              onCheckedChange={setTaxable}
             />
-            <Label htmlFor="taxable">Taxable</Label>
           </div>
+        </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {product ? "Update" : "Add"} Product
-            </Button>
-          </div>
-        </form>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            Save Product
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

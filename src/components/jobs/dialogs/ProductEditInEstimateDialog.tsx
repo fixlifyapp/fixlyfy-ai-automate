@@ -47,7 +47,7 @@ export const ProductEditInEstimateDialog = ({
       setDescription(product.description || "");
       setCategory(product.category || "");
       setPrice(product.price);
-      setOurPrice(product.ourPrice || product.cost || 0);
+      setOurPrice(product.ourPrice || product.ourprice || product.cost || 0);
       setQuantity(product.quantity || 1);
       setTaxable(product.taxable !== undefined ? product.taxable : true);
       setTags(product.tags || []);
@@ -92,10 +92,6 @@ export const ProductEditInEstimateDialog = ({
       return;
     }
     
-    // Calculate profit margin for display
-    const margin = price - ourPrice;
-    const marginPercentage = price > 0 ? (margin / price) * 100 : 0;
-    
     const updatedProduct: Product = {
       ...product,
       name,
@@ -105,6 +101,7 @@ export const ProductEditInEstimateDialog = ({
       quantity,
       cost: ourPrice, // Set cost to ourPrice
       ourPrice,
+      ourprice: ourPrice, // For database compatibility
       taxable,
       tags
     };

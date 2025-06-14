@@ -88,6 +88,7 @@ export const SimpleEstimateBuilder = ({
             category: "Warranties",
             price: 149,
             ourPrice: 0,
+            ourprice: 0,
             cost: 0,
             taxable: false,
             tags: ["warranty", "protection"]
@@ -100,6 +101,7 @@ export const SimpleEstimateBuilder = ({
             category: "Warranties",
             price: 89,
             ourPrice: 0,
+            ourprice: 0,
             cost: 0,
             taxable: false,
             tags: ["warranty", "protection"]
@@ -112,6 +114,7 @@ export const SimpleEstimateBuilder = ({
             category: "Warranties",
             price: 49,
             ourPrice: 0,
+            ourprice: 0,
             cost: 0,
             taxable: false,
             tags: ["warranty", "protection"]
