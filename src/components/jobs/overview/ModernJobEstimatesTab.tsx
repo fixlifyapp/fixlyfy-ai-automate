@@ -20,7 +20,7 @@ interface ModernJobEstimatesTabProps {
 }
 
 export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
-  const { estimates, setEstimates, isLoading, refreshEstimates, convertEstimateToInvoice } = useEstimates(jobId);
+  const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -115,10 +115,16 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
   const handleConvertEstimate = async (estimate: any) => {
     if (!estimate) return;
     
+    console.log('Converting estimate to invoice:', estimate.id);
     setIsConverting(true);
+    
     try {
-      const success = await convertEstimateToInvoice(estimate.id);
+      // Use the confirmConvertToInvoice action from useEstimateActions
+      actions.setSelectedEstimate(estimate);
+      const success = await actions.confirmConvertToInvoice();
+      
       if (success) {
+        console.log('Estimate converted successfully, calling onEstimateConverted');
         toast.success("Estimate converted to invoice successfully!");
         if (onEstimateConverted) {
           onEstimateConverted();
