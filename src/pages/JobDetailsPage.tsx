@@ -13,7 +13,7 @@ import { JobOverview } from "@/components/jobs/JobOverview";
 import { ModernJobEstimatesTab } from "@/components/jobs/overview/ModernJobEstimatesTab";
 import { ModernJobInvoicesTab } from "@/components/jobs/overview/ModernJobInvoicesTab";
 import { ModernJobPaymentsTab } from "@/components/jobs/overview/ModernJobPaymentsTab";
-import { ModernJobHistoryTab } from "@/components/jobs/overview/ModernJobHistoryTab";
+import { JobHistory } from "@/components/jobs/JobHistory";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const JobDetailsPage = () => {
@@ -79,7 +79,7 @@ const JobDetailsPage = () => {
                 <ModernJobPaymentsTab jobId={id} />
               </TabsContent>
               <TabsContent value="history" className="mt-0">
-                <ModernJobHistoryTab jobId={id} />
+                <JobHistory jobId={id} />
               </TabsContent>
             </JobDetailsTabs>
           </div>
