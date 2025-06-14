@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,9 +17,14 @@ import { useJobData } from "../dialogs/unified/hooks/useJobData";
 interface ModernJobEstimatesTabProps {
   jobId: string;
   onEstimateConverted?: () => void;
+  onTabChange?: (tab: string) => void;
 }
 
-export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobEstimatesTabProps) => {
+export const ModernJobEstimatesTab = ({ 
+  jobId, 
+  onEstimateConverted, 
+  onTabChange 
+}: ModernJobEstimatesTabProps) => {
   const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
@@ -129,6 +133,10 @@ export const ModernJobEstimatesTab = ({ jobId, onEstimateConverted }: ModernJobE
         toast.success("Estimate converted to invoice successfully!");
         if (onEstimateConverted) {
           onEstimateConverted();
+        }
+        // Switch to invoices tab after successful conversion
+        if (onTabChange) {
+          onTabChange('invoices');
         }
       }
     } catch (error) {
