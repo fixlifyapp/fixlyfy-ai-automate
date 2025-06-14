@@ -139,7 +139,6 @@ export const useInvoicePersistence = (
         issue_date: invoice.issue_date,
         due_date: invoice.due_date,
         total: invoice.total,
-        tax_amount: invoice.tax_amount,
         amount_paid: invoice.amount_paid || 0,
         balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         status: invoice.status,
