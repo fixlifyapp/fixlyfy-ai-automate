@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { isValidEmail, isValidPhoneNumber } from "../utils/validationUtils";
 import { extractErrorMessage } from "../utils/errorUtils";
@@ -43,26 +43,31 @@ export const useSendDialog = ({
   
   console.log("Sending hook state:", { isProcessing });
 
-  // Set default values when dialog opens or method changes
-  useEffect(() => {
-    console.log("=== useSendDialog useEffect ===");
+  // Memoize the effect logic to prevent infinite loops
+  const updateSendTo = useCallback(() => {
+    if (!isOpen) return;
+    
+    console.log("=== useSendDialog updateSendTo ===");
     console.log("Effect triggered:", { isOpen, sendMethod, contactInfo });
     
-    if (isOpen) {
-      if (sendMethod === "email" && contactInfo?.email && isValidEmail(contactInfo.email)) {
-        console.log("Setting email default:", contactInfo.email);
-        setSendTo(contactInfo.email);
-      } else if (sendMethod === "sms" && contactInfo?.phone && isValidPhoneNumber(contactInfo.phone)) {
-        console.log("Setting phone default:", contactInfo.phone);
-        setSendTo(contactInfo.phone);
-      } else {
-        console.log("No valid default found, clearing sendTo");
-        setSendTo("");
-      }
+    if (sendMethod === "email" && contactInfo?.email && isValidEmail(contactInfo.email)) {
+      console.log("Setting email default:", contactInfo.email);
+      setSendTo(contactInfo.email);
+    } else if (sendMethod === "sms" && contactInfo?.phone && isValidPhoneNumber(contactInfo.phone)) {
+      console.log("Setting phone default:", contactInfo.phone);
+      setSendTo(contactInfo.phone);
+    } else {
+      console.log("No valid default found, clearing sendTo");
+      setSendTo("");
     }
-  }, [isOpen, sendMethod, contactInfo]);
+  }, [isOpen, sendMethod, contactInfo?.email, contactInfo?.phone]);
 
-  const handleSend = async () => {
+  // Set default values when dialog opens or method changes
+  useEffect(() => {
+    updateSendTo();
+  }, [updateSendTo]);
+
+  const handleSend = useCallback(async () => {
     console.log("=== useSendDialog.handleSend START ===");
     console.log("Handle send called with:", {
       documentType,
@@ -163,7 +168,19 @@ export const useSendDialog = ({
     } finally {
       console.log("=== useSendDialog.handleSend END ===");
     }
-  };
+  }, [
+    documentType,
+    documentId,
+    documentNumber,
+    sendMethod,
+    sendTo,
+    total,
+    customNote,
+    contactInfo,
+    onSave,
+    onSuccess,
+    sendDocument
+  ]);
 
   return {
     sendMethod,

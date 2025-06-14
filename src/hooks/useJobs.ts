@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,17 +52,13 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
   const { items: jobTypes } = useJobTypes();
   const { items: jobStatuses } = useJobStatuses();
 
-  // Set up real-time updates
-  useUnifiedRealtime({
-    tables: ['jobs', 'job_custom_field_values'],
-    onUpdate: () => {
-      console.log('Real-time update triggered for jobs');
-      setRefreshTrigger(prev => prev + 1);
-    },
-    enabled: true
-  });
-
+  // Memoize fetchJobs to prevent infinite loops
   const fetchJobs = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       let query = supabase
@@ -83,12 +78,10 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       if (jobViewScope === "assigned" && user?.id) {
         query = query.eq('technician_id', user.id);
       } else if (jobViewScope === "none") {
-        // User has no permission to view jobs
         setJobs([]);
         setIsLoading(false);
         return;
       }
-      // For "all" scope, no additional filtering needed
       
       query = query.order('created_at', { ascending: false });
       
@@ -103,7 +96,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         tasks: Array.isArray(job.tasks) 
           ? job.tasks.map(task => typeof task === 'string' ? task : String(task))
           : [],
-        // Auto-generate title if missing
         title: job.title || `${job.client?.name || 'Service'} - ${job.job_type || job.service || 'General Service'}`
       }));
       
@@ -114,11 +106,22 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     } finally {
       setIsLoading(false);
     }
-  }, [clientId, getJobViewScope, user?.id]);
+  }, [clientId, user?.id, getJobViewScope]);
 
+  // Only trigger fetch when dependencies actually change
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs, refreshTrigger]);
+
+  // Set up real-time updates with limited triggers
+  useUnifiedRealtime({
+    tables: ['jobs'],
+    onUpdate: () => {
+      console.log('Real-time update triggered for jobs');
+      setRefreshTrigger(prev => prev + 1);
+    },
+    enabled: true
+  });
 
   const validateJobData = (jobData: any) => {
     // Validate job type against configuration
@@ -151,14 +154,10 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
 
     try {
-      // Generate new job ID using the database function
       const jobId = await generateNextId('job');
-      
-      // Auto-generate title if not provided
       const autoTitle = jobData.title || 
         `${jobData.client?.name || 'Service'} - ${jobData.job_type || jobData.service || 'General Service'}`;
       
-      // Get client address if client_id is provided
       let clientAddress = '';
       if (jobData.client_id) {
         const { data: clientData } = await supabase
@@ -178,7 +177,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
         }
       }
       
-      // Validate and normalize job data using configuration
       const validatedJobData = validateJobData({
         ...jobData,
         id: jobId,
@@ -200,8 +198,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       if (error) throw error;
 
       console.log('Job created successfully:', data);
-      
-      // Real-time will handle the refresh automatically
       return data;
     } catch (error) {
       console.error('Error creating job:', error);
@@ -216,7 +212,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
 
     try {
-      // Validate updates using configuration
       const validatedUpdates = validateJobData({
         ...updates,
         updated_at: new Date().toISOString()
@@ -232,8 +227,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       if (error) throw error;
 
       console.log('Job updated successfully:', data);
-      
-      // Real-time will handle the refresh automatically
       return data;
     } catch (error) {
       console.error('Error updating job:', error);
@@ -256,8 +249,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
       if (error) throw error;
 
       console.log('Job deleted successfully:', jobId);
-      
-      // Real-time will handle the refresh automatically
       return true;
     } catch (error) {
       console.error('Error deleting job:', error);
@@ -265,9 +256,9 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     }
   };
 
-  const refreshJobs = () => {
+  const refreshJobs = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
   return {
     jobs,
@@ -276,7 +267,6 @@ export const useJobs = (clientId?: string, enableCustomFields?: boolean) => {
     updateJob,
     deleteJob,
     refreshJobs,
-    // Permission flags for UI
     canCreate: canCreateJobs(),
     canEdit: canEditJobs(),
     canDelete: canDeleteJobs(),
