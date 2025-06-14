@@ -35,48 +35,68 @@ export const useSendDialog = ({
   const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [sendTo, setSendTo] = useState("");
   const [customNote, setCustomNote] = useState("");
+  
+  console.log("=== useSendDialog HOOK ===");
+  console.log("Hook params:", { documentType, documentNumber, documentId, isOpen });
+  
   const { sendDocument, isProcessing } = useSendingHook();
+  
+  console.log("Sending hook state:", { isProcessing });
 
   // Set default values when dialog opens or method changes
   useEffect(() => {
+    console.log("=== useSendDialog useEffect ===");
+    console.log("Effect triggered:", { isOpen, sendMethod, contactInfo });
+    
     if (isOpen) {
       if (sendMethod === "email" && contactInfo?.email && isValidEmail(contactInfo.email)) {
+        console.log("Setting email default:", contactInfo.email);
         setSendTo(contactInfo.email);
       } else if (sendMethod === "sms" && contactInfo?.phone && isValidPhoneNumber(contactInfo.phone)) {
+        console.log("Setting phone default:", contactInfo.phone);
         setSendTo(contactInfo.phone);
       } else {
+        console.log("No valid default found, clearing sendTo");
         setSendTo("");
       }
     }
   }, [isOpen, sendMethod, contactInfo]);
 
   const handleSend = async () => {
-    console.log("=== HANDLE SEND CLICKED ===");
-    console.log("Document type:", documentType);
-    console.log("Document ID:", documentId);
-    console.log("Document number:", documentNumber);
-    console.log("Send method:", sendMethod);
-    console.log("Send to:", sendTo);
-    console.log("Total:", total);
+    console.log("=== useSendDialog.handleSend START ===");
+    console.log("Handle send called with:", {
+      documentType,
+      documentId,
+      documentNumber,
+      sendMethod,
+      sendTo,
+      total,
+      customNote
+    });
 
     if (!sendTo.trim()) {
-      toast.error(`Please enter ${sendMethod === "email" ? "email address" : "phone number"}`);
+      const errorMsg = `Please enter ${sendMethod === "email" ? "email address" : "phone number"}`;
+      console.error("Validation error:", errorMsg);
+      toast.error(errorMsg);
       return false;
     }
 
     // Validate format
     if (sendMethod === "email" && !isValidEmail(sendTo.trim())) {
+      console.error("Invalid email format:", sendTo);
       toast.error("Please enter a valid email address");
       return false;
     }
 
     if (sendMethod === "sms" && !isValidPhoneNumber(sendTo.trim())) {
+      console.error("Invalid phone format:", sendTo);
       toast.error("Please enter a valid phone number");
       return false;
     }
 
     // Validate document ID
     if (!documentId) {
+      console.error("Missing document ID");
       toast.error(`${documentType} ID is required`);
       return false;
     }
@@ -87,12 +107,14 @@ export const useSendDialog = ({
         console.log("Saving document before sending...");
         const saveSuccess = await onSave();
         if (!saveSuccess) {
+          console.error("Save failed");
           toast.error("Failed to save document. Please try again.");
           return false;
         }
+        console.log("Document saved successfully");
       }
 
-      console.log("Calling sendDocument with parameters:");
+      console.log("Preparing to call sendDocument...");
       const sendParams = {
         sendMethod,
         sendTo: sendTo.trim(),
@@ -110,20 +132,21 @@ export const useSendDialog = ({
       };
       console.log("Send parameters:", sendParams);
 
-      // Call the sendDocument function with proper parameters
+      console.log("Calling sendDocument function...");
       const result = await sendDocument(sendParams);
-
-      console.log("Send result:", result);
+      console.log("sendDocument result:", result);
 
       if (result.success) {
         console.log(`${documentType} sent successfully!`);
+        toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} sent successfully!`);
         if (onSuccess) {
+          console.log("Calling onSuccess callback");
           onSuccess();
         }
         return true;
       } else {
         const errorMessage = extractErrorMessage(result.error);
-        console.error(`Failed to send ${documentType}: ${errorMessage}`);
+        console.error(`Failed to send ${documentType}:`, errorMessage);
         toast.error(`Failed to send ${documentType}: ${errorMessage}`);
         return false;
       }
@@ -137,6 +160,8 @@ export const useSendDialog = ({
       );
       toast.error(`Failed to send ${documentType}: ${errorMessage}`);
       return false;
+    } finally {
+      console.log("=== useSendDialog.handleSend END ===");
     }
   };
 

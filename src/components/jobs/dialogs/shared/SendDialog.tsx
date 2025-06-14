@@ -37,6 +37,7 @@ export const SendDialog = ({
   onSave,
   useSendingHook
 }: SendDialogProps) => {
+  console.log("=== SendDialog RENDER ===");
   console.log("SendDialog props:", {
     isOpen,
     documentId,
@@ -68,17 +69,47 @@ export const SendDialog = ({
   });
 
   const handleSendClick = async () => {
-    console.log("Send button clicked!");
-    const success = await handleSend();
-    if (success) {
-      console.log("Send successful, closing dialog");
-      onClose();
-    } else {
-      console.log("Send failed, keeping dialog open");
+    console.log("=== SEND BUTTON CLICKED ===");
+    console.log("Button click handler starting...");
+    console.log("Current state:", {
+      sendMethod,
+      sendTo,
+      customNote,
+      isProcessing,
+      documentId,
+      documentNumber
+    });
+    
+    try {
+      console.log("Calling handleSend...");
+      const success = await handleSend();
+      console.log("handleSend returned:", success);
+      
+      if (success) {
+        console.log("Send successful, closing dialog");
+        onClose();
+      } else {
+        console.log("Send failed, keeping dialog open");
+      }
+    } catch (error) {
+      console.error("Error in handleSendClick:", error);
     }
+    
+    console.log("=== SEND BUTTON CLICK COMPLETE ===");
   };
 
-  if (!isOpen) return null;
+  console.log("SendDialog state:", {
+    sendMethod,
+    sendTo,
+    customNote,
+    isProcessing,
+    canSend: !isProcessing && sendTo.trim() && documentId
+  });
+
+  if (!isOpen) {
+    console.log("SendDialog not open, returning null");
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
