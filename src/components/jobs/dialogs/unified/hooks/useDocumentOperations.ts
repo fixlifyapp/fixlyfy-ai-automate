@@ -110,8 +110,8 @@ export const useDocumentOperations = ({
         job_id: String(jobId), // Explicitly convert to string
         total: calculateGrandTotal(),
         status: formData.status || (documentType === 'estimate' ? 'draft' : 'unpaid'),
-        notes: notes || '',
-        date: new Date().toISOString()
+        notes: notes || ''
+        // Removed 'date' field as it doesn't exist in estimates table
       };
 
       const documentData = documentType === 'estimate' 
@@ -122,8 +122,8 @@ export const useDocumentOperations = ({
         : {
             ...baseDocumentData,
             invoice_number: documentNumber,
-            amount_paid: 0,
-            balance: calculateGrandTotal()
+            amount_paid: 0
+            // Removed 'balance' field as it's a generated column
           };
 
       console.log('📦 Document data to save:', documentData);
@@ -274,7 +274,7 @@ export const useDocumentOperations = ({
           job_id: document.job_id,
           estimate_number: document.estimate_number,
           number: document.estimate_number,
-          date: document.date || document.created_at,
+          date: document.created_at, // Use created_at instead of date
           total: document.total,
           amount: document.total,
           status: document.status,
@@ -290,7 +290,7 @@ export const useDocumentOperations = ({
           job_id: document.job_id,
           invoice_number: document.invoice_number,
           number: document.invoice_number,
-          date: document.date || document.created_at,
+          date: document.created_at, // Use created_at instead of date
           total: document.total,
           amount_paid: document.amount_paid || 0,
           balance: (document.total || 0) - (document.amount_paid || 0),
@@ -352,11 +352,11 @@ export const useDocumentOperations = ({
         invoice_number: invoiceNumber,
         total: calculateGrandTotal(),
         amount_paid: 0,
-        balance: calculateGrandTotal(),
+        // Remove balance field as it's generated
         status: 'unpaid',
         notes: notes || existingDocument.notes,
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        date: new Date().toISOString()
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        // Remove date field
       };
 
       console.log('Creating invoice:', invoiceData);
@@ -421,10 +421,10 @@ export const useDocumentOperations = ({
         job_id: invoice.job_id,
         invoice_number: invoice.invoice_number,
         number: invoice.invoice_number,
-        date: invoice.date || invoice.created_at,
+        date: invoice.created_at, // Use created_at instead of date
         total: invoice.total,
         amount_paid: invoice.amount_paid || 0,
-        balance: invoice.balance || invoice.total,
+        balance: (invoice.total || 0) - (invoice.amount_paid || 0),
         status: invoice.status,
         notes: invoice.notes,
         created_at: invoice.created_at,
