@@ -7,6 +7,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Email utility functions
+const formatCompanyNameForEmail = (companyName: string): string => {
+  if (!companyName || typeof companyName !== 'string') {
+    return 'support';
+  }
+
+  return companyName
+    .toLowerCase()
+    .trim()
+    .replace(/[\s\-&+.,()]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 30)
+    || 'support';
+};
+
+const generateFromEmail = (companyName: string): string => {
+  const formattedName = formatCompanyNameForEmail(companyName);
+  return `${formattedName}@fixlify.app`;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -32,6 +54,8 @@ serve(async (req) => {
     if (userError || !userData.user) {
       throw new Error('Failed to authenticate user');
     }
+
+    console.log('send-invoice - Authenticated user ID:', userData.user.id);
 
     const requestBody = await req.json()
     console.log('Request body:', requestBody);
@@ -67,6 +91,17 @@ serve(async (req) => {
     const job = invoice.jobs;
     const client = job?.clients;
 
+    // Get company settings for the user
+    const { data: companySettings, error: settingsError } = await supabaseAdmin
+      .from('company_settings')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error('send-invoice - Error fetching company settings:', settingsError);
+    }
+
     // Generate client portal login token and create portal link
     let portalLink = '';
     if (client?.email) {
@@ -92,6 +127,9 @@ serve(async (req) => {
       ? `Invoice ${invoice.invoice_number} from ${job?.title || 'Your Service Provider'}`
       : `Your Invoice ${invoice.invoice_number} is Ready`;
 
+    const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
+    const fromEmail = `${companyName} <${generateFromEmail(companyName)}>`;
+
     const emailBody = customMessage || `
       Hi ${client?.name || 'valued customer'},
       
@@ -106,10 +144,57 @@ serve(async (req) => {
       Thank you for your business!
     `;
 
-    // Here you would integrate with your email service (Mailgun, SendGrid, etc.)
-    // For now, we'll simulate sending and log the communication
-    console.log('Email would be sent with subject:', subject);
-    console.log('Email body:', emailBody);
+    // Get Mailgun API key
+    const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
+    if (!mailgunApiKey) {
+      console.error('send-invoice - Mailgun API key not found in environment variables');
+      throw new Error('Mailgun API key not configured');
+    }
+
+    // Send email via Mailgun
+    console.log('send-invoice - Sending email via Mailgun');
+    console.log('send-invoice - FROM:', fromEmail);
+    console.log('send-invoice - TO:', recipientEmail);
+    console.log('send-invoice - SUBJECT:', subject);
+
+    const formData = new FormData();
+    formData.append('from', fromEmail);
+    formData.append('to', recipientEmail);
+    formData.append('subject', subject);
+    formData.append('text', emailBody);
+    formData.append('o:tracking', 'yes');
+    formData.append('o:tracking-clicks', 'yes');
+    formData.append('o:tracking-opens', 'yes');
+
+    const mailgunUrl = 'https://api.mailgun.net/v3/fixlify.app/messages';
+    const basicAuth = btoa(`api:${mailgunApiKey}`);
+
+    const mailgunResponse = await fetch(mailgunUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`
+      },
+      body: formData
+    });
+
+    const responseText = await mailgunResponse.text();
+    console.log('send-invoice - Mailgun response status:', mailgunResponse.status);
+    console.log('send-invoice - Mailgun response body:', responseText);
+
+    if (!mailgunResponse.ok) {
+      console.error("send-invoice - Mailgun send error:", responseText);
+      throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${responseText}`);
+    }
+
+    let mailgunResult;
+    try {
+      mailgunResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('send-invoice - Error parsing Mailgun response:', parseError);
+      throw new Error('Invalid response from Mailgun API');
+    }
+
+    console.log('send-invoice - Email sent successfully via Mailgun:', mailgunResult);
 
     // Log email communication
     try {
@@ -126,7 +211,8 @@ serve(async (req) => {
           client_name: client?.name,
           client_email: client?.email,
           client_phone: client?.phone,
-          portal_link_included: !!portalLink
+          portal_link_included: !!portalLink,
+          provider_message_id: mailgunResult.id
         });
     } catch (logError) {
       console.warn('Failed to log communication:', logError);
@@ -138,6 +224,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Email sent successfully',
+        messageId: mailgunResult.id,
         portalLinkIncluded: !!portalLink
       }),
       {
