@@ -1,26 +1,29 @@
 
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Payment } from './usePayments';
+import { toast } from 'sonner';
 
-export const usePaymentActions = (jobId: string, refreshPayments: () => void) => {
+export interface PaymentData {
+  invoiceId: string;
+  amount: number;
+  method: string;
+  reference?: string;
+  notes?: string;
+}
+
+export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const generatePaymentNumber = () => {
-    return `PAY-${Date.now()}`;
-  };
-
-  const addPayment = async (paymentData: {
-    invoiceId: string;
-    amount: number;
-    method: string;
-    reference?: string;
-    notes?: string;
-  }): Promise<boolean> => {
+  const addPayment = async (paymentData: PaymentData): Promise<boolean> => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      // Generate payment number
+      const { data: paymentNumber } = await supabase.rpc('generate_next_id', {
+        p_entity_type: 'payment'
+      });
+
+      // Insert payment record
+      const { error: paymentError } = await supabase
         .from('payments')
         .insert({
           invoice_id: paymentData.invoiceId,
@@ -28,41 +31,48 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
           method: paymentData.method,
           reference: paymentData.reference,
           notes: paymentData.notes,
-          payment_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
-          payment_number: generatePaymentNumber(),
+          payment_number: paymentNumber,
           status: 'completed'
         });
 
-      if (error) throw error;
+      if (paymentError) throw paymentError;
 
-      // Update invoice status and amounts
-      const { data: invoice } = await supabase
+      // Update invoice amount_paid and status
+      const { data: invoice, error: fetchError } = await supabase
         .from('invoices')
         .select('total, amount_paid')
         .eq('id', paymentData.invoiceId)
         .single();
 
-      if (invoice) {
-        const newAmountPaid = (invoice.amount_paid || 0) + paymentData.amount;
-        const newBalance = invoice.total - newAmountPaid;
-        const newStatus = newBalance <= 0 ? 'paid' : 'partial';
+      if (fetchError) throw fetchError;
 
-        await supabase
-          .from('invoices')
-          .update({
-            amount_paid: newAmountPaid,
-            balance: newBalance,
-            status: newStatus
-          })
-          .eq('id', paymentData.invoiceId);
+      const newAmountPaid = (invoice.amount_paid || 0) + paymentData.amount;
+      const newBalance = invoice.total - newAmountPaid;
+      
+      let newStatus = 'unpaid';
+      if (newBalance <= 0) {
+        newStatus = 'paid';
+      } else if (newAmountPaid > 0) {
+        newStatus = 'partial';
       }
 
-      toast.success('Payment recorded successfully');
-      refreshPayments();
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          amount_paid: newAmountPaid,
+          status: newStatus,
+          paid_at: newBalance <= 0 ? new Date().toISOString() : null
+        })
+        .eq('id', paymentData.invoiceId);
+
+      if (updateError) throw updateError;
+
+      toast.success('Payment recorded successfully!');
+      if (onSuccess) onSuccess();
       return true;
     } catch (error) {
-      console.error('Error adding payment:', error);
-      toast.error('Failed to record payment');
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment. Please try again.');
       return false;
     } finally {
       setIsProcessing(false);
@@ -75,55 +85,67 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
       // Get payment details
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
-        .select('amount, invoice_id')
+        .select('*')
         .eq('id', paymentId)
         .single();
 
-      if (paymentError || !payment) throw paymentError;
+      if (paymentError) throw paymentError;
 
-      // Create refund record
+      // Create refund record (negative amount)
+      const { data: refundNumber } = await supabase.rpc('generate_next_id', {
+        p_entity_type: 'payment'
+      });
+
       const { error: refundError } = await supabase
         .from('payments')
         .insert({
           invoice_id: payment.invoice_id,
-          amount: -payment.amount,
-          method: 'refund',
-          reference: `Refund for payment ${paymentId}`,
-          payment_date: new Date().toISOString().split('T')[0],
-          payment_number: generatePaymentNumber(),
+          amount: -Math.abs(payment.amount),
+          method: payment.method,
+          reference: `Refund of ${payment.payment_number}`,
+          notes: `Refund of payment ${payment.payment_number}`,
+          payment_number: refundNumber,
           status: 'completed'
         });
 
       if (refundError) throw refundError;
 
-      // Update invoice amounts
-      const { data: invoice } = await supabase
+      // Update invoice amount_paid and status
+      const { data: invoice, error: fetchError } = await supabase
         .from('invoices')
         .select('total, amount_paid')
         .eq('id', payment.invoice_id)
         .single();
 
-      if (invoice) {
-        const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
-        const newBalance = invoice.total - newAmountPaid;
-        const newStatus = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
+      if (fetchError) throw fetchError;
 
-        await supabase
-          .from('invoices')
-          .update({
-            amount_paid: Math.max(0, newAmountPaid),
-            balance: newBalance,
-            status: newStatus
-          })
-          .eq('id', payment.invoice_id);
+      const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
+      const newBalance = invoice.total - newAmountPaid;
+      
+      let newStatus = 'unpaid';
+      if (newBalance <= 0) {
+        newStatus = 'paid';
+      } else if (newAmountPaid > 0) {
+        newStatus = 'partial';
       }
 
-      toast.success('Payment refunded successfully');
-      refreshPayments();
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          amount_paid: Math.max(0, newAmountPaid),
+          status: newStatus,
+          paid_at: newBalance <= 0 ? null : invoice.total === newAmountPaid ? new Date().toISOString() : null
+        })
+        .eq('id', payment.invoice_id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Payment refunded successfully!');
+      if (onSuccess) onSuccess();
       return true;
     } catch (error) {
       console.error('Error refunding payment:', error);
-      toast.error('Failed to refund payment');
+      toast.error('Failed to refund payment. Please try again.');
       return false;
     } finally {
       setIsProcessing(false);
@@ -136,50 +158,56 @@ export const usePaymentActions = (jobId: string, refreshPayments: () => void) =>
       // Get payment details first
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
-        .select('amount, invoice_id')
+        .select('*')
         .eq('id', paymentId)
         .single();
 
-      if (paymentError || !payment) throw paymentError;
+      if (paymentError) throw paymentError;
 
       // Delete the payment
-      const { error } = await supabase
+      const { error: deleteError } = await supabase
         .from('payments')
         .delete()
         .eq('id', paymentId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      // Update invoice amounts if payment was positive (not a refund)
-      if (payment.amount > 0) {
-        const { data: invoice } = await supabase
-          .from('invoices')
-          .select('total, amount_paid')
-          .eq('id', payment.invoice_id)
-          .single();
+      // Update invoice amount_paid and status
+      const { data: invoice, error: fetchError } = await supabase
+        .from('invoices')
+        .select('total, amount_paid')
+        .eq('id', payment.invoice_id)
+        .single();
 
-        if (invoice) {
-          const newAmountPaid = Math.max(0, (invoice.amount_paid || 0) - payment.amount);
-          const newBalance = invoice.total - newAmountPaid;
-          const newStatus = newAmountPaid <= 0 ? 'unpaid' : newBalance <= 0 ? 'paid' : 'partial';
+      if (fetchError) throw fetchError;
 
-          await supabase
-            .from('invoices')
-            .update({
-              amount_paid: newAmountPaid,
-              balance: newBalance,
-              status: newStatus
-            })
-            .eq('id', payment.invoice_id);
-        }
+      const newAmountPaid = (invoice.amount_paid || 0) - payment.amount;
+      const newBalance = invoice.total - newAmountPaid;
+      
+      let newStatus = 'unpaid';
+      if (newBalance <= 0) {
+        newStatus = 'paid';
+      } else if (newAmountPaid > 0) {
+        newStatus = 'partial';
       }
 
-      toast.success('Payment deleted successfully');
-      refreshPayments();
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          amount_paid: Math.max(0, newAmountPaid),
+          status: newStatus,
+          paid_at: newBalance <= 0 ? null : null
+        })
+        .eq('id', payment.invoice_id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Payment deleted successfully!');
+      if (onSuccess) onSuccess();
       return true;
     } catch (error) {
       console.error('Error deleting payment:', error);
-      toast.error('Failed to delete payment');
+      toast.error('Failed to delete payment. Please try again.');
       return false;
     } finally {
       setIsProcessing(false);

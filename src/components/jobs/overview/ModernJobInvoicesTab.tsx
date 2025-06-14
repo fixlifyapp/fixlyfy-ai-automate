@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,13 +8,14 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
 import { UniversalSendDialog } from "../dialogs/shared/UniversalSendDialog";
-import { InvoicePaymentDialog } from "../dialogs/invoice-builder/InvoicePaymentDialog";
 import { InvoicePreviewWindow } from "../dialogs/InvoicePreviewWindow";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useJobData } from "../dialogs/unified/hooks/useJobData";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { UnifiedPaymentDialog } from "../dialogs/UnifiedPaymentDialog";
 
 interface ModernJobInvoicesTabProps {
   jobId: string;
@@ -356,7 +358,7 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
             onSuccess={handleSendSuccess}
           />
 
-          <InvoicePaymentDialog
+          <UnifiedPaymentDialog
             isOpen={showPaymentDialog}
             onClose={() => setShowPaymentDialog(false)}
             invoice={selectedInvoice}
