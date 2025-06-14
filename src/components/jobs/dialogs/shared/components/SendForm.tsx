@@ -20,7 +20,7 @@ export const SendForm = ({
   onCustomNoteChange
 }: SendFormProps) => {
   return (
-    <>
+    <div className="space-y-4">
       <div>
         <Label htmlFor="sendTo">
           {sendMethod === "email" ? "Email Address" : "Phone Number"}
@@ -28,22 +28,22 @@ export const SendForm = ({
         <Input
           id="sendTo"
           type={sendMethod === "email" ? "email" : "tel"}
-          placeholder={sendMethod === "email" ? "client@example.com" : "+1234567890"}
+          placeholder={sendMethod === "email" ? "Enter email address" : "Enter phone number"}
           value={sendTo}
           onChange={(e) => onSendToChange(e.target.value)}
         />
       </div>
 
       <div>
-        <Label htmlFor="customNote">Custom Note (Optional)</Label>
+        <Label htmlFor="customNote">Custom Message (Optional)</Label>
         <Textarea
           id="customNote"
-          placeholder="Add a personal note to include with the document..."
+          placeholder="Add a custom message..."
           value={customNote}
           onChange={(e) => onCustomNoteChange(e.target.value)}
           rows={3}
         />
       </div>
-    </>
+    </div>
   );
 };
