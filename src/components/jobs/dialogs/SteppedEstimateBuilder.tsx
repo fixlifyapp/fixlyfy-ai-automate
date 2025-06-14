@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { EstimateUpsellStep } from "./estimate-builder/EstimateUpsellStep";
 import { UniversalSendDialog } from "./shared/UniversalSendDialog";
 import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
+import { useEstimateSending } from "./estimate-builder/hooks/useEstimateSending";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { generateNextId } from "@/utils/idGeneration";
@@ -73,7 +73,7 @@ export const SteppedEstimateBuilder = ({
     open
   });
 
-  // Create job context for AI recommendations
+  // Create job context for AI recommendations - now includes estimateId
   const jobContext = {
     job_type: existingEstimate?.job_type || 'General Service',
     service_category: existingEstimate?.service_category || 'Maintenance',
@@ -130,82 +130,21 @@ export const SteppedEstimateBuilder = ({
     try {
       console.log("💾 Saving estimate before continuing to upsell step...");
       
-      // Create estimate data manually instead of using saveDocumentChanges to avoid database conflicts
-      const estimateData = {
-        job_id: jobId,
-        estimate_number: documentNumber,
-        total: calculateGrandTotal(),
-        subtotal: calculateSubtotal(),
-        tax_rate: taxRate,
-        tax_amount: calculateTotalTax(),
-        status: existingEstimate?.status || 'draft',
-        notes: notes || null
-      };
-
-      let estimate;
+      // Always save the estimate, whether it's new or existing
+      const estimate = await saveDocumentChanges();
       
-      if (existingEstimate?.id) {
-        // Update existing estimate
-        const { data, error } = await supabase
-          .from('estimates')
-          .update(estimateData)
-          .eq('id', existingEstimate.id)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        estimate = data;
+      if (estimate) {
+        setSavedEstimate(estimate);
+        setEstimateCreated(true);
+        console.log("✅ Estimate saved successfully:", estimate.id);
+        toast.success("Estimate saved successfully!");
+        
+        // Move to upsell step
+        setCurrentStep("upsell");
       } else {
-        // Create new estimate
-        const { data, error } = await supabase
-          .from('estimates')
-          .insert(estimateData)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        estimate = data;
+        toast.error("Failed to save estimate. Please try again.");
+        return;
       }
-
-      // Save line items
-      if (lineItems.length > 0) {
-        // Delete existing line items if updating
-        if (existingEstimate?.id) {
-          await supabase
-            .from('line_items')
-            .delete()
-            .eq('parent_id', estimate.id)
-            .eq('parent_type', 'estimate');
-        }
-
-        // Insert new line items
-        const itemsToInsert = lineItems.map(item => ({
-          parent_id: estimate.id,
-          parent_type: 'estimate',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('line_items')
-          .insert(itemsToInsert);
-
-        if (itemsError) {
-          console.error('Error saving line items:', itemsError);
-          throw itemsError;
-        }
-      }
-      
-      setSavedEstimate(estimate);
-      setEstimateCreated(true);
-      console.log("✅ Estimate saved successfully:", estimate.id);
-      toast.success("Estimate saved successfully!");
-      
-      // Move to upsell step
-      setCurrentStep("upsell");
-      
     } catch (error: any) {
       console.error("Error in handleSaveAndContinue:", error);
       toast.error("Failed to save estimate: " + (error.message || "Unknown error"));
@@ -216,7 +155,8 @@ export const SteppedEstimateBuilder = ({
     setSelectedUpsells(prev => [...prev, ...upsells]);
     setUpsellNotes(notes);
     
-    // Update notes if needed
+    // Don't add line items here since they're already saved in the upsell step
+    // Just update notes if needed
     if (notes.trim() && savedEstimate?.id) {
       try {
         console.log("💾 Updating estimate notes...");
@@ -238,6 +178,19 @@ export const SteppedEstimateBuilder = ({
     }
     
     setCurrentStep("send");
+  };
+
+  const handleSaveAndSend = async () => {
+    try {
+      const savedEstimate = await saveDocumentChanges();
+      if (savedEstimate && onEstimateCreated) {
+        onEstimateCreated();
+      }
+      return savedEstimate !== null;
+    } catch (error) {
+      console.error("Error saving estimate:", error);
+      return false;
+    }
   };
 
   const handleSendSuccess = () => {
@@ -282,47 +235,7 @@ export const SteppedEstimateBuilder = ({
 
     try {
       console.log("💾 Saving estimate for later...");
-      
-      // Create estimate data manually
-      const estimateData = {
-        job_id: jobId,
-        estimate_number: documentNumber,
-        total: calculateGrandTotal(),
-        subtotal: calculateSubtotal(),
-        tax_rate: taxRate,
-        tax_amount: calculateTotalTax(),
-        status: 'draft',
-        notes: notes || null
-      };
-
-      const { data, error } = await supabase
-        .from('estimates')
-        .insert(estimateData)
-        .select()
-        .single();
-        
-      if (error) throw error;
-
-      // Save line items
-      if (lineItems.length > 0) {
-        const itemsToInsert = lineItems.map(item => ({
-          parent_id: data.id,
-          parent_type: 'estimate',
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          taxable: item.taxable
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('line_items')
-          .insert(itemsToInsert);
-
-        if (itemsError) {
-          console.error('Error saving line items:', itemsError);
-        }
-      }
-      
+      await saveDocumentChanges();
       toast.success("Estimate saved as draft");
       onOpenChange(false);
       
@@ -335,7 +248,7 @@ export const SteppedEstimateBuilder = ({
     }
   };
 
-  // Step indicator logic
+  // Step indicator logic matching invoice builder
   const steps = [
     { number: 1, title: "Items & Pricing", description: "Add line items and set pricing" },
     { number: 2, title: "Additional Services", description: "Add warranties and extras" },
@@ -357,7 +270,7 @@ export const SteppedEstimateBuilder = ({
 
   const stepTitles = {
     items: existingEstimate ? "Edit Estimate" : "Create Estimate",
-    upsell: "Enhance Your Service", 
+    upsell: "Enhance Your Service",
     send: "Send Estimate"
   };
 
@@ -376,7 +289,7 @@ export const SteppedEstimateBuilder = ({
               {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
             </DialogTitle>
             
-            {/* Step Indicator */}
+            {/* Step Indicator matching invoice builder */}
             <div className="flex items-center justify-center space-x-4 py-4">
               {steps.map((step, index) => (
                 <div key={step.number} className="flex items-center">
