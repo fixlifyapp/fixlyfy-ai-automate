@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,8 +86,16 @@ export const SendDialog = ({
     }
 
     try {
+      console.log("=== SENDING DOCUMENT ===");
+      console.log("Document type:", documentType);
+      console.log("Document ID:", documentId);
+      console.log("Document number:", documentNumber);
+      console.log("Send method:", sendMethod);
+      console.log("Send to:", sendTo);
+
       // Save document first if needed
       if (onSave) {
+        console.log("Saving document before sending...");
         const saveSuccess = await onSave();
         if (!saveSuccess) {
           toast.error("Failed to save document");
@@ -94,6 +103,7 @@ export const SendDialog = ({
         }
       }
 
+      // Call the sendDocument function with proper parameters
       const result = await sendDocument({
         sendMethod,
         sendTo: sendTo.trim(),
@@ -102,12 +112,15 @@ export const SendDialog = ({
           [documentType + '_number']: documentNumber,
           total: total
         },
-        lineItems: [],
+        lineItems: [], // Line items are handled by the document save process
         contactInfo,
         customNote: customNote.trim(),
-        jobId: documentId,
-        existingDocumentId: documentId
+        jobId: documentId, // This might be estimate/invoice ID, the hook will handle it
+        existingDocumentId: documentId,
+        onSave: onSave || (() => Promise.resolve(true))
       });
+
+      console.log("Send result:", result);
 
       if (result.success) {
         toast.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} sent successfully!`);
@@ -116,10 +129,12 @@ export const SendDialog = ({
         } else {
           onClose();
         }
+      } else {
+        toast.error(`Failed to send ${documentType}: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error(`Error sending ${documentType}:`, error);
-      toast.error(`Failed to send ${documentType}`);
+      toast.error(`Failed to send ${documentType}: ${error.message || 'Unknown error'}`);
     }
   };
 
