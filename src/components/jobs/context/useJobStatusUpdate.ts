@@ -1,66 +1,36 @@
 
-import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { recordStatusChange } from "@/services/jobHistoryService";
-import { useRBAC } from "@/components/auth/RBACProvider";
 
-export const useJobStatusUpdate = (jobId: string, onSuccess?: () => void) => {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const { currentUser } = useRBAC();
-
+export const useJobStatusUpdate = (jobId: string, refreshJob: () => void) => {
   const updateJobStatus = async (newStatus: string) => {
-    if (!jobId || isUpdating) return;
-
-    setIsUpdating(true);
+    if (!jobId) return;
     
     try {
-      // Get current status first
-      const { data: currentJob, error: fetchError } = await supabase
-        .from('jobs')
-        .select('status')
-        .eq('id', jobId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const oldStatus = currentJob?.status;
-
-      // Update the job status
+      console.log('Updating job status:', { jobId, newStatus });
+      
+      // Update job status in database
       const { error } = await supabase
         .from('jobs')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: newStatus })
         .eq('id', jobId);
-
-      if (error) throw error;
-
-      // Log the status change to job history
-      if (oldStatus && oldStatus !== newStatus) {
-        await recordStatusChange(
-          jobId,
-          oldStatus,
-          newStatus,
-          currentUser?.name || 'Unknown User',
-          currentUser?.id
-        );
+        
+      if (error) {
+        console.error("Error updating job status:", error);
+        toast.error("Failed to update job status");
+        return;
       }
-
+      
       toast.success(`Job status updated to ${newStatus}`);
-      onSuccess?.();
+      
+      // Refresh job data
+      refreshJob();
+      
     } catch (error) {
-      console.error('Error updating job status:', error);
-      toast.error('Failed to update job status');
-      throw error;
-    } finally {
-      setIsUpdating(false);
+      console.error("Error in updateJobStatus:", error);
+      toast.error("Failed to update job status");
     }
   };
 
-  return {
-    updateJobStatus,
-    isUpdating
-  };
+  return { updateJobStatus };
 };

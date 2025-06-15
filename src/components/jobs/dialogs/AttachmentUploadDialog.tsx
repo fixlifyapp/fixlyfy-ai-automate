@@ -1,131 +1,172 @@
 
-import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState, useRef, ChangeEvent } from "react";
 import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
-import { useJobHistoryIntegration } from "@/hooks/useJobHistoryIntegration";
+import { FileText, X, Upload } from "lucide-react";
+import { useJobAttachments } from "@/hooks/useJobAttachments";
 
 interface AttachmentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   jobId: string;
-  onSuccess?: () => void;
-  onUploadSuccess?: () => void; // Added for backward compatibility
+  onUploadSuccess?: () => void;
 }
 
-export const AttachmentUploadDialog = ({
+export function AttachmentUploadDialog({
   open,
   onOpenChange,
   jobId,
-  onSuccess,
-  onUploadSuccess
-}: AttachmentUploadDialogProps) => {
-  const [uploading, setUploading] = useState(false);
+  onUploadSuccess,
+}: AttachmentUploadDialogProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const { logFileAttached } = useJobHistoryIntegration();
-
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setSelectedFiles(prev => [...prev, ...files]);
-  }, []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadAttachments, isUploading } = useJobAttachments(jobId);
+  
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+      toast.success(`${newFiles.length} file(s) selected`);
+    }
+  };
 
   const handleRemoveFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) return;
-
-    setUploading(true);
-    try {
-      for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `job-attachments/${jobId}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('job-attachments')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        // Get the public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('job-attachments')
-          .getPublicUrl(filePath);
-
-        // Save to database
-        const { error: dbError } = await supabase
-          .from('job_attachments')
-          .insert({
-            job_id: jobId,
-            file_name: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type
-          });
-
-        if (dbError) throw dbError;
-
-        // Log to job history
-        await logFileAttached(jobId, file.name, publicUrl);
-      }
-
-      toast.success(`${selectedFiles.length} file(s) uploaded successfully`);
-      onSuccess?.();
-      onUploadSuccess?.(); // Call both for backward compatibility
-      onOpenChange(false);
-      setSelectedFiles([]);
-    } catch (error) {
-      console.error('Error uploading files:', error);
-      toast.error('Failed to upload files');
-    } finally {
-      setUploading(false);
+    if (selectedFiles.length === 0) {
+      toast.error("Please select files to upload");
+      return;
     }
+
+    console.log("Starting upload for job:", jobId, "Files:", selectedFiles.length);
+    const success = await uploadAttachments(selectedFiles);
+    
+    if (success) {
+      console.log("Upload successful, clearing files and closing dialog");
+      setSelectedFiles([]);
+      onOpenChange(false);
+      
+      // Always call onUploadSuccess to trigger refresh
+      if (onUploadSuccess) {
+        console.log("Calling onUploadSuccess callback");
+        onUploadSuccess();
+      }
+      
+      // Add a small delay to ensure the upload is processed
+      setTimeout(() => {
+        console.log("Upload process completed");
+      }, 500);
+    } else {
+      console.error("Upload failed");
+    }
+  };
+
+  const handleCancel = () => {
+    setSelectedFiles([]);
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Upload Attachments</DialogTitle>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <input
-            type="file"
-            id="attachment"
-            className="hidden"
-            multiple
-            onChange={handleFileSelect}
-          />
-          <Button asChild variant="outline">
-            <label htmlFor="attachment" className="cursor-pointer w-full">
-              <Upload className="h-4 w-4 mr-2" />
-              Select Files
-            </label>
-          </Button>
-
-          {selectedFiles.length > 0 && (
-            <div className="space-y-2">
+        <div className="py-4 space-y-6">
+          <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+            <Input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.csv,.xls,.xlsx"
+            />
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              <Upload size={16} className="mr-2" />
+              Choose Files
+            </Button>
+            <p className="mt-2 text-sm text-gray-500">
+              Or drag and drop files here
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Supported formats: PDF, JPEG, PNG, DOC, DOCX, TXT, CSV, XLS, XLSX
+            </p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="mb-2 block">
+              Selected Files ({selectedFiles.length} files)
+            </Label>
+            
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between rounded-md border p-2">
-                  <span className="text-sm font-medium">{file.name}</span>
-                  <Button variant="ghost" size="sm" onClick={() => handleRemoveFile(index)}>
-                    <X className="h-4 w-4" />
+                <div 
+                  key={index} 
+                  className="flex items-center justify-between p-2 border border-gray-200 rounded-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText size={16} className="text-gray-500" />
+                    <span className="text-sm">{file.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {formatFileSize(file.size)}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveFile(index)}
+                    disabled={isUploading}
+                  >
+                    <X size={16} />
                   </Button>
                 </div>
               ))}
+              
+              {selectedFiles.length === 0 && (
+                <p className="text-sm text-gray-500">No files selected</p>
+              )}
             </div>
-          )}
+          </div>
         </div>
-
-        <Button onClick={handleUpload} disabled={uploading || selectedFiles.length === 0} className="w-full">
-          {uploading ? 'Uploading...' : 'Upload'}
-        </Button>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel} disabled={isUploading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleUpload} 
+            disabled={selectedFiles.length === 0 || isUploading}
+          >
+            {isUploading ? "Uploading..." : "Upload Files"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
+}

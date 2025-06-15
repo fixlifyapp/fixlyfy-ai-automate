@@ -47,7 +47,6 @@ export const ModalRenderer = () => {
       return <AssignTechnicianDialog 
         {...commonProps} 
         {...modalProps}
-        jobId={modalProps.jobId}
         selectedJobs={modalProps.selectedJobs || []}
         onSuccess={modalProps.onSuccess || (() => {})}
       />;
@@ -140,16 +139,15 @@ export const ModalRenderer = () => {
       return <ConvertToInvoiceDialog 
         {...commonProps} 
         {...modalProps}
-        estimate={modalProps.estimate}
-        onSuccess={modalProps.onSuccess || (() => {})}
+        onConfirm={modalProps.onConfirm || (() => {})}
       />;
       
     case "jobDetailsEdit":
       return <JobDetailsEditDialog 
         {...commonProps} 
         {...modalProps}
-        jobId={modalProps.jobId || ""}
-        onSuccess={modalProps.onSuccess || (() => {})}
+        initialDescription={modalProps.initialDescription || ""}
+        onSave={modalProps.onSave || (() => {})}
       />;
 
     default:
