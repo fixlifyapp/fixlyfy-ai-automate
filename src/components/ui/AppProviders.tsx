@@ -1,6 +1,5 @@
 
 import { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RBACProvider } from '@/components/auth/RBACProvider';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
@@ -12,32 +11,20 @@ interface AppProvidersProps {
   children: ReactNode;
 }
 
-// Create a query client instance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
-});
-
 export const AppProviders = ({ children }: AppProvidersProps) => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ClientPortalAuthProvider>
-          <RBACProvider>
-            <GlobalRealtimeProvider>
-              <MessageProvider>
-                <ModalProvider>
-                  {children}
-                </ModalProvider>
-              </MessageProvider>
-            </GlobalRealtimeProvider>
-          </RBACProvider>
-        </ClientPortalAuthProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <ClientPortalAuthProvider>
+        <RBACProvider>
+          <GlobalRealtimeProvider>
+            <MessageProvider>
+              <ModalProvider>
+                {children}
+              </ModalProvider>
+            </MessageProvider>
+          </GlobalRealtimeProvider>
+        </RBACProvider>
+      </ClientPortalAuthProvider>
+    </AuthProvider>
   );
 };
