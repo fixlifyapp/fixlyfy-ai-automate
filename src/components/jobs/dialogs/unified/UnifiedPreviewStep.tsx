@@ -110,6 +110,42 @@ export const UnifiedPreviewStep = ({
 
   const documentNumber = (document as any).estimate_number || (document as any).invoice_number || '';
 
+  // Calculate values using available properties or fallback to calculation functions
+  const calculateSubtotal = () => {
+    // Try to use existing subtotal property first, then fallback to calculation
+    const existingSubtotal = (document as any).subtotal;
+    if (existingSubtotal !== undefined && existingSubtotal !== null) {
+      return existingSubtotal;
+    }
+    
+    // Fallback: calculate from items
+    if (Array.isArray(document.items)) {
+      return document.items.reduce((sum: number, item: any) => {
+        const quantity = item.quantity || 1;
+        const unitPrice = item.unitPrice || item.unit_price || 0;
+        return sum + (quantity * unitPrice);
+      }, 0);
+    }
+    return 0;
+  };
+
+  const calculateTotalTax = () => {
+    // Try to use existing tax_amount property first
+    const existingTax = (document as any).tax_amount;
+    if (existingTax !== undefined && existingTax !== null) {
+      return existingTax;
+    }
+    
+    // Fallback: calculate from subtotal and tax rate
+    const taxRate = document.tax_rate || 13;
+    const subtotal = calculateSubtotal();
+    return (subtotal * taxRate) / 100;
+  };
+
+  const calculateGrandTotal = () => {
+    return document.total || (calculateSubtotal() + calculateTotalTax());
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -127,9 +163,9 @@ export const UnifiedPreviewStep = ({
               total: (item.quantity || 1) * (item.unitPrice || item.unit_price || 0)
             })) : []}
             taxRate={document.tax_rate || 13}
-            calculateSubtotal={() => document.subtotal || 0}
-            calculateTotalTax={() => document.tax_amount || 0}
-            calculateGrandTotal={() => document.total || 0}
+            calculateSubtotal={calculateSubtotal}
+            calculateTotalTax={calculateTotalTax}
+            calculateGrandTotal={calculateGrandTotal}
             notes={document.notes || ''}
             clientInfo={clientInfo}
             jobId={jobId}
