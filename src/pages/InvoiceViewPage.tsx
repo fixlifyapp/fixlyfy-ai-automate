@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,7 +68,27 @@ export default function InvoiceViewPage() {
 
       if (invoiceError) throw invoiceError;
 
-      setInvoice(invoiceData);
+      // Parse items field properly - handle both string and array cases
+      let parsedItems: any[] = [];
+      if (invoiceData.items) {
+        if (typeof invoiceData.items === 'string') {
+          try {
+            parsedItems = JSON.parse(invoiceData.items);
+          } catch (e) {
+            console.warn('Failed to parse invoice items JSON:', e);
+            parsedItems = [];
+          }
+        } else if (Array.isArray(invoiceData.items)) {
+          parsedItems = invoiceData.items;
+        }
+      }
+
+      const formattedInvoice: Invoice = {
+        ...invoiceData,
+        items: parsedItems
+      };
+
+      setInvoice(formattedInvoice);
 
       // Fetch job details
       if (invoiceData.job_id) {
