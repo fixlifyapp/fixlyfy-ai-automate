@@ -167,6 +167,16 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
+  const handleSendDialogClose = () => {
+    // Return to the upsell step instead of closing the entire dialog
+    setCurrentStep("upsell");
+  };
+
+  const handleSendSuccess = () => {
+    // Close the entire dialog after successful send
+    onOpenChange(false);
+  };
+
   const handleSaveForLater = async () => {
     if (lineItems.length === 0) {
       onOpenChange(false);
@@ -337,13 +347,13 @@ export const SteppedInvoiceBuilder = ({
       
       <UniversalSendDialog
         isOpen={currentStep === "send"}
-        onClose={() => onOpenChange(false)}
+        onClose={handleSendDialogClose}
         documentType="invoice"
         documentId={getCurrentInvoiceId()}
         documentNumber={documentNumber}
         total={calculateGrandTotal()}
         contactInfo={getClientInfo()}
-        onSuccess={() => onOpenChange(false)}
+        onSuccess={handleSendSuccess}
       />
     </>
   );
