@@ -7,26 +7,120 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Email utility functions
-const formatCompanyNameForEmail = (companyName: string): string => {
-  if (!companyName || typeof companyName !== 'string') {
-    return 'support';
-  }
+const createInvoiceEmailTemplate = (data: any) => {
+  const {
+    companyName,
+    companyLogo,
+    companyPhone,
+    companyEmail,
+    clientName,
+    invoiceNumber,
+    total,
+    amountDue,
+    invoiceLink,
+    portalLink
+  } = data;
 
-  return companyName
-    .toLowerCase()
-    .trim()
-    .replace(/[\s\-&+.,()]+/g, '_')
-    .replace(/[^a-z0-9_]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .substring(0, 30)
-    || 'support';
-};
-
-const generateFromEmail = (companyName: string): string => {
-  const formattedName = formatCompanyNameForEmail(companyName);
-  return `${formattedName}@fixlify.app`;
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Ready for Payment</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+    .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px 20px; text-align: center; }
+    .logo { max-height: 60px; margin-bottom: 15px; }
+    .header-text { color: #ffffff; font-size: 24px; font-weight: bold; margin: 0; }
+    .content { padding: 40px 30px; }
+    .greeting { font-size: 18px; color: #374151; margin-bottom: 20px; }
+    .invoice-card { background-color: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center; }
+    .invoice-title { font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
+    .invoice-number { font-size: 16px; color: #6b7280; margin-bottom: 15px; }
+    .invoice-total { font-size: 28px; font-weight: bold; color: #dc2626; margin: 15px 0; }
+    .amount-due { font-size: 18px; color: #dc2626; font-weight: bold; margin: 10px 0; }
+    .portal-button { display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: transform 0.2s; }
+    .portal-button:hover { transform: translateY(-2px); }
+    .alternative-link { margin: 20px 0; padding: 15px; background-color: #f3f4f6; border-radius: 8px; }
+    .alternative-link a { color: #4f46e5; text-decoration: none; word-break: break-all; }
+    .footer { background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .company-info { color: #6b7280; font-size: 14px; line-height: 1.6; }
+    .contact-info { margin-top: 15px; }
+    .contact-info a { color: #4f46e5; text-decoration: none; }
+    .urgent-note { background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0; color: #92400e; }
+    @media (max-width: 600px) {
+      .content { padding: 20px 15px; }
+      .invoice-card { padding: 20px 15px; }
+      .portal-button { padding: 12px 24px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      ${companyLogo ? `<img src="${companyLogo}" alt="${companyName}" class="logo">` : ''}
+      <h1 class="header-text">Invoice Ready for Payment</h1>
+    </div>
+    
+    <div class="content">
+      <p class="greeting">Hi ${clientName || 'valued customer'},</p>
+      
+      <p>Thank you for your business! Your invoice is now ready for payment. Please review the details below.</p>
+      
+      <div class="invoice-card">
+        <div class="invoice-title">Invoice Details</div>
+        <div class="invoice-number">Invoice #${invoiceNumber}</div>
+        <div class="invoice-total">Total: $${total.toFixed(2)}</div>
+        <div class="amount-due">Amount Due: $${amountDue.toFixed(2)}</div>
+        
+        ${portalLink ? `
+          <a href="${portalLink}" class="portal-button">View & Pay Online</a>
+          <div style="margin-top: 15px; color: #6b7280; font-size: 14px;">
+            ✓ Secure online payment<br>
+            ✓ Download PDF<br>
+            ✓ View payment history
+          </div>
+        ` : `
+          <a href="${invoiceLink}" class="portal-button">View Invoice</a>
+        `}
+      </div>
+      
+      ${amountDue > 0 ? `
+        <div class="urgent-note">
+          <strong>⚠️ Payment Required</strong><br>
+          Please remit payment at your earliest convenience to avoid any service interruptions.
+        </div>
+      ` : ''}
+      
+      ${portalLink && invoiceLink ? `
+        <div class="alternative-link">
+          <strong>Alternative link:</strong><br>
+          <a href="${invoiceLink}">${invoiceLink}</a>
+        </div>
+      ` : ''}
+      
+      <p>If you have any questions about this invoice, please don't hesitate to contact us. We appreciate your prompt attention to this matter.</p>
+      
+      <p>Best regards,<br>
+      <strong>${companyName}</strong></p>
+    </div>
+    
+    <div class="footer">
+      <div class="company-info">
+        <strong>${companyName}</strong><br>
+        Professional service you can trust
+      </div>
+      <div class="contact-info">
+        ${companyPhone ? `<div>📞 <a href="tel:${companyPhone}">${companyPhone}</a></div>` : ''}
+        ${companyEmail ? `<div>✉️ <a href="mailto:${companyEmail}">${companyEmail}</a></div>` : ''}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
 };
 
 serve(async (req) => {
@@ -42,13 +136,11 @@ serve(async (req) => {
       throw new Error('No authorization header provided');
     }
 
-    // Use service role client for database access
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the current user
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
@@ -68,7 +160,6 @@ serve(async (req) => {
 
     console.log('Processing email for invoice:', invoiceId, 'to email:', recipientEmail);
 
-    // Get invoice details with proper join
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
       .select(`
@@ -91,7 +182,6 @@ serve(async (req) => {
     const job = invoice.jobs;
     const client = job?.clients;
 
-    // Get company settings for the user
     const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
@@ -111,47 +201,52 @@ serve(async (req) => {
         });
 
         if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
-          console.log('Portal link generated');
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/invoices?id=${invoice.id}`;
+          console.log('Portal link generated for client portal');
         }
       } catch (error) {
         console.warn('Failed to generate portal login token:', error);
       }
     }
 
-    // Create invoice link
     const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
 
-    // Prepare email content
-    const subject = customMessage 
-      ? `Invoice ${invoice.invoice_number} from ${job?.title || 'Your Service Provider'}`
-      : `Your Invoice ${invoice.invoice_number} is Ready`;
-
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
-    const fromEmail = `${companyName} <${generateFromEmail(companyName)}>`;
+    const companyLogo = companySettings?.company_logo_url;
+    const companyPhone = companySettings?.company_phone;
+    const companyEmail = companySettings?.company_email;
 
-    const emailBody = customMessage || `
-      Hi ${client?.name || 'valued customer'},
-      
-      Your invoice ${invoice.invoice_number} is ready for payment.
-      
-      Total: $${invoice.total?.toFixed(2) || '0.00'}
-      Amount Due: $${((invoice.total || 0) - (invoice.amount_paid || 0)).toFixed(2)}
-      
-      View your invoice: ${invoiceLink}
-      ${portalLink ? `\nClient Portal: ${portalLink}` : ''}
-      
-      Thank you for your business!
-    `;
+    const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
 
-    // Get Mailgun API key
+    let subject, emailBody;
+    
+    if (customMessage) {
+      subject = `Invoice ${invoice.invoice_number} from ${companyName}`;
+      emailBody = customMessage;
+    } else {
+      subject = `Your Invoice ${invoice.invoice_number} is Ready`;
+      emailBody = createInvoiceEmailTemplate({
+        companyName,
+        companyLogo,
+        companyPhone,
+        companyEmail,
+        clientName: client?.name,
+        invoiceNumber: invoice.invoice_number,
+        total: invoice.total || 0,
+        amountDue,
+        invoiceLink,
+        portalLink
+      });
+    }
+
+    const fromEmail = `${companyName} <${companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30)}@fixlify.app>`;
+
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
       console.error('send-invoice - Mailgun API key not found in environment variables');
       throw new Error('Mailgun API key not configured');
     }
 
-    // Send email via Mailgun
     console.log('send-invoice - Sending email via Mailgun');
     console.log('send-invoice - FROM:', fromEmail);
     console.log('send-invoice - TO:', recipientEmail);
@@ -161,7 +256,12 @@ serve(async (req) => {
     formData.append('from', fromEmail);
     formData.append('to', recipientEmail);
     formData.append('subject', subject);
-    formData.append('text', emailBody);
+    if (customMessage) {
+      formData.append('text', emailBody);
+    } else {
+      formData.append('html', emailBody);
+      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour invoice ${invoice.invoice_number} is ready for payment.\n\nTotal: $${(invoice.total || 0).toFixed(2)}\nAmount Due: $${amountDue.toFixed(2)}\n\nView your invoice: ${invoiceLink}\n${portalLink ? `\nClient Portal: ${portalLink}` : ''}\n\nThank you for your business!\n\n${companyName}`);
+    }
     formData.append('o:tracking', 'yes');
     formData.append('o:tracking-clicks', 'yes');
     formData.append('o:tracking-opens', 'yes');
@@ -205,7 +305,7 @@ serve(async (req) => {
           communication_type: 'email',
           recipient: recipientEmail,
           subject: subject,
-          content: emailBody,
+          content: customMessage || `Professional invoice email with portal access sent`,
           status: 'sent',
           invoice_number: invoice.invoice_number,
           client_name: client?.name,

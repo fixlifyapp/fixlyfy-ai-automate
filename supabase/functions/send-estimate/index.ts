@@ -7,26 +7,109 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Email utility functions
-const formatCompanyNameForEmail = (companyName: string): string => {
-  if (!companyName || typeof companyName !== 'string') {
-    return 'support';
-  }
+const createEstimateEmailTemplate = (data: any) => {
+  const {
+    companyName,
+    companyLogo,
+    companyPhone,
+    companyEmail,
+    clientName,
+    estimateNumber,
+    total,
+    estimateLink,
+    portalLink
+  } = data;
 
-  return companyName
-    .toLowerCase()
-    .trim()
-    .replace(/[\s\-&+.,()]+/g, '_')
-    .replace(/[^a-z0-9_]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .substring(0, 30)
-    || 'support';
-};
-
-const generateFromEmail = (companyName: string): string => {
-  const formattedName = formatCompanyNameForEmail(companyName);
-  return `${formattedName}@fixlify.app`;
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Estimate is Ready</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; }
+    .logo { max-height: 60px; margin-bottom: 15px; }
+    .header-text { color: #ffffff; font-size: 24px; font-weight: bold; margin: 0; }
+    .content { padding: 40px 30px; }
+    .greeting { font-size: 18px; color: #374151; margin-bottom: 20px; }
+    .estimate-card { background-color: #f8fafc; border: 2px solid #e5e7eb; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center; }
+    .estimate-title { font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
+    .estimate-number { font-size: 16px; color: #6b7280; margin-bottom: 15px; }
+    .estimate-total { font-size: 28px; font-weight: bold; color: #059669; margin: 15px 0; }
+    .portal-button { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: transform 0.2s; }
+    .portal-button:hover { transform: translateY(-2px); }
+    .alternative-link { margin: 20px 0; padding: 15px; background-color: #f3f4f6; border-radius: 8px; }
+    .alternative-link a { color: #4f46e5; text-decoration: none; word-break: break-all; }
+    .footer { background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .company-info { color: #6b7280; font-size: 14px; line-height: 1.6; }
+    .contact-info { margin-top: 15px; }
+    .contact-info a { color: #4f46e5; text-decoration: none; }
+    @media (max-width: 600px) {
+      .content { padding: 20px 15px; }
+      .estimate-card { padding: 20px 15px; }
+      .portal-button { padding: 12px 24px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      ${companyLogo ? `<img src="${companyLogo}" alt="${companyName}" class="logo">` : ''}
+      <h1 class="header-text">Your Estimate is Ready</h1>
+    </div>
+    
+    <div class="content">
+      <p class="greeting">Hi ${clientName || 'valued customer'},</p>
+      
+      <p>We're pleased to present your estimate. Please review the details below and let us know if you have any questions.</p>
+      
+      <div class="estimate-card">
+        <div class="estimate-title">Estimate Details</div>
+        <div class="estimate-number">Estimate #${estimateNumber}</div>
+        <div class="estimate-total">$${total.toFixed(2)}</div>
+        
+        ${portalLink ? `
+          <a href="${portalLink}" class="portal-button">View in Client Portal</a>
+          <div style="margin-top: 15px; color: #6b7280; font-size: 14px;">
+            ✓ Easy online access<br>
+            ✓ Download PDF<br>
+            ✓ View all your documents
+          </div>
+        ` : `
+          <a href="${estimateLink}" class="portal-button">View Estimate</a>
+        `}
+      </div>
+      
+      ${portalLink && estimateLink ? `
+        <div class="alternative-link">
+          <strong>Alternative link:</strong><br>
+          <a href="${estimateLink}">${estimateLink}</a>
+        </div>
+      ` : ''}
+      
+      <p>If you're ready to proceed, please contact us at your earliest convenience. We look forward to working with you!</p>
+      
+      <p>Best regards,<br>
+      <strong>${companyName}</strong></p>
+    </div>
+    
+    <div class="footer">
+      <div class="company-info">
+        <strong>${companyName}</strong><br>
+        Professional service you can trust
+      </div>
+      <div class="contact-info">
+        ${companyPhone ? `<div>📞 <a href="tel:${companyPhone}">${companyPhone}</a></div>` : ''}
+        ${companyEmail ? `<div>✉️ <a href="mailto:${companyEmail}">${companyEmail}</a></div>` : ''}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
 };
 
 serve(async (req) => {
@@ -42,13 +125,11 @@ serve(async (req) => {
       throw new Error('No authorization header provided');
     }
 
-    // Use service role client for database access
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the current user
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
@@ -72,7 +153,6 @@ serve(async (req) => {
       recipientEmail
     });
 
-    // Get estimate details with proper join
     const { data: estimate, error: estimateError } = await supabaseAdmin
       .from('estimates')
       .select(`
@@ -95,8 +175,6 @@ serve(async (req) => {
     const job = estimate.jobs;
     const client = job?.clients;
 
-    // Get company settings for the user
-    console.log('send-estimate - Fetching company settings for user_id:', userData.user.id);
     const { data: companySettings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
@@ -108,7 +186,6 @@ serve(async (req) => {
     }
 
     console.log('send-estimate - Company settings found:', !!companySettings);
-    console.log('send-estimate - Company name from database:', companySettings?.company_name || 'NULL');
 
     // Generate client portal login token and create portal link
     let portalLink = '';
@@ -119,46 +196,49 @@ serve(async (req) => {
         });
 
         if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
-          console.log('Portal link generated');
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/estimates?id=${estimate.id}`;
+          console.log('Portal link generated for client portal');
         }
       } catch (error) {
         console.warn('Failed to generate portal login token:', error);
       }
     }
 
-    // Create estimate link
     const estimateLink = `https://hub.fixlify.app/estimate/view/${estimate.id}`;
 
-    // Prepare email content
-    const subject = customMessage 
-      ? `Estimate ${estimate.estimate_number} from ${job?.title || 'Your Service Provider'}`
-      : `Your Estimate ${estimate.estimate_number} is Ready`;
-
     const companyName = companySettings?.company_name?.trim() || 'Fixlify Services';
-    const fromEmail = `${companyName} <${generateFromEmail(companyName)}>`;
+    const companyLogo = companySettings?.company_logo_url;
+    const companyPhone = companySettings?.company_phone;
+    const companyEmail = companySettings?.company_email;
 
-    const emailBody = customMessage || `
-      Hi ${client?.name || 'valued customer'},
-      
-      Your estimate ${estimate.estimate_number} is ready for review.
-      
-      Total: $${estimate.total?.toFixed(2) || '0.00'}
-      
-      View your estimate: ${estimateLink}
-      ${portalLink ? `\nClient Portal: ${portalLink}` : ''}
-      
-      Thank you for your business!
-    `;
+    let subject, emailBody;
+    
+    if (customMessage) {
+      subject = `Estimate ${estimate.estimate_number} from ${companyName}`;
+      emailBody = customMessage;
+    } else {
+      subject = `Your Estimate ${estimate.estimate_number} is Ready`;
+      emailBody = createEstimateEmailTemplate({
+        companyName,
+        companyLogo,
+        companyPhone,
+        companyEmail,
+        clientName: client?.name,
+        estimateNumber: estimate.estimate_number,
+        total: estimate.total || 0,
+        estimateLink,
+        portalLink
+      });
+    }
 
-    // Get Mailgun API key
+    const fromEmail = `${companyName} <${companyName.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30)}@fixlify.app>`;
+
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
     if (!mailgunApiKey) {
       console.error('send-estimate - Mailgun API key not found in environment variables');
       throw new Error('Mailgun API key not configured');
     }
 
-    // Send email via Mailgun
     console.log('send-estimate - Sending email via Mailgun');
     console.log('send-estimate - FROM:', fromEmail);
     console.log('send-estimate - TO:', recipientEmail);
@@ -168,7 +248,12 @@ serve(async (req) => {
     formData.append('from', fromEmail);
     formData.append('to', recipientEmail);
     formData.append('subject', subject);
-    formData.append('text', emailBody);
+    if (customMessage) {
+      formData.append('text', emailBody);
+    } else {
+      formData.append('html', emailBody);
+      formData.append('text', `Hi ${client?.name || 'valued customer'},\n\nYour estimate ${estimate.estimate_number} is ready for review.\n\nTotal: $${(estimate.total || 0).toFixed(2)}\n\nView your estimate: ${estimateLink}\n${portalLink ? `\nClient Portal: ${portalLink}` : ''}\n\nThank you for your business!\n\n${companyName}`);
+    }
     formData.append('o:tracking', 'yes');
     formData.append('o:tracking-clicks', 'yes');
     formData.append('o:tracking-opens', 'yes');
@@ -212,7 +297,7 @@ serve(async (req) => {
           communication_type: 'email',
           recipient: recipientEmail,
           subject: subject,
-          content: emailBody,
+          content: customMessage || `Professional estimate email with portal access sent`,
           status: 'sent',
           estimate_number: estimate.estimate_number,
           client_name: client?.name,

@@ -20,13 +20,11 @@ serve(async (req) => {
       throw new Error('No authorization header provided');
     }
 
-    // Use service role client for database access
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the current user
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
@@ -44,7 +42,6 @@ serve(async (req) => {
 
     console.log('Processing SMS for invoice:', invoiceId, 'to phone:', recipientPhone);
 
-    // Get invoice details
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
       .select('*')
@@ -57,7 +54,6 @@ serve(async (req) => {
 
     console.log('Invoice found:', invoice.invoice_number);
     
-    // Get job details separately
     const { data: job, error: jobError } = await supabaseAdmin
       .from('jobs')
       .select('*')
@@ -68,7 +64,6 @@ serve(async (req) => {
       console.warn('Could not fetch job details:', jobError);
     }
 
-    // Get client details separately
     let client = null;
     if (job?.client_id) {
       const { data: clientData, error: clientError } = await supabaseAdmin
@@ -82,7 +77,15 @@ serve(async (req) => {
       }
     }
 
-    // Get user's Telnyx phone numbers
+    // Get company settings for branding
+    const { data: companySettings } = await supabaseAdmin
+      .from('company_settings')
+      .select('company_name')
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
+
+    const companyName = companySettings?.company_name || 'Fixlify Services';
+
     const { data: userPhoneNumbers, error: phoneError } = await supabaseAdmin
       .from('telnyx_phone_numbers')
       .select('*')
@@ -97,13 +100,11 @@ serve(async (req) => {
     const fromNumber = userPhoneNumbers[0].phone_number;
     console.log('Using from number:', fromNumber);
 
-    // Get Telnyx API key
     const telnyxApiKey = Deno.env.get('TELNYX_API_KEY');
     if (!telnyxApiKey) {
       throw new Error('Telnyx API key not configured');
     }
 
-    // Clean and format phone numbers
     const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
     const formatForTelnyx = (phone: string) => {
       const cleaned = cleanPhone(phone);
@@ -124,21 +125,32 @@ serve(async (req) => {
         });
 
         if (!tokenError && tokenData) {
-          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}`;
-          console.log('Portal link generated');
+          portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/invoices?id=${invoice.id}`;
+          console.log('Portal link generated for SMS');
         }
       } catch (error) {
         console.warn('Failed to generate portal login token:', error);
       }
     }
 
-    // Create SMS message with portal link
-    const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
-    const smsMessage = message || `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} is ready. Total: $${invoice.total?.toFixed(2) || '0.00'}. View: ${invoiceLink}${portalLink ? ` | Portal: ${portalLink}` : ''}`;
+    // Create SMS message with portal link and improved formatting
+    const amountDue = (invoice.total || 0) - (invoice.amount_paid || 0);
+    
+    let smsMessage;
+    if (message) {
+      smsMessage = message;
+    } else {
+      const invoiceLink = `https://hub.fixlify.app/invoice/view/${invoice.id}`;
+      
+      if (portalLink) {
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. Pay online: ${portalLink}`;
+      } else {
+        smsMessage = `Hi ${client?.name || 'valued customer'}! Your invoice ${invoice.invoice_number} from ${companyName} is ready. Amount Due: $${amountDue.toFixed(2)}. View: ${invoiceLink}`;
+      }
+    }
 
     console.log('SMS message length:', smsMessage.length);
 
-    // Send SMS via Telnyx
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
