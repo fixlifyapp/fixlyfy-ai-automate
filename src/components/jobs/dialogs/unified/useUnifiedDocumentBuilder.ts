@@ -102,7 +102,7 @@ export const useUnifiedDocumentBuilder = ({
     onSyncToInvoice
   });
 
-  // Line item management
+  // Line item management with standardized interface
   const handleAddProduct = useCallback((product: Product) => {
     const newLineItem: LineItem = {
       id: `temp-${Date.now()}`,
@@ -126,6 +126,7 @@ export const useUnifiedDocumentBuilder = ({
     toast.success("Item removed");
   }, [setLineItems]);
 
+  // Standardized update interface to match both estimate and invoice patterns
   const handleUpdateLineItem = useCallback((id: string, field: string, value: any) => {
     setLineItems(prev => prev.map(item => {
       if (item.id === id) {
@@ -164,7 +165,7 @@ export const useUnifiedDocumentBuilder = ({
     calculateTotalMargin,
     calculateMarginPercentage,
 
-    // Line item actions
+    // Line item actions with standardized interface
     handleAddProduct,
     handleRemoveLineItem,
     handleUpdateLineItem,

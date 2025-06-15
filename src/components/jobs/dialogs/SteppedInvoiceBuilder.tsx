@@ -11,7 +11,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { UnifiedItemsStep } from "./unified/UnifiedItemsStep";
 import { InvoiceUpsellStep } from "./invoice-builder/InvoiceUpsellStep";
 import { UniversalSendDialog } from "./shared/UniversalSendDialog";
-import { useInvoiceBuilder } from "../hooks/useInvoiceBuilder";
+import { useUnifiedDocumentBuilder } from "./unified/useUnifiedDocumentBuilder";
 import { useInvoiceSending } from "./shared/hooks/useInvoiceSending";
 import { Estimate } from "@/hooks/useEstimates";
 import { Invoice } from "@/hooks/useInvoices";
@@ -49,50 +49,47 @@ export const SteppedInvoiceBuilder = ({
   // Get job and client data
   const { clientInfo, loading: jobLoading } = useJobData(jobId);
 
+  // Use the unified document builder hook
   const {
-    formData,
     lineItems,
-    taxRate,
-    notes,
-    invoiceNumber,
-    isSubmitting,
     setLineItems,
+    taxRate,
     setTaxRate,
+    notes,
     setNotes,
+    documentNumber,
+    setDocumentNumber,
+    isInitialized,
+    isSubmitting,
     handleAddProduct,
     handleRemoveLineItem,
-    handleUpdateLineItem: originalHandleUpdateLineItem,
+    handleUpdateLineItem,
     calculateSubtotal,
     calculateTotalTax,
     calculateGrandTotal,
-    saveInvoiceChanges,
-    resetForm,
-    initializeFromEstimate,
-    initializeFromInvoice
-  } = useInvoiceBuilder(jobId);
-
-  // Create a wrapper function to match the standardized interface
-  const handleUpdateLineItem = (id: string, field: string, value: any) => {
-    originalHandleUpdateLineItem(id, { [field]: value });
-  };
+    saveDocumentChanges
+  } = useUnifiedDocumentBuilder({
+    documentType: "invoice",
+    existingDocument: existingInvoice,
+    jobId,
+    open,
+    onSyncToInvoice: undefined
+  });
 
   // Initialize form data when dialog opens
   useEffect(() => {
     if (open) {
       if (existingInvoice) {
-        initializeFromInvoice(existingInvoice);
         setInvoiceCreated(true);
         setSavedInvoice(existingInvoice);
       } else if (estimateToConvert) {
-        initializeFromEstimate(estimateToConvert);
-      } else {
-        resetForm();
+        // The unified hook will handle estimate conversion
       }
       setCurrentStep("items");
       setSelectedUpsells([]);
       setUpsellNotes("");
     }
-  }, [open, existingInvoice, estimateToConvert, initializeFromEstimate, initializeFromInvoice, resetForm]);
+  }, [open, existingInvoice, estimateToConvert]);
 
   const handleSaveAndContinue = async () => {
     if (lineItems.length === 0) {
@@ -103,8 +100,7 @@ export const SteppedInvoiceBuilder = ({
     try {
       console.log("💾 Saving invoice before continuing to upsell step...");
       
-      // Always save the invoice, whether it's new or existing
-      const invoice = await saveInvoiceChanges();
+      const invoice = await saveDocumentChanges();
       
       if (invoice) {
         setSavedInvoice(invoice);
@@ -112,7 +108,6 @@ export const SteppedInvoiceBuilder = ({
         console.log("✅ Invoice saved successfully:", invoice.id);
         toast.success("Invoice saved successfully!");
         
-        // Move to upsell step
         setCurrentStep("upsell");
       } else {
         toast.error("Failed to save invoice. Please try again.");
@@ -137,8 +132,6 @@ export const SteppedInvoiceBuilder = ({
     setSelectedUpsells(prev => [...prev, ...upsells]);
     setUpsellNotes(notes);
     
-    // Don't add line items here since they're already saved in the upsell step
-    // Just update notes if needed
     if (notes.trim() && savedInvoice?.id) {
       try {
         console.log("💾 Updating invoice notes...");
@@ -162,22 +155,6 @@ export const SteppedInvoiceBuilder = ({
     setCurrentStep("send");
   };
 
-  const handleSaveAndSend = async () => {
-    setIsCompleting(true);
-    try {
-      const savedInvoice = await saveInvoiceChanges();
-      if (savedInvoice && onInvoiceCreated) {
-        onInvoiceCreated(savedInvoice);
-      }
-      return savedInvoice !== null;
-    } catch (error) {
-      console.error("Error saving invoice:", error);
-      return false;
-    } finally {
-      setIsCompleting(false);
-    }
-  };
-
   const handleDialogClose = () => {
     if (currentStep === "send") {
       setCurrentStep("upsell");
@@ -188,7 +165,6 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
-  // Function to save invoice without continuing (for cancel/close scenarios)
   const handleSaveForLater = async () => {
     if (lineItems.length === 0) {
       onOpenChange(false);
@@ -197,7 +173,7 @@ export const SteppedInvoiceBuilder = ({
 
     try {
       console.log("💾 Saving invoice for later...");
-      const invoice = await saveInvoiceChanges();
+      const invoice = await saveDocumentChanges();
       if (invoice) {
         toast.success("Invoice saved as draft");
         onOpenChange(false);
@@ -212,7 +188,6 @@ export const SteppedInvoiceBuilder = ({
     }
   };
 
-  // Get client info for sending
   const getClientInfo = () => {
     if (clientInfo) {
       return {
@@ -235,16 +210,12 @@ export const SteppedInvoiceBuilder = ({
       case 1:
         return lineItems.length > 0;
       case 2:
-        return true; // Upsell step is always optional
+        return true;
       case 3:
-        return false; // Send step is never "complete" until actually sent
+        return false;
       default:
         return false;
     }
-  };
-
-  const canProceedToNext = () => {
-    return isStepComplete(currentStep === "items" ? 1 : currentStep === "upsell" ? 2 : 3);
   };
 
   const stepTitles = {
@@ -265,10 +236,9 @@ export const SteppedInvoiceBuilder = ({
                 Step {currentStepNumber} of 3
               </span>
               {stepTitles[currentStep]}
-              {invoiceNumber && <span className="text-sm text-muted-foreground">(#{invoiceNumber})</span>}
+              {documentNumber && <span className="text-sm text-muted-foreground">(#{documentNumber})</span>}
             </DialogTitle>
             
-            {/* Step Indicator */}
             <div className="flex items-center justify-center space-x-4 py-4">
               {steps.map((step, index) => (
                 <div key={step.number} className="flex items-center">
@@ -308,7 +278,7 @@ export const SteppedInvoiceBuilder = ({
               <>
                 <UnifiedItemsStep
                   documentType="invoice"
-                  documentNumber={invoiceNumber}
+                  documentNumber={documentNumber}
                   lineItems={lineItems}
                   taxRate={taxRate}
                   notes={notes}
@@ -357,13 +327,12 @@ export const SteppedInvoiceBuilder = ({
         </DialogContent>
       </Dialog>
       
-      {/* Universal Send Dialog for invoices */}
       <UniversalSendDialog
         isOpen={currentStep === "send"}
         onClose={() => onOpenChange(false)}
         documentType="invoice"
         documentId={savedInvoice?.id || existingInvoice?.id || ''}
-        documentNumber={invoiceNumber}
+        documentNumber={documentNumber}
         total={calculateGrandTotal()}
         contactInfo={getClientInfo()}
         onSuccess={() => onOpenChange(false)}

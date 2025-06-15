@@ -29,7 +29,6 @@ export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFo
   };
 
   const handleEditLineItem = (id: string) => {
-    // Implementation for editing line items
     return true;
   };
 
@@ -39,7 +38,7 @@ export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFo
 
   const calculateTotalTax = () => {
     const subtotal = calculateSubtotal();
-    return subtotal * 0.13; // 13% tax rate
+    return subtotal * 0.13;
   };
 
   const calculateGrandTotal = () => {
