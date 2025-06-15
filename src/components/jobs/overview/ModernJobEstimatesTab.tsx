@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,7 @@ export const ModernJobEstimatesTab = ({
   onEstimateConverted, 
   onTabChange 
 }: ModernJobEstimatesTabProps) => {
-  const { estimates, setEstimates, isLoading, refreshEstimates } = useEstimates(jobId);
+  const { estimates, setEstimates, isLoading, refreshEstimates, convertEstimateToInvoice } = useEstimates(jobId);
   const { state, actions } = useEstimateActions(jobId, estimates, setEstimates, refreshEstimates, onEstimateConverted);
   const { clientInfo, loading: jobDataLoading } = useJobData(jobId);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -124,8 +123,7 @@ export const ModernJobEstimatesTab = ({
     setIsConverting(true);
     
     try {
-      actions.setSelectedEstimate(estimate);
-      const success = await actions.confirmConvertToInvoice();
+      const success = await convertEstimateToInvoice(estimate.id);
       
       if (success) {
         console.log('Estimate converted successfully, calling onEstimateConverted');
@@ -146,7 +144,7 @@ export const ModernJobEstimatesTab = ({
   };
 
   const handleConvertToInvoice = async (estimate: any) => {
-    const success = await actions.convertEstimateToInvoice(estimate.id);
+    const success = await convertEstimateToInvoice(estimate.id);
     if (success && onEstimateConverted) {
       onEstimateConverted();
     }

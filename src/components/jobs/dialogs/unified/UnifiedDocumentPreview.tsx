@@ -13,7 +13,7 @@ interface UnifiedDocumentPreviewProps {
   documentType: DocumentType;
   documentNumber: string;
   lineItems: LineItem[];
-  taxRate: number;
+  taxRate?: number; // Make optional since we'll use locked rate
   calculateSubtotal: () => number;
   calculateTotalTax: () => number;
   calculateGrandTotal: () => number;
@@ -24,11 +24,13 @@ interface UnifiedDocumentPreviewProps {
   jobId?: string;
 }
 
+// Lock tax rate to 13%
+const LOCKED_TAX_RATE = 13;
+
 export const UnifiedDocumentPreview = ({
   documentType,
   documentNumber,
   lineItems,
-  taxRate,
   calculateSubtotal,
   calculateTotalTax,
   calculateGrandTotal,
@@ -85,7 +87,7 @@ export const UnifiedDocumentPreview = ({
         jobAddress={jobAddress}
         issueDate={issueDate}
         dueDate={dueDate}
-        taxRate={taxRate}
+        taxRate={LOCKED_TAX_RATE}
         companyInfo={companyInfo}
       />
 
@@ -99,7 +101,7 @@ export const UnifiedDocumentPreview = ({
         subtotal={subtotal}
         tax={tax}
         total={total}
-        taxRate={taxRate}
+        taxRate={LOCKED_TAX_RATE}
       />
 
       {/* Notes Section */}

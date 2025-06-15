@@ -15,6 +15,9 @@ interface InvoiceFormStepProps {
   jobId: string;
 }
 
+// Lock tax rate to 13%
+const LOCKED_TAX_RATE = 13;
+
 export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFormStepProps) => {
   const handleUpdateLineItem = (id: string, field: string, value: any) => {
     const updatedItems = formData.items.map(item => 
@@ -38,7 +41,7 @@ export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFo
 
   const calculateTotalTax = () => {
     const subtotal = calculateSubtotal();
-    return subtotal * 0.13;
+    return subtotal * (LOCKED_TAX_RATE / 100);
   };
 
   const calculateGrandTotal = () => {
@@ -68,8 +71,8 @@ export const InvoiceFormStep = ({ formData, onFormDataChange, jobId }: InvoiceFo
       onEditLineItem={handleEditLineItem}
       onAddEmptyLineItem={() => {}}
       onAddCustomLine={() => {}}
-      taxRate={13}
-      setTaxRate={() => {}}
+      taxRate={LOCKED_TAX_RATE}
+      setTaxRate={() => {}} // No-op since tax rate is locked
       calculateSubtotal={calculateSubtotal}
       calculateTotalTax={calculateTotalTax}
       calculateGrandTotal={calculateGrandTotal}

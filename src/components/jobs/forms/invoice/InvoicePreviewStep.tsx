@@ -14,6 +14,9 @@ interface InvoicePreviewStepProps {
   jobId: string;
 }
 
+// Lock tax rate to 13%
+const LOCKED_TAX_RATE = 13;
+
 export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps) => {
   console.log('=== InvoicePreviewStep Debug ===');
   console.log('JobId received:', jobId);
@@ -26,7 +29,7 @@ export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps)
   const calculateTax = () => {
     return formData.items.reduce((sum: number, item: any) => {
       if (item.taxable) {
-        return sum + (item.quantity * item.unitPrice * 0.13);
+        return sum + (item.quantity * item.unitPrice * (LOCKED_TAX_RATE / 100));
       }
       return sum;
     }, 0);
@@ -41,7 +44,7 @@ export const InvoicePreviewStep = ({ formData, jobId }: InvoicePreviewStepProps)
       documentType="invoice"
       documentNumber={formData.invoiceNumber}
       lineItems={formData.items}
-      taxRate={13}
+      taxRate={LOCKED_TAX_RATE}
       calculateSubtotal={calculateSubtotal}
       calculateTotalTax={calculateTax}
       calculateGrandTotal={calculateTotal}

@@ -2,8 +2,8 @@
 import { Input } from "@/components/ui/input";
 
 interface EstimateSummaryProps {
-  taxRate: number;
-  onTaxRateChange?: (value: string) => void;
+  taxRate?: number; // Make optional since we'll use locked rate
+  onTaxRateChange?: (value: string) => void; // Keep for compatibility but won't be used
   calculateSubtotal?: () => number;
   calculateTotalTax?: () => number;
   calculateGrandTotal?: () => number;
@@ -12,9 +12,10 @@ interface EstimateSummaryProps {
   showMargin?: boolean;
 }
 
+// Lock tax rate to 13%
+const LOCKED_TAX_RATE = 13;
+
 export const EstimateSummary = ({
-  taxRate = 13, // Default to 13%
-  onTaxRateChange,
   calculateSubtotal = () => 0,
   calculateTotalTax = () => 0,
   calculateGrandTotal = () => 0,
@@ -44,7 +45,7 @@ export const EstimateSummary = ({
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <span className="text-muted-foreground mr-2">Tax Rate:</span>
-            <span className="font-medium">13%</span>
+            <span className="font-medium text-blue-600">{LOCKED_TAX_RATE}% (Locked)</span>
           </div>
           <span className="font-medium">${totalTax.toFixed(2)}</span>
         </div>

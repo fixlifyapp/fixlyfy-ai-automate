@@ -4,10 +4,13 @@ import { LineItem } from "../../../builder/types";
 
 interface UseDocumentCalculationsProps {
   lineItems: LineItem[];
-  taxRate: number;
+  taxRate?: number; // Make optional since we'll use locked rate
 }
 
-export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalculationsProps) => {
+// Lock tax rate to 13%
+const LOCKED_TAX_RATE = 13;
+
+export const useDocumentCalculations = ({ lineItems }: UseDocumentCalculationsProps) => {
   const calculateSubtotal = useMemo(() => {
     return () => {
       return lineItems.reduce((total, item) => {
@@ -24,9 +27,9 @@ export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalcu
         }
         return total;
       }, 0);
-      return (taxableTotal * taxRate) / 100;
+      return (taxableTotal * LOCKED_TAX_RATE) / 100;
     };
-  }, [lineItems, taxRate]);
+  }, [lineItems]);
 
   const calculateGrandTotal = useMemo(() => {
     return () => {
@@ -59,6 +62,7 @@ export const useDocumentCalculations = ({ lineItems, taxRate }: UseDocumentCalcu
     calculateTotalTax,
     calculateGrandTotal,
     calculateTotalMargin,
-    calculateMarginPercentage
+    calculateMarginPercentage,
+    taxRate: LOCKED_TAX_RATE // Always return the locked tax rate
   };
 };
