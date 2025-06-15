@@ -2,10 +2,12 @@
 import { ReactNode } from 'react';
 import { RBACProvider } from '@/components/auth/RBACProvider';
 import { AuthProvider } from '@/hooks/use-auth';
-import { ClientPortalAuthProvider } from '@/hooks/useClientPortalAuth';
 import { MessageProvider } from '@/contexts/MessageContext';
 import { GlobalRealtimeProvider } from '@/contexts/GlobalRealtimeProvider';
 import { ModalProvider } from '@/components/ui/modal-provider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -13,8 +15,8 @@ interface AppProvidersProps {
 
 export const AppProviders = ({ children }: AppProvidersProps) => {
   return (
-    <AuthProvider>
-      <ClientPortalAuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
         <RBACProvider>
           <GlobalRealtimeProvider>
             <MessageProvider>
@@ -24,7 +26,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
             </MessageProvider>
           </GlobalRealtimeProvider>
         </RBACProvider>
-      </ClientPortalAuthProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };

@@ -1,21 +1,21 @@
+
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { AppProviders } from './providers';
-import DashboardPage from './pages/DashboardPage';
+import { AppProviders } from './components/ui/AppProviders';
+import DashboardPage from './pages/Dashboard';
 import JobsPage from './pages/JobsPage';
 import ClientsPage from './pages/ClientsPage';
 import SettingsPage from './pages/SettingsPage';
 import InvoicesPage from './pages/InvoicesPage';
 import EstimatesPage from './pages/EstimatesPage';
 import TeamPage from './pages/TeamPage';
-import LoginPage from './pages/LoginPage';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginPage from './pages/AuthPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailsPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
 import EstimateViewPage from './pages/EstimateViewPage';
-import PortalLoginPage from './pages/portal/PortalLoginPage';
 import SecureDocumentViewer from "@/pages/SecureDocumentViewer";
 
 function App() {
@@ -24,7 +24,7 @@ function App() {
       <Toaster />
       <AppProviders>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth" element={<LoginPage />} />
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><JobsPage /></ProtectedRoute>} />
@@ -37,7 +37,6 @@ function App() {
           <Route path="/estimate/view/:id" element={<ProtectedRoute><EstimateViewPage /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          <Route path="/portal/login" element={<PortalLoginPage />} />
           
           {/* Secure document viewer - no authentication required */}
           <Route path="/view/:token" element={<SecureDocumentViewer />} />
