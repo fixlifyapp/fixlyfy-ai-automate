@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { PaymentMethod } from '@/types/payment';
@@ -79,13 +78,25 @@ export const recordPayment = async (
   reference?: string
 ) => {
   try {
-    console.log('Recording payment in job history:', {
+    console.log('recordPayment called with:', {
       jobId,
       amount,
       method,
       userName,
+      userId,
       reference
     });
+
+    // Validate required parameters
+    if (!jobId) {
+      throw new Error('jobId is required for payment history logging');
+    }
+    if (!amount || amount <= 0) {
+      throw new Error('Valid amount is required for payment history logging');
+    }
+    if (!method) {
+      throw new Error('Payment method is required for payment history logging');
+    }
 
     const historyItem = {
       job_id: jobId,
@@ -103,6 +114,8 @@ export const recordPayment = async (
       visibility: 'restricted'
     };
     
+    console.log('Inserting history item:', historyItem);
+    
     const { data, error } = await supabase
       .from('job_history')
       .insert(historyItem)
@@ -111,14 +124,16 @@ export const recordPayment = async (
       
     if (error) {
       console.error('Supabase error inserting payment history:', error);
-      throw error;
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      throw new Error(`Failed to insert payment history: ${error.message}`);
     }
     
     console.log('Payment history record created successfully:', data);
     return data;
   } catch (error) {
-    console.error('Error recording payment:', error);
-    return null;
+    console.error('Error in recordPayment function:', error);
+    // Re-throw the error so calling code can handle it
+    throw error;
   }
 };
 

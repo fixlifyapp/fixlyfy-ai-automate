@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useRBAC } from '@/components/auth/RBACProvider';
 import { 
@@ -40,15 +39,34 @@ export const useJobHistoryIntegration = (jobId?: string) => {
     method: PaymentMethod, 
     reference?: string
   ) => {
-    if (!jobId) return;
-    await recordPayment(
+    console.log('logPaymentReceived called with:', {
       jobId,
       amount,
       method,
-      currentUser?.name || currentUser?.email,
-      currentUser?.id,
-      reference
-    );
+      reference,
+      currentUser: currentUser?.id
+    });
+
+    if (!jobId) {
+      console.error('No jobId provided to logPaymentReceived');
+      throw new Error('jobId is required for payment logging');
+    }
+
+    try {
+      const result = await recordPayment(
+        jobId,
+        amount,
+        method,
+        currentUser?.name || currentUser?.email,
+        currentUser?.id,
+        reference
+      );
+      console.log('Payment logged successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error in logPaymentReceived:', error);
+      throw error;
+    }
   }, [jobId, currentUser]);
 
   const logTechnicianChange = useCallback(async (

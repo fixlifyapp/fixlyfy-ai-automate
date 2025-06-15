@@ -20,6 +20,7 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
     setIsProcessing(true);
     try {
       console.log('Starting payment recording process for job:', jobId);
+      console.log('Payment data:', paymentData);
       
       // Generate payment number
       const { data: paymentNumber } = await supabase.rpc('generate_next_id', {
@@ -72,20 +73,29 @@ export const usePaymentActions = (jobId: string, onSuccess?: () => void) => {
       if (updateError) throw updateError;
 
       // Log the payment in job history - this is the critical part for partial payments
-      console.log('Logging payment to job history:', {
+      console.log('About to log payment to job history:', {
         jobId,
         amount: paymentData.amount,
         method: paymentData.method,
+        reference: paymentData.reference,
         isPartial: newBalance > 0
       });
 
-      await logPaymentReceived(
-        paymentData.amount, 
-        paymentData.method as any, 
-        paymentData.reference
-      );
+      try {
+        await logPaymentReceived(
+          paymentData.amount, 
+          paymentData.method as any, 
+          paymentData.reference
+        );
+        console.log('Payment successfully logged to job history');
+      } catch (historyError) {
+        console.error('Failed to log payment to job history:', historyError);
+        // Don't fail the entire payment if history logging fails
+        // but show a warning
+        toast.error('Payment recorded but history logging failed');
+      }
 
-      console.log('Payment successfully recorded and logged to history');
+      console.log('Payment successfully recorded');
       toast.success('Payment recorded successfully!');
       if (onSuccess) onSuccess();
       return true;
