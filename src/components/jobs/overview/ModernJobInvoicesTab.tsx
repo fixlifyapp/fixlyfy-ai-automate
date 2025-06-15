@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Send, Edit, CreditCard, Eye, FileText, Download, Trash2 } from "lucide-react";
+import { Plus, Send, Edit, CreditCard, Eye, FileText, Trash2 } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useEstimates } from "@/hooks/useEstimates";
 import { SteppedInvoiceBuilder } from "../dialogs/SteppedInvoiceBuilder";
@@ -65,38 +65,6 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
   const handleViewInvoice = (invoice: any) => {
     setSelectedInvoice(invoice);
     setShowPreviewWindow(true);
-  };
-
-  const handleDownloadInvoice = async (invoice: any) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('download-invoice', {
-        body: {
-          invoiceId: invoice.id,
-          jobId: jobId
-        }
-      });
-
-      if (error) {
-        console.error('Error downloading invoice:', error);
-        toast.error('Failed to download invoice PDF');
-        return;
-      }
-
-      if (data && data.success && data.pdfUrl) {
-        const link = document.createElement('a');
-        link.href = data.pdfUrl;
-        link.download = `Invoice-${invoice.invoice_number}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success('Invoice PDF downloaded successfully');
-      } else {
-        toast.error('Failed to generate invoice PDF');
-      }
-    } catch (error) {
-      console.error('Error downloading invoice:', error);
-      toast.error('Failed to download invoice PDF');
-    }
   };
 
   const handleRemoveInvoice = async (invoice: any) => {
@@ -348,16 +316,6 @@ export const ModernJobInvoicesTab = ({ jobId }: ModernJobInvoicesTabProps) => {
                         Pay
                       </Button>
                     )}
-                    
-                    <Button
-                      variant="outline"
-                      size={isMobile ? "default" : "sm"}
-                      className={`${isMobile ? 'w-full h-11 justify-start' : ''}`}
-                      onClick={() => handleDownloadInvoice(invoice)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      PDF
-                    </Button>
 
                     <Button
                       variant="outline"
