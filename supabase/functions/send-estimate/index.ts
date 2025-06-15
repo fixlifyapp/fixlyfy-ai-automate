@@ -191,6 +191,32 @@ serve(async (req) => {
     let portalLink = '';
     if (client?.email) {
       try {
+        console.log('Generating portal link for client email:', client.email);
+        
+        // Ensure client portal user exists first
+        const { data: existingPortalUser, error: portalUserError } = await supabaseAdmin
+          .from('client_portal_users')
+          .select('*')
+          .eq('email', client.email)
+          .single();
+
+        if (portalUserError && portalUserError.code === 'PGRST116') {
+          // Create client portal user if doesn't exist
+          const { error: createError } = await supabaseAdmin
+            .from('client_portal_users')
+            .insert({
+              email: client.email,
+              client_id: client.id,
+              is_active: true
+            });
+
+          if (createError) {
+            console.error('Error creating client portal user:', createError);
+          } else {
+            console.log('Created client portal user for:', client.email);
+          }
+        }
+
         const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc('generate_client_login_token', {
           p_email: client.email
         });
@@ -198,6 +224,8 @@ serve(async (req) => {
         if (!tokenError && tokenData) {
           portalLink = `https://hub.fixlify.app/portal/login?token=${tokenData}&redirect=/portal/estimates?id=${estimate.id}`;
           console.log('Portal link generated for client portal');
+        } else {
+          console.error('Failed to generate portal login token:', tokenError);
         }
       } catch (error) {
         console.warn('Failed to generate portal login token:', error);

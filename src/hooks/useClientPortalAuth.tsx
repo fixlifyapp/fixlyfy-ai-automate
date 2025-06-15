@@ -144,7 +144,7 @@ export function ClientPortalAuthProvider({ children }: { children: ReactNode }) 
         };
         
         setUser(userData);
-        console.log('User set:', userData);
+        console.log('User set after token verification:', userData);
 
         return { success: true, message: 'Successfully logged in' };
       }

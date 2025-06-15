@@ -19,40 +19,46 @@ export default function PortalLoginPage() {
   const token = searchParams.get('token');
   const redirectTo = searchParams.get('redirect');
 
-  // If user is already logged in, redirect
+  // If user is already logged in, redirect immediately
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !token) {
       const destination = redirectTo || '/portal/dashboard';
+      console.log('User already logged in, redirecting to:', destination);
       navigate(destination, { replace: true });
     }
-  }, [user, loading, navigate, redirectTo]);
+  }, [user, loading, navigate, redirectTo, token]);
 
-  // Handle token-based login
+  // Handle token-based login immediately when token is present
   useEffect(() => {
-    if (token && !user && !loading) {
+    if (token && !user && !loading && !tokenProcessing) {
+      console.log('Token found, attempting auto-login:', token.substring(0, 20) + '...');
       handleTokenLogin();
     }
-  }, [token, user, loading]);
+  }, [token, user, loading, tokenProcessing]);
 
   const handleTokenLogin = async () => {
     if (!token) return;
     
     setTokenProcessing(true);
     try {
+      console.log('Verifying token for auto-login...');
       const result = await verifyToken(token);
       if (result.success) {
+        console.log('Token verification successful, navigating...');
         toast.success('Successfully logged in!');
-        // Navigate after successful login
-        setTimeout(() => {
-          const destination = redirectTo || '/portal/dashboard';
-          navigate(destination, { replace: true });
-        }, 500);
+        
+        // Navigate immediately after successful login
+        const destination = redirectTo || '/portal/dashboard';
+        console.log('Navigating to:', destination);
+        navigate(destination, { replace: true });
       } else {
+        console.error('Token verification failed:', result.message);
         toast.error(result.message);
+        setTokenProcessing(false);
       }
     } catch (error) {
+      console.error('Token verification error:', error);
       toast.error('Failed to verify login link');
-    } finally {
       setTokenProcessing(false);
     }
   };
@@ -80,14 +86,27 @@ export default function PortalLoginPage() {
     }
   };
 
-  if (loading || tokenProcessing) {
+  // Show loading state while processing token or initial auth check
+  if (loading || tokenProcessing || (token && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-fixlyfy" />
           <p className="text-gray-600">
-            {tokenProcessing ? 'Verifying login link...' : 'Loading...'}
+            {tokenProcessing || token ? 'Verifying login link...' : 'Loading...'}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't show the form if we have a token and are processing
+  if (token && tokenProcessing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-fixlyfy" />
+          <p className="text-gray-600">Verifying your login link...</p>
         </div>
       </div>
     );
