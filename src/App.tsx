@@ -11,13 +11,12 @@ import EstimatesPage from './pages/EstimatesPage';
 import TeamPage from './pages/TeamManagementPage';
 import LoginPage from './pages/AuthPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailPage';
 import InvoiceViewPage from './pages/InvoiceViewPage';
 import EstimateViewPage from './pages/EstimateViewPage';
 import PortalLoginPage from './pages/portal/PortalLoginPage';
-import SecureDocumentViewer from "@/pages/SecureDocumentViewer";
+import SecureDocumentViewer from "./pages/SecureDocumentViewer";
 
 function App() {
   return (
