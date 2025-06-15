@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { LineItem, Product } from "../../builder/types";
-import { OptimizedProductCatalog } from "../../builder/OptimizedProductCatalog";
+import { ProductCatalog } from "../../builder/ProductCatalog";
 import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
 import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
 import { NotesSection } from "./components/NotesSection";
@@ -114,7 +114,7 @@ export const UnifiedItemsStep = ({
             <DialogTitle>Select Products</DialogTitle>
           </DialogHeader>
           <div className="overflow-auto max-h-[70vh] p-4">
-            <OptimizedProductCatalog
+            <ProductCatalog
               onAddProduct={handleProductSelect}
             />
           </div>
