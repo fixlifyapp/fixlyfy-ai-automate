@@ -14,7 +14,6 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ClientDetailsPage from './pages/ClientDetailPage';
-import InvoiceViewPage from './pages/InvoiceViewPage';
 import EstimateViewPage from './pages/EstimateViewPage';
 import SecureDocumentViewer from "@/pages/SecureDocumentViewer";
 
@@ -32,7 +31,6 @@ function App() {
           <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailsPage /></ProtectedRoute>} />
           <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
-          <Route path="/invoices/view/:id" element={<ProtectedRoute><InvoiceViewPage /></ProtectedRoute>} />
           <Route path="/estimates" element={<ProtectedRoute><EstimatesPage /></ProtectedRoute>} />
           <Route path="/estimate/view/:id" element={<ProtectedRoute><EstimateViewPage /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
