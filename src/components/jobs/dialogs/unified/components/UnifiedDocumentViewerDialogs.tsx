@@ -4,7 +4,7 @@ import { Invoice } from "@/hooks/useInvoices";
 import { Estimate } from "@/hooks/useEstimates";
 import { UniversalSendDialog } from "../../shared/UniversalSendDialog";
 import { SteppedInvoiceBuilder } from "../../SteppedInvoiceBuilder";
-import { UnifiedDocumentBuilder } from "../../UnifiedDocumentBuilder";
+import { SteppedEstimateBuilder } from "../../SteppedEstimateBuilder";
 
 interface UnifiedDocumentViewerDialogsProps {
   documentType: "invoice" | "estimate";
@@ -65,13 +65,12 @@ export const UnifiedDocumentViewerDialogs = ({
 
       {/* Edit Dialog for Estimates */}
       {documentType === "estimate" && (
-        <UnifiedDocumentBuilder
+        <SteppedEstimateBuilder
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
-          documentType="estimate"
           jobId={jobId}
-          existingDocument={document as Estimate}
-          onDocumentCreated={handleEditSuccess}
+          existingEstimate={document as Estimate}
+          onEstimateCreated={handleEditSuccess}
         />
       )}
     </>
