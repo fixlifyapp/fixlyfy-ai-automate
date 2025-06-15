@@ -25,7 +25,6 @@ export const useUnifiedDocumentViewer = ({
 }: UseUnifiedDocumentViewerProps) => {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -126,12 +125,6 @@ export const useUnifiedDocumentViewer = ({
     setShowSendDialog(true);
   };
 
-  const handleConvert = () => {
-    if (documentType === "estimate" && onConvertToInvoice) {
-      setShowConvertDialog(true);
-    }
-  };
-
   const handleSendSuccess = () => {
     setShowSendDialog(false);
     if (onDocumentUpdated) {
@@ -146,13 +139,6 @@ export const useUnifiedDocumentViewer = ({
     }
   };
 
-  const handleConvertSuccess = () => {
-    setShowConvertDialog(false);
-    if (onDocumentUpdated) {
-      onDocumentUpdated();
-    }
-  };
-
   const documentNumber = documentType === "invoice" 
     ? (document as Invoice).invoice_number 
     : (document as Estimate).estimate_number;
@@ -162,8 +148,6 @@ export const useUnifiedDocumentViewer = ({
     setShowSendDialog,
     showEditDialog,
     setShowEditDialog,
-    showConvertDialog,
-    setShowConvertDialog,
     clientInfo,
     jobAddress,
     loading,
@@ -176,9 +160,7 @@ export const useUnifiedDocumentViewer = ({
     getClientInfo,
     handleEdit,
     handleSend,
-    handleConvert,
     handleSendSuccess,
-    handleEditSuccess,
-    handleConvertSuccess
+    handleEditSuccess
   };
 };

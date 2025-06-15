@@ -7,6 +7,8 @@ import { useUnifiedDocumentViewer } from "./unified/hooks/useUnifiedDocumentView
 import { UnifiedDocumentViewerHeader } from "./unified/components/UnifiedDocumentViewerHeader";
 import { UnifiedDocumentViewerContent } from "./unified/components/UnifiedDocumentViewerContent";
 import { UnifiedDocumentViewerDialogs } from "./unified/components/UnifiedDocumentViewerDialogs";
+import { useDocumentOperations } from "./unified/hooks/useDocumentOperations";
+import { toast } from "sonner";
 
 interface UnifiedDocumentViewerProps {
   open: boolean;
@@ -34,8 +36,6 @@ export const UnifiedDocumentViewer = ({
     setShowSendDialog,
     showEditDialog,
     setShowEditDialog,
-    showConvertDialog,
-    setShowConvertDialog,
     clientInfo,
     loading,
     lineItems,
@@ -47,10 +47,8 @@ export const UnifiedDocumentViewer = ({
     getClientInfo,
     handleEdit,
     handleSend,
-    handleConvert,
     handleSendSuccess,
-    handleEditSuccess,
-    handleConvertSuccess
+    handleEditSuccess
   } = useUnifiedDocumentViewer({
     document,
     documentType,
@@ -58,6 +56,47 @@ export const UnifiedDocumentViewer = ({
     onConvertToInvoice,
     onDocumentUpdated
   });
+
+  // Use document operations hook for conversion
+  const { convertToInvoice, isSubmitting } = useDocumentOperations({
+    documentType,
+    existingDocument: document,
+    jobId,
+    formData: {
+      documentNumber,
+      items: lineItems.map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        taxable: item.taxable
+      })),
+      notes: document.notes || '',
+      status: document.status || 'draft',
+      total: calculateGrandTotal()
+    },
+    lineItems,
+    notes: document.notes || '',
+    calculateGrandTotal
+  });
+
+  const handleConvert = async () => {
+    if (documentType === "estimate" && !isSubmitting) {
+      try {
+        const newInvoice = await convertToInvoice();
+        if (newInvoice && onConvertToInvoice) {
+          onConvertToInvoice(document as Estimate);
+        }
+        if (onDocumentUpdated) {
+          onDocumentUpdated();
+        }
+        // Close the viewer after successful conversion
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Error converting estimate to invoice:', error);
+        toast.error('Failed to convert estimate to invoice');
+      }
+    }
+  };
 
   console.log('UnifiedDocumentViewer Debug:', {
     documentType,
@@ -141,14 +180,14 @@ export const UnifiedDocumentViewer = ({
         setShowSendDialog={setShowSendDialog}
         showEditDialog={showEditDialog}
         setShowEditDialog={setShowEditDialog}
-        showConvertDialog={showConvertDialog}
-        setShowConvertDialog={setShowConvertDialog}
+        showConvertDialog={false}
+        setShowConvertDialog={() => {}}
         documentNumber={documentNumber}
         calculateGrandTotal={calculateGrandTotal}
         getClientInfo={getClientInfo}
         handleSendSuccess={handleSendSuccess}
         handleEditSuccess={handleEditSuccess}
-        handleConvertSuccess={handleConvertSuccess}
+        handleConvertSuccess={() => {}}
       />
     </>
   );

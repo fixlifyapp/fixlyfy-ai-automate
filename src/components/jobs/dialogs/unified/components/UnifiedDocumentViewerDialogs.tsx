@@ -32,14 +32,11 @@ export const UnifiedDocumentViewerDialogs = ({
   setShowSendDialog,
   showEditDialog,
   setShowEditDialog,
-  showConvertDialog,
-  setShowConvertDialog,
   documentNumber,
   calculateGrandTotal,
   getClientInfo,
   handleSendSuccess,
-  handleEditSuccess,
-  handleConvertSuccess
+  handleEditSuccess
 }: UnifiedDocumentViewerDialogsProps) => {
   return (
     <>
@@ -75,17 +72,6 @@ export const UnifiedDocumentViewerDialogs = ({
           jobId={jobId}
           existingDocument={document as Estimate}
           onDocumentCreated={handleEditSuccess}
-        />
-      )}
-
-      {/* Convert Estimate to Invoice Dialog */}
-      {documentType === "estimate" && (
-        <SteppedInvoiceBuilder
-          open={showConvertDialog}
-          onOpenChange={setShowConvertDialog}
-          jobId={jobId}
-          estimateToConvert={document as Estimate}
-          onInvoiceCreated={handleConvertSuccess}
         />
       )}
     </>

@@ -20,6 +20,42 @@ export const UnifiedDocumentViewerHeader = ({
   onConvert,
   showConvertButton
 }: UnifiedDocumentViewerHeaderProps) => {
+  const handleDownloadPDF = () => {
+    // Use the browser's print functionality with CSS media queries for PDF
+    // This avoids showing Lovable URLs in the printed document
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const currentContent = document.querySelector('.max-w-5xl')?.outerHTML || '';
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${documentType === "invoice" ? "Invoice" : "Estimate"} ${documentNumber}</title>
+            <link href="https://cdn.tailwindcss.com/3.3.6" rel="stylesheet">
+            <style>
+              @media print {
+                body { margin: 0; padding: 20px; }
+                .no-print { display: none !important; }
+                .print-only { display: block !important; }
+              }
+              @page { margin: 1in; }
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+            </style>
+          </head>
+          <body>
+            ${currentContent}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
+
   return (
     <div className="flex items-center justify-between p-6 border-b">
       <div>
@@ -30,7 +66,7 @@ export const UnifiedDocumentViewerHeader = ({
       </div>
       
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => window.print()}>
+        <Button variant="outline" onClick={handleDownloadPDF}>
           <Download className="h-4 w-4 mr-2" />
           Download PDF
         </Button>
