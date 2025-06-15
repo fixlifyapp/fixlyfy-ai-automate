@@ -120,7 +120,7 @@ export const UnifiedPreviewStep = ({
     
     // Fallback: calculate from items
     if (Array.isArray(document.items)) {
-      return document.items.reduce((sum: number, item: any) => {
+      return document.items.reduce((sum, item) => {
         const quantity = item.quantity || 1;
         const unitPrice = item.unitPrice || item.unit_price || 0;
         return sum + (quantity * unitPrice);
@@ -178,12 +178,12 @@ export const UnifiedPreviewStep = ({
           />
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Mobile Optimized */}
         <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between'} pt-4 border-t`}>
           <Button 
             variant="outline" 
             onClick={onBack}
-            className={`gap-2 ${isMobile ? 'w-full h-12' : ''}`}
+            className={`gap-2 ${isMobile ? 'w-full h-12 text-sm' : ''}`}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to {documentType === "estimate" ? "Services" : "Upsells"}
@@ -193,7 +193,7 @@ export const UnifiedPreviewStep = ({
             <Button
               variant="outline"
               onClick={handleSend}
-              className={`gap-2 ${isMobile ? 'w-full h-12' : ''}`}
+              className={`gap-2 ${isMobile ? 'w-full h-12 text-sm' : ''}`}
             >
               <Send className="h-4 w-4" />
               Send {documentType}
@@ -202,7 +202,7 @@ export const UnifiedPreviewStep = ({
             {canAcceptPayment(document) && (
               <Button
                 onClick={handlePayment}
-                className={`gap-2 bg-green-600 hover:bg-green-700 ${isMobile ? 'w-full h-12' : ''}`}
+                className={`gap-2 bg-green-600 hover:bg-green-700 ${isMobile ? 'w-full h-12 text-sm' : ''}`}
               >
                 <CreditCard className="h-4 w-4" />
                 Record Payment
@@ -213,7 +213,7 @@ export const UnifiedPreviewStep = ({
               <Button
                 onClick={handleConvert}
                 disabled={isSubmitting}
-                className={`gap-2 ${isMobile ? 'w-full h-12' : ''}`}
+                className={`gap-2 ${isMobile ? 'w-full h-12 text-sm' : ''}`}
               >
                 {isSubmitting ? "Converting..." : "Convert to Invoice"}
                 <ArrowRight className="h-4 w-4" />
