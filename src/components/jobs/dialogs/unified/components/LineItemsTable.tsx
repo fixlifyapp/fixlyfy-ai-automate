@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,8 +49,8 @@ export const LineItemsTable = ({
           <CardTitle>Added Items ({lineItems.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Description</th>
@@ -62,7 +63,7 @@ export const LineItemsTable = ({
                 </tr>
               </thead>
               <tbody>
-                {lineItems.length > 0 ? lineItems.map((item) => (
+                {lineItems.map((item) => (
                   <tr key={item.id} className="border-t">
                     <td className="px-4 py-3">
                       <Input
@@ -106,7 +107,7 @@ export const LineItemsTable = ({
                         value={item.taxable.toString()} 
                         onValueChange={(value) => onUpdateLineItem(item.id, 'taxable', value === 'true')}
                       >
-                        <SelectTrigger className="w-20">
+                        <SelectTrigger className="w-16">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -120,7 +121,7 @@ export const LineItemsTable = ({
                         <div>{formatCurrency(item.quantity * item.unitPrice)}</div>
                         {item.ourPrice && item.ourPrice > 0 && (
                           <div className="text-xs text-green-600">
-                            Margin: {formatCurrency((item.unitPrice - (item.ourPrice || 0)) * item.quantity)}
+                            Margin: {formatCurrency((item.unitPrice - item.ourPrice) * item.quantity)}
                           </div>
                         )}
                       </div>
@@ -148,13 +149,7 @@ export const LineItemsTable = ({
                       </div>
                     </td>
                   </tr>
-                )) : (
-                  <tr className="border-t">
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No items added yet. Click 'Add Product' to get started.
-                    </td>
-                  </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
