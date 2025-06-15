@@ -1,14 +1,12 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { LineItem, Product } from "../../builder/types";
 import { ProductCatalog } from "../../builder/ProductCatalog";
 import { DocumentTotalsSection } from "./components/DocumentTotalsSection";
-import { DocumentLineItemsTable } from "./components/DocumentLineItemsTable";
 import { NotesSection } from "./components/NotesSection";
+import { LineItemsTable } from "./components/LineItemsTable";
 
 interface UnifiedItemsStepProps {
   documentType: "estimate" | "invoice";
@@ -72,25 +70,11 @@ export const UnifiedItemsStep = ({
       </div>
 
       {/* Line Items Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DocumentLineItemsTable
-            documentType={documentType}
-            lineItems={lineItems}
-          />
-          
-          {lineItems.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Plus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium">No items added yet</p>
-              <p className="text-sm">Add products to get started</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <LineItemsTable
+        lineItems={lineItems}
+        onRemoveLineItem={onRemoveLineItem}
+        onUpdateLineItem={onUpdateLineItem}
+      />
 
       {/* Totals Section */}
       <DocumentTotalsSection

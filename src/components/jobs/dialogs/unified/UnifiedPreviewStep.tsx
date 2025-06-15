@@ -10,6 +10,8 @@ import { UnifiedPaymentDialog } from "../UnifiedPaymentDialog";
 import { useDocumentOperations } from "./hooks/useDocumentOperations";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDocumentCalculations } from "./hooks/useDocumentCalculations";
+import { LineItem } from "../../builder/types";
 
 interface UnifiedPreviewStepProps {
   documentType: "estimate" | "invoice";
@@ -32,6 +34,25 @@ export const UnifiedPreviewStep = ({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const isMobile = useIsMobile();
 
+  const lineItemsForPreview: LineItem[] = Array.isArray(document.items) ? document.items.map((item: any) => ({
+    id: item.id || `item-${Date.now()}`,
+    description: item.description || '',
+    name: item.name || item.description || '',
+    quantity: item.quantity || 1,
+    unitPrice: item.unitPrice || item.unit_price || 0,
+    ourPrice: item.ourPrice || 0,
+    taxable: item.taxable !== undefined ? item.taxable : true,
+    total: (item.quantity || 1) * (item.unitPrice || item.unit_price || 0),
+    discount: item.discount || 0
+  })) : [];
+
+  const {
+    calculateSubtotal,
+    calculateTotalTax,
+    calculateGrandTotal,
+    taxRate
+  } = useDocumentCalculations({ lineItems: lineItemsForPreview });
+
   // Use document operations hook for conversion
   const { convertToInvoice, isSubmitting } = useDocumentOperations({
     documentType,
@@ -42,18 +63,11 @@ export const UnifiedPreviewStep = ({
       items: Array.isArray(document.items) ? document.items : [],
       notes: document.notes || '',
       status: document.status || 'draft',
-      total: document.total || 0
+      total: calculateGrandTotal()
     },
-    lineItems: Array.isArray(document.items) ? document.items.map((item: any) => ({
-      id: item.id || `item-${Date.now()}`,
-      description: item.description || '',
-      quantity: item.quantity || 1,
-      unitPrice: item.unitPrice || item.unit_price || 0,
-      taxable: item.taxable !== undefined ? item.taxable : true,
-      total: (item.quantity || 1) * (item.unitPrice || item.unit_price || 0)
-    })) : [],
+    lineItems: lineItemsForPreview,
     notes: document.notes || '',
-    calculateGrandTotal: () => document.total || 0
+    calculateGrandTotal: calculateGrandTotal
   });
 
   const handleSend = () => {
@@ -118,18 +132,11 @@ export const UnifiedPreviewStep = ({
           <UnifiedDocumentPreview
             documentType={documentType}
             documentNumber={documentNumber}
-            lineItems={Array.isArray(document.items) ? document.items.map((item: any) => ({
-              id: item.id || `item-${Date.now()}`,
-              description: item.description || '',
-              quantity: item.quantity || 1,
-              unitPrice: item.unitPrice || item.unit_price || 0,
-              taxable: item.taxable !== undefined ? item.taxable : true,
-              total: (item.quantity || 1) * (item.unitPrice || item.unit_price || 0)
-            })) : []}
-            taxRate={document.tax_rate || 13}
-            calculateSubtotal={() => document.subtotal || 0}
-            calculateTotalTax={() => document.tax_amount || 0}
-            calculateGrandTotal={() => document.total || 0}
+            lineItems={lineItemsForPreview}
+            taxRate={taxRate}
+            calculateSubtotal={calculateSubtotal}
+            calculateTotalTax={calculateTotalTax}
+            calculateGrandTotal={calculateGrandTotal}
             notes={document.notes || ''}
             clientInfo={clientInfo}
             jobId={jobId}
